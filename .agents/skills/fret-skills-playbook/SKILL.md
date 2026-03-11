@@ -18,12 +18,14 @@ agent work **reviewable**, **reproducible**, and **architecture-aligned**.
 
 - What is the user-facing invariant (correctness, UX, parity, perf)?
 - What is the smallest runnable target (demo/gallery/script) that shows it?
+- Is the work about a first-party teaching surface (for example UI Gallery) or an internal recipe/runtime surface?
 - Which layer should own the change (mechanism vs policy vs recipe)?
 - What artifacts must be produced (gate + evidence)?
 
 Defaults if unclear:
 
 - Start from the smallest runnable demo and leave a regression artifact + evidence anchors.
+- When first-party examples are involved, treat UI Gallery snippet files as the exemplar source of truth.
 
 ## Smallest starting point (one command)
 
@@ -44,6 +46,7 @@ Use this rule of thumb:
 
 - `crates/*`: mechanisms and hard-to-change contracts (routing, focus primitives, overlay roots, layout/semantics).
 - `ecosystem/*`: policy + composition + recipes (dismiss/focus restore rules, roving/typeahead, shadcn recipes).
+- `apps/fret-ui-gallery`: first-party exemplar/teaching surface; if the drift is “how should users author this in Fret?”, fix the snippet/page surface first.
 
 If the change is “interaction policy” (dismiss rules, focus restore, keyboard nav rules), it almost never belongs in
 `crates/fret-ui`.
@@ -58,17 +61,23 @@ Every non-trivial change should leave these three deliverables:
   - `fretboard diag` script for event sequences/state machines, and/or
   - perf gate/baseline when perf is the goal.
 - **Evidence**: 1–3 evidence anchors (file paths + key functions/tests/scripts) so reviewers can verify quickly.
+  - Prefer the smallest deterministic proof:
+    - geometry assertions or `capture_layout_sidecar` for layout ownership/size negotiation
+    - `capture_screenshot` for visible chrome/clipping/focus rings
+    - `capture_bundle` for interaction state machines and shareable run context
 
 ### 3) `test_id` conventions (automation stability)
 
 Goal: scripts should select **intent-level** targets, not pixel coordinates.
 
-- Put `test_id` at the recipe/component layer (often `ecosystem/fret-ui-shadcn`) so it survives layout refactors.
+- Put `test_id` at the highest stable semantic surface that survives refactors:
+  - reusable component crates → recipe/component layer
+  - first-party UI Gallery surfaces → snippet/page/driver seam used by diagnostics
 - Use stable, namespaced ids (examples):
-  - `gallery.command_palette.trigger`
-  - `select.trigger`
-  - `docking.tab_bar.drag_anchor`
-- Avoid using list indices as ids; use model ids.
+  - `ui-gallery-command-palette-trigger`
+  - `ui-gallery-select-trigger`
+  - `ui-gallery-docking-tab-bar-drag-anchor`
+- Avoid using list indices as ids; use model ids or stable row/item keys.
 
 ### 4) Diag script conventions (reviewable and gate-friendly)
 
@@ -78,6 +87,8 @@ Goal: scripts should select **intent-level** targets, not pixel coordinates.
   - `ui-gallery-<surface>-<behavior>-<expectation>.json`
   - `docking-<scenario>-<expectation>.json`
 - Keep scripts minimal: one scenario, one or two assertions, at least one `capture_bundle`.
+- When proving layout ownership or size negotiation, add `capture_layout_sidecar` before falling back to screenshots.
+- For first-party component pages, prefer the canonical nested corpus under `tools/diag-scripts/ui-gallery/<family>/`.
 
 ### 5) Evidence discipline (make it reversible)
 
@@ -108,7 +119,12 @@ Minimum deliverables (3-pack):
 ## Evidence anchors
 
 - Layering and contracts: `docs/architecture.md`, `docs/runtime-contract-matrix.md`
+- Crate/layer usage map: `docs/crate-usage-guide.md`
+- Canonical shadcn migration status: `docs/shadcn-declarative-progress.md`
 - Diag scripts and workflows: `tools/diag-scripts/`, `.agents/skills/fret-diag-workflow/SKILL.md`
+- UI Gallery exemplar + evidence note: `.agents/skills/fret-shadcn-source-alignment/references/ui-gallery-exemplar-and-evidence.md`
+- UI Gallery authoring gates: `apps/fret-ui-gallery/src/lib.rs`
+- UI Gallery geometry/test-id helpers: `apps/fret-ui-gallery/src/driver/render_flow.rs`
 - Perf gates and baselines: `tools/perf/`, `docs/workstreams/perf-baselines/` (see `.agents/skills/fret-diag-workflow/SKILL.md`)
 
 ## Examples

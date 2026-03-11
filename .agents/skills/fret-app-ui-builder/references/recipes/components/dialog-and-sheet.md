@@ -17,7 +17,11 @@ Goal: modal/overlay surfaces with correct focus trapping/restoration, dismiss ru
 - Sheet: `fret-ui-shadcn::Sheet`, `SheetContent`, `SheetSide`, ...
 - Model:
   - `Model<bool>` for open/closed
-- Example usage: `apps/fret-ui-gallery/src/docs.rs` (Overlay docs/usage snippet)
+- Example usage:
+  - `apps/fret-ui-gallery/src/ui/pages/dialog.rs`
+  - `apps/fret-ui-gallery/src/ui/pages/sheet.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/dialog/usage.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/sheet/usage.rs`
 
 ## Checklist (what to verify)
 
@@ -37,6 +41,9 @@ Goal: modal/overlay surfaces with correct focus trapping/restoration, dismiss ru
 
 - Prefer unit tests for focus trap/restore invariants.
 - Add scripted repros for overlay click + escape + focus restore, and capture a bundle after each state.
+- UI Gallery script starts:
+  - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-escape-focus-restore.json`
+  - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-sheet-escape-focus-restore.json`
 
 ## See also
 

@@ -4,6 +4,7 @@ Start here (portable artifacts):
 
 - `script.result.json`: `reason_code`, failing `step_index`, bounded evidence ring-buffers.
 - `bundle.json`: frame snapshots (semantics/layout/stats/debug surfaces).
+- layout sidecar artifacts from `capture_layout_sidecar`: width/height/flex/min-size ownership when visual diffs are ambiguous.
 - `check.lint.json`: bundle lint findings (often a fast “why is the tree weird?” answer).
 
 ## Common evidence fields (script.result.json)
@@ -25,6 +26,8 @@ Start here (portable artifacts):
 
 - `selector.not_found`
   - Inspect `selector_resolution_trace` and then run `diag lint` for duplicate/missing `test_id`.
+- layout / clipping drift
+  - Inspect the layout sidecar first to see which node owns width, height, flex, min-size, and overflow before changing tokens or screenshot baselines.
 - `timeout`
   - Prefer adding an intermediate `capture_bundle` near the “interesting point”.
   - Replace sleeps with `wait_until`, `click_stable`, `wait_bounds_stable`.

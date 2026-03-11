@@ -21,10 +21,12 @@ Ask these before running guardrails so you know what “green” means:
 - Which crates are in scope (especially kernel/contract crates like `fret-core`, `fret-ui`)?
 - What is the risk: backend dep leakage, reverse deps, feature allowlists, module bloat?
 - What is the expected outcome: just “detect”, or “fix + land with gates”?
+- Does the refactor also change a public/facade surface that first-party examples or docs teach?
 
 Defaults if unclear:
 
 - Run layering + module-size drift before and after the change, and keep allowlists as a last resort.
+- If exports/facades move, also run a first-party surface drift check (docs/UI Gallery/source-policy tests), not just dependency checks.
 
 ## Smallest starting point (one command)
 
@@ -38,6 +40,8 @@ Run the always-on guardrails:
   - `python3 tools/check_layering.py`
 - Module size drift (keep god files visible):
   - `python3 tools/report_largest_files.py --top 30 --min-lines 800`
+- If public authoring surfaces moved:
+  - `cargo nextest run -p fret-ui-gallery --lib gallery_curated_shadcn_surfaces_stay_explicit`
 
 ## Workflow
 
@@ -52,6 +56,10 @@ Run the always-on guardrails:
 
 - Quick audit snapshot:
   - `python3 tools/audit_crate.py --crate <crate>`
+- Public-surface drift spot check:
+  - `docs/crate-usage-guide.md`
+  - `docs/shadcn-declarative-progress.md`
+  - `apps/fret-ui-gallery/src/lib.rs`
 
 ### Interpreting failures (common cases)
 
@@ -59,6 +67,8 @@ Run the always-on guardrails:
   - Fix by moving code to the correct layer, or by adding an explicit allowlist entry only when
     the crate is intentionally “wiring heavy”.
 - Huge-file drift means you should split by responsibility before expanding behavior surface.
+- Passing layering does **not** mean the public story is still coherent.
+  - If a facade/export moved, check whether docs and UI Gallery exemplars now teach a stale import or stale seam.
 
 ## Definition of done (what to leave behind)
 
@@ -67,6 +77,7 @@ Run the always-on guardrails:
 - Module-size drift is understood and addressed (split responsibilities before “god files” grow).
 - If a violation was fixed, the fix is placed in the correct layer (prefer moving code over adding allowlists).
 - If the refactor touches behavior, at least one regression artifact exists (unit test or diag script).
+- If the refactor changes a public authoring surface, docs and first-party exemplars are updated alongside the boundary fix.
 
 ## Notes
 
@@ -79,6 +90,10 @@ Run the always-on guardrails:
 - Layering checks: `tools/check_layering.py`, `docs/dependency-policy.md`
 - Crate audit snapshot: `tools/audit_crate.py`
 - Module-size drift: `tools/report_largest_files.py`
+- Crate/layer usage map: `docs/crate-usage-guide.md`
+- Shadcn authoring golden path: `docs/shadcn-declarative-progress.md`
+- UI Gallery authoring gates: `apps/fret-ui-gallery/src/lib.rs`
+- UI Gallery exemplar surface: `apps/fret-ui-gallery/src/ui/snippets/`
 
 ## Examples
 
@@ -92,6 +107,7 @@ Run the always-on guardrails:
 - Treating allowlists as a first-choice fix (prefer moving code to the correct layer).
 - Ignoring a “small” layering violation during a refactor (it compounds quickly).
 - Measuring file-size drift after the refactor lands (run guardrails early).
+- Declaring a refactor “safe” because layering is green while first-party docs/examples still teach stale imports or stale seams.
 
 ## Troubleshooting
 

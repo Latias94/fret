@@ -33,6 +33,7 @@ Use this skill when the goal is to build or refactor a **cohesive app surface** 
 - Must-have flows: command palette, settings, navigation sidebar, data table, docking workspace.
 - Evidence needs: diag script gate only, or screenshots/pixel checks too?
 - State ownership: plain local snapshot, narrow bridge, or shared `Model<T>`?
+- What authoring surface should the result teach: app-facing `fret`, direct `fret_ui_shadcn`, or lower-level ecosystem internals?
 - What app surface are we building first (settings, command palette, workspace shell, inspector, data table, etc.)?
 - What is the design direction (keywords, tone, density, contrast, product personality)?
 - Which baseline style/preset should anchor the UI?
@@ -43,6 +44,7 @@ Use this skill when the goal is to build or refactor a **cohesive app surface** 
 Defaults if unclear:
 
 - Start with one runnable screen, one baseline preset, one small token override, and one interaction gate.
+- For first-party direct-crate shadcn examples, prefer `use fret_ui_shadcn::{facade as shadcn, prelude::*};`; keep raw escapes explicit via `shadcn::raw::*`.
 
 ## Design brief (1 minute, non-negotiable)
 
@@ -68,10 +70,11 @@ If you are in an external repo, start with `fret-external-app-mode` first.
 ## Quick start
 
 1. Lock the 1-minute design brief.
-2. Pick a baseline style and generate small token overrides.
-3. Compose one app surface from an existing recipe.
-4. Add stable `test_id` early and leave one interaction gate.
-5. Run a polish pass one screen at a time.
+2. Decide which authoring surface the UI should teach before copying imports or helper patterns.
+3. Pick a baseline style and generate small token overrides.
+4. Compose one app surface from an existing recipe or UI Gallery exemplar.
+5. Add stable `test_id` early and leave one interaction gate.
+6. Run a polish pass one screen at a time.
 
 ## Workflow
 
@@ -85,6 +88,11 @@ Use these references to keep the main skill lean:
   - `references/theme/token-groups.md`
   - `references/theme/editor-presets.md`
   - `references/mind-models/mm-theme-and-tokens.md`
+- Surface/layer selection:
+  - `docs/crate-usage-guide.md`
+  - `docs/shadcn-declarative-progress.md`
+- First-party shadcn exemplar + evidence workflow:
+  - `.agents/skills/fret-shadcn-source-alignment/references/ui-gallery-exemplar-and-evidence.md`
 - App recipes:
   - `references/recipes/INDEX.md`
   - `references/architecture/app-architecture-recipes.md`
@@ -115,6 +123,11 @@ Helpful commands:
 - Decide the shell first: sidebar, top bar, center viewport, inspector, bottom panel.
 - Keep one scroll root per pane.
 - Start from a proven recipe instead of inventing a surface from scratch.
+- For first-party shadcn pages, prefer snippet-backed UI Gallery exemplars:
+  - snippet file = canonical example source
+  - page file = documentation composition
+  - driver/diag glue = automation and geometry ownership
+- Do not mix app-facing `fret` examples with direct `fret_ui_shadcn` examples in the same teaching surface.
 
 Suggested starts:
 
@@ -127,6 +140,17 @@ Suggested starts:
 - Commands need stable ids and explicit `when` gating.
 - Add stable `test_id` to interactive affordances before the surface gets large.
 - Leave one diag script per non-trivial interaction state machine.
+- When layout ownership is fragile, add geometry assertions or `capture_layout_sidecar` before screenshot churn.
+
+### 3.5) Capture evidence before polishing tokens
+
+- Layout drift first:
+  - align `w_full`, `flex_1`, `min_w_0`, stretch/shrink ownership
+  - prove it with geometry assertions or `capture_layout_sidecar`
+- Visual drift next:
+  - use `capture_screenshot` for chrome, clipping, focus rings, and constrained viewport evidence
+- Interaction drift always:
+  - keep `capture_bundle` in the final scriptable path
 
 ### 4) Use engineering notes for the deep dives
 
@@ -239,11 +263,16 @@ Minimum deliverables (3-pack): Repro (smallest app surface), Gate (script/test),
 ## Evidence anchors
 
 - Shared conventions: `.agents/skills/fret-skills-playbook/SKILL.md`
+- Crate/layer selection: `docs/crate-usage-guide.md`
+- Shadcn authoring golden path: `docs/shadcn-declarative-progress.md`
 - Style generation: `.agents/skills/fret-app-ui-builder/scripts/stylegen.py`
 - Style catalog: `.agents/skills/fret-app-ui-builder/references/style_catalog.json`
 - Recipes + mind models: `.agents/skills/fret-app-ui-builder/references/`
 - Design direction mind model: `.agents/skills/fret-app-ui-builder/references/mind-models/mm-design-direction.md`
 - Widget state surface mind model: `.agents/skills/fret-app-ui-builder/references/mind-models/mm-widget-state-surfaces.md`
+- UI Gallery exemplar + evidence note: `.agents/skills/fret-shadcn-source-alignment/references/ui-gallery-exemplar-and-evidence.md`
+- UI Gallery authoring gates: `apps/fret-ui-gallery/src/lib.rs`
+- UI Gallery snippet exemplars: `apps/fret-ui-gallery/src/ui/snippets/`
 - Polish pass rules: `.agents/skills/fret-app-ui-builder/references/polish/polish-pass.md`
 - Engineering deep dives: `.agents/skills/fret-app-ui-builder/references/engineering-notes.md`
 - Polish pass: `.agents/skills/fret-app-ui-builder/references/polish/polish-pass.md`

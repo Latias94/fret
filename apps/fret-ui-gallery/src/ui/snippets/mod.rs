@@ -4,7 +4,8 @@
 //! - the compiled preview,
 //! - and the copyable code tab (via `include_str!`).
 //!
-//! Prefer user-facing imports in snippet files (typically `use fret_ui_shadcn::prelude::*;`).
+//! Prefer curated first-party imports in snippet files
+//! (`use fret_ui_shadcn::{facade as shadcn, prelude::*};`).
 
 pub mod accordion;
 #[cfg(feature = "gallery-ai")]

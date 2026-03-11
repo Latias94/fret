@@ -23,6 +23,7 @@ description: "Align shadcn/ui v4 + Radix behavior and composition to Fret. Use w
 - Which component + mismatch class (dismiss/focus/keyboard nav/placement/style)?
 - Which mechanism axis is likely involved (overlay dismissal/focus restore/hit-testing/transform/clipping/breakpoints)?
 - What is the upstream source of truth (Radix docs vs shadcn composition/source)?
+- Which authoring surface is drifting: `fret` app-facing snippets, direct `fret_ui_shadcn` usage, or internal recipe code?
 - Is this actually a public-surface drift (upstream prop-driven API vs Fret model-only authoring surface)?
 - Which layer should own the change (mechanism vs policy vs recipe)?
 - What regression protection is required: unit test, parity harness case, and/or diag script?
@@ -35,6 +36,7 @@ Defaults if unclear:
 
 - Treat interaction semantics as Radix truth.
 - Treat composition/sizing/tokens as shadcn truth.
+- Treat first-party UI Gallery snippets as the in-tree exemplar surface when the mismatch is about how Fret code should be authored or taught.
 - Treat default-style ownership as a first-class decision: keep recipe defaults only for intrinsic component chrome/slot spacing, and keep page/container negotiation (`w-full`, `min-w-0`, `max-w-*`, `flex-1`, centering) caller-owned unless upstream puts it in the component source itself.
 - Add at least one gate.
 - When DOM-focused assumptions are involved, consult Base UI as an additional headless reference.
@@ -68,10 +70,11 @@ Default-style ownership check before changing a recipe:
 ## Quick start
 
 1. Identify whether the mismatch is layout policy, mechanism, or public-surface parity before touching code.
-2. Compare against upstream docs/source (shadcn for composition + sizing; Radix for semantics).
-3. If app code is paying for per-row `Model<T>` or surrogate buttons just to keep the intended widget, run `references/public-surface-parity.md` before widening helpers.
-4. Land a gate: a small invariant test and/or a `tools/diag-scripts/*.json` scripted repro with stable `test_id`.
-5. Compare against a mature in-tree exemplar when available.
+2. Decide which Fret authoring surface is the target (`fret` facade vs direct `fret_ui_shadcn` vs recipe internals) before copying imports or helper patterns.
+3. Compare against upstream docs/source (shadcn for composition + sizing; Radix for semantics).
+4. If app code is paying for per-row `Model<T>` or surrogate buttons just to keep the intended widget, run `references/public-surface-parity.md` before widening helpers.
+5. Land a gate: a small invariant test and/or a `tools/diag-scripts/*.json` scripted repro with stable `test_id`.
+6. Compare against a mature in-tree exemplar when available.
 
 ## Workflow
 
@@ -82,6 +85,23 @@ Use these notes to keep the main skill lean:
 Before doing token tweaks or adding goldens, consult:
 
 - `.agents/skills/fret-shadcn-source-alignment/references/layout-parity-footguns.md`
+- `.agents/skills/fret-shadcn-source-alignment/references/ui-gallery-exemplar-and-evidence.md`
+
+### 0.25) Decide the Fret authoring surface before copying patterns
+
+Do not mix the repo's app-facing `fret` facade guidance with direct-crate `fret_ui_shadcn` guidance.
+Check the intended surface first:
+
+- App-facing samples and starter docs should align with the current `fret` facade guidance in `docs/crate-usage-guide.md`.
+- First-party direct-crate shadcn examples should prefer:
+  - `use fret_ui_shadcn::{facade as shadcn, prelude::*};`
+- Raw escape hatches should stay explicit:
+  - `shadcn::raw::*`
+- Canonical declarative shadcn migration status and authoring golden path live in:
+  - `docs/shadcn-declarative-progress.md`
+
+If the mismatch is “our example code teaches the wrong import/build pattern”, fix the exemplar surface
+first, then the component internals if they still block the intended authoring flow.
 
 ### 0.5) Audit public surface parity before inventing helpers
 
@@ -110,6 +130,7 @@ dismissal/focus, hit-testing, breakpoints), not styling. Before adding/adjusting
 - `crates/fret-ui`: mechanisms/contracts
 - `ecosystem/fret-ui-kit`: headless policy + reusable infra
 - `ecosystem/fret-ui-shadcn`: shadcn v4 taxonomy + recipes
+- `apps/fret-ui-gallery`: first-party exemplar + diagnostics-friendly teaching surface
 
 If the mismatch is interaction policy (dismiss rules, focus restore, hover intent, menu navigation), it almost never belongs in `crates/fret-ui`.
 
@@ -132,11 +153,30 @@ See `references/reference-stack-and-renderer-notes.md` for the detailed mapping 
 - Choose viewport vs container as the single source of truth for each responsive decision.
 - Verify semantics and input-modality outcomes before chasing pixel polish.
 
+### 3.5) Capture evidence before tweaking recipes/tokens
+
+When a shadcn page or gallery sample looks wrong, follow this order:
+
+1. Check the UI Gallery exemplar first:
+   - snippet file = compiled preview + copyable code tab
+   - page/driver glue should stay thin and avoid re-teaching alternative imports
+2. Lock or add stable `test_id` hooks before writing automation.
+3. Use deterministic geometry/layout evidence before screenshot churn:
+   - in-tree geometry assertions (`apps/fret-ui-gallery/src/driver/render_flow.rs`)
+   - `capture_layout_sidecar` when the dispute is layout-tree ownership or slot sizing
+4. Add `capture_screenshot` when visual chrome or clipping needs proof.
+5. Add `capture_bundle` for the interaction/state-machine record that survives refactors.
+
+Do not jump straight to token edits when the real drift is missing caller-owned width, flex, or
+overflow constraints.
+
 ### 4) Lock the change with the smallest gate
 
 - unit tests for deterministic logic/invariants
 - geometry/chrome assertions for layout/style outcomes
 - `tools/diag-scripts/*.json` for interaction state machines and resize/dismiss flows
+- `capture_layout_sidecar` when you need to prove layout-tree structure or size negotiation
+- `capture_screenshot` when human-reviewable visual evidence is part of parity
 - semantics/a11y assertions when accessibility is involved
 
 See `references/a11y-responsive-and-gates.md` for detailed gate guidance and high-value target areas.
@@ -164,11 +204,13 @@ Prefer bounded, fast gates:
 
 - Layers and contracts: `docs/architecture.md`, `docs/runtime-contract-matrix.md`
 - Reference stack (APG/Radix/Floating/cmdk): `docs/reference-stack-ui-behavior.md`
+- Crate/layer usage map: `docs/crate-usage-guide.md`
 - Shadcn parity tracker (canonical; treat older audits as historical): `docs/shadcn-declarative-progress.md`
 - Mechanism checklist (this skill): `.agents/skills/fret-shadcn-source-alignment/references/mechanism-parity-checklist.md`
 - Style checklist (this skill): `.agents/skills/fret-shadcn-source-alignment/references/style-parity-checklist.md`
 - Layout footguns checklist (this skill): `.agents/skills/fret-shadcn-source-alignment/references/layout-parity-footguns.md`
 - Public-surface parity checklist (this skill): `.agents/skills/fret-shadcn-source-alignment/references/public-surface-parity.md`
+- UI Gallery exemplar + evidence note (this skill): `.agents/skills/fret-shadcn-source-alignment/references/ui-gallery-exemplar-and-evidence.md`
 - Action hooks (component-owned policy): `docs/action-hooks.md`
 - Overlay ADRs:
   - `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
@@ -180,6 +222,11 @@ Prefer bounded, fast gates:
 - A11y acceptance checklist: `docs/a11y-acceptance-checklist.md`
 - Local shadcn component implementations: `ecosystem/fret-ui-shadcn/src/`
 - Policy primitives (roving/typeahead/overlays): `ecosystem/fret-ui-kit/src/primitives/`
+- UI Gallery authoring policy tests: `apps/fret-ui-gallery/src/lib.rs`
+- UI Gallery snippet exemplars: `apps/fret-ui-gallery/src/ui/snippets/`
+- UI Gallery geometry/test-id helpers: `apps/fret-ui-gallery/src/driver/render_flow.rs`
+- Diag script corpus: `tools/diag-scripts/ui-gallery/`
+- Layout sidecar writer: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps.rs`
 - Responsive helpers:
   - `ecosystem/fret-ui-kit/src/declarative/container_queries.rs`
   - `ecosystem/fret-ui-kit/src/declarative/viewport_queries.rs`

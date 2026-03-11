@@ -5,11 +5,12 @@ Goal: a dense, editor-friendly data table surface (fixed header + virtualized bo
 ## References
 
 - shadcn docs: https://ui.shadcn.com/docs/components/data-table
-- Gallery docs snippet: `apps/fret-ui-gallery/src/docs.rs` (DataTable usage)
+- UI Gallery page: `apps/fret-ui-gallery/src/ui/pages/data_table.rs`
+- UI Gallery snippets: `apps/fret-ui-gallery/src/ui/snippets/data_table/`
 - Demo app: `apps/fret-examples/src/datatable_demo.rs`
 - Diag scripts:
-  - `tools/diag-scripts/ui-gallery-data-table-smoke.json`
-  - `tools/diag-scripts/ui-gallery-data-table-torture-scroll-refresh.json`
+  - `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-smoke.json`
+  - `tools/diag-scripts/ui-gallery/perf/ui-gallery-data-table-torture-scroll-refresh.json`
 
 ## Building blocks
 

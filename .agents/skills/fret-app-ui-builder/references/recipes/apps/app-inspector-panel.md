@@ -4,8 +4,9 @@ Goal: a dense, long-scrolling inspector surface (like Unity/Unreal/Godot) with s
 
 ## References
 
-- UI Gallery torture page docs: `apps/fret-ui-gallery/src/docs.rs` (Inspector torture)
-- UI Gallery implementation: `apps/fret-ui-gallery/src/ui.rs` (`preview_inspector_torture`)
+- UI Gallery route registry: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_INSPECTOR_TORTURE`)
+- UI Gallery preview entry: `apps/fret-ui-gallery/src/ui/content.rs` (`PAGE_INSPECTOR_TORTURE => preview_inspector_torture`)
+- UI Gallery implementation: `apps/fret-ui-gallery/src/ui/previews/gallery/torture/inspector_torture.rs`
 - Inspector protocol scaffolding (app side): `apps/fret-editor/src/inspector_protocol.rs`
 
 ## Building blocks

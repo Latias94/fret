@@ -14,7 +14,9 @@ Goal: a right-click menu (contextmenu-triggered) that matches Radix expectations
 - Component surface: `fret-ui-shadcn::ContextMenu` + `ContextMenuEntry` variants.
 - Model:
   - `Model<bool>` for open/closed
-- Example usage: `apps/fret-ui-gallery/src/docs.rs` (Menus)
+- Example usage:
+  - `apps/fret-ui-gallery/src/ui/pages/context_menu.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/context_menu/usage.rs`
 
 ## Checklist
 
@@ -25,7 +27,7 @@ Goal: a right-click menu (contextmenu-triggered) that matches Radix expectations
 
 ## Regression gates
 
-- `tools/diag-scripts/ui-gallery-contextmenu-edge-bounds.json` (screenshot-backed edge clamp)
+- `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-contextmenu-edge-bounds.json` (screenshot-backed edge clamp)
 
 ## See also
 

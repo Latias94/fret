@@ -27,11 +27,12 @@ guideline-based skills (e.g. Vercel’s web interface checks), but tailored to F
 - What files or directories should be reviewed (`src/`, a specific module, or one component)?
 - Target surface: settings/forms, workspace shell, data table, overlay-heavy flows?
 - Platform(s): native/web; keyboard-first expectations?
+- Is the review about user-facing behavior only, or also about whether the code teaches the intended Fret authoring surface?
 - What is the acceptance criterion: “looks cohesive”, “no focus bugs”, “parity with Radix”, “no perf hitches”?
 
 Defaults if unclear:
 
-- Review the smallest surface that shows the issue and prioritize: tokens + focus-visible + overlays + gating + `test_id`.
+- Review the smallest surface that shows the issue and prioritize: authoring-surface drift + tokens + focus-visible + overlays + gating + `test_id`.
 
 ## Smallest starting point (one command)
 
@@ -41,13 +42,14 @@ Defaults if unclear:
 
 Audit in this priority order:
 
-1. **Theme/tokens**: token-driven spacing/radius/colors (avoid per-component magic numbers).
-2. **Focus-visible**: focus ring visible, not clipped; keyboard-first paths work.
-3. **Overlays**: dismiss + focus restore rules are in policy layers (`ecosystem/`), not runtime.
-4. **Commands/keymaps**: stable `CommandId` + explicit `when` gating (avoid firing in text inputs/IME).
-5. **Automation stability**: stable `test_id` targets for interactive affordances.
-6. **Regression gates**: at least one script/test for the most fragile interaction.
-7. **Polish pass** (style-agnostic): apply `rule_id` checklist from:
+1. **Authoring surface**: examples/snippets teach the intended facade/import/build pattern.
+2. **Theme/tokens**: token-driven spacing/radius/colors (avoid per-component magic numbers).
+3. **Focus-visible**: focus ring visible, not clipped; keyboard-first paths work.
+4. **Overlays**: dismiss + focus restore rules are in policy layers (`ecosystem/`), not runtime.
+5. **Commands/keymaps**: stable `CommandId` + explicit `when` gating (avoid firing in text inputs/IME).
+6. **Automation stability**: stable `test_id` targets for interactive affordances.
+7. **Regression gates**: at least one script/test for the most fragile interaction.
+8. **Polish pass** (style-agnostic): apply `rule_id` checklist from:
    - `.agents/skills/fret-app-ui-builder/references/polish/polish-pass.md`
 
 ## Output format (recommended)
@@ -59,6 +61,17 @@ Keep findings terse and reviewable (Vercel-style):
 ## Workflow
 
 1) Identify the review scope (files/patterns) and the smallest runnable target.
+
+1.5) If this is a first-party surface, compare the right UI Gallery layers before reviewing styling:
+
+- snippet file = canonical example source
+- page file = docs composition around the snippet
+- driver/render flow = geometry/test-id/diagnostics ownership
+
+Also verify the intended surface against:
+
+- `docs/crate-usage-guide.md`
+- `docs/shadcn-declarative-progress.md`
 
 2) Check layering alignment first:
 
@@ -88,6 +101,8 @@ Keep findings terse and reviewable (Vercel-style):
 
 - For state machines: a `tools/diag-scripts/*.json` script (schema v2 preferred) + `capture_bundle`.
 - For deterministic logic: unit/integration tests.
+- For layout ownership/size negotiation: geometry assertions or `capture_layout_sidecar`.
+- For visual chrome/clipping/focus rings: `capture_screenshot` when a screenshot carries more signal than a prose note.
 - For perf-sensitive changes: a small perf probe/baseline.
 
 ## Definition of done (what to leave behind)
@@ -101,10 +116,16 @@ Minimum deliverables (3-pack): Repro (smallest surface), Gate (script/test/perf)
 ## Evidence anchors
 
 - Shared conventions: `.agents/skills/fret-skills-playbook/SKILL.md`
+- Crate/layer selection: `docs/crate-usage-guide.md`
+- Shadcn authoring golden path: `docs/shadcn-declarative-progress.md`
 - Build playbook (tokens + recipes): `.agents/skills/fret-app-ui-builder/SKILL.md`, `.agents/skills/fret-app-ui-builder/references/`
 - Polish pass rules: `.agents/skills/fret-app-ui-builder/references/polish/polish-pass.md`
 - Contracts/ADRs: `docs/architecture.md`, `docs/runtime-contract-matrix.md`, `docs/adr/`
 - Diag gates: `.agents/skills/fret-diag-workflow/SKILL.md`
+- UI Gallery exemplar + evidence note: `.agents/skills/fret-shadcn-source-alignment/references/ui-gallery-exemplar-and-evidence.md`
+- UI Gallery authoring gates: `apps/fret-ui-gallery/src/lib.rs`
+- UI Gallery snippet exemplars: `apps/fret-ui-gallery/src/ui/snippets/`
+- UI Gallery geometry/test-id helpers: `apps/fret-ui-gallery/src/driver/render_flow.rs`
 
 ## Examples
 
@@ -120,6 +141,7 @@ Minimum deliverables (3-pack): Repro (smallest surface), Gate (script/test/perf)
 
 ## Common pitfalls
 
+- Reviewing page glue while ignoring the snippet file that actually teaches the public example surface.
 - Over-polishing visuals without fixing focus/keyboard paths.
 - Fixing policy mismatches by adding runtime knobs.
 - Missing `when` gating, causing shortcuts to fire inside text inputs / IME.
