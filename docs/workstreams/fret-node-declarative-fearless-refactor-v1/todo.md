@@ -1603,6 +1603,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     application through the private `ui/canvas/widget/group_draw_order/selection.rs` and
     `ui/canvas/widget/group_draw_order/apply.rs` seams, so `group_draw_order.rs` now mainly keeps
     the group draw-order orchestration explicit.
+  - Progress: cursor resolution now also routes resize-handle hit resolution and edge-anchor target
+    selection through the private `ui/canvas/widget/cursor_resolve/resize.rs` and
+    `ui/canvas/widget/cursor_resolve/edge.rs` seams, so `cursor_resolve.rs` now mainly keeps the
+    cursor-resolution façades explicit.
 
 ## M5 - Compatibility retained convergence
 

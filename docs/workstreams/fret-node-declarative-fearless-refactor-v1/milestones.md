@@ -1142,6 +1142,10 @@ real editors.
   through the private `ui/canvas/widget/group_draw_order/selection.rs` and
   `ui/canvas/widget/group_draw_order/apply.rs` seams, so `group_draw_order.rs` now mainly keeps
   the group draw-order orchestration explicit.
+- cursor resolution now also routes resize-handle hit resolution and edge-anchor target selection
+  through the private `ui/canvas/widget/cursor_resolve/resize.rs` and
+  `ui/canvas/widget/cursor_resolve/edge.rs` seams, so `cursor_resolve.rs` now mainly keeps the
+  cursor-resolution façades explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
