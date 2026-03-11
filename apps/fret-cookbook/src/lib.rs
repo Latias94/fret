@@ -221,6 +221,8 @@ mod authoring_surface_policy_tests {
         assert!(ASYNC_INBOX_EXAMPLE.contains("on_action_notify::<act::Start>"));
 
         assert!(QUERY_EXAMPLE.contains("cx.data().query("));
+        assert!(!QUERY_EXAMPLE.contains("cx.use_query("));
+        assert!(!QUERY_EXAMPLE.contains("fret_query::ui::QueryElementContextExt"));
         assert!(QUERY_EXAMPLE.contains("toggle_local_bool::<act::ToggleErrorMode>"));
 
         assert!(ROUTER_EXAMPLE.contains("use fret::router::{"));

@@ -125,16 +125,16 @@ Companion docs:
   - [x] Move the cookbook docking example to the `fret::docking::*` seam.
   - [x] Move app-facing `fret-examples` docking demos (`docking_demo`, `container_queries_docking_demo`) to the `fret::docking::*` seam.
   - [x] Audit remaining advanced/component call sites and keep direct `fret-docking` imports explicit.
-- [ ] Migrate `fret-selector` to the grouped app data surface.
+- [x] Migrate `fret-selector` to the grouped app data surface.
   - [x] Re-export `DepsBuilder` / `DepsSignature` from `fret::app::prelude::*`.
   - [x] Move default docs/templates/examples to `cx.data().selector(...)`.
-  - [ ] Audit remaining advanced/component call sites and keep them explicit.
-- [ ] Migrate `fret-query` to the grouped app data surface.
+  - [x] Audit remaining advanced/component call sites and keep them explicit.
+- [x] Migrate `fret-query` to the grouped app data surface.
   - [x] Move default docs/examples to `cx.data().query(...)` / `cx.data().query_async(...)`.
   - [x] Add the grouped `data()` namespace to extracted `UiCx` helpers so helper-heavy examples no
     longer fall back to raw `use_query*`.
   - [x] Add source/doc gates that forbid default teaching text from drifting back to flat query hooks.
-  - [ ] Audit remaining advanced/component call sites and keep them explicit.
+  - [x] Audit remaining advanced/component call sites and keep them explicit.
 - [x] Migrate `fret-router` to the new explicit app/advanced extension seams.
   - [x] Add an explicit `fret::router` facade module behind a `fret/router` feature.
   - [x] Move the cookbook router example to the `fret::router::*` extension seam.
@@ -211,6 +211,9 @@ Companion docs:
   - [x] `fret-router-ui` now gates its thin adoption-layer posture and forbids growing a second
     app runtime surface.
   - [x] Docking cookbook/docs now gate the `fret::docking::*` seam.
+  - [x] Selector/query docs, templates, and helper-heavy examples now gate grouped
+    `cx.data().selector/query*` teaching while keeping raw hook entry explicit to advanced or
+    component surfaces.
 - [ ] Keep layering checks green.
 
 ## Exit Criteria
