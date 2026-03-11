@@ -16,7 +16,8 @@ use crate::controls::numeric_input::{
 use crate::primitives::EditorTokenKeys;
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
-    editor_input_group_divider, editor_input_group_frame, editor_input_group_segment,
+    derived_test_id, editor_input_group_divider, editor_input_group_frame,
+    editor_input_group_segment,
 };
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::EditorFrameState;
@@ -372,6 +373,8 @@ where
         let allow_typing = self.options.allow_typing;
         let prefix = self.options.prefix.clone();
         let suffix = self.options.suffix.clone();
+        let typing_test_id = derived_test_id(self.options.test_id.as_ref(), "typing");
+        let value_display_test_id = derived_test_id(self.options.test_id.as_ref(), "value_display");
 
         let interactive_enabled = enabled && !typing;
 
@@ -687,7 +690,7 @@ where
                         );
 
                         let value_el = if show_value {
-                            let value_text_el = cx.text_props(TextProps {
+                            let mut value_text_el = cx.text_props(TextProps {
                                 layout: LayoutStyle {
                                     size: SizeStyle {
                                         width: Length::Fill,
@@ -708,6 +711,11 @@ where
                                 align: TextAlign::End,
                                 ink_overflow: Default::default(),
                             });
+                            if let Some(test_id) = value_display_test_id.as_ref() {
+                                value_text_el = value_text_el
+                                    .test_id(test_id.clone())
+                                    .a11y_label(value_display_text.clone());
+                            }
 
                             let value_seg = editor_input_group_segment(
                                 cx,
@@ -825,7 +833,7 @@ where
                 focusable: enabled && typing,
                 prefix: self.options.prefix.clone(),
                 suffix: self.options.suffix.clone(),
-                test_id: self.options.test_id.clone(),
+                test_id: typing_test_id,
                 // Avoid growing the row height when a commit-time validation error occurs.
                 // A small trailing status icon keeps the inspector layout stable.
                 error_display: NumericInputErrorDisplay::TrailingIcon,

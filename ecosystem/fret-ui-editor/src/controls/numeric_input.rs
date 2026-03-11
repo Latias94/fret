@@ -25,7 +25,7 @@ use fret_ui_kit::{ChromeRefinement, Size};
 use crate::primitives::EditorTokenKeys;
 use crate::primitives::chrome::{joined_text_input_style, resolve_editor_text_field_style};
 use crate::primitives::input_group::{
-    EditorInputGroupFrameOverrides, editor_icon_segment,
+    EditorInputGroupFrameOverrides, derived_test_id, editor_icon_segment,
     editor_joined_input_frame_segments_with_overrides, editor_text_segment,
 };
 use crate::primitives::style::EditorStyle;
@@ -202,10 +202,10 @@ where
         let error_display = options.error_display;
         let prefix = options.prefix.clone();
         let suffix = options.suffix.clone();
-        let error_icon_test_id = options
-            .test_id
-            .as_ref()
-            .map(|id| Arc::<str>::from(format!("{}.error", id.as_ref())));
+        let input_test_id = derived_test_id(options.test_id.as_ref(), "input");
+        let prefix_test_id = derived_test_id(options.test_id.as_ref(), "prefix");
+        let suffix_test_id = derived_test_id(options.test_id.as_ref(), "suffix");
+        let error_icon_test_id = derived_test_id(options.test_id.as_ref(), "error");
 
         let frame_bg = frame_chrome.bg;
         let field = editor_joined_input_frame_segments_with_overrides(
@@ -266,14 +266,18 @@ where
                 let mut segments = Vec::new();
 
                 if let Some(prefix) = prefix.clone() {
-                    segments.push(editor_text_segment(
+                    let mut segment = editor_text_segment(
                         cx,
                         density,
                         frame_chrome.text_px,
-                        prefix,
+                        prefix.clone(),
                         affix_color,
                         frame_chrome.padding,
-                    ));
+                    );
+                    if let Some(test_id) = prefix_test_id.as_ref() {
+                        segment = segment.test_id(test_id.clone()).a11y_label(prefix);
+                    }
+                    segments.push(segment);
                 }
                 segments
             },
@@ -291,7 +295,7 @@ where
                 props.enabled = enabled_for_paint;
                 props.focusable = focusable;
                 props.placeholder = placeholder.clone();
-                props.test_id = None;
+                props.test_id = input_test_id.clone();
                 props.chrome = joined_text_input_style(chrome);
                 props.text_style = text_style_for_field.clone();
 
@@ -409,14 +413,18 @@ where
                 };
 
                 if let Some(suffix) = suffix.clone() {
-                    segments.push(editor_text_segment(
+                    let mut segment = editor_text_segment(
                         cx,
                         density,
                         frame_chrome.text_px,
-                        suffix,
+                        suffix.clone(),
                         affix_color,
                         frame_chrome.padding,
-                    ));
+                    );
+                    if let Some(test_id) = suffix_test_id.as_ref() {
+                        segment = segment.test_id(test_id.clone()).a11y_label(suffix);
+                    }
+                    segments.push(segment);
                 }
 
                 let show_icon = matches!(

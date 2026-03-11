@@ -1385,6 +1385,8 @@ fn render_authoring_parity_declarative_group(
                                     id_source: Some(Arc::from(
                                         "authoring-parity.declarative.drag-value",
                                     )),
+                                    prefix: Some(Arc::from("$")),
+                                    suffix: Some(Arc::from("ms")),
                                     test_id: Some(Arc::from(
                                         "imui-editor-proof.authoring.declarative.value",
                                     )),
@@ -1407,6 +1409,7 @@ fn render_authoring_parity_declarative_group(
                                     id_source: Some(Arc::from(
                                         "authoring-parity.declarative.slider",
                                     )),
+                                    suffix: Some(Arc::from("%")),
                                     test_id: Some(Arc::from(
                                         "imui-editor-proof.authoring.declarative.blend",
                                     )),
@@ -1534,6 +1537,8 @@ fn render_authoring_parity_imui_group(
                                             id_source: Some(Arc::from(
                                                 "authoring-parity.imui.drag-value",
                                             )),
+                                            prefix: Some(Arc::from("$")),
+                                            suffix: Some(Arc::from("ms")),
                                             test_id: Some(Arc::from(
                                                 "imui-editor-proof.authoring.imui.value",
                                             )),
@@ -1561,6 +1566,7 @@ fn render_authoring_parity_imui_group(
                                             id_source: Some(Arc::from(
                                                 "authoring-parity.imui.slider",
                                             )),
+                                            suffix: Some(Arc::from("%")),
                                             test_id: Some(Arc::from(
                                                 "imui-editor-proof.authoring.imui.blend",
                                             )),

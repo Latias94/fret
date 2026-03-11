@@ -372,6 +372,10 @@ pub(crate) fn editor_text_segment<H: UiHost>(
     )
 }
 
+pub(crate) fn derived_test_id(base: Option<&Arc<str>>, suffix: &str) -> Option<Arc<str>> {
+    base.map(|id| Arc::<str>::from(format!("{}.{}", id.as_ref(), suffix)))
+}
+
 #[derive(Debug, Default)]
 struct JoinedInputPointerState {
     pressed: bool,

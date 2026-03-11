@@ -14,7 +14,7 @@ use crate::controls::numeric_input::{
 };
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
-    editor_input_group_divider, editor_input_group_inset, editor_input_group_row,
+    derived_test_id, editor_input_group_divider, editor_input_group_inset, editor_input_group_row,
     editor_text_segment,
 };
 use crate::primitives::style::EditorStyle;
@@ -159,6 +159,11 @@ where
         let typing = mode == DragValueMode::Typing;
         let prefix = self.options.prefix.clone();
         let suffix = self.options.suffix.clone();
+        let scrub_test_id = self.options.test_id.clone();
+        let typing_test_id = derived_test_id(self.options.test_id.as_ref(), "typing");
+        let prefix_test_id = derived_test_id(scrub_test_id.as_ref(), "prefix");
+        let suffix_test_id = derived_test_id(scrub_test_id.as_ref(), "suffix");
+        let value_test_id = derived_test_id(scrub_test_id.as_ref(), "value");
 
         let (density, scrub_chrome) = {
             let theme = Theme::global(&*cx.app);
@@ -225,7 +230,7 @@ where
                     },
                 );
 
-                vec![cx.container(
+                let mut scrub_frame = cx.container(
                     ContainerProps {
                         layout: LayoutStyle {
                             size: SizeStyle {
@@ -271,35 +276,52 @@ where
                             align: TextAlign::Start,
                             ink_overflow: Default::default(),
                         });
-                        let value =
+                        let mut value =
                             editor_input_group_inset(cx, scrub_chrome.padding, value_text_el);
+                        if let Some(test_id) = value_test_id.as_ref() {
+                            value = value
+                                .test_id(test_id.clone())
+                                .a11y_label(value_text.clone());
+                        }
                         let mut segments = Vec::new();
                         if let Some(prefix) = prefix.clone() {
-                            segments.push(editor_text_segment(
+                            let mut segment = editor_text_segment(
                                 cx,
                                 density,
                                 scrub_chrome.text_px,
-                                prefix,
+                                prefix.clone(),
                                 affix_color,
                                 scrub_chrome.padding,
-                            ));
+                            );
+                            if let Some(test_id) = prefix_test_id.as_ref() {
+                                segment = segment.test_id(test_id.clone()).a11y_label(prefix);
+                            }
+                            segments.push(segment);
                             segments.push(editor_input_group_divider(cx, divider));
                         }
                         segments.push(value);
                         if let Some(suffix) = suffix.clone() {
                             segments.push(editor_input_group_divider(cx, divider));
-                            segments.push(editor_text_segment(
+                            let mut segment = editor_text_segment(
                                 cx,
                                 density,
                                 scrub_chrome.text_px,
-                                suffix,
+                                suffix.clone(),
                                 affix_color,
                                 scrub_chrome.padding,
-                            ));
+                            );
+                            if let Some(test_id) = suffix_test_id.as_ref() {
+                                segment = segment.test_id(test_id.clone()).a11y_label(suffix);
+                            }
+                            segments.push(segment);
                         }
                         vec![editor_input_group_row(cx, Px(0.0), segments)]
                     },
-                )]
+                );
+                if let Some(test_id) = scrub_test_id.as_ref() {
+                    scrub_frame = scrub_frame.test_id(test_id.clone());
+                }
+                vec![scrub_frame]
             });
 
         let mut input_layout = self.options.layout;
@@ -316,7 +338,7 @@ where
                 focusable: typing,
                 prefix: self.options.prefix.clone(),
                 suffix: self.options.suffix.clone(),
-                test_id: self.options.test_id.clone(),
+                test_id: typing_test_id,
                 // Avoid growing the row height when a commit-time validation error occurs.
                 // A small trailing status icon keeps the inspector layout stable.
                 error_display: NumericInputErrorDisplay::TrailingIcon,

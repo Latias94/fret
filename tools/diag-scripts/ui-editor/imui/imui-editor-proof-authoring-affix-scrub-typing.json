@@ -1,0 +1,153 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "imui-editor-proof-authoring-affix-scrub-typing",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui_editor", "imui", "affix", "drag_value", "slider", "regression"],
+    "target_hints": [
+      "Uses the authoring parity section in imui_editor_proof_demo.",
+      "Proves affixes stay visible in scrub mode and survive typing-mode commits."
+    ]
+  },
+  "window": "lowest_id",
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.declarative.value" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.declarative.value.prefix" },
+        "text": "$"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.declarative.value.suffix" },
+        "text": "ms"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.imui.value.prefix" },
+        "text": "$"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.imui.value.suffix" },
+        "text": "ms"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.declarative.blend.value_display" },
+        "text": "%"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.imui.blend.value_display" },
+        "text": "%"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.declarative.value" },
+      "click_count": 2
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.declarative.value.typing.input" }
+    },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.declarative.value.typing.input" },
+      "text": "2.500"
+    },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.shared.value" },
+        "text": "shared value: 2.500"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.declarative.value.value" },
+        "text": "2.500"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.imui.blend" },
+      "click_count": 2
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.imui.blend.typing.input" }
+    },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.imui.blend.typing.input" },
+      "text": "75"
+    },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.shared.blend" },
+        "text": "shared blend: 75%"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.imui.blend.value_display" },
+        "text": "75%"
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "imui-editor-proof-authoring-affix-scrub-typing" }
+  ]
+}
