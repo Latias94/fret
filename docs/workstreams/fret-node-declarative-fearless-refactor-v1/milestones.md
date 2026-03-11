@@ -978,6 +978,13 @@ real editors.
   `ui/canvas/widget/menu_session/searcher.rs` seams, so `menu_session.rs` now mainly keeps the
   shared session-builder surface explicit while context-menu and searcher state assembly stop
   sharing one root helper body.
+- insert-candidate helpers now also route reroute candidate synthesis, menu-item mapping, and
+  presenter-backed candidate list loading through the private
+  `ui/canvas/widget/insert_candidates/reroute.rs`,
+  `ui/canvas/widget/insert_candidates/menu.rs`, and
+  `ui/canvas/widget/insert_candidates/list.rs` seams, so `insert_candidates.rs` now mainly keeps
+  the façade surface explicit while candidate synthesis and list loading stop sharing the same root
+  helper body.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

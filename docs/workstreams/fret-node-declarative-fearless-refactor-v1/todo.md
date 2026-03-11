@@ -1436,6 +1436,13 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/menu_session/searcher.rs` seams, so `menu_session.rs` now mainly keeps the
     shared session-builder surface explicit while context-menu and searcher state assembly stop
     sharing one root helper body.
+  - Progress: insert-candidate helpers now also route reroute candidate synthesis, menu-item
+    mapping, and presenter-backed candidate list loading through the private
+    `ui/canvas/widget/insert_candidates/reroute.rs`,
+    `ui/canvas/widget/insert_candidates/menu.rs`, and
+    `ui/canvas/widget/insert_candidates/list.rs` seams, so `insert_candidates.rs` now mainly
+    keeps the façade surface explicit while candidate synthesis and list loading stop sharing the
+    same root helper body.
 
 ## M5 - Compatibility retained convergence
 
