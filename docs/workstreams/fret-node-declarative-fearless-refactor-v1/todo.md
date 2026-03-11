@@ -1358,6 +1358,24 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/searcher_activation_hit/candidate.rs` seams, so
     `searcher_activation_hit.rs` now mainly keeps the re-export surface explicit while candidate-row
     mapping retains focused unit coverage.
+  - Progress: searcher activation state helpers now also route clear/dismiss, row-arm, and
+    release/activation tails through the private `ui/canvas/widget/searcher_activation_state/clear.rs`,
+    `ui/canvas/widget/searcher_activation_state/arm.rs`, and
+    `ui/canvas/widget/searcher_activation_state/release.rs` seams, so
+    `searcher_activation_state.rs` now mainly keeps the re-export surface explicit while searcher
+    overlay clearing retains focused unit coverage.
+  - Progress: searcher wheel helpers now also route scroll-delta application through the private
+    `ui/canvas/widget/searcher_pointer_wheel/delta.rs` seam, so
+    `searcher_pointer_wheel.rs` now mainly keeps canvas-level wheel routing explicit while scroll
+    clamping behavior retains focused unit coverage.
+  - Progress: searcher hover helpers now also route hovered-row state sync through the private
+    `ui/canvas/widget/searcher_pointer_hover/state.rs` seam, so
+    `searcher_pointer_hover.rs` now mainly keeps pointer-position to hovered-row orchestration
+    explicit while hovered-row promotion behavior retains focused unit coverage.
+  - Progress: searcher navigation helpers now also route active-row step planning through the
+    private `ui/canvas/widget/searcher_input_nav/step.rs` seam, so
+    `searcher_input_nav.rs` now mainly keeps canvas-level active-row update orchestration explicit
+    while selectable-row step planning retains focused unit coverage.
 
 ## M5 - Compatibility retained convergence
 
