@@ -1393,6 +1393,12 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/callbacks_graph/delete.rs` seams, so `callbacks_connect.rs` and
     `callbacks_graph.rs` now mainly keep lifecycle orchestration explicit while callback payload
     mapping stops accumulating inline in the root helpers.
+  - Progress: auto-measure cache-key, per-node collect, and measured-size apply tails now also
+    route through the private `ui/canvas/widget/auto_measure/key.rs`,
+    `ui/canvas/widget/auto_measure_collect/input.rs`, and
+    `ui/canvas/widget/auto_measure_apply/apply.rs` seams, so the `auto_measure*` roots now mainly
+    keep cache invalidation and pipeline orchestration explicit while the collect/apply tails stop
+    sharing root helper bodies.
 
 ## M5 - Compatibility retained convergence
 

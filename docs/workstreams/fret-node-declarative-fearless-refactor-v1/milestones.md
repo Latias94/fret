@@ -936,6 +936,12 @@ real editors.
   `ui/canvas/widget/callbacks_graph/delete.rs` seams, so `callbacks_connect.rs` and
   `callbacks_graph.rs` now mainly keep lifecycle orchestration explicit while callback payload
   mapping stops accumulating inline in the root helpers.
+- auto-measure cache-key, per-node collect, and measured-size apply tails now also route through
+  the private `ui/canvas/widget/auto_measure/key.rs`,
+  `ui/canvas/widget/auto_measure_collect/input.rs`, and
+  `ui/canvas/widget/auto_measure_apply/apply.rs` seams, so the `auto_measure*` roots now mainly
+  keep cache invalidation and pipeline orchestration explicit while the collect/apply tails stop
+  sharing root helper bodies.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
