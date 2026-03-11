@@ -7,7 +7,7 @@ use fret_core::{
     AttributedText, DecorationLineStyle, TextOverflow, TextPaintStyle, TextSpan, TextWrap,
     UnderlineStyle,
 };
-use fret_runtime::Model;
+use fret_runtime::{Effect, Model};
 use fret_ui::action::ActivateReason;
 use fret_ui::element::{SelectableTextInteractiveSpan, SelectableTextProps};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -17,14 +17,39 @@ struct DemoModels {
     last_link: Option<Model<Option<Arc<str>>>>,
 }
 
+fn is_diag_mode() -> bool {
+    std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
+        || std::env::var_os("FRET_DIAG_DIR").is_some_and(|v| !v.is_empty())
+}
+
+fn is_safe_open_url(url: &str) -> bool {
+    let url = url.trim();
+    if url.is_empty() {
+        return false;
+    }
+
+    let lower = url.to_ascii_lowercase();
+    if lower.starts_with("javascript:")
+        || lower.starts_with("data:")
+        || lower.starts_with("file:")
+        || lower.starts_with("vbscript:")
+    {
+        return false;
+    }
+
+    lower.starts_with("http://") || lower.starts_with("https://") || lower.starts_with("mailto:")
+}
+
 fn interactive_link<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     last_link: Model<Option<Arc<str>>>,
     label: &'static str,
     tag: &'static str,
+    href: &'static str,
     test_id: &'static str,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
+    let diag_mode = is_diag_mode();
     let mut span = TextSpan::new(label.len());
     span.paint = TextPaintStyle::default().with_underline(UnderlineStyle {
         color: None,
@@ -33,13 +58,22 @@ fn interactive_link<H: UiHost + 'static>(
 
     let rich = AttributedText::new(Arc::<str>::from(label), Arc::<[TextSpan]>::from([span]));
     let tag_arc: Arc<str> = Arc::from(tag);
+    let href_arc: Arc<str> = Arc::from(href);
 
     cx.selectable_text_with_id_props(move |cx, id| {
         let last_link_for_activate = last_link.clone();
+        let href_for_activate = href_arc.clone();
         cx.selectable_text_on_activate_span_for(
             id,
             Arc::new(
                 move |host, action_cx, _reason: ActivateReason, activation| {
+                    if !diag_mode && is_safe_open_url(&href_for_activate) {
+                        host.push_effect(Effect::OpenUrl {
+                            url: href_for_activate.to_string(),
+                            target: None,
+                            rel: None,
+                        });
+                    }
                     let _ = host.models_mut().update(&last_link_for_activate, |value| {
                         *value = Some(activation.tag.clone())
                     });
@@ -107,6 +141,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                         last_link.clone(),
                         "Open billing information",
                         "billing-information",
+                        "https://example.com/billing-information",
                         "ui-gallery-alert-link-billing",
                     ),
                     interactive_link(
@@ -114,6 +149,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                         last_link.clone(),
                         "Open support article",
                         "support-article",
+                        "https://example.com/support-article",
                         "ui-gallery-alert-link-support",
                     ),
                 ])

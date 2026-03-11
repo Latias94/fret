@@ -20,21 +20,13 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 );
                 out.push_ui(
                     cx,
-                    shadcn::AlertDescription::new(
-                        "Use the action to reverse the classification without leaving the list view.",
-                    )
-                    .ui()
-                    .test_id("ui-gallery-alert-action-description"),
-                );
-                out.push_ui(
-                    cx,
                     shadcn::AlertAction::build(|cx, out| {
                         out.push_ui(
                             cx,
                             shadcn::Button::new("Undo")
-                                .variant(shadcn::ButtonVariant::Outline)
                                 .size(shadcn::ButtonSize::Xs)
                                 .ui()
+                                .shadow_none()
                                 .test_id("ui-gallery-alert-action-enable"),
                         );
                     }),
@@ -50,13 +42,17 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 ));
                 out.push_ui(
                     cx,
-                    shadcn::AlertTitle::new("The selected emails have been marked as spam."),
+                    shadcn::AlertTitle::new("The selected emails have been marked as spam.")
+                        .ui()
+                        .test_id("ui-gallery-alert-action-badge-title"),
                 );
                 out.push_ui(
                     cx,
                     shadcn::AlertDescription::new(
-                        "This is a very long alert description that demonstrates how the action slot keeps content clear of the top-right badge.",
-                    ),
+                        "This is a very long alert title that demonstrates how the component handles extended text content.",
+                    )
+                    .ui()
+                    .test_id("ui-gallery-alert-action-badge-description"),
                 );
                 out.push_ui(
                     cx,
@@ -64,7 +60,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         out.push_ui(
                             cx,
                             shadcn::Badge::new("Badge")
-                                .variant(shadcn::BadgeVariant::Secondary),
+                                .variant(shadcn::BadgeVariant::Secondary)
+                                .ui()
+                                .test_id("ui-gallery-alert-action-badge-chip"),
                         );
                     }),
                 );
