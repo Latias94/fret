@@ -1065,6 +1065,14 @@ real editors.
   `ui/canvas/widget/split_edge_execution/apply.rs`, and
   `ui/canvas/widget/split_edge_execution/execute.rs` seams, so
   `split_edge_execution.rs` now mainly keeps the public execution façade explicit.
+- edge double-click handling now also routes insert-picker opening, reroute execution, double-click
+  target hit-testing, and finish tails through the private
+  `ui/canvas/widget/pointer_down_double_click_edge/insert_picker.rs`,
+  `ui/canvas/widget/pointer_down_double_click_edge/reroute.rs`,
+  `ui/canvas/widget/pointer_down_double_click_edge/target.rs`, and
+  `ui/canvas/widget/pointer_down_double_click_edge/finish.rs` seams, and the insert-picker path
+  now reuses the shared `select_edge_context_target` reducer instead of duplicating edge selection
+  updates inline.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
