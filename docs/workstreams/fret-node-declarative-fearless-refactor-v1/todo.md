@@ -1612,6 +1612,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/pointer_move_release_pan/missing_release.rs` and
     `ui/canvas/widget/pointer_move_release_pan/pending_right_click.rs` seams, so
     `pointer_move_release_pan.rs` now mainly keeps the pan-release orchestration explicit.
+  - Progress: pending resize-session activation now also routes group/node activation state
+    assembly through the private `ui/canvas/widget/pending_resize_session/group.rs` and
+    `ui/canvas/widget/pending_resize_session/node.rs` seams, so
+    `pending_resize_session.rs` now mainly keeps the resize-session activation façades explicit.
 
 ## M5 - Compatibility retained convergence
 

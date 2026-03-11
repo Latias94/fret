@@ -1151,6 +1151,10 @@ real editors.
   `ui/canvas/widget/pointer_move_release_pan/missing_release.rs` and
   `ui/canvas/widget/pointer_move_release_pan/pending_right_click.rs` seams, so
   `pointer_move_release_pan.rs` now mainly keeps the pan-release orchestration explicit.
+- pending resize-session activation now also routes group/node activation state assembly through
+  the private `ui/canvas/widget/pending_resize_session/group.rs` and
+  `ui/canvas/widget/pending_resize_session/node.rs` seams, so
+  `pending_resize_session.rs` now mainly keeps the resize-session activation façades explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

@@ -1,38 +1,20 @@
-use crate::ui::canvas::state::{
-    GroupResize, InteractionState, PendingGroupResize, PendingNodeResize,
-};
+mod group;
+mod node;
+
+use crate::ui::canvas::state::{InteractionState, PendingGroupResize, PendingNodeResize};
 
 pub(super) fn activate_pending_group_resize(
     interaction: &mut InteractionState,
     pending: PendingGroupResize,
 ) {
-    interaction.pending_group_resize = None;
-    interaction.group_resize = Some(GroupResize {
-        group: pending.group,
-        start_pos: pending.start_pos,
-        start_rect: pending.start_rect,
-        current_rect: pending.start_rect,
-        preview_rev: 0,
-    });
+    group::activate_pending_group_resize(interaction, pending);
 }
 
 pub(super) fn activate_pending_node_resize(
     interaction: &mut InteractionState,
     pending: PendingNodeResize,
 ) {
-    interaction.pending_node_resize = None;
-    interaction.node_resize = Some(crate::ui::canvas::state::NodeResize {
-        node: pending.node,
-        handle: pending.handle,
-        start_pos: pending.start_pos,
-        start_node_pos: pending.start_node_pos,
-        start_size: pending.start_size,
-        start_size_opt: pending.start_size_opt,
-        current_node_pos: pending.start_node_pos,
-        current_size_opt: pending.start_size_opt,
-        current_groups: Vec::new(),
-        preview_rev: 0,
-    });
+    node::activate_pending_node_resize(interaction, pending);
 }
 
 #[cfg(test)]
