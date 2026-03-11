@@ -82,13 +82,7 @@
       "click_count": 2
     },
     {
-      "type": "click_stable",
-      "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.declarative.value.typing.input" }
-    },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    {
-      "type": "type_text_into",
+      "type": "set_text_value",
       "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.declarative.value.typing.input" },
       "text": "2.500"
     },
@@ -118,13 +112,7 @@
       "click_count": 2
     },
     {
-      "type": "click_stable",
-      "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.imui.blend.typing.input" }
-    },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    {
-      "type": "type_text_into",
+      "type": "set_text_value",
       "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.imui.blend.typing.input" },
       "text": "75"
     },

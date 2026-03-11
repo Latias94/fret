@@ -157,6 +157,20 @@ fn script_v2_roundtrip_chart_torture_pan_zoom() {
 }
 
 #[test]
+fn script_v2_roundtrip_imui_editor_proof_advanced_axis_composites() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/imui-editor-proof-advanced-axis-composites.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_imui_editor_proof_gradient_stop_lifecycle() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/imui-editor-proof-gradient-stop-lifecycle.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_button_with_icon_non_overlap() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-button-with-icon-non-overlap.json"
