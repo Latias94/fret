@@ -28,6 +28,27 @@ fn assert_curated_facade_only(relative_paths: &[&str]) {
     }
 }
 
+fn assert_only_documented_raw_shadcn_modules(path: &std::path::Path, source: &str) {
+    for (line_idx, line) in source.lines().enumerate() {
+        let trimmed = line.trim();
+        if !trimmed.contains("shadcn::raw::") {
+            continue;
+        }
+
+        let allowed = trimmed.contains("shadcn::raw::typography::")
+            || trimmed.contains("shadcn::raw::extras::")
+            || trimmed.contains("shadcn::raw::breadcrumb::")
+            || trimmed.contains("shadcn::raw::icon::");
+        assert!(
+            allowed,
+            "{}:{} used an undocumented shadcn raw escape hatch: {}",
+            path.display(),
+            line_idx + 1,
+            trimmed
+        );
+    }
+}
+
 #[test]
 fn gallery_curated_shadcn_surfaces_stay_explicit() {
     let chrome = read("src/driver/chrome.rs");
@@ -222,5 +243,13 @@ fn gallery_breadcrumb_primitive_batch_uses_explicit_raw_escape_hatch() {
             "{} should use the explicit raw breadcrumb primitive escape hatch",
             path.display()
         );
+    }
+}
+
+#[test]
+fn gallery_source_tree_limits_raw_shadcn_escape_hatches() {
+    for path in gallery_rust_sources() {
+        let source = read_path(&path);
+        assert_only_documented_raw_shadcn_modules(&path, &source);
     }
 }

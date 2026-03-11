@@ -550,6 +550,34 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn examples_source_tree_limits_raw_shadcn_escape_hatches() {
+        for path in examples_rust_sources() {
+            if path.ends_with("src/lib.rs") {
+                continue;
+            }
+
+            let source = std::fs::read_to_string(&path).unwrap();
+            for (line_idx, line) in source.lines().enumerate() {
+                let trimmed = line.trim();
+                if !(trimmed.contains("shadcn::raw::") || trimmed.contains("fret::shadcn::raw::")) {
+                    continue;
+                }
+
+                let allowed = trimmed.contains("shadcn::raw::typography::")
+                    || trimmed.contains("shadcn::raw::extras::")
+                    || trimmed.contains("fret::shadcn::raw::prelude::");
+                assert!(
+                    allowed,
+                    "{}:{} used an undocumented shadcn raw escape hatch: {}",
+                    path.display(),
+                    line_idx + 1,
+                    trimmed
+                );
+            }
+        }
+    }
+
+    #[test]
     fn advanced_entry_examples_prefer_view_elements_aliases() {
         for (src, state) in [
             (CUSTOM_EFFECT_V1_DEMO, "CustomEffectV1State"),

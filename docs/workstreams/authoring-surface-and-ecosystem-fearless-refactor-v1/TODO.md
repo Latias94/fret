@@ -113,6 +113,9 @@ Companion docs:
     (`shadcn::{..., app, themes, raw}`).
   - [x] Migrate first-party direct-crate examples to `fret_ui_shadcn::{facade as shadcn, prelude::*}`
     and require raw-only helpers to flow through `shadcn::raw::*`.
+  - [x] Classify the first-party raw escape hatches and gate them to the documented set
+    (`typography`, `extras`, breadcrumb primitives, low-level icon helpers, advanced/raw prelude
+    seams where explicitly justified).
   - [x] Add a source gate that forbids first-party curated examples from drifting back to
     `use fret_ui_shadcn as shadcn;`, `shadcn::shadcn_themes::*`, or root
     `shadcn::typography::*`.

@@ -288,6 +288,10 @@ Direct crate usage rule for first-party recipe crates:
   `fret::shadcn::raw::advanced::*` when intentionally exiting the curated `fret` facade)
 - theme presets stay on `shadcn::themes::*`
 - full crate-root escape hatches must be explicit via `shadcn::raw::*`
+- first-party teaching surfaces may currently use only the documented raw lanes:
+  `shadcn::raw::typography::*`, `shadcn::raw::extras::*`,
+  `shadcn::raw::breadcrumb::primitives`, low-level `shadcn::raw::icon::*`, and
+  explicitly justified retained/interop seams such as `fret::shadcn::raw::prelude::*`
 
 ## Symbols to Remove
 

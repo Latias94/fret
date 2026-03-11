@@ -1749,6 +1749,7 @@ mod authoring_surface_policy_tests {
             "`fret_ui_shadcn::advanced::{sync_theme_from_environment(...), install_with_ui_services(...)}`"
         ));
         assert!(CRATE_USAGE_GUIDE.contains("`shadcn::raw::*`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`shadcn::raw::typography::*`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::app::install(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::themes::apply_shadcn_new_york(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::raw::*`"));

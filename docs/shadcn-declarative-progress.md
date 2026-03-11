@@ -157,9 +157,9 @@ Guidelines:
 - First-party app surfaces should prefer `use fret_ui_shadcn::{facade as shadcn, prelude::*};`;
   `apps/fret-examples` and the curated `apps/fret-ui-gallery` snippet batches are now gated this way.
 - Non-curated seams should stay explicit in app code: use `fret_ui_shadcn::advanced::*` for
-  environment / `UiServices` hooks, and use `shadcn::raw::*` for surfaces such as `extras`,
-  breadcrumb primitives, and low-level icon helpers instead of importing `fret_ui_shadcn::*`
-  directly.
+  environment / `UiServices` hooks, and use `shadcn::raw::*` only for the documented escape-hatch
+  lanes (`typography` prose helpers, `extras`, breadcrumb primitives, and low-level icon helpers)
+  instead of importing `fret_ui_shadcn::*` directly.
 - `StyledExt` exists in `fret-ui-kit` but is intentionally not part of the shadcn prelude to avoid splitting the
   ecosystem into competing patterns.
 

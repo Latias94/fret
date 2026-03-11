@@ -467,6 +467,67 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn cookbook_examples_limit_raw_shadcn_escape_hatches() {
+        for (name, src) in [
+            ("commands_keymap_basics", COMMANDS_KEYMAP_EXAMPLE),
+            ("data_table_basics", DATA_TABLE_EXAMPLE),
+            ("date_picker_basics", DATE_PICKER_EXAMPLE),
+            ("drag_basics", DRAG_EXAMPLE),
+            ("docking_basics", DOCKING_EXAMPLE),
+            ("drop_shadow_basics", DROP_SHADOW_EXAMPLE),
+            ("embedded_viewport_basics", EMBEDDED_VIEWPORT_EXAMPLE),
+            ("effects_layer_basics", EFFECTS_LAYER_EXAMPLE),
+            (
+                "external_texture_import_basics",
+                EXTERNAL_TEXTURE_IMPORT_EXAMPLE,
+            ),
+            ("form_basics", FORM_EXAMPLE),
+            ("gizmo_basics", GIZMO_EXAMPLE),
+            ("imui_action_basics", IMUI_ACTION_EXAMPLE),
+            ("icons_and_assets_basics", ICONS_AND_ASSETS_EXAMPLE),
+            ("hello", HELLO_EXAMPLE),
+            ("hello_counter", HELLO_COUNTER_EXAMPLE),
+            ("markdown_and_code_basics", MARKDOWN_AND_CODE_EXAMPLE),
+            ("overlay_basics", OVERLAY_EXAMPLE),
+            ("payload_actions_basics", PAYLOAD_ACTIONS_EXAMPLE),
+            ("query_basics", QUERY_EXAMPLE),
+            ("router_basics", ROUTER_EXAMPLE),
+            ("simple_todo", SIMPLE_TODO_EXAMPLE),
+            ("simple_todo_v2_target", SIMPLE_TODO_V2_TARGET_EXAMPLE),
+            ("async_inbox_basics", ASYNC_INBOX_EXAMPLE),
+            ("assets_reload_epoch_basics", ASSETS_RELOAD_EPOCH_EXAMPLE),
+            ("canvas_pan_zoom_basics", CANVAS_PAN_ZOOM_EXAMPLE),
+            ("chart_interactions_basics", CHART_INTERACTIONS_EXAMPLE),
+            ("theme_switching_basics", THEME_SWITCHING_EXAMPLE),
+            ("customv1_basics", CUSTOM_V1_EXAMPLE),
+            ("text_input_basics", TEXT_INPUT_EXAMPLE),
+            ("toast_basics", TOAST_EXAMPLE),
+            ("toggle_basics", TOGGLE_EXAMPLE),
+            ("undo_basics", UNDO_EXAMPLE),
+            (
+                "utility_window_materials_windows",
+                UTILITY_WINDOW_MATERIALS_EXAMPLE,
+            ),
+            ("virtual_list_basics", VIRTUAL_LIST_EXAMPLE),
+        ] {
+            for (line_idx, line) in src.lines().enumerate() {
+                let trimmed = line.trim();
+                if !(trimmed.contains("shadcn::raw::") || trimmed.contains("fret::shadcn::raw::")) {
+                    continue;
+                }
+
+                let allowed = trimmed.contains("fret::shadcn::raw::prelude::");
+                assert!(
+                    allowed,
+                    "{name}:{} used an undocumented shadcn raw escape hatch: {}",
+                    line_idx + 1,
+                    trimmed
+                );
+            }
+        }
+    }
+
+    #[test]
     fn docs_and_examples_prefer_builder_then_run() {
         for src in [
             ROOT_README,
