@@ -29,8 +29,12 @@ Current status on 2026-03-11:
 - The baseline first-party docking demos that already use stable panel identities now also install
   their panels through `DockPanelRegistryBuilder`:
   `docking_demo`, `container_queries_docking_demo`, and `imui_editor_proof_demo`.
-- The remaining docking migration pressure is now concentrated in demos that still synthesize
-  dynamic panel kinds instead of using stable `PanelKind + instance` identity.
+- `docking_arbitration_demo` now also uses `DockPanelRegistryBuilder`, with the old
+  `demo.viewport.extra.{ix}` dynamic kinds replaced by stable `demo.viewport.extra + instance`
+  identity.
+- No remaining first-party app/example `DockPanelRegistry` implementations remain outside
+  `fret-docking` test harnesses; the old monolithic app-registry teaching posture is now in
+  delete-ready territory.
 - Free installer functions remain the default story; first-party bundle examples and the remaining
   trait-budget decisions are still open.
 

@@ -8,9 +8,9 @@ use fret_core::{
     dock::DropZone, geometry::Px,
 };
 use fret_docking::{
-    DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockSpace,
-    DockViewportOverlayHooks, DockViewportOverlayHooksService, DockingPolicy, DockingPolicyService,
-    DockingRuntime, render_and_bind_dock_panels, render_cached_panel_root,
+    DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx, DockPanelRegistryBuilder,
+    DockPanelRegistryService, DockSpace, DockViewportOverlayHooks, DockViewportOverlayHooksService,
+    DockingPolicy, DockingPolicyService, DockingRuntime, render_and_bind_dock_panels,
 };
 use fret_launch::{
     DevStateExport, DevStateHook, DevStateHooks, DevStateWindowKeyRegistry, FnDriver,
@@ -45,6 +45,59 @@ const DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE: Px = Px(12.0);
 const DOCKING_ARBITRATION_SPLIT_HANDLE_ANCHOR_SIZE: Px = Px(12.0);
 
 const DEV_STATE_DOCKING_LAYOUT_KEY: &str = "docking_arbitration.layout";
+const PANEL_KIND_VIEWPORT_LEFT: &str = "demo.viewport.left";
+const PANEL_KIND_VIEWPORT_RIGHT: &str = "demo.viewport.right";
+const PANEL_KIND_VIEWPORT_EXTRA: &str = "demo.viewport.extra";
+const PANEL_KIND_CONTROLS: &str = "demo.controls";
+const PANEL_KIND_DUMMY_OVERFLOW: &str = "demo.dummy.overflow";
+
+fn viewport_left_panel_key() -> fret_core::PanelKey {
+    fret_core::PanelKey::new(PANEL_KIND_VIEWPORT_LEFT)
+}
+
+fn viewport_right_panel_key() -> fret_core::PanelKey {
+    fret_core::PanelKey::new(PANEL_KIND_VIEWPORT_RIGHT)
+}
+
+fn extra_viewport_panel_key(ix: usize) -> fret_core::PanelKey {
+    fret_core::PanelKey::with_instance(PANEL_KIND_VIEWPORT_EXTRA, ix.to_string())
+}
+
+fn controls_panel_key() -> fret_core::PanelKey {
+    fret_core::PanelKey::new(PANEL_KIND_CONTROLS)
+}
+
+fn dummy_overflow_panel_key() -> fret_core::PanelKey {
+    fret_core::PanelKey::new(PANEL_KIND_DUMMY_OVERFLOW)
+}
+
+fn dock_panel_debug_name(panel: &fret_core::PanelKey) -> String {
+    match panel.instance.as_deref() {
+        Some(instance) => format!("{}:{instance}", panel.kind.0),
+        None => panel.kind.0.clone(),
+    }
+}
+
+fn render_viewport_panel_root(
+    cx: &mut DockPanelFactoryCx<'_, App>,
+    root_name: &str,
+    test_id: Arc<str>,
+) -> fret_core::NodeId {
+    cx.render_cached_panel_root(root_name, move |cx| {
+        let mut layout = fret_ui::element::LayoutStyle::default();
+        layout.size.width = fret_ui::element::Length::Fill;
+        layout.size.height = fret_ui::element::Length::Fill;
+        vec![cx.semantics(
+            fret_ui::element::SemanticsProps {
+                layout,
+                role: fret_core::SemanticsRole::Viewport,
+                test_id: Some(test_id.clone()),
+                ..Default::default()
+            },
+            |_cx| vec![],
+        )]
+    })
+}
 
 #[derive(Debug, Default)]
 struct DockingArbitrationDevStateIncoming {
@@ -362,8 +415,8 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 None
             }
 
-            let viewport_left = PanelKey::new("demo.viewport.left");
-            let viewport_right = PanelKey::new("demo.viewport.right");
+            let viewport_left = viewport_left_panel_key();
+            let viewport_right = viewport_right_panel_key();
             if let Some(p) = tab_bar_anchor_for_panel(
                 dock,
                 self.window,
@@ -396,7 +449,7 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
             }
 
             for (ix, pos) in extra_anchor_pos.iter_mut().enumerate() {
-                let panel = PanelKey::new(format!("demo.viewport.extra.{ix}"));
+                let panel = extra_viewport_panel_key(ix);
                 if let Some(p) = tab_bar_anchor_for_panel(
                     dock,
                     self.window,
@@ -549,7 +602,7 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
 
             // Anchor overflow geometry to the left viewport's tabs container. Most arbitration
             // scripts build tab overflow by merging additional tabs into that leaf.
-            let left_panel = PanelKey::new("demo.viewport.left");
+            let left_panel = viewport_left_panel_key();
             let tabs_rect = tabs_rect_for_panel(
                 &dock.graph,
                 root,
@@ -988,132 +1041,47 @@ impl DockingArbitrationPanelModelsService {
     }
 }
 
-struct DockingArbitrationDockPanelRegistry;
+fn render_controls_panel(
+    factory_cx: &mut DockPanelFactoryCx<'_, App>,
+) -> Option<fret_core::NodeId> {
+    let models = factory_cx
+        .app
+        .global::<DockingArbitrationPanelModelsService>()
+        .and_then(|svc| svc.get(factory_cx.window))
+        .cloned()?;
 
-impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
-    fn render_panel(
-        &self,
-        ui: &mut UiTree<App>,
-        app: &mut App,
-        services: &mut dyn UiServices,
-        window: AppWindowId,
-        bounds: Rect,
-        panel: &fret_core::PanelKey,
-    ) -> Option<fret_core::NodeId> {
-        let kind = panel.kind.0.as_str();
-        match kind {
-            "demo.viewport.left" => {
-                let root_name = "dock.panel.viewport_left";
-                return Some(render_cached_panel_root(
-                    ui,
-                    app,
-                    services,
-                    window,
-                    bounds,
-                    root_name,
-                    |cx| {
-                        let mut layout = fret_ui::element::LayoutStyle::default();
-                        layout.size.width = fret_ui::element::Length::Fill;
-                        layout.size.height = fret_ui::element::Length::Fill;
-                        vec![cx.semantics(
-                            fret_ui::element::SemanticsProps {
-                                layout,
-                                role: fret_core::SemanticsRole::Viewport,
-                                test_id: Some(Arc::<str>::from("dock-arb-viewport-left")),
-                                ..Default::default()
-                            },
-                            |_cx| vec![],
-                        )]
-                    },
-                ));
-            }
-            "demo.viewport.right" => {
-                let root_name = "dock.panel.viewport_right";
-                return Some(render_cached_panel_root(
-                    ui,
-                    app,
-                    services,
-                    window,
-                    bounds,
-                    root_name,
-                    |cx| {
-                        let mut layout = fret_ui::element::LayoutStyle::default();
-                        layout.size.width = fret_ui::element::Length::Fill;
-                        layout.size.height = fret_ui::element::Length::Fill;
-                        vec![cx.semantics(
-                            fret_ui::element::SemanticsProps {
-                                layout,
-                                role: fret_core::SemanticsRole::Viewport,
-                                test_id: Some(Arc::<str>::from("dock-arb-viewport-right")),
-                                ..Default::default()
-                            },
-                            |_cx| vec![],
-                        )]
-                    },
-                ));
-            }
-            "demo.controls" => {}
-            _ => {
-                let Some(suffix) = kind.strip_prefix("demo.viewport.extra.") else {
-                    return None;
-                };
+    let captured = format!("captured={:?}", factory_cx.ui.captured());
+    let layer_lines: Vec<String> = factory_cx
+        .ui
+        .debug_layers_in_paint_order()
+        .iter()
+        .enumerate()
+        .map(|(ix, layer)| {
+            format!(
+                "#{ix} root={:?} visible={} barrier={} hit_testable={} outside={} move={} timer={}",
+                layer.root,
+                layer.visible,
+                layer.blocks_underlay_input,
+                layer.hit_testable,
+                layer.wants_pointer_down_outside_events,
+                layer.wants_pointer_move_events,
+                layer.wants_timer_events
+            )
+        })
+        .collect();
 
-                let root_name = format!("dock.panel.viewport_extra_{suffix}");
-                let test_id = Arc::<str>::from(format!("dock-arb-viewport-extra-{suffix}"));
-                return Some(render_cached_panel_root(
-                    ui,
-                    app,
-                    services,
-                    window,
-                    bounds,
-                    &root_name,
-                    |cx| {
-                        let mut layout = fret_ui::element::LayoutStyle::default();
-                        layout.size.width = fret_ui::element::Length::Fill;
-                        layout.size.height = fret_ui::element::Length::Fill;
-                        vec![cx.semantics(
-                            fret_ui::element::SemanticsProps {
-                                layout,
-                                role: fret_core::SemanticsRole::Viewport,
-                                test_id: Some(test_id.clone()),
-                                ..Default::default()
-                            },
-                            |_cx| vec![],
-                        )]
-                    },
-                ));
-            }
-        }
-
-        let models = app
-            .global::<DockingArbitrationPanelModelsService>()
-            .and_then(|svc| svc.get(window))
-            .cloned()?;
-
-        let captured = format!("captured={:?}", ui.captured());
-        let layer_lines: Vec<String> = ui
-            .debug_layers_in_paint_order()
-            .iter()
-            .enumerate()
-            .map(|(ix, layer)| {
-                format!(
-                    "#{ix} root={:?} visible={} barrier={} hit_testable={} outside={} move={} timer={}",
-                    layer.root,
-                    layer.visible,
-                    layer.blocks_underlay_input,
-                    layer.hit_testable,
-                    layer.wants_pointer_down_outside_events,
-                    layer.wants_pointer_move_events,
-                    layer.wants_timer_events
-                )
-            })
-            .collect();
-
-        let root_name = "dock.panel.controls";
-        Some(
-            declarative::RenderRootContext::new(ui, app, services, window, bounds).render_root(
-                root_name,
-                |cx| {
+    let root_name = "dock.panel.controls";
+    Some(
+        declarative::RenderRootContext::new(
+            factory_cx.ui,
+            factory_cx.app,
+            factory_cx.services,
+            factory_cx.window,
+            factory_cx.bounds,
+        )
+        .render_root(
+            root_name,
+            |cx| {
                 cx.observe_model(&models.popover_open, Invalidation::Layout);
                 cx.observe_model(&models.dialog_open, Invalidation::Layout);
                 cx.observe_model(&models.drop_mask_disallow_left_edge, Invalidation::Layout);
@@ -1411,9 +1379,7 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
 	                                                            host.push_effect(Effect::Dock(
 	                                                                fret_core::DockOp::ClosePanel {
 	                                                                    window: action_cx.window,
-	                                                                    panel: fret_core::PanelKey::new(
-	                                                                        "demo.viewport.left",
-	                                                                    ),
+	                                                                    panel: viewport_left_panel_key(),
 	                                                                },
 	                                                            ));
 	                                                            host.request_redraw(action_cx.window);
@@ -1432,9 +1398,7 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
 	                                                        host.push_effect(Effect::Dock(
 	                                                            fret_core::DockOp::ClosePanel {
 	                                                                window: action_cx.window,
-	                                                                panel: fret_core::PanelKey::new(
-	                                                                    "demo.viewport.right",
-	                                                                ),
+	                                                                panel: viewport_right_panel_key(),
 	                                                            },
 	                                                        ));
 	                                                        host.request_redraw(action_cx.window);
@@ -1451,9 +1415,7 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
 	                                                            host.push_effect(Effect::Dock(
 	                                                                fret_core::DockOp::ClosePanel {
 	                                                                    window: action_cx.window,
-	                                                                    panel: fret_core::PanelKey::new(
-	                                                                        "demo.controls",
-	                                                                    ),
+	                                                                    panel: controls_panel_key(),
 	                                                                },
 	                                                            ));
 	                                                            host.request_redraw(action_cx.window);
@@ -1583,9 +1545,77 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                     ]
                 },
             )]
-                },
-            ),
-        )
+            },
+        ),
+    )
+}
+
+struct StaticViewportPanelFactory {
+    kind: fret_core::PanelKind,
+    root_name: &'static str,
+    test_id: &'static str,
+}
+
+impl StaticViewportPanelFactory {
+    fn new(kind: &'static str, root_name: &'static str, test_id: &'static str) -> Self {
+        Self {
+            kind: fret_core::PanelKind::new(kind),
+            root_name,
+            test_id,
+        }
+    }
+}
+
+impl DockPanelFactory<App> for StaticViewportPanelFactory {
+    fn panel_kind(&self) -> fret_core::PanelKind {
+        self.kind.clone()
+    }
+
+    fn build_panel(
+        &self,
+        _panel: &fret_core::PanelKey,
+        cx: &mut DockPanelFactoryCx<'_, App>,
+    ) -> Option<fret_core::NodeId> {
+        Some(render_viewport_panel_root(
+            cx,
+            self.root_name,
+            Arc::<str>::from(self.test_id),
+        ))
+    }
+}
+
+struct ExtraViewportPanelFactory;
+
+impl DockPanelFactory<App> for ExtraViewportPanelFactory {
+    fn panel_kind(&self) -> fret_core::PanelKind {
+        fret_core::PanelKind::new(PANEL_KIND_VIEWPORT_EXTRA)
+    }
+
+    fn build_panel(
+        &self,
+        panel: &fret_core::PanelKey,
+        cx: &mut DockPanelFactoryCx<'_, App>,
+    ) -> Option<fret_core::NodeId> {
+        let suffix = panel.instance.as_deref()?;
+        let root_name = format!("dock.panel.viewport_extra_{suffix}");
+        let test_id = Arc::<str>::from(format!("dock-arb-viewport-extra-{suffix}"));
+        Some(render_viewport_panel_root(cx, &root_name, test_id))
+    }
+}
+
+struct DockingArbitrationControlsPanelFactory;
+
+impl DockPanelFactory<App> for DockingArbitrationControlsPanelFactory {
+    fn panel_kind(&self) -> fret_core::PanelKind {
+        fret_core::PanelKind::new(PANEL_KIND_CONTROLS)
+    }
+
+    fn build_panel(
+        &self,
+        _panel: &fret_core::PanelKey,
+        cx: &mut DockPanelFactoryCx<'_, App>,
+    ) -> Option<fret_core::NodeId> {
+        render_controls_panel(cx)
     }
 }
 
@@ -2018,9 +2048,9 @@ impl DockingArbitrationDriver {
         }
 
         app.with_global_mut(DockManager::default, |dock, _app| {
-            let viewport_left = PanelKey::new("demo.viewport.left");
-            let viewport_right = PanelKey::new("demo.viewport.right");
-            let controls_panel = PanelKey::new("demo.controls");
+            let viewport_left = viewport_left_panel_key();
+            let viewport_right = viewport_right_panel_key();
+            let controls_panel = controls_panel_key();
 
             dock.ensure_panel(&viewport_left, || DockPanel {
                 title: "Viewport Left".to_string(),
@@ -2109,9 +2139,8 @@ impl DockingArbitrationDriver {
                     dock.graph.set_window_root(window, root);
                 }
                 DockingArbitrationLayoutPreset::Large => {
-                    let extra_viewports: Vec<PanelKey> = (0..10)
-                        .map(|ix| PanelKey::new(format!("demo.viewport.extra.{ix}")))
-                        .collect();
+                    let extra_viewports: Vec<PanelKey> =
+                        (0..10).map(extra_viewport_panel_key).collect();
 
                     for (ix, key) in extra_viewports.iter().enumerate() {
                         let title = format!("Viewport Extra {ix}");
@@ -2162,9 +2191,8 @@ impl DockingArbitrationDriver {
                     dock.graph.set_window_root(window, root);
                 }
                 DockingArbitrationLayoutPreset::OverflowTabs => {
-                    let extra_viewports: Vec<PanelKey> = (0..10)
-                        .map(|ix| PanelKey::new(format!("demo.viewport.extra.{ix}")))
-                        .collect();
+                    let extra_viewports: Vec<PanelKey> =
+                        (0..10).map(extra_viewport_panel_key).collect();
 
                     for (ix, key) in extra_viewports.iter().enumerate() {
                         let title = format!("Viewport Extra {ix}");
@@ -2181,7 +2209,7 @@ impl DockingArbitrationDriver {
                         });
                     }
 
-                    let dummy_panel = PanelKey::new("demo.dummy.overflow");
+                    let dummy_panel = dummy_overflow_panel_key();
                     dock.ensure_panel(&dummy_panel, || DockPanel {
                         title: "Dummy".to_string(),
                         color: Color::TRANSPARENT,
@@ -3137,7 +3165,10 @@ fn window_create_spec(
 ) -> Option<WindowCreateSpec> {
     match &request.kind {
         CreateWindowKind::DockFloating { panel, .. } => Some(WindowCreateSpec::new(
-            format!("fret-demo docking_arbitration_demo 闁?{}", panel.kind.0),
+            format!(
+                "fret-demo docking_arbitration_demo 闁?{}",
+                dock_panel_debug_name(panel)
+            ),
             fret_launch::WindowLogicalSize::new(720.0, 520.0),
         )),
         CreateWindowKind::DockRestore { logical_window_id } => {
@@ -3413,8 +3444,22 @@ pub fn run() -> anyhow::Result<()> {
         caps.ui.window_tear_off = false;
     }
     app.set_global(caps);
+    let mut registry = DockPanelRegistryBuilder::new();
+    registry
+        .register(StaticViewportPanelFactory::new(
+            PANEL_KIND_VIEWPORT_LEFT,
+            "dock.panel.viewport_left",
+            "dock-arb-viewport-left",
+        ))
+        .register(StaticViewportPanelFactory::new(
+            PANEL_KIND_VIEWPORT_RIGHT,
+            "dock.panel.viewport_right",
+            "dock-arb-viewport-right",
+        ))
+        .register(ExtraViewportPanelFactory)
+        .register(DockingArbitrationControlsPanelFactory);
     app.with_global_mut(DockPanelRegistryService::<App>::default, |svc, _app| {
-        svc.set(Arc::new(DockingArbitrationDockPanelRegistry));
+        svc.set(registry.build_arc());
     });
     app.with_global_mut(DockViewportOverlayHooksService::default, |svc, _app| {
         svc.set(Arc::new(DemoViewportOverlayHooks {

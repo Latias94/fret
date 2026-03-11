@@ -125,9 +125,15 @@ surface.
     `apps/fret-examples/src/container_queries_docking_demo.rs`, and
     `apps/fret-examples/src/imui_editor_proof_demo.rs` now install panel factories through
     `DockPanelRegistryBuilder`.
-- [ ] Rework the remaining dynamic-kind or extra-viewport demos onto stable `PanelKind + instance`
-  semantics before deleting bespoke registration helpers.
-  - Likely first target: `apps/fret-examples/src/docking_arbitration_demo.rs`.
+- [x] Rework the first dynamic-kind extra-viewport demo onto stable `PanelKind + instance`
+  semantics and move it onto the factory/builder path.
+  - Landed on 2026-03-11: `apps/fret-examples/src/docking_arbitration_demo.rs` now models extra
+    viewports as `demo.viewport.extra + instance`, and the demo installs all panels through
+    `DockPanelRegistryBuilder`.
+- [x] Confirm whether any first-party app/example code still teaches monolithic app-owned panel
+  registries.
+  - Result on 2026-03-11: no remaining first-party app/example `DockPanelRegistry` implementations
+    remain outside `fret-docking` test harnesses.
 
 ## 7. `QueryAdapter` and Selector Boundaries
 
