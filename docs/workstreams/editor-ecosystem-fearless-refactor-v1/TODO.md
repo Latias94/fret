@@ -32,25 +32,48 @@ Interaction contract:
 - [x] `EER-DOC-105` Publish a short standalone conventions note for `id_source`, `test_id`,
       response semantics, and loop-built widget state.
 
-## Phase B - Editor starter kit closure
+## Phase B - Foundation closure before component growth
 
-- [~] `EER-IMUI-110` Keep expanding `fret-ui-editor::imui` only as a thin facade over declarative
+- [ ] `EER-BASE-110` Fix the default editor baseline visual hierarchy:
+      field chrome, contrast bands, separators, label/readout clarity, and group hierarchy.
+- [ ] `EER-BASE-111` Finish `EditorWidgetVisuals` convergence for the existing starter-set controls
+      before promoting more components.
+- [ ] `EER-BASE-112` Define and land inspector/property layout grammar:
+      label width, value width, status slot, reset slot, and dense minimums.
+- [ ] `EER-BASE-113` Make typed-edit, focus, active, and invalid states visually explicit across
+      numeric, text, and select-like controls.
+- [ ] `EER-BASE-114` Clean up proof-surface composition so overview / typing / error screenshots are
+      directly reviewable instead of relying on accidental window placement or hidden states.
+- [~] `EER-BASE-115` Add screenshot/diag coverage for the neutral default editor baseline.
+      The default screenshot proof now exists via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-default.json`;
+      review + follow-up token/layout fixes are still pending.
+- [ ] `EER-BASE-116` Decide whether `imgui_like_dense` should get matching screenshot proof coverage
+      now or only after the default baseline is acceptable.
+- [ ] `EER-BASE-117` Close baseline editor text/numeric policy where visuals and interaction are
+      coupled:
+      Enter/Escape semantics, selection defaults, clear affordances, affix behavior, and error
+      presentation.
+- [ ] `EER-BASE-118` Do not promote new reusable editor components until `EER-BASE-110` through
+      `EER-BASE-117` are in materially better shape.
+
+## Phase C - Editor starter kit closure
+
+- [~] `EER-IMUI-120` Keep expanding `fret-ui-editor::imui` only as a thin facade over declarative
       controls; do not allow a second implementation tree to form.
-- [ ] `EER-EDITOR-111` Finish `EditorWidgetVisuals` convergence for all reusable editor controls.
-- [ ] `EER-EDITOR-112` Close `DragValue` for real editor workflows:
+- [ ] `EER-EDITOR-121` Close `DragValue` for real editor workflows:
       prefix/suffix, clamp policy, step, decimals policy, unit helpers, and consistent commit/cancel.
-- [ ] `EER-EDITOR-113` Close editor-grade text input policy:
-      password mode, completion/history hook placeholders, selection defaults, and clear Enter/Escape
-      behavior.
-- [ ] `EER-EDITOR-114` Freeze the v1 reusable starter set:
+- [ ] `EER-EDITOR-122` Close editor-grade text input policy beyond the baseline layer:
+      password mode, completion/history hook placeholders, and richer editing hooks.
+- [ ] `EER-EDITOR-123` Freeze the v1 reusable starter set:
       `TextField`, `Checkbox`, `DragValue`, `Slider`, `EnumSelect`, `ColorEdit`, `VecNEdit`,
       `TransformEdit`, `PropertyGrid`, and `InspectorPanel`.
-- [ ] `EER-EDITOR-115` Ensure every promoted reusable control first lands as a declarative
+- [ ] `EER-EDITOR-124` Ensure every promoted reusable control first lands as a declarative
       implementation and only then gains optional `imui` sugar.
-- [ ] `EER-EDITOR-116` Promote one proof surface that exercises the starter set under shared state
+- [ ] `EER-EDITOR-125` Promote one proof surface that exercises the starter set under shared state
       and stable diagnostics anchors.
 
-## Phase C - Shell, adapters, and extraction
+## Phase D - Shell, adapters, and extraction
 
 - [ ] `EER-SHELL-120` Freeze the reusable `fret-workspace` shell starter set:
       frame, top bar, status bar, pane chrome, shell tabstrip, command scope, focus coordination.
@@ -74,11 +97,11 @@ Interaction contract:
 - [ ] `EER-GATE-131` Add state-identity regression coverage for loop-built or repeated controls.
 - [~] `EER-GATE-132` Keep `imui_editor_proof_demo` and the promoted workspace-shell proof surfaces
       as the primary evidence anchors for this workstream.
-- [~] `EER-GATE-133` Decide whether the neutral default editor baseline and `imgui_like_dense`
-      should both receive screenshot/diag coverage.
+- [~] `EER-GATE-133` Keep screenshot coverage tied to actual baseline-review states, not just
+      arbitrary captures.
       The neutral default baseline now has a screenshot proof via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-default.json`;
-      a matching `imgui_like_dense` screenshot surface is still pending.
+      its next job is to drive token/layout cleanup, not just exist.
 - [ ] `EER-MIGRATE-134` Write a short migration note for promoting app-local editor surfaces into
       ecosystem crates.
 - [ ] `EER-CLEANUP-135` Delete or quarantine any duplicated editor widget implementations left after

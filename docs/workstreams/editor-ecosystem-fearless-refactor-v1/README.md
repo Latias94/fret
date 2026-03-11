@@ -21,6 +21,26 @@ system.
 - App-layer inspector/property protocols stay app-owned until a dedicated protocol crate is
   justified by a second consumer and a stable ownership story.
 
+## Current execution priority
+
+The workstream is no longer "ship more editor widgets first".
+The current priority is:
+
+1. close the editor foundations,
+2. prove the default baseline visually and behaviorally,
+3. then resume promoted component growth.
+
+For this workstream, "foundations" means:
+
+- the default editor visual baseline and token hierarchy,
+- shared widget-state visuals and edit-session semantics,
+- property-grid / inspector layout grammar,
+- proof-surface composition that actually exposes the states we need to review,
+- and focused diagnostics/screenshot gates for those states.
+
+Until those are in better shape, new promoted reusable components should be treated as lower
+priority than baseline correction.
+
 ## Primary documents
 
 - Design and ownership baseline:
@@ -62,9 +82,11 @@ These notes remain useful, but they are no longer the primary execution surface 
 
 ## Recommended path for new work
 
-1. Add or refine the declarative widget in `ecosystem/fret-ui-editor` first.
-2. Expose an optional `imui` facade only when immediate-style authoring clearly improves the
+1. Fix baseline infrastructure first in `ecosystem/fret-ui-editor`:
+   visuals, density, state hierarchy, layout grammar, proof surfaces, and gates.
+2. Close the existing starter-set controls against that baseline before adding more promoted
+   components.
+3. Only then add or refine a declarative widget in `ecosystem/fret-ui-editor`.
+4. Expose an optional `imui` facade only when immediate-style authoring clearly improves the
    surface.
-3. Reuse the editor component system and token families before inventing app-local chrome or
-   component-local style rules.
-4. Add proof/gate evidence before promoting behavior as editor-grade and reusable.
+5. Add proof/gate evidence before promoting behavior as editor-grade and reusable.

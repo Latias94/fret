@@ -83,6 +83,21 @@ It needs a component system with:
 - consistent density rules,
 - and clear guidance on how shell/design-system skins should compose over it.
 
+### G3a - Finish the baseline before scaling the component surface
+
+The current execution mistake would be:
+
+- adding more promoted controls while the default editor baseline is still visually weak,
+- while typing/focus/invalid states are still inconsistent,
+- and while proof surfaces do not reliably expose those states for review.
+
+For this workstream, foundation-first means:
+
+- baseline visuals and token hierarchy are reviewed first,
+- property/inspector layout grammar is explicit,
+- proof surfaces are composed so screenshots are actually reviewable,
+- and only then does component expansion resume.
+
 ### G4 - Keep `crates/fret-ui` mechanism-only
 
 Continue honoring ADR 0066:
@@ -172,6 +187,48 @@ Current recommended stance:
 - `imgui_like_dense` remains an optional preset proving density and hand-feel,
 - shell and docking should align visually through adapter seeding rather than ownership collapse,
 - new components should be admitted only when they satisfy interaction, layout, and gate criteria.
+
+## Current execution pivot (March 2026)
+
+The workstream is now explicitly foundation-first.
+
+The next tranche of work should prioritize:
+
+1. fixing the default editor baseline,
+2. converging shared widget-state visuals,
+3. making inspector/property layout rules explicit,
+4. improving proof-surface composition so screenshots are actually useful,
+5. and locking those outcomes with diagnostics + screenshot gates.
+
+This is a deliberate sequencing choice.
+The repo already has enough component surface area to expose baseline problems.
+Pushing more promoted components before those problems are fixed will increase drift rather than
+reduce it.
+
+### Foundation-first rule
+
+Do not treat "new reusable component count" as the success metric for the next phase.
+
+For promoted editor work, baseline infrastructure now comes first:
+
+- `EditorWidgetVisuals` convergence,
+- editor-owned token hierarchy and default-preset cleanup,
+- layout grammar for rows/groups/status/reset slots,
+- typed-edit / focus / invalid state clarity,
+- proof/gate quality for overview, typing, and error states.
+
+Only after those are in better shape should the workstream resume broad component promotion.
+
+### Readiness checklist before new promoted components
+
+Before this workstream advertises another reusable editor component as promoted, the following
+should be true for the existing baseline:
+
+1. the default editor preset is visually legible and reviewable,
+2. focus, typing, active, and invalid states are distinguishable without reading source code,
+3. proof surfaces expose the relevant states in screenshots/bundles without ad hoc manual setup,
+4. starter-set controls follow one shared layout/state grammar,
+5. and the interaction + screenshot gates are keeping that baseline from drifting.
 
 ## Relationship to adjacent workstreams
 

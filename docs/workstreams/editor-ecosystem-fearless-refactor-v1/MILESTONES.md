@@ -43,7 +43,34 @@ Exit gates:
 - Supporting notes (`OWNERSHIP_AUDIT.md`, `TOKEN_INVENTORY.md`, `IMGUI_LIKE_PRESET.md`,
   `PARITY_MATRIX.md`) are treated as references rather than competing trackers.
 
-## Phase B - Editor starter kit closure
+## Phase B - Foundation closure before component growth
+
+Status: In progress
+
+Goal:
+
+- fix the current editor baseline before scaling the promoted component surface,
+- make screenshots and proof surfaces genuinely reviewable,
+- and converge layout/state/tokens across the existing starter set.
+
+Deliverables:
+
+- clearer default editor visual hierarchy and token ownership,
+- broader `EditorWidgetVisuals` coverage across reusable editor controls,
+- explicit property-grid / inspector layout grammar,
+- stronger typed-edit, focus, active, and invalid state clarity,
+- screenshot proof coverage for the neutral default baseline,
+- a decision and follow-up plan for `imgui_like_dense` screenshot parity,
+- proof-surface cleanup so overview / typing / error states are visible without manual scene setup.
+
+Exit gates:
+
+- the default editor baseline is visually legible enough to review without "squinting through gray",
+- overview / typing / invalid screenshots are all meaningful and reproducible,
+- starter-set controls share one layout/state grammar instead of per-control heuristics,
+- and this workstream can point to clear proof/gate evidence for baseline correctness.
+
+## Phase C - Editor starter kit closure
 
 Status: Planned
 
@@ -55,20 +82,21 @@ Goal:
 
 Deliverables:
 
-- broader `EditorWidgetVisuals` coverage across reusable editor controls,
 - `DragValue` closure for real editor workflows,
 - richer text-input policy for editor surfaces,
 - a promoted starter set definition for controls and composites,
-- explicit conventions for `id_source`, response semantics, and `test_id`.
+- explicit conventions for `id_source`, response semantics, and `test_id`,
+- and a "no new promoted components without gates" landing rule.
 
 Exit gates:
 
 - starter-set controls do not keep parallel declarative and `imui` implementations,
 - `imui_editor_proof_demo` or an equivalent promoted proof surface covers the core editor set,
-- at least one focused gate exists for edit-session commit/cancel and state-identity correctness,
+- focused gates exist for edit-session commit/cancel, state-identity correctness, and screenshot
+  baseline review,
 - new editor controls follow the component-system baseline instead of ad-hoc style rules.
 
-## Phase C - Shell, adapters, and extraction closure
+## Phase D - Shell, adapters, and extraction closure
 
 Status: Planned
 
@@ -95,6 +123,7 @@ Exit gates:
 ## Recommended execution order
 
 1. Finish Phase A document closure and keep it stable for a while.
-2. Use Phase B to close the editor starter set and interaction contracts.
-3. Use Phase C only after the starter set is coherent enough to justify protocol extraction and
+2. Use Phase B to fix the current editor baseline and proof/gate quality.
+3. Use Phase C to resume starter-set closure only after the baseline is coherent.
+4. Use Phase D only after the starter set is coherent enough to justify protocol extraction and
    adapter cleanup.
