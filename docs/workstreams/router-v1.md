@@ -40,6 +40,8 @@ The goal of this workstream is to define a single, portable routing story withou
 - First-party web entry surfaces (`apps/fret-demo-web`, `apps/fret-ui-gallery`) now centralize
   their canonical route decode/encode logic through app-defined codecs instead of scattered string
   parsing.
+- `apps/fret-ui-gallery` also centralizes page-history sync/command update handling so first-party
+  router side effects are not duplicated across `sync`, `back`, and `forward` paths.
 - Public first-party web READMEs now teach canonical query routes first and explicitly mark legacy
   hash/query aliases as compatibility-only behavior.
 - Remaining v1 work is now mostly authoring ergonomics (`router-ui` snapshot/link helpers),

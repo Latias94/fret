@@ -1,6 +1,33 @@
 use super::*;
 
 impl UiGalleryDriver {
+    fn apply_gallery_page_history_update(
+        app: &mut App,
+        state: &mut UiGalleryWindowState,
+        window: AppWindowId,
+        action_label: &str,
+        update: Result<
+            fret::router::RouterUpdateWithPrefetchIntents<UiGalleryRouteId>,
+            fret::router::RouteSearchValidationFailure,
+        >,
+    ) {
+        let next_page = page_from_gallery_location(&state.page_router.state().location)
+            .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+        Self::select_gallery_page_in_models(app, state, next_page.clone());
+
+        apply_page_router_update_side_effects(
+            app,
+            window,
+            next_page.clone(),
+            &mut state.page_router,
+            update,
+        );
+
+        let _ = app.models_mut().update(&state.last_action, |value| {
+            *value = Arc::<str>::from(format!("{action_label}({})", next_page.as_ref()));
+        });
+    }
+
     pub(crate) fn build_workspace_window_layout(
         selected_page: Arc<str>,
         workspace_tabs: &[Arc<str>],
@@ -271,21 +298,13 @@ impl UiGalleryDriver {
             return;
         }
 
-        let next_page = page_from_gallery_location(&state.page_router.state().location)
-            .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
-        Self::select_gallery_page_in_models(app, state, next_page.clone());
-
-        apply_page_router_update_side_effects(
+        Self::apply_gallery_page_history_update(
             app,
+            state,
             window,
-            next_page.clone(),
-            &mut state.page_router,
+            "gallery.page_history.sync",
             Ok(update),
         );
-
-        let _ = app.models_mut().update(&state.last_action, |v| {
-            *v = Arc::<str>::from(format!("gallery.page_history.sync({})", next_page.as_ref()));
-        });
     }
 
     pub(crate) fn handle_nav_command(
@@ -306,27 +325,14 @@ impl UiGalleryDriver {
             let update = state
                 .page_router
                 .navigate_with_prefetch_intents(action, None);
-
-            let next_page = page_from_gallery_location(&state.page_router.state().location)
-                .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
-            Self::select_gallery_page_in_models(app, state, next_page.clone());
-
-            apply_page_router_update_side_effects(
+            let action_label = format!("gallery.page_history.{}", action);
+            Self::apply_gallery_page_history_update(
                 app,
+                state,
                 window,
-                next_page.clone(),
-                &mut state.page_router,
+                action_label.as_str(),
                 update,
             );
-
-            let _ = app.models_mut().update(&state.last_action, |v| {
-                *v = Arc::<str>::from(format!(
-                    "gallery.page_history.{}({})",
-                    action,
-                    next_page.as_ref()
-                ));
-            });
-
             return true;
         }
 
