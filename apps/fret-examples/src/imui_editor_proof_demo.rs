@@ -15,6 +15,7 @@ use fret_runtime::{
     ActivationPolicy, FrameId, Model, PlatformCapabilities, TickId, WindowHoverDetectionQuality,
     WindowRole, WindowStyleRequest,
 };
+use fret_ui::element::{LayoutStyle, SizeStyle};
 use fret_ui_editor::composites::{
     GradientEditor, GradientEditorOptions, GradientStopBinding, InspectorPanel,
     InspectorPanelOptions, PropertyGrid, PropertyGroup, PropertyRow, PropertyRowReset,
@@ -33,6 +34,23 @@ const VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
 const AUX_LOGICAL_WINDOW_ID: &str = "aux";
 const ENV_SINGLE_WINDOW: &str = "FRET_IMUI_EDITOR_PROOF_SINGLE_WINDOW";
 const ENV_EDITOR_PRESET: &str = "FRET_IMUI_EDITOR_PRESET";
+const ENV_PROOF_LAYOUT: &str = "FRET_IMUI_EDITOR_PROOF_LAYOUT";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+enum ImUiEditorProofLayout {
+    #[default]
+    Full,
+    EditorReview,
+}
+
+impl ImUiEditorProofLayout {
+    const fn key(self) -> &'static str {
+        match self {
+            Self::Full => "full",
+            Self::EditorReview => "editor_review",
+        }
+    }
+}
 
 fn diag_enabled() -> bool {
     std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty() && v != "0")
@@ -46,6 +64,17 @@ fn selected_editor_theme_preset() -> EditorThemePresetV1 {
     match raw.to_string_lossy().trim().to_ascii_lowercase().as_str() {
         "imgui_like_dense" => EditorThemePresetV1::ImguiLikeDense,
         _ => EditorThemePresetV1::Default,
+    }
+}
+
+fn selected_proof_layout() -> ImUiEditorProofLayout {
+    let Some(raw) = std::env::var_os(ENV_PROOF_LAYOUT) else {
+        return ImUiEditorProofLayout::Full;
+    };
+
+    match raw.to_string_lossy().trim().to_ascii_lowercase().as_str() {
+        "editor_review" => ImUiEditorProofLayout::EditorReview,
+        _ => ImUiEditorProofLayout::Full,
     }
 }
 
@@ -189,6 +218,8 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
         .and_then(|svc| svc.inner_size(window));
     let single = single_window_mode_enabled();
     let editor_preset = selected_editor_theme_preset();
+    let proof_layout = selected_proof_layout();
+    let editor_review_layout = proof_layout == ImUiEditorProofLayout::EditorReview;
     let editor_preset_env = std::env::var_os(ENV_EDITOR_PRESET)
         .filter(|v| !v.is_empty())
         .map(|v| v.to_string_lossy().into_owned());
@@ -245,128 +276,137 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
 
         let root = fret_ui_kit::ui::v_flex_build(move |cx, out| {
             fret_imui::imui_build(cx, out, |ui| {
-                let headline = fret_ui_kit::ui::text(format!(
-                        "imui editor-grade proof (M7): docking + multi-window + viewport surfaces (window={window:?})"
-                    ),
-                )
-                .font_semibold();
-                ui.add_ui(headline);
+                if !editor_review_layout {
+                    let headline = fret_ui_kit::ui::text(format!(
+                            "imui editor-grade proof (M7): docking + multi-window + viewport surfaces (window={window:?})"
+                        ),
+                    )
+                    .font_semibold();
+                    ui.add_ui(headline);
 
-                if single {
-                    let hint = fret_ui_kit::ui::text(format!(
-                            "single-window mode enabled ({ENV_SINGLE_WINDOW}=1): dock tear-off should degrade to in-window floating"
+                    if single {
+                        let hint = fret_ui_kit::ui::text(format!(
+                                "single-window mode enabled ({ENV_SINGLE_WINDOW}=1): dock tear-off should degrade to in-window floating"
+                            ),
+                        )
+                        .text_xs();
+                        ui.add_ui(hint);
+                    }
+
+                    let preset_line = match editor_preset_env.as_deref() {
+                        Some(raw) => fret_ui_kit::ui::text(format!(
+                            "editor preset: {} ({ENV_EDITOR_PRESET}={raw})",
+                            editor_preset.key()
+                        ))
+                        .text_xs(),
+                        None => fret_ui_kit::ui::text(format!(
+                            "editor preset: {} ({ENV_EDITOR_PRESET} unset)",
+                            editor_preset.key()
+                        ))
+                        .text_xs(),
+                    };
+                    ui.add_ui(preset_line);
+
+                    let layout_line = fret_ui_kit::ui::text(format!(
+                        "proof layout: {} ({ENV_PROOF_LAYOUT})",
+                        proof_layout.key()
+                    ))
+                    .text_xs();
+                    ui.add_ui(layout_line);
+
+                    let caps_line = fret_ui_kit::ui::text(format!(
+                            "caps: multi_window={} window_tear_off={} window_hover_detection={:?} window_inner_size={window_size:?}",
+                            caps.ui.multi_window, caps.ui.window_tear_off, caps.ui.window_hover_detection,
                         ),
                     )
                     .text_xs();
-                    ui.add_ui(hint);
-                }
+                    ui.add_ui(caps_line);
 
-                let preset_line = match editor_preset_env.as_deref() {
-                    Some(raw) => fret_ui_kit::ui::text(format!(
-                        "editor preset: {} ({ENV_EDITOR_PRESET}={raw})",
-                        editor_preset.key()
-                    ))
-                    .text_xs(),
-                    None => fret_ui_kit::ui::text(format!(
-                        "editor preset: {} ({ENV_EDITOR_PRESET} unset)",
-                        editor_preset.key()
-                    ))
-                    .text_xs(),
-                };
-                ui.add_ui(preset_line);
+                    let controls = fret_ui_kit::ui::h_flex_build(move |cx, out| {
+                        fret_imui::imui_build(cx, out, |ui| {
+                            if <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<App>>::button(
+                                ui,
+                                "Reset layout",
+                            )
+                            .clicked()
+                            {
+                                reset_dock_graph(ui.cx_mut().app, window);
+                                dock_runtime::request_dock_invalidation(ui.cx_mut().app, [window]);
+                            }
+                            if <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<App>>::button(
+                                ui,
+                                "Center floatings",
+                            )
+                            .clicked()
+                            {
+                                dock_runtime::recenter_in_window_floatings(ui.cx_mut().app, window);
+                            }
+                        });
+                    })
+                    .gap(fret_ui_kit::Space::N2);
+                    ui.add_ui(controls);
 
-                let caps_line = fret_ui_kit::ui::text(format!(
-                        "caps: multi_window={} window_tear_off={} window_hover_detection={:?} window_inner_size={window_size:?}",
-                        caps.ui.multi_window, caps.ui.window_tear_off, caps.ui.window_hover_detection,
-                    ),
-                )
-                .text_xs();
-                ui.add_ui(caps_line);
+                    let last_input_line =
+                        fret_ui_kit::ui::text(format!("last_input: {last_input}")).text_xs();
+                    ui.add_ui(last_input_line);
+                    ui.separator();
 
-                let controls = fret_ui_kit::ui::h_flex_build(move |cx, out| {
-                    fret_imui::imui_build(cx, out, |ui| {
-                        if <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<KernelApp>>::button(
-                            ui,
-                            "Reset layout",
-                        )
-                        .clicked()
-                        {
-                            reset_dock_graph(ui.cx_mut().app, window);
-                            dock_runtime::request_dock_invalidation(ui.cx_mut().app, [window]);
-                        }
-                        if <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<KernelApp>>::button(
-                            ui,
-                            "Center floatings",
-                        )
-                        .clicked()
-                        {
-                            dock_runtime::recenter_in_window_floatings(ui.cx_mut().app, window);
-                        }
+                    let parity_label = fret_ui_kit::ui::text(
+                        "authoring parity proof: shared models, left declarative, right imui adapters",
+                    )
+                    .text_xs();
+                    ui.add_ui(parity_label);
+
+                    let parity_hint = fret_ui_kit::ui::text(
+                        "edit either column and verify the paired control stays in sync under the same preset",
+                    )
+                    .text_xs();
+                    ui.add_ui(parity_hint);
+
+                    let parity_name_model_for_surface = parity_name_model.clone();
+                    let parity_drag_value_model_for_surface = parity_drag_value_model.clone();
+                    let parity_slider_model_for_surface = parity_slider_model.clone();
+                    let parity_enabled_model_for_surface = parity_enabled_model.clone();
+                    let parity_shading_model_for_surface = parity_shading_model.clone();
+                    ui.mount(move |cx| {
+                        vec![render_authoring_parity_surface(
+                            cx,
+                            parity_name_model_for_surface.clone(),
+                            parity_drag_value_model_for_surface.clone(),
+                            parity_slider_model_for_surface.clone(),
+                            parity_enabled_model_for_surface.clone(),
+                            parity_shading_model_for_surface.clone(),
+                        )]
                     });
-                })
-                .gap(fret_ui_kit::Space::N2);
-                ui.add_ui(controls);
 
-                let last_input_line =
-                    fret_ui_kit::ui::text(format!("last_input: {last_input}")).text_xs();
-                ui.add_ui(last_input_line);
-                ui.separator();
+                    let parity_state_hint = fret_ui_kit::ui::text(
+                        "shared state readout: use this to verify both columns mutate the same models",
+                    )
+                    .text_xs();
+                    ui.add_ui(parity_state_hint);
 
-                let parity_label = fret_ui_kit::ui::text(
-                    "authoring parity proof: shared models, left declarative, right imui adapters",
-                )
-                .text_xs();
-                ui.add_ui(parity_label);
+                    let parity_name_model_for_state = parity_name_model.clone();
+                    let parity_drag_value_model_for_state = parity_drag_value_model.clone();
+                    let parity_slider_model_for_state = parity_slider_model.clone();
+                    let parity_enabled_model_for_state = parity_enabled_model.clone();
+                    let parity_shading_model_for_state = parity_shading_model.clone();
+                    ui.mount(move |cx| {
+                        vec![render_authoring_parity_shared_state(
+                            cx,
+                            parity_name_model_for_state.clone(),
+                            parity_drag_value_model_for_state.clone(),
+                            parity_slider_model_for_state.clone(),
+                            parity_enabled_model_for_state.clone(),
+                            parity_shading_model_for_state.clone(),
+                        )]
+                    });
+                    ui.separator();
 
-                let parity_hint = fret_ui_kit::ui::text(
-                    "edit either column and verify the paired control stays in sync under the same preset",
-                )
-                .text_xs();
-                ui.add_ui(parity_hint);
-
-                let parity_name_model_for_surface = parity_name_model.clone();
-                let parity_drag_value_model_for_surface = parity_drag_value_model.clone();
-                let parity_slider_model_for_surface = parity_slider_model.clone();
-                let parity_enabled_model_for_surface = parity_enabled_model.clone();
-                let parity_shading_model_for_surface = parity_shading_model.clone();
-                ui.mount(move |cx| {
-                    vec![render_authoring_parity_surface(
-                        cx,
-                        parity_name_model_for_surface.clone(),
-                        parity_drag_value_model_for_surface.clone(),
-                        parity_slider_model_for_surface.clone(),
-                        parity_enabled_model_for_surface.clone(),
-                        parity_shading_model_for_surface.clone(),
-                    )]
-                });
-
-                let parity_state_hint = fret_ui_kit::ui::text(
-                    "shared state readout: use this to verify both columns mutate the same models",
-                )
-                .text_xs();
-                ui.add_ui(parity_state_hint);
-
-                let parity_name_model_for_state = parity_name_model.clone();
-                let parity_drag_value_model_for_state = parity_drag_value_model.clone();
-                let parity_slider_model_for_state = parity_slider_model.clone();
-                let parity_enabled_model_for_state = parity_enabled_model.clone();
-                let parity_shading_model_for_state = parity_shading_model.clone();
-                ui.mount(move |cx| {
-                    vec![render_authoring_parity_shared_state(
-                        cx,
-                        parity_name_model_for_state.clone(),
-                        parity_drag_value_model_for_state.clone(),
-                        parity_slider_model_for_state.clone(),
-                        parity_enabled_model_for_state.clone(),
-                        parity_shading_model_for_state.clone(),
-                    )]
-                });
-                ui.separator();
-
-                let editor_label =
-                    fret_ui_kit::ui::text("fret-ui-editor (M2): PropertyGroup + PropertyGrid + MiniSearchBox (filter)")
-                        .text_xs();
-                ui.add_ui(editor_label);
+                    let editor_label =
+                        fret_ui_kit::ui::text("fret-ui-editor (M2): PropertyGroup + PropertyGrid + MiniSearchBox (filter)")
+                            .text_xs();
+                    ui.add_ui(editor_label);
+                }
                 ui.mount(|cx| {
                     let fmt: NumericFormatFn<f64> =
                         Arc::new(|v| Arc::from(format!("{v:.3}")));
@@ -381,6 +421,18 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
 
                     vec![InspectorPanel::new(Some(editor_search_model.clone()))
                         .options(InspectorPanelOptions {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: if editor_review_layout {
+                                        Length::Fill
+                                    } else {
+                                        Length::Auto
+                                    },
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
                             test_id: Some(Arc::from("imui-editor-proof.editor.inspector")),
                             header_test_id: Some(Arc::from(
                                 "imui-editor-proof.editor.inspector.header",
@@ -585,8 +637,15 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                     parse.clone(),
                                                                 )
                                                                 .validate(Some(validate.clone()))
+                                                                .options(
+                                                                    fret_ui_editor::controls::DragValueOptions {
+                                                                        test_id: Some(Arc::from(
+                                                                            "imui-editor-proof.editor.drag-value-demo",
+                                                                        )),
+                                                                        ..Default::default()
+                                                                    },
+                                                                )
                                                                 .into_element(cx)
-                                                                .test_id("imui-editor-proof.editor.drag-value-demo")
                                                             },
                                                             |cx| {
                                                                 Some(
@@ -1173,8 +1232,15 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                             fmt_i32.clone(),
                                                                             parse_i32.clone(),
                                                                         )
+                                                                        .options(
+                                                                            fret_ui_editor::controls::DragValueOptions {
+                                                                                test_id: Some(Arc::from(
+                                                                                    "imui-editor-proof.editor.advanced.iterations",
+                                                                                )),
+                                                                                ..Default::default()
+                                                                            },
+                                                                        )
                                                                         .into_element(cx)
-                                                                        .test_id("imui-editor-proof.editor.advanced.iterations")
                                                                     },
                                                                     |cx| {
                                                                         Some(
@@ -1262,17 +1328,19 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                             },
                         )]
                 });
-                ui.separator();
+                if !editor_review_layout {
+                    ui.separator();
 
-                fret_docking::imui::dock_space_with(
-                    ui,
-                    fret_docking::imui::DockSpaceImUiOptions {
-                        test_id: dock_test_id,
-                        tab_drag_anchor_test_id,
-                        ..Default::default()
-                    },
-                    move |app, window| ensure_dock_graph(app, window),
-                );
+                    fret_docking::imui::dock_space_with(
+                        ui,
+                        fret_docking::imui::DockSpaceImUiOptions {
+                            test_id: dock_test_id,
+                            tab_drag_anchor_test_id,
+                            ..Default::default()
+                        },
+                        move |app, window| ensure_dock_graph(app, window),
+                    );
+                }
             });
         })
         .size_full();

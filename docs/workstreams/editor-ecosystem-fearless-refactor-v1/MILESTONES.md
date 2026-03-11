@@ -61,14 +61,18 @@ Deliverables:
 - explicit property-grid / inspector layout grammar,
 - stronger typed-edit, focus, active, and invalid state clarity,
 - screenshot proof coverage for the neutral default baseline,
+- a review-only proof composition that hides unrelated parity/docking surfaces during baseline
+  screenshot capture,
 - a decision and follow-up plan for `imgui_like_dense` screenshot parity,
-- proof-surface cleanup so overview / typing / error states are visible without manual scene setup.
+- proof-surface cleanup so overview / typing / error states are visible without manual scene setup,
+- and a boring close-out path for screenshot automation after typed-mode interactions.
 
 Exit gates:
 
 - the default editor baseline is visually legible enough to review without "squinting through gray",
 - proof/demo startup and host theme sync no longer silently erase the intended editor preset,
 - overview / typing / invalid screenshots are all meaningful and reproducible,
+- the screenshot proof can switch into a review-only composition without manual window/layout setup,
 - starter-set controls share one layout/state grammar instead of per-control heuristics,
 - and this workstream can point to clear proof/gate evidence for baseline correctness.
 

@@ -42,12 +42,18 @@ Interaction contract:
       label width, value width, status slot, reset slot, and dense minimums.
 - [ ] `EER-BASE-113` Make typed-edit, focus, active, and invalid states visually explicit across
       numeric, text, and select-like controls.
-- [ ] `EER-BASE-114` Clean up proof-surface composition so overview / typing / error screenshots are
+- [~] `EER-BASE-114` Clean up proof-surface composition so overview / typing / error screenshots are
       directly reviewable instead of relying on accidental window placement or hidden states.
+      `imui_editor_proof_demo` now exposes `FRET_IMUI_EDITOR_PROOF_LAYOUT=editor_review`, and the
+      default screenshot proof script uses that mode to capture inspector-only baseline states.
+      Remaining work: make the proof runner close out reliably after typed-mode interactions so the
+      gate is boring to rerun.
 - [~] `EER-BASE-115` Add screenshot/diag coverage for the neutral default editor baseline.
       The default screenshot proof now exists via
-      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-default.json`;
-      review + follow-up token/layout fixes are still pending.
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-default.json`,
+      and the latest review-only capture now covers overview / typing / validation states on the
+      editor inspector surface. Review + follow-up token/layout fixes are still pending, and the
+      runner finalization flake still needs cleanup.
 - [ ] `EER-BASE-119` Make editor-owned baseline theming resilient to host/theme resets:
       app-owned shadcn sync, environment color-scheme changes, and proof/demo startup should all
       converge on the same intended editor preset instead of silently falling back to host-only
@@ -106,6 +112,11 @@ Interaction contract:
       The neutral default baseline now has a screenshot proof via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-default.json`;
       its next job is to drive token/layout cleanup, not just exist.
+- [~] `EER-GATE-136` Close the screenshot-runner finalization gap for editor typed-edit proof.
+      The current default baseline script can capture reviewable overview / typing / validation
+      screenshots, but `fretboard diag run` can still time out while waiting for final script
+      completion after typed-mode interactions and emits `global access while leased` noise that
+      should be understood or removed.
 - [ ] `EER-MIGRATE-134` Write a short migration note for promoting app-local editor surfaces into
       ecosystem crates.
 - [ ] `EER-CLEANUP-135` Delete or quarantine any duplicated editor widget implementations left after

@@ -5,7 +5,8 @@
     "tags": ["screenshots", "ui_editor", "imui", "editor_components", "default_preset"],
     "env_defaults": {
       "FRET_IMUI_EDITOR_PROOF_SINGLE_WINDOW": "1",
-      "FRET_IMUI_EDITOR_PRESET": "default"
+      "FRET_IMUI_EDITOR_PRESET": "default",
+      "FRET_IMUI_EDITOR_PROOF_LAYOUT": "editor_review"
     },
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
     "target_hints": [
@@ -32,7 +33,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.declarative.group" }
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.drag-value-demo" }
       },
       "timeout_frames": 600
     },
@@ -56,7 +57,7 @@
 
     {
       "type": "click_stable",
-      "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.imui.value" },
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.drag-value-demo" },
       "click_count": 2
     },
     {
@@ -65,7 +66,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "imui-editor-proof.authoring.imui.value.typing.input"
+          "id": "imui-editor-proof.editor.drag-value-demo.typing.input"
         }
       },
       "timeout_frames": 240
@@ -74,7 +75,7 @@
       "type": "set_text_value",
       "target": {
         "kind": "test_id",
-        "id": "imui-editor-proof.authoring.imui.value.typing.input"
+        "id": "imui-editor-proof.editor.drag-value-demo.typing.input"
       },
       "text": "9.999"
     },
