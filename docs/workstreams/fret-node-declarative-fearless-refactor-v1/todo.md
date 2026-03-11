@@ -1382,6 +1382,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/callbacks_view/view_change.rs` seams, so `callbacks_view.rs` now mainly
     keeps the re-export surface explicit while retained callback emission stops accumulating
     unrelated gesture/view tails inline.
+  - Progress: auto-measure sizing helpers now also route text-metric and width-planning logic
+    through the private `ui/canvas/widget/auto_measure_apply/measure.rs` seam, so
+    `auto_measure_apply.rs` now mainly keeps size-apply synchronization explicit while measured
+    width planning stops sharing the same inline helper body.
 
 ## M5 - Compatibility retained convergence
 

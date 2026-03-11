@@ -926,6 +926,10 @@ real editors.
   `ui/canvas/widget/callbacks_view/view_change.rs` seams, so `callbacks_view.rs` now mainly keeps
   the re-export surface explicit while retained callback emission stops accumulating unrelated
   gesture/view tails inline.
+- auto-measure sizing helpers now also route text-metric and width-planning logic through the
+  private `ui/canvas/widget/auto_measure_apply/measure.rs` seam, so `auto_measure_apply.rs` now
+  mainly keeps size-apply synchronization explicit while measured width planning stops sharing the
+  same inline helper body.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
