@@ -1202,7 +1202,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
 }
 
 fn render_authoring_parity_surface(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     name_model: Model<String>,
     drag_value_model: Model<f64>,
     slider_model: Model<f64>,
@@ -1259,7 +1259,7 @@ fn render_authoring_parity_surface(
 }
 
 fn render_authoring_parity_shared_state(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     name_model: Model<String>,
     drag_value_model: Model<f64>,
     slider_model: Model<f64>,
@@ -1325,7 +1325,7 @@ fn render_authoring_parity_shared_state(
 }
 
 fn render_authoring_parity_declarative_group(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     name_model: Model<String>,
     drag_value_model: Model<f64>,
     slider_model: Model<f64>,
@@ -1465,7 +1465,7 @@ fn render_authoring_parity_declarative_group(
 }
 
 fn render_authoring_parity_imui_group(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     name_model: Model<String>,
     drag_value_model: Model<f64>,
     slider_model: Model<f64>,

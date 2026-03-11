@@ -463,7 +463,7 @@ $$
             size.size.width = Length::Fill;
             size.size.height = Length::Px(Px(240.0));
 
-            let spinner_box = |cx: &mut fret_ui::ElementContext<'_, KernelApp>| {
+            let spinner_box = |cx: &mut UiCx<'_>| {
                 cx.container(
                     fret_ui::element::ContainerProps {
                         layout: size,

@@ -569,6 +569,12 @@ mod authoring_surface_policy_tests {
         );
 
         assert_advanced_helpers_prefer_uicx(
+            HELLO_WORLD_COMPARE_DEMO,
+            &["let swatch = |cx: &mut UiCx<'_>,"],
+            &["let swatch = |cx: &mut ElementContext<'_, KernelApp>,"],
+        );
+
+        assert_advanced_helpers_prefer_uicx(
             IMAGE_HEAVY_MEMORY_DEMO,
             &["fn render_view(cx: &mut UiCx<'_>) -> Ui"],
             &["fn render_view(cx: &mut ElementContext<'_, KernelApp>) -> Ui"],
@@ -576,8 +582,26 @@ mod authoring_surface_policy_tests {
 
         assert_advanced_helpers_prefer_uicx(
             IMUI_EDITOR_PROOF_DEMO,
-            &["fn render_view(cx: &mut UiCx<'_>) -> ViewElements"],
-            &["fn render_view(cx: &mut ElementContext<'_, KernelApp>) -> ViewElements"],
+            &[
+                "fn render_view(cx: &mut UiCx<'_>) -> ViewElements",
+                "fn render_authoring_parity_surface(cx: &mut UiCx<'_>,",
+                "fn render_authoring_parity_shared_state(cx: &mut UiCx<'_>,",
+                "fn render_authoring_parity_declarative_group(cx: &mut UiCx<'_>,",
+                "fn render_authoring_parity_imui_group(cx: &mut UiCx<'_>,",
+            ],
+            &[
+                "fn render_view(cx: &mut ElementContext<'_, KernelApp>) -> ViewElements",
+                "fn render_authoring_parity_surface(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn render_authoring_parity_shared_state(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn render_authoring_parity_declarative_group(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn render_authoring_parity_imui_group(cx: &mut ElementContext<'_, KernelApp>,",
+            ],
+        );
+
+        assert_advanced_helpers_prefer_uicx(
+            MARKDOWN_DEMO,
+            &["let spinner_box = |cx: &mut UiCx<'_>|"],
+            &["let spinner_box = |cx: &mut fret_ui::ElementContext<'_, KernelApp>|"],
         );
 
         assert_advanced_helpers_prefer_uicx(

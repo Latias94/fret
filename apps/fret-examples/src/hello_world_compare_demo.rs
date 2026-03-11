@@ -10,7 +10,6 @@ use fret_runtime::{
     RunnerSurfaceConfigDiagnosticsStore, WindowGlobalChangeDiagnosticsStore,
     WindowRedrawRequestDiagnosticsStore,
 };
-use fret_ui::ElementContext;
 use fret_ui::element::{AnyElement, TextProps};
 use fret_ui_kit::declarative::scheduling::set_continuous_frames;
 use serde_json::json;
@@ -1040,7 +1039,7 @@ impl View for HelloWorldCompareView {
                 8.0
             };
 
-        let swatch = |cx: &mut ElementContext<'_, KernelApp>,
+        let swatch = |cx: &mut UiCx<'_>,
                       fill_rgb: u32,
                       border_rgb: u32|
          -> AnyElement {
