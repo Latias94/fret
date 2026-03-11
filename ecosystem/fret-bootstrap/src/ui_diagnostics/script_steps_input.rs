@@ -419,6 +419,151 @@ pub(super) fn handle_type_text_into_step(
     true
 }
 
+pub(super) fn handle_set_text_value_step(
+    svc: &mut UiDiagnosticsService,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    step_index: usize,
+    step: UiActionStepV2,
+    element_runtime: Option<&ElementRuntime>,
+    semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    mut ui: Option<&mut UiTree<App>>,
+    active: &mut ActiveScript,
+    output: &mut UiScriptFrameOutput,
+    force_dump_label: &mut Option<String>,
+    stop_script: &mut bool,
+    failure_reason: &mut Option<String>,
+) -> bool {
+    let UiActionStepV2::SetTextValue {
+        window: _,
+        target,
+        text,
+        timeout_frames,
+    } = step
+    else {
+        return false;
+    };
+
+    active.wait_until = None;
+    active.screenshot_wait = None;
+
+    let mut state = match active.v2_step_state.take() {
+        Some(V2StepState::SetTextValue(mut state)) if state.step_index == step_index => {
+            state.remaining_frames = state.remaining_frames.min(timeout_frames);
+            state
+        }
+        _ => V2SetTextValueState {
+            step_index,
+            remaining_frames: timeout_frames,
+        },
+    };
+
+    let Some(snapshot) = semantics_snapshot else {
+        if state.remaining_frames == 0 {
+            *force_dump_label = Some(format!(
+                "script-step-{step_index:04}-set_text_value-timeout"
+            ));
+            *stop_script = true;
+            *failure_reason = Some("set_text_value_timeout".to_string());
+            active.v2_step_state = None;
+            output.request_redraw = true;
+        } else {
+            state.remaining_frames = state.remaining_frames.saturating_sub(1);
+            active.v2_step_state = Some(V2StepState::SetTextValue(state));
+            output.request_redraw = true;
+        }
+        return true;
+    };
+
+    let Some(node) = select_semantics_node_with_trace(
+        snapshot,
+        window,
+        element_runtime,
+        &target,
+        active.scope_root_for_window(window),
+        step_index as u32,
+        svc.cfg.redact_text,
+        &mut active.selector_resolution_trace,
+    ) else {
+        if state.remaining_frames == 0 {
+            *force_dump_label = Some(format!(
+                "script-step-{step_index:04}-set_text_value-timeout"
+            ));
+            *stop_script = true;
+            *failure_reason = Some("set_text_value_timeout".to_string());
+            active.v2_step_state = None;
+            output.request_redraw = true;
+        } else {
+            state.remaining_frames = state.remaining_frames.saturating_sub(1);
+            active.v2_step_state = Some(V2StepState::SetTextValue(state));
+            output.request_redraw = true;
+        }
+        return true;
+    };
+
+    if node.flags.disabled {
+        *force_dump_label = Some(format!(
+            "script-step-{step_index:04}-set_text_value-disabled"
+        ));
+        *stop_script = true;
+        *failure_reason = Some("set_text_value_disabled".to_string());
+        active.v2_step_state = None;
+        output.request_redraw = true;
+        return true;
+    }
+
+    if !node.actions.set_value {
+        *force_dump_label = Some(format!(
+            "script-step-{step_index:04}-set_text_value-unsupported"
+        ));
+        *stop_script = true;
+        *failure_reason = Some("set_text_value_unsupported".to_string());
+        active.v2_step_state = None;
+        output.request_redraw = true;
+        return true;
+    }
+
+    let Some(ui) = ui.as_deref_mut() else {
+        *force_dump_label = Some(format!("script-step-{step_index:04}-set_text_value-no-ui"));
+        *stop_script = true;
+        *failure_reason = Some("set_text_value_no_ui".to_string());
+        active.v2_step_state = None;
+        output.request_redraw = true;
+        return true;
+    };
+
+    active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
+    fret_ui_app::accessibility_actions::set_value_text(ui, app, services, node.id, text.as_str());
+    record_focus_trace(
+        &mut active.focus_trace,
+        app,
+        window,
+        element_runtime,
+        Some(snapshot),
+        Some(ui),
+        step_index as u32,
+        Some(node.id.data().as_ffi()),
+        node.test_id.as_deref(),
+        "set_text_value.accessibility_set_value",
+    );
+    record_web_ime_trace(
+        &mut active.web_ime_trace,
+        app,
+        step_index as u32,
+        "set_text_value.accessibility_set_value",
+    );
+
+    active.v2_step_state = None;
+    active.next_step = active.next_step.saturating_add(1);
+    output.request_redraw = true;
+    if svc.cfg.script_auto_dump {
+        *force_dump_label = Some(format!("script-step-{step_index:04}-set_text_value"));
+    }
+
+    true
+}
+
 pub(super) fn handle_paste_text_into_step(
     svc: &mut UiDiagnosticsService,
     app: &App,

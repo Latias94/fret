@@ -908,6 +908,24 @@ pub enum UiActionStepV2 {
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
+    /// Set the full text value of a target text surface via the accessibility SetValue path.
+    ///
+    /// Unlike [`UiActionStepV2::TypeTextInto`], this step does not depend on click-to-focus
+    /// behavior. It resolves the target from semantics, requests focus for that node, selects the
+    /// current text, then dispatches a single text input payload with `text`.
+    ///
+    /// Notes:
+    ///
+    /// - Intended for diagnostics gates that need stable text entry across policy-layer widgets.
+    /// - Targets should expose `actions.set_value=true`; disabled targets fail the step.
+    SetTextValue {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        target: UiSelectorV1,
+        text: String,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
     /// Paste `text` into a target text surface by:
     ///
     /// 1) clicking the target to focus it,
@@ -3738,6 +3756,31 @@ mod tests {
                 assert_eq!(timeout_frames, default_action_timeout_frames());
             }
             _ => panic!("expected paste_text_into"),
+        }
+    }
+
+    #[test]
+    fn step_set_text_value_deserializes_with_defaults() {
+        let value = serde_json::json!({
+            "type": "set_text_value",
+            "target": { "kind": "test_id", "id": "field" },
+            "text": "#112233"
+        });
+
+        let step: UiActionStepV2 = serde_json::from_value(value).unwrap();
+        match step {
+            UiActionStepV2::SetTextValue {
+                window,
+                target,
+                text,
+                timeout_frames,
+            } => {
+                assert!(window.is_none());
+                assert!(matches!(target, UiSelectorV1::TestId { .. }));
+                assert_eq!(text, "#112233");
+                assert_eq!(timeout_frames, default_action_timeout_frames());
+            }
+            _ => panic!("expected set_text_value"),
         }
     }
 

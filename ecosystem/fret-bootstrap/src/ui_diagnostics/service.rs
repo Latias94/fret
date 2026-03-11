@@ -356,6 +356,7 @@ impl UiDiagnosticsService {
             | UiActionStepV2::EnsureVisible { target, .. }
             | UiActionStepV2::ScrollIntoView { target, .. }
             | UiActionStepV2::TypeTextInto { target, .. }
+            | UiActionStepV2::SetTextValue { target, .. }
             | UiActionStepV2::SetSliderValue { target, .. } => Some(target),
             _ => None,
         }?;
@@ -618,6 +619,7 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::EnsureVisible { window, .. }
                 | UiActionStepV2::ScrollIntoView { window, .. }
                 | UiActionStepV2::TypeTextInto { window, .. }
+                | UiActionStepV2::SetTextValue { window, .. }
                 | UiActionStepV2::MenuSelect { window, .. }
                 | UiActionStepV2::MenuSelectPath { window, .. }
                 | UiActionStepV2::SetSliderValue { window, .. }
@@ -669,6 +671,7 @@ impl UiDiagnosticsService {
             | UiActionStepV2::EnsureVisible { window, .. }
             | UiActionStepV2::ScrollIntoView { window, .. }
             | UiActionStepV2::TypeTextInto { window, .. }
+            | UiActionStepV2::SetTextValue { window, .. }
             | UiActionStepV2::MenuSelect { window, .. }
             | UiActionStepV2::MenuSelectPath { window, .. }
             | UiActionStepV2::SetSliderValue { window, .. }

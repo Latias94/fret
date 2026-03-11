@@ -155,6 +155,7 @@ pub(super) enum V2StepState {
     EnsureVisible(V2EnsureVisibleState),
     ScrollIntoView(V2ScrollIntoViewState),
     TypeTextInto(V2TypeTextIntoState),
+    SetTextValue(V2SetTextValueState),
     PasteTextInto(V2PasteTextIntoState),
     MenuSelect(V2MenuSelectState),
     MenuSelectPath(V2MenuSelectPathState),
@@ -252,6 +253,12 @@ pub(super) struct V2TypeTextIntoState {
     pub(super) phase: u32,
     pub(super) expected_node_id: Option<u64>,
     pub(super) expected_test_id: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct V2SetTextValueState {
+    pub(super) step_index: usize,
+    pub(super) remaining_frames: u32,
 }
 
 #[derive(Debug, Clone)]

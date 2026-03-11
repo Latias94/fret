@@ -40,6 +40,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
                 | V2StepState::EnsureVisible(_)
                 | V2StepState::ScrollIntoView(_)
                 | V2StepState::TypeTextInto(_)
+                | V2StepState::SetTextValue(_)
                 | V2StepState::PasteTextInto(_)
                 | V2StepState::MenuSelect(_)
                 | V2StepState::MenuSelectPath(_)
@@ -81,6 +82,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::EnsureVisible { .. }
         | UiActionStepV2::ScrollIntoView { .. }
         | UiActionStepV2::TypeTextInto { .. }
+        | UiActionStepV2::SetTextValue { .. }
         | UiActionStepV2::PasteTextInto { .. }
         | UiActionStepV2::MenuSelect { .. }
         | UiActionStepV2::MenuSelectPath { .. }
@@ -144,6 +146,7 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::WheelBurst { .. } => "wheel_burst",
         UiActionStepV2::TypeText { .. } => "type_text",
         UiActionStepV2::TypeTextInto { .. } => "type_text_into",
+        UiActionStepV2::SetTextValue { .. } => "set_text_value",
         UiActionStepV2::PasteTextInto { .. } => "paste_text_into",
         UiActionStepV2::WaitFrames { .. } => "wait_frames",
         UiActionStepV2::WaitMs { .. } => "wait_ms",
@@ -1058,6 +1061,25 @@ pub(super) fn dispatch_drive_script_step(
                 app,
                 window,
                 window_bounds,
+                step_index,
+                step,
+                element_runtime,
+                semantics_snapshot,
+                ui.as_deref_mut(),
+                active,
+                output,
+                force_dump_label,
+                stop_script,
+                failure_reason,
+            );
+            debug_assert!(handled);
+        }
+        step @ UiActionStepV2::SetTextValue { .. } => {
+            let handled = script_steps_input::handle_set_text_value_step(
+                service,
+                app,
+                services,
+                window,
                 step_index,
                 step,
                 element_runtime,

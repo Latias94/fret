@@ -479,6 +479,15 @@ impl ScriptV2Builder {
         })
     }
 
+    pub fn set_text_value(self, target: UiSelectorV1, text: impl Into<String>) -> Self {
+        self.push(UiActionStepV2::SetTextValue {
+            window: None,
+            target,
+            text: text.into(),
+            timeout_frames: 180,
+        })
+    }
+
     pub fn wait_frames(self, n: u32) -> Self {
         self.push(UiActionStepV2::WaitFrames { window: None, n })
     }
