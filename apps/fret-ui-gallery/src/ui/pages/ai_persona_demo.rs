@@ -2,6 +2,7 @@ use super::super::*;
 
 use crate::ui::doc_layout::DocSection;
 use crate::ui::snippets::ai as snippets;
+use fret_ui_kit::ui::UiElementSinkExt as _;
 
 fn states_notes(cx: &mut ElementContext<'_, App>) -> AnyElement {
     crate::ui::doc_layout::notes(

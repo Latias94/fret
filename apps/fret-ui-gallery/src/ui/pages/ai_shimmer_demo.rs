@@ -2,6 +2,7 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
+use fret_ui_kit::ui::UiElementSinkExt as _;
 use fret_ui_shadcn as shadcn;
 
 pub(super) fn preview_ai_shimmer_demo(
@@ -54,10 +55,7 @@ pub(super) fn preview_ai_shimmer_demo(
 }
 
 fn shimmer_props_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let row = |prop: &'static str,
-               ty: &'static str,
-               default: &'static str,
-               desc: &'static str| {
+    let row = |prop: &'static str, ty: &'static str, default: &'static str, desc: &'static str| {
         shadcn::TableRow::build(4, move |cx, out| {
             out.push_ui(cx, shadcn::TableCell::build(ui::text(prop)));
             out.push_ui(cx, shadcn::TableCell::build(ui::text(ty)));

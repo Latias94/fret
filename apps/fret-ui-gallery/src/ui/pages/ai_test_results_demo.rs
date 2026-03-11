@@ -2,16 +2,16 @@ use super::super::*;
 
 use crate::ui::doc_layout::DocSection;
 use crate::ui::snippets::ai as snippets;
+use fret_ui_kit::ui::UiElementSinkExt as _;
 
 fn status_colors_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let row =
-        |status: &'static str, color: &'static str, use_case: &'static str| {
-            shadcn::TableRow::build(3, move |cx, out| {
-                out.push_ui(cx, shadcn::TableCell::build(ui::text(status)));
-                out.push_ui(cx, shadcn::TableCell::build(ui::text(color)));
-                out.push_ui(cx, shadcn::TableCell::build(ui::text(use_case)));
-            })
-        };
+    let row = |status: &'static str, color: &'static str, use_case: &'static str| {
+        shadcn::TableRow::build(3, move |cx, out| {
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(status)));
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(color)));
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(use_case)));
+        })
+    };
 
     shadcn::Table::build(|cx, out| {
         out.push_ui(

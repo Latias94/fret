@@ -2,12 +2,10 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
+use fret_ui_kit::ui::UiElementSinkExt as _;
 
 fn file_status_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let row = |cx: &mut ElementContext<'_, App>,
-               status: &'static str,
-               label: &'static str,
-               color: &'static str| {
+    let row = |status: &'static str, label: &'static str, color: &'static str| {
         shadcn::TableRow::build(3, move |cx, out| {
             out.push_ui(cx, shadcn::TableCell::build(ui::text(status)));
             out.push_ui(cx, shadcn::TableCell::build(ui::text(label)));
@@ -32,10 +30,10 @@ fn file_status_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
         out.push_ui(
             cx,
             shadcn::TableBody::build(|cx, out| {
-                out.push_ui(cx, row(cx, "added", "A", "Green"));
-                out.push_ui(cx, row(cx, "modified", "M", "Yellow"));
-                out.push_ui(cx, row(cx, "deleted", "D", "Red"));
-                out.push_ui(cx, row(cx, "renamed", "R", "Blue"));
+                out.push_ui(cx, row("added", "A", "Green"));
+                out.push_ui(cx, row("modified", "M", "Yellow"));
+                out.push_ui(cx, row("deleted", "D", "Red"));
+                out.push_ui(cx, row("renamed", "R", "Blue"));
             }),
         );
     })
@@ -43,10 +41,7 @@ fn file_status_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
 }
 
 fn parts_props_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let row = |cx: &mut ElementContext<'_, App>,
-               part: &'static str,
-               inputs: &'static str,
-               notes: &'static str| {
+    let row = |part: &'static str, inputs: &'static str, notes: &'static str| {
         shadcn::TableRow::build(3, move |cx, out| {
             out.push_ui(cx, shadcn::TableCell::build(ui::text(part)));
             out.push_ui(cx, shadcn::TableCell::build(ui::text(inputs)));
@@ -71,21 +66,21 @@ fn parts_props_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
         out.push_ui(
             cx,
             shadcn::TableBody::build(|cx, out| {
-                out.push_ui(cx, row(cx, "Commit", "header, content, default_open", "Collapsible root surface; mechanism stays in shadcn/fret-ui primitives."));
-                out.push_ui(cx, row(cx, "CommitHeader", "children, test_id", "Trigger row; nested actions should not toggle the disclosure."));
-                out.push_ui(cx, row(cx, "CommitAuthor / CommitInfo", "children", "Layout helpers for the left avatar slot and the main info column."));
-                out.push_ui(cx, row(cx, "CommitAuthorAvatar", "new(initials)", "Avatar fallback initials, matching the official example."));
-                out.push_ui(cx, row(cx, "CommitMessage / CommitHash", "new(text)", "Text leaves for the message and short hash."));
-                out.push_ui(cx, row(cx, "CommitMetadata", "children", "Inline metadata row for hash, separator, and timestamp."));
-                out.push_ui(cx, row(cx, "CommitSeparator", "default() | new(text) | children(...)", "Docs-aligned custom separator slot; defaults to `•`."));
-                out.push_ui(cx, row(cx, "CommitTimestamp", "new(date) | children(...)", "Relative time by default; custom children mirror the official API."));
-                out.push_ui(cx, row(cx, "CommitActions", "children", "Trailing action cluster; button activation stays app-owned."));
-                out.push_ui(cx, row(cx, "CommitCopyButton", "new(hash), on_copy(...), timeout(...)", "Matches upstream copied-state suppression and exposes a hook for app effects."));
-                out.push_ui(cx, row(cx, "CommitContent / CommitFiles / CommitFile / CommitFileInfo", "children", "Composable wrappers for the disclosure body and file rows."));
-                out.push_ui(cx, row(cx, "CommitFileStatus", "new(status) | children(...)", "Docs-aligned custom status slot; defaults to A/M/D/R labels."));
-                out.push_ui(cx, row(cx, "CommitFileIcon", "default()", "Muted file glyph matching the official chrome."));
-                out.push_ui(cx, row(cx, "CommitFilePath", "new(path), on_click(...), test_id(...)", "Upstream is presentational; Fret adds an explicit file-open seam for apps."));
-                out.push_ui(cx, row(cx, "CommitFileChanges / CommitFileAdditions / CommitFileDeletions", "children | new(count)", "Monospace change counters aligned with the official preview."));
+                out.push_ui(cx, row("Commit", "header, content, default_open", "Collapsible root surface; mechanism stays in shadcn/fret-ui primitives."));
+                out.push_ui(cx, row("CommitHeader", "children, test_id", "Trigger row; nested actions should not toggle the disclosure."));
+                out.push_ui(cx, row("CommitAuthor / CommitInfo", "children", "Layout helpers for the left avatar slot and the main info column."));
+                out.push_ui(cx, row("CommitAuthorAvatar", "new(initials)", "Avatar fallback initials, matching the official example."));
+                out.push_ui(cx, row("CommitMessage / CommitHash", "new(text)", "Text leaves for the message and short hash."));
+                out.push_ui(cx, row("CommitMetadata", "children", "Inline metadata row for hash, separator, and timestamp."));
+                out.push_ui(cx, row("CommitSeparator", "default() | new(text) | children(...)", "Docs-aligned custom separator slot; defaults to `•`."));
+                out.push_ui(cx, row("CommitTimestamp", "new(date) | children(...)", "Relative time by default; custom children mirror the official API."));
+                out.push_ui(cx, row("CommitActions", "children", "Trailing action cluster; button activation stays app-owned."));
+                out.push_ui(cx, row("CommitCopyButton", "new(hash), on_copy(...), timeout(...)", "Matches upstream copied-state suppression and exposes a hook for app effects."));
+                out.push_ui(cx, row("CommitContent / CommitFiles / CommitFile / CommitFileInfo", "children", "Composable wrappers for the disclosure body and file rows."));
+                out.push_ui(cx, row("CommitFileStatus", "new(status) | children(...)", "Docs-aligned custom status slot; defaults to A/M/D/R labels."));
+                out.push_ui(cx, row("CommitFileIcon", "default()", "Muted file glyph matching the official chrome."));
+                out.push_ui(cx, row("CommitFilePath", "new(path), on_click(...), test_id(...)", "Upstream is presentational; Fret adds an explicit file-open seam for apps."));
+                out.push_ui(cx, row("CommitFileChanges / CommitFileAdditions / CommitFileDeletions", "children | new(count)", "Monospace change counters aligned with the official preview."));
             }),
         );
     })

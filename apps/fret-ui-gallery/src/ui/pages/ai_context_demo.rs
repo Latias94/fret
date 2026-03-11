@@ -2,6 +2,7 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
+use fret_ui_kit::ui::UiElementSinkExt as _;
 
 fn parts_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let row = |part: &'static str, notes: &'static str| {

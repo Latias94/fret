@@ -2,6 +2,7 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection, notes};
 use crate::ui::snippets::ai as snippets;
+use fret_ui_kit::ui::UiElementSinkExt as _;
 use fret_ui_shadcn as shadcn;
 
 pub(super) fn preview_ai_checkpoint_demo(
@@ -92,8 +93,7 @@ pub(super) fn preview_ai_checkpoint_demo(
 }
 
 fn checkpoint_props_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let row = |cx: &mut ElementContext<'_, App>,
-               part: &'static str,
+    let row = |part: &'static str,
                method: &'static str,
                ty: &'static str,
                default: &'static str,
@@ -128,17 +128,17 @@ fn checkpoint_props_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
         out.push_ui(
             cx,
             shadcn::TableBody::build(|cx, out| {
-                out.push_ui(cx, row(cx, "Checkpoint", "new(children)", "IntoIterator<Item = AnyElement>", "-", "Primary compound children; appends a trailing separator automatically."));
-                out.push_ui(cx, row(cx, "Checkpoint", "into_element_with_children", "FnOnce(&mut ElementContext) -> Vec<AnyElement>", "-", "Builds the checkpoint row inside a live scope when compound children are easier to author lazily."));
-                out.push_ui(cx, row(cx, "Checkpoint", "test_id", "impl Into<Arc<str>>", "None", "Stamps a group-level diagnostics id for automation and scripted repros."));
-                out.push_ui(cx, row(cx, "Checkpoint", "refine_layout / refine_style", "builder methods", "w_full + min_w_0 + overflow_hidden", "Adjusts layout and chrome while preserving the checkpoint recipe defaults."));
-                out.push_ui(cx, row(cx, "CheckpointIcon", "children", "AnyElement", "Bookmark icon", "Overrides the default icon with one composed subtree; muted foreground now inherits from the row by default."));
-                out.push_ui(cx, row(cx, "CheckpointIcon", "children_many / into_element_with_children", "builder methods", "None", "Lets the icon slot host multiple composed nodes or build them lazily inside a live element scope."));
-                out.push_ui(cx, row(cx, "CheckpointIcon", "icon_id / size / color", "builder methods", "bookmark / 16px / muted", "Tweaks the default bookmark visual without replacing the slot entirely."));
-                out.push_ui(cx, row(cx, "CheckpointTrigger", "new(children)", "IntoIterator<Item = AnyElement>", "-", "Button label or richer trigger content."));
-                out.push_ui(cx, row(cx, "CheckpointTrigger", "variant / size", "ButtonVariant / ButtonSize", "Ghost / Sm", "Matches the official AI Elements checkpoint trigger defaults."));
-                out.push_ui(cx, row(cx, "CheckpointTrigger", "tooltip / tooltip_panel_test_id", "builder methods", "None", "Adds the docs-style tooltip and a stable test id for the floating panel."));
-                out.push_ui(cx, row(cx, "CheckpointTrigger", "on_activate / muted_foreground / test_id", "builder methods", "None / true / None", "Wires restore behavior, keeps the idle ghost label muted, and exposes a stable trigger id."));
+                out.push_ui(cx, row("Checkpoint", "new(children)", "IntoIterator<Item = AnyElement>", "-", "Primary compound children; appends a trailing separator automatically."));
+                out.push_ui(cx, row("Checkpoint", "into_element_with_children", "FnOnce(&mut ElementContext) -> Vec<AnyElement>", "-", "Builds the checkpoint row inside a live scope when compound children are easier to author lazily."));
+                out.push_ui(cx, row("Checkpoint", "test_id", "impl Into<Arc<str>>", "None", "Stamps a group-level diagnostics id for automation and scripted repros."));
+                out.push_ui(cx, row("Checkpoint", "refine_layout / refine_style", "builder methods", "w_full + min_w_0 + overflow_hidden", "Adjusts layout and chrome while preserving the checkpoint recipe defaults."));
+                out.push_ui(cx, row("CheckpointIcon", "children", "AnyElement", "Bookmark icon", "Overrides the default icon with one composed subtree; muted foreground now inherits from the row by default."));
+                out.push_ui(cx, row("CheckpointIcon", "children_many / into_element_with_children", "builder methods", "None", "Lets the icon slot host multiple composed nodes or build them lazily inside a live element scope."));
+                out.push_ui(cx, row("CheckpointIcon", "icon_id / size / color", "builder methods", "bookmark / 16px / muted", "Tweaks the default bookmark visual without replacing the slot entirely."));
+                out.push_ui(cx, row("CheckpointTrigger", "new(children)", "IntoIterator<Item = AnyElement>", "-", "Button label or richer trigger content."));
+                out.push_ui(cx, row("CheckpointTrigger", "variant / size", "ButtonVariant / ButtonSize", "Ghost / Sm", "Matches the official AI Elements checkpoint trigger defaults."));
+                out.push_ui(cx, row("CheckpointTrigger", "tooltip / tooltip_panel_test_id", "builder methods", "None", "Adds the docs-style tooltip and a stable test id for the floating panel."));
+                out.push_ui(cx, row("CheckpointTrigger", "on_activate / muted_foreground / test_id", "builder methods", "None / true / None", "Wires restore behavior, keeps the idle ghost label muted, and exposes a stable trigger id."));
             }),
         );
     })
