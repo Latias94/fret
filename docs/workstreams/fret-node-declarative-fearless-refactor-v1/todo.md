@@ -1552,6 +1552,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/node_drag_preview/state.rs` seams, so `node_drag_preview.rs` now mainly
     keeps the node-drag preview façade explicit while the heavy preview calculation stops living in
     one monolithic root function.
+  - Progress: overlay painting now also routes close-button chrome/text paint and overlay-layer
+    dispatch through the private `ui/canvas/widget/paint_overlays/close_button.rs` and
+    `ui/canvas/widget/paint_overlays/layers.rs` seams, so `paint_overlays.rs` now mainly keeps the
+    overlay paint orchestration explicit.
 
 ## M5 - Compatibility retained convergence
 

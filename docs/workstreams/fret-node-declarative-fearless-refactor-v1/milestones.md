@@ -1091,6 +1091,10 @@ real editors.
   `ui/canvas/widget/node_drag_preview/state.rs` seams, so `node_drag_preview.rs` now mainly keeps
   the node-drag preview façade explicit while the heavy preview calculation stops living in one
   monolithic root function.
+- overlay painting now also routes close-button chrome/text paint and overlay-layer dispatch
+  through the private `ui/canvas/widget/paint_overlays/close_button.rs` and
+  `ui/canvas/widget/paint_overlays/layers.rs` seams, so `paint_overlays.rs` now mainly keeps the
+  overlay paint orchestration explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
