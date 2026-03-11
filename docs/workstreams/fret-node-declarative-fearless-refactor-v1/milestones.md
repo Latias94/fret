@@ -1019,6 +1019,14 @@ real editors.
   `ui/canvas/widget/context_menu/opening/edge.rs`, and
   `ui/canvas/widget/context_menu/opening/background.rs` seams, so
   `context_menu/opening.rs` now mainly keeps the right-click orchestration explicit.
+- keyboard context-menu navigation now also routes active-item stepping, typeahead, hover sync,
+  key handling, and pointer-move tails through the private
+  `ui/canvas/widget/context_menu/key_navigation/active_item.rs`,
+  `ui/canvas/widget/context_menu/key_navigation/typeahead.rs`,
+  `ui/canvas/widget/context_menu/key_navigation/hover.rs`,
+  `ui/canvas/widget/context_menu/key_navigation/key_down.rs`, and
+  `ui/canvas/widget/context_menu/key_navigation/pointer_move.rs` seams, so
+  `context_menu/key_navigation.rs` now mainly keeps the navigation façade explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

@@ -1,134 +1,19 @@
+mod active_item;
+mod hover;
+mod key_down;
+mod pointer_move;
+mod typeahead;
+
 use fret_ui::UiHost;
 
-use super::ui;
 use crate::ui::canvas::widget::*;
-
-pub(super) fn advance_context_menu_active_item(menu: &mut ContextMenuState, backwards: bool) {
-    let item_count = menu.items.len();
-    if item_count == 0 {
-        return;
-    }
-
-    let mut index = if backwards {
-        if menu.active_item == 0 {
-            item_count - 1
-        } else {
-            menu.active_item - 1
-        }
-    } else {
-        (menu.active_item + 1) % item_count
-    };
-
-    for _ in 0..item_count {
-        if menu.items.get(index).is_some_and(|item| item.enabled) {
-            break;
-        }
-        index = if backwards {
-            if index == 0 {
-                item_count - 1
-            } else {
-                index - 1
-            }
-        } else {
-            (index + 1) % item_count
-        };
-    }
-
-    menu.active_item = index;
-}
-
-pub(super) fn pop_context_menu_typeahead(menu: &mut ContextMenuState) -> bool {
-    if menu.typeahead.is_empty() {
-        return false;
-    }
-    menu.typeahead.pop();
-    true
-}
-
-pub(super) fn apply_context_menu_typeahead(menu: &mut ContextMenuState, ch: char) {
-    let try_find = |needle: &str| -> Option<usize> {
-        if needle.is_empty() {
-            return None;
-        }
-        menu.items.iter().position(|item| {
-            item.enabled && item.label.as_ref().to_ascii_lowercase().starts_with(needle)
-        })
-    };
-
-    menu.typeahead.push(ch);
-    let mut needle = menu.typeahead.to_ascii_lowercase();
-    let mut hit = try_find(&needle);
-    if hit.is_none() {
-        needle.clear();
-        needle.push(ch);
-        hit = try_find(&needle);
-        if hit.is_some() {
-            menu.typeahead.clear();
-            menu.typeahead.push(ch);
-        }
-    }
-    if let Some(index) = hit {
-        menu.active_item = index.min(menu.items.len().saturating_sub(1));
-    }
-}
-
-pub(super) fn sync_context_menu_hovered_item(
-    menu: &mut ContextMenuState,
-    hovered_item: Option<usize>,
-) -> bool {
-    if menu.hovered_item == hovered_item {
-        return false;
-    }
-
-    menu.hovered_item = hovered_item;
-    if let Some(ix) = hovered_item
-        && menu.items.get(ix).is_some_and(|item| item.enabled)
-    {
-        menu.active_item = ix.min(menu.items.len().saturating_sub(1));
-        menu.typeahead.clear();
-    }
-    true
-}
 
 pub(super) fn handle_context_menu_key_down_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut EventCx<'_, H>,
     key: fret_core::KeyCode,
 ) -> bool {
-    let Some(mut menu) = super::take_context_menu(&mut canvas.interaction) else {
-        return false;
-    };
-
-    match key {
-        fret_core::KeyCode::ArrowDown => {
-            advance_context_menu_active_item(&mut menu, false);
-            menu.typeahead.clear();
-            return ui::restore_context_menu_event(canvas, cx, menu);
-        }
-        fret_core::KeyCode::ArrowUp => {
-            advance_context_menu_active_item(&mut menu, true);
-            menu.typeahead.clear();
-            return ui::restore_context_menu_event(canvas, cx, menu);
-        }
-        fret_core::KeyCode::Enter | fret_core::KeyCode::NumpadEnter => {
-            let _ = canvas.activate_context_menu_active_selection(cx, &menu);
-            return ui::finish_context_menu_event(cx);
-        }
-        fret_core::KeyCode::Backspace => {
-            if pop_context_menu_typeahead(&mut menu) {
-                return ui::restore_context_menu_event(canvas, cx, menu);
-            }
-        }
-        _ => {}
-    }
-
-    if let Some(ch) = fret_core::keycode_to_ascii_lowercase(key) {
-        apply_context_menu_typeahead(&mut menu, ch);
-        return ui::restore_context_menu_event(canvas, cx, menu);
-    }
-
-    super::restore_context_menu(&mut canvas.interaction, menu);
-    false
+    key_down::handle_context_menu_key_down_event(canvas, cx, key)
 }
 
 pub(super) fn handle_context_menu_pointer_move_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
@@ -137,15 +22,7 @@ pub(super) fn handle_context_menu_pointer_move_event<H: UiHost, M: NodeGraphCanv
     position: Point,
     zoom: f32,
 ) -> bool {
-    let Some(menu) = canvas.interaction.context_menu.as_mut() else {
-        return false;
-    };
-
-    let hovered_item = hit_context_menu_item(&canvas.style, menu, position, zoom);
-    if sync_context_menu_hovered_item(menu, hovered_item) {
-        ui::invalidate_context_menu_paint(cx);
-    }
-    true
+    pointer_move::handle_context_menu_pointer_move_event(canvas, cx, position, zoom)
 }
 
 #[cfg(test)]
@@ -186,7 +63,7 @@ mod tests {
             0,
         );
 
-        advance_context_menu_active_item(&mut menu, false);
+        active_item::advance_context_menu_active_item(&mut menu, false);
 
         assert_eq!(menu.active_item, 1);
     }
@@ -202,7 +79,7 @@ mod tests {
             0,
         );
 
-        advance_context_menu_active_item(&mut menu, true);
+        active_item::advance_context_menu_active_item(&mut menu, true);
 
         assert_eq!(menu.active_item, 2);
     }
@@ -212,7 +89,7 @@ mod tests {
         let mut menu = menu(vec![item("Alpha", true), item("Beta", true)], 0);
         menu.typeahead.push('a');
 
-        apply_context_menu_typeahead(&mut menu, 'b');
+        typeahead::apply_context_menu_typeahead(&mut menu, 'b');
 
         assert_eq!(menu.typeahead, "b");
         assert_eq!(menu.active_item, 1);
@@ -221,10 +98,10 @@ mod tests {
     #[test]
     fn pop_typeahead_reports_whether_anything_changed() {
         let mut menu = menu(vec![item("Alpha", true)], 0);
-        assert!(!pop_context_menu_typeahead(&mut menu));
+        assert!(!typeahead::pop_context_menu_typeahead(&mut menu));
 
         menu.typeahead.push('a');
-        assert!(pop_context_menu_typeahead(&mut menu));
+        assert!(typeahead::pop_context_menu_typeahead(&mut menu));
         assert!(menu.typeahead.is_empty());
     }
 
@@ -233,7 +110,7 @@ mod tests {
         let mut menu = menu(vec![item("Alpha", true), item("Beta", true)], 0);
         menu.typeahead.push('a');
 
-        assert!(sync_context_menu_hovered_item(&mut menu, Some(1)));
+        assert!(hover::sync_context_menu_hovered_item(&mut menu, Some(1)));
         assert_eq!(menu.hovered_item, Some(1));
         assert_eq!(menu.active_item, 1);
         assert!(menu.typeahead.is_empty());
@@ -243,7 +120,7 @@ mod tests {
     fn sync_hovered_item_keeps_active_for_disabled_item() {
         let mut menu = menu(vec![item("Alpha", true), item("Beta", false)], 0);
 
-        assert!(sync_context_menu_hovered_item(&mut menu, Some(1)));
+        assert!(hover::sync_context_menu_hovered_item(&mut menu, Some(1)));
         assert_eq!(menu.hovered_item, Some(1));
         assert_eq!(menu.active_item, 0);
     }
