@@ -831,6 +831,11 @@ real editors.
   `ui/canvas/widget/pending_drag_session/node.rs` seams, so `pending_drag_session.rs` now mainly
   keeps the re-export surface explicit while pending drag activation helpers gain focused unit
   coverage.
+- group paint helpers now also route static chrome/text layout and selected overlay filtering
+  through the private `ui/canvas/widget/paint_groups/chrome.rs` and
+  `ui/canvas/widget/paint_groups/overlay.rs` seams, so `paint_groups.rs` now mainly keeps the
+  module split explicit while zoom-scaled group chrome and selected-overlay filtering gain focused
+  unit coverage.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
