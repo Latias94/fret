@@ -119,7 +119,7 @@ Companion docs:
   - [x] Add a source gate that forbids first-party curated examples from drifting back to
     `use fret_ui_shadcn as shadcn;`, `shadcn::shadcn_themes::*`, or root
     `shadcn::typography::*`.
-  - [ ] Audit remaining first-party docs/examples for root-level shadcn app-install teaching.
+  - [x] Audit remaining first-party docs/examples for root-level shadcn app-install teaching.
 - [ ] Migrate `fret-docking` to the component/advanced split without redefining the app authoring model.
   - [x] Add an explicit `fret::docking` facade module behind a `fret/docking` feature.
   - [x] Move the cookbook docking example to the `fret::docking::*` seam.
@@ -205,6 +205,8 @@ Companion docs:
     dedicated integration tests under `apps/fret-ui-gallery/tests/ui_authoring_surface_*.rs` to
     reduce merge conflicts on the crate entry file.
 - [ ] Add a gate that first-party ecosystem crates use documented extension seams.
+  - [x] Shadcn docs/examples now gate the curated `shadcn::app::*` seam, explicit advanced hooks,
+    and the documented raw escape-hatch lanes.
   - [x] Router cookbook/docs now gate the `fret::router::*` seam.
   - [x] Docking cookbook/docs now gate the `fret::docking::*` seam.
 - [ ] Keep layering checks green.
