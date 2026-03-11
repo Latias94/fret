@@ -4,16 +4,15 @@ pub const SOURCE: &str = include_str!("demo.rs");
 use std::sync::Arc;
 
 use fret_core::{
-    AttributedText, DecorationLineStyle, TextOverflow, TextPaintStyle, TextSpan, TextWrap,
-    UnderlineStyle,
+    AttributedText, DecorationLineStyle, SemanticsRole, TextOverflow, TextPaintStyle, TextSpan,
+    TextWrap, UnderlineStyle,
 };
 use fret_runtime::Effect;
-use fret_ui::element::{SelectableTextInteractiveSpan, SelectableTextProps};
+use fret_ui::element::{PressableKeyActivation, PressableProps, StyledTextProps};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 fn is_diag_mode() -> bool {
     std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
-        || std::env::var_os("FRET_DIAG_DIR").is_some_and(|v| !v.is_empty())
 }
 
 fn is_safe_open_url(url: &str) -> bool {
@@ -73,34 +72,43 @@ fn interactive_link_text<H: UiHost + 'static>(
     href: &'static str,
     test_id: &'static str,
 ) -> AnyElement {
-    let (rich, range) = link_like_rich_text(text, underlined_fragment);
+    let (rich, _range) = link_like_rich_text(text, underlined_fragment);
+    let theme = Theme::global(&*cx.app).snapshot();
     let diag_mode = is_diag_mode();
+    let label_arc: Arc<str> = Arc::from(text);
     let href_arc: Arc<str> = Arc::from(href);
+    let href_for_semantics = href_arc.clone();
 
-    cx.selectable_text_with_id_props(move |cx, id| {
+    cx.pressable_with_id_props(move |cx, st, _id| {
         let href_for_activate = href_arc.clone();
-        cx.selectable_text_on_activate_span_for(
-            id,
-            Arc::new(move |host, _action_cx, _reason, _activation| {
-                if !diag_mode && is_safe_open_url(&href_for_activate) {
-                    host.push_effect(Effect::OpenUrl {
-                        url: href_for_activate.to_string(),
-                        target: None,
-                        rel: None,
-                    });
-                }
-            }),
-        );
+        cx.pressable_on_activate(Arc::new(move |host, action_cx, _reason| {
+            if !diag_mode && is_safe_open_url(&href_for_activate) {
+                host.push_effect(Effect::OpenUrl {
+                    url: href_for_activate.to_string(),
+                    target: None,
+                    rel: None,
+                });
+            }
+            host.request_redraw(action_cx.window);
+        }));
 
-        let mut props = SelectableTextProps::new(rich);
-        props.wrap = TextWrap::WordBreak;
-        props.overflow = TextOverflow::Clip;
-        props.interactive_spans = Arc::from([SelectableTextInteractiveSpan {
-            range: range.clone(),
-            tag: href_arc.clone(),
-        }]);
-        props
+        let mut props = PressableProps::default();
+        props.key_activation = PressableKeyActivation::EnterOnly;
+        props.a11y.role = Some(SemanticsRole::Link);
+        props.a11y.label = Some(label_arc.clone());
+
+        let mut text_props = StyledTextProps::new(rich.clone());
+        text_props.wrap = TextWrap::WordBreak;
+        text_props.overflow = TextOverflow::Clip;
+        text_props.color = Some(if st.hovered {
+            theme.color_token("foreground")
+        } else {
+            theme.color_token("primary")
+        });
+
+        (props, [cx.styled_text_props(text_props)])
     })
+    .a11y_value(href_for_semantics)
     .test_id(test_id)
 }
 

@@ -4,12 +4,11 @@ pub const SOURCE: &str = include_str!("interactive_links.rs");
 use std::sync::Arc;
 
 use fret_core::{
-    AttributedText, DecorationLineStyle, TextOverflow, TextPaintStyle, TextSpan, TextWrap,
-    UnderlineStyle,
+    AttributedText, DecorationLineStyle, SemanticsRole, TextOverflow, TextPaintStyle, TextSpan,
+    TextWrap, UnderlineStyle,
 };
 use fret_runtime::{Effect, Model};
-use fret_ui::action::ActivateReason;
-use fret_ui::element::{SelectableTextInteractiveSpan, SelectableTextProps};
+use fret_ui::element::{PressableKeyActivation, PressableProps, StyledTextProps};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 #[derive(Default)]
@@ -19,7 +18,6 @@ struct DemoModels {
 
 fn is_diag_mode() -> bool {
     std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
-        || std::env::var_os("FRET_DIAG_DIR").is_some_and(|v| !v.is_empty())
 }
 
 fn is_safe_open_url(url: &str) -> bool {
@@ -40,6 +38,15 @@ fn is_safe_open_url(url: &str) -> bool {
     lower.starts_with("http://") || lower.starts_with("https://") || lower.starts_with("mailto:")
 }
 
+fn underlined_rich_text(label: &'static str) -> AttributedText {
+    let mut span = TextSpan::new(label.len());
+    span.paint = TextPaintStyle::default().with_underline(UnderlineStyle {
+        color: None,
+        style: DecorationLineStyle::Solid,
+    });
+    AttributedText::new(Arc::<str>::from(label), Arc::<[TextSpan]>::from([span]))
+}
+
 fn interactive_link<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     last_link: Model<Option<Arc<str>>>,
@@ -50,49 +57,48 @@ fn interactive_link<H: UiHost + 'static>(
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
     let diag_mode = is_diag_mode();
-    let mut span = TextSpan::new(label.len());
-    span.paint = TextPaintStyle::default().with_underline(UnderlineStyle {
-        color: None,
-        style: DecorationLineStyle::Solid,
-    });
-
-    let rich = AttributedText::new(Arc::<str>::from(label), Arc::<[TextSpan]>::from([span]));
+    let rich = underlined_rich_text(label);
+    let label_arc: Arc<str> = Arc::from(label);
     let tag_arc: Arc<str> = Arc::from(tag);
     let href_arc: Arc<str> = Arc::from(href);
+    let href_for_semantics = href_arc.clone();
 
-    cx.selectable_text_with_id_props(move |cx, id| {
+    cx.pressable_with_id_props(move |cx, st, _id| {
         let last_link_for_activate = last_link.clone();
         let href_for_activate = href_arc.clone();
-        cx.selectable_text_on_activate_span_for(
-            id,
-            Arc::new(
-                move |host, action_cx, _reason: ActivateReason, activation| {
-                    if !diag_mode && is_safe_open_url(&href_for_activate) {
-                        host.push_effect(Effect::OpenUrl {
-                            url: href_for_activate.to_string(),
-                            target: None,
-                            rel: None,
-                        });
-                    }
-                    let _ = host.models_mut().update(&last_link_for_activate, |value| {
-                        *value = Some(activation.tag.clone())
-                    });
-                    host.notify(action_cx);
-                    host.request_redraw(action_cx.window);
-                },
-            ),
-        );
+        let tag_for_activate = tag_arc.clone();
+        cx.pressable_on_activate(Arc::new(move |host, action_cx, _reason| {
+            if !diag_mode && is_safe_open_url(&href_for_activate) {
+                host.push_effect(Effect::OpenUrl {
+                    url: href_for_activate.to_string(),
+                    target: None,
+                    rel: None,
+                });
+            }
+            let _ = host.models_mut().update(&last_link_for_activate, |value| {
+                *value = Some(tag_for_activate.clone())
+            });
+            host.notify(action_cx);
+            host.request_redraw(action_cx.window);
+        }));
 
-        let mut props = SelectableTextProps::new(rich);
-        props.wrap = TextWrap::WordBreak;
-        props.overflow = TextOverflow::Clip;
-        props.color = Some(theme.color_token("primary"));
-        props.interactive_spans = Arc::from([SelectableTextInteractiveSpan {
-            range: 0..label.len(),
-            tag: tag_arc,
-        }]);
-        props
+        let mut props = PressableProps::default();
+        props.key_activation = PressableKeyActivation::EnterOnly;
+        props.a11y.role = Some(SemanticsRole::Link);
+        props.a11y.label = Some(label_arc.clone());
+
+        let mut text_props = StyledTextProps::new(rich.clone());
+        text_props.wrap = TextWrap::WordBreak;
+        text_props.overflow = TextOverflow::Clip;
+        text_props.color = Some(if st.hovered {
+            theme.color_token("foreground")
+        } else {
+            theme.color_token("primary")
+        });
+
+        (props, [cx.styled_text_props(text_props)])
     })
+    .a11y_value(href_for_semantics)
     .test_id(test_id)
 }
 
@@ -120,7 +126,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             .variant(shadcn::BadgeVariant::Secondary)
             .into_element(cx)
             .test_id(format!("ui-gallery-alert-link-status-{tag}")),
-        None => ui::text("Activate a link to verify span routing.")
+        None => ui::text("Activate a link to verify link routing.")
             .text_sm()
             .into_element(cx)
             .test_id("ui-gallery-alert-link-status-idle"),
@@ -133,7 +139,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 shadcn::AlertTitle::new("Need help resolving the billing issue?").into_element(cx),
                 shadcn::AlertDescription::new_children([
                     ui::text(
-                        "Review the recovery resources below. The links are backed by selectable-text spans so diagnostics can verify activation deterministically.",
+                        "Review the recovery resources below. These text-like links open safe URLs in normal runs while diagnostics still keep deterministic activation evidence.",
                     )
                     .into_element(cx),
                     interactive_link(

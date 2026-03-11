@@ -52,7 +52,7 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .test_id_prefix("ui-gallery-alert-rich-title")
                 .code_rust_from_file_region(snippets::rich_title::SOURCE, "example"),
             DocSection::new("Interactive Links", interactive_links)
-                .description("A Fret-specific link-span pattern: normal runs open safe URLs, while diagnostics still keep deterministic activation evidence.")
+                .description("A Fret-specific text-link pattern: normal runs open safe URLs, while diagnostics still keep deterministic activation evidence.")
                 .code_rust_from_file_region(snippets::interactive_links::SOURCE, "example"),
             DocSection::new("Custom Colors", custom_colors)
                 .description("Custom chrome override for special emphasis.")
