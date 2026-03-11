@@ -1302,6 +1302,16 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/paint_overlay_wire_hint/style.rs` seams, so `paint_overlay_wire_hint.rs`
     now mainly keeps the paint orchestration explicit while invalid-hover diagnostics and bundle/yank
     hint semantics gain focused unit coverage.
+  - Progress: toast overlay paint helpers now also route zoom-scaled layout and severity/style
+    semantics through the private `ui/canvas/widget/paint_overlay_toast/layout.rs` and
+    `ui/canvas/widget/paint_overlay_toast/style.rs` seams, so `paint_overlay_toast.rs` now mainly
+    keeps the paint orchestration explicit while toast placement and severity color mapping gain
+    focused unit coverage.
+  - Progress: pointer-down routing now also routes double-click arbitration and tail-lane dispatch
+    through the private `ui/canvas/widget/event_pointer_down_route/double_click.rs` and
+    `ui/canvas/widget/event_pointer_down_route/dispatch.rs` seams, so
+    `event_pointer_down_route.rs` now mainly keeps early-return orchestration explicit while button
+    lane selection retains focused unit coverage.
 
 ## M5 - Compatibility retained convergence
 

@@ -1,3 +1,6 @@
+mod layout;
+mod style;
+
 use super::*;
 
 pub(super) fn paint_toast<H: UiHost, M: NodeGraphCanvasMiddleware>(
@@ -9,41 +12,17 @@ pub(super) fn paint_toast<H: UiHost, M: NodeGraphCanvasMiddleware>(
     viewport_origin_y: f32,
     viewport_h: f32,
 ) {
-    let margin = 12.0 / zoom;
-    let pad = 10.0 / zoom;
-    let max_w = 420.0 / zoom;
-
-    let mut text_style = canvas.style.geometry.context_menu_text_style.clone();
-    text_style.size = Px(text_style.size.0 / zoom);
-    if let Some(lh) = text_style.line_height.as_mut() {
-        lh.0 /= zoom;
-    }
-
-    let constraints = TextConstraints {
-        max_width: Some(Px(max_w - 2.0 * pad)),
-        wrap: TextWrap::Word,
-        overflow: TextOverflow::Clip,
-        align: fret_core::TextAlign::Start,
-        scale_factor: effective_scale_factor(cx.scale_factor, zoom),
-    };
+    let text_style = style::toast_text_style(canvas, zoom);
+    let layout = layout::toast_layout(zoom, viewport_origin_x, viewport_origin_y, viewport_h);
+    let constraints = layout::toast_text_constraints(cx.scale_factor, layout, zoom);
 
     let (blob, metrics) =
         canvas
             .paint_cache
             .text_blob(cx.services, toast.message.clone(), &text_style, constraints);
 
-    let box_w = (metrics.size.width.0 + 2.0 * pad).clamp(120.0 / zoom, max_w);
-    let box_h = metrics.size.height.0 + 2.0 * pad;
-
-    let x = viewport_origin_x + margin;
-    let y = viewport_origin_y + viewport_h - box_h - margin;
-    let rect = Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(box_w), Px(box_h)));
-
-    let border_color = match toast.severity {
-        DiagnosticSeverity::Info => Color::from_srgb_hex_rgb(0x33_8c_f2),
-        DiagnosticSeverity::Warning => Color::from_srgb_hex_rgb(0xf2_bf_33),
-        DiagnosticSeverity::Error => Color::from_srgb_hex_rgb(0xe6_59_59),
-    };
+    let rect = layout::toast_rect(layout, metrics.size.width.0, metrics.size.height.0);
+    let border_color = style::toast_border_color(toast.severity);
 
     cx.scene.push(SceneOp::Quad {
         order: DrawOrder(70),
@@ -54,8 +33,8 @@ pub(super) fn paint_toast<H: UiHost, M: NodeGraphCanvasMiddleware>(
         corner_radii: Corners::all(Px(6.0 / zoom)),
     });
 
-    let text_x = Px(rect.origin.x.0 + pad);
-    let text_y = Px(rect.origin.y.0 + pad + metrics.baseline.0);
+    let text_x = Px(rect.origin.x.0 + layout.pad);
+    let text_y = Px(rect.origin.y.0 + layout.pad + metrics.baseline.0);
     cx.scene.push(SceneOp::Text {
         order: DrawOrder(71),
         origin: Point::new(text_x, text_y),
