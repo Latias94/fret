@@ -1399,6 +1399,13 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/auto_measure_apply/apply.rs` seams, so the `auto_measure*` roots now mainly
     keep cache invalidation and pipeline orchestration explicit while the collect/apply tails stop
     sharing root helper bodies.
+  - Progress: searcher query-edit and row-state helpers now also route key-to-query mutation plus
+    recent-kind and active-row/scroll maintenance through the private
+    `ui/canvas/widget/searcher_input_query/query.rs`,
+    `ui/canvas/widget/searcher_rows/recent.rs`, and
+    `ui/canvas/widget/searcher_rows/active.rs` seams, so `searcher_input_query.rs` and
+    `searcher_rows.rs` now mainly keep canvas-level orchestration explicit while query mutation and
+    row-state tails stop accumulating in the root helpers.
 
 ## M5 - Compatibility retained convergence
 

@@ -942,6 +942,13 @@ real editors.
   `ui/canvas/widget/auto_measure_apply/apply.rs` seams, so the `auto_measure*` roots now mainly
   keep cache invalidation and pipeline orchestration explicit while the collect/apply tails stop
   sharing root helper bodies.
+- searcher query-edit and row-state helpers now also route key-to-query mutation plus recent-kind
+  and active-row/scroll maintenance through the private
+  `ui/canvas/widget/searcher_input_query/query.rs`,
+  `ui/canvas/widget/searcher_rows/recent.rs`, and
+  `ui/canvas/widget/searcher_rows/active.rs` seams, so `searcher_input_query.rs` and
+  `searcher_rows.rs` now mainly keep canvas-level orchestration explicit while query mutation and
+  row-state tails stop accumulating in the root helpers.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
