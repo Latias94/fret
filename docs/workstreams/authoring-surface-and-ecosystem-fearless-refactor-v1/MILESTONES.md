@@ -83,6 +83,8 @@ Deliverables:
 
 - old aliases/helpers removed,
 - templates/docs/examples rewritten,
+- first-party UI Gallery teaching surfaces normalized to `UiCx` so the default story no longer
+  leaks `ElementContext<'_, App>`,
 - stale docs deleted or archived.
 
 Exit criteria:
@@ -100,6 +102,7 @@ Deliverables:
 - prelude leakage gates,
 - docs consistency gates,
 - template authoring-surface gates,
+- UI Gallery source gates for first-party teaching surfaces,
 - ecosystem extension-seam checks.
 
 Exit criteria:

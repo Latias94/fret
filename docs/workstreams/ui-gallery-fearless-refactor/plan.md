@@ -52,10 +52,21 @@ The current authoring follow-up also has a concrete feature-boundary outcome:
   `gallery-dev` is off,
 - dev/material3-only page/cmd entry points and model wiring are being gated end-to-end through
   `src/spec.rs`, `src/driver/*`, `src/ui/models.rs`, and `src/ui/content.rs`,
+- authoring-surface policy gates no longer live in `src/lib.rs`; they are split into dedicated
+  integration tests under `apps/fret-ui-gallery/tests/` so future UI Gallery cleanup no longer
+  collides with the crate entry file,
 - current crate-local check baseline on 2026-03-11 is:
   - `fret-ui-gallery` warnings under `cargo check -p fret-ui-gallery --lib`: 0,
   - `fret-ui-gallery` warnings under
     `cargo check -p fret-ui-gallery --lib --features gallery-full`: 0.
+
+Progress assessment on 2026-03-11:
+
+- this workstream is now in **stabilization / polish**, not interface migration,
+- the hard-to-reverse work is done: snippet-backed pages, `UiCx` teaching surfaces, Material 3
+  legacy preview retirement, and dedicated source-policy gates are all landed,
+- the tracked TODO checklist is now complete; remaining work is limited to opportunistic dead-code /
+  stale-asset cleanup and future doc polish outside the core migration path.
 
 ## Goals
 
@@ -227,7 +238,8 @@ Macros (`stringify!`) tend to:
 Now that drift is eliminated by construction, the highest leverage follow-ups are:
 
 - Expand the drift audit to cover any non-`src/ui/pages/**` preview surfaces (if present).
-- Normalize DocSection chrome/layout (max widths, padding, “Notes” shell usage) across pages so the gallery feels consistent.
+- Keep the reviewed DocSection width allowlist current when genuinely wide pages are added
+  (`layout-audit.md` records the retained exceptions).
 - Optional: align page taxonomy + section ordering to upstream shadcn MDX navigation (Base as primary, Radix as cross-check).
 
 ## Current execution order for the authoring-surface cleanup

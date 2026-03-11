@@ -1,0 +1,80 @@
+# Ecosystem Integration Traits v1 — Milestones
+
+Status: Planning
+Last updated: 2026-03-11
+
+Related:
+
+- `DESIGN.md`
+- `TODO.md`
+- `TARGET_INTERFACE_STATE.md`
+- `MIGRATION_MATRIX.md`
+
+## M0 — Trait Budget Lock
+
+Goal:
+
+- agree on the integration vocabulary before more first-party ecosystems drift.
+
+Exit criteria:
+
+- `DESIGN.md` is accepted as the working plan,
+- the target ownership for `InstallIntoApp`, `CommandCatalog`, `RouteCodec`,
+  `DockPanelFactory`, and `QueryAdapter` is recorded,
+- rejected/deferred traits are explicitly documented,
+- docs index and roadmap link to this workstream.
+
+## M1 — App Integration Normalization
+
+Goal:
+
+- make app-level ecosystem wiring boring and consistent.
+
+Exit criteria:
+
+- `FretApp::setup(...)` remains the canonical default story,
+- first-party app integration modules converge on one naming posture,
+- `InstallIntoApp` (or its final equivalent) is implemented or intentionally deferred with a clear
+  reason,
+- at least one first-party bundle/composition example exists.
+
+## M2 — Domain Trait Extraction
+
+Goal:
+
+- land the domain-specific seams where traits are actually justified.
+
+Exit criteria:
+
+- command catalog abstraction is separated from shadcn recipe code,
+- router typed route encoding has one shared codec seam,
+- docking panel contributions have a contribution-level factory seam,
+- each extracted trait is owned by the correct ecosystem layer.
+
+## M3 — State/Query Integration Closure
+
+Goal:
+
+- clarify the boundary between app-facing grouped data helpers and optional reusable adapters.
+
+Exit criteria:
+
+- grouped `cx.data().selector(...)` / `cx.data().query(...)` remains the official app-path story,
+- a decision is made on `QueryAdapter`:
+  - implemented for a real consumer, or
+  - explicitly deferred with written rationale,
+- selector remains trait-free unless concrete pressure proves otherwise.
+
+## M4 — Docs, Gates, and Deletion
+
+Goal:
+
+- lock the cleaned surface and prevent drift back toward mixed integration stories.
+
+Exit criteria:
+
+- official docs/examples/templates point to the new ecosystem integration story,
+- guardrails exist for the highest-risk regressions,
+- legacy mixed postures tracked in `MIGRATION_MATRIX.md` are either deleted or intentionally marked
+  as advanced/internal,
+- this workstream can be downgraded from active refactor planning to maintenance.

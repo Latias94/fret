@@ -16,6 +16,8 @@ Status (2026-03-11):
   migrations stay low-conflict.
 - The legacy implementation under `apps/fret-ui-gallery/src/ui/previews/material3.rs` and
   `apps/fret-ui-gallery/src/ui/previews/material3/**` has been deleted after the retirement audit.
+- The retirement is locked by the default-app authoring gate in
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`.
 - Legacy preview-only helpers `preview_material3_fab`, `preview_material3_card`,
   `preview_material3_chip`, and `preview_material3_search_view` are no longer routed as standalone
   pages. Their useful coverage now lives inside snippet-backed composite surfaces, primarily

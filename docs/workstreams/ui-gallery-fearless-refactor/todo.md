@@ -23,8 +23,10 @@ The authoring-surface cleanup is also ahead of the previous snapshot:
   context-bearing Rust files on the default app helper surface.
 - Gallery shell helpers that are visible to first-party app authors (`src/ui/content.rs`,
   `src/ui/nav.rs`) also use `UiCx`.
-- Internal preview buckets already normalized to `UiCx` and guarded in
-  `apps/fret-ui-gallery/src/lib.rs`:
+- Internal preview buckets already normalized to `UiCx` and guarded in dedicated policy tests:
+  - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
+  - `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs`
+  - `apps/fret-ui-gallery/tests/ui_authoring_surface_import_policies.rs`
   - `src/ui/previews/magic.rs`
   - `src/ui/previews/pages/components/**`
   - `src/ui/previews/pages/harness/**`
@@ -37,8 +39,8 @@ The authoring-surface cleanup is also ahead of the previous snapshot:
   - `src/ui/previews/gallery/torture/**`
 - Remaining internal preview migration is now explicit and bounded:
   - `0 / 92` preview-surface files expose `ElementContext<'_, App>`.
-  - Source gates in `apps/fret-ui-gallery/src/lib.rs` now cover every preview bucket that still
-    exposes a context surface.
+  - Dedicated source-policy tests now cover every preview bucket that still exposes a context
+    surface while keeping `src/lib.rs` conflict-light.
 - Immediate dead-code cleanup has started:
   - deleted dead `*_legacy` preview helpers from
     `src/ui/previews/pages/components/buttons.rs`,
@@ -68,6 +70,17 @@ The authoring-surface cleanup is also ahead of the previous snapshot:
       `cargo check -p fret-ui-gallery --lib --features gallery-full`: 0,
     - remaining command output warnings come from dependency crates (`fret-ui-shadcn`,
       `fret-bootstrap`, `fret-ui-ai`), not from `fret-ui-gallery`.
+
+### Progress assessment (2026-03-11)
+
+- Workstream stage: stabilization / polish.
+- Contract-risk migration work: complete.
+- Required open items in this tracker: none.
+- Remaining optional follow-ups:
+  - keep warning cleanup opportunistic and bounded to live gallery inventory,
+  - decide whether the stricter snippet import gate changes in
+    `apps/fret-ui-gallery/tests/ui_snippets_deny_gallery_internal_imports.rs` should land as a
+    separate cleanup commit.
 
 ### Next authoring-surface execution order (2026-03-11)
 
@@ -118,6 +131,8 @@ The authoring-surface cleanup is also ahead of the previous snapshot:
 - [x] Forbid `include_str!("../snippets/...")` usage in pages; require `snippets::*::SOURCE` to avoid refactor path drift (`apps/fret-ui-gallery/tests/ui_pages_deny_relative_snippet_includes.rs`).
 - [x] Forbid snippet files from importing UI Gallery internals (`crate::ui`, `crate::spec`) (`apps/fret-ui-gallery/tests/ui_snippets_deny_gallery_internal_imports.rs`).
 - [x] Require every snippet file to export a `SOURCE` const (`apps/fret-ui-gallery/tests/ui_snippets_require_source_const.rs`).
+- [x] Split the large UI Gallery authoring-surface policy gate out of `src/lib.rs` into dedicated
+  integration tests (`apps/fret-ui-gallery/tests/ui_authoring_surface_{default_app,internal_previews,import_policies}.rs`).
 - [x] Add a small “drift audit” doc section in UI Gallery (optional) to list remaining legacy sections (`apps/fret-ui-gallery/build.rs`, `apps/fret-ui-gallery/src/ui/previews/pages/harness/intro.rs`).
 - [x] Prevent ContextMenu Escape dismissal from restoring focus (ensures focus is cleared when the overlay closes): `ecosystem/fret-ui-kit/src/primitives/menu/root.rs`, `ecosystem/fret-ui-shadcn/src/context_menu.rs`, `ecosystem/fret-ui-shadcn/tests/context_menu_escape_dismiss_focus_clears.rs`.
 
@@ -137,14 +152,16 @@ The authoring-surface cleanup is also ahead of the previous snapshot:
     `tools/diag-scripts/ui-gallery/{select,native-select,slider,radio-group,toggle,date-picker,combobox,switch,input,textarea}/*.json`.
   - Evidence: `apps/fret-ui-gallery/src/driver/render_flow.rs`, `apps/fret-ui-gallery/src/driver/status_bar.rs`,
     `apps/fret-ui-gallery/src/driver/debug_stats.rs`, `apps/fret-ui-gallery/src/driver/debug_hud.rs`.
-- [ ] Normalize DocSection chrome/layout (max widths, padding, “Notes” shell usage) across pages.
+- [x] Normalize DocSection chrome/layout (max widths, padding, “Notes” shell usage) across pages.
   - [x] Remove redundant centering wrappers so Preview/Code tabs share consistent left padding.
   - [x] Center doc pages once (page-level max width) so sections align to the same left gutter.
   - [x] Ensure Code tabs respect `.no_shell()` sections so Preview/Code padding matches by contract.
     - Evidence: `apps/fret-ui-gallery/src/ui/doc_layout.rs` passes `shell` through to the CodeBlock wrapper.
   - [x] Render `Notes` sections without demo shell chrome (no border/padding by default).
     - Evidence: `apps/fret-ui-gallery/src/ui/doc_layout.rs`.
-  - [ ] Audit remaining max-width and padding inconsistencies across pages.
+  - [x] Audit remaining max-width and padding inconsistencies across pages.
+    - Evidence: `docs/workstreams/ui-gallery-fearless-refactor/layout-audit.md` records the
+      reviewed allowlist for the remaining intentionally wide pages.
   - [x] Add a coarse `.max_w` audit report: `docs/workstreams/ui-gallery-fearless-refactor/layout-audit.generated.md` (regen via `tools/ui_gallery_layout_audit.py`).
   - [x] Remove redundant `.max_w(Px(820.0))` overrides (default width) in `apps/fret-ui-gallery/src/ui/pages/**` so future diffs stay focused.
   - [x] Remove redundant `.max_w(Px(980.0))` overrides on non-wide pages (keep 980 only for wide surfaces like Card/Calendar/Sheet/Sidebar where it improves the demo).

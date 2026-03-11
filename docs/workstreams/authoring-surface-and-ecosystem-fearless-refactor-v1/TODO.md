@@ -148,6 +148,19 @@ Companion docs:
 - [x] Move advanced examples to explicit advanced imports when needed.
 - [x] Migrate first-party extracted helper teaching snippets to `UiCx` unless they intentionally
   stay generic over `H: UiHost` or define an explicit advanced entry seam.
+- [x] Normalize the first-party UI Gallery routed page surface to `UiCx` and add source gates for
+  the default app-facing teaching surface.
+- [x] Finish migrating the remaining first-party UI Gallery internal preview surface to `UiCx`
+  before deleting the old `ElementContext<'_, App>` teaching seam.
+  - Current bounded remainder on 2026-03-11 after the editor/torture batch: `0 / 92`
+    preview-surface files in
+    `apps/fret-ui-gallery/src/ui/previews/**`.
+  - The remaining cleanup work is deletion/compaction of legacy helpers, not interface migration.
+  - 2026-03-11 follow-up cleanup removed the first dead legacy helpers from the gallery
+    atoms/components buckets and deleted orphan `gallery/data/table*.rs` preview bridge files.
+  - 2026-03-11 follow-up cleanup also started feature-boundary alignment for UI Gallery dev-only
+    teaching surfaces (`harness.rs`, `content.rs`, routed dev pages), restoring a green
+    `cargo check -p fret-ui-gallery --lib --features gallery-full`.
 - [ ] Remove or rewrite examples that still teach superseded patterns.
 
 ## M5 — Delete the old surface
@@ -177,6 +190,15 @@ Companion docs:
 - [x] Add source gates that keep default selector/query teaching on grouped `cx.data()` helpers.
 - [x] Add a source gate that keeps default extracted helper teaching on `UiCx` instead of raw
   `ElementContext`.
+- [x] Add focused UI Gallery source gates for the first migrated teaching surfaces:
+  routed pages, gallery shell helpers, the retired Material 3 surface, Magic previews, and
+  component preview modules.
+- [x] Extend the internal preview gates to cover the first harness-shell batch.
+- [x] Extend the internal preview gates to cover gallery atoms/forms/data/overlays.
+- [x] Extend the internal preview gates to cover the remaining harness/editor/torture preview buckets.
+  - On 2026-03-11 these UI Gallery gates were moved out of `apps/fret-ui-gallery/src/lib.rs` into
+    dedicated integration tests under `apps/fret-ui-gallery/tests/ui_authoring_surface_*.rs` to
+    reduce merge conflicts on the crate entry file.
 - [ ] Add a gate that first-party ecosystem crates use documented extension seams.
   - [x] Router cookbook/docs now gate the `fret::router::*` seam.
   - [x] Docking cookbook/docs now gate the `fret::docking::*` seam.
