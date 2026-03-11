@@ -638,7 +638,7 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
         Deps: Any + PartialEq,
         TValue: Any + Clone,
     {
-        self.cx.use_selector(deps, compute)
+        fret_selector::ui::SelectorElementContextExt::use_selector(self.cx.cx, deps, compute)
     }
 
     #[track_caller]
@@ -653,7 +653,12 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
         Deps: Any + PartialEq,
         TValue: Any + Clone,
     {
-        self.cx.use_selector_keyed(key, deps, compute)
+        fret_selector::ui::SelectorElementContextExt::use_selector_keyed(
+            self.cx.cx,
+            key,
+            deps,
+            compute,
+        )
     }
 
     #[cfg(feature = "state-query")]
@@ -665,7 +670,7 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
         + Send
         + 'static,
     ) -> fret_query::QueryHandle<T> {
-        self.cx.use_query(key, policy, fetch)
+        fret_query::ui::QueryElementContextExt::use_query(self.cx.cx, key, policy, fetch)
     }
 
     #[cfg(feature = "state-query")]
@@ -679,7 +684,7 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
         T: Any + Send + Sync + 'static,
         Fut: Future<Output = Result<T, fret_query::QueryError>> + Send + 'static,
     {
-        self.cx.use_query_async(key, policy, fetch)
+        fret_query::ui::QueryElementContextExt::use_query_async(self.cx.cx, key, policy, fetch)
     }
 
     #[cfg(feature = "state-query")]
@@ -693,7 +698,12 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
         T: Any + Send + Sync + 'static,
         Fut: Future<Output = Result<T, fret_query::QueryError>> + 'static,
     {
-        self.cx.use_query_async_local(key, policy, fetch)
+        fret_query::ui::QueryElementContextExt::use_query_async_local(
+            self.cx.cx,
+            key,
+            policy,
+            fetch,
+        )
     }
 }
 
@@ -704,7 +714,7 @@ pub struct AppUiEffects<'view, 'cx, 'a, H: UiHost> {
 
 impl<'view, 'cx, 'a, H: UiHost> AppUiEffects<'view, 'cx, 'a, H> {
     pub fn take_transient(self, key: u64) -> bool {
-        self.cx.take_transient_on_action_root(key)
+        self.cx.cx.take_transient_for(self.cx.action_root, key)
     }
 }
 
@@ -721,14 +731,6 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
     /// The element that owns view-level action handlers for this render pass.
     pub fn action_root(&self) -> fret_ui::GlobalElementId {
         self.action_root
-    }
-
-    /// Consume a transient event recorded for this view's action root.
-    ///
-    /// This is a lightweight scheduling primitive intended for “app effects” that need to run in
-    /// the next render pass (e.g. query invalidation) without allocating a dedicated model.
-    pub fn take_transient_on_action_root(&mut self, key: u64) -> bool {
-        self.cx.take_transient_for(self.action_root, key)
     }
 
     /// Access the underlying element context.
@@ -906,82 +908,6 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
         local: &'m LocalState<T>,
     ) -> WatchedLocal<'m, 'm, 'a, H, T> {
         WatchedState::new(self.cx, local.model())
-    }
-
-    /// Derived state hook backed by `ecosystem/fret-selector` (UI feature).
-    #[track_caller]
-    #[cfg(feature = "state-selector")]
-    pub fn use_selector<Deps, TValue>(
-        &mut self,
-        deps: impl FnOnce(&mut ElementContext<'a, H>) -> Deps,
-        compute: impl FnOnce(&mut ElementContext<'a, H>) -> TValue,
-    ) -> TValue
-    where
-        Deps: Any + PartialEq,
-        TValue: Any + Clone,
-    {
-        fret_selector::ui::SelectorElementContextExt::use_selector(self.cx, deps, compute)
-    }
-
-    /// Keyed derived state hook backed by `ecosystem/fret-selector` (UI feature).
-    #[track_caller]
-    #[cfg(feature = "state-selector")]
-    pub fn use_selector_keyed<K: Hash, Deps, TValue>(
-        &mut self,
-        key: K,
-        deps: impl FnOnce(&mut ElementContext<'a, H>) -> Deps,
-        compute: impl FnOnce(&mut ElementContext<'a, H>) -> TValue,
-    ) -> TValue
-    where
-        Deps: Any + PartialEq,
-        TValue: Any + Clone,
-    {
-        fret_selector::ui::SelectorElementContextExt::use_selector_keyed(
-            self.cx, key, deps, compute,
-        )
-    }
-
-    /// Async query hook backed by `ecosystem/fret-query` (UI feature).
-    #[cfg(feature = "state-query")]
-    pub fn use_query<T: Any + Send + Sync + 'static>(
-        &mut self,
-        key: fret_query::QueryKey<T>,
-        policy: fret_query::QueryPolicy,
-        fetch: impl FnOnce(fret_query::CancellationToken) -> Result<T, fret_query::QueryError>
-        + Send
-        + 'static,
-    ) -> fret_query::QueryHandle<T> {
-        fret_query::ui::QueryElementContextExt::use_query(self.cx, key, policy, fetch)
-    }
-
-    /// Async query hook (async fetch) backed by `ecosystem/fret-query` (UI feature).
-    #[cfg(feature = "state-query")]
-    pub fn use_query_async<T, Fut>(
-        &mut self,
-        key: fret_query::QueryKey<T>,
-        policy: fret_query::QueryPolicy,
-        fetch: impl FnOnce(fret_query::CancellationToken) -> Fut + Send + 'static,
-    ) -> fret_query::QueryHandle<T>
-    where
-        T: Any + Send + Sync + 'static,
-        Fut: Future<Output = Result<T, fret_query::QueryError>> + Send + 'static,
-    {
-        fret_query::ui::QueryElementContextExt::use_query_async(self.cx, key, policy, fetch)
-    }
-
-    /// Async query hook (non-Send async fetch) backed by `ecosystem/fret-query` (UI feature).
-    #[cfg(feature = "state-query")]
-    pub fn use_query_async_local<T, Fut>(
-        &mut self,
-        key: fret_query::QueryKey<T>,
-        policy: fret_query::QueryPolicy,
-        fetch: impl FnOnce(fret_query::CancellationToken) -> Fut + 'static,
-    ) -> fret_query::QueryHandle<T>
-    where
-        T: Any + Send + Sync + 'static,
-        Fut: Future<Output = Result<T, fret_query::QueryError>> + 'static,
-    {
-        fret_query::ui::QueryElementContextExt::use_query_async_local(self.cx, key, policy, fetch)
     }
 
     /// Register a typed unit action handler (v1: adapter over `OnCommand`).
@@ -1317,6 +1243,7 @@ pub fn view_record_engine_frame<V: View>(
 #[cfg(test)]
 mod tests {
     use super::LocalState;
+    const VIEW_RS_SOURCE: &str = include_str!("view.rs");
     use fret_core::AppWindowId;
     use fret_runtime::{Effect, ModelStore, TimerToken};
     use fret_ui::action::{ActionCx, UiActionHost, UiFocusActionHost};
@@ -1488,5 +1415,21 @@ mod tests {
 
         let _input = fret_ui_shadcn::Input::new(&local);
         let _textarea = fret_ui_shadcn::Textarea::new(&local);
+    }
+
+    #[test]
+    fn grouped_data_and_effect_surfaces_replace_flat_app_ui_helpers() {
+        let api_source = VIEW_RS_SOURCE
+            .split("\nmod tests {")
+            .next()
+            .expect("view.rs test module marker should exist");
+        assert!(!api_source.contains("pub fn use_selector<"));
+        assert!(!api_source.contains("pub fn use_selector_keyed<"));
+        assert!(!api_source.contains("pub fn use_query<"));
+        assert!(!api_source.contains("pub fn use_query_async<"));
+        assert!(!api_source.contains("pub fn use_query_async_local<"));
+        assert!(!api_source.contains("pub fn take_transient_on_action_root("));
+        assert!(api_source.contains("pub fn data(&mut self) -> AppUiData"));
+        assert!(api_source.contains("pub fn effects(&mut self) -> AppUiEffects"));
     }
 }

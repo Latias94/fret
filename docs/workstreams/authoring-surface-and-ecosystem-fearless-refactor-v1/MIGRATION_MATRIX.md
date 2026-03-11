@@ -57,8 +57,8 @@ An old surface is eligible for deletion only when all of the following are true:
 | UI return alias | `Elements` as default taught return type | `Ui` | alias `Ui = Elements` | official examples/docs use `Ui` and retained runtime helpers no longer surface bare `Elements` on the app-facing path | Migrated | `ecosystem/fret/src/view.rs`, `TARGET_INTERFACE_STATE.md` |
 | Flat state helpers | `use_local*`, `use_state*` mixed default posture | `ui.state()` | wrapper namespace over current methods | default docs/templates stop teaching flat calls | In progress | `ecosystem/fret/src/view.rs` |
 | Flat action helpers | `on_action*`, `on_action_notify*`, payload variants | `ui.actions()` | wrapper namespace over current handlers | default docs/templates stop teaching flat handler list | In progress | `ecosystem/fret/src/view.rs` |
-| Selector/query hooks | `use_selector`, `use_query*` on flat context | `ui.data()` | namespace wrapper + extension traits | first-party state libs use grouped data surface | In progress | `ecosystem/fret/src/view.rs`, `apps/fret-examples/src/query_demo.rs`, `docs/authoring-golden-path-v2.md` |
-| Effect helpers | app-bound side effects via ad-hoc patterns | `ui.effects()` | introduce grouped entry while forwarding to current mechanisms | default path has one documented effect story | In progress | `DESIGN.md` |
+| Selector/query hooks | `use_selector`, `use_query*` on flat context | `ui.data()` | namespace wrapper + extension traits, then delete flat `AppUi` data helpers once first-party app surfaces are migrated | first-party state libs use grouped data surface | Deleted | `ecosystem/fret/src/view.rs`, `apps/fret-examples/src/markdown_demo.rs`, `docs/authoring-golden-path-v2.md` |
+| Effect helpers | app-bound side effects via ad-hoc patterns | `ui.effects()` | introduce grouped entry while forwarding to current mechanisms, then delete the old flat render-time transient helper | default path has one documented effect story | Deleted | `ecosystem/fret/src/view.rs`, `apps/fret-examples/src/query_demo.rs`, `apps/fret-examples/src/markdown_demo.rs` |
 
 ## Ecosystem Crates
 
@@ -98,6 +98,8 @@ These are the concrete "remove this" lanes.
 | `ViewCx` as the taught app-facing context name | `AppUi` | grouped context APIs are live, official surfaces migrated, and the retained alias is deleted | Deleted |
 | `Elements` as the taught app-facing return alias | `Ui` | official examples/docs migrated and retained runtime helpers stop returning bare `Elements` on the app path | Migrated |
 | `run_view::<V>()` / `run_view_with_hooks::<V>(...)` convenience entry | `view::<V>()?.run()` / `view_with_hooks::<V>(...)?.run()` | default docs/templates/examples are migrated and a gate forbids the convenience APIs from returning | Deleted |
+| flat `AppUi::use_selector*` / `AppUi::use_query*` helper family | `cx.data().selector/query*` | first-party app-facing code is migrated and `AppUi` no longer exposes the flat methods | Deleted |
+| `AppUi::take_transient_on_action_root(...)` | `cx.effects().take_transient(...)` | first-party app-facing code is migrated and `AppUi` no longer exposes the flat helper | Deleted |
 | flat default-path calls like `use_local*` in official docs/templates | `ui.state()` | templates + docs migrated | In progress |
 | flat default-path calls like `on_action_notify_*` in official docs/templates | `ui.actions()` | templates + docs migrated | In progress |
 | broad `fret::prelude::*` bridge and app-prelude mechanism leakage | `fret::app` / `fret::component` / `fret::advanced` split | explicit surface gate exists, passes, and the bridge is deleted | Deleted |

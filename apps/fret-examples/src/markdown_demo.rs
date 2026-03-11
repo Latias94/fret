@@ -608,7 +608,7 @@ $$
                 .into_element(cx)
         }));
 
-        let expanded_count = cx.use_selector(
+        let expanded_count = cx.data().selector(
             |cx| {
                 cx.observe_model(&self.st.expanded_code_blocks, Invalidation::Layout);
                 cx.app

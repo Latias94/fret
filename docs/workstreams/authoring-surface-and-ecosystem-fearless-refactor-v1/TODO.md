@@ -151,6 +151,8 @@ Companion docs:
 - [x] Remove `run_view::<V>()` / `run_view_with_hooks::<V>(...)` from the default app surface once
   docs/templates/examples and gates all prefer `view::<V>()?.run()`.
 - [ ] Remove old default-path names that are no longer canonical.
+- [x] Remove flat `AppUi` data/effects helpers that duplicate the grouped `cx.data()` /
+  `cx.effects()` surface.
 - [ ] Remove duplicate or ambiguous exports from the app prelude.
 - [ ] Remove redundant action helpers from the default app surface.
 - [ ] Remove compatibility-only aliases that survive only for internal inertia.

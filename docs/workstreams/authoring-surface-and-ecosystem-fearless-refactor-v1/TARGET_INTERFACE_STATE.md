@@ -206,6 +206,12 @@ Target operations:
 - `query_async_local(...)`
 - future router/state-library integration hooks
 
+Target rule:
+
+- flat `AppUi::use_selector*` / `AppUi::use_query*` helpers are removed from the default app
+  surface; low-level `ElementContext` query/selector helpers remain explicit for component or
+  advanced call sites.
+
 ### `ui.effects()`
 
 Target operations:
@@ -214,6 +220,8 @@ Target operations:
 
 Target rule:
 
+- the default app surface does not expose a flat render-time transient helper like
+  `take_transient_on_action_root(...)`; use `cx.effects().take_transient(...)` instead.
 - app authors should discover behavior by going to the relevant namespace first, not by scanning a
   flat list of dozens of methods.
 
