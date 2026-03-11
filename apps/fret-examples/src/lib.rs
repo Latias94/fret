@@ -338,6 +338,8 @@ mod authoring_surface_policy_tests {
                 || src.contains("cx.data().query_async(")
                 || src.contains("cx.data().query_async_local(")
         );
+        assert!(!src.contains("fret_query::ui::QueryElementContextExt"));
+        assert!(!src.contains("fret_selector::ui::SelectorElementContextExt"));
         assert!(!src.contains("cx.use_selector("));
         assert!(!src.contains("cx.use_query("));
         assert!(!src.contains("cx.use_query_async("));
