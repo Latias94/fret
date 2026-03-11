@@ -985,6 +985,12 @@ real editors.
   `ui/canvas/widget/insert_candidates/list.rs` seams, so `insert_candidates.rs` now mainly keeps
   the façade surface explicit while candidate synthesis and list loading stop sharing the same root
   helper body.
+- group open-command helpers now also route create, draw-order, and rename overlay tails through
+  the private `ui/canvas/widget/command_open_group/create.rs`,
+  `ui/canvas/widget/command_open_group/order.rs`, and
+  `ui/canvas/widget/command_open_group/rename.rs` seams, so `command_open_group.rs` now mainly
+  keeps the command façade surface explicit while group command tails stop sharing one root helper
+  body.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

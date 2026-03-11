@@ -1443,6 +1443,12 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/insert_candidates/list.rs` seams, so `insert_candidates.rs` now mainly
     keeps the façade surface explicit while candidate synthesis and list loading stop sharing the
     same root helper body.
+  - Progress: group open-command helpers now also route create, draw-order, and rename overlay
+    tails through the private `ui/canvas/widget/command_open_group/create.rs`,
+    `ui/canvas/widget/command_open_group/order.rs`, and
+    `ui/canvas/widget/command_open_group/rename.rs` seams, so `command_open_group.rs` now mainly
+    keeps the command façade surface explicit while group command tails stop sharing one root
+    helper body.
 
 ## M5 - Compatibility retained convergence
 
