@@ -62,6 +62,8 @@ Memorize the default app surface before you start editing:
 - startup path: `FretApp::new("my-simple-todo").window("my-simple-todo", (...)).view::<TodoView>()?.run()`
 - render signature: `fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui`
 - grouped namespaces first: `cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()`
+- if you intentionally need the raw model-backed hook, make that an advanced choice via
+  `use fret::advanced::AppUiRawStateExt;`
 
 ### Path taxonomy
 

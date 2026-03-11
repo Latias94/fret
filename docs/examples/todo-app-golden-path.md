@@ -256,6 +256,14 @@ The view runtime renders the same declarative IR (`Ui`, backed by `Elements`) bu
 - LocalState/query/selector helpers behind those grouped entrypoints,
 - `notify → dirty → reuse` semantics via view cache roots.
 
+If a product intentionally needs the raw model-backed hook, keep that explicit and advanced:
+
+```rust,ignore
+use fret::advanced::AppUiRawStateExt;
+
+let raw_model = cx.use_state::<MyState>();
+```
+
 For the full runnable baseline, see the `cargo run -p fretboard -- new todo` scaffold template.
 
 ## Derived state (selectors)

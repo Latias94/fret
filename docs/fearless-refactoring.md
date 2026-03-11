@@ -80,6 +80,7 @@ actions:
 - Define typed unit actions with stable IDs via `fret::actions!([..])`.
 - Bind UI triggers via `.action(act::Something)` (or `cx.dispatch(...)` for programmatic dispatch).
 - Handle actions via `cx.actions().locals::<A>(...)`, `cx.actions().models::<A>(...)` (shared graphs), `cx.actions().transient::<A>(...)`, and local `on_activate*` by default; keep raw `AppUi::on_action_notify*` for cookbook/reference host-side cases.
+- If advanced code intentionally wants the raw model-backed hook, import `use fret::advanced::AppUiRawStateExt;` and call `cx.use_state::<T>()` explicitly instead of treating it as part of the default `AppUi` surface.
 
 Authoring and historical note:
 

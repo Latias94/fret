@@ -28,6 +28,7 @@ missing default guideline).
 | Derived values | `cx.data().selector(deps, compute)` | Prefer `DepsBuilder` with tracked locals/models. |
 | Async resources | `cx.data().query(key, policy, fetch)` | Put invalidation inputs into the key. |
 | App-only effects | `cx.actions().transient::<A>(...)` + `cx.effects().take_transient(...)` | Consume transients in `render()` when `&mut App` is required. |
+| Explicit raw `Model<T>` hook (advanced) | `use fret::advanced::AppUiRawStateExt;` + `cx.use_state::<T>()` | Only when you intentionally want the raw model handle instead of `LocalState<T>`. |
 
 ## When to drop down to explicit `Model<T>` graphs
 
@@ -38,6 +39,14 @@ Use explicit shared `Model<T>` graphs (and `cx.actions().models::<A>(...)`) when
 - you need **cross-view coordination** with explicit ownership and auditability.
 
 Otherwise, keep the default surface LocalState-first.
+
+If you intentionally need the raw model-backed hook, make that choice explicit in imports:
+
+```rust,ignore
+use fret::advanced::AppUiRawStateExt;
+
+let shared = cx.use_state::<MyState>();
+```
 
 ## Example: payload + keyed list (row toggle)
 
