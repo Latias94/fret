@@ -362,6 +362,7 @@ pub mod advanced {
     pub use crate::interop;
     #[cfg(feature = "desktop")]
     pub use crate::kernel;
+    pub use crate::view::AppUiRawStateExt;
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::{UiAppBuilder, UiAppDriver, ViewElements};
 
@@ -1613,6 +1614,7 @@ mod authoring_surface_policy_tests {
     fn advanced_prelude_reexports_app_facing_view_aliases() {
         let advanced_prelude = advanced_prelude_source();
         assert!(LIB_RS.contains("pub use crate::{AppUi, Ui, UiCx};"));
+        assert!(advanced_prelude_exports_symbol("AppUiRawStateExt"));
         assert!(advanced_prelude_exports_symbol("AppUi"));
         assert!(advanced_prelude_exports_symbol("Ui"));
         assert!(advanced_prelude_exports_symbol("UiCx"));
@@ -1632,6 +1634,7 @@ mod authoring_surface_policy_tests {
     #[test]
     fn app_prelude_omits_low_level_mechanism_types() {
         assert!(!app_prelude_exports_symbol("AppWindowId"));
+        assert!(!app_prelude_exports_symbol("AppUiRawStateExt"));
         assert!(!app_prelude_exports_symbol("Event"));
         assert!(!app_prelude_exports_symbol("ElementContext"));
         assert!(!app_prelude_exports_symbol("UiTree"));
