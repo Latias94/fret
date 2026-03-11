@@ -234,7 +234,9 @@ Evidence anchors (verified in-tree as of 2026-03-08):
 - `apps/fret-cookbook/examples/date_picker_basics.rs` (now uses `use_local*` / `local.clone_model()` for the controlled open/selected state while keeping the existing date-picker widget boundary)
 - `apps/fret-cookbook/examples/form_basics.rs` (prefers `on_action_notify_models`, now uses `use_local*` plus the direct text bridge for field inputs, and keeps the late-landing card builder path)
 - `apps/fret-cookbook/examples/toast_basics.rs` (intentional advanced reference case for imperative Sonner host integration)
-- `apps/fret-cookbook/examples/router_basics.rs` (`ClearIntents` uses the default path; back/forward remain advanced for router availability sync)
+- `apps/fret-cookbook/examples/router_basics.rs` (`ClearIntents`, back, and forward now use the
+  shared cookbook/default typed-action path, with router availability sync hidden behind
+  `RouterUiStore` helpers)
 - `apps/fret-cookbook/examples/undo_basics.rs` (`Inc`/`Dec`/`Reset` use the default path; `Undo`/`Redo` keep the host-side RAF effect)
 - `apps/fret-cookbook/examples/simple_todo.rs` (now matches the default cookbook keyed-list path: `LocalState<Vec<_>>`, payload row toggle, and keyed row identity without explicit row models)
 - `apps/fret-cookbook/examples/simple_todo_v2_target.rs` (comparison target now keeps the keyed list in `LocalState<Vec<TodoRow>>`, uses `Checkbox::from_checked(...).action_payload(...)` for row toggles, and makes the remaining visible gap more precise: row-level event ergonomics still prefer root handler registration)

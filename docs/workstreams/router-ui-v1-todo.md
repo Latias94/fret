@@ -1,6 +1,6 @@
 # Router UI v1 (Desktop Adoption) (Tracking)
 
-Last updated: 2026-02-09
+Last updated: 2026-03-11
 
 This file tracks concrete work for:
 
@@ -72,6 +72,11 @@ Status legend:
 - `[x]` Register recommended router commands (optional):
   - `router.back`
   - `router.forward`
+- `[x]` Add host-friendly history action helpers so cookbook/default typed action surfaces do not
+  need bespoke router availability glue:
+  - `RouterUiStore::navigate_history_on_action(...)`
+  - `RouterUiStore::back_on_action()`
+  - `RouterUiStore::forward_on_action()`
 
 ## Phase 5 - Link semantics conformance (ADR 0241)
 

@@ -106,7 +106,9 @@ Examples adoption (authoring-noise reduction):
 - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs` (reload bump action now uses the default `on_action_notify_models` transaction path)
 - `apps/fret-cookbook/examples/commands_keymap_basics.rs` (command toggle handler now uses the default `on_action_notify_models` transaction path while availability stays explicit)
 - `apps/fret-cookbook/examples/toast_basics.rs` (intentional advanced reference case: imperative Sonner host integration still needs `UiActionHost` + window)
-- `apps/fret-cookbook/examples/router_basics.rs` (`ClearIntents` now uses the default `on_action_notify_models` transaction path; back/forward remain advanced because they also sync router command availability)
+- `apps/fret-cookbook/examples/router_basics.rs` (`ClearIntents` uses the default
+  `on_action_notify_models` transaction path, and back/forward now also stay on the shared typed
+  action path through `RouterUiStore::{back_on_action, forward_on_action}`)
 - `apps/fret-cookbook/examples/async_inbox_basics.rs` (`Cancel` now uses the default `on_action_notify_models` transaction path; `Start` remains advanced because it spawns dispatcher/inbox work)
 - `apps/fret-cookbook/examples/undo_basics.rs` (`Inc`/`Dec`/`Reset` now use the default `on_action_notify_models` transaction path; `Undo`/`Redo` remain advanced because they combine history traversal with RAF scheduling)
 

@@ -230,6 +230,9 @@ mod authoring_surface_policy_tests {
         assert!(ROUTER_EXAMPLE.contains("router_link_to_typed_route_with_test_id"));
         assert!(ROUTER_EXAMPLE.contains("models::<act::ClearIntents>"));
         assert!(ROUTER_EXAMPLE.contains("on_action_notify::<act::RouterBack>"));
+        assert!(ROUTER_EXAMPLE.contains("self.store.back_on_action()"));
+        assert!(ROUTER_EXAMPLE.contains("self.store.forward_on_action()"));
+        assert!(!ROUTER_EXAMPLE.contains("set_router_command_availability(window"));
         assert!(ROUTER_EXAMPLE.contains(".setup(fret::router::install_app)"));
 
         assert!(DATA_TABLE_EXAMPLE.contains("use fret_runtime::Model;"));

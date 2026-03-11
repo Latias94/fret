@@ -157,6 +157,9 @@ Implemented helpers (optional):
 
 - `register_router_commands(&mut CommandRegistry)` registers `router.back` and `router.forward`.
 - `RouterUiStore::handle_router_command(...)` performs navigation via the store and updates snapshot/intents models.
+- `RouterUiStore::navigate_history_on_action(...)`, `back_on_action()`, and `forward_on_action()`
+  bridge history navigation onto object-safe UI action hosts so apps can keep `cx.on_action_notify`
+  handlers small instead of rewriting host/model glue for back/forward.
 
 Default keybindings (recommended):
 

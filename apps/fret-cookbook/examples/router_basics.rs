@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use fret::app::prelude::*;
 use fret::router::{
-    HistoryAdapter as _, MemoryHistory, NavigationAction, PathPattern, RouteCodec, RouteHooks,
-    RouteLocation, RouteNode, RoutePrefetchIntent, RouteSearchTable, RouteSearchValidationFailure,
-    RouteTree, Router, RouterOutlet, RouterUiSnapshot, RouterUiStore, SearchValidationMode,
-    router_link_to_typed_route_with_test_id, router_link_with_test_id,
+    router_link_to_typed_route_with_test_id, router_link_with_test_id, MemoryHistory,
+    NavigationAction, PathPattern, RouteCodec, RouteHooks, RouteLocation, RouteNode,
+    RoutePrefetchIntent, RouteSearchTable, RouteTree, Router, RouterOutlet, RouterUiStore,
+    SearchValidationMode,
 };
 use fret_ui::{CommandAvailability, Invalidation};
 
@@ -156,75 +156,12 @@ impl View for RouterBasicsView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let window = cx.window;
-
-        let router_model = self.store.router_model().downgrade();
         let snapshot_model = self.store.snapshot_model();
-        let snapshot_weak = snapshot_model.downgrade();
         let intents_model = self.store.intents_model();
-        let intents_weak = intents_model.downgrade();
-        let intents_weak_for_clear = intents_weak.clone();
+        let intents_weak_for_clear = intents_model.downgrade();
 
-        // Back/forward stay on the advanced host-aware helper because navigation also
-        // publishes router command availability on the host path (`set_router_command_availability`).
-        let navigate_history_action = {
-            let intents_weak = intents_weak.clone();
-            let router_model = router_model.clone();
-            let snapshot = snapshot_weak.clone();
-            move |action: NavigationAction| {
-                let router_model = router_model.clone();
-                let snapshot = snapshot.clone();
-                let intents = intents_weak.clone();
-
-                move |host: &mut dyn fret_ui::action::UiFocusActionHost, _acx| {
-                    let Some(router) = router_model.upgrade() else {
-                        return true;
-                    };
-                    let Some(snapshot) = snapshot.upgrade() else {
-                        return true;
-                    };
-                    let Some(intents_model) = intents.upgrade() else {
-                        return true;
-                    };
-
-                    let result = host.models_mut().update(&router, |router| {
-                        let update = router.navigate_with_prefetch_intents(action, None)?;
-                        let next_snapshot = RouterUiSnapshot::from_state(router.state());
-                        let history = router.history();
-                        let can_back = history.can_navigate(NavigationAction::Back);
-                        let can_forward = history.can_navigate(NavigationAction::Forward);
-                        Ok::<_, RouteSearchValidationFailure>((
-                            update,
-                            next_snapshot,
-                            can_back,
-                            can_forward,
-                        ))
-                    });
-
-                    let Ok(result) = result else {
-                        return true;
-                    };
-                    let Ok((update, next_snapshot, can_back, can_forward)) = result else {
-                        return true;
-                    };
-                    if !update.update.changed() {
-                        return true;
-                    }
-
-                    let _ = host.models_mut().update(&snapshot, |v| *v = next_snapshot);
-                    let _ = host
-                        .models_mut()
-                        .update(&intents_model, |v| *v = update.intents);
-                    host.set_router_command_availability(window, can_back, can_forward);
-                    true
-                }
-            }
-        };
-
-        cx.on_action_notify::<act::RouterBack>(navigate_history_action(NavigationAction::Back));
-        cx.on_action_notify::<act::RouterForward>(navigate_history_action(
-            NavigationAction::Forward,
-        ));
+        cx.on_action_notify::<act::RouterBack>(self.store.back_on_action());
+        cx.on_action_notify::<act::RouterForward>(self.store.forward_on_action());
         cx.actions().models::<act::ClearIntents>({
             let intents = intents_weak_for_clear;
             move |models| {
