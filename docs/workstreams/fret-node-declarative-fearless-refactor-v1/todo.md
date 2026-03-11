@@ -1534,6 +1534,13 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/pointer_down_double_click_edge/finish.rs` seams, and the insert-picker path
     now reuses the shared `select_edge_context_target` reducer instead of duplicating edge
     selection updates inline.
+  - Progress: pointer-down gesture start handling now also routes close-button dispatch,
+    pending-right-click startup, and pan-start gating through the private
+    `ui/canvas/widget/pointer_down_gesture_start/close_button.rs`,
+    `ui/canvas/widget/pointer_down_gesture_start/pending_right_click.rs`, and
+    `ui/canvas/widget/pointer_down_gesture_start/pan_start.rs` seams, so
+    `pointer_down_gesture_start.rs` now mainly keeps the gesture-start façade explicit while
+    preserving the existing context-menu and sticky-wire delegation.
 
 ## M5 - Compatibility retained convergence
 
