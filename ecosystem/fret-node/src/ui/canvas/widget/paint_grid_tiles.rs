@@ -1,21 +1,9 @@
+mod support;
+
 use super::*;
 use crate::ui::style::NodeGraphBackgroundPattern;
 
-pub(super) struct GridTileSpec {
-    pub(super) tile_origin: Point,
-    pub(super) tile_size_canvas: f32,
-    pub(super) spacing: f32,
-    pub(super) major_every: i64,
-    pub(super) major_color: Color,
-    pub(super) minor_color: Color,
-    pub(super) thickness: Px,
-    pub(super) dot_size: f32,
-    pub(super) cross_size: f32,
-    pub(super) x0: i64,
-    pub(super) x1: i64,
-    pub(super) y0: i64,
-    pub(super) y1: i64,
-}
+pub(super) use support::GridTileSpec;
 
 pub(super) fn grid_tile_ops(
     pattern: NodeGraphBackgroundPattern,
@@ -29,7 +17,7 @@ pub(super) fn grid_tile_ops(
     dot_size: f32,
     cross_size: f32,
 ) -> Vec<SceneOp> {
-    let spec = GridTileSpec::new(
+    let spec = support::grid_tile_spec(
         tile_origin,
         tile_size_canvas,
         spacing,
@@ -40,7 +28,7 @@ pub(super) fn grid_tile_ops(
         dot_size,
         cross_size,
     );
-    let mut ops: Vec<SceneOp> = Vec::with_capacity(spec.approx_ops(pattern));
+    let mut ops: Vec<SceneOp> = Vec::with_capacity(support::approx_ops(&spec, pattern));
 
     match pattern {
         NodeGraphBackgroundPattern::Lines => {
@@ -54,57 +42,6 @@ pub(super) fn grid_tile_ops(
         }
     }
     ops
-}
-
-impl GridTileSpec {
-    pub(super) fn new(
-        tile_origin: Point,
-        tile_size_canvas: f32,
-        spacing: f32,
-        major_every: i64,
-        major_color: Color,
-        minor_color: Color,
-        thickness: Px,
-        dot_size: f32,
-        cross_size: f32,
-    ) -> Self {
-        let tile_min_x = tile_origin.x.0;
-        let tile_min_y = tile_origin.y.0;
-        let tile_max_x = tile_min_x + tile_size_canvas;
-        let tile_max_y = tile_min_y + tile_size_canvas;
-
-        let x0 = (tile_min_x / spacing).floor() as i64;
-        let x1 = (tile_max_x / spacing).ceil() as i64;
-        let y0 = (tile_min_y / spacing).floor() as i64;
-        let y1 = (tile_max_y / spacing).ceil() as i64;
-
-        Self {
-            tile_origin,
-            tile_size_canvas,
-            spacing,
-            major_every,
-            major_color,
-            minor_color,
-            thickness,
-            dot_size,
-            cross_size,
-            x0,
-            x1,
-            y0,
-            y1,
-        }
-    }
-
-    pub(super) fn approx_ops(&self, pattern: NodeGraphBackgroundPattern) -> usize {
-        let approx_x = (self.x1 - self.x0 + 1).max(0) as usize;
-        let approx_y = (self.y1 - self.y0 + 1).max(0) as usize;
-        let approx_points = approx_x.saturating_mul(approx_y);
-        match pattern {
-            NodeGraphBackgroundPattern::Lines => approx_x.saturating_add(approx_y),
-            NodeGraphBackgroundPattern::Dots => approx_points,
-            NodeGraphBackgroundPattern::Cross => approx_points.saturating_mul(2),
-        }
-    }
 }
 
 #[cfg(test)]

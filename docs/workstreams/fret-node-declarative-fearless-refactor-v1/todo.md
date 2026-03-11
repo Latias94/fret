@@ -1312,6 +1312,21 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/event_pointer_down_route/dispatch.rs` seams, so
     `event_pointer_down_route.rs` now mainly keeps early-return orchestration explicit while button
     lane selection retains focused unit coverage.
+  - Progress: grid-tile paint helpers now also route tile-index projection and pattern-density
+    capacity estimation through the private `ui/canvas/widget/paint_grid_tiles/support.rs` seam, so
+    `paint_grid_tiles.rs` now mainly keeps pattern-to-painter orchestration explicit while tile
+    bounds projection and capacity heuristics gain focused unit coverage.
+  - Progress: keyboard-shortcut mapping now also routes modifier/history bindings and tab/arrow
+    navigation bindings through the private `ui/canvas/widget/keyboard_shortcuts_map/modifier.rs`
+    and `ui/canvas/widget/keyboard_shortcuts_map/navigation.rs` seams, so
+    `keyboard_shortcuts_map.rs` now mainly keeps the re-export surface explicit while shortcut
+    family mapping retains focused unit coverage.
+  - Progress: keyboard-shortcut gating now also routes modifier, navigation, and delete-binding
+    predicates through the private `ui/canvas/widget/keyboard_shortcuts_gate/modifier.rs`,
+    `ui/canvas/widget/keyboard_shortcuts_gate/navigation.rs`, and
+    `ui/canvas/widget/keyboard_shortcuts_gate/editing.rs` seams, so
+    `keyboard_shortcuts_gate.rs` now mainly keeps the re-export surface explicit while per-family
+    gate predicates retain focused unit coverage.
 
 ## M5 - Compatibility retained convergence
 
