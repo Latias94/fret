@@ -744,12 +744,16 @@ fn prepared_glyph_face_key(glyph: &ParleyGlyph, font_data_id: u64, face_index: u
         face_index,
         variation_key: variation_key_from_normalized_coords(&glyph.normalized_coords),
         synthesis_embolden: glyph.synthesis.embolden(),
-        synthesis_skew_degrees: glyph
-            .synthesis
-            .skew()
-            .unwrap_or(0.0)
-            .clamp(i8::MIN as f32, i8::MAX as f32) as i8,
+        synthesis_skew_degrees: prepared_glyph_synthesis_skew_degrees(glyph),
     }
+}
+
+fn prepared_glyph_synthesis_skew_degrees(glyph: &ParleyGlyph) -> i8 {
+    glyph
+        .synthesis
+        .skew()
+        .unwrap_or(0.0)
+        .clamp(i8::MIN as f32, i8::MAX as f32) as i8
 }
 
 fn record_prepared_glyph_face_usage(

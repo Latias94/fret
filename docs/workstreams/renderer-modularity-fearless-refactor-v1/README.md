@@ -287,6 +287,10 @@ As of 2026-03-12:
   - prepared-glyph raster-key derivation now lives behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `prepared_glyph_raster(...)` no longer shares the atlas-lookup key helper directly
+- The fifty-first internal text split has landed:
+  - prepared-glyph synthesis skew normalization now lives behind a pure helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `prepared_glyph_face_key(...)` no longer owns skew clamp/default logic directly
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
