@@ -453,7 +453,8 @@ impl TextSystem {
         kind: GlyphQuadKind,
         epoch: u64,
     ) -> Option<(GlyphKey, GlyphAtlasEntry)> {
-        let glyph_key = prepared_glyph_key(face_key, glyph_id, size_bits, x_bin, y_bin, kind);
+        let glyph_key =
+            prepared_glyph_lookup_key(face_key, glyph_id, size_bits, x_bin, y_bin, kind);
         self.lookup_prepared_glyph_atlas_entry(glyph_key, epoch)
     }
 
@@ -801,6 +802,17 @@ fn prepared_glyph_raster_from_image(
         bytes_per_pixel,
         data: image.data,
     })
+}
+
+fn prepared_glyph_lookup_key(
+    face_key: FontFaceKey,
+    glyph_id: u32,
+    size_bits: u32,
+    x_bin: u8,
+    y_bin: u8,
+    kind: GlyphQuadKind,
+) -> GlyphKey {
+    prepared_glyph_key(face_key, glyph_id, size_bits, x_bin, y_bin, kind)
 }
 
 fn prepared_glyph_key(

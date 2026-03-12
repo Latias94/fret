@@ -236,6 +236,10 @@ As of 2026-03-12:
   - prepared-glyph atlas-entry fetch/pack now lives behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `lookup_prepared_glyph_atlas_kind(...)` no longer owns atlas-entry fetch result packing directly
+- The thirty-ninth internal text split has landed:
+  - prepared-glyph atlas lookup-key construction now lives behind a pure helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `lookup_prepared_glyph_atlas_kind(...)` no longer owns lookup-key construction directly
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
