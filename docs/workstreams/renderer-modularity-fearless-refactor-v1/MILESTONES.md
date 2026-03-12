@@ -198,6 +198,10 @@ Current snapshot (2026-03-12):
   - prepared-glyph render source selection now lives behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `render_prepared_glyph_image_with_scaler(...)` no longer owns the swash source list literal directly
+- The forty-fourth internal `text/mod.rs` split has landed:
+  - prepared-glyph raster packing now lives behind a dedicated helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `prepared_glyph_raster_from_image(...)` no longer owns `PreparedGlyphRaster` field packing directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
