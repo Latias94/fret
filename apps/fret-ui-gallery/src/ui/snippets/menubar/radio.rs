@@ -3,17 +3,35 @@ pub const SOURCE: &str = include_str!("radio.rs");
 // region: example
 use fret_core::Px;
 use fret_runtime::CommandId;
+use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
+#[derive(Default, Clone)]
+struct MenubarRadioState {
+    profile: Option<Arc<str>>,
+    theme: Option<Arc<str>>,
+}
+
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let width = LayoutRefinement::default().w_px(Px(288.0)).min_w_0();
-    let profile = cx.local_model_keyed("profile", || Some(Arc::<str>::from("benoit")));
-    let theme = cx.local_model_keyed("theme", || Some(Arc::<str>::from("system")));
+    let state = cx.local_model(|| MenubarRadioState {
+        profile: Some(Arc::<str>::from("benoit")),
+        theme: Some(Arc::<str>::from("system")),
+    });
+    let state_now = cx.watch_model(&state).layout().cloned().unwrap_or_default();
 
     let profiles = shadcn::MenubarMenu::new("Profiles").entries([
         shadcn::MenubarEntry::RadioGroup(
-            shadcn::MenubarRadioGroup::new(profile.clone())
+            shadcn::MenubarRadioGroup::from_value(state_now.profile.clone())
+                .on_value_change({
+                    let state = state.clone();
+                    move |host, _action_cx, value| {
+                        let _ = host
+                            .models_mut()
+                            .update(&state, |st| st.profile = Some(value));
+                    }
+                })
                 .item(
                     shadcn::MenubarRadioItemSpec::new("andy", "Andy")
                         .action(CommandId::new("ui_gallery.menubar.radio.profile.andy")),
@@ -41,7 +59,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ]);
 
     let themes = shadcn::MenubarMenu::new("Theme").entries([shadcn::MenubarEntry::RadioGroup(
-        shadcn::MenubarRadioGroup::new(theme.clone())
+        shadcn::MenubarRadioGroup::from_value(state_now.theme.clone())
+            .on_value_change({
+                let state = state.clone();
+                move |host, _action_cx, value| {
+                    let _ = host
+                        .models_mut()
+                        .update(&state, |st| st.theme = Some(value));
+                }
+            })
             .item(
                 shadcn::MenubarRadioItemSpec::new("light", "Light")
                     .action(CommandId::new("ui_gallery.menubar.radio.theme.light")),

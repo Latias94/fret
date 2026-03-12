@@ -3,13 +3,24 @@ pub const SOURCE: &str = include_str!("demo.rs");
 // region: example
 use fret_core::Px;
 use fret_runtime::CommandId;
+use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
+#[derive(Default, Clone)]
+struct MenubarDemoState {
+    view_bookmarks_bar: bool,
+    view_full_urls: bool,
+    profile: Option<Arc<str>>,
+}
+
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let view_bookmarks_bar = cx.local_model_keyed("view_bookmarks_bar", || false);
-    let view_full_urls = cx.local_model_keyed("view_full_urls", || true);
-    let profile = cx.local_model_keyed("profile", || Some(Arc::<str>::from("benoit")));
+    let state = cx.local_model(|| MenubarDemoState {
+        view_bookmarks_bar: false,
+        view_full_urls: true,
+        profile: Some(Arc::<str>::from("benoit")),
+    });
+    let state_now = cx.watch_model(&state).layout().cloned().unwrap_or_default();
 
     let file = shadcn::MenubarMenu::new("File").entries([
         shadcn::MenubarEntry::Group(shadcn::MenubarGroup::new([
@@ -66,13 +77,32 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .entries_parts(
             shadcn::MenubarContent::new().min_width(Px(256.0)),
             [
-                shadcn::MenubarCheckboxItem::new(
-                    view_bookmarks_bar.clone(),
+                shadcn::MenubarCheckboxItem::from_checked(
+                    state_now.view_bookmarks_bar,
                     "Always Show Bookmarks Bar",
                 )
+                .on_checked_change({
+                    let state = state.clone();
+                    move |host, _action_cx, checked| {
+                        let _ = host
+                            .models_mut()
+                            .update(&state, |st| st.view_bookmarks_bar = checked);
+                    }
+                })
                 .into(),
-                shadcn::MenubarCheckboxItem::new(view_full_urls.clone(), "Always Show Full URLs")
-                    .into(),
+                shadcn::MenubarCheckboxItem::from_checked(
+                    state_now.view_full_urls,
+                    "Always Show Full URLs",
+                )
+                .on_checked_change({
+                    let state = state.clone();
+                    move |host, _action_cx, checked| {
+                        let _ = host
+                            .models_mut()
+                            .update(&state, |st| st.view_full_urls = checked);
+                    }
+                })
+                .into(),
                 shadcn::MenubarSeparator::new().into(),
                 shadcn::MenubarItem::new("Reload")
                     .inset(true)
@@ -94,7 +124,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     let profiles = shadcn::MenubarMenu::new("Profiles").entries([
         shadcn::MenubarEntry::RadioGroup(
-            shadcn::MenubarRadioGroup::new(profile)
+            shadcn::MenubarRadioGroup::from_value(state_now.profile.clone())
+                .on_value_change({
+                    let state = state.clone();
+                    move |host, _action_cx, value| {
+                        let _ = host
+                            .models_mut()
+                            .update(&state, |st| st.profile = Some(value));
+                    }
+                })
                 .item(shadcn::MenubarRadioItemSpec::new("andy", "Andy"))
                 .item(shadcn::MenubarRadioItemSpec::new("benoit", "Benoit"))
                 .item(shadcn::MenubarRadioItemSpec::new("luis", "Luis")),
