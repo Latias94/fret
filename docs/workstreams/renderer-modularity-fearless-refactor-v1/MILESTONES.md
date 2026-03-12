@@ -71,6 +71,10 @@ Current snapshot (2026-03-12):
 - The twelfth internal `text/mod.rs` split has landed:
   - shape-cache hit/store helpers moved into `crates/fret-render-wgpu/src/text/prepare.rs`
   - `text/mod.rs` no longer owns shape-cache hit/store bookkeeping directly
+- The thirteenth internal `text/mod.rs` split has landed:
+  - shape-build prelude and shape-finalization helpers moved into
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `text/mod.rs` no longer owns prepare shape-build setup or `TextShape` finalization directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed

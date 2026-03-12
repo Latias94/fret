@@ -1,6 +1,4 @@
-use fret_core::{
-    TextBlobId, TextConstraints, TextInputRef, TextMetrics, TextSpan, TextStyle, geometry::Px,
-};
+use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextSpan, TextStyle, geometry::Px};
 use slotmap::SlotMap;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
@@ -37,6 +35,7 @@ use self::atlas::{
     GlyphAtlas, GlyphAtlasEntry, GlyphKey, TEXT_ATLAS_MAX_PAGES, subpixel_bin_as_float,
     subpixel_bin_q4, subpixel_bin_y,
 };
+use self::prepare::PrepareShapeBuildContext;
 pub use self::quality::TextQualitySettings;
 use self::quality::TextQualityState;
 
@@ -339,27 +338,13 @@ impl TextSystem {
             self.perf_frame_shape_cache_misses =
                 self.perf_frame_shape_cache_misses.saturating_add(1);
             let shape = {
-                let input = match spans {
-                    Some(spans) => TextInputRef::Attributed {
-                        text: text.as_ref(),
-                        base: style,
-                        spans,
-                    },
-                    None => TextInputRef::Plain {
-                        text: text.as_ref(),
-                        style,
-                    },
-                };
-                let wrapped = self.wrap_for_prepare(input, constraints);
-                let epoch = {
-                    let e = self.glyph_atlas_epoch;
-                    self.glyph_atlas_epoch = self.glyph_atlas_epoch.saturating_add(1);
-                    e
-                };
-
-                let mut glyphs: Vec<GlyphInstance> = Vec::new();
-                let mut face_usage: HashMap<FontFaceKey, (u32, u32)> = HashMap::new();
-                let mut lines: Vec<TextLine> = Vec::new();
+                let PrepareShapeBuildContext {
+                    wrapped,
+                    epoch,
+                    mut glyphs,
+                    mut face_usage,
+                    mut lines,
+                } = self.begin_prepare_shape_build(text.as_ref(), style, spans, constraints);
 
                 let (metrics, missing_glyphs, first_line_caret_stops) = {
                     let prepared = fret_render_text::prepare_layout::prepare_layout_from_wrapped(
@@ -1249,36 +1234,14 @@ impl TextSystem {
                     */
                 };
 
-                let mut face_usages: Vec<TextFontFaceUsage> = Vec::with_capacity(face_usage.len());
-                for (face, (glyphs, missing)) in face_usage {
-                    face_usages.push(TextFontFaceUsage {
-                        font_data_id: face.font_data_id,
-                        face_index: face.face_index,
-                        variation_key: face.variation_key,
-                        synthesis_embolden: face.synthesis_embolden,
-                        synthesis_skew_degrees: face.synthesis_skew_degrees,
-                        glyphs,
-                        missing_glyphs: missing,
-                    });
-                }
-                face_usages.sort_by(|a, b| {
-                    b.glyphs
-                        .cmp(&a.glyphs)
-                        .then_with(|| a.font_data_id.cmp(&b.font_data_id))
-                        .then_with(|| a.face_index.cmp(&b.face_index))
-                        .then_with(|| a.variation_key.cmp(&b.variation_key))
-                        .then_with(|| a.synthesis_embolden.cmp(&b.synthesis_embolden))
-                        .then_with(|| a.synthesis_skew_degrees.cmp(&b.synthesis_skew_degrees))
-                });
-
-                Arc::new(TextShape {
-                    glyphs: Arc::from(glyphs),
+                self.finish_prepared_shape(
+                    glyphs,
+                    lines,
+                    face_usage,
                     metrics,
-                    lines: Arc::from(lines),
-                    caret_stops: Arc::from(first_line_caret_stops),
                     missing_glyphs,
-                    font_faces: Arc::from(face_usages),
-                })
+                    first_line_caret_stops,
+                )
             };
             self.cache_prepared_shape(shape_key, shape)
         };

@@ -1,13 +1,22 @@
-use super::{TextBlob, TextShape, TextSystem};
+use super::{TextBlob, TextFontFaceUsage, TextLine, TextShape, TextSystem};
 use fret_core::{
-    AttributedText, TextBlobId, TextConstraints, TextInputRef, TextMetrics, TextStyle,
+    AttributedText, TextBlobId, TextConstraints, TextInputRef, TextMetrics, TextSpan, TextStyle,
+    geometry::Px,
 };
 use fret_render_text::cache_keys::{TextBlobKey, TextShapeKey};
 use fret_render_text::decorations::TextDecorationMetricsPx;
 use fret_render_text::font_instance_key::FontFaceKey;
 use fret_render_text::font_trace::FontTraceFamilyResolved;
 use fret_render_text::spans::ResolvedSpan;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
+
+pub(super) struct PrepareShapeBuildContext {
+    pub(super) wrapped: crate::text::wrapper::WrappedLayout,
+    pub(super) epoch: u64,
+    pub(super) glyphs: Vec<super::GlyphInstance>,
+    pub(super) face_usage: HashMap<FontFaceKey, (u32, u32)>,
+    pub(super) lines: Vec<TextLine>,
+}
 
 impl TextSystem {
     #[allow(dead_code)]
@@ -179,6 +188,78 @@ impl TextSystem {
         self.perf_frame_shapes_created = self.perf_frame_shapes_created.saturating_add(1);
         self.shape_cache.insert(shape_key, shape.clone());
         shape
+    }
+
+    pub(super) fn begin_prepare_shape_build(
+        &mut self,
+        text: &str,
+        style: &TextStyle,
+        spans: Option<&[TextSpan]>,
+        constraints: TextConstraints,
+    ) -> PrepareShapeBuildContext {
+        let input = match spans {
+            Some(spans) => TextInputRef::Attributed {
+                text,
+                base: style,
+                spans,
+            },
+            None => TextInputRef::Plain { text, style },
+        };
+        let wrapped = self.wrap_for_prepare(input, constraints);
+        let epoch = {
+            let e = self.glyph_atlas_epoch;
+            self.glyph_atlas_epoch = self.glyph_atlas_epoch.saturating_add(1);
+            e
+        };
+
+        PrepareShapeBuildContext {
+            wrapped,
+            epoch,
+            glyphs: Vec::new(),
+            face_usage: HashMap::new(),
+            lines: Vec::new(),
+        }
+    }
+
+    pub(super) fn finish_prepared_shape(
+        &self,
+        glyphs: Vec<super::GlyphInstance>,
+        lines: Vec<TextLine>,
+        face_usage: HashMap<FontFaceKey, (u32, u32)>,
+        metrics: TextMetrics,
+        missing_glyphs: u32,
+        first_line_caret_stops: Vec<(usize, Px)>,
+    ) -> Arc<TextShape> {
+        let mut face_usages: Vec<TextFontFaceUsage> = Vec::with_capacity(face_usage.len());
+        for (face, (glyphs, missing)) in face_usage {
+            face_usages.push(TextFontFaceUsage {
+                font_data_id: face.font_data_id,
+                face_index: face.face_index,
+                variation_key: face.variation_key,
+                synthesis_embolden: face.synthesis_embolden,
+                synthesis_skew_degrees: face.synthesis_skew_degrees,
+                glyphs,
+                missing_glyphs: missing,
+            });
+        }
+        face_usages.sort_by(|a, b| {
+            b.glyphs
+                .cmp(&a.glyphs)
+                .then_with(|| a.font_data_id.cmp(&b.font_data_id))
+                .then_with(|| a.face_index.cmp(&b.face_index))
+                .then_with(|| a.variation_key.cmp(&b.variation_key))
+                .then_with(|| a.synthesis_embolden.cmp(&b.synthesis_embolden))
+                .then_with(|| a.synthesis_skew_degrees.cmp(&b.synthesis_skew_degrees))
+        });
+
+        Arc::new(TextShape {
+            glyphs: Arc::from(glyphs),
+            metrics,
+            lines: Arc::from(lines),
+            caret_stops: Arc::from(first_line_caret_stops),
+            missing_glyphs,
+            font_faces: Arc::from(face_usages),
+        })
     }
 
     pub(super) fn maybe_record_font_trace_entry(
