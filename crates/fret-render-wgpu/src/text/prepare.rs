@@ -1001,14 +1001,8 @@ fn prepared_glyph_raster_from_image_with_placement(
     image: parley::swash::scale::image::Image,
     placement: PreparedGlyphRasterPlacement,
 ) -> PreparedGlyphRaster {
-    let PreparedGlyphRasterPlacement {
-        width,
-        height,
-        left,
-        top,
-    } = placement;
     prepared_glyph_raster_from_image_parts(
-        face_key, glyph_id, size_bits, x_bin, y_bin, image, width, height, left, top,
+        face_key, glyph_id, size_bits, x_bin, y_bin, image, placement,
     )
 }
 
@@ -1053,14 +1047,11 @@ fn prepared_glyph_raster_from_image_parts(
     x_bin: u8,
     y_bin: u8,
     image: parley::swash::scale::image::Image,
-    width: u32,
-    height: u32,
-    left: i32,
-    top: i32,
+    placement: PreparedGlyphRasterPlacement,
 ) -> PreparedGlyphRaster {
     let metadata = prepared_glyph_raster_metadata(image.content);
     prepared_glyph_raster_from_image_parts_with_metadata(
-        face_key, glyph_id, size_bits, x_bin, y_bin, image, width, height, left, top, metadata,
+        face_key, glyph_id, size_bits, x_bin, y_bin, image, placement, metadata,
     )
 }
 
@@ -1071,12 +1062,15 @@ fn prepared_glyph_raster_from_image_parts_with_metadata(
     x_bin: u8,
     y_bin: u8,
     image: parley::swash::scale::image::Image,
-    width: u32,
-    height: u32,
-    left: i32,
-    top: i32,
+    placement: PreparedGlyphRasterPlacement,
     metadata: PreparedGlyphRasterMetadata,
 ) -> PreparedGlyphRaster {
+    let PreparedGlyphRasterPlacement {
+        width,
+        height,
+        left,
+        top,
+    } = placement;
     let PreparedGlyphRasterMetadata {
         kind,
         bytes_per_pixel,
