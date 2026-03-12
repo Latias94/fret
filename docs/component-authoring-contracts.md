@@ -49,7 +49,7 @@ at least one regression test before expanding usage.
 - Anchoring helpers for overlays: `fret_ui_kit::overlay::*`
 - Control chrome wrapper (focus ring + clipping split): `fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props`
 - Styling refinements: `fret_ui_kit::{ChromeRefinement, LayoutRefinement, StyledExt, Space, Radius, ColorRef, MetricRef}`
-- Unified authoring builder surface (ADR 0160): `fret_ui_kit::{UiExt, UiPatchTarget, UiIntoElement, UiBuilder}`
+- Unified authoring builder surface (ADR 0160): `fret_ui_kit::{UiExt, UiPatchTarget, IntoUiElement, UiBuilder}`
 
 ## Unified authoring builder surface (ADR 0160)
 
@@ -66,7 +66,7 @@ If you want other crates to style/layout your component in a uniform way, implem
 your public component types:
 
 - `UiPatchTarget`: apply aggregated `{ chrome, layout }` patches.
-- `UiIntoElement`: render into `AnyElement` (so `UiBuilder::into_element(cx)` works).
+- `IntoUiElement<H>`: public reusable-component conversion contract for landing into `AnyElement`.
 - `UiSupportsChrome` / `UiSupportsLayout` (optional): enable the full fluent method set.
 
 Practical pattern (recommended):
@@ -83,15 +83,20 @@ prefer the `macro_rules!` helpers exported by `fret-ui-kit`:
 - `fret_ui_kit::ui_component_*_patch_only!(MyType);` (patch-only; see below)
 - `fret_ui_kit::ui_into_element_render_once!(MyType);` (when a type implements `RenderOnce`)
 
-#### Adapter strategy (RenderOnce vs UiIntoElement)
+#### Implementation strategy (host-agnostic vs `RenderOnce`)
 
 Near-term decision:
 
-- Prefer explicit `UiIntoElement` impls for component types that can render directly into `AnyElement`.
-- For types that already implement `fret_ui::element::RenderOnce`, use `fret_ui_kit::ui_into_element_render_once!(MyType);`.
-- We intentionally do **not** provide a blanket impl `UiIntoElement for T: RenderOnce` today due to Rust coherence constraints
-  (see `ONB-macro-052` in the onboarding workstream TODO). This keeps the ecosystem surface explicit and avoids surprising
-  overlap with existing impls.
+- Prefer explicit `impl<H: UiHost> IntoUiElement<H> for MyType` for reusable component types that
+  can render directly into `AnyElement`.
+- For types that already implement `fret_ui::element::RenderOnce`, use
+  `fret_ui_kit::ui_into_element_render_once!(MyType);`.
+- If a host-agnostic type already has `refine_style` / `refine_layout` plus an inherent
+  `into_element(self, cx)`, prefer the `fret_ui_kit` helper macros so the required adapter glue
+  stays internal instead of becoming part of the taught component-authoring vocabulary.
+- We intentionally do **not** provide a blanket conversion impl for all `RenderOnce` types due to
+  Rust coherence constraints (see `ONB-macro-052` in the onboarding workstream TODO). This keeps
+  the ecosystem surface explicit and avoids surprising overlap with existing impls.
 
 In-tree example:
 
@@ -110,7 +115,7 @@ Typical examples:
 
 In these cases:
 
-- implement `UiPatchTarget` (+ `UiSupports*`) **without** implementing `UiIntoElement`,
+- implement `UiPatchTarget` (+ `UiSupports*`) **without** implementing either conversion trait,
 - use `UiBuilder::build()` to produce the patched value, then pass it into the owning component.
 
 The `ui_component_*_patch_only!` macros exist to make this a 1-liner.

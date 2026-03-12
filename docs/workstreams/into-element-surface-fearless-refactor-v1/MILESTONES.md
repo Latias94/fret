@@ -28,7 +28,7 @@ Current readout on 2026-03-12:
 | M1 | Done | `IntoUiElement<H>` is the curated component conversion name; docs/preludes/tests reflect it |
 | M2 | Done | `UiBuilder<T>` and host-bound child builders now land through `IntoUiElement<H>`; `UiBuilderHostBoundIntoElementExt` is deleted; child collection is on a thin bridge over the unified contract |
 | M3 | In progress | curated `fret` / `fret-ui-kit` surfaces and the canonical todo/scaffold compare set are aligned; `fret-ui-shadcn` ui_ext glue and `ui_builder_ext` helper closures now land through `IntoUiElement<H>`, while broader shadcn/gallery/helper cleanup and `UiChildIntoElement` contraction remain |
-| M4 | In progress | prelude gates are in place and one bridge trait is deleted, but stale-name source/doc guards still need to expand |
+| M4 | In progress | prelude gates are in place, curated component-authoring docs now teach only `IntoUiElement<H>`, and stale-name source/doc guards now cover curated docs; `UiIntoElement` / `UiChildIntoElement` root-level cleanup still remains |
 
 ## Milestone 0 — Lock the target conversion vocabulary
 

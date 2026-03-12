@@ -132,7 +132,7 @@ Implementation note on 2026-03-12:
 - [x] Remove `UiHostBoundIntoElement` from curated public surfaces.
 - [ ] Remove `UiChildIntoElement` from curated public surfaces.
 - [x] Remove `UiBuilderHostBoundIntoElementExt` from curated public surfaces.
-- [ ] Rewrite or delete stale docs that still teach the old names.
+- [x] Rewrite or delete stale docs that still teach the old names.
 
 ## M5 — Add guardrails
 
@@ -143,7 +143,7 @@ Implementation note on 2026-03-12:
 - [x] Add a source/doc gate that app-facing examples prefer `Ui` / `UiChild`.
 - [x] Add a source/doc gate that generic reusable first-party helpers prefer the unified
   conversion trait over raw `AnyElement` when a raw landed element is not required.
-- [ ] Add a source gate that old names (`UiChildIntoElement`, `UiHostBoundIntoElement`,
+- [x] Add a source gate that old names (`UiChildIntoElement`, `UiHostBoundIntoElement`,
   `UiBuilderHostBoundIntoElementExt`) do not return in curated surfaces.
 
 Implementation note on 2026-03-12:
@@ -160,6 +160,10 @@ Implementation note on 2026-03-12:
 - `ecosystem/fret/tests/reusable_component_helper_surface.rs` now guards the facade-level
   source/doc story: shadcn reusable helpers stay on `IntoUiElement<H>` rather than requiring
   pre-landed `AnyElement` inputs.
+- `docs/component-author-guide.md` and `docs/component-authoring-contracts.md` now teach only
+  `IntoUiElement<H>` on the curated component-authoring lane.
+- `ecosystem/fret-ui-kit/tests/curated_conversion_surface_docs.rs` now guards curated docs against
+  legacy conversion trait names.
 
 ## M6 — Keep advanced/raw seams explicit and justified
 
