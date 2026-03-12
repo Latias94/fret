@@ -10,7 +10,7 @@ use fret_ui::tree::UiTree;
 use fret_ui_kit::{LayoutRefinement, OverlayController};
 use std::sync::Arc;
 
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::facade as shadcn;
 
 #[derive(Default)]
 struct FakeServices;

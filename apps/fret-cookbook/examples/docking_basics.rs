@@ -36,8 +36,7 @@ const CMD_ACTIVATE_HIERARCHY: &str = "cookbook.docking.activate_hierarchy";
 const CMD_ACTIVATE_INSPECTOR: &str = "cookbook.docking.activate_inspector";
 const CMD_ACTIVATE_EDITOR: &str = "cookbook.docking.activate_editor";
 const CMD_ACTIVATE_CONSOLE: &str = "cookbook.docking.activate_console";
-const PANEL_DESCRIPTION: &str =
-    "Dock content is app-owned, while reusable panel contributions aggregate through fret::docking::DockPanelFactory over the fret-docking ecosystem layer.";
+const PANEL_DESCRIPTION: &str = "Dock content is app-owned, while reusable panel contributions aggregate through fret::docking::DockPanelFactory over the fret-docking ecosystem layer.";
 
 fn install_commands(app: &mut KernelApp) {
     let scope = CommandScope::Widget;
@@ -284,10 +283,19 @@ struct DockingBasicsWindowState {
 fn install_docking_services(app: &mut KernelApp) {
     let mut registry = DockPanelRegistryBuilder::new();
     registry
-        .register(DockingBasicsCardPanelFactory::new("core.hierarchy", "Hierarchy"))
-        .register(DockingBasicsCardPanelFactory::new("core.inspector", "Inspector"))
+        .register(DockingBasicsCardPanelFactory::new(
+            "core.hierarchy",
+            "Hierarchy",
+        ))
+        .register(DockingBasicsCardPanelFactory::new(
+            "core.inspector",
+            "Inspector",
+        ))
         .register(DockingBasicsCardPanelFactory::new("core.editor", "Editor"))
-        .register(DockingBasicsCardPanelFactory::new("core.console", "Console"));
+        .register(DockingBasicsCardPanelFactory::new(
+            "core.console",
+            "Console",
+        ));
 
     app.with_global_mut(
         DockPanelRegistryService::<KernelApp>::default,

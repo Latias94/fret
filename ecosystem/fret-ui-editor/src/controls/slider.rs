@@ -13,13 +13,13 @@ use crate::controls::numeric_input::{
     NumericFormatFn, NumericInput, NumericInputErrorDisplay, NumericInputOptions,
     NumericInputOutcome, NumericParseFn, NumericValidateFn,
 };
+use crate::primitives::EditorTokenKeys;
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
     editor_input_group_divider, editor_input_group_frame, editor_input_group_segment,
 };
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::EditorFrameState;
-use crate::primitives::EditorTokenKeys;
 use fret_core::text::{TextOverflow, TextWrap};
 use fret_core::{
     Axis, Corners, CursorIcon, Edges, MouseButton, PointerId, Px, TextAlign, TextStyle,

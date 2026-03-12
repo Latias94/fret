@@ -1,5 +1,4 @@
-const UI_ERGONOMICS_AND_INTEROP: &str =
-    include_str!("../../../docs/ui-ergonomics-and-interop.md");
+const UI_ERGONOMICS_AND_INTEROP: &str = include_str!("../../../docs/ui-ergonomics-and-interop.md");
 
 #[test]
 fn ui_ergonomics_doc_uses_grouped_action_surface_names() {

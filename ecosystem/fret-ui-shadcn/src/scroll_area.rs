@@ -25,9 +25,7 @@ use fret_ui_kit::declarative::motion;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::scroll_area::DEFAULT_SCROLL_HIDE_DELAY_TICKS;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
-use fret_ui_kit::{
-    IntoUiElement, LayoutRefinement, UiPatch, UiPatchTarget, UiSupportsLayout,
-};
+use fret_ui_kit::{IntoUiElement, LayoutRefinement, UiPatch, UiPatchTarget, UiSupportsLayout};
 
 fn tailwind_transition_ease_in_out(t: f32) -> f32 {
     // Tailwind default transition timing function: cubic-bezier(0.4, 0, 0.2, 1).

@@ -4557,8 +4557,12 @@ fn outer_y_scroll_does_not_count_descendant_overflow_behind_clipped_wrapper() {
                                             crate::element::ContainerProps {
                                                 layout: crate::element::LayoutStyle {
                                                     size: crate::element::SizeStyle {
-                                                        width: crate::element::Length::Px(Px(320.0)),
-                                                        height: crate::element::Length::Px(Px(1100.0)),
+                                                        width: crate::element::Length::Px(Px(
+                                                            320.0,
+                                                        )),
+                                                        height: crate::element::Length::Px(Px(
+                                                            1100.0,
+                                                        )),
                                                         ..Default::default()
                                                     },
                                                     ..Default::default()
@@ -4609,7 +4613,6 @@ fn outer_y_scroll_does_not_count_descendant_overflow_behind_clipped_wrapper() {
         outer_handle.max_offset(),
     );
 }
-
 
 #[test]
 fn scroll_axis_both_mixed_child_invalidation_keeps_descendant_only_growth_authoritative_at_edge() {

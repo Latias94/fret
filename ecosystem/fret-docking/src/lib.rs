@@ -17,8 +17,8 @@ pub use dock::{
     ActivatePanelOptions, DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx,
     DockPanelFactoryRegistry, DockPanelRegistry, DockPanelRegistryBuilder,
     DockPanelRegistryService, DockSpace, DockSpaceMount, DockViewportLayout,
-    DockViewportOverlayHooks, DockViewportOverlayHooksService, DockingPolicy,
-    DockingPolicyService, DuplicateDockPanelKindError, ViewportPanel, create_dock_space_node,
+    DockViewportOverlayHooks, DockViewportOverlayHooksService, DockingPolicy, DockingPolicyService,
+    DuplicateDockPanelKindError, ViewportPanel, create_dock_space_node,
     create_dock_space_node_with_test_id, mount_dock_space, mount_dock_space_with_test_id,
     render_and_bind_dock_panels, render_cached_panel_root,
 };

@@ -259,32 +259,30 @@ impl View for IconsAndAssetsBasicsView {
             fret_ui_assets::image_asset_state::ImageLoadingStatus::Error => "error",
         };
 
-        let render_image = |cx: &mut UiCx<'_>,
-                            title: &str,
-                            st: &fret_ui_assets::ImageSourceState|
-         -> AnyElement {
-            let box_el = ui::container(|cx| {
-                if let Some(image) = st.image {
-                    let mut props = ImageProps::new(image);
-                    props.layout =
-                        style::layout_style(&theme, LayoutRefinement::default().size_full());
-                    [cx.image_props(props)]
-                } else {
-                    [cx.spinner()]
-                }
-            })
-            .border_1()
-            .border_color(ColorRef::Color(theme.color_token("border")))
-            .rounded(Radius::Lg)
-            .w_px(Px(160.0))
-            .h_px(Px(160.0))
-            .overflow_hidden();
+        let render_image =
+            |cx: &mut UiCx<'_>, title: &str, st: &fret_ui_assets::ImageSourceState| -> AnyElement {
+                let box_el = ui::container(|cx| {
+                    if let Some(image) = st.image {
+                        let mut props = ImageProps::new(image);
+                        props.layout =
+                            style::layout_style(&theme, LayoutRefinement::default().size_full());
+                        [cx.image_props(props)]
+                    } else {
+                        [cx.spinner()]
+                    }
+                })
+                .border_1()
+                .border_color(ColorRef::Color(theme.color_token("border")))
+                .rounded(Radius::Lg)
+                .w_px(Px(160.0))
+                .h_px(Px(160.0))
+                .overflow_hidden();
 
-            ui::v_flex(|cx| ui::children![cx; shadcn::Label::new(title), box_el])
-                .gap(Space::N2)
-                .w_full()
-                .into_element(cx)
-        };
+                ui::v_flex(|cx| ui::children![cx; shadcn::Label::new(title), box_el])
+                    .gap(Space::N2)
+                    .w_full()
+                    .into_element(cx)
+            };
 
         let image_panel = shadcn::Card::build(|cx, out| {
             out.push_ui(

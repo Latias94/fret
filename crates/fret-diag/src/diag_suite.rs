@@ -2967,9 +2967,7 @@ fn prepare_single_script_external_no_diag_suite_decision(
     let mut checks_for_post_run = checks_for_post_run_template.clone();
     checks_for_post_run.check_hello_world_compare_idle_present_max_delta = checks_for_post_run
         .check_hello_world_compare_idle_present_max_delta
-        .or(diag_policy::hello_world_compare_script_idle_present_max_delta(
-            single_src,
-        ));
+        .or(diag_policy::hello_world_compare_script_idle_present_max_delta(single_src));
 
     let use_external_no_diag = launch_requested
         && !reuse_launch

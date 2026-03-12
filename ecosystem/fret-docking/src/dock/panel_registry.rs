@@ -120,10 +120,7 @@ impl<H: UiHost + 'static> DockPanelRegistryBuilder<H> {
         }
     }
 
-    pub fn try_register<F>(
-        &mut self,
-        factory: F,
-    ) -> Result<&mut Self, DuplicateDockPanelKindError>
+    pub fn try_register<F>(&mut self, factory: F) -> Result<&mut Self, DuplicateDockPanelKindError>
     where
         F: DockPanelFactory<H>,
     {

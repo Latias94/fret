@@ -189,11 +189,9 @@ pub fn command_catalog_entries_from_host_commands_with_gating_snapshot<H: UiHost
 
     let mut entries: Vec<CommandCatalogEntry> = Vec::new();
     entries.extend(root_items.into_iter().map(CommandCatalogEntry::Item));
-    entries.extend(
-        groups
-            .into_iter()
-            .map(|(heading, items)| CommandCatalogEntry::Group(CommandCatalogGroup::new(heading, items))),
-    );
+    entries.extend(groups.into_iter().map(|(heading, items)| {
+        CommandCatalogEntry::Group(CommandCatalogGroup::new(heading, items))
+    }));
     entries
 }
 
@@ -339,7 +337,10 @@ mod tests {
     };
 
     fn bounds() -> Rect {
-        Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(400.0), Px(240.0)))
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        )
     }
 
     fn find_item<'a>(
@@ -368,9 +369,10 @@ mod tests {
             svc.set_enabled(window, cmd.clone(), false);
         });
 
-        let entries = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "cmdk", |cx| {
-            command_catalog_entries_from_host_commands(cx)
-        });
+        let entries =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "cmdk", |cx| {
+                command_catalog_entries_from_host_commands(cx)
+            });
         let item = find_item(&entries, &cmd).expect("catalog item");
         assert!(
             item.disabled,
@@ -399,9 +401,10 @@ mod tests {
             },
         );
 
-        let entries = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "cmdk", |cx| {
-            command_catalog_entries_from_host_commands(cx)
-        });
+        let entries =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "cmdk", |cx| {
+                command_catalog_entries_from_host_commands(cx)
+            });
         let item = find_item(&entries, &cmd).expect("catalog item");
         assert!(
             item.disabled,
@@ -446,9 +449,10 @@ mod tests {
             },
         );
 
-        let entries = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "cmdk", |cx| {
-            command_catalog_entries_from_host_commands(cx)
-        });
+        let entries =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "cmdk", |cx| {
+                command_catalog_entries_from_host_commands(cx)
+            });
         let item = find_item(&entries, &cmd).expect("catalog item");
         assert!(
             item.disabled,

@@ -981,16 +981,11 @@ mod tests {
         let mut app = App::new();
         apply_theme(&mut app);
 
-        let text = fret_ui::elements::with_element_cx(
-            &mut app,
-            window,
-            bounds_320x240(),
-            "test",
-            |cx| {
+        let text =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds_320x240(), "test", |cx| {
                 ButtonGroupText::new_children([cx.text("prefix"), cx.text("suffix")])
                     .into_element(cx)
-            },
-        );
+            });
 
         let ElementKind::Container(_) = &text.kind else {
             panic!("expected ButtonGroupText to render a container");
