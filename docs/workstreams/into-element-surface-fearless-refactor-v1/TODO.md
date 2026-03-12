@@ -141,7 +141,7 @@ Implementation note on 2026-03-12:
 - [x] Add a source/doc gate that the canonical authoring compare set (`simple_todo_v2_target`,
   `todo_demo`, and the simple-todo scaffold template) stays on the target conversion vocabulary.
 - [x] Add a source/doc gate that app-facing examples prefer `Ui` / `UiChild`.
-- [ ] Add a source/doc gate that generic reusable first-party helpers prefer the unified
+- [x] Add a source/doc gate that generic reusable first-party helpers prefer the unified
   conversion trait over raw `AnyElement` when a raw landed element is not required.
 - [ ] Add a source gate that old names (`UiChildIntoElement`, `UiHostBoundIntoElement`,
   `UiBuilderHostBoundIntoElementExt`) do not return in curated surfaces.
@@ -157,6 +157,9 @@ Implementation note on 2026-03-12:
   reintroducing direct `UiIntoElement` glue.
 - `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs` now also guards that
   `ui_builder_ext/*` reusable helper closures keep accepting `IntoUiElement<H>`.
+- `ecosystem/fret/tests/reusable_component_helper_surface.rs` now guards the facade-level
+  source/doc story: shadcn reusable helpers stay on `IntoUiElement<H>` rather than requiring
+  pre-landed `AnyElement` inputs.
 
 ## M6 — Keep advanced/raw seams explicit and justified
 
