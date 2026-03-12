@@ -310,6 +310,10 @@ Current snapshot (2026-03-12):
   - prepared-glyph raster assembly after image-content metadata decoding now lives behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `prepared_glyph_raster_from_image_parts(...)` no longer owns content-metadata-backed raster assembly directly
+- The seventy-first internal `text/mod.rs` split has landed:
+  - prepared-glyph raster assembly after image rendering now lives behind a dedicated helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `render_prepared_glyph_raster(...)` no longer owns image-to-raster handoff directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
