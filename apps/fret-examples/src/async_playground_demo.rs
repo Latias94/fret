@@ -11,6 +11,7 @@ use fret_query::{
     QueryPolicy, QuerySnapshotEntry, QueryState, QueryStatus, with_query_client,
 };
 use fret_ui::element::{PressableA11y, PressableProps};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::QueryHandleWatchExt as _;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
 use fret_ui_kit::primitives::separator::SeparatorOrientation;
@@ -528,6 +529,7 @@ fn catalog_item(
                 .truncate()
                 .into_element(cx);
             let badge = status_badge(cx, diag.as_ref());
+            let badge = badge.into_element(cx);
 
             let row = ui::h_flex(|cx| {
                 let spacer = ui::container(|_cx| Vec::<AnyElement>::new())
@@ -951,6 +953,7 @@ fn query_result_view(
             ..QueryDiag::from_state(state)
         }),
     );
+    let badge = badge.into_element(cx);
 
     let meta = ui::h_flex(|cx| {
         let left = ui::text(id.namespace())
@@ -1135,7 +1138,10 @@ fn observe_query_diag(
     st.last_diag.insert(id, diag);
 }
 
-fn status_badge(cx: &mut UiCx<'_>, diag: Option<&QueryDiag>) -> AnyElement {
+fn status_badge(
+    cx: &mut UiCx<'_>,
+    diag: Option<&QueryDiag>,
+) -> impl IntoUiElement<KernelApp> + use<> {
     let Some(diag) = diag else {
         return shadcn::Badge::new("Not mounted")
             .variant(shadcn::BadgeVariant::Secondary)

@@ -2,10 +2,10 @@ use super::super::*;
 
 use crate::ui::doc_layout::DocSection;
 use crate::ui::snippets::ai as snippets;
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_ui_kit::ui::UiElementSinkExt as _;
 
-fn status_colors_table(cx: &mut UiCx<'_>) -> AnyElement {
+fn status_colors_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let row = |status: &'static str, color: &'static str, use_case: &'static str| {
         shadcn::TableRow::build(3, move |cx, out| {
             out.push_ui(cx, shadcn::TableCell::build(ui::text(status)));
@@ -41,7 +41,7 @@ fn status_colors_table(cx: &mut UiCx<'_>) -> AnyElement {
     .into_element(cx)
 }
 
-fn parts_props_table(cx: &mut UiCx<'_>) -> AnyElement {
+fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let row = |part: &'static str, inputs: &'static str, notes: &'static str| {
         shadcn::TableRow::build(3, move |cx, out| {
             out.push_ui(cx, shadcn::TableCell::build(ui::text(part)));
@@ -98,10 +98,12 @@ pub(super) fn preview_ai_test_results_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
         ],
     );
     let status_colors = status_colors_table(cx);
+    let status_colors = status_colors.into_element(cx);
     let basic = snippets::test_results_basic::render(cx);
     let suites = snippets::test_results_suites::render(cx);
     let errors = snippets::test_results_errors::render(cx);
     let props = parts_props_table(cx);
+    let props = props.into_element(cx);
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,

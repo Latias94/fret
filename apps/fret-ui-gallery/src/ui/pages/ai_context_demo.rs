@@ -2,10 +2,10 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_ui_kit::ui::UiElementSinkExt as _;
 
-fn parts_table(cx: &mut UiCx<'_>) -> AnyElement {
+fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let row = |part: &'static str, notes: &'static str| {
         shadcn::TableRow::build(2, move |cx, out| {
             out.push_ui(cx, shadcn::TableCell::build(ui::text(part)));
@@ -63,6 +63,7 @@ pub(super) fn preview_ai_context_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
         ],
     );
     let parts = parts_table(cx);
+    let parts = parts.into_element(cx);
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,

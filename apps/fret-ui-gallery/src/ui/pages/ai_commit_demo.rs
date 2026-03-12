@@ -2,10 +2,10 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_ui_kit::ui::UiElementSinkExt as _;
 
-fn file_status_table(cx: &mut UiCx<'_>) -> AnyElement {
+fn file_status_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let row = |status: &'static str, label: &'static str, color: &'static str| {
         shadcn::TableRow::build(3, move |cx, out| {
             out.push_ui(cx, shadcn::TableCell::build(ui::text(status)));
@@ -41,7 +41,7 @@ fn file_status_table(cx: &mut UiCx<'_>) -> AnyElement {
     .into_element(cx)
 }
 
-fn parts_props_table(cx: &mut UiCx<'_>) -> AnyElement {
+fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let row = |part: &'static str, inputs: &'static str, notes: &'static str| {
         shadcn::TableRow::build(3, move |cx, out| {
             out.push_ui(cx, shadcn::TableCell::build(ui::text(part)));
@@ -111,7 +111,9 @@ pub(super) fn preview_ai_commit_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<A
         ],
     );
     let file_status = file_status_table(cx);
+    let file_status = file_status.into_element(cx);
     let props = parts_props_table(cx);
+    let props = props.into_element(cx);
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,

@@ -17,9 +17,9 @@ use fret_ui::element::{
     ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle, SpacerProps,
     TextProps,
 };
-use fret_ui_kit::Space;
 use fret_ui_kit::custom_effects::CustomEffectProgramV1;
 use fret_ui_kit::ui;
+use fret_ui_kit::{IntoUiElement, Space};
 
 mod act {
     fret::actions!([Reset = "postprocess_theme_demo.reset.v1"]);
@@ -607,7 +607,9 @@ fn stage(
     let chain = EffectChain::from_steps(&steps).sanitize();
 
     let raw_body = stage_body(cx, false, "Raw (unprocessed)");
+    let raw_body = raw_body.into_element(cx);
     let processed_body = stage_body(cx, true, "Postprocess (filtered)");
+    let processed_body = processed_body.into_element(cx);
 
     if !enabled {
         return raw_body;
@@ -660,7 +662,11 @@ fn stage(
     .into_element(cx)
 }
 
-fn stage_body(cx: &mut UiCx<'_>, postprocess_applied: bool, label: &str) -> AnyElement {
+fn stage_body(
+    cx: &mut UiCx<'_>,
+    postprocess_applied: bool,
+    label: &str,
+) -> impl IntoUiElement<KernelApp> + use<> {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;
@@ -741,12 +747,13 @@ fn stage_body(cx: &mut UiCx<'_>, postprocess_applied: bool, label: &str) -> AnyE
             );
 
             let body = stage_cards(cx);
+            let body = body.into_element(cx);
             vec![header, body]
         },
     )
 }
 
-fn stage_cards(cx: &mut UiCx<'_>) -> AnyElement {
+fn stage_cards(cx: &mut UiCx<'_>) -> impl IntoUiElement<KernelApp> + use<> {
     let theme_snapshot = Theme::global(&*cx.app).snapshot();
 
     let card = |cx: &mut UiCx<'_>, title: &str, subtitle: &str| {

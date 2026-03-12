@@ -129,6 +129,24 @@ Implementation note on 2026-03-12:
   `UiIntoElement` on those adapters.
 - `fret-ui-shadcn` `ui_builder_ext/*` reusable helper closures now accept values that land through
   `IntoUiElement<H>` instead of requiring `AnyElement`-typed closure returns up front.
+- selected advanced/manual-assembly examples now also keep reusable helpers off raw landed return
+  types by default:
+  `apps/fret-examples/src/assets_demo.rs` (`render_image_panel`, `render_svg_panel`),
+  `apps/fret-examples/src/async_playground_demo.rs` (`status_badge`),
+  and `apps/fret-examples/src/postprocess_theme_demo.rs` (`stage_body`, `stage_cards`)
+  now return `impl IntoUiElement<KernelApp>`.
+- selected UI Gallery AI doc pages now keep page-local helpers on the default app-facing child
+  surface:
+  `ai_persona_demo.rs`, `ai_commit_demo.rs`, `ai_context_demo.rs`,
+  `ai_model_selector_demo.rs`, `ai_voice_selector_demo.rs`, `ai_mic_selector_demo.rs`,
+  `ai_checkpoint_demo.rs`, `ai_shimmer_demo.rs`, `ai_test_results_demo.rs`,
+  `ai_artifact_demo.rs`, and `ai_chain_of_thought_demo.rs`
+  now return `impl UiChild + use<>` for page-local notes/table helpers, with explicit
+  `.into_element(cx)` seams only where `DocSection::new(...)` still intentionally consumes
+  `AnyElement`.
+- explicit raw seams remain where the helper is genuinely low-level composition glue, for example
+  `postprocess_theme_demo.rs::stage(...)` where the function arbitrates effect-layer composition
+  and compare-mode raw/processed branching.
 
 ## M4 — Delete the old public surface
 

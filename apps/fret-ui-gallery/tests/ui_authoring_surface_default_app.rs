@@ -14,6 +14,42 @@ fn assert_curated_default_app_paths(
     }
 }
 
+fn assert_selected_page_helpers_prefer_ui_child(
+    relative_path: &str,
+    required_markers: &[&str],
+    forbidden_markers: &[&str],
+) {
+    let path = manifest_path(relative_path);
+    let source = read_path(&path);
+    let normalized = source.split_whitespace().collect::<String>();
+
+    assert!(
+        normalized.contains("usefret::{UiChild,UiCx};"),
+        "{} should import UiChild alongside UiCx on the page surface",
+        path.display()
+    );
+
+    for marker in required_markers {
+        let marker = marker.split_whitespace().collect::<String>();
+        assert!(
+            normalized.contains(&marker),
+            "{} is missing marker `{}`",
+            path.display(),
+            marker
+        );
+    }
+
+    for marker in forbidden_markers {
+        let marker = marker.split_whitespace().collect::<String>();
+        assert!(
+            !normalized.contains(&marker),
+            "{} reintroduced legacy page helper marker `{}`",
+            path.display(),
+            marker
+        );
+    }
+}
+
 #[test]
 fn gallery_sources_do_not_depend_on_the_legacy_fret_prelude() {
     let menubar = read("src/driver/menubar.rs");
@@ -289,6 +325,95 @@ fn curated_ai_doc_pages_prefer_ui_cx_on_the_default_app_surface() {
             "app-facing page surface",
         );
     }
+}
+
+#[test]
+fn selected_ai_doc_page_helpers_prefer_uichild_over_anyelement() {
+    assert_selected_page_helpers_prefer_ui_child(
+        "src/ui/pages/ai_persona_demo.rs",
+        &[
+            "fn states_notes(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "fn props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "fn lifecycle_notes(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        &[
+            "fn states_notes(cx: &mut UiCx<'_>) -> AnyElement",
+            "fn props_table(cx: &mut UiCx<'_>) -> AnyElement",
+            "fn lifecycle_notes(cx: &mut UiCx<'_>) -> AnyElement",
+        ],
+    );
+
+    assert_selected_page_helpers_prefer_ui_child(
+        "src/ui/pages/ai_commit_demo.rs",
+        &[
+            "fn file_status_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        &[
+            "fn file_status_table(cx: &mut UiCx<'_>) -> AnyElement",
+            "fn parts_props_table(cx: &mut UiCx<'_>) -> AnyElement",
+        ],
+    );
+
+    assert_selected_page_helpers_prefer_ui_child(
+        "src/ui/pages/ai_context_demo.rs",
+        &["fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
+        &["fn parts_table(cx: &mut UiCx<'_>) -> AnyElement"],
+    );
+
+    assert_selected_page_helpers_prefer_ui_child(
+        "src/ui/pages/ai_model_selector_demo.rs",
+        &["fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
+        &["fn parts_table(cx: &mut UiCx<'_>) -> AnyElement"],
+    );
+
+    assert_selected_page_helpers_prefer_ui_child(
+        "src/ui/pages/ai_voice_selector_demo.rs",
+        &["fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
+        &["fn parts_table(cx: &mut UiCx<'_>) -> AnyElement"],
+    );
+
+    assert_selected_page_helpers_prefer_ui_child(
+        "src/ui/pages/ai_mic_selector_demo.rs",
+        &["fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
+        &["fn parts_table(cx: &mut UiCx<'_>) -> AnyElement"],
+    );
+
+    assert_selected_page_helpers_prefer_ui_child(
+        "src/ui/pages/ai_checkpoint_demo.rs",
+        &["fn checkpoint_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
+        &["fn checkpoint_props_table(cx: &mut UiCx<'_>) -> AnyElement"],
+    );
+
+    assert_selected_page_helpers_prefer_ui_child(
+        "src/ui/pages/ai_shimmer_demo.rs",
+        &["fn shimmer_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
+        &["fn shimmer_props_table(cx: &mut UiCx<'_>) -> AnyElement"],
+    );
+
+    assert_selected_page_helpers_prefer_ui_child(
+        "src/ui/pages/ai_test_results_demo.rs",
+        &[
+            "fn status_colors_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        &[
+            "fn status_colors_table(cx: &mut UiCx<'_>) -> AnyElement",
+            "fn parts_props_table(cx: &mut UiCx<'_>) -> AnyElement",
+        ],
+    );
+
+    assert_selected_page_helpers_prefer_ui_child(
+        "src/ui/pages/ai_artifact_demo.rs",
+        &["fn render_notes(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
+        &["fn render_notes(cx: &mut UiCx<'_>) -> AnyElement"],
+    );
+
+    assert_selected_page_helpers_prefer_ui_child(
+        "src/ui/pages/ai_chain_of_thought_demo.rs",
+        &["fn chain_of_thought_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
+        &["fn chain_of_thought_props_table(cx: &mut UiCx<'_>) -> AnyElement"],
+    );
 }
 
 #[test]

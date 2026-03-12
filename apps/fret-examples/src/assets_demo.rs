@@ -5,7 +5,7 @@ use fret::advanced::kernel::ui::element::{ImageProps, SvgIconProps};
 use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_ui_assets::{UiAssets, image_asset_state, svg_asset_state};
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_kit::{ColorRef, IntoUiElement, LayoutRefinement, Radius, Space};
 
 static DEMO_SVG: &[u8] = br##"
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
@@ -185,7 +185,9 @@ fn render_view(cx: &mut UiCx<'_>) -> Ui {
         image_error,
         image_stats,
     );
+    let left = left.into_element(cx);
     let right = render_svg_panel(cx, &theme, svg);
+    let right = right.into_element(cx);
 
     let stats = ui::v_flex_build(|cx, out| {
         let lines = [
@@ -268,7 +270,7 @@ fn render_image_panel(
     status: image_asset_state::ImageLoadingStatus,
     error: Option<Arc<str>>,
     stats: fret_ui_assets::image_asset_cache::ImageAssetStats,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let title = match status {
         image_asset_state::ImageLoadingStatus::Idle => "Image (idle)",
         image_asset_state::ImageLoadingStatus::Loading => "Image (loading...)",
@@ -329,7 +331,11 @@ fn render_image_panel(
     .into_element(cx)
 }
 
-fn render_svg_panel(cx: &mut UiCx<'_>, theme: &Theme, svg: Option<fret_core::SvgId>) -> AnyElement {
+fn render_svg_panel(
+    cx: &mut UiCx<'_>,
+    theme: &Theme,
+    svg: Option<fret_core::SvgId>,
+) -> impl IntoUiElement<KernelApp> + use<> {
     let icon = if let Some(svg) = svg {
         let mut props = SvgIconProps::new(fret_ui::SvgSource::Id(svg));
         props.layout = decl_style::layout_style(

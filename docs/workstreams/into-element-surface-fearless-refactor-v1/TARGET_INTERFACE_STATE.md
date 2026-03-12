@@ -60,6 +60,19 @@ Transitional note on 2026-03-12:
 - keep that seam explicit at the call site rather than widening app helpers to teach component
   conversion trait names prematurely.
 
+Advanced/manual-assembly note on 2026-03-12:
+
+- examples that intentionally use `fret::advanced::prelude::*` do not currently teach `UiChild`
+  as their primary helper vocabulary.
+- in that lane, the preferred non-raw helper signature is:
+
+```rust
+fn helper(cx: &mut UiCx<'_>) -> impl fret_ui_kit::IntoUiElement<KernelApp> + use<>
+```
+
+- do not default those helpers to `AnyElement` unless the function is actually raw composition
+  glue (overlay/effect/manual-assembly internals).
+
 ## Component Surface
 
 ### Target public conversion contract

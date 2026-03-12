@@ -2,9 +2,9 @@ use super::super::*;
 
 use crate::ui::doc_layout::DocSection;
 use crate::ui::snippets::ai as snippets;
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 
-fn render_notes(cx: &mut UiCx<'_>) -> AnyElement {
+fn render_notes(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     fret_ui_kit::ui::v_flex(move |cx| {
         vec![
             cx.text(
@@ -49,7 +49,7 @@ pub(super) fn preview_ai_artifact_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec
     );
 
     sections.push(
-        DocSection::new("Notes", render_notes(cx))
+        DocSection::new("Notes", render_notes(cx).into_element(cx))
             .description("Parity findings and current API notes for Artifact."),
     );
 
