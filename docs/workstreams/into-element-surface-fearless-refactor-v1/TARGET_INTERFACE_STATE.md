@@ -317,6 +317,7 @@ The same input rule also applies to internal shadcn menu-slot wrappers:
 The same typed-constructor rule now also applies to thin public shadcn leaf helpers where no raw
 child list or explicit landing seam is conceptually required:
 
+- `ecosystem/fret-ui-shadcn/src/badge.rs::badge<H, T>(...)`
 - `ecosystem/fret-ui-shadcn/src/kbd.rs::kbd<H, T>(...)`
 - `ecosystem/fret-ui-shadcn/src/separator.rs::separator<H>()`
 

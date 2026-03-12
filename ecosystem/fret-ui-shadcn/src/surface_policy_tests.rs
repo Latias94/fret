@@ -2,6 +2,7 @@ const LIB_RS: &str = include_str!("lib.rs");
 const APP_RS: &str = include_str!("app.rs");
 const ADVANCED_RS: &str = include_str!("advanced.rs");
 const README: &str = include_str!("../README.md");
+const BADGE_RS: &str = include_str!("badge.rs");
 const UI_EXT_SUPPORT_RS: &str = include_str!("ui_ext/support.rs");
 const UI_EXT_DATA_RS: &str = include_str!("ui_ext/data.rs");
 const ALERT_DIALOG_RS: &str = include_str!("alert_dialog.rs");
@@ -301,6 +302,16 @@ fn internal_menu_slot_wrappers_accept_unified_component_conversion_trait() {
 #[test]
 fn public_leaf_constructors_prefer_typed_conversion_outputs_when_no_raw_seam_is_required() {
     for (label, source, required_markers, forbidden_markers) in [
+        (
+            "badge.rs",
+            BADGE_RS,
+            &[
+                "pub fn badge<H: UiHost, T>(label: T, variant: BadgeVariant) -> impl IntoUiElement<H> + use<H, T> where T: Into<Arc<str>>,",
+            ][..],
+            &[
+                "pub fn badge<H: UiHost>( cx: &mut ElementContext<'_, H>, label: impl Into<Arc<str>>, variant: BadgeVariant, ) -> AnyElement",
+            ][..],
+        ),
         (
             "kbd.rs",
             KBD_RS,

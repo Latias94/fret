@@ -86,8 +86,9 @@ Execution note on 2026-03-12:
   where the internal `menu_icon_slot(...)` wrappers now accept `IntoUiElement<H>` inputs instead
   of forcing pre-landed `AnyElement`, while keeping the wrapper output itself as the explicit
   landed menu-slot seam.
-- the shadcn surface gate now also records the first thin public leaf-constructor trial:
-  `ecosystem/fret-ui-shadcn/src/kbd.rs::kbd<H, T>(...)` and
+- the shadcn surface gate now also records the current thin public leaf-constructor trial:
+  `ecosystem/fret-ui-shadcn/src/badge.rs::badge<H, T>(...)`,
+  `ecosystem/fret-ui-shadcn/src/kbd.rs::kbd<H, T>(...)`, and
   `ecosystem/fret-ui-shadcn/src/separator.rs::separator<H>()` now expose typed constructor
   outputs, while `ecosystem/fret-ui-shadcn/src/kbd.rs::kbd_icon<H>(...)` remains intentionally
   raw because `Kbd::from_children(...)` still owns a concrete `Vec<AnyElement>` child seam.
