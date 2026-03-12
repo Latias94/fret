@@ -1,7 +1,7 @@
 # Ecosystem Integration Traits v1 — TODO
 
 Status: Active planning tracker
-Last updated: 2026-03-11
+Last updated: 2026-03-12
 
 Related:
 
@@ -9,6 +9,20 @@ Related:
 - `MILESTONES.md`
 - `TARGET_INTERFACE_STATE.md`
 - `MIGRATION_MATRIX.md`
+
+Execution note on 2026-03-12:
+
+- do not treat this as the first place to solve authoring-surface feel,
+- finish core trait closure after `into-element` M0/M1 and the canonical todo/scaffold evidence
+  set move onto the new conversion vocabulary,
+- keep `QueryAdapter` explicitly behind a later keep/defer decision instead of expanding trait
+  budget in parallel with the conversion-surface refactor.
+
+Status note on 2026-03-12:
+
+- the canonical todo/scaffold evidence set is now on the new app-facing posture,
+- keep this workstream focused on follow-up deletion/alignment while `into-element` M2 rewires the
+  remaining builder and child pipelines.
 
 This file tracks the execution work needed to turn the trait budget into a clean pre-release
 surface.
@@ -81,6 +95,12 @@ surface.
     `fret_ui_shadcn::advanced::*`, leaving `fret_ui_shadcn::app::*` for default theme setup only.
 - [ ] Audit first-party crates for ad-hoc panel/route/query integration helpers that should move to
   one of the target seams.
+- [ ] Audit reusable helper signatures in first-party ecosystem crates so each public helper is
+  classified by lane:
+  - app-facing teaching helpers use `Ui` / `UiChild`,
+  - reusable generic helpers move toward the unified component conversion trait tracked by
+    `docs/workstreams/into-element-surface-fearless-refactor-v1/`,
+  - raw `AnyElement` stays explicit for advanced/internal seams only.
 
 ## 3. `InstallIntoApp` Adoption
 
@@ -201,6 +221,8 @@ surface.
   - Extended on 2026-03-12 with first-party source-policy coverage in
     `apps/fret-examples/src/lib.rs` and `apps/fret-cookbook/src/lib.rs`.
 - [ ] Add evidence anchors for the first in-tree implementation of each accepted trait.
+- [ ] Keep first-party ecosystem docs/examples aligned with the follow-on conversion-surface
+  tracker so trait adoption does not re-teach the legacy split conversion traits.
 
 ## 9. Hard Deletion Work
 

@@ -613,22 +613,29 @@ __PALETTE_BUTTON__
         .max_w(Px(520.0))
         ;
 
-        let page = ui::container(|cx| ui::children![cx;
-            ui::v_flex(|cx| ui::children![cx; card])
-                .w_full()
-                .h_full()
-                .justify_center()
-                .items_center()
-                ,
-        ])
-        .bg(ColorRef::Color(theme.color_token("muted")))
-        .p(Space::N6)
-        .w_full()
-        .h_full()
-        ;
-
-        page.into_element(cx).into()
+        let card = card.into_element(cx);
+        todo_page(cx, theme, card).into()
     }
+}
+
+fn todo_page(
+    cx: &mut UiCx<'_>,
+    theme: ThemeSnapshot,
+    content: impl UiChild,
+) -> fret_ui::element::AnyElement {
+    ui::container(|cx| ui::children![cx;
+        ui::v_flex(|cx| ui::children![cx; content])
+            .w_full()
+            .h_full()
+            .justify_center()
+            .items_center()
+            ,
+    ])
+    .bg(ColorRef::Color(theme.color_token("muted")))
+    .p(Space::N6)
+    .w_full()
+    .h_full()
+    .into_element(cx)
 }
 
 fn filter_chip(
@@ -993,27 +1000,31 @@ __ADD_BTN_DEF__
         .max_w(Px(520.0))
         ;
 
-        let page = ui::container(|cx| {
-            ui::children![cx;
-                ui::v_flex(|cx| ui::children![cx;
-                    card,
+        let content = ui::v_flex(|cx| ui::children![cx;
+            card,
 __PALETTE_BUTTON__
-                ])
-                .w_full()
-                .h_full()
-                .justify_center()
-                .items_center()
-                ,
-            ]
-        })
+        ])
+        .w_full()
+        .h_full()
+        .justify_center()
+        .items_center();
+
+        let content = content.into_element(cx);
+        todo_page(cx, theme, content).into()
+    }
+}
+
+fn todo_page(
+    cx: &mut UiCx<'_>,
+    theme: ThemeSnapshot,
+    content: impl UiChild,
+) -> fret_ui::element::AnyElement {
+    ui::container(|cx| ui::children![cx; content])
         .bg(ColorRef::Color(theme.color_token("muted")))
         .p(Space::N6)
         .w_full()
         .h_full()
-        ;
-
-        page.into_element(cx).into()
-    }
+        .into_element(cx)
 }
 
 fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {
@@ -1304,6 +1315,10 @@ mod tests {
         assert!(src.contains("let draft_state = cx.state().local::<String>();"));
         assert!(src.contains("let filter_state = cx.state().local_init(|| TodoFilter::All);"));
         assert!(src.contains("let todos_state = cx.state().local_init(|| {"));
+        assert!(src.contains("let card = card.into_element(cx);"));
+        assert!(src.contains("todo_page(cx, theme, card).into()"));
+        assert!(src.contains("fn todo_page("));
+        assert!(src.contains(") -> fret_ui::element::AnyElement {"));
         assert!(!src.contains("Model<Vec<TodoItem>>"));
         assert!(!src.contains("Model<bool>"));
         assert!(!src.contains(".models_mut().insert("));
@@ -1369,6 +1384,10 @@ mod tests {
         assert!(src.contains("let draft_state = cx.state().local::<String>();"));
         assert!(src.contains("let next_id_state = cx.state().local_init(|| 3u64);"));
         assert!(src.contains("let todos_state = cx.state().local_init(|| {"));
+        assert!(src.contains("let content = content.into_element(cx);"));
+        assert!(src.contains("todo_page(cx, theme, content).into()"));
+        assert!(src.contains("fn todo_page("));
+        assert!(src.contains(") -> fret_ui::element::AnyElement {"));
         assert!(src.contains("shadcn::Input::new(&draft_state)"));
         assert!(src.contains("shadcn::Checkbox::from_checked(row.done)"));
         assert!(!src.contains("Model<Vec<TodoItem>>"));

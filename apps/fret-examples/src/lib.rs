@@ -309,6 +309,16 @@ mod authoring_surface_policy_tests {
         );
     }
 
+    fn assert_uses_default_app_surface(src: &str) {
+        assert!(src.contains("use fret::app::prelude::*;"));
+        assert!(!src.contains("advanced::prelude::*"));
+        assert!(!src.contains("KernelApp"));
+        assert!(!src.contains("AppWindowId"));
+        assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
+        assert!(src.contains("let card = card.into_element(cx);"));
+        assert!(src.contains("todo_page(cx, theme, card).into()"));
+    }
+
     fn assert_view_runtime_example_uses_app_ui_aliases(src: &str) {
         assert!(
             src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui")
@@ -443,11 +453,15 @@ mod authoring_surface_policy_tests {
             QUERY_ASYNC_TOKIO_DEMO,
             QUERY_DEMO,
             TEXT_HEAVY_MEMORY_DEMO,
-            TODO_DEMO,
             WINDOW_HIT_TEST_PROBE_DEMO,
         ] {
             assert_uses_advanced_surface(src);
         }
+    }
+
+    #[test]
+    fn todo_demo_prefers_default_app_surface() {
+        assert_uses_default_app_surface(TODO_DEMO);
     }
 
     #[test]

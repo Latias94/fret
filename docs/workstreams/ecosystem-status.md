@@ -10,6 +10,23 @@ This document summarizes the current state of the Fret library + ecosystem by re
 
 It is intentionally **non-normative**. Treat it as a “where we are today” snapshot, not a contract.
 
+## Current Refactor Order (2026-03-12)
+
+The current recommended execution order across the active interface-cleanup lanes is:
+
+1. Treat `authoring-surface-and-ecosystem-fearless-refactor-v1` as closeout-only.
+2. Keep `into-element-surface-fearless-refactor-v1` as the main authoring-surface lane until
+   builder/child-pipeline cleanup is done.
+3. Resume `ecosystem-integration-traits-v1` cleanup only after the conversion surface is stable
+   enough that ecosystem helpers do not re-teach old split conversion names.
+
+Practical meaning:
+
+- app/component/advanced tiering is already decided,
+- the remaining "write UI" feel gap is mostly conversion-surface closure,
+- trait-budget follow-up should now bias toward deletion, naming cleanup, and ecosystem helper
+  alignment rather than inventing new authoring vocabulary in parallel.
+
 ## What Fret Is (and Is Not)
 
 Fret is a documentation-driven, editor-grade UI runtime and ecosystem for Rust.
@@ -59,8 +76,8 @@ apps still need ecosystem-level ergonomics to avoid re-inventing patterns.
 Current ecosystem surfaces:
 
 - Typed UI ? app routing for dynamic per-item actions: `fret::payload_actions!` +
-  `ViewCx::on_payload_action*` (avoids `"prefix.{id}"` parsing and does not rely on per-frame router maps).
-- Typed UI ? app routing for globally addressable actions: `fret::actions!` + `ViewCx::on_action*`
+  `AppUi::on_payload_action*` (avoids `"prefix.{id}"` parsing and does not rely on per-frame router maps).
+- Typed UI ? app routing for globally addressable actions: `fret::actions!` + `AppUi::on_action*`
   (stable `CommandId`s where keymaps/menus/palette integration matters).
 - Async resource state (loading/error/cache/invalidation): `ecosystem/fret-query` (TanStack Query-like,
   adapted to ADR 0175 and `Dispatcher.exec_capabilities()`).

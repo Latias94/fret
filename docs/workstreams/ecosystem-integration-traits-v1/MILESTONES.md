@@ -1,7 +1,7 @@
 # Ecosystem Integration Traits v1 — Milestones
 
 Status: Active
-Last updated: 2026-03-11
+Last updated: 2026-03-12
 
 Related:
 
@@ -9,6 +9,32 @@ Related:
 - `TODO.md`
 - `TARGET_INTERFACE_STATE.md`
 - `MIGRATION_MATRIX.md`
+
+## Current execution stance (2026-03-12)
+
+This workstream is still active, but it is now a **narrow follow-up lane** rather than the main
+authoring-surface refactor.
+
+Current reading:
+
+- the core justified traits are already mostly landed (`InstallIntoApp`, `CommandCatalog`,
+  `RouteCodec`, `DockPanelFactory`),
+- the remaining high-value work is cleanup and closure,
+- conversion-surface redesign is owned by
+  `docs/workstreams/into-element-surface-fearless-refactor-v1/`.
+
+Recommended order:
+
+1. let `into-element` land the unified conversion story first,
+2. then align ecosystem helper signatures and docs with that result,
+3. finish `QueryAdapter` keep/defer, bundle examples, old export deletion, and docs cleanup after
+   the conversion vocabulary is stable.
+
+Progress note on 2026-03-12:
+
+- the canonical todo/scaffold evidence set has now moved onto the new app-facing posture,
+- the next reopen point for this lane is after `into-element` M2 finishes builder/child-pipeline
+  cleanup, not before.
 
 Current status on 2026-03-11:
 
@@ -65,6 +91,9 @@ Current status on 2026-03-11:
 - `docs/crate-usage-guide.md` now includes a short ecosystem author checklist that points back to
   this trait budget and repeats the "no universal component / giant plugin trait" rule.
 - `ecosystem/fret` authoring-surface policy tests now gate that guidance.
+- This workstream now explicitly hands off the remaining conversion-vocabulary cleanup to
+  `docs/workstreams/into-element-surface-fearless-refactor-v1/` so trait adoption does not create
+  a second, crate-local authoring language.
 - Free installer functions remain the default story; first-party bundle examples and the remaining
   trait-budget decisions are still open.
 
@@ -147,3 +176,16 @@ Exit criteria:
   as advanced/internal,
 - first-party router docs stop teaching compatibility-only hash-token routing as a primary path,
 - this workstream can be downgraded from active refactor planning to maintenance.
+
+## Post-v1 handoff — Conversion-surface alignment
+
+Goal:
+
+- keep ecosystem integration contracts and authoring conversion contracts moving in lockstep.
+
+Exit criteria:
+
+- curated ecosystem docs/examples stop teaching legacy split conversion traits while trait adoption continues,
+- shadcn and UI Gallery exemplars track the active authoring target state,
+- the remaining conversion-surface cleanup is clearly owned by
+  `docs/workstreams/into-element-surface-fearless-refactor-v1/` rather than ad-hoc crate docs.

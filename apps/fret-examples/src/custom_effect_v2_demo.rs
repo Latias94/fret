@@ -21,8 +21,8 @@ use fret_ui::element::{
     ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle, SpacerProps,
     TextProps,
 };
+use fret_ui_kit::Space;
 use fret_ui_kit::custom_effects::CustomEffectProgramV2;
-use fret_ui_kit::{Space, UiIntoElement};
 
 mod act {
     fret::actions!([Reset = "custom_effect_v2_demo.reset.v1"]);
@@ -598,7 +598,7 @@ fn lens_shell(cx: &mut UiCx<'_>, label: Arc<str>, radius: Px, body: AnyElement) 
                     corner_radii: Corners::all(Px(999.0)),
                     ..Default::default()
                 },
-                move |cx| vec![title.into_element(cx)],
+                move |_cx| vec![title],
             );
 
             vec![body, pill]

@@ -17,9 +17,9 @@ use fret_ui::element::{
     ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle, SpacerProps,
     TextProps,
 };
+use fret_ui_kit::Space;
 use fret_ui_kit::custom_effects::CustomEffectProgramV1;
 use fret_ui_kit::ui;
-use fret_ui_kit::{Space, UiIntoElement};
 
 mod act {
     fret::actions!([Reset = "postprocess_theme_demo.reset.v1"]);
@@ -735,7 +735,7 @@ fn stage_body(cx: &mut UiCx<'_>, postprocess_applied: bool, label: &str) -> AnyE
                             .items_center()
                             .into_element(cx),
                         subtitle,
-                        shadcn::raw::typography::muted(cx, label).into_element(cx),
+                        shadcn::raw::typography::muted(cx, label),
                     ]
                 },
             );
@@ -767,8 +767,8 @@ fn stage_cards(cx: &mut UiCx<'_>) -> AnyElement {
             },
             move |cx| {
                 vec![
-                    shadcn::raw::typography::large(cx, title).into_element(cx),
-                    shadcn::raw::typography::muted(cx, subtitle).into_element(cx),
+                    shadcn::raw::typography::large(cx, title),
+                    shadcn::raw::typography::muted(cx, subtitle),
                     cx.spacer(SpacerProps::default()),
                     shadcn::Button::new("Primary")
                         .variant(shadcn::ButtonVariant::Default)

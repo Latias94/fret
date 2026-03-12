@@ -237,6 +237,7 @@ pub mod app {
         pub use fret_icons::IconId;
         pub use fret_runtime::CommandId;
         pub use fret_ui::{Theme, ThemeSnapshot};
+        pub use fret_ui_kit::IntoUiElement as _;
         pub use fret_ui_kit::UiBuilderHostBoundIntoElementExt as _;
         pub use fret_ui_kit::command::ElementCommandGatingExt as _;
         pub use fret_ui_kit::declarative::icon;
@@ -277,6 +278,7 @@ pub mod component {
     /// Common imports for reusable component crates built on Fret.
     pub mod prelude {
         pub use crate::ComponentCx;
+        pub use fret_ui_kit::IntoUiElement as _;
         pub use fret_ui_kit::UiBuilderHostBoundIntoElementExt as _;
         pub use fret_ui_kit::command::ElementCommandGatingExt as _;
         pub use fret_ui_kit::declarative::prelude::{
@@ -296,11 +298,10 @@ pub mod component {
         pub use fret_ui_kit::ui;
         pub use fret_ui_kit::ui::UiElementSinkExt as _;
         pub use fret_ui_kit::{
-            ChromeRefinement, ColorRef, Corners4, Edges4, LayoutRefinement, MetricRef,
-            OverlayArbitrationSnapshot, OverlayController, OverlayKind, OverlayPresence,
+            ChromeRefinement, ColorRef, Corners4, Edges4, IntoUiElement, LayoutRefinement,
+            MetricRef, OverlayArbitrationSnapshot, OverlayController, OverlayKind, OverlayPresence,
             OverlayRequest, OverlayStackEntryKind, Radius, ShadowPreset, Size, Space, UiBuilder,
-            UiChildIntoElement, UiExt, UiHostBoundIntoElement, UiIntoElement, UiPatchTarget,
-            UiSupportsChrome, UiSupportsLayout, WindowOverlayStackEntry,
+            UiExt, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, WindowOverlayStackEntry,
             WindowOverlayStackSnapshot, on_activate, on_activate_notify,
             on_activate_request_redraw, on_activate_request_redraw_notify,
         };
@@ -1060,6 +1061,7 @@ fn shadcn_sync_theme_from_environment_on_global_changes<S>(
 
 #[cfg(all(test, not(target_arch = "wasm32"), feature = "desktop"))]
 mod builder_surface_tests {
+    use std::sync::Mutex;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     use super::FretApp;
@@ -1077,6 +1079,7 @@ mod builder_surface_tests {
     fn install_bundle_fixture(_app: &mut App) {}
 
     static INSTALL_INTO_APP_CALLS: AtomicUsize = AtomicUsize::new(0);
+    static INSTALL_INTO_APP_TEST_LOCK: Mutex<()> = Mutex::new(());
 
     struct BundleInstaller;
 
@@ -1245,6 +1248,7 @@ mod builder_surface_tests {
 
     #[test]
     fn fret_app_setup_accepts_install_into_app_bundles() {
+        let _guard = INSTALL_INTO_APP_TEST_LOCK.lock().expect("lock should not be poisoned");
         INSTALL_INTO_APP_CALLS.store(0, Ordering::SeqCst);
 
         let app = FretApp::new("builder-view-bundle-setup").setup(BundleInstaller);
@@ -1256,6 +1260,7 @@ mod builder_surface_tests {
 
     #[test]
     fn ui_app_builder_setup_accepts_install_into_app_bundles() {
+        let _guard = INSTALL_INTO_APP_TEST_LOCK.lock().expect("lock should not be poisoned");
         INSTALL_INTO_APP_CALLS.store(0, Ordering::SeqCst);
 
         let builder = FretApp::new("builder-view-bundle-setup-ui-builder")
@@ -1269,6 +1274,7 @@ mod builder_surface_tests {
 
     #[test]
     fn fret_app_setup_accepts_small_tuple_composition() {
+        let _guard = INSTALL_INTO_APP_TEST_LOCK.lock().expect("lock should not be poisoned");
         INSTALL_INTO_APP_CALLS.store(0, Ordering::SeqCst);
 
         let app = FretApp::new("builder-view-tuple-setup")
@@ -1786,7 +1792,7 @@ mod authoring_surface_policy_tests {
     fn usage_docs_expose_curated_component_surface() {
         assert!(CRATE_USAGE_GUIDE.contains("`use fret::component::prelude::*;`"));
         assert!(CRATE_USAGE_GUIDE.contains("`ComponentCx`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`UiBuilder`/`UiPatchTarget`/`UiIntoElement`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`UiBuilder`/`UiPatchTarget`/`IntoUiElement<H>`"));
         assert!(
             CRATE_USAGE_GUIDE
                 .contains("without pulling in `FretApp`, `AppUi`, or runner-facing seams")
@@ -1878,6 +1884,10 @@ mod authoring_surface_policy_tests {
         assert!(app_prelude.contains("UiIntoElementTestIdExt"));
         assert!(app_prelude.contains("ElementContextThemeExt"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::declarative::prelude::*;"));
+        assert!(!app_prelude.contains("pub use fret_ui_kit::IntoUiElement;"));
+        assert!(!app_prelude.contains("pub use fret_ui_kit::UiIntoElement;"));
+        assert!(!app_prelude.contains("pub use fret_ui_kit::UiHostBoundIntoElement;"));
+        assert!(!app_prelude.contains("pub use fret_ui_kit::UiChildIntoElement;"));
         assert!(!app_prelude_exports_symbol("RouterUiStore"));
         assert!(!app_prelude_exports_symbol("DockManager"));
         assert!(!app_prelude_exports_symbol("DockPanelRegistry"));
@@ -2040,8 +2050,7 @@ mod authoring_surface_policy_tests {
         assert!(component_prelude.contains("pub use fret_ui_kit::{"));
         assert!(component_prelude_exports_symbol("UiBuilder"));
         assert!(component_prelude_exports_symbol("UiPatchTarget"));
-        assert!(component_prelude_exports_symbol("UiIntoElement"));
-        assert!(component_prelude_exports_symbol("UiHostBoundIntoElement"));
+        assert!(component_prelude_exports_symbol("IntoUiElement"));
         assert!(component_prelude_exports_symbol("UiExt"));
         assert!(component_prelude_exports_symbol("AnyElement"));
         assert!(component_prelude_exports_symbol("UiHost"));
@@ -2053,6 +2062,9 @@ mod authoring_surface_policy_tests {
         assert!(component_prelude_exports_symbol("OverlayRequest"));
         assert!(component_prelude_exports_symbol("SemanticsRole"));
         assert!(!component_prelude.contains("pub use fret_ui_kit::prelude::*;"));
+        assert!(!component_prelude_exports_symbol("UiIntoElement"));
+        assert!(!component_prelude_exports_symbol("UiHostBoundIntoElement"));
+        assert!(!component_prelude_exports_symbol("UiChildIntoElement"));
     }
 
     #[test]

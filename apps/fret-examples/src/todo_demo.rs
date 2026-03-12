@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret::{FretApp, advanced::prelude::*, shadcn};
+use fret::app::prelude::*;
 use fret_ui::element::SemanticsDecoration;
 
 mod act {
@@ -36,7 +36,7 @@ struct TodoRow {
 struct TodoDemoView;
 
 impl View for TodoDemoView {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 
@@ -228,27 +228,35 @@ impl View for TodoDemoView {
                 rows.len() != before
             });
 
-        ui::container(|cx| {
-            ui::children![
-                cx;
-                ui::v_flex(|cx| ui::children![cx; card])
-                    .w_full()
-                    .h_full()
-                    .justify_center()
-                    .items_center()
-            ]
-        })
-        .bg(ColorRef::Color(theme.color_token("muted")))
-        .p(Space::N6)
-        .w_full()
-        .h_full()
-        .test_id(TEST_ID_ROOT)
-        .into_element(cx)
-        .into()
+        let card = card.into_element(cx);
+        todo_page(cx, theme, card).into()
     }
 }
 
-fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChildIntoElement<KernelApp> {
+fn todo_page(
+    cx: &mut UiCx<'_>,
+    theme: ThemeSnapshot,
+    content: impl UiChild,
+) -> fret_ui::element::AnyElement {
+    ui::container(|cx| {
+        ui::children![
+            cx;
+            ui::v_flex(|cx| ui::children![cx; content])
+                .w_full()
+                .h_full()
+                .justify_center()
+                .items_center()
+        ]
+    })
+    .bg(ColorRef::Color(theme.color_token("muted")))
+    .p(Space::N6)
+    .w_full()
+    .h_full()
+    .test_id(TEST_ID_ROOT)
+    .into_element(cx)
+}
+
+fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {
     let checkbox = shadcn::Checkbox::from_checked(row.done)
         .action(act::Toggle)
         .action_payload(row.id)
