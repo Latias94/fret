@@ -10,8 +10,10 @@ const DIALOG_RS: &str = include_str!("dialog.rs");
 const DRAWER_RS: &str = include_str!("drawer.rs");
 const DROPDOWN_MENU_RS: &str = include_str!("dropdown_menu.rs");
 const HOVER_CARD_RS: &str = include_str!("hover_card.rs");
+const KBD_RS: &str = include_str!("kbd.rs");
 const MENUBAR_RS: &str = include_str!("menubar.rs");
 const POPOVER_RS: &str = include_str!("popover.rs");
+const SEPARATOR_RS: &str = include_str!("separator.rs");
 const SHEET_RS: &str = include_str!("sheet.rs");
 const TABLE_RS: &str = include_str!("table.rs");
 const TOOLTIP_RS: &str = include_str!("tooltip.rs");
@@ -293,5 +295,76 @@ fn internal_menu_slot_wrappers_accept_unified_component_conversion_trait() {
                 "{label} reintroduced pre-landed AnyElement wrapper inputs"
             );
         }
+    }
+}
+
+#[test]
+fn public_leaf_constructors_prefer_typed_conversion_outputs_when_no_raw_seam_is_required() {
+    for (label, source, required_markers, forbidden_markers) in [
+        (
+            "kbd.rs",
+            KBD_RS,
+            &[
+                "pub fn kbd<H: UiHost, T>(text: T) -> impl IntoUiElement<H> + use<H, T> where T: Into<Arc<str>>,",
+            ][..],
+            &[
+                "pub fn kbd<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
+            ][..],
+        ),
+        (
+            "separator.rs",
+            SEPARATOR_RS,
+            &["pub fn separator<H: UiHost>() -> impl IntoUiElement<H> + use<H> {"][..],
+            &["pub fn separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"][..],
+        ),
+    ] {
+        let normalized = normalize_ws(source);
+        for marker in required_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                normalized.contains(&marker),
+                "{label} should expose a typed leaf constructor when no raw seam is conceptually required"
+            );
+        }
+        for marker in forbidden_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                !normalized.contains(&marker),
+                "{label} reintroduced a pre-landed AnyElement leaf constructor"
+            );
+        }
+    }
+}
+
+#[test]
+fn kbd_icon_stays_an_explicit_raw_helper_for_kbd_child_lists() {
+    assert!(
+        KBD_RS.contains(
+            "This intentionally stays raw because `Kbd::from_children(...)` stores an explicit"
+        ),
+        "kbd.rs should keep the raw `kbd_icon(...)` seam explicitly documented"
+    );
+
+    let normalized = normalize_ws(KBD_RS);
+    let required_markers =
+        ["pub fn kbd_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: IconId) -> AnyElement"];
+    let forbidden_markers = [
+        "pub fn kbd_icon<H: UiHost>(icon: IconId) -> impl IntoUiElement<H>",
+        "pub fn kbd_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: IconId) -> impl IntoUiElement<H>",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "kbd.rs should keep the raw `kbd_icon(...)` signature explicit"
+        );
+    }
+    for marker in forbidden_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            !normalized.contains(&marker),
+            "kbd.rs should not pretend the `kbd_icon(...)` helper is typed while `Kbd::from_children(...)` still owns a raw child list"
+        );
     }
 }

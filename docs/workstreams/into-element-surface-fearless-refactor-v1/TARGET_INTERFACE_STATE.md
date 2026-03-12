@@ -314,6 +314,18 @@ The same input rule also applies to internal shadcn menu-slot wrappers:
 - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs::menu_icon_slot<H, B>(...)`
 - `ecosystem/fret-ui-shadcn/src/menubar.rs::menu_icon_slot<H, B>(...)`
 
+The same typed-constructor rule now also applies to thin public shadcn leaf helpers where no raw
+child list or explicit landing seam is conceptually required:
+
+- `ecosystem/fret-ui-shadcn/src/kbd.rs::kbd<H, T>(...)`
+- `ecosystem/fret-ui-shadcn/src/separator.rs::separator<H>()`
+
+Intentional exception:
+
+- `ecosystem/fret-ui-shadcn/src/kbd.rs::kbd_icon<H>(...)` remains `-> AnyElement` because
+  `Kbd::from_children(...)` still owns a concrete `Vec<AnyElement>` slot for icon-first keycap
+  composition.
+
 Implementation fallback rule:
 
 - if an ecosystem builder or recipe type does not yet implement `IntoUiElement<H>` directly,

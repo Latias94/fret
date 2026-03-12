@@ -18,7 +18,8 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, Radius, Size, Space, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, Items, Justify, LayoutRefinement, Radius, Size,
+    Space, ui,
 };
 use fret_ui_shadcn::{
     Button, ButtonSize, ButtonVariant, Collapsible, CollapsibleContent, Input, OnInputSubmit,
@@ -552,7 +553,7 @@ impl WebPreviewNavigation {
             move |_cx| vec![row],
         );
 
-        let separator = fret_ui_shadcn::separator(cx);
+        let separator = fret_ui_shadcn::separator().into_element(cx);
         let el = ui::v_stack(move |_cx| vec![bar, separator])
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N0)
