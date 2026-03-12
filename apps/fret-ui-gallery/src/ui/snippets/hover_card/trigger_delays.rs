@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("trigger_delays.rs");
 
 // region: example
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 use std::time::Duration;
@@ -11,7 +12,7 @@ fn demo_content<H: UiHost>(
     desc: &'static str,
     joined: &'static str,
     test_id: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let theme = Theme::global(&*cx.app).snapshot();
     let muted_fg = theme.color_token("muted-foreground");
 
@@ -59,7 +60,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             "openDelay=0",
             "closeDelay=0",
             "ui-gallery-hover-card-delay-instant-content",
-        ),
+        )
+        .into_element(cx),
     )
     .open_delay_frames(0)
     .close_delay_frames(0)
@@ -77,7 +79,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             "openDelay=700ms",
             "closeDelay=300ms",
             "ui-gallery-hover-card-delay-delayed-content",
-        ),
+        )
+        .into_element(cx),
     )
     .open_delay(Duration::from_millis(700))
     .close_delay(Duration::from_millis(300))

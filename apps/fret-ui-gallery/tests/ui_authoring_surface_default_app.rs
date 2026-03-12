@@ -581,6 +581,92 @@ fn selected_avatar_snippet_helpers_prefer_into_ui_element_over_anyelement() {
 }
 
 #[test]
+fn selected_button_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    for relative_path in [
+        "src/ui/snippets/button/demo.rs",
+        "src/ui/snippets/button/link_render.rs",
+        "src/ui/snippets/button/rtl.rs",
+        "src/ui/snippets/button/loading.rs",
+        "src/ui/snippets/button/with_icon.rs",
+        "src/ui/snippets/button/variants.rs",
+        "src/ui/snippets/button/button_group.rs",
+        "src/ui/snippets/button/rounded.rs",
+        "src/ui/snippets/button/size.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "fn wrap_row<H: UiHost, F>(children: F) -> impl IntoUiElement<H> + use<H, F> where F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>",
+            ],
+            &[
+                "fn wrap_row<H: UiHost>(cx: &mut ElementContext<'_, H>, children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>) -> AnyElement",
+            ],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/button/size.rs",
+        &[
+            "fn row<H: UiHost>(_cx: &mut ElementContext<'_, H>, label: &'static str, text_size: shadcn::ButtonSize, icon_size: shadcn::ButtonSize,) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &[
+            "fn row<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, text_size: shadcn::ButtonSize, icon_size: shadcn::ButtonSize,) -> AnyElement",
+        ],
+    );
+}
+
+#[test]
+fn selected_hover_card_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/hover_card/sides.rs",
+        &[
+            "fn card<H: UiHost>(cx: &mut ElementContext<'_, H>, side: shadcn::HoverCardSide, label: &'static str, trigger_test_id: &'static str, content_test_id: &'static str, root_test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &[
+            "fn card<H: UiHost>(cx: &mut ElementContext<'_, H>, side: shadcn::HoverCardSide, label: &'static str, trigger_test_id: &'static str, content_test_id: &'static str, root_test_id: &'static str,) -> AnyElement",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/hover_card/trigger_delays.rs",
+        &[
+            "fn demo_content<H: UiHost>(cx: &mut ElementContext<'_, H>, title: &'static str, desc: &'static str, joined: &'static str, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &[
+            "fn demo_content<H: UiHost>(cx: &mut ElementContext<'_, H>, title: &'static str, desc: &'static str, joined: &'static str, test_id: &'static str,) -> AnyElement",
+        ],
+    );
+}
+
+#[test]
+fn selected_tooltip_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    for relative_path in [
+        "src/ui/snippets/tooltip/rtl.rs",
+        "src/ui/snippets/tooltip/sides.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "fn make_tooltip<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, side: shadcn::TooltipSide, content: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            ],
+            &[
+                "fn make_tooltip<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, side: shadcn::TooltipSide, content: &'static str,) -> AnyElement",
+            ],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/tooltip/rtl.rs",
+        &[
+            "fn make_tooltip_with_test_ids<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, trigger_test_id: &'static str, side: shadcn::TooltipSide, content: &'static str, panel_test_id: &'static str, text_test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &[
+            "fn make_tooltip_with_test_ids<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, trigger_test_id: &'static str, side: shadcn::TooltipSide, content: &'static str, panel_test_id: &'static str, text_test_id: &'static str,) -> AnyElement",
+        ],
+    );
+}
+
+#[test]
 fn selected_context_menu_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     for relative_path in [
         "src/ui/snippets/context_menu/basic.rs",

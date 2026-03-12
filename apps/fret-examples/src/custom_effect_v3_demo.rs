@@ -797,83 +797,91 @@ fn lens_row(
             ..Default::default()
         },
         move |cx| {
-            vec![
-                plain_lens(cx, "Plain (no effect)", radius, lens_w, lens_h)
-                    .test_id("custom-effect-v3-demo.lens_left"),
-                if show_user0_probe && show_user1_probe {
-                    match (user01_probe_effect, user0_image, user1_image) {
-                        (Some(effect), Some(user0), Some(user1)) => {
-                            custom_effect_user01_probe_lens(
-                                cx,
-                                "CustomV3 user0+user1 probe",
-                                effect,
-                                user0,
-                                user1,
-                                radius,
-                                lens_w,
-                                lens_h,
-                            )
-                            .test_id("custom-effect-v3-demo.lens_right")
-                        }
-                        _ => plain_lens(
-                            cx,
-                            "CustomV3 user0+user1 probe (unavailable)",
-                            radius,
-                            lens_w,
-                            lens_h,
-                        )
-                        .test_id("custom-effect-v3-demo.lens_right"),
-                    }
-                } else if show_user0_probe {
-                    match (user0_probe_effect, user0_image) {
-                        (Some(effect), Some(image)) => custom_effect_user0_probe_lens(
-                            cx,
-                            "CustomV3 user0 probe",
-                            effect,
-                            image,
-                            radius,
-                            lens_w,
-                            lens_h,
-                        )
-                        .test_id("custom-effect-v3-demo.lens_right"),
-                        _ => plain_lens(
-                            cx,
-                            "CustomV3 user0 probe (unavailable)",
-                            radius,
-                            lens_w,
-                            lens_h,
-                        )
-                        .test_id("custom-effect-v3-demo.lens_right"),
-                    }
-                } else if show_user1_probe {
-                    match (user1_probe_effect, user1_image) {
-                        (Some(effect), Some(image)) => custom_effect_user1_probe_lens(
-                            cx,
-                            "CustomV3 user1 probe",
-                            effect,
-                            image,
-                            radius,
-                            lens_w,
-                            lens_h,
-                        )
-                        .test_id("custom-effect-v3-demo.lens_right"),
-                        _ => plain_lens(
-                            cx,
-                            "CustomV3 user1 probe (unavailable)",
-                            radius,
-                            lens_w,
-                            lens_h,
-                        )
-                        .test_id("custom-effect-v3-demo.lens_right"),
-                    }
-                } else if enabled {
-                    custom_effect_lens(cx, "CustomV3 lens", lens_effect, radius, lens_w, lens_h)
-                        .test_id("custom-effect-v3-demo.lens_right")
-                } else {
-                    plain_lens(cx, "CustomV3 lens (disabled)", radius, lens_w, lens_h)
-                        .test_id("custom-effect-v3-demo.lens_right")
-                },
-            ]
+            let left_lens = plain_lens(cx, "Plain (no effect)", radius, lens_w, lens_h)
+                .into_element(cx)
+                .test_id("custom-effect-v3-demo.lens_left");
+
+            let right_lens = if show_user0_probe && show_user1_probe {
+                match (user01_probe_effect, user0_image, user1_image) {
+                    (Some(effect), Some(user0), Some(user1)) => custom_effect_user01_probe_lens(
+                        cx,
+                        "CustomV3 user0+user1 probe",
+                        effect,
+                        user0,
+                        user1,
+                        radius,
+                        lens_w,
+                        lens_h,
+                    )
+                    .into_element(cx)
+                    .test_id("custom-effect-v3-demo.lens_right"),
+                    _ => plain_lens(
+                        cx,
+                        "CustomV3 user0+user1 probe (unavailable)",
+                        radius,
+                        lens_w,
+                        lens_h,
+                    )
+                    .into_element(cx)
+                    .test_id("custom-effect-v3-demo.lens_right"),
+                }
+            } else if show_user0_probe {
+                match (user0_probe_effect, user0_image) {
+                    (Some(effect), Some(image)) => custom_effect_user0_probe_lens(
+                        cx,
+                        "CustomV3 user0 probe",
+                        effect,
+                        image,
+                        radius,
+                        lens_w,
+                        lens_h,
+                    )
+                    .into_element(cx)
+                    .test_id("custom-effect-v3-demo.lens_right"),
+                    _ => plain_lens(
+                        cx,
+                        "CustomV3 user0 probe (unavailable)",
+                        radius,
+                        lens_w,
+                        lens_h,
+                    )
+                    .into_element(cx)
+                    .test_id("custom-effect-v3-demo.lens_right"),
+                }
+            } else if show_user1_probe {
+                match (user1_probe_effect, user1_image) {
+                    (Some(effect), Some(image)) => custom_effect_user1_probe_lens(
+                        cx,
+                        "CustomV3 user1 probe",
+                        effect,
+                        image,
+                        radius,
+                        lens_w,
+                        lens_h,
+                    )
+                    .into_element(cx)
+                    .test_id("custom-effect-v3-demo.lens_right"),
+                    _ => plain_lens(
+                        cx,
+                        "CustomV3 user1 probe (unavailable)",
+                        radius,
+                        lens_w,
+                        lens_h,
+                    )
+                    .into_element(cx)
+                    .test_id("custom-effect-v3-demo.lens_right"),
+                }
+            } else if enabled {
+                custom_effect_lens(cx, "CustomV3 lens", lens_effect, radius, lens_w, lens_h)
+                    .into_element(cx)
+                    .test_id("custom-effect-v3-demo.lens_right")
+            } else {
+                plain_lens(cx, "CustomV3 lens (disabled)", radius, lens_w, lens_h)
+                    .into_element(cx)
+                    .test_id("custom-effect-v3-demo.lens_right")
+            };
+
+            vec![left_lens, right_lens]
         },
     )
 }
@@ -981,7 +989,7 @@ fn plain_lens(
     radius: Px,
     lens_w: Px,
     lens_h: Px,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     lens_shell(cx, title, radius, lens_w, lens_h, None)
 }
 
@@ -992,7 +1000,7 @@ fn custom_effect_lens(
     radius: Px,
     lens_w: Px,
     lens_h: Px,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let sf = cx.environment_scale_factor(Invalidation::Paint).max(1.0e-6);
     let params = EffectParamsV1 {
         vec4s: [
@@ -1043,7 +1051,7 @@ fn custom_effect_user0_probe_lens(
     radius: Px,
     lens_w: Px,
     lens_h: Px,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let chain = EffectChain::from_steps(&[EffectStep::CustomV3 {
         id: effect,
         params: EffectParamsV1::ZERO,
@@ -1072,7 +1080,7 @@ fn custom_effect_user1_probe_lens(
     radius: Px,
     lens_w: Px,
     lens_h: Px,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let chain = EffectChain::from_steps(&[EffectStep::CustomV3 {
         id: effect,
         params: EffectParamsV1::ZERO,
@@ -1102,7 +1110,7 @@ fn custom_effect_user01_probe_lens(
     radius: Px,
     lens_w: Px,
     lens_h: Px,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let chain = EffectChain::from_steps(&[EffectStep::CustomV3 {
         id: effect,
         params: EffectParamsV1::ZERO,

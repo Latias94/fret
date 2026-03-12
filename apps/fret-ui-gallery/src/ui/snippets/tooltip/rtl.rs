@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::time::Duration;
 
@@ -9,7 +10,7 @@ fn make_tooltip<H: UiHost>(
     label: &'static str,
     side: shadcn::TooltipSide,
     content: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     shadcn::Tooltip::new(
         shadcn::Button::new(label)
             .variant(shadcn::ButtonVariant::Outline)
@@ -30,7 +31,7 @@ fn make_tooltip_with_test_ids<H: UiHost>(
     content: &'static str,
     panel_test_id: &'static str,
     text_test_id: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     shadcn::Tooltip::new(
         shadcn::Button::new(label)
             .variant(shadcn::ButtonVariant::Outline)
@@ -61,7 +62,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                                 "يسار",
                                 shadcn::TooltipSide::Left,
                                 "إضافة إلى المكتبة",
-                            ),
+                            )
+                            .into_element(cx),
                             make_tooltip_with_test_ids(
                                 cx,
                                 "أعلى",
@@ -70,19 +72,22 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                                 "إضافة إلى المكتبة",
                                 "ui-gallery-tooltip-rtl-top-panel",
                                 "ui-gallery-tooltip-rtl-top-text",
-                            ),
+                            )
+                            .into_element(cx),
                             make_tooltip(
                                 cx,
                                 "أسفل",
                                 shadcn::TooltipSide::Bottom,
                                 "إضافة إلى المكتبة",
-                            ),
+                            )
+                            .into_element(cx),
                             make_tooltip(
                                 cx,
                                 "يمين",
                                 shadcn::TooltipSide::Right,
                                 "إضافة إلى المكتبة",
-                            ),
+                            )
+                            .into_element(cx),
                         ]
                     })
                     .gap(Space::N2)

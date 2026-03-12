@@ -2,18 +2,18 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
 use fret_icons::IconId;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn row<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+fn row<H: UiHost, F>(children: F) -> impl IntoUiElement<H> + use<H, F>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+{
     fret_ui_kit::ui::h_flex(children)
         .gap(Space::N2)
         .wrap()
         .w_full()
         .items_center()
-        .into_element(cx)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -22,7 +22,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     // Note: upstream uses a language selector + translations; in the gallery we keep this snippet
     // copy/paste-friendly and focus on RTL layout direction + glyph shaping.
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
-        row(cx, |cx| {
+        row(|cx| {
             vec![
                 shadcn::Badge::new("شارة")
                     .test_id("ui-gallery-badge-rtl-default")
@@ -51,6 +51,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .into_element(cx),
             ]
         })
+        .into_element(cx)
         .test_id("ui-gallery-badge-rtl")
     })
 }

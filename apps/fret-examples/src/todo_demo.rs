@@ -75,7 +75,8 @@ impl View for TodoDemoView {
 
         let progress = shadcn::Badge::new(format!("{done_count}/{total_count} done"))
             .variant(shadcn::BadgeVariant::Secondary)
-            .a11y(
+            .into_element(cx)
+            .attach_semantics(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::ProgressBar)
                     .test_id(TEST_ID_PROGRESS)

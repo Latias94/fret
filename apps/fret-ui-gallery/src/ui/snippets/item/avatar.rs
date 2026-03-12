@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("avatar.rs");
 
 // region: example
 use fret::UiCx;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
@@ -11,7 +12,7 @@ fn icon_button(
     icon_id: &'static str,
     variant: shadcn::ButtonVariant,
     test_id: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<fret_app::App> + use<> {
     shadcn::Button::new("")
         .a11y_label(icon_id)
         .variant(variant)
@@ -21,7 +22,11 @@ fn icon_button(
         .test_id(test_id)
 }
 
-fn item_team(cx: &mut UiCx<'_>, test_id: &'static str, action_test_id: &'static str) -> AnyElement {
+fn item_team(
+    cx: &mut UiCx<'_>,
+    test_id: &'static str,
+    action_test_id: &'static str,
+) -> impl IntoUiElement<fret_app::App> + use<> {
     let avatars = ui::h_row(|cx| {
         vec![
             shadcn::Avatar::new([shadcn::AvatarFallback::new("CN").into_element(cx)])
@@ -48,7 +53,8 @@ fn item_team(cx: &mut UiCx<'_>, test_id: &'static str, action_test_id: &'static 
         "lucide.chevron-right",
         shadcn::ButtonVariant::Outline,
         action_test_id,
-    );
+    )
+    .into_element(cx);
     let actions = shadcn::ItemActions::new([chevron])
         .refine_layout(LayoutRefinement::default().mt(Space::N1))
         .into_element(cx);
@@ -96,7 +102,8 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         cx,
         "ui-gallery-item-avatar-team",
         "ui-gallery-item-avatar-team-action",
-    );
+    )
+    .into_element(cx);
 
     ui::v_stack(|_cx| vec![item_one, team])
         .gap(Space::N6)

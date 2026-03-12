@@ -35,6 +35,37 @@ Active tracker highlights:
 - Docking N-ary split graph (canonical form + ops semantics): `docs/workstreams/docking-nary-split-graph-v1.md` (TODOs: `docs/workstreams/docking-nary-split-graph-v1-todo.md`).
 - Immediate-mode authoring convergence (imui v2): `docs/workstreams/imui-authoring-facade-v2.md` (TODOs: `docs/workstreams/imui-authoring-facade-v2-todo.md`).
 - Foundation closure tracker (P0 cross-workstream milestones): `docs/workstreams/foundation-closure-p0.md` (TODOs: `docs/workstreams/foundation-closure-p0-todo.md`).
+- Authoring surface + ecosystem reset (pre-release, no-compat cleanup): `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TODO.md`, `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, and `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/MIGRATION_MATRIX.md`.
+- Ecosystem integration traits budget (install/catalog/router/docking/query seams): `docs/workstreams/ecosystem-integration-traits-v1/DESIGN.md`, `docs/workstreams/ecosystem-integration-traits-v1/TODO.md`, `docs/workstreams/ecosystem-integration-traits-v1/MILESTONES.md`, `docs/workstreams/ecosystem-integration-traits-v1/TARGET_INTERFACE_STATE.md`, and `docs/workstreams/ecosystem-integration-traits-v1/MIGRATION_MATRIX.md`.
+- Into-element surface cleanup (follow-on to the authoring reset; conversion vocabulary collapse): `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TODO.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, and `docs/workstreams/into-element-surface-fearless-refactor-v1/MIGRATION_MATRIX.md`.
+
+Current pre-release authoring cleanup sequence:
+
+1. `authoring-surface-and-ecosystem-fearless-refactor-v1` shrinks the app/component/advanced lanes and the default teaching surface.
+2. `ecosystem-integration-traits-v1` locks the ecosystem trait budget for install/catalog/router/docking/query seams.
+3. `into-element-surface-fearless-refactor-v1` finishes the remaining conversion-surface cleanup so curated first-party examples, including shadcn/UI Gallery surfaces, converge on one authoring vocabulary.
+
+Treat these three trackers as one continuous execution chain rather than unrelated cleanup notes.
+
+Current execution stance on 2026-03-12:
+
+- `authoring-surface-and-ecosystem-fearless-refactor-v1` = closeout lane:
+  keep deleting stale aliases, tightening gates, and cleaning docs, but do not reopen broad
+  surface redesign here.
+- `ecosystem-integration-traits-v1` = narrow follow-up lane:
+  most core trait decisions are landed; remaining work is query-adapter decision, root-export
+  cleanup, bundle/examples/docs cleanup, and helper-signature alignment with the new conversion
+  surface.
+- `into-element-surface-fearless-refactor-v1` = current main authoring lane:
+  it now owns the highest-leverage remaining "write UI" gap.
+
+Recommended order from here:
+
+1. land `into-element` M0/M1,
+2. use `simple_todo_v2_target`, `todo_demo`, and the simple-todo scaffold template as the
+   canonical evidence set for keyed/list/build-sink follow-up work,
+3. only then finish the remaining ecosystem-trait cleanup and the `QueryAdapter` keep/defer
+   decision.
 
 For the “foundation-first, component-validated” execution loop (Plan C), see `docs/foundation-first-workflow.md`.
 

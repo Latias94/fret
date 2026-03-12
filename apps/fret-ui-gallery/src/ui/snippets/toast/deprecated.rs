@@ -3,15 +3,18 @@ pub const SOURCE: &str = include_str!("deprecated.rs");
 // region: example
 use fret::UiCx;
 use fret_core::Px;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 const CMD_NAV_SONNER: &str = "ui_gallery.nav.select.sonner";
 
-fn centered(cx: &mut UiCx<'_>, body: AnyElement) -> AnyElement {
-    ui::h_flex(move |_cx| [body])
+fn centered<B>(body: B) -> impl IntoUiElement<fret_app::App> + use<B>
+where
+    B: IntoUiElement<fret_app::App>,
+{
+    ui::h_flex(move |cx| [body.into_element(cx)])
         .layout(LayoutRefinement::default().w_full())
         .justify_center()
-        .into_element(cx)
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
@@ -42,7 +45,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     .into_element(cx)
     .test_id("ui-gallery-toast-deprecated");
 
-    centered(cx, deprecated_card)
+    centered(deprecated_card).into_element(cx)
 }
 
 // endregion: example

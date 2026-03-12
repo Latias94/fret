@@ -8,7 +8,7 @@ from _gate_lib import run_regex_gate
 def main() -> None:
     # This gate is intentionally narrow and teaching-surface-focused: it prevents the
     # cookbook/examples from drifting back to the more verbose `move |host, _acx| host.models_mut()...`
-    # style now that `ViewCx::on_action_notify_models` exists.
+    # style now that `AppUi` exposes `cx.actions().models::<...>(...)`.
     #
     # It is not a global style rule for the whole repo: internal widgets, diagnostics harnesses,
     # and low-level mechanisms can still use `models_mut()` directly where appropriate.

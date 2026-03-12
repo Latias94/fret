@@ -2,6 +2,23 @@
 
 This file defines milestones for the workstream in `DESIGN.md`.
 
+## Current execution stance (2026-03-12)
+
+This workstream should now be read as a **closeout lane**, not the main place for new authoring
+surface invention.
+
+Meaning:
+
+- keep deleting stale names and ambiguous exports,
+- keep first-party docs/examples aligned with the already-decided app/component/advanced split,
+- keep gates/layering checks green,
+- but hand off the remaining conversion-vocabulary redesign to
+  `docs/workstreams/into-element-surface-fearless-refactor-v1/`.
+
+If a proposed change is mainly about "too many `into_element` concepts" or "helper/component code
+still falls back to raw conversion vocabulary", it belongs in the follow-on workstream rather than
+reopening this one.
+
 ## Milestone 0 — Lock the target product surface
 
 Outcome:
@@ -108,3 +125,20 @@ Deliverables:
 Exit criteria:
 
 - Surface regressions fail fast in review/CI instead of returning through documentation drift months later.
+
+## Post-v1 handoff — Conversion-surface closure
+
+Outcome:
+
+- This workstream has a named follow-on owner for the remaining conversion-vocabulary cleanup.
+
+Deliverables:
+
+- `docs/workstreams/into-element-surface-fearless-refactor-v1/*` stays linked from repo indexes and active workstreams.
+- first-party app-facing teaching continues to prefer `Ui` / `UiChild`,
+- first-party reusable component helpers stop expanding legacy conversion vocabulary while the unified conversion trait lands,
+- shadcn and UI Gallery exemplars follow the active authoring target instead of re-teaching raw or legacy conversion terms by default.
+
+Exit criteria:
+
+- maintainers can answer "what is the next refactor after the app/component/advanced split?" without reconstructing it from chat history or commits.

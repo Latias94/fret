@@ -797,6 +797,24 @@ mod authoring_surface_policy_tests {
             ],
         );
 
+        assert_advanced_generic_helpers_prefer_into_ui_element(
+            CUSTOM_EFFECT_V3_DEMO,
+            &[
+                "fn plain_lens(cx: &mut UiCx<'_>, title: &'static str, radius: Px, lens_w: Px, lens_h: Px) -> impl IntoUiElement<KernelApp> + use<>",
+                "fn custom_effect_lens(cx: &mut UiCx<'_>, title: &'static str, effect: EffectId, radius: Px, lens_w: Px, lens_h: Px) -> impl IntoUiElement<KernelApp> + use<>",
+                "fn custom_effect_user0_probe_lens(cx: &mut UiCx<'_>, title: &'static str, effect: EffectId, user0_image: ImageId, radius: Px, lens_w: Px, lens_h: Px) -> impl IntoUiElement<KernelApp> + use<>",
+                "fn custom_effect_user1_probe_lens(cx: &mut UiCx<'_>, title: &'static str, effect: EffectId, user1_image: ImageId, radius: Px, lens_w: Px, lens_h: Px) -> impl IntoUiElement<KernelApp> + use<>",
+                "fn custom_effect_user01_probe_lens(cx: &mut UiCx<'_>, title: &'static str, effect: EffectId, user0_image: ImageId, user1_image: ImageId, radius: Px, lens_w: Px, lens_h: Px) -> impl IntoUiElement<KernelApp> + use<>",
+            ],
+            &[
+                "fn plain_lens(cx: &mut UiCx<'_>, title: &'static str, radius: Px, lens_w: Px, lens_h: Px) -> AnyElement",
+                "fn custom_effect_lens(cx: &mut UiCx<'_>, title: &'static str, effect: EffectId, radius: Px, lens_w: Px, lens_h: Px) -> AnyElement",
+                "fn custom_effect_user0_probe_lens(cx: &mut UiCx<'_>, title: &'static str, effect: EffectId, user0_image: ImageId, radius: Px, lens_w: Px, lens_h: Px) -> AnyElement",
+                "fn custom_effect_user1_probe_lens(cx: &mut UiCx<'_>, title: &'static str, effect: EffectId, user1_image: ImageId, radius: Px, lens_w: Px, lens_h: Px) -> AnyElement",
+                "fn custom_effect_user01_probe_lens(cx: &mut UiCx<'_>, title: &'static str, effect: EffectId, user0_image: ImageId, user1_image: ImageId, radius: Px, lens_w: Px, lens_h: Px) -> AnyElement",
+            ],
+        );
+
         assert_advanced_helpers_prefer_uicx(
             LIQUID_GLASS_DEMO,
             &[
@@ -857,6 +875,30 @@ mod authoring_surface_policy_tests {
                 "fn status_badge(cx: &mut UiCx<'_>, diag: Option<&QueryDiag>) -> AnyElement",
                 "fn status_badge(cx: &mut ElementContext<'_, KernelApp>, diag: Option<&QueryDiag>) -> AnyElement",
                 "fn snapshot_entry_for_key(cx: &mut ElementContext<'_, KernelApp>,",
+            ],
+        );
+
+        assert_advanced_generic_helpers_prefer_into_ui_element(
+            CUSTOM_EFFECT_V1_DEMO,
+            &[
+                "fn plain_lens<L>(cx: &mut UiCx<'_>, label: L, radius: Px) -> impl IntoUiElement<KernelApp> + use<L>",
+                "fn custom_effect_lens<L>(cx: &mut UiCx<'_>, label: L, effect: EffectId, blur_radius_px: f32, blur_downsample: f32, refraction_height_px: f32, refraction_amount_px: f32, depth_effect: f32, chromatic_aberration: f32, corner_radius_px: f32, grain_strength: f32, grain_scale: f32) -> impl IntoUiElement<KernelApp> + use<L>",
+            ],
+            &[
+                "fn plain_lens(cx: &mut UiCx<'_>, label: impl Into<Arc<str>>, radius: Px) -> AnyElement",
+                "fn custom_effect_lens(cx: &mut UiCx<'_>, label: impl Into<Arc<str>>, effect: EffectId, blur_radius_px: f32, blur_downsample: f32, refraction_height_px: f32, refraction_amount_px: f32, depth_effect: f32, chromatic_aberration: f32, corner_radius_px: f32, grain_strength: f32, grain_scale: f32) -> AnyElement",
+            ],
+        );
+
+        assert_advanced_generic_helpers_prefer_into_ui_element(
+            CUSTOM_EFFECT_V2_DEMO,
+            &[
+                "fn plain_lens<L>(cx: &mut UiCx<'_>, label: L, radius: Px) -> impl IntoUiElement<KernelApp> + use<L>",
+                "fn custom_effect_lens<L>(cx: &mut UiCx<'_>, label: L, effect: EffectId, input_image: Option<ImageId>, sampling: ImageSamplingHint, uv_span: f32, input_strength: f32, rim_strength: f32, blur_radius_px: f32, debug_input: bool) -> impl IntoUiElement<KernelApp> + use<L>",
+            ],
+            &[
+                "fn plain_lens(cx: &mut UiCx<'_>, label: impl Into<Arc<str>>, radius: Px) -> AnyElement",
+                "fn custom_effect_lens(cx: &mut UiCx<'_>, label: impl Into<Arc<str>>, effect: EffectId, input_image: Option<ImageId>, sampling: ImageSamplingHint, uv_span: f32, input_strength: f32, rim_strength: f32, blur_radius_px: f32, debug_input: bool) -> AnyElement",
             ],
         );
 

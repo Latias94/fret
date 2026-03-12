@@ -2,9 +2,14 @@ pub const SOURCE: &str = include_str!("fluid_tabs_demo.rs");
 
 // region: example
 use fret::UiCx;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn panel(cx: &mut UiCx<'_>, title: &'static str, description: &'static str) -> AnyElement {
+fn panel(
+    cx: &mut UiCx<'_>,
+    title: &'static str,
+    description: &'static str,
+) -> impl IntoUiElement<fret_app::App> + use<> {
     shadcn::Alert::new([
         fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.sparkles")),
         shadcn::AlertTitle::new(title).into_element(cx),
@@ -28,7 +33,8 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                     cx,
                     "Accounts",
                     "Crossfade content on selection change (semantic presence tokens).",
-                )],
+                )
+                .into_element(cx)],
             )
             .trigger_test_id("ui-gallery-motion-presets-fluid-tabs-trigger-accounts"),
             shadcn::TabsItem::new(
@@ -38,7 +44,8 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                     cx,
                     "Deposits",
                     "Uses a Duration-based driver so it stays stable across refresh rates.",
-                )],
+                )
+                .into_element(cx)],
             )
             .trigger_test_id("ui-gallery-motion-presets-fluid-tabs-trigger-deposits"),
             shadcn::TabsItem::new(
@@ -48,7 +55,8 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                     cx,
                     "Funds",
                     "This is intentionally not DOM/Framer Motion: same semantics, different runtime.",
-                )],
+                )
+                .into_element(cx)],
             )
             .trigger_test_id("ui-gallery-motion-presets-fluid-tabs-trigger-funds"),
         ])

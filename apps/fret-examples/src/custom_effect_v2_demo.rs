@@ -526,25 +526,25 @@ fn lens_row(
 ) -> AnyElement {
     let radius = Px(24.0);
     ui::h_flex(move |cx| {
-        [
-            plain_lens(cx, "Plain (no effect)", radius),
-            if enabled {
-                custom_effect_lens(
-                    cx,
-                    "CustomV2 lens",
-                    effect,
-                    input_image,
-                    sampling,
-                    uv_span,
-                    input_strength,
-                    rim_strength,
-                    blur_radius_px,
-                    debug_input,
-                )
-            } else {
-                plain_lens(cx, "CustomV2 lens (disabled)", radius)
-            },
-        ]
+        let effect_lens = if enabled {
+            custom_effect_lens(
+                cx,
+                "CustomV2 lens",
+                effect,
+                input_image,
+                sampling,
+                uv_span,
+                input_strength,
+                rim_strength,
+                blur_radius_px,
+                debug_input,
+            )
+            .into_element(cx)
+        } else {
+            plain_lens(cx, "CustomV2 lens (disabled)", radius).into_element(cx)
+        };
+
+        ui::children![cx; plain_lens(cx, "Plain (no effect)", radius), effect_lens]
     })
     .gap(Space::N3)
     .items_start()
@@ -606,7 +606,10 @@ fn lens_shell(cx: &mut UiCx<'_>, label: Arc<str>, radius: Px, body: AnyElement) 
     )
 }
 
-fn plain_lens(cx: &mut UiCx<'_>, label: impl Into<Arc<str>>, radius: Px) -> AnyElement {
+fn plain_lens<L>(cx: &mut UiCx<'_>, label: L, radius: Px) -> impl IntoUiElement<KernelApp> + use<L>
+where
+    L: Into<Arc<str>>,
+{
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;
@@ -623,9 +626,9 @@ fn plain_lens(cx: &mut UiCx<'_>, label: impl Into<Arc<str>>, radius: Px) -> AnyE
     lens_shell(cx, label.into(), radius, body)
 }
 
-fn custom_effect_lens(
+fn custom_effect_lens<L>(
     cx: &mut UiCx<'_>,
-    label: impl Into<Arc<str>>,
+    label: L,
     effect: EffectId,
     input_image: Option<ImageId>,
     sampling: ImageSamplingHint,
@@ -634,7 +637,10 @@ fn custom_effect_lens(
     rim_strength: f32,
     blur_radius_px: f32,
     debug_input: bool,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<L>
+where
+    L: Into<Arc<str>>,
+{
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;

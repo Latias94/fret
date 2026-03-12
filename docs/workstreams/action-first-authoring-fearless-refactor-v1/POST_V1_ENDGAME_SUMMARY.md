@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Post-v1 Endgame Summary
 
 Status: draft, post-v1 summary
-Last updated: 2026-03-10
+Last updated: 2026-03-12
 
 Related:
 
@@ -40,9 +40,14 @@ The repo is no longer in a broad authoring-surface migration phase.
 Current state:
 
 1. the default path is converged enough to teach (`hello` -> `simple-todo` -> `todo`),
-2. several post-v1 authoring tracks are now in maintenance mode rather than active expansion,
-3. the biggest remaining local-state gap is architectural, not helper-shaped,
-4. the hard-delete track is now mostly about staged cleanup decisions rather than missing in-tree
+2. the biggest remaining "write UI" feel gap is now the adjacent conversion-surface cleanup in
+   `docs/workstreams/into-element-surface-fearless-refactor-v1/`,
+3. keyed-list / build-sink density plus the canonical trio
+   (`simple_todo_v2_target`, `todo_demo`, scaffold template) should now be treated as a targeted
+   productization lane rather than pure maintenance,
+4. the local-state architecture question remains real, but it is no longer the next highest-value
+   day-to-day authoring improvement,
+5. the hard-delete track is now mostly about staged cleanup decisions rather than missing in-tree
    migration.
 
 In short:
@@ -57,9 +62,10 @@ In short:
 | Track | Current state | Meaning |
 | --- | --- | --- |
 | Default path / onboarding taxonomy | Active productization track | Keep docs/templates/examples aligned on one obvious ladder. |
+| Conversion surface (`into-element`) | Active adjacent track | Highest-leverage remaining "write UI" gap; owned by the focused conversion-surface workstream. |
 | Local-state default teaching path (`use_local*`) | Done for the default path | This is the recommended way to teach local state now. |
 | `AFA-postv1-002` builder-first seams | Maintenance mode | Reopen only if a new cross-surface host/root seam appears. |
-| `AFA-postv1-003` keyed-list / payload-row ergonomics | Maintenance mode | Reopen only if a new non-todo medium surface shows the same row-local pressure. |
+| `AFA-postv1-003` keyed-list / payload-row ergonomics | Reopened targeted productization track | Focus on keyed/list/build-sink density and keep the canonical trio aligned on one intended writing style. |
 | `AFA-postv1-004` invalidation ergonomics | Maintenance mode / policy complete | The default rule is stable; `notify()` stays an escape hatch. |
 | `AFA-postv1-001` local-state ergonomics | Open architectural question | The remaining gap is model-backed `LocalState<T>` vs a stronger plain-Rust/self-owned story. |
 | Hard-delete / quarantine track | Active cleanup track | Mostly sequencing/policy work, not broad migration work. |
@@ -90,14 +96,9 @@ The main repeated medium-surface families are already closed.
 Remaining density is mostly:
 
 - adoption of existing builders,
+- targeted keyed/list/build-sink pressure on the canonical trio,
 - advanced/runtime-owned seams,
 - or separate product surfaces such as `DataTable`.
-
-### Keyed-list / payload-row ergonomics
-
-The narrow helper already covers the current todo-like evidence slice.
-The remaining visible root handler table is intentional unless a new non-todo surface proves
-otherwise.
 
 ### Invalidation ergonomics
 
@@ -136,6 +137,26 @@ The default path still needs continuing product work:
 - keep the ladder stable as the first-contact story.
 
 This is now a higher-value track than adding more API names.
+
+### Keyed-list / build-sink density on the canonical trio
+
+The earlier narrow helper still stands, but the planning stance has changed.
+
+The repo now has a concrete authoring compare set:
+
+- `apps/fret-cookbook/examples/simple_todo_v2_target.rs`
+- `apps/fret-examples/src/todo_demo.rs`
+- `apps/fretboard/src/scaffold/templates.rs`
+
+Those surfaces are where users most directly judge whether Fret still feels heavier than GPUI when
+writing ordinary dynamic UI.
+
+So this lane is no longer "done enough, ignore it".
+It is a narrow productization track:
+
+- keep those three surfaces aligned,
+- reduce visible keyed/list/build-sink friction where it repeats,
+- and avoid widening the helper surface beyond what those concrete examples justify.
 
 ---
 
@@ -190,10 +211,11 @@ last grep-and-delete pass.
 
 ## Recommended next order
 
-1. keep productization/doc ingress stable,
-2. treat `AFA-postv1-001` as the only major remaining authoring-side architecture question,
-3. keep builder/keyed-list/invalidation tracks in maintenance mode unless new evidence appears,
-4. continue the hard-delete/quarantine sequence deliberately instead of reopening surface churn.
+1. keep the `into-element` conversion-surface cleanup moving as the highest-leverage remaining UI-authoring refactor,
+2. use `simple_todo_v2_target`, `todo_demo`, and the scaffold template as the canonical compare set for keyed/list/build-sink density,
+3. keep productization/doc ingress stable around that same compare set,
+4. treat `AFA-postv1-001` as a separate, longer-horizon architecture question,
+5. continue the hard-delete/quarantine sequence deliberately instead of reopening broad surface churn.
 
 ---
 

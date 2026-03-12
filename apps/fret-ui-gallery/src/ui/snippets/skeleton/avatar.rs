@@ -2,9 +2,10 @@ pub const SOURCE: &str = include_str!("avatar.rs");
 
 // region: example
 use fret_ui::element::SemanticsDecoration;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn round<H: UiHost>(cx: &mut ElementContext<'_, H>, size: f32) -> AnyElement {
+fn round<H: UiHost>(size: f32) -> impl IntoUiElement<H> + use<H> {
     shadcn::Skeleton::new()
         .refine_style(ChromeRefinement::default().rounded(Radius::Full))
         .refine_layout(
@@ -13,7 +14,6 @@ fn round<H: UiHost>(cx: &mut ElementContext<'_, H>, size: f32) -> AnyElement {
                 .h_px(Px(size))
                 .flex_shrink_0(),
         )
-        .into_element(cx)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -31,7 +31,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .layout(LayoutRefinement::default().w_px(Px(150.0)))
     .into_element(cx);
 
-    ui::h_row(|cx| vec![round(cx, 40.0), text_lines])
+    ui::h_row(|cx| vec![round(40.0).into_element(cx), text_lines])
         .gap(Space::N4)
         .items_center()
         .into_element(cx)

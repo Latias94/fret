@@ -91,7 +91,7 @@ We want `fret` to be:
 We define explicit profiles:
 
 - `default`: `desktop` + `app` (shadcn-first; no filesystem config by default).
-- `state`: opt-in for selector/query helpers in `ViewCx`.
+- `state`: opt-in for selector/query helpers in `AppUi`.
 - `diagnostics`: opt-in for dev tooling (tracing + panic hook + diag plumbing).
 - `batteries`: opt-in bundle for “everything”: `state` + `diagnostics` + config files + ui-assets caches + icon packs + preloading.
 - `config-files`: opt-in, because it can create filesystem side effects (`.fret/*`) and can surprise

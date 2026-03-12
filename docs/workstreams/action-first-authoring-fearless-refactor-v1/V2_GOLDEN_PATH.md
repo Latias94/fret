@@ -1,7 +1,7 @@
 # Authoring v2 Golden Path (Draft)
 
 Status: draft, post-v1 guidance
-Last updated: 2026-03-09
+Last updated: 2026-03-12
 
 Related:
 
@@ -47,8 +47,10 @@ Examples:
 - `shadcn::Popover::build(cx, trigger, content)`
 
 Rule: if a component already has a host-bound root builder, prefer it over assembling early-landed
-`AnyElement` trees by hand. When a helper only feeds parent children, prefer returning
-`impl UiChildIntoElement<_>` over forcing an intermediate `AnyElement`.
+`AnyElement` trees by hand. When a helper only feeds parent children, prefer keeping it on the
+late-landing child pipeline (`UiChild` on app-facing surfaces; the unified component conversion
+surface tracked by `docs/workstreams/into-element-surface-fearless-refactor-v1/` elsewhere) over
+forcing an intermediate `AnyElement`.
 
 ### 2. Section `build(...)`
 
@@ -143,9 +145,17 @@ bridge already lets `Input` / `Textarea` consume `&LocalState<String>` directly.
 
 The clearest remaining gaps are now narrower:
 
+- the biggest remaining "write UI" feel gap is now the adjacent conversion-surface split
+  (`UiIntoElement`, `UiHostBoundIntoElement`, `UiChildIntoElement`, bridge traits) rather than the
+  grouped app-facing surface,
 - local state is now stable as a default teaching path, but `LocalState<T>` is still model-backed rather than the fully plain-Rust/self-owned north-star,
-- keyed-list / payload-row flows now have one narrow helper for local collection mutation, but the root action table still remains visible by design,
-- builder-first `.child(...)` composition is largely in maintenance mode now; `ui::children!` remains common in some medium surfaces, but the remaining pressure is mostly adoption or advanced/runtime-owned seams rather than a missing generic builder family,
+- keyed-list / payload-row flows now have one narrow helper for local collection mutation, but the
+  canonical trio (`simple_todo_v2_target`, `todo_demo`, scaffold template) still keeps visible
+  root action tables and build-sink friction,
+- builder-first `.child(...)` composition is largely in maintenance mode now outside that
+  canonical keyed/list slice; `ui::children!` remains common in some medium surfaces, but the
+  remaining pressure is mostly adoption or advanced/runtime-owned seams rather than a missing
+  generic builder family,
 - product-facing docs/templates still need a sharper default/comparison/advanced taxonomy so users do
   not have to infer the intended path from scattered examples,
 - `DataTable` remains a separate business-table/reference surface whose current pressure is more
@@ -161,23 +171,25 @@ payload row actions, snapshot checkbox bindings, and the new narrow
 pressure more toward default-path documentation and narrower widget ergonomics rather than macros or
 another round of generic tracked-write helpers.
 
-## Current recommendation order (2026-03-09)
+## Current recommendation order (2026-03-12)
 
 The next post-v1 pass should stay disciplined:
 
-1. **Productize the current default path first**
+1. **Collapse the conversion surface first**
+   - use `docs/workstreams/into-element-surface-fearless-refactor-v1/` to remove the biggest
+     remaining `into_element` taxonomy gap.
+2. **Reopen canonical keyed/list/build-sink density second**
+   - treat `simple_todo_v2_target`, `todo_demo`, and the scaffold template as the primary evidence set,
+   - prefer one narrow list-authoring improvement over broad helper expansion.
+3. **Productize the current default path around the same evidence**
    - keep `hello` → `simple-todo` → `todo` as the obvious onboarding ladder,
    - make default/comparison/advanced surfaces explicit in docs and templates,
-   - avoid promoting more helpers until that teaching surface is boring and consistent.
-2. **Keep builder-first seam work in maintenance mode second**
+   - keep the canonical trio aligned on one intended writing style.
+4. **Keep broader builder-first seam work behind that**
    - the last clearly repeated medium families are already closed for this pass,
    - reopen only if a new cross-surface host/root seam still forces eager landing across multiple
-     real default-facing surfaces.
-3. **Keep keyed-list / payload-row ergonomics in maintenance mode third**
-   - the current narrow helper is enough for the existing todo-like evidence slice,
-   - only reopen this track if another medium surface still looks materially noisier than the
-     root-handler path after the product pass.
-4. **Keep macros fourth and optional**
+     real default-facing surfaces outside the canonical keyed/list slice.
+5. **Keep macros fifth and optional**
    - no new macro work is required for v2 success,
    - only revisit narrow composition macros if builder-first cleanup still leaves repeated structural noise.
 

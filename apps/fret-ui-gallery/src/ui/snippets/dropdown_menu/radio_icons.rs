@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("radio_icons.rs");
 
 // region: example
 use fret_core::Px;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
@@ -67,5 +68,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             },
         )
     })
+    .into_element(cx)
 }
 // endregion: example

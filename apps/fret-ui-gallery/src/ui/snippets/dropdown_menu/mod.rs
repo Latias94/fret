@@ -7,7 +7,7 @@
 //! Keep `ui-gallery-dropdown-menu-*` `test_id`s stable: diag scripts depend on them.
 
 use fret_core::Px;
-use fret_ui_kit::{LayoutRefinement, ui};
+use fret_ui_kit::{IntoUiElement, LayoutRefinement, ui};
 use fret_ui_shadcn::prelude::*;
 
 pub mod avatar;
@@ -27,8 +27,11 @@ pub mod submenu;
 pub mod usage;
 
 /// Match shadcn docs preview behavior locally without changing the global docs shell.
-fn preview_frame<H: UiHost>(cx: &mut ElementContext<'_, H>, body: AnyElement) -> AnyElement {
-    ui::h_flex(move |_cx| [body])
+fn preview_frame<H: UiHost, B>(body: B) -> impl IntoUiElement<H> + use<H, B>
+where
+    B: IntoUiElement<H>,
+{
+    ui::h_flex(move |cx| [body.into_element(cx)])
         .layout(
             LayoutRefinement::default()
                 .w_full()
@@ -38,13 +41,16 @@ fn preview_frame<H: UiHost>(cx: &mut ElementContext<'_, H>, body: AnyElement) ->
         )
         .items_center()
         .justify_center()
-        .into_element(cx)
 }
 
-fn preview_frame_with<H: UiHost>(
+fn preview_frame_with<H: UiHost, F, B>(
     cx: &mut ElementContext<'_, H>,
-    build: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
-) -> AnyElement {
+    build: F,
+) -> impl IntoUiElement<H> + use<H, F, B>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> B,
+    B: IntoUiElement<H>,
+{
     let body = build(cx);
-    preview_frame(cx, body)
+    preview_frame(body)
 }

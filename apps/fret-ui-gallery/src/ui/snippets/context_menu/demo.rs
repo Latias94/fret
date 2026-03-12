@@ -5,6 +5,7 @@ use fret_core::Px;
 use fret_core::scene::DashPatternV1;
 use fret_runtime::CommandId;
 use fret_ui::Theme;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -17,7 +18,7 @@ struct BrowserMenuState {
     person: Option<Arc<str>>,
 }
 
-fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H> {
     let theme = Theme::global(&*cx.app);
     let border = theme.color_token("border");
     let bg = theme.color_token("background");
@@ -65,7 +66,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .content_test_id("ui-gallery-context-menu-demo-content")
         .into_element_parts(
             cx,
-            |cx| shadcn::ContextMenuTrigger::new(trigger_surface(cx)),
+            |cx| shadcn::ContextMenuTrigger::new(trigger_surface(cx).into_element(cx)),
             shadcn::ContextMenuContent::new()
                 .min_width(Px(208.0))
                 .submenu_min_width(Px(176.0)),

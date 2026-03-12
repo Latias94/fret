@@ -28,10 +28,18 @@ surface, lock these decisions before adding public API:
   command catalog ownership in `fret-ui-kit::command`
 - keep selector/query integration optional for reusable kits; do not add a universal `Component`
   trait or widen `fret-app::Plugin` into the default ecosystem model
+- keep reusable docs/examples aligned with the current conversion-surface target:
+  app-facing teaching helpers use `Ui` / `UiChild`, reusable generic helpers should move toward
+  the unified component conversion trait tracked in
+  `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, and raw
+  `AnyElement` stays explicit
 - for the full trait budget, target state, and migration posture, see
   `docs/workstreams/ecosystem-integration-traits-v1/DESIGN.md`,
   `docs/workstreams/ecosystem-integration-traits-v1/TARGET_INTERFACE_STATE.md`, and
   `docs/workstreams/ecosystem-integration-traits-v1/MIGRATION_MATRIX.md`
+- for the follow-on conversion cleanup that collapses legacy split `into_element` vocabulary, see
+  `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md` and
+  `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
 
 Rust note:
 
@@ -114,8 +122,12 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 
 **Reusable component surface:** if you intentionally use the `fret` facade for reusable
 component/scaffold code, keep that code on `use fret::component::prelude::*;`. That surface now
-provides `ComponentCx`, `UiBuilder`/`UiPatchTarget`/`UiIntoElement`, layout/style refinements, and
-semantics/overlay helpers without pulling in `FretApp`, `AppUi`, or runner-facing seams.
+provides `ComponentCx`, `UiBuilder`/`UiPatchTarget`/`IntoUiElement<H>`, layout/style refinements,
+and semantics/overlay helpers without pulling in `FretApp`, `AppUi`, or runner-facing seams. The
+conversion surface is intentionally being collapsed to one public component conversion trait; new
+docs/examples should follow
+`docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md` instead of
+teaching the legacy split conversion trait names.
 
 **Surface taxonomy:** for user-facing docs, keep `fret` aligned with the same repo-wide ladder:
 

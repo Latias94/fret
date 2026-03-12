@@ -1,10 +1,13 @@
 pub const SOURCE: &str = include_str!("api_reference.rs");
 
 // region: example
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[allow(dead_code)]
-pub fn basic_button_group<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn basic_button_group<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> impl IntoUiElement<H> + use<H> {
     shadcn::ButtonGroup::new([
         shadcn::Button::new("Back").into(),
         shadcn::Button::new("Next").into(),
@@ -14,7 +17,9 @@ pub fn basic_button_group<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyEleme
 }
 
 #[allow(dead_code)]
-pub fn button_group_with_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn button_group_with_separator<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> impl IntoUiElement<H> + use<H> {
     shadcn::ButtonGroup::new([
         shadcn::Button::new("Copy").into(),
         shadcn::ButtonGroupSeparator::new().into(),
@@ -24,7 +29,9 @@ pub fn button_group_with_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) ->
 }
 
 #[allow(dead_code)]
-pub fn button_group_with_text<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn button_group_with_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> impl IntoUiElement<H> + use<H> {
     let site_name = cx.local_model(String::new);
 
     shadcn::ButtonGroup::new([

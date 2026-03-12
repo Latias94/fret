@@ -6,11 +6,11 @@ from _gate_lib import run_regex_gate
 
 
 def main() -> None:
-    # Teaching surfaces should prefer `ViewCx::on_action_notify*` helpers.
+    # Teaching surfaces should prefer `AppUi`'s grouped `cx.actions()*` helpers.
     #
     # Rationale:
     # - avoids repeating `request_redraw + notify` boilerplate,
-    # - keeps view-cache closure behavior consistent across examples,
+    # - keeps the default app-facing surface aligned with `cx.state()/cx.actions()`,
     # - makes authoring code easier to read and migrate.
     #
     # This is intentionally narrow: it only guards cookbook/examples plus ui-gallery
@@ -33,4 +33,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

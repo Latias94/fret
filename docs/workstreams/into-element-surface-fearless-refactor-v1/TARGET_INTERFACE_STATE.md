@@ -208,6 +208,8 @@ First-party UI Gallery examples already using this rule now include:
 - `src/ui/snippets/avatar/{demo,with_badge}.rs::avatar_with_badge(...)`
 - `src/ui/snippets/avatar/{group,group_count}.rs::{group(...), group_with_count(...)}`
 - `src/ui/snippets/avatar/{badge_icon,group_count_icon}.rs::icon(...)`
+- `src/ui/snippets/button/{demo,size,with_icon,link_render,rtl,loading,variants,button_group,rounded}.rs::wrap_row(...)`
+- `src/ui/snippets/button/size.rs::row(...)`
 - `src/ui/snippets/breadcrumb/dropdown.rs::dot_separator(...)`
 - `src/ui/snippets/item/extras_rtl.rs::{outline_button_sm(...), item_basic(...)}`
 

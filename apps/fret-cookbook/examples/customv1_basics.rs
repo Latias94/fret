@@ -61,11 +61,7 @@ fn install_custom_effect(app: &mut KernelApp, effects: &mut dyn fret_core::Custo
     app.set_global(CookbookCustomV1Effect(id));
 }
 
-fn panel_shell(
-    cx: &mut UiCx<'_>,
-    title: &str,
-    body: impl IntoUiElement<KernelApp>,
-) -> AnyElement {
+fn panel_shell(cx: &mut UiCx<'_>, title: &str, body: impl IntoUiElement<KernelApp>) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
     let body = body.into_element(cx);
 

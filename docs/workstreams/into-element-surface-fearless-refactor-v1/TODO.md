@@ -213,6 +213,13 @@ Implementation note on 2026-03-12:
   as `impl IntoUiElement<H> + use<...>` helpers,
   with explicit `.into_element(cx)` only at `AvatarGroup::new(...)`, `children([..])`, and final
   render-boundary seams.
+- selected UI Gallery button snippets now also keep row wrappers and local size-composition helpers
+  off raw landed returns by default:
+  `src/ui/snippets/button/{demo,size,with_icon,link_render,rtl,loading,variants,button_group,rounded}.rs`
+  now use `wrap_row(...) -> impl IntoUiElement<H> + use<H, F>`,
+  and `src/ui/snippets/button/size.rs`
+  now also keeps `row(...) -> impl IntoUiElement<H> + use<H>`,
+  with explicit `.into_element(cx)` only at vector collection and final render-boundary seams.
 - selected UI Gallery button-group, toggle-group, and drawer snippets now also expose reusable
   helpers as `IntoUiElement`-based signatures:
   `src/ui/snippets/button_group/api_reference.rs`
@@ -243,8 +250,8 @@ Validation note on 2026-03-12:
 
 - verified the expanded UI Gallery helper gate with
   `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app selected_`;
-  the focused source gate now covers 18 `selected_*` checks and passed after the AI wrapper,
-  breadcrumb, `item/extras_rtl`, and avatar helper migrations landed.
+  the focused source gate now covers 19 `selected_*` checks and passed after the AI wrapper,
+  breadcrumb, `item/extras_rtl`, avatar, and button helper migrations landed.
 
 ## M4 — Delete the old public surface
 

@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("sides.rs");
 
 // region: example
 use fret_core::Px;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn side_content<H: UiHost>(
@@ -31,7 +32,7 @@ fn card<H: UiHost>(
     trigger_test_id: &'static str,
     content_test_id: &'static str,
     root_test_id: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let content = side_content(cx, label, content_test_id).side(side);
     shadcn::HoverCard::new(
         shadcn::Button::new(label)
@@ -87,7 +88,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             trigger_test_id,
             content_test_id,
             root_test_id,
-        );
+        )
+        .into_element(cx);
         let (side, label, trigger_test_id, content_test_id, root_test_id) = entries[1];
         let top = card(
             cx,
@@ -96,7 +98,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             trigger_test_id,
             content_test_id,
             root_test_id,
-        );
+        )
+        .into_element(cx);
         vec![left, top]
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -114,7 +117,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             trigger_test_id,
             content_test_id,
             root_test_id,
-        );
+        )
+        .into_element(cx);
         let (side, label, trigger_test_id, content_test_id, root_test_id) = entries[3];
         let right = card(
             cx,
@@ -123,7 +127,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             trigger_test_id,
             content_test_id,
             root_test_id,
-        );
+        )
+        .into_element(cx);
         vec![bottom, right]
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())

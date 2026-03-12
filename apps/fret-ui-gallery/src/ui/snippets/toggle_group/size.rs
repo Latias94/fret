@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("size.rs");
 
 // region: example
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn text_item<H: UiHost>(
@@ -11,7 +12,10 @@ fn text_item<H: UiHost>(
     shadcn::ToggleGroupItem::new(value, [cx.text(label)]).a11y_label(format!("Toggle {label}"))
 }
 
-fn group<H: UiHost>(cx: &mut ElementContext<'_, H>, size: shadcn::ToggleSize) -> AnyElement {
+fn group<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    size: shadcn::ToggleSize,
+) -> impl IntoUiElement<H> + use<H> {
     shadcn::ToggleGroup::single_uncontrolled(Some("left"))
         .variant(shadcn::ToggleVariant::Outline)
         .size(size)
@@ -20,13 +24,12 @@ fn group<H: UiHost>(cx: &mut ElementContext<'_, H>, size: shadcn::ToggleSize) ->
             text_item(cx, "center", "Center"),
             text_item(cx, "right", "Right"),
         ])
-        .into_element(cx)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let sm = group(cx, shadcn::ToggleSize::Sm);
-    let default = group(cx, shadcn::ToggleSize::Default);
-    let lg = group(cx, shadcn::ToggleSize::Lg);
+    let sm = group(cx, shadcn::ToggleSize::Sm).into_element(cx);
+    let default = group(cx, shadcn::ToggleSize::Default).into_element(cx);
+    let lg = group(cx, shadcn::ToggleSize::Lg).into_element(cx);
 
     ui::v_stack(move |cx| {
         vec![

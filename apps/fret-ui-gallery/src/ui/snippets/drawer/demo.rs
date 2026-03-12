@@ -7,6 +7,7 @@ use fret_core::{Corners, Edges, Px};
 use fret_ui::Theme;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length, SizeStyle};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -19,14 +20,13 @@ const GOAL_SERIES: [i32; 13] = [
 ];
 
 fn goal_adjust_button<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
     goal: Model<i32>,
     adjustment: i32,
     icon: &'static str,
     a11y_label: &'static str,
     disabled: bool,
     test_id: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let on_activate: OnActivate = Arc::new(move |host, acx, _reason| {
         let _ = host.models_mut().update(&goal, |value| {
             *value = (*value + adjustment).clamp(GOAL_MIN, GOAL_MAX);
@@ -42,16 +42,18 @@ fn goal_adjust_button<H: UiHost>(
         .disabled(disabled)
         .on_activate(on_activate)
         .test_id(test_id)
-        .into_element(cx)
 }
 
-fn goal_chart<H: UiHost>(cx: &mut ElementContext<'_, H>, goal: i32) -> AnyElement {
+fn goal_chart<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    goal: i32,
+) -> impl IntoUiElement<H> + use<H> {
     let theme = Theme::global(&*cx.app).snapshot();
     let active = theme.color_token("foreground");
     let mut inactive = active;
     inactive.a *= 0.35;
 
-    ui::h_flex(|cx| {
+    ui::h_flex(move |cx| {
         GOAL_SERIES
             .iter()
             .map(|value| {
@@ -88,7 +90,6 @@ fn goal_chart<H: UiHost>(cx: &mut ElementContext<'_, H>, goal: i32) -> AnyElemen
             .h_px(Px(120.0))
             .min_w_0(),
     )
-    .into_element(cx)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -121,14 +122,14 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             ui::h_flex(|cx| {
                                 vec![
                                     goal_adjust_button(
-                                        cx,
                                         goal_for_decrease.clone(),
                                         -GOAL_STEP,
                                         "lucide.minus",
                                         "Decrease goal",
                                         current_goal <= GOAL_MIN,
                                         "ui-gallery-drawer-demo-decrease",
-                                    ),
+                                    )
+                                    .into_element(cx),
                                     ui::v_stack(|cx| {
                                         vec![
                                             ui::text(current_goal.to_string())
@@ -148,21 +149,21 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                                     .layout(LayoutRefinement::default().flex_1().min_w_0())
                                     .into_element(cx),
                                     goal_adjust_button(
-                                        cx,
                                         goal_for_increase.clone(),
                                         GOAL_STEP,
                                         "lucide.plus",
                                         "Increase goal",
                                         current_goal >= GOAL_MAX,
                                         "ui-gallery-drawer-demo-increase",
-                                    ),
+                                    )
+                                    .into_element(cx),
                                 ]
                             })
                             .gap(Space::N3)
                             .items_center()
                             .layout(LayoutRefinement::default().w_full().min_w_0())
                             .into_element(cx),
-                            goal_chart(cx, current_goal),
+                            goal_chart(cx, current_goal).into_element(cx),
                         ]
                     })
                     .gap(Space::N3)

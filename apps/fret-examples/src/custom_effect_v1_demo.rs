@@ -520,27 +520,27 @@ fn lens_row(
 ) -> AnyElement {
     let radius = Px(corner_radius_px.clamp(0.0, 64.0));
     ui::h_flex(move |cx| {
-        [
-            plain_lens(cx, "Plain (no effect)", radius),
-            if enabled {
-                custom_effect_lens(
-                    cx,
-                    "CustomV1 lens",
-                    effect,
-                    blur_radius_px,
-                    blur_downsample,
-                    refraction_height_px,
-                    refraction_amount_px,
-                    depth_effect,
-                    chromatic_aberration,
-                    corner_radius_px,
-                    grain_strength,
-                    grain_scale,
-                )
-            } else {
-                plain_lens(cx, "CustomV1 lens (disabled)", radius)
-            },
-        ]
+        let effect_lens = if enabled {
+            custom_effect_lens(
+                cx,
+                "CustomV1 lens",
+                effect,
+                blur_radius_px,
+                blur_downsample,
+                refraction_height_px,
+                refraction_amount_px,
+                depth_effect,
+                chromatic_aberration,
+                corner_radius_px,
+                grain_strength,
+                grain_scale,
+            )
+            .into_element(cx)
+        } else {
+            plain_lens(cx, "CustomV1 lens (disabled)", radius).into_element(cx)
+        };
+
+        ui::children![cx; plain_lens(cx, "Plain (no effect)", radius), effect_lens]
     })
     .gap(Space::N3)
     .items_start()
@@ -602,7 +602,10 @@ fn lens_shell(cx: &mut UiCx<'_>, label: Arc<str>, radius: Px, body: AnyElement) 
     )
 }
 
-fn plain_lens(cx: &mut UiCx<'_>, label: impl Into<Arc<str>>, radius: Px) -> AnyElement {
+fn plain_lens<L>(cx: &mut UiCx<'_>, label: L, radius: Px) -> impl IntoUiElement<KernelApp> + use<L>
+where
+    L: Into<Arc<str>>,
+{
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;
@@ -619,9 +622,9 @@ fn plain_lens(cx: &mut UiCx<'_>, label: impl Into<Arc<str>>, radius: Px) -> AnyE
     lens_shell(cx, label.into(), radius, body)
 }
 
-fn custom_effect_lens(
+fn custom_effect_lens<L>(
     cx: &mut UiCx<'_>,
-    label: impl Into<Arc<str>>,
+    label: L,
     effect: EffectId,
     blur_radius_px: f32,
     blur_downsample: f32,
@@ -632,7 +635,10 @@ fn custom_effect_lens(
     corner_radius_px: f32,
     grain_strength: f32,
     grain_scale: f32,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<L>
+where
+    L: Into<Arc<str>>,
+{
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;

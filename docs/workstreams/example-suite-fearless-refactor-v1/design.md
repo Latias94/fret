@@ -111,6 +111,22 @@ We keep the existing reality (many apps/harnesses), but we reframe and reorganiz
 
 Rule: stages 0–2 must stay **boring and stable**.
 
+### Canonical authoring compare set
+
+Beyond the onboarding ladder, keep one small cross-tier compare set aligned whenever authoring
+surfaces change:
+
+- `apps/fret-cookbook/examples/simple_todo_v2_target.rs` = comparison/evidence slice for authoring density,
+- `apps/fret-examples/src/todo_demo.rs` = app-grade proof that the same writing style scales,
+- `apps/fretboard/src/scaffold/templates.rs` (`simple_todo_template_main_rs`) = generated default path.
+
+Rule:
+
+- authoring-surface work is not complete until these three surfaces teach the same intended
+  vocabulary,
+- if one of them needs a different pattern, that difference must be documented as a deliberate
+  default/comparison/advanced split rather than accidental drift.
+
 ### Reference apps (app-scale examples)
 
 In addition to cookbook-scale examples, we should maintain a small number of “app-scale” reference apps.

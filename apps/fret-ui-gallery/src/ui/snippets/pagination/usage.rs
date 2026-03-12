@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 const CMD_PAGE_PREVIOUS: &str = "ui_gallery.pagination.previous";
@@ -8,8 +9,8 @@ const CMD_PAGE_1: &str = "ui_gallery.pagination.page_1";
 const CMD_PAGE_2: &str = "ui_gallery.pagination.page_2";
 const CMD_PAGE_NEXT: &str = "ui_gallery.pagination.next";
 
-fn page_number<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str) -> AnyElement {
-    fret_ui_kit::ui::text(label).tabular_nums().into_element(cx)
+fn page_number<H: UiHost>(label: &'static str) -> impl IntoUiElement<H> + use<H> {
+    fret_ui_kit::ui::text(label).tabular_nums()
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -21,13 +22,13 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         )
         .into_element(cx),
         shadcn::PaginationItem::new(
-            shadcn::PaginationLink::new([page_number(cx, "1")])
+            shadcn::PaginationLink::new([page_number("1").into_element(cx)])
                 .on_click(CMD_PAGE_1)
                 .into_element(cx),
         )
         .into_element(cx),
         shadcn::PaginationItem::new(
-            shadcn::PaginationLink::new([page_number(cx, "2")])
+            shadcn::PaginationLink::new([page_number("2").into_element(cx)])
                 .active(true)
                 .on_click(CMD_PAGE_2)
                 .into_element(cx),

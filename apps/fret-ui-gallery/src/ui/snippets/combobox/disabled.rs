@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("disabled.rs");
 
 // region: example
 use fret::UiCx;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::{ElementContextThemeExt, style as decl_style};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
@@ -15,7 +16,11 @@ fn base_items() -> Vec<shadcn::ComboboxItem> {
     ]
 }
 
-fn state_row(cx: &mut UiCx<'_>, text: Arc<str>, test_id: Arc<str>) -> AnyElement {
+fn state_row(
+    cx: &mut UiCx<'_>,
+    text: Arc<str>,
+    test_id: Arc<str>,
+) -> impl IntoUiElement<fret_app::App> + use<> {
     let props = cx.with_theme(|theme| {
         decl_style::container_props(
             theme,

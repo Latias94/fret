@@ -12,6 +12,13 @@ Companion docs:
 - `TARGET_INTERFACE_STATE.md`
 - `MIGRATION_MATRIX.md`
 
+Execution note on 2026-03-12:
+
+- treat this file as a closeout tracker,
+- do not reopen broad surface redesign here,
+- route remaining conversion-surface work to
+  `docs/workstreams/into-element-surface-fearless-refactor-v1/`.
+
 ## M0 — Freeze the target product surface
 
 - [ ] Finalize `TARGET_INTERFACE_STATE.md` as the single source of truth for the desired public surface.
@@ -158,6 +165,9 @@ Companion docs:
   stay generic over `H: UiHost` or define an explicit advanced entry seam.
 - [x] Normalize the first-party UI Gallery routed page surface to `UiCx` and add source gates for
   the default app-facing teaching surface.
+- [ ] Keep the follow-on `into-element-surface-fearless-refactor-v1` tracker linked from repo
+  indexes and active workstream docs so conversion-surface cleanup has an explicit owner after the
+  app/component/advanced split lands.
 - [x] Finish migrating the remaining first-party UI Gallery internal preview surface to `UiCx`
   before deleting the old `ElementContext<'_, App>` teaching seam.
   - Current bounded remainder on 2026-03-11 after the editor/torture batch: `0 / 92`
@@ -170,6 +180,9 @@ Companion docs:
     teaching surfaces (`harness.rs`, `content.rs`, routed dev pages), restoring a green
     `cargo check -p fret-ui-gallery --lib --features gallery-full`.
 - [ ] Remove or rewrite examples that still teach superseded patterns.
+- [ ] Keep first-party docs/examples/UI Gallery copy aligned with the next-phase target:
+  app-facing lanes teach `Ui` / `UiChild`, while reusable generic helpers move to the unified
+  component conversion trait once that workstream lands it.
 
 ## M5 — Delete the old surface
 

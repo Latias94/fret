@@ -215,8 +215,8 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut WindowState) -> ViewEle
                 ])
                 .into_element(cx),
             ])
-            .test_id(root_test_id)
-            .into_element(cx);
+            .into_element(cx)
+            .test_id(root_test_id);
 
             vec![header, content]
         },
