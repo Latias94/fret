@@ -25,6 +25,8 @@ use fret_ui::element::AnyElement;
 use fret_ui::element::{PressableKeyActivation, PressableProps, SemanticsDecoration};
 use fret_ui::{ElementContext, Invalidation};
 
+pub mod app;
+
 #[doc(hidden)]
 pub trait RouterOutletIntoElement: Sized {
     fn into_router_outlet_element(self, cx: &mut ElementContext<'_, App>) -> AnyElement;
@@ -1031,6 +1033,7 @@ mod tests {
     use fret_ui_kit::ui;
     use std::sync::Arc;
 
+    const APP_RS: &str = include_str!("app.rs");
     const LIB_RS: &str = include_str!("lib.rs");
 
     fn action_cx(window: fret_core::AppWindowId) -> ActionCx {
@@ -1111,9 +1114,11 @@ mod tests {
     #[test]
     fn crate_docs_keep_router_ui_positioned_as_thin_adoption_layer() {
         assert!(LIB_RS.contains("This crate intentionally provides a thin layer:"));
-        assert!(LIB_RS.contains(
-            "Policy-heavy behavior remains in apps and higher-level ecosystem crates."
-        ));
+        assert!(
+            LIB_RS.contains(
+                "Policy-heavy behavior remains in apps and higher-level ecosystem crates."
+            )
+        );
     }
 
     #[test]
@@ -1123,6 +1128,7 @@ mod tests {
             .next()
             .expect("router-ui source should contain a test module split");
 
+        assert!(public_surface.contains("pub mod app;"));
         assert!(public_surface.contains("pub fn register_router_commands("));
         assert!(public_surface.contains("pub struct RouterUiStore"));
         assert!(public_surface.contains("pub struct RouterOutlet"));
@@ -1130,12 +1136,14 @@ mod tests {
         assert!(public_surface.contains("pub fn router_outlet<"));
 
         assert!(!public_surface.contains("pub fn install_app("));
+        assert!(!public_surface.contains("pub fn install(app: &mut App)"));
         assert!(!public_surface.contains("pub struct RouterApp"));
         assert!(!public_surface.contains("pub trait RouterApp"));
         assert!(!public_surface.contains("FretApp::"));
         assert!(!public_surface.contains("AppUi<"));
         assert!(!public_surface.contains("ViewCx<"));
         assert!(!public_surface.contains("Plugin"));
+        assert!(APP_RS.contains("pub fn install(app: &mut App)"));
     }
 
     #[test]

@@ -39,7 +39,7 @@ use fret::app::prelude::*;
 
 fn install_app(app: &mut App) {
     fret::shadcn::app::install(app);
-    fret::router::install_app(app);
+    fret::router::app::install(app);
 }
 
 fn main() -> fret::Result<()> {
@@ -208,7 +208,7 @@ struct WorkbenchBundle;
 impl InstallIntoApp for WorkbenchBundle {
     fn install_into_app(self, app: &mut App) {
         fret::shadcn::app::install(app);
-        fret::router::install_app(app);
+        fret::router::app::install(app);
         workbench_panels::install(app);
     }
 }
@@ -219,7 +219,7 @@ The same app should still be able to teach the non-trait version:
 ```rust
 fn install_workbench(app: &mut App) {
     fret::shadcn::app::install(app);
-    fret::router::install_app(app);
+    fret::router::app::install(app);
     workbench_panels::install(app);
 }
 ```

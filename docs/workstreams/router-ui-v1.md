@@ -167,7 +167,7 @@ Default keybindings (recommended):
 - Windows/Linux: `Alt+Left` / `Alt+Right`
 
 Golden path: enable the `fret` `router` feature and call
-`FretApp::setup(fret::router::install_app)` so router commands are registered before
+`FretApp::setup(fret::router::app::install)` so router commands are registered before
 `with_default_config_files()` installs the default keybindings and before layered
 `.fret/keymap.json` overrides are applied.
 
@@ -178,7 +178,7 @@ added to the baseline keymap (the installer is idempotent per command id).
 Menu bar integration:
 
 - `fret-workspace::menu::workspace_default_menu_bar(...)` accepts optional router command IDs.
-- `fret::router::install_app` intentionally limits itself to command registration; menu wiring
+- `fret::router::app::install` intentionally limits itself to command registration; menu wiring
   stays explicit for now.
 
 ## Evidence anchors (when implemented)

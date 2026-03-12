@@ -198,6 +198,9 @@ Companion docs:
   - [x] 2026-03-12: removed `FretApp::register_icon_pack(...)`,
     `UiAppBuilder::register_icon_pack(...)`, and `UiAppBuilder::with_lucide_icons()` from the
     default `fret` facade; explicit pack setup now flows through `setup(...::app::install)`.
+  - [x] 2026-03-12: removed the root `fret::router::install_app(...)` exception; router setup on
+    the default app lane now follows the same `fret::router::app::install(...)` pattern as the
+    other ecosystem app installers.
 - [ ] Remove dead docs and stale guidance after the migration is complete.
 
 ## M6 — Add gates so the surface stays clean
@@ -238,6 +241,8 @@ Companion docs:
     gate now requires those names to stay under `fret::actions::*` instead.
   - 2026-03-12: keep icon registry / icon-pack builder helpers off the default `fret` facade; the
     source gates now require app-facing icon setup to stay on `.setup(...::app::install)`.
+  - 2026-03-12: keep router app wiring on `fret::router::app::install(...)`; the source/docs
+    gates now forbid `fret::router::install_app(...)` from returning on the default lane.
   - 2026-03-12: keep the `fret` feature surface on canonical names only; the source gate now
     forbids the old `icons-lucide = ["icons"]` alias from returning.
   - 2026-03-12: keep workspace-shell helpers module-scoped; the source gate now forbids root

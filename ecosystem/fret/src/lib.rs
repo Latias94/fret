@@ -51,7 +51,7 @@
 //! Optional ecosystem extensions stay explicit:
 //!
 //! - enable `state` for grouped selector/query helpers on `AppUi`
-//! - enable `router` for `fret::router::{install_app, RouterUiStore, RouterOutlet, router_link, ...}`
+//! - enable `router` for `fret::router::{app::install, RouterUiStore, RouterOutlet, router_link, ...}`
 //!   plus `RouterUiStore::{back_on_action, forward_on_action}` history bindings
 //! - enable `docking` for `fret::docking::{core::*, DockManager, handle_dock_op, ...}`
 //! - use `fret::shadcn::{..., app::install, themes::apply_shadcn_new_york, raw::*}` for the
@@ -351,12 +351,15 @@ pub mod router {
         router_outlet, router_outlet_with_test_id,
     };
 
-    /// Register recommended router commands on the app surface.
-    ///
-    /// Use this from `FretApp::setup(...)` so default command keybindings/config layering can see
-    /// the router commands before the bootstrap installs baseline keymaps.
-    pub fn install_app(app: &mut crate::app::App) {
-        register_router_commands(app.commands_mut());
+    /// Explicit router app-install helpers for the default app lane.
+    pub mod app {
+        /// Register recommended router commands on the app surface.
+        ///
+        /// Use this from `FretApp::setup(...)` so default command keybindings/config layering can
+        /// see the router commands before the bootstrap installs baseline keymaps.
+        pub fn install(app: &mut crate::app::App) {
+            fret_router_ui::app::install(app);
+        }
     }
 }
 
@@ -1543,16 +1546,18 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_README.contains("- `router`: enable the explicit app-level router surface"));
         assert!(
             CRATE_README
-                .contains("`fret::router::{install_app, RouterUiStore, RouterOutlet, ...}`")
+                .contains("`fret::router::{app::install, RouterUiStore, RouterOutlet, ...}`")
         );
 
         let rustdoc = crate_rustdoc();
         assert!(rustdoc.contains(
-            "`fret::router::{install_app, RouterUiStore, RouterOutlet, router_link, ...}`"
+            "`fret::router::{app::install, RouterUiStore, RouterOutlet, router_link, ...}`"
         ));
         assert!(rustdoc.contains("`RouterUiStore::{back_on_action, forward_on_action}`"));
         assert!(LIB_RS.contains("pub mod router {"));
-        assert!(LIB_RS.contains("pub fn install_app(app: &mut crate::app::App) {"));
+        assert!(LIB_RS.contains("pub mod app {"));
+        assert!(LIB_RS.contains("pub fn install(app: &mut crate::app::App) {"));
+        assert!(!LIB_RS.contains("pub fn install_app(app: &mut crate::app::App) {"));
     }
 
     #[test]
@@ -1697,10 +1702,12 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`fret_ui_assets::app::install_with_budgets(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret_ui_assets::advanced::{install_with_ui_services(...), install_with_ui_services_and_budgets(...)}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret_node::app::install(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::router::app::install(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`BootstrapBuilder::register_icon_pack(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`FretApp::register_icon_pack(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`UiAppBuilder::register_icon_pack(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`UiAppBuilder::with_lucide_icons()`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`fret::router::install_app(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`fret_icons_radix::install_app`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`fret_ui_assets::install_app_with_budgets`"));
     }

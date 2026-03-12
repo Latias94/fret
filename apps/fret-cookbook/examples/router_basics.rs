@@ -2,10 +2,9 @@ use std::sync::Arc;
 
 use fret::app::prelude::*;
 use fret::router::{
-    router_link_to_typed_route_with_test_id, router_link_with_test_id, MemoryHistory,
-    NavigationAction, PathPattern, RouteCodec, RouteHooks, RouteLocation, RouteNode,
+    MemoryHistory, NavigationAction, PathPattern, RouteCodec, RouteHooks, RouteLocation, RouteNode,
     RoutePrefetchIntent, RouteSearchTable, RouteTree, Router, RouterOutlet, RouterUiStore,
-    SearchValidationMode,
+    SearchValidationMode, router_link_to_typed_route_with_test_id, router_link_with_test_id,
 };
 use fret_ui::{CommandAvailability, Invalidation};
 
@@ -442,7 +441,7 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-router-basics")
         .window("cookbook-router-basics", (1040.0, 620.0))
         .config_files(false)
-        .setup(fret::router::install_app)
+        .setup(fret::router::app::install)
         .setup(fret_cookbook::install_cookbook_defaults)
         .view::<RouterBasicsView>()?
         .run()

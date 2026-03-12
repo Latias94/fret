@@ -45,7 +45,8 @@ Current status on 2026-03-11:
   the canonical `?demo=...` entry path while retaining legacy hash-token fallback compatibility.
 - First-party web README surfaces now also teach canonical query routes first and treat hash/query
   aliases as compatibility-only migration baggage.
-- `fret-ui-assets`, `fret-icons-lucide`, `fret-icons-radix`, and `fret-node` now expose default
+- `fret-ui-assets`, `fret-icons-lucide`, `fret-icons-radix`, `fret-node`, and `fret-router-ui`
+  now expose default
   app wiring under explicit `crate::app::install(...)` seams instead of root-level
   `install_app(...)` exports; their UI-services-boundary wrappers now live under explicit
   `crate::advanced::*` seams.

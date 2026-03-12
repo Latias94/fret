@@ -490,7 +490,7 @@ use fret::app::prelude::*;
 
 fn install_workspace(app: &mut App) {
     fret::shadcn::app::install(app);
-    fret::router::install_app(app);
+    fret::router::app::install(app);
     workspace_panels::install(app);
 }
 
@@ -517,7 +517,7 @@ struct WorkspaceBundle {
 impl InstallIntoApp for WorkspaceBundle {
     fn install_into_app(self, app: &mut App) {
         fret::shadcn::app::install(app);
-        fret::router::install_app(app);
+        fret::router::app::install(app);
         self.panels.install_into_app(app);
     }
 }

@@ -122,7 +122,7 @@ fn main() -> fret::Result<()> {
 - `desktop`: enable the native desktop stack (winit + wgpu) via `fret-framework/native-wgpu`.
 - `app`: recommended baseline for apps (shadcn).
 - `state`: enable selector/query helpers on `AppUi` (`cx.data().selector(...)`, `cx.data().query(...)`) for the default app surface.
-- `router`: enable the explicit app-level router surface (`fret::router::{install_app, RouterUiStore, RouterOutlet, ...}`).
+- `router`: enable the explicit app-level router surface (`fret::router::{app::install, RouterUiStore, RouterOutlet, ...}`).
 - `docking`: enable the explicit advanced docking surface (`fret::docking::{core::*, DockManager, handle_dock_op, ...}`).
 - `batteries`: “works out of the box” opt-in bundle (config files + UI assets + icons + preloading + diagnostics).
 - `config-files`: load layered config files from `.fret/` (settings/keymap/menubar).
@@ -172,7 +172,7 @@ extension seams without dropping to `fret-launch` immediately, but the GPU/effec
 now live explicitly under `fret::advanced` instead of the default inherent builder surface.
 
 Optional ecosystems also stay explicit. For example, the router integration lives under
-`fret::router`; wire it with `FretApp::setup(fret::router::install_app)` instead of expecting it
+`fret::router`; wire it with `FretApp::setup(fret::router::app::install)` instead of expecting it
 to appear in `fret::app::prelude::*`. Docking similarly lives under `fret::docking` so advanced
 apps can opt into panel registries, dock ops, and retained-host wiring without turning docking into
 part of the default app prelude. The default design-system surface is similarly curated under

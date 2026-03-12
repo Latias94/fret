@@ -57,6 +57,10 @@ surface.
     `fret-ui-assets`, `fret-icons-lucide`, `fret-icons-radix`, and `fret-node` now expose
     default app wiring under explicit `crate::app::install(...)` seams, while UI-services-boundary
     helpers live under explicit `crate::advanced::*` seams.
+  - Extended on 2026-03-12:
+    `fret-router-ui` now exposes command-registration setup through `crate::app::install(...)`,
+    and the `fret::router` facade mirrors the same `app::install` seam instead of a root
+    `install_app(...)` exception.
 - [ ] Keep `FretApp::setup(...)` as the canonical app authoring story in docs and templates.
 - [ ] Audit first-party crates for root-level exports that bypass curated facades.
   - Landed first-pass migration on 2026-03-11 for
