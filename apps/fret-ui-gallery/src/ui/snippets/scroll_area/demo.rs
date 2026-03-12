@@ -2,9 +2,28 @@ pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use fret_ui::element::SemanticsDecoration;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::ui::UiElementSinkExt as _;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
+
+fn tag_row<H: UiHost>(tag: Arc<str>) -> impl IntoUiElement<H> + use<H> {
+    ui::v_flex(move |cx| {
+        vec![
+            ui::text(tag.clone())
+                .text_size_px(Px(14.0))
+                .line_height_px(Px(20.0))
+                .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
+                .into_element(cx),
+            shadcn::Separator::new()
+                .refine_layout(LayoutRefinement::default().w_full().my(Space::N2))
+                .into_element(cx),
+        ]
+    })
+    .gap(Space::N0)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full())
+}
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let tags: Vec<Arc<str>> = (1..=50)
@@ -20,25 +39,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .into_element(cx);
 
         let tags_list = ui::v_flex(move |cx| {
-            let mut out: Vec<AnyElement> = Vec::with_capacity(tags.len() * 2);
+            let mut out: Vec<AnyElement> = Vec::with_capacity(tags.len());
             for tag in tags {
-                out.push(
-                    ui::text(tag)
-                        .text_size_px(Px(14.0))
-                        .line_height_px(Px(20.0))
-                        .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
-                        .into_element(cx),
-                );
-                out.push(
-                    shadcn::Separator::new()
-                        .refine_layout(LayoutRefinement::default().w_full().my(Space::N2))
-                        .into_element(cx),
-                );
+                out.push(tag_row::<H>(tag).into_element(cx));
             }
             out
         })
-        .gap(Space::N0)
-        .layout(LayoutRefinement::default().w_full())
         .into_element(cx);
 
         vec![

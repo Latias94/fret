@@ -343,6 +343,18 @@ fn selected_card_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         ],
         &["fn cell(cx: &mut UiCx<'_>, test_id: &'static str, card: shadcn::Card,) -> AnyElement"],
     );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/card/demo.rs",
+        &[
+            "fn email_field(email: Model<String>) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn password_field(password: Model<String>) -> impl IntoUiElement<fret_app::App> + use<>",
+        ],
+        &[
+            "fn email_field(email: Model<String>) -> AnyElement",
+            "fn password_field(password: Model<String>) -> AnyElement",
+        ],
+    );
 }
 
 #[test]
@@ -1031,6 +1043,12 @@ fn selected_scroll_area_snippet_helpers_prefer_into_ui_element_over_anyelement()
             "fn row<H: UiHost>(cx: &mut ElementContext<'_, H>, i: usize) -> impl IntoUiElement<H> + use<H>",
         ],
         &["fn row<H: UiHost>(cx: &mut ElementContext<'_, H>, i: usize) -> AnyElement"],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/scroll_area/demo.rs",
+        &["fn tag_row<H: UiHost>(tag: Arc<str>) -> impl IntoUiElement<H> + use<H>"],
+        &["fn tag_row<H: UiHost>(tag: Arc<str>) -> AnyElement"],
     );
 }
 

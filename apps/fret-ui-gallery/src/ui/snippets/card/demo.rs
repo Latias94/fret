@@ -2,7 +2,46 @@ pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use fret::UiCx;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
+
+fn email_field(email: Model<String>) -> impl IntoUiElement<fret_app::App> + use<> {
+    ui::v_stack(|cx| {
+        vec![
+            shadcn::Label::new("Email").into_element(cx),
+            shadcn::Input::new(email)
+                .a11y_label("Email")
+                .placeholder("m@example.com")
+                .into_element(cx),
+        ]
+    })
+    .gap(Space::N2)
+}
+
+fn password_field(password: Model<String>) -> impl IntoUiElement<fret_app::App> + use<> {
+    ui::v_stack(|cx| {
+        vec![
+            ui::h_flex(|cx| {
+                vec![
+                    shadcn::Label::new("Password").into_element(cx),
+                    shadcn::Button::new("Forgot your password?")
+                        .variant(shadcn::ButtonVariant::Link)
+                        .size(shadcn::ButtonSize::Sm)
+                        .into_element(cx),
+                ]
+            })
+            .layout(LayoutRefinement::default().w_full())
+            .justify_between()
+            .items_center()
+            .into_element(cx),
+            shadcn::Input::new(password)
+                .a11y_label("Password")
+                .placeholder("••••••••")
+                .into_element(cx),
+        ]
+    })
+    .gap(Space::N2)
+}
 
 pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let email = cx.local_model_keyed("email", String::new);
@@ -35,43 +74,10 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
             shadcn::card_content(cx, |cx| {
                 vec![
                     ui::v_flex(|cx| {
-                        let email = ui::v_stack(|cx| {
-                            vec![
-                                shadcn::Label::new("Email").into_element(cx),
-                                shadcn::Input::new(email.clone())
-                                    .a11y_label("Email")
-                                    .placeholder("m@example.com")
-                                    .into_element(cx),
-                            ]
-                        })
-                        .gap(Space::N2)
-                        .into_element(cx);
-
-                        let password = ui::v_stack(|cx| {
-                            vec![
-                                ui::h_flex(|cx| {
-                                    vec![
-                                        shadcn::Label::new("Password").into_element(cx),
-                                        shadcn::Button::new("Forgot your password?")
-                                            .variant(shadcn::ButtonVariant::Link)
-                                            .size(shadcn::ButtonSize::Sm)
-                                            .into_element(cx),
-                                    ]
-                                })
-                                .layout(LayoutRefinement::default().w_full())
-                                .justify_between()
-                                .items_center()
-                                .into_element(cx),
-                                shadcn::Input::new(password.clone())
-                                    .a11y_label("Password")
-                                    .placeholder("••••••••")
-                                    .into_element(cx),
-                            ]
-                        })
-                        .gap(Space::N2)
-                        .into_element(cx);
-
-                        vec![email, password]
+                        vec![
+                            email_field(email.clone()).into_element(cx),
+                            password_field(password.clone()).into_element(cx),
+                        ]
                     })
                     .gap(Space::N6)
                     .layout(LayoutRefinement::default().w_full())
