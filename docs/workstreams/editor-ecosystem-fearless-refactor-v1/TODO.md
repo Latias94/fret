@@ -125,10 +125,11 @@ Interaction contract:
 
 ## Gates and migration evidence
 
-- [~] `EER-GATE-130` Add focused edit-session commit/cancel coverage for numeric editing.
-      Numeric-input validation/commit coverage now exists via
-      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-numeric-input-validation.json`;
-      Escape/cancel-specific proof is still missing.
+- [x] `EER-GATE-130` Add focused edit-session commit/cancel coverage for numeric editing.
+      Numeric-input validation/commit coverage exists via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-numeric-input-validation.json`, and
+      Escape/cancel coverage now exists via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-numeric-input-escape-cancel.json`.
 - [ ] `EER-GATE-131` Add state-identity regression coverage for loop-built or repeated controls.
 - [~] `EER-GATE-132` Keep `imui_editor_proof_demo` and the promoted workspace-shell proof surfaces
       as the primary evidence anchors for this workstream.

@@ -1,0 +1,146 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "imui-editor-proof-numeric-input-escape-cancel",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui_editor", "imui", "numeric_input", "escape", "cancel", "regression"],
+    "target_hints": [
+      "Uses the Advanced editor section in imui_editor_proof_demo.",
+      "Proves Escape cancels a focused NumericInput edit session, including clearing a visible validation error."
+    ]
+  },
+  "window": "lowest_id",
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.advanced.exposure" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.advanced.exposure.input" },
+        "text": "0.750"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "focus",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.advanced.exposure.input" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.advanced.exposure.input" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.advanced.exposure.input" },
+      "text": "1.500"
+    },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.advanced.exposure.error" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.advanced.exposure.error-text"
+        },
+        "text": "Expected 0.0..=1.0"
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.advanced.exposure.input" },
+        "text": "0.750"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.advanced.exposure.error" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.advanced.exposure.error-text"
+        }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "focus",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.advanced.exposure.input" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.advanced.exposure.input" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.advanced.exposure.input" },
+      "text": "0.250"
+    },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.advanced.exposure.input" },
+        "text": "0.750"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.advanced.exposure.error" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "capture_bundle",
+      "label": "imui-editor-proof-numeric-input-escape-cancel"
+    }
+  ]
+}
