@@ -79,10 +79,12 @@ Interaction contract:
       inspector surface. The script is rerun-safe inside one session, and the launched
       `fretboard diag run --session-auto --launch --pack --ai-packet --include-screenshots`
       workflow now exits cleanly after success instead of waiting for a redundant post-pass dump.
-- [ ] `EER-BASE-119` Make editor-owned baseline theming resilient to host/theme resets:
-      app-owned shadcn sync, environment color-scheme changes, and proof/demo startup should all
-      converge on the same intended editor preset instead of silently falling back to host-only
-      chrome.
+- [~] `EER-BASE-119` Make editor-owned baseline theming resilient to host/theme resets:
+      `fret-ui-editor::theme` now exposes a shared "host sync first, editor preset replay second"
+      helper for `WindowMetricsService`-driven theme resets, and `imui_editor_proof_demo` now uses
+      that path instead of hand-rolling a local replay hook. Remaining work: apply the same helper
+      pattern to adjacent promoted editor/workspace surfaces and decide how much of this should be
+      lifted into broader app-integration guidance.
 - [ ] `EER-BASE-116` Decide whether `imgui_like_dense` should get matching screenshot proof coverage
       now or only after the default baseline is acceptable.
 - [ ] `EER-BASE-117` Close baseline editor text/numeric policy where visuals and interaction are

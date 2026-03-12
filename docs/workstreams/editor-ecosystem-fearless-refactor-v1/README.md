@@ -55,6 +55,9 @@ Current checkpoint:
 - input-like editor controls now share one state grammar for focus, typed-edit, and invalid
   semantics through `EditorWidgetVisuals` and shared `editor.control.invalid.*` tokens instead of
   mixing per-widget error/focus overrides,
+- editor preset replay is no longer proof-demo-local glue only: the editor theme helpers now expose
+  a reusable "host theme sync, then editor preset replay" path for `WindowMetricsService`-driven
+  resets, and the promoted proof demo uses that shared ordering,
 - the default proof surface can produce reviewable overview / typing / validation screenshots,
 - and the remaining foundation cleanup is rerun-safe screenshot automation plus follow-up tuning for
   wide-inspector slack after the new lane grammar landed.

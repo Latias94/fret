@@ -3,6 +3,9 @@
 //! These helpers are intentionally opt-in. They should be used by demos/apps that want an
 //! editor-like density baseline without depending on a full design-system crate.
 
+use std::any::TypeId;
+
+use fret_core::WindowMetricsService;
 use fret_ui::{Theme, ThemeConfig, UiHost};
 
 use crate::primitives::EditorTokenKeys;
@@ -78,6 +81,39 @@ pub fn reapply_installed_editor_theme_preset_v1<H: UiHost>(
     let preset = app.global::<EditorThemeInstallConfigV1>().copied()?.preset;
     apply_editor_theme_preset_v1(app, preset);
     Some(preset)
+}
+
+/// Reapply the installed editor preset when a `WindowMetricsService` change may have caused the
+/// host app to rebuild its base theme.
+///
+/// This is the common "host changed first, editor patch second" ordering used by apps that keep a
+/// host-owned theme in sync with environment light/dark preferences.
+pub fn sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metrics_change<
+    H: UiHost,
+>(
+    app: &mut H,
+    changed: &[TypeId],
+    sync_host_theme: impl FnOnce(&mut H),
+) -> Option<EditorThemePresetV1> {
+    if !changed.contains(&TypeId::of::<WindowMetricsService>()) {
+        return None;
+    }
+
+    sync_host_theme(app);
+    reapply_installed_editor_theme_preset_v1(app)
+}
+
+/// Reapply the installed editor preset when `WindowMetricsService` changes and no host theme sync
+/// callback is needed.
+pub fn reapply_installed_editor_theme_preset_on_window_metrics_change<H: UiHost>(
+    app: &mut H,
+    changed: &[TypeId],
+) -> Option<EditorThemePresetV1> {
+    sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metrics_change(
+        app,
+        changed,
+        |_app| {},
+    )
 }
 
 /// Apply the default editor density patch.
@@ -260,12 +296,16 @@ mod tests {
     use fret_core::{Color, Px};
     use fret_ui::Theme;
     use fret_ui_shadcn::shadcn_themes::{
-        ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york,
+        apply_shadcn_new_york, ShadcnBaseColor, ShadcnColorScheme,
     };
+    use std::any::TypeId;
 
     use super::{
-        EditorThemePresetV1, apply_editor_theme_preset_v1, install_editor_theme_preset_v1,
+        apply_editor_theme_preset_v1, install_editor_theme_preset_v1,
+        reapply_installed_editor_theme_preset_on_window_metrics_change,
         reapply_installed_editor_theme_preset_v1,
+        sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metrics_change,
+        EditorThemePresetV1,
     };
     use crate::primitives::EditorTokenKeys;
 
@@ -439,6 +479,50 @@ mod tests {
         assert_eq!(
             Theme::global(&app).color_by_key(EditorTokenKeys::PROPERTY_PANEL_BG),
             expected_panel_bg
+        );
+    }
+
+    #[test]
+    fn window_metrics_helper_reapplies_after_host_theme_sync() {
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Slate, ShadcnColorScheme::Dark);
+        install_editor_theme_preset_v1(&mut app, EditorThemePresetV1::Default);
+
+        let expected_field_bg = Some(Color::from_srgb_hex_rgb(0x14_1b_24));
+        let changed = [TypeId::of::<fret_core::WindowMetricsService>()];
+
+        let replayed =
+            sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metrics_change(
+                &mut app,
+                &changed,
+                |app| {
+                    apply_shadcn_new_york(app, ShadcnBaseColor::Slate, ShadcnColorScheme::Light);
+                },
+            );
+
+        assert_eq!(replayed, Some(EditorThemePresetV1::Default));
+        assert_eq!(
+            Theme::global(&app).color_by_key("component.text_field.bg"),
+            expected_field_bg
+        );
+    }
+
+    #[test]
+    fn window_metrics_helper_ignores_unrelated_global_changes() {
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Slate, ShadcnColorScheme::Dark);
+        install_editor_theme_preset_v1(&mut app, EditorThemePresetV1::Default);
+
+        let expected_field_bg = Theme::global(&app).color_by_key("component.text_field.bg");
+        let changed = [TypeId::of::<Theme>()];
+
+        let replayed =
+            reapply_installed_editor_theme_preset_on_window_metrics_change(&mut app, &changed);
+
+        assert_eq!(replayed, None);
+        assert_eq!(
+            Theme::global(&app).color_by_key("component.text_field.bg"),
+            expected_field_bg
         );
     }
 }

@@ -5,10 +5,10 @@ use fret::interop::embedded_viewport as embedded;
 use fret::prelude::*;
 use fret::view::ViewWindowState;
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
-use fret_core::{Color, Px, WindowMetricsService};
+use fret_core::{Color, Px};
 use fret_docking::{
-    DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx, DockPanelRegistryBuilder,
-    DockPanelRegistryService, ViewportPanel, runtime as dock_runtime,
+    runtime as dock_runtime, DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService,
+    ViewportPanel,
 };
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{
@@ -35,6 +35,10 @@ const AUX_LOGICAL_WINDOW_ID: &str = "aux";
 const ENV_SINGLE_WINDOW: &str = "FRET_IMUI_EDITOR_PROOF_SINGLE_WINDOW";
 const ENV_EDITOR_PRESET: &str = "FRET_IMUI_EDITOR_PRESET";
 const ENV_PROOF_LAYOUT: &str = "FRET_IMUI_EDITOR_PROOF_LAYOUT";
+const EDITOR_HOST_BASE_COLOR: shadcn::shadcn_themes::ShadcnBaseColor =
+    shadcn::shadcn_themes::ShadcnBaseColor::Slate;
+const EDITOR_HOST_DEFAULT_SCHEME: shadcn::shadcn_themes::ShadcnColorScheme =
+    shadcn::shadcn_themes::ShadcnColorScheme::Dark;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 enum ImUiEditorProofLayout {
@@ -80,16 +84,23 @@ fn selected_proof_layout() -> ImUiEditorProofLayout {
 
 fn replay_editor_theme_preset_on_global_changes(
     app: &mut App,
-    _window: AppWindowId,
+    window: AppWindowId,
     _ui: &mut fret_ui::UiTree<App>,
     _st: &mut ViewWindowState<ImUiEditorProofView>,
     changed: &[std::any::TypeId],
 ) {
-    if !changed.contains(&std::any::TypeId::of::<WindowMetricsService>()) {
-        return;
-    }
-
-    let _ = fret_ui_editor::theme::reapply_installed_editor_theme_preset_v1(app);
+    let _ = fret_ui_editor::theme::sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metrics_change(
+        app,
+        changed,
+        |app| {
+            let _ = shadcn::sync_theme_from_environment(
+                app,
+                window,
+                EDITOR_HOST_BASE_COLOR,
+                EDITOR_HOST_DEFAULT_SCHEME,
+            );
+        },
+    );
 }
 
 fn configure_imui_editor_proof_driver(
@@ -148,11 +159,7 @@ pub fn run() -> anyhow::Result<()> {
         .view_with_hooks::<ImUiEditorProofView>(configure_imui_editor_proof_driver)?
         .init_app(move |app| {
             configure_single_window_caps_if_requested(app);
-            shadcn::install_app_with_theme(
-                app,
-                shadcn::themes::ShadcnBaseColor::Slate,
-                shadcn::themes::ShadcnColorScheme::Dark,
-            );
+            shadcn::install_app_with_theme(app, EDITOR_HOST_BASE_COLOR, EDITOR_HOST_DEFAULT_SCHEME);
             fret_ui_editor::theme::install_editor_theme_preset_v1(app, editor_preset);
             fret_icons_lucide::install_app(app);
             install_dock_panel_registry(app);
