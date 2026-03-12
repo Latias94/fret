@@ -97,11 +97,20 @@ As of 2026-03-12:
 - The fourth internal text split has landed:
   - text tests now live under `crates/fret-render-wgpu/src/text/tests.rs`
   - `text/mod.rs` now keeps only `#[cfg(test)] mod tests;` as the test entrypoint
+- The fifth internal text split has landed:
+  - font catalog / fallback lifecycle helpers now live under
+    `crates/fret-render-wgpu/src/text/fonts.rs`
+  - `text/mod.rs` no longer owns font enumeration, locale updates, rescan flow, or font-family
+    cache reset helpers directly
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
   - `python3 tools/check_layering.py`: passed
 - Internal text split verification remains green after the test-module extraction:
+  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+- Internal text split verification remains green after the font/fallback extraction:
   - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
   - `python3 tools/check_layering.py`: passed

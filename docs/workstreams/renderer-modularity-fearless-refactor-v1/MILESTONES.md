@@ -39,6 +39,11 @@ Current snapshot (2026-03-12):
 - The fourth internal `text/mod.rs` split has landed:
   - tests moved into `crates/fret-render-wgpu/src/text/tests.rs`
   - `text/mod.rs` now keeps only a `#[cfg(test)] mod tests;` declaration for the test entrypoint
+- The fifth internal `text/mod.rs` split has landed:
+  - font catalog / fallback lifecycle helpers moved into
+    `crates/fret-render-wgpu/src/text/fonts.rs`
+  - `text/mod.rs` no longer owns font enumeration, locale updates, rescan flow, or font-family
+    cache reset helpers directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
