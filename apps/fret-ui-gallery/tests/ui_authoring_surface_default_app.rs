@@ -994,6 +994,18 @@ fn selected_resizable_snippet_helpers_prefer_into_ui_element_over_anyelement() {
             ],
         );
     }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/resizable/rtl.rs",
+        &[
+            "fn box_group<H: UiHost, B>(cx: &mut ElementContext<'_, H>, layout: LayoutRefinement, body: B,) -> impl IntoUiElement<H> + use<H, B> where B: IntoUiElement<H>",
+            "fn panel<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, height: Option<Px>,) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &[
+            "fn box_group<H: UiHost>(cx: &mut ElementContext<'_, H>, layout: LayoutRefinement, body: AnyElement,) -> AnyElement",
+            "fn panel<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, height: Option<Px>,) -> AnyElement",
+        ],
+    );
 }
 
 #[test]

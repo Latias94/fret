@@ -2,26 +2,30 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
 use fret_core::Axis;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn box_group<H: UiHost>(
+fn box_group<H: UiHost, B>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutRefinement,
-    body: AnyElement,
-) -> AnyElement {
+    body: B,
+) -> impl IntoUiElement<H> + use<H, B>
+where
+    B: IntoUiElement<H>,
+{
     let props = decl_style::container_props(
         cx.theme(),
         ChromeRefinement::default().border_1().rounded(Radius::Lg),
         layout,
     );
-    cx.container(props, move |_cx| [body])
+    ui::container_props(props, move |cx| [body.into_element(cx)])
 }
 
 fn panel<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: &'static str,
     height: Option<Px>,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let layout = match height {
         Some(h) => LayoutRefinement::default().w_full().h_px(h),
         None => LayoutRefinement::default().w_full().h_full(),
@@ -35,7 +39,7 @@ fn panel<H: UiHost>(
 
     let props =
         decl_style::container_props(cx.theme(), ChromeRefinement::default().p(Space::N6), layout);
-    cx.container(props, move |_cx| [body])
+    ui::container_props(props, move |_cx| [body])
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -49,9 +53,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .axis(Axis::Vertical)
             .test_id_prefix("ui-gallery-resizable-rtl.nested-vertical")
             .entries([
-                shadcn::ResizablePanel::new([panel(cx, "اثنان", None)]).into(),
+                shadcn::ResizablePanel::new([panel(cx, "اثنان", None).into_element(cx)]).into(),
                 shadcn::ResizableHandle::new().with_handle(true).into(),
-                shadcn::ResizablePanel::new([panel(cx, "ثلاثة", None)]).into(),
+                shadcn::ResizablePanel::new([panel(cx, "ثلاثة", None).into_element(cx)]).into(),
             ])
             .into_element(cx);
 
@@ -59,7 +63,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .axis(Axis::Horizontal)
             .test_id_prefix("ui-gallery-resizable-rtl")
             .entries([
-                shadcn::ResizablePanel::new([panel(cx, "واحد", Some(Px(200.0)))]).into(),
+                shadcn::ResizablePanel::new([panel(cx, "واحد", Some(Px(200.0))).into_element(cx)])
+                    .into(),
                 shadcn::ResizableHandle::new().with_handle(true).into(),
                 shadcn::ResizablePanel::new([nested_vertical]).into(),
             ])
@@ -73,6 +78,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .merge(LayoutRefinement::default().h_px(Px(320.0))),
         group,
     )
+    .into_element(cx)
     .test_id("ui-gallery-resizable-rtl")
 }
 // endregion: example
