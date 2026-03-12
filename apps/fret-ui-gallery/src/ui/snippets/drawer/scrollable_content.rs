@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("scrollable_content.rs");
 // region: example
 use fret_core::Px;
 use fret_ui::Theme;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -10,8 +11,9 @@ fn paragraph_block<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     prefix: &'static str,
     rows: usize,
-) -> AnyElement {
-    ui::v_flex(|cx| {
+) -> impl IntoUiElement<H> + use<H> {
+    let _ = cx;
+    ui::v_flex(move |cx| {
         (0..rows)
             .map(|index| {
                 cx.text(format!(
@@ -24,7 +26,6 @@ fn paragraph_block<H: UiHost>(
     .gap(Space::N2)
     .items_start()
     .layout(LayoutRefinement::default().w_full())
-    .into_element(cx)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -44,16 +45,19 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .into_element(cx)
             },
             move |cx| {
-                let scroller = shadcn::ScrollArea::new([paragraph_block(cx, "Scrollable", 14)])
-                    .refine_layout(
-                        LayoutRefinement::default()
-                            .w_full()
-                            .h_px(Px(220.0))
-                            .min_w_0()
-                            .min_h_0(),
-                    )
-                    .viewport_test_id("ui-gallery-drawer-scrollable-viewport")
-                    .into_element(cx);
+                let scroller = shadcn::ScrollArea::new(ui::children![
+                    cx;
+                    paragraph_block(cx, "Scrollable", 14)
+                ])
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .w_full()
+                        .h_px(Px(220.0))
+                        .min_w_0()
+                        .min_h_0(),
+                )
+                .viewport_test_id("ui-gallery-drawer-scrollable-viewport")
+                .into_element(cx);
 
                 let padded = {
                     let theme = Theme::global(&*cx.app);
@@ -65,24 +69,23 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     cx.container(props, move |_cx| [scroller])
                 };
 
-                shadcn::DrawerContent::new([
-                    shadcn::DrawerHeader::new([
-                        shadcn::DrawerTitle::new("Scrollable Content").into_element(cx),
+                shadcn::DrawerContent::new(ui::children![
+                    cx;
+                    shadcn::DrawerHeader::new(ui::children![
+                        cx;
+                        shadcn::DrawerTitle::new("Scrollable Content"),
                         shadcn::DrawerDescription::new(
                             "Keep actions visible while the content scrolls.",
                         )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
+                    ]),
                     padded,
-                    shadcn::DrawerFooter::new([
-                        shadcn::Button::new("Submit").into_element(cx),
+                    shadcn::DrawerFooter::new(ui::children![
+                        cx;
+                        shadcn::Button::new("Submit"),
                         shadcn::Button::new("Cancel")
                             .variant(shadcn::ButtonVariant::Outline)
-                            .toggle_model(close_open.clone())
-                            .into_element(cx),
-                    ])
-                    .into_element(cx),
+                            .toggle_model(close_open.clone()),
+                    ]),
                 ])
                 .into_element(cx)
                 .test_id("ui-gallery-drawer-scrollable-content")

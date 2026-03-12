@@ -1,26 +1,30 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn profile_fields<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     name: Model<String>,
     username: Model<String>,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let field = |cx: &mut ElementContext<'_, H>, label: &'static str, model: Model<String>| {
-        shadcn::Field::new([
-            shadcn::FieldLabel::new(label).into_element(cx),
-            shadcn::Input::new(model)
-                .refine_layout(LayoutRefinement::default().w_full())
-                .into_element(cx),
+        shadcn::Field::new(ui::children![
+            cx;
+            shadcn::FieldLabel::new(label),
+            shadcn::Input::new(model).refine_layout(LayoutRefinement::default().w_full())
         ])
         .into_element(cx)
     };
 
-    shadcn::FieldSet::new([field(cx, "Name", name), field(cx, "Username", username)])
-        .refine_layout(LayoutRefinement::default().w_full())
-        .into_element(cx)
+    shadcn::FieldSet::new(ui::children![
+        cx;
+        field(cx, "Name", name),
+        field(cx, "Username", username)
+    ])
+    .refine_layout(LayoutRefinement::default().w_full())
+    .into_element(cx)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -48,7 +52,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 },
                 |cx| {
                     let fields = {
-                        let fields = profile_fields(cx, name_model.clone(), username_model.clone());
+                        let fields = profile_fields(cx, name_model.clone(), username_model.clone())
+                            .into_element(cx);
                         let props = decl_style::container_props(
                             Theme::global(&*cx.app),
                             ChromeRefinement::default().px(Space::N4),
@@ -60,26 +65,24 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         );
                         cx.container(props, move |_cx| vec![fields])
                     };
-                    shadcn::SheetContent::new([
-                        shadcn::SheetHeader::new([
-                            shadcn::SheetTitle::new("Edit profile").into_element(cx),
+                    shadcn::SheetContent::new(ui::children![
+                        cx;
+                        shadcn::SheetHeader::new(ui::children![
+                            cx;
+                            shadcn::SheetTitle::new("Edit profile"),
                             shadcn::SheetDescription::new(
                                 "RTL layout keeps spacing and focus flow aligned.",
                             )
-                            .into_element(cx),
-                        ])
-                        .into_element(cx),
+                        ]),
                         fields,
-                        shadcn::SheetFooter::new([
+                        shadcn::SheetFooter::new(ui::children![
+                            cx;
                             shadcn::Button::new("Save changes")
-                                .toggle_model(save_open.clone())
-                                .into_element(cx),
+                                .toggle_model(save_open.clone()),
                             shadcn::Button::new("Close")
                                 .variant(shadcn::ButtonVariant::Outline)
-                                .toggle_model(close_open.clone())
-                                .into_element(cx),
-                        ])
-                        .into_element(cx),
+                                .toggle_model(close_open.clone()),
+                        ]),
                     ])
                     .into_element(cx)
                 },

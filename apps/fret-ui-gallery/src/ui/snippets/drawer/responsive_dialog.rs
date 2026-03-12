@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("responsive_dialog.rs");
 
 // region: example
 use fret_core::{Px, TextAlign};
-use fret_ui_kit::ui;
+use fret_ui_kit::{IntoUiElement, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn profile_field<H: UiHost>(
@@ -10,7 +10,7 @@ fn profile_field<H: UiHost>(
     label: &'static str,
     model: Model<String>,
     input_test_id: Option<&'static str>,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let input =
         shadcn::Input::new(model).refine_layout(LayoutRefinement::default().w_full().min_w_0());
     let input = match input_test_id {
@@ -18,11 +18,7 @@ fn profile_field<H: UiHost>(
         None => input,
     };
 
-    shadcn::Field::new([
-        shadcn::FieldLabel::new(label).into_element(cx),
-        input.into_element(cx),
-    ])
-    .into_element(cx)
+    shadcn::Field::new(ui::children![cx; shadcn::FieldLabel::new(label), input]).into_element(cx)
 }
 
 #[derive(Clone, Copy)]
@@ -38,17 +34,16 @@ fn profile_form<H: UiHost>(
     email: Model<String>,
     username: Model<String>,
     test_ids: Option<ProfileFormTestIds>,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let form = ui::v_stack(|cx| {
-        vec![
+        ui::children![
+            cx;
             profile_field(cx, "Email", email, test_ids.map(|ids| ids.email)),
             profile_field(cx, "Username", username, test_ids.map(|ids| ids.username)),
             match test_ids {
-                Some(ids) => shadcn::Button::new("Save changes")
-                    .test_id(ids.save)
-                    .into_element(cx),
-                None => shadcn::Button::new("Save changes").into_element(cx),
-            },
+                Some(ids) => shadcn::Button::new("Save changes").test_id(ids.save),
+                None => shadcn::Button::new("Save changes"),
+            }
         ]
     })
     .gap(Space::N6)
@@ -84,15 +79,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .into_element(cx)
         },
         move |cx| {
-            shadcn::DialogContent::new([
-                shadcn::DialogHeader::new([
-                    shadcn::DialogTitle::new("Edit profile").into_element(cx),
+            shadcn::DialogContent::new(ui::children![
+                cx;
+                shadcn::DialogHeader::new(ui::children![
+                    cx;
+                    shadcn::DialogTitle::new("Edit profile"),
                     shadcn::DialogDescription::new(
                         "Make changes to your profile here. Click save when you're done.",
                     )
-                    .into_element(cx),
-                ])
-                .into_element(cx),
+                ]),
                 profile_form(cx, desktop_email.clone(), desktop_username.clone(), None),
             ])
             .refine_layout(LayoutRefinement::default().max_w(Px(425.0)))
@@ -121,31 +116,34 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     username: "ui-gallery-drawer-responsive-mobile-username",
                     save: "ui-gallery-drawer-responsive-mobile-save",
                 }),
-            );
+            )
+            .into_element(cx);
             let form = ui::v_stack(move |_cx| vec![form])
                 .px_4()
                 .layout(LayoutRefinement::default().w_full().min_w_0())
                 .into_element(cx);
 
-            shadcn::DrawerContent::new([
-                shadcn::DrawerHeader::new([
-                    shadcn::DrawerTitle::new("Edit profile").into_element(cx),
+            shadcn::DrawerContent::new(ui::children![
+                cx;
+                shadcn::DrawerHeader::new(ui::children![
+                    cx;
+                    shadcn::DrawerTitle::new("Edit profile"),
                     shadcn::DrawerDescription::new(
                         "Make changes to your profile here. Click save when you're done.",
                     )
-                    .into_element(cx),
                 ])
-                .text_align(TextAlign::Start)
-                .into_element(cx),
+                .text_align(TextAlign::Start),
                 form,
-                shadcn::DrawerFooter::new([shadcn::DrawerClose::from_scope().build(
-                    cx,
-                    shadcn::Button::new("Cancel")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .test_id("ui-gallery-drawer-responsive-mobile-cancel"),
-                )])
-                .refine_style(ChromeRefinement::default().pt(Space::N2))
-                .into_element(cx),
+                shadcn::DrawerFooter::new(ui::children![
+                    cx;
+                    shadcn::DrawerClose::from_scope().build(
+                        cx,
+                        shadcn::Button::new("Cancel")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .test_id("ui-gallery-drawer-responsive-mobile-cancel"),
+                    )
+                ])
+                .refine_style(ChromeRefinement::default().pt(Space::N2)),
             ])
             .into_element(cx)
             .test_id("ui-gallery-drawer-responsive-mobile-content")

@@ -193,6 +193,9 @@ Current execution note on 2026-03-12:
   `new(children: Vec<AnyElement>)`, the teaching surface should prefer
   `ui::children![cx; ...]` over `vec![...into_element(cx)]` so typed values remain the visible
   authoring vocabulary even before that constructor grows a late-landing builder path.
+- this now explicitly includes first-party modal/form section examples such as
+  `DialogContent` / `DialogHeader` / `DialogFooter`, `SheetContent` / `SheetHeader` /
+  `SheetFooter`, and `DrawerContent` / `DrawerHeader` / `DrawerFooter`.
 
 ## Advanced/Raw Surface
 

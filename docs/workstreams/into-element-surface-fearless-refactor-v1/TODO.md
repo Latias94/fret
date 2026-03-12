@@ -158,6 +158,11 @@ Implementation note on 2026-03-12:
   as well: where a component still intentionally owns `new(children: Vec<AnyElement>)`, Gallery
   snippets should prefer `ui::children![cx; ...]` over ad-hoc `vec![...into_element(cx)]`
   assembly so typed helpers can still read like component values at the call site.
+- that eager child-list guidance now also covers the first-party modal/form exemplars:
+  selected `dialog`, `sheet`, and `drawer` snippets now build `Field`, `FieldSet`,
+  `DialogContent`, `DialogHeader`, `DialogFooter`, `SheetContent`, `SheetHeader`,
+  `SheetFooter`, `DrawerContent`, `DrawerHeader`, and `DrawerFooter` children through
+  `ui::children![cx; ...]` instead of manually pre-landing every child.
 - `fret-ui-shadcn::prelude::*` now re-exports `IntoUiElement`, so direct-crate first-party
   shadcn examples do not need ad-hoc trait imports just to land typed helpers such as
   `shadcn::raw::typography::*`.

@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("sides.rs");
 
 // region: example
-use fret_ui_kit::ui;
+use fret_ui_kit::{IntoUiElement, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn side_button<H: UiHost>(
@@ -10,7 +10,7 @@ fn side_button<H: UiHost>(
     direction: shadcn::DrawerDirection,
     open: Model<bool>,
     test_id_prefix: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let open_for_trigger = open.clone();
     let open_for_close = open.clone();
     shadcn::Drawer::new(open).direction(direction).into_element(
@@ -23,20 +23,21 @@ fn side_button<H: UiHost>(
                 .into_element(cx)
         },
         move |cx| {
-            shadcn::DrawerContent::new([
-                shadcn::DrawerHeader::new([
-                    shadcn::DrawerTitle::new(format!("{title} Drawer")).into_element(cx),
+            shadcn::DrawerContent::new(ui::children![
+                cx;
+                shadcn::DrawerHeader::new(ui::children![
+                    cx;
+                    shadcn::DrawerTitle::new(format!("{title} Drawer")),
                     shadcn::DrawerDescription::new(
                         "Use the `direction` prop to control drawer placement.",
                     )
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::DrawerFooter::new([shadcn::Button::new("Close")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .toggle_model(open_for_close.clone())
-                    .into_element(cx)])
-                .into_element(cx),
+                ]),
+                shadcn::DrawerFooter::new(ui::children![
+                    cx;
+                    shadcn::Button::new("Close")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .toggle_model(open_for_close.clone())
+                ]),
             ])
             .into_element(cx)
             .test_id(format!("{test_id_prefix}-content"))
@@ -58,28 +59,32 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 shadcn::DrawerDirection::Top,
                 top_open.clone(),
                 "ui-gallery-drawer-side-top",
-            ),
+            )
+            .into_element(cx),
             side_button(
                 cx,
                 "Right",
                 shadcn::DrawerDirection::Right,
                 right_open.clone(),
                 "ui-gallery-drawer-side-right",
-            ),
+            )
+            .into_element(cx),
             side_button(
                 cx,
                 "Bottom",
                 shadcn::DrawerDirection::Bottom,
                 bottom_open.clone(),
                 "ui-gallery-drawer-side-bottom",
-            ),
+            )
+            .into_element(cx),
             side_button(
                 cx,
                 "Left",
                 shadcn::DrawerDirection::Left,
                 left_open.clone(),
                 "ui-gallery-drawer-side-left",
-            ),
+            )
+            .into_element(cx),
         ]
     })
     .gap(Space::N2)
