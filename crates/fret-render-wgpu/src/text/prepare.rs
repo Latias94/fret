@@ -531,6 +531,17 @@ impl TextSystem {
         y_bin: u8,
     ) -> Option<parley::swash::scale::image::Image> {
         let font_ref = prepared_glyph_font_ref(glyph)?;
+        self.render_prepared_glyph_image_with_font_ref(glyph, font_ref, glyph_id, x_bin, y_bin)
+    }
+
+    fn render_prepared_glyph_image_with_font_ref(
+        &mut self,
+        glyph: &ParleyGlyph,
+        font_ref: parley::swash::FontRef<'_>,
+        glyph_id: u16,
+        x_bin: u8,
+        y_bin: u8,
+    ) -> Option<parley::swash::scale::image::Image> {
         let mut scaler = self.build_prepared_glyph_scaler(glyph, font_ref);
         render_prepared_glyph_image_at_bins(&mut scaler, glyph_id, x_bin, y_bin)
     }

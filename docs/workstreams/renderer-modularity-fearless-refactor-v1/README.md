@@ -352,6 +352,10 @@ As of 2026-03-12:
   - prepared-glyph scaler-builder normalized-coords assembly now lives behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `build_prepared_glyph_scaler(...)` no longer owns normalized-coords builder assembly directly
+- The sixty-seventh internal text split has landed:
+  - prepared-glyph image rendering after font-ref resolution now lives behind a dedicated helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `render_prepared_glyph_image(...)` no longer owns scaler/render handoff after font-ref lookup directly
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
