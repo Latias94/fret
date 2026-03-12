@@ -7,7 +7,7 @@ use fret_core::{
     TextPaintStyle, TextShapingStyle, TextSpan, TextStyle, TextWrap, UnderlineStyle,
 };
 use fret_render_text::cache_keys::{TextMeasureKey, spans_shaping_fingerprint};
-use fret_render_text::spans::ResolvedSpan;
+use fret_render_text::spans::{ResolvedSpan, sanitize_spans_for_text};
 use std::sync::Arc;
 
 fn pending_upload_bytes_for_key(text: &super::TextSystem, key: super::GlyphKey) -> Vec<u8> {
@@ -303,7 +303,7 @@ fn sanitize_spans_extends_missing_tail() {
         ..Default::default()
     }];
 
-    let sanitized = super::sanitize_spans_for_text(text, &spans).expect("sanitized spans");
+    let sanitized = sanitize_spans_for_text(text, &spans).expect("sanitized spans");
     let rich = fret_core::AttributedText {
         text: Arc::<str>::from(text),
         spans: sanitized.clone(),
@@ -335,7 +335,7 @@ fn sanitize_spans_truncates_overflowing_last_span() {
         ..Default::default()
     }];
 
-    let sanitized = super::sanitize_spans_for_text(text, &spans).expect("sanitized spans");
+    let sanitized = sanitize_spans_for_text(text, &spans).expect("sanitized spans");
     let rich = fret_core::AttributedText {
         text: Arc::<str>::from(text),
         spans: sanitized.clone(),
@@ -382,7 +382,7 @@ fn sanitize_spans_snaps_to_char_boundaries() {
         },
     ];
 
-    let sanitized = super::sanitize_spans_for_text(text, &spans).expect("sanitized spans");
+    let sanitized = sanitize_spans_for_text(text, &spans).expect("sanitized spans");
     let rich = fret_core::AttributedText {
         text: Arc::<str>::from(text),
         spans: sanitized.clone(),
@@ -401,7 +401,7 @@ fn sanitize_spans_snaps_to_char_boundaries() {
 fn sanitize_spans_returns_none_for_noop_full_span() {
     let text = "hello";
     let spans = vec![TextSpan::new(text.len())];
-    assert!(super::sanitize_spans_for_text(text, &spans).is_none());
+    assert!(sanitize_spans_for_text(text, &spans).is_none());
 }
 
 #[test]
@@ -412,7 +412,7 @@ fn sanitize_spans_treats_axis_overrides_as_non_noop() {
         shaping: TextShapingStyle::default().with_axis("wght", 300.0),
         paint: Default::default(),
     }];
-    assert!(super::sanitize_spans_for_text(text, &spans).is_some());
+    assert!(sanitize_spans_for_text(text, &spans).is_some());
 }
 
 #[test]
@@ -423,7 +423,7 @@ fn sanitize_spans_treats_feature_overrides_as_non_noop() {
         shaping: TextShapingStyle::default().with_feature("calt", 0),
         paint: Default::default(),
     }];
-    assert!(super::sanitize_spans_for_text(text, &spans).is_some());
+    assert!(sanitize_spans_for_text(text, &spans).is_some());
 }
 
 #[test]

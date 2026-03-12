@@ -59,6 +59,11 @@ Current snapshot (2026-03-12):
   - atlas runtime helpers moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` no longer owns atlas bind-group access, scene pinning, or glyph
     ensure/rasterize helpers directly
+- The tenth internal `text/mod.rs` split has landed:
+  - prepare entrypoints and prepare-specific trace/decoration helpers moved into
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `text/mod.rs` no longer owns plain/attributed prepare entrypoints or prepare support helpers
+    directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed

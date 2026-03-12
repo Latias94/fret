@@ -117,6 +117,11 @@ As of 2026-03-12:
   - atlas runtime helpers now live under `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` no longer owns atlas bind-group access, scene pinning, or glyph ensure/rasterize
     helpers directly
+- The tenth internal text split has landed:
+  - prepare entrypoints and prepare-specific trace/decoration helpers now live under
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `text/mod.rs` no longer owns plain/attributed prepare entrypoints or prepare support helpers
+    directly
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
@@ -138,6 +143,10 @@ As of 2026-03-12:
   - `cargo check -p fret-launch -p fret-examples`: passed
   - `python3 tools/check_layering.py`: passed
 - Internal text split verification remains green after the atlas runtime extraction:
+  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+- Internal text split verification remains green after the prepare support extraction:
   - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
   - `python3 tools/check_layering.py`: passed
