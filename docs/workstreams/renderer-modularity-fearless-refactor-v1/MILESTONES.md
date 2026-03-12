@@ -146,6 +146,10 @@ Current snapshot (2026-03-12):
   - prepared-glyph context assembly now lives behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `materialize_prepared_line(...)` no longer owns `glyph_id/face_key/size_bits` setup directly
+- The thirty-first internal `text/mod.rs` split has landed:
+  - prepared-line per-glyph materialization now lives behind a dedicated helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `materialize_prepared_line(...)` now just iterates prepared glyphs and pushes returned instances
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed

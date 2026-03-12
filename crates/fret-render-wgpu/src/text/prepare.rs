@@ -316,30 +316,40 @@ impl TextSystem {
         lines.push(layout);
 
         for g in prepared_glyphs {
-            let Some(context) = self.prepare_prepared_glyph_context(&g, face_usage) else {
+            let Some(instance) =
+                self.materialize_prepared_line_glyph(&g, resolved_spans, scale, epoch, face_usage)
+            else {
                 continue;
             };
-            let (x, x_bin, y, y_bin) = prepared_glyph_origin_bins(&g);
-
-            let paint_span = prepared_glyph_paint_span(resolved_spans, &g);
-            let Some((glyph_key, x0_px, y0_px, w_px, h_px)) = self.resolve_prepared_glyph_bounds(
-                &g,
-                context.glyph_id,
-                context.face_key,
-                context.size_bits,
-                x_bin,
-                y_bin,
-                x,
-                y,
-                epoch,
-            ) else {
-                continue;
-            };
-
-            glyphs.push(prepared_glyph_instance(
-                glyph_key, x0_px, y0_px, w_px, h_px, paint_span, scale,
-            ));
+            glyphs.push(instance);
         }
+    }
+
+    fn materialize_prepared_line_glyph(
+        &mut self,
+        glyph: &ParleyGlyph,
+        resolved_spans: Option<&[ResolvedSpan]>,
+        scale: f32,
+        epoch: u64,
+        face_usage: &mut HashMap<FontFaceKey, (u32, u32)>,
+    ) -> Option<GlyphInstance> {
+        let context = self.prepare_prepared_glyph_context(glyph, face_usage)?;
+        let (x, x_bin, y, y_bin) = prepared_glyph_origin_bins(glyph);
+        let paint_span = prepared_glyph_paint_span(resolved_spans, glyph);
+        let (glyph_key, x0_px, y0_px, w_px, h_px) = self.resolve_prepared_glyph_bounds(
+            glyph,
+            context.glyph_id,
+            context.face_key,
+            context.size_bits,
+            x_bin,
+            y_bin,
+            x,
+            y,
+            epoch,
+        )?;
+        Some(prepared_glyph_instance(
+            glyph_key, x0_px, y0_px, w_px, h_px, paint_span, scale,
+        ))
     }
 
     fn prepare_prepared_glyph_context(
