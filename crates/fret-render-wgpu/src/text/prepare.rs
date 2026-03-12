@@ -1056,6 +1056,36 @@ fn prepared_glyph_raster_from_image_parts_with_metadata(
     kind: GlyphQuadKind,
     bytes_per_pixel: u32,
 ) -> PreparedGlyphRaster {
+    prepared_glyph_raster_from_image_parts_with_payload(
+        face_key,
+        glyph_id,
+        size_bits,
+        x_bin,
+        y_bin,
+        width,
+        height,
+        left,
+        top,
+        kind,
+        bytes_per_pixel,
+        image.data,
+    )
+}
+
+fn prepared_glyph_raster_from_image_parts_with_payload(
+    face_key: FontFaceKey,
+    glyph_id: u32,
+    size_bits: u32,
+    x_bin: u8,
+    y_bin: u8,
+    width: u32,
+    height: u32,
+    left: i32,
+    top: i32,
+    kind: GlyphQuadKind,
+    bytes_per_pixel: u32,
+    data: Vec<u8>,
+) -> PreparedGlyphRaster {
     prepared_glyph_raster(
         face_key,
         glyph_id,
@@ -1068,7 +1098,7 @@ fn prepared_glyph_raster_from_image_parts_with_metadata(
         left,
         top,
         bytes_per_pixel,
-        image.data,
+        data,
     )
 }
 

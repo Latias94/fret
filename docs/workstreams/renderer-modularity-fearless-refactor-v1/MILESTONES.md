@@ -318,6 +318,10 @@ Current snapshot (2026-03-12):
   - prepared-glyph raster image handoff now uses a projected glyph-id value helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `render_prepared_glyph_raster_from_image(...)` no longer depends on the full glyph record
+- The seventy-third internal `text/mod.rs` split has landed:
+  - prepared-glyph raster payload handoff after metadata decoding now lives behind a dedicated helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `prepared_glyph_raster_from_image_parts_with_metadata(...)` no longer owns `image.data` payload handoff directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
