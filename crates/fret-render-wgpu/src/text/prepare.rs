@@ -475,18 +475,7 @@ impl TextSystem {
         let font_ref = prepared_glyph_font_ref(glyph)?;
         let mut scaler = self.build_prepared_glyph_scaler(glyph, font_ref);
         let offset_px = prepared_glyph_offset_px(x_bin, y_bin);
-
-        let Some(image) = parley::swash::scale::Render::new(&[
-            parley::swash::scale::Source::ColorOutline(0),
-            parley::swash::scale::Source::ColorBitmap(parley::swash::scale::StrikeWith::BestFit),
-            parley::swash::scale::Source::Outline,
-        ])
-        .offset(offset_px)
-        .render(&mut scaler, glyph_id) else {
-            return None;
-        };
-
-        Some(image)
+        render_prepared_glyph_image_with_scaler(&mut scaler, glyph_id, offset_px)
     }
 
     fn build_prepared_glyph_scaler<'a>(
@@ -646,6 +635,20 @@ fn prepared_glyph_font_ref<'a>(glyph: &'a ParleyGlyph) -> Option<parley::swash::
 
 fn prepared_glyph_offset_px(x_bin: u8, y_bin: u8) -> parley::swash::zeno::Vector {
     parley::swash::zeno::Vector::new(subpixel_bin_as_float(x_bin), subpixel_bin_as_float(y_bin))
+}
+
+fn render_prepared_glyph_image_with_scaler(
+    scaler: &mut parley::swash::scale::Scaler<'_>,
+    glyph_id: u16,
+    offset_px: parley::swash::zeno::Vector,
+) -> Option<parley::swash::scale::image::Image> {
+    parley::swash::scale::Render::new(&[
+        parley::swash::scale::Source::ColorOutline(0),
+        parley::swash::scale::Source::ColorBitmap(parley::swash::scale::StrikeWith::BestFit),
+        parley::swash::scale::Source::Outline,
+    ])
+    .offset(offset_px)
+    .render(scaler, glyph_id)
 }
 
 fn prepared_glyph_raster_from_image(
