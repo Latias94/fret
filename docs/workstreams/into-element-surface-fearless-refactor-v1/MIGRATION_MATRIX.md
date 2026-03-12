@@ -81,6 +81,11 @@ Execution note on 2026-03-12:
   where `demo_shell<B>(...)` and `gate_panel<B>(...)` now accept `IntoUiElement<fret_app::App>`
   inputs and reserve `.into_element(cx)` for the shell/panel child-landing seams instead of
   forcing callers to pre-land `AnyElement`.
+- the shadcn surface gate now also records
+  `ecosystem/fret-ui-shadcn/src/{context_menu,dropdown_menu,menubar}.rs`,
+  where the internal `menu_icon_slot(...)` wrappers now accept `IntoUiElement<H>` inputs instead
+  of forcing pre-landed `AnyElement`, while keeping the wrapper output itself as the explicit
+  landed menu-slot seam.
 - the focused `selected_*` source gate now also covers
   `apps/fret-ui-gallery/src/ui/snippets/sidebar/{demo,controlled,mobile,rtl}.rs`,
   where `menu_button(...)` moved from raw `AnyElement` returns to `IntoUiElement`-based helper

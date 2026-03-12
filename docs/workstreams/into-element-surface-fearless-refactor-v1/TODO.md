@@ -129,6 +129,10 @@ Implementation note on 2026-03-12:
   `UiIntoElement` on those adapters.
 - `fret-ui-shadcn` `ui_builder_ext/*` reusable helper closures now accept values that land through
   `IntoUiElement<H>` instead of requiring `AnyElement`-typed closure returns up front.
+- `fret-ui-shadcn` internal menu-slot wrappers in
+  `context_menu.rs`, `dropdown_menu.rs`, and `menubar.rs`
+  now accept `IntoUiElement<H>` inputs for `menu_icon_slot(...)` instead of forcing pre-landed
+  `AnyElement`, while keeping the wrapper's own output as an explicit landed menu row slot.
 - selected advanced/manual-assembly examples now also keep reusable helpers off raw landed return
   types by default:
   `apps/fret-examples/src/assets_demo.rs` (`render_image_panel`, `render_svg_panel`),

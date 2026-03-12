@@ -33,8 +33,8 @@ use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Radius, Space, WidgetState, WidgetStateProperty, WidgetStates, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayController,
+    OverlayPresence, Radius, Space, WidgetState, WidgetStateProperty, WidgetStates, ui,
 };
 
 use crate::menu_authoring;
@@ -1299,7 +1299,10 @@ fn menu_row_children<H: UiHost>(
     vec![chrome].into()
 }
 
-fn menu_icon_slot<H: UiHost>(cx: &mut ElementContext<'_, H>, element: AnyElement) -> AnyElement {
+fn menu_icon_slot<H: UiHost, B>(cx: &mut ElementContext<'_, H>, element: B) -> AnyElement
+where
+    B: IntoUiElement<H>,
+{
     cx.flex(
         FlexProps {
             layout: {
@@ -1316,7 +1319,7 @@ fn menu_icon_slot<H: UiHost>(cx: &mut ElementContext<'_, H>, element: AnyElement
             align: CrossAlign::Center,
             wrap: false,
         },
-        move |_cx| vec![element],
+        move |cx| vec![element.into_element(cx)],
     )
 }
 

@@ -308,6 +308,12 @@ The same wrapper rule also applies to internal gallery scaffolds:
 - `src/ui/doc_layout.rs::demo_shell<B>(...)`
 - `src/ui/previews/pages/editors/code_editor/mvp/gates.rs::gate_panel<B>(...)`
 
+The same input rule also applies to internal shadcn menu-slot wrappers:
+
+- `ecosystem/fret-ui-shadcn/src/context_menu.rs::menu_icon_slot<H, B>(...)`
+- `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs::menu_icon_slot<H, B>(...)`
+- `ecosystem/fret-ui-shadcn/src/menubar.rs::menu_icon_slot<H, B>(...)`
+
 Implementation fallback rule:
 
 - if an ecosystem builder or recipe type does not yet implement `IntoUiElement<H>` directly,
