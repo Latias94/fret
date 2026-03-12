@@ -1949,22 +1949,7 @@ impl DropdownMenu {
             let scale = motion.scale;
             let opening = is_open;
             let arrow = self.arrow;
-            #[derive(Default)]
-            struct TriggerKeyboardOpenState {
-                focus_last_on_open: Option<Model<bool>>,
-            }
-            let focus_last_on_open = cx.with_state(TriggerKeyboardOpenState::default, |st| {
-                st.focus_last_on_open.clone()
-            });
-            let focus_last_on_open = if let Some(model) = focus_last_on_open {
-                model
-            } else {
-                let model = cx.app.models_mut().insert(false);
-                cx.with_state(TriggerKeyboardOpenState::default, |st| {
-                    st.focus_last_on_open = Some(model.clone());
-                });
-                model
-            };
+            let focus_last_on_open = cx.model_for(overlay_id, || false);
             let keyboard_focus_last_on_open = cx
                 .watch_model(&focus_last_on_open)
                 .layout()
