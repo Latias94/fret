@@ -23,9 +23,9 @@ use fret_ui_kit::primitives::control_registry::{
 };
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, OverrideSlot, Radius,
-    ShadowPreset, Size as ComponentSize, Space, WidgetStateProperty, WidgetStates,
-    resolve_override_slot, ui,
+    ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, MetricRef, OverrideSlot,
+    PaddingRefinement, Radius, ShadowPreset, Size as ComponentSize, Space, WidgetStateProperty,
+    WidgetStates, resolve_override_slot, ui,
 };
 
 use crate::overlay_motion;
@@ -416,10 +416,46 @@ pub(crate) fn button_text_style(theme: &Theme, size: ButtonSize) -> TextStyle {
     style
 }
 
+fn button_padding_refinement(
+    dir: crate::LayoutDirection,
+    size: ComponentSize,
+    shrink_inline_start: bool,
+    shrink_inline_end: bool,
+) -> PaddingRefinement {
+    let (base_x, compact_x, pad_y) = match size {
+        ComponentSize::XSmall => (Space::N2, Space::N1p5, Space::N1),
+        ComponentSize::Small => (Space::N3, Space::N2p5, Space::N1),
+        ComponentSize::Medium => (Space::N4, Space::N3, Space::N2),
+        ComponentSize::Large => (Space::N6, Space::N4, Space::N2),
+    };
+
+    let pad_inline_start = MetricRef::space(if shrink_inline_start {
+        compact_x
+    } else {
+        base_x
+    });
+    let pad_inline_end = MetricRef::space(if shrink_inline_end { compact_x } else { base_x });
+    let pad_y = MetricRef::space(pad_y);
+
+    let (left, right) = match dir {
+        crate::LayoutDirection::Ltr => (pad_inline_start, pad_inline_end),
+        crate::LayoutDirection::Rtl => (pad_inline_end, pad_inline_start),
+    };
+
+    PaddingRefinement {
+        top: Some(pad_y.clone()),
+        right: Some(right),
+        bottom: Some(pad_y),
+        left: Some(left),
+    }
+}
+
 pub struct Button {
     label: Arc<str>,
     a11y_label: Option<Arc<str>>,
     children: Vec<AnyElement>,
+    leading_children: Vec<AnyElement>,
+    trailing_children: Vec<AnyElement>,
     leading_icon: Option<IconId>,
     trailing_icon: Option<IconId>,
     label_font_override: Option<FontId>,
@@ -462,6 +498,8 @@ impl std::fmt::Debug for Button {
             .field("label", &self.label)
             .field("a11y_label", &self.a11y_label)
             .field("children_len", &self.children.len())
+            .field("leading_children_len", &self.leading_children.len())
+            .field("trailing_children_len", &self.trailing_children.len())
             .field("leading_icon", &self.leading_icon)
             .field("trailing_icon", &self.trailing_icon)
             .field("command", &self.command)
@@ -491,6 +529,8 @@ impl Button {
             label,
             a11y_label: None,
             children: Vec::new(),
+            leading_children: Vec::new(),
+            trailing_children: Vec::new(),
             leading_icon: None,
             trailing_icon: None,
             label_font_override: None,
@@ -540,6 +580,24 @@ impl Button {
 
     pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
         self.children = children.into_iter().collect();
+        self
+    }
+
+    /// Adds inline-start content while preserving the button's default label and slot layout.
+    ///
+    /// Prefer this for dynamic affordances such as `Spinner`, matching upstream
+    /// `data-icon="inline-start"` compositions without forcing a full content override.
+    pub fn leading_children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.leading_children = children.into_iter().collect();
+        self
+    }
+
+    /// Adds inline-end content while preserving the button's default label and slot layout.
+    ///
+    /// Prefer this for trailing affordances such as `Spinner`, matching upstream
+    /// `data-icon="inline-end"` compositions without forcing a full content override.
+    pub fn trailing_children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.trailing_children = children.into_iter().collect();
         self
     }
 
@@ -756,6 +814,7 @@ impl Button {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).snapshot();
+            let dir = crate::use_direction(cx, None);
 
             let variant_style = variant_style(self.variant);
             let has_outline_shadow = self.variant == ButtonVariant::Outline;
@@ -898,19 +957,32 @@ impl Button {
             let text_line_height = text_style
                 .line_height
                 .unwrap_or_else(|| theme.metric_token("font.line_height"));
+            let has_content_override = !self.children.is_empty();
+            let has_inline_start_svg_like_children = !has_content_override
+                && (self.leading_icon.is_some()
+                    || self.leading_children.iter().any(contains_svg_icon_like));
+            let has_inline_end_svg_like_children = !has_content_override
+                && (self.trailing_icon.is_some()
+                    || self.trailing_children.iter().any(contains_svg_icon_like));
+            let has_override_svg_like_children =
+                has_content_override && self.children.iter().any(contains_svg_icon_like);
             let is_icon = {
                 let label_is_empty = self.label.is_empty();
                 is_icon_button
                     || (label_is_empty
                         && (self.leading_icon.is_some()
                             || self.trailing_icon.is_some()
+                            || !self.leading_children.is_empty()
+                            || !self.trailing_children.is_empty()
                             || !self.children.is_empty()))
             };
             let has_svg_icon_like_children = !is_icon_button
-                && (self.children.iter().any(contains_svg_icon_like)
-                    || self.leading_icon.is_some()
-                    || self.trailing_icon.is_some());
+                && (has_override_svg_like_children
+                    || has_inline_start_svg_like_children
+                    || has_inline_end_svg_like_children);
             let children = self.children;
+            let leading_children = self.leading_children;
+            let trailing_children = self.trailing_children;
             let visible_label = self.label;
             let leading_icon = self.leading_icon;
             let trailing_icon = self.trailing_icon;
@@ -1023,22 +1095,27 @@ impl Button {
                 let padding = if is_icon {
                     ChromeRefinement::default()
                 } else {
-                    // shadcn/ui: `has-[>svg]:px-*` uses tighter horizontal padding when an icon is present.
-                    let shrink_px = has_svg_icon_like_children;
-                    match size {
-                        ComponentSize::Small => ChromeRefinement::default()
-                            .px(if shrink_px { Space::N2p5 } else { Space::N3 })
-                            .py(Space::N1),
-                        ComponentSize::Medium => ChromeRefinement::default()
-                            .px(if shrink_px { Space::N3 } else { Space::N4 })
-                            .py(Space::N2),
-                        ComponentSize::Large => ChromeRefinement::default()
-                            .px(if shrink_px { Space::N4 } else { Space::N6 })
-                            .py(Space::N2),
-                        ComponentSize::XSmall => {
-                            ChromeRefinement::default().px(Space::N2).py(Space::N1)
-                        }
-                    }
+                    // Upstream shadcn buttons compact only the occupied inline side when icon-like
+                    // content is expressed through `data-icon="inline-start|inline-end"`. Keep
+                    // the older "shrink both sides" fallback only for full content overrides.
+                    let (shrink_inline_start, shrink_inline_end) = if has_content_override {
+                        let shrink = has_svg_icon_like_children;
+                        (shrink, shrink)
+                    } else {
+                        (
+                            has_inline_start_svg_like_children,
+                            has_inline_end_svg_like_children,
+                        )
+                    };
+
+                    let mut chrome = ChromeRefinement::default();
+                    chrome.padding = Some(button_padding_refinement(
+                        dir,
+                        size,
+                        shrink_inline_start,
+                        shrink_inline_end,
+                    ));
+                    chrome
                 };
 
                 let mut chrome = padding.merge(
@@ -1136,10 +1213,15 @@ impl Button {
                         };
 
                         let mut children = Some(children);
+                        let mut leading_children = Some(leading_children);
+                        let mut trailing_children = Some(trailing_children);
                         let content = if children.as_ref().is_some_and(|c| c.is_empty()) {
-                            let mut content = Vec::with_capacity(
+                            let mut inline_start = Vec::with_capacity(
                                 usize::from(leading_icon.is_some())
-                                    + usize::from(!visible_label.is_empty())
+                                    + leading_children.as_ref().map_or(0, Vec::len),
+                            );
+                            let mut inline_end = Vec::with_capacity(
+                                trailing_children.as_ref().map_or(0, Vec::len)
                                     + usize::from(trailing_icon.is_some()),
                             );
 
@@ -1154,14 +1236,15 @@ impl Button {
                             });
                             if let Some(icon) = leading_icon.clone() {
                                 let icon = crate::icon::icon_with(cx, icon, Some(icon_px), None);
-                                content.push(crate::test_id::attach_test_id_suffix(
+                                inline_start.push(crate::test_id::attach_test_id_suffix(
                                     icon,
                                     test_id.as_ref(),
                                     "icon",
                                 ));
                             }
+                            inline_start.extend(leading_children.take().unwrap_or_default());
 
-                            if !visible_label.is_empty() {
+                            let label = if !visible_label.is_empty() {
                                 let mut label = ui::text(visible_label.clone())
                                     .text_size_px(text_px)
                                     .fixed_line_box_px(text_line_height)
@@ -1180,23 +1263,45 @@ impl Button {
                                     label = label.font_axis(axis.tag.to_string(), axis.value);
                                 }
                                 let label = label.into_element(cx);
-                                content.push(crate::test_id::attach_test_id_suffix(
+                                Some(crate::test_id::attach_test_id_suffix(
                                     label,
                                     test_id.as_ref(),
                                     "label",
-                                ));
-                            }
+                                ))
+                            } else {
+                                None
+                            };
 
+                            inline_end.extend(trailing_children.take().unwrap_or_default());
                             if let Some(icon) = trailing_icon.clone() {
                                 let icon = crate::icon::icon_with(cx, icon, Some(icon_px), None);
-                                content.push(crate::test_id::attach_test_id_suffix(
+                                inline_end.push(crate::test_id::attach_test_id_suffix(
                                     icon,
                                     test_id.as_ref(),
                                     "trailing-icon",
                                 ));
                             }
 
-                            content
+                            match dir {
+                                crate::LayoutDirection::Ltr => {
+                                    let mut content = inline_start;
+                                    if let Some(label) = label {
+                                        content.push(label);
+                                    }
+                                    content.extend(inline_end);
+                                    content
+                                }
+                                crate::LayoutDirection::Rtl => {
+                                    inline_end.reverse();
+                                    let mut content = inline_end;
+                                    if let Some(label) = label {
+                                        content.push(label);
+                                    }
+                                    inline_start.reverse();
+                                    content.extend(inline_start);
+                                    content
+                                }
+                            }
                         } else {
                             children.take().unwrap_or_default()
                         };
@@ -1240,6 +1345,7 @@ impl Button {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Spinner;
 
     use fret_app::App;
     use fret_core::{
@@ -1603,6 +1709,65 @@ mod tests {
     }
 
     #[test]
+    fn button_inline_slot_padding_compacts_only_the_occupied_inline_side() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let theme = Theme::global(&app).snapshot();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(400.0), Px(200.0)),
+        );
+
+        let base_px = MetricRef::space(Space::N4).resolve(&theme);
+        let compact_px = MetricRef::space(Space::N3).resolve(&theme);
+
+        let leading =
+            elements::with_element_cx(&mut app, window, bounds, "button-leading-slot", |cx| {
+                Button::new("Generating")
+                    .leading_children(vec![Spinner::new().speed(0.0).into_element(cx)])
+                    .into_element(cx)
+            });
+        let leading_chrome = leading.children.first().expect("expected chrome container");
+        let ElementKind::Container(leading_props) = &leading_chrome.kind else {
+            panic!("expected chrome container");
+        };
+        assert_eq!(leading_props.padding.left, compact_px.into());
+        assert_eq!(leading_props.padding.right, base_px.into());
+
+        let trailing =
+            elements::with_element_cx(&mut app, window, bounds, "button-trailing-slot", |cx| {
+                Button::new("Downloading")
+                    .trailing_children(vec![Spinner::new().speed(0.0).into_element(cx)])
+                    .into_element(cx)
+            });
+        let trailing_chrome = trailing
+            .children
+            .first()
+            .expect("expected chrome container");
+        let ElementKind::Container(trailing_props) = &trailing_chrome.kind else {
+            panic!("expected chrome container");
+        };
+        assert_eq!(trailing_props.padding.left, base_px.into());
+        assert_eq!(trailing_props.padding.right, compact_px.into());
+
+        let rtl =
+            elements::with_element_cx(&mut app, window, bounds, "button-leading-slot-rtl", |cx| {
+                crate::with_direction_provider(cx, crate::LayoutDirection::Rtl, |cx| {
+                    Button::new("جاري التحميل")
+                        .leading_children(vec![Spinner::new().speed(0.0).into_element(cx)])
+                        .into_element(cx)
+                })
+            });
+        let rtl_chrome = rtl.children.first().expect("expected chrome container");
+        let ElementKind::Container(rtl_props) = &rtl_chrome.kind else {
+            panic!("expected chrome container");
+        };
+        assert_eq!(rtl_props.padding.left, base_px.into());
+        assert_eq!(rtl_props.padding.right, compact_px.into());
+    }
+
+    #[test]
     fn button_default_layout_does_not_flex_shrink() {
         let mut app = App::new();
         let window = AppWindowId::default();
@@ -1629,6 +1794,55 @@ mod tests {
             ElementKind::Row(props) => Some(*props),
             _ => el.children.iter().find_map(find_first_row),
         }
+    }
+
+    fn find_first_row_element(el: &AnyElement) -> Option<&AnyElement> {
+        match &el.kind {
+            ElementKind::Row(_) => Some(el),
+            _ => el.children.iter().find_map(find_first_row_element),
+        }
+    }
+
+    fn collect_row_texts(el: &AnyElement) -> Vec<String> {
+        let row = find_first_row_element(el).expect("expected row element");
+        row.children
+            .iter()
+            .filter_map(|child| match &child.kind {
+                ElementKind::Text(props) => Some(props.text.to_string()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn button_inline_slots_preserve_label_and_flip_order_in_rtl() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(400.0), Px(200.0)),
+        );
+
+        let ltr =
+            elements::with_element_cx(&mut app, window, bounds, "button-inline-slots-ltr", |cx| {
+                Button::new("Main")
+                    .leading_children(vec![cx.text("start")])
+                    .trailing_children(vec![cx.text("end")])
+                    .into_element(cx)
+            });
+        assert_eq!(collect_row_texts(&ltr), vec!["start", "Main", "end"]);
+
+        let rtl =
+            elements::with_element_cx(&mut app, window, bounds, "button-inline-slots-rtl", |cx| {
+                crate::with_direction_provider(cx, crate::LayoutDirection::Rtl, |cx| {
+                    Button::new("Main")
+                        .leading_children(vec![cx.text("start")])
+                        .trailing_children(vec![cx.text("end")])
+                        .into_element(cx)
+                })
+            });
+        assert_eq!(collect_row_texts(&rtl), vec!["end", "Main", "start"]);
     }
 
     #[test]
