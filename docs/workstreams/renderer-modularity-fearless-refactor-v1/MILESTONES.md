@@ -237,6 +237,10 @@ Current snapshot (2026-03-12):
   - prepared-glyph variation-key derivation now lives behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `prepared_glyph_face_key(...)` no longer owns variation-key derivation directly
+- The fifty-third internal `text/mod.rs` split has landed:
+  - prepared-glyph synthesis embolden extraction now lives behind a pure helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `prepared_glyph_face_key(...)` no longer owns synthesis-embolden extraction directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
