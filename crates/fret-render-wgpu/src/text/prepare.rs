@@ -397,13 +397,7 @@ impl TextSystem {
         let face_index = glyph.font.index;
         let face_key = prepared_glyph_face_key(glyph, font_data_id, face_index);
         self.cache_prepared_glyph_face_data(glyph, face_key, font_data_id, face_index);
-
-        let usage = face_usage.entry(face_key).or_insert((0, 0));
-        usage.0 = usage.0.saturating_add(1);
-        if glyph.id == 0 {
-            usage.1 = usage.1.saturating_add(1);
-        }
-
+        record_prepared_glyph_face_usage(face_usage, face_key, glyph.id);
         face_key
     }
 
@@ -721,6 +715,18 @@ fn prepared_glyph_face_key(glyph: &ParleyGlyph, font_data_id: u64, face_index: u
             .skew()
             .unwrap_or(0.0)
             .clamp(i8::MIN as f32, i8::MAX as f32) as i8,
+    }
+}
+
+fn record_prepared_glyph_face_usage(
+    face_usage: &mut HashMap<FontFaceKey, (u32, u32)>,
+    face_key: FontFaceKey,
+    glyph_id: u32,
+) {
+    let usage = face_usage.entry(face_key).or_insert((0, 0));
+    usage.0 = usage.0.saturating_add(1);
+    if glyph_id == 0 {
+        usage.1 = usage.1.saturating_add(1);
     }
 }
 
