@@ -372,6 +372,10 @@ As of 2026-03-12:
   - prepared-glyph raster assembly after image rendering now lives behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `render_prepared_glyph_raster(...)` no longer owns image-to-raster handoff directly
+- The seventy-second internal text split has landed:
+  - prepared-glyph raster image handoff now uses a projected glyph-id value helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `render_prepared_glyph_raster_from_image(...)` no longer depends on the full glyph record
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed

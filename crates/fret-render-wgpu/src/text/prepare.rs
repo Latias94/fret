@@ -521,20 +521,20 @@ impl TextSystem {
     ) -> Option<PreparedGlyphRaster> {
         let image = self.render_prepared_glyph_image(glyph, glyph_id, x_bin, y_bin)?;
         self.render_prepared_glyph_raster_from_image(
-            glyph, image, face_key, size_bits, x_bin, y_bin,
+            glyph.id, image, face_key, size_bits, x_bin, y_bin,
         )
     }
 
     fn render_prepared_glyph_raster_from_image(
         &mut self,
-        glyph: &ParleyGlyph,
+        glyph_id: u32,
         image: parley::swash::scale::image::Image,
         face_key: FontFaceKey,
         size_bits: u32,
         x_bin: u8,
         y_bin: u8,
     ) -> Option<PreparedGlyphRaster> {
-        prepared_glyph_raster_from_image(image, face_key, glyph.id, size_bits, x_bin, y_bin)
+        prepared_glyph_raster_from_image(image, face_key, glyph_id, size_bits, x_bin, y_bin)
     }
 
     fn render_prepared_glyph_image(
