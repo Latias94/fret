@@ -12,9 +12,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ui::v_stack(|cx| {
         vec![
             shadcn::raw::typography::muted(
-                cx,
                 "For forms, prefer Field + FieldLabel for built-in description/error structure.",
-            ),
+            ).into_element(cx),
             shadcn::Field::new([
                 shadcn::FieldLabel::new("Work email")
                     .for_control(control_id)

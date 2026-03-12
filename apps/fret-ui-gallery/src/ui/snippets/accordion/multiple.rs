@@ -18,9 +18,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 shadcn::AccordionTrigger::new(vec![cx.text("Notifications")])
                     .test_id("ui-gallery-accordion-multiple-trigger-notifications"),
                 shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
-                    cx,
                     "Configure email, push, and in-app notifications.",
-                )])
+                ).into_element(cx)])
                 .test_id("ui-gallery-accordion-multiple-content-notifications"),
             ),
             shadcn::AccordionItem::new(
@@ -28,9 +27,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 shadcn::AccordionTrigger::new(vec![cx.text("Security")])
                     .test_id("ui-gallery-accordion-multiple-trigger-security"),
                 shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
-                    cx,
                     "Manage passwords, 2FA, and active sessions.",
-                )]),
+                ).into_element(cx)]),
             ),
         ])
         .into_element(cx)

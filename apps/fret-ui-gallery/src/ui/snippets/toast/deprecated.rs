@@ -28,9 +28,8 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         ])
         .into_element(cx),
         shadcn::CardContent::new(vec![shadcn::raw::typography::muted(
-            cx,
             "This page intentionally keeps only the deprecation guidance to match upstream docs.",
-        )])
+        ).into_element(cx)])
         .into_element(cx),
         shadcn::CardFooter::new(vec![
             shadcn::Button::new("Open Sonner page")

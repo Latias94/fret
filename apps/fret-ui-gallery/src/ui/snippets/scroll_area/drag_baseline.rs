@@ -125,9 +125,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     .test_id("ui-gallery-scroll-area-drag-baseline-controls");
 
                 let instructions = shadcn::raw::typography::muted(
-                    cx,
                     "Drag the thumb, then click “Arm content growth”. Content will grow after ~120ms; the thumb should remain stable.",
                 )
+                .into_element(cx)
                 .test_id("ui-gallery-scroll-area-drag-baseline-instructions");
 
                 // Deterministic sizing for diagnostics:

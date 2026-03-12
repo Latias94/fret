@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("controlled.rs");
 // region: example
 use fret_core::Px;
 use fret_ui::element::SemanticsDecoration;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -23,7 +24,7 @@ fn menu_button<H: UiHost>(
     label: &'static str,
     icon: &'static str,
     test_id: Arc<str>,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let collapsed = shadcn::use_sidebar(cx).is_some_and(|ctx| !ctx.is_mobile && ctx.collapsed());
     let is_active = active_value.as_ref() == value;
     let selected_for_activate = selected_model.clone();
@@ -41,7 +42,6 @@ fn menu_button<H: UiHost>(
         .collapsed(collapsed)
         .on_activate(on_activate)
         .test_id(test_id)
-        .into_element(cx)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -76,9 +76,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .test_id("ui-gallery-sidebar-controlled-toggle")
                     .into_element(cx),
                     shadcn::raw::typography::muted(
-                        cx,
                         "Controlled via SidebarProvider.open(Some(model)).",
-                    ),
+                    ).into_element(cx),
                 ]
             })
             .gap(Space::N2)
@@ -89,55 +88,70 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             let projects = shadcn::SidebarGroup::new([
                 shadcn::SidebarGroupLabel::new("Projects").into_element(cx),
                 shadcn::SidebarMenu::new([
-                    shadcn::SidebarMenuItem::new(menu_button(
-                        cx,
-                        selected.clone(),
-                        &selected_value,
-                        "design-engineering",
-                        "Design Engineering",
-                        "lucide.frame",
-                        Arc::from("ui-gallery-sidebar-controlled-item-design-engineering"),
-                    ))
+                    shadcn::SidebarMenuItem::new(
+                        menu_button(
+                            cx,
+                            selected.clone(),
+                            &selected_value,
+                            "design-engineering",
+                            "Design Engineering",
+                            "lucide.frame",
+                            Arc::from("ui-gallery-sidebar-controlled-item-design-engineering"),
+                        )
+                        .into_element(cx),
+                    )
                     .into_element(cx),
-                    shadcn::SidebarMenuItem::new(menu_button(
-                        cx,
-                        selected.clone(),
-                        &selected_value,
-                        "sales-marketing",
-                        "Sales & Marketing",
-                        "lucide.chart-pie",
-                        Arc::from("ui-gallery-sidebar-controlled-item-sales-marketing"),
-                    ))
+                    shadcn::SidebarMenuItem::new(
+                        menu_button(
+                            cx,
+                            selected.clone(),
+                            &selected_value,
+                            "sales-marketing",
+                            "Sales & Marketing",
+                            "lucide.chart-pie",
+                            Arc::from("ui-gallery-sidebar-controlled-item-sales-marketing"),
+                        )
+                        .into_element(cx),
+                    )
                     .into_element(cx),
-                    shadcn::SidebarMenuItem::new(menu_button(
-                        cx,
-                        selected.clone(),
-                        &selected_value,
-                        "travel",
-                        "Travel",
-                        "lucide.map",
-                        Arc::from("ui-gallery-sidebar-controlled-item-travel"),
-                    ))
+                    shadcn::SidebarMenuItem::new(
+                        menu_button(
+                            cx,
+                            selected.clone(),
+                            &selected_value,
+                            "travel",
+                            "Travel",
+                            "lucide.map",
+                            Arc::from("ui-gallery-sidebar-controlled-item-travel"),
+                        )
+                        .into_element(cx),
+                    )
                     .into_element(cx),
-                    shadcn::SidebarMenuItem::new(menu_button(
-                        cx,
-                        selected.clone(),
-                        &selected_value,
-                        "support",
-                        "Support",
-                        "lucide.life-buoy",
-                        Arc::from("ui-gallery-sidebar-controlled-item-support"),
-                    ))
+                    shadcn::SidebarMenuItem::new(
+                        menu_button(
+                            cx,
+                            selected.clone(),
+                            &selected_value,
+                            "support",
+                            "Support",
+                            "lucide.life-buoy",
+                            Arc::from("ui-gallery-sidebar-controlled-item-support"),
+                        )
+                        .into_element(cx),
+                    )
                     .into_element(cx),
-                    shadcn::SidebarMenuItem::new(menu_button(
-                        cx,
-                        selected.clone(),
-                        &selected_value,
-                        "feedback",
-                        "Feedback",
-                        "lucide.send",
-                        Arc::from("ui-gallery-sidebar-controlled-item-feedback"),
-                    ))
+                    shadcn::SidebarMenuItem::new(
+                        menu_button(
+                            cx,
+                            selected.clone(),
+                            &selected_value,
+                            "feedback",
+                            "Feedback",
+                            "lucide.send",
+                            Arc::from("ui-gallery-sidebar-controlled-item-feedback"),
+                        )
+                        .into_element(cx),
+                    )
                     .into_element(cx),
                 ])
                 .into_element(cx),

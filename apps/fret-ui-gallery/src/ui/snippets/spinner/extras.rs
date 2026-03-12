@@ -34,9 +34,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ui::v_flex(|cx| {
             vec![
                 shadcn::raw::typography::muted(
-                    cx,
                     "Extras are Fret-specific demos and regression gates (not part of upstream shadcn SpinnerDemo).",
-                ),
+                ).into_element(cx),
                 custom_icon_row,
                 speed_row,
             ]

@@ -4,6 +4,7 @@ pub const SOURCE: &str = include_str!("basic.rs");
 use fret_core::{Point, Transform2D};
 use fret_ui::Theme;
 use fret_ui::element::VisualTransformProps;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -11,7 +12,7 @@ fn rotated_lucide<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     id: &'static str,
     rotation_deg: f32,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let size = Px(16.0);
     let center = Point::new(Px(8.0), Px(8.0));
     let transform = Transform2D::rotation_about_degrees(rotation_deg, center);
@@ -48,7 +49,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             cx,
             |cx, open, is_open| {
                 let chevron =
-                    rotated_lucide(cx, "lucide.chevron-down", if is_open { 180.0 } else { 0.0 });
+                    rotated_lucide(cx, "lucide.chevron-down", if is_open { 180.0 } else { 0.0 })
+                        .into_element(cx);
                 let row = ui::h_flex(|cx| vec![cx.text("Product details"), chevron])
                     .layout(LayoutRefinement::default().w_full().min_w_0())
                     .justify_between()
@@ -67,9 +69,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 let body = ui::v_flex(|cx| {
                     vec![
                         shadcn::raw::typography::p(
-                            cx,
                             "This panel can be expanded or collapsed to reveal additional content.",
-                        ),
+                        ).into_element(cx),
                         shadcn::Button::new("Learn more")
                             .size(shadcn::ButtonSize::Sm)
                             .variant(shadcn::ButtonVariant::Secondary)

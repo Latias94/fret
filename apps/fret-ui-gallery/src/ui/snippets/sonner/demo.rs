@@ -415,13 +415,12 @@ pub fn render<H: UiHost>(
         vec![
             buttons,
             shadcn::raw::typography::muted(
-                cx,
                 if pending {
                     "Promise toast pending: click Promise again to resolve."
                 } else {
                     "Promise toast idle: click Promise to start loading state."
                 },
-            ),
+            ).into_element(cx),
         ]
     })
     .gap(Space::N2)

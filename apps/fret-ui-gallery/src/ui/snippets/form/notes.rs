@@ -8,29 +8,23 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     ui::v_flex(|cx| {
         vec![
             shadcn::raw::typography::muted(
-                cx,
                 "Upstream reference: `repo-ref/ui/apps/v4/app/(internal)/sink/components/form-demo.tsx`.",
-            ),
+            ).into_element(cx),
             shadcn::raw::typography::muted(
-                cx,
                 "API reference: `ecosystem/fret-ui-shadcn/src/form.rs` (`FormControl` is slot-like for a single child), `ecosystem/fret-ui-shadcn/src/field.rs` (`Form`/`FormItem`/helpers), and control primitives: `input.rs`, `textarea.rs`, `checkbox.rs`, `switch.rs`.",
-            ),
+            ).into_element(cx),
             shadcn::raw::typography::muted(
-                cx,
                 "The first section mirrors upstream `FormDemo` using `FormState` + `FormRegistry`; the remaining sections are gallery recipes (composition hub).",
-            ),
+            ).into_element(cx),
             shadcn::raw::typography::muted(
-                cx,
                 "Fret keeps the shadcn taxonomy (`Form`, `FormField`, `FormItem`, etc.) but maps it onto framework-agnostic field primitives instead of mirroring `react-hook-form` literally; `FormControl` stays a transparent single-control wrapper rather than a layout column.",
-            ),
+            ).into_element(cx),
             shadcn::raw::typography::muted(
-                cx,
                 "Keep stable test IDs for each recipe so future diag automation can target composition surfaces.",
-            ),
+            ).into_element(cx),
             shadcn::raw::typography::muted(
-                cx,
                 "Textarea supports placeholder text; the upstream Bio example uses a placeholder string.",
-            ),
+            ).into_element(cx),
         ]
     })
     .gap(Space::N1)

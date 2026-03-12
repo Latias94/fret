@@ -17,9 +17,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             "item-1",
             shadcn::AccordionTrigger::new(vec![cx.text("Disabled")]),
             shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
-                cx,
                 "This item is disabled and should not be interactive.",
-            )]),
+            ).into_element(cx)]),
         )
         .disabled(true)])
         .into_element(cx)

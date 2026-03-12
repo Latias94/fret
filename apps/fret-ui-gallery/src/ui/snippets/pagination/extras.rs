@@ -110,9 +110,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ui::v_flex(|cx| {
             vec![
                 shadcn::raw::typography::muted(
-                    cx,
                     "Extras are Fret-specific recipes and regression gates (not part of upstream shadcn PaginationDemo).",
-                ),
+                ).into_element(cx),
                 simple,
                 icons_only,
             ]

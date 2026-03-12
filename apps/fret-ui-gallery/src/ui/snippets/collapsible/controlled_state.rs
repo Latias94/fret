@@ -13,13 +13,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ui::v_flex(|cx| {
             vec![
                 shadcn::raw::typography::muted(
-                    cx,
                     if open_now {
                         "open=true (controlled)"
                     } else {
                         "open=false (controlled)"
                     },
-                ),
+                ).into_element(cx),
                 shadcn::Collapsible::new(open.clone()).into_element_with_open_model(
                     cx,
                     |cx, open, is_open| {

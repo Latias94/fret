@@ -131,9 +131,8 @@ pub fn render<H: UiHost>(
             top_row,
             bottom_row,
             shadcn::raw::typography::muted(
-                cx,
                 format!("Current toaster position: {}", toast_position_key(current)),
-            ),
+            ).into_element(cx),
         ]
     })
     .gap(Space::N2)
