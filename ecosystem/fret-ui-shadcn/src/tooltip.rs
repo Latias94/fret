@@ -823,23 +823,7 @@ impl Tooltip {
             let event_models = tooltip_trigger_event_models(cx);
             let tooltip_id = cx.root_id();
 
-            #[derive(Default)]
-            struct TooltipOpenModelState {
-                model: Option<Model<bool>>,
-            }
-
-            let open = cx.with_state_for(tooltip_id, TooltipOpenModelState::default, |st| {
-                st.model.clone()
-            });
-            let open = if let Some(model) = open {
-                model
-            } else {
-                let model = cx.app.models_mut().insert(false);
-                cx.with_state_for(tooltip_id, TooltipOpenModelState::default, |st| {
-                    st.model = Some(model.clone());
-                });
-                model
-            };
+            let open = cx.model_for(tooltip_id, || false);
             let open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
 
             let close_requested = cx

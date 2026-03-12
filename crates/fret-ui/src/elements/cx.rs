@@ -608,6 +608,23 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.state_for(element, init, f)
     }
 
+    /// Returns a model handle stored under an explicit element identity.
+    ///
+    /// This is the explicit-identity counterpart to [`Self::local_model`] and
+    /// [`Self::local_model_keyed`]. Prefer it when a helper must bind a `Model<T>` to a stable
+    /// overlay/portal/root id instead of a callsite-derived slot.
+    ///
+    /// Like [`Self::state_for`], storage is keyed by `(element, TypeId)`. Different model value
+    /// types may therefore share one explicit element id, while multiple models of the same type
+    /// still need distinct explicit ids.
+    pub fn model_for<T: Any>(
+        &mut self,
+        element: GlobalElementId,
+        init: impl FnOnce() -> T,
+    ) -> Model<T> {
+        self.local_model_for(element, init)
+    }
+
     fn local_model_for<T: Any>(
         &mut self,
         slot: GlobalElementId,

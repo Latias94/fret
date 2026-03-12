@@ -31,6 +31,7 @@ at least one regression test before expanding usage.
   - Identity: `ElementContext::scope(...)`, `ElementContext::keyed(...)`
   - Local state:
     - authored local models: `ElementContext::{local_model, local_model_keyed}`
+    - explicit-identity models: `ElementContext::model_for(...)`
     - helper/runtime slots: `ElementContext::{slot_state, slot_id, keyed_slot_id}`
     - explicit identity slots: `ElementContext::{state_for, with_state_for}`
     - lower-level compatibility API: `ElementContext::with_state(...)`
@@ -152,6 +153,11 @@ Public constructors/setters that accept children should use:
 - `ElementContext::local_model_keyed(...)` stores a helper-local `Model<T>` in a synthetic
   `(callsite, key)` slot and is the recommended default for authored local `Model<T>` state in
   reorderable collections and copyable examples.
+- `ElementContext::model_for(...)` stores a helper-local `Model<T>` under an explicitly chosen
+  `GlobalElementId` and is the preferred surface for overlay/portal helpers that already own a
+  stable explicit identity. Like `state_for`, it is keyed by `(GlobalElementId, TypeId)`, so
+  different model value types may share one explicit identity but same-typed sibling models still
+  need separate explicit ids.
 - `ElementContext::slot_state(...)` stores **helper-local callsite slots** under a
   synthetic child id derived from `(current_root, caller_location, slot_index)`.
 - `ElementContext::slot_id(...)` / `keyed_slot_id(...)` allocate a

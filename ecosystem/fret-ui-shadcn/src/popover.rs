@@ -163,33 +163,11 @@ fn popover_open_change_events(
     (changed, completed)
 }
 
-#[derive(Default)]
-struct PopoverHoverLastPointerModelState {
-    model: Option<Model<Option<Point>>>,
-}
-
 fn popover_hover_last_pointer_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     popover_id: fret_ui::elements::GlobalElementId,
 ) -> Model<Option<Point>> {
-    let existing = cx.with_state_for(
-        popover_id,
-        PopoverHoverLastPointerModelState::default,
-        |st| st.model.clone(),
-    );
-    if let Some(model) = existing {
-        model
-    } else {
-        let model = cx.app.models_mut().insert(None::<Point>);
-        cx.with_state_for(
-            popover_id,
-            PopoverHoverLastPointerModelState::default,
-            |st| {
-                st.model = Some(model.clone());
-            },
-        );
-        model
-    }
+    cx.model_for(popover_id, || None::<Point>)
 }
 
 /// shadcn/ui `Popover` (v4).

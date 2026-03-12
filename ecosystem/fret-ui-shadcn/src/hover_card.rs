@@ -121,33 +121,11 @@ fn hover_card_open_change_events(
     (changed, completed)
 }
 
-#[derive(Default)]
-struct HoverCardLastPointerModelState {
-    model: Option<Model<Option<Point>>>,
-}
-
 fn hover_card_last_pointer_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     hover_card_id: fret_ui::elements::GlobalElementId,
 ) -> Model<Option<Point>> {
-    let existing = cx.with_state_for(
-        hover_card_id,
-        HoverCardLastPointerModelState::default,
-        |st| st.model.clone(),
-    );
-    if let Some(model) = existing {
-        model
-    } else {
-        let model = cx.app.models_mut().insert(None::<Point>);
-        cx.with_state_for(
-            hover_card_id,
-            HoverCardLastPointerModelState::default,
-            |st| {
-                st.model = Some(model.clone());
-            },
-        );
-        model
-    }
+    cx.model_for(hover_card_id, || None::<Point>)
 }
 
 fn fixed_size_hint_px(element: &AnyElement) -> Option<Size> {
@@ -556,54 +534,14 @@ impl HoverCard {
                 }
             }
 
-            #[derive(Default)]
-            struct HoverCardPointerDownModelState {
-                model: Option<Model<bool>>,
-                lease: Option<Model<u32>>,
-            }
-
-            let pointer_down_on_content = cx.with_state_for(
-                hover_card_id,
-                HoverCardPointerDownModelState::default,
-                |st| st.model.clone(),
-            );
-            let pointer_down_on_content = if let Some(model) = pointer_down_on_content {
-                model
-            } else {
-                let model = cx.app.models_mut().insert(false);
-                cx.with_state_for(
-                    hover_card_id,
-                    HoverCardPointerDownModelState::default,
-                    |st| {
-                        st.model = Some(model.clone());
-                    },
-                );
-                model
-            };
+            let pointer_down_on_content = cx.model_for(hover_card_id, || false);
             let mut pointer_down_on_content_now = cx
                 .watch_model(&pointer_down_on_content)
                 .layout()
                 .copied()
                 .unwrap_or(false);
 
-            let interaction_lease = cx.with_state_for(
-                hover_card_id,
-                HoverCardPointerDownModelState::default,
-                |st| st.lease.clone(),
-            );
-            let interaction_lease = if let Some(model) = interaction_lease {
-                model
-            } else {
-                let model = cx.app.models_mut().insert(0u32);
-                cx.with_state_for(
-                    hover_card_id,
-                    HoverCardPointerDownModelState::default,
-                    |st| {
-                        st.lease = Some(model.clone());
-                    },
-                );
-                model
-            };
+            let interaction_lease = cx.model_for(hover_card_id, || 0u32);
             let interaction_lease_now = cx
                 .watch_model(&interaction_lease)
                 .layout()

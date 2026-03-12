@@ -1,4 +1,5 @@
 use super::*;
+use crate::GlobalElementId;
 use fret_runtime::ModelId;
 
 #[test]
@@ -303,6 +304,52 @@ fn local_model_keyed_preserves_model_identity_across_reorder() {
         first, second,
         "expected local_model_keyed to preserve model identity by key across reorder"
     );
+}
+
+#[test]
+fn model_for_preserves_model_identity_for_explicit_element_id() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let ids = Arc::new(std::sync::Mutex::new(Vec::<ModelId>::new()));
+
+    let mut root: Option<NodeId> = None;
+    for frame in 0..2 {
+        let ids = ids.clone();
+        let root_node = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "model-for-explicit-id",
+            move |cx| {
+                let overlay_id = GlobalElementId(0xC0FFEE);
+                let model = cx.model_for(overlay_id, || frame as u64);
+                ids.lock().unwrap().push(model.id());
+                vec![cx.text("leaf")]
+            },
+        );
+
+        root.get_or_insert(root_node);
+        if frame == 0 {
+            ui.set_root(root_node);
+        }
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        app.advance_frame();
+    }
+
+    let ids = ids.lock().unwrap();
+    assert_eq!(ids.len(), 2);
+    assert_eq!(ids[0], ids[1]);
 }
 
 #[test]

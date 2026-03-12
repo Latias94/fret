@@ -1395,16 +1395,6 @@ impl NavigationMenu {
                     let root_state = nav_ctx.root_state.clone();
 
                     #[derive(Default)]
-                    struct OpenModelState {
-                        model: Option<Model<bool>>,
-                    }
-
-                    #[derive(Default)]
-                    struct TriggerTabStopModelState {
-                        model: Option<Model<Option<Arc<str>>>>,
-                    }
-
-                    #[derive(Default)]
                     struct SelectionSyncState {
                         last_selected: Option<Arc<str>>,
                     }
@@ -1417,32 +1407,8 @@ impl NavigationMenu {
                         pointer_in_corridor: bool,
                     }
 
-                    let open_model =
-                        cx.with_state_for(root_id, OpenModelState::default, |st| st.model.clone());
-                    let open_model = if let Some(model) = open_model {
-                        model
-                    } else {
-                        let model = cx.app.models_mut().insert(false);
-                        cx.with_state_for(root_id, OpenModelState::default, |st| {
-                            st.model = Some(model.clone());
-                        });
-                        model
-                    };
-
-                    let trigger_tab_stop_model = cx.with_state_for(
-                        root_id,
-                        TriggerTabStopModelState::default,
-                        |st| st.model.clone(),
-                    );
-                    let trigger_tab_stop_model = if let Some(model) = trigger_tab_stop_model {
-                        model
-                    } else {
-                        let model = cx.app.models_mut().insert(None::<Arc<str>>);
-                        cx.with_state_for(root_id, TriggerTabStopModelState::default, |st| {
-                            st.model = Some(model.clone());
-                        });
-                        model
-                    };
+                    let open_model = cx.model_for(root_id, || false);
+                    let trigger_tab_stop_model = cx.model_for(root_id, || None::<Arc<str>>);
 
                     let selected: Option<Arc<str>> =
                         cx.watch_model(&value_model).layout().cloned().flatten();
