@@ -424,9 +424,11 @@ mod source_policy_tests {
     }
 
     #[test]
-    fn ui_into_element_scaffolding_stays_internal_to_ui_builder_module() {
-        assert!(UI_BUILDER_RS.contains("#[doc(hidden)]"));
-        assert!(UI_BUILDER_RS.contains("pub trait UiIntoElement: Sized"));
+    fn legacy_ui_into_element_bridge_name_is_deleted_from_ui_builder() {
+        assert!(!UI_BUILDER_RS.contains("trait UiIntoElement"));
+        assert!(!UI_BUILDER_RS.contains("T: UiIntoElement"));
+        assert!(!UI_BUILDER_RS.contains("UiIntoElement::into_element"));
+        assert!(UI_BUILDER_RS.contains("impl<H: UiHost> IntoUiElement<H> for AnyElement"));
     }
 
     #[test]

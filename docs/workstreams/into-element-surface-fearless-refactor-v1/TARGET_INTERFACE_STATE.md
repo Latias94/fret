@@ -181,18 +181,19 @@ Current execution note on 2026-03-12:
 
 - `UiBuilderHostBoundIntoElementExt` is already deleted from the codebase.
 - `UiHostBoundIntoElement<H>` is already deleted from the codebase.
-- `UiIntoElement` now survives only as `fret_ui_kit::ui_builder::UiIntoElement`, marked
-  `#[doc(hidden)]` and treated as internal landing scaffolding rather than public vocabulary.
+- the legacy `UiIntoElement` name is now deleted from code; `fret_ui_kit::ui_builder` keeps only
+  the public `IntoUiElement<H>` contract plus a direct `IntoUiElement<H> for AnyElement`
+  implementation for explicit raw seams.
 - exported `fret_ui_kit` adapter macros (`ui_component_*`, `ui_component_render_once!`) and the
-  built-in primitive glue now implement `IntoUiElement<H>` directly, so the remaining
-  `UiIntoElement` scaffold is narrower than the first-party macro/component authoring surface.
+  built-in primitive glue now implement `IntoUiElement<H>` directly, so the legacy
+  `UiIntoElement` name is no longer needed anywhere in production code.
 - declarative semantics helpers now also sit on the public landing trait:
   `UiElementTestIdExt`, `UiElementA11yExt`, and `UiElementKeyContextExt` wrap values that land
   through `IntoUiElement<H>` directly, so `UiIntoElement` no longer leaks into the production
   implementation of `declarative/semantics.rs`.
 - built-in text primitives now also land directly through the public trait:
-  `ui::TextBox` and `ui::RawTextBox` implement `IntoUiElement<H>` directly, so the remaining
-  `UiIntoElement` production scaffold is concentrated in `ui_builder.rs`.
+  `ui::TextBox` and `ui::RawTextBox` implement `IntoUiElement<H>` directly, and `ui_builder.rs`
+  now keeps only the public trait plus raw `AnyElement` landing.
 - `UiChildIntoElement<H>` is now deleted from the codebase; heterogeneous child collection in
   `fret_ui_kit::ui` / `imui` lands directly through `IntoUiElement<H>`.
 - direct-crate shadcn authoring now also gets the same landing ergonomics:

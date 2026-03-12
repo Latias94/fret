@@ -43,12 +43,12 @@ Implementation note after the first landing:
 
 - `IntoUiElement<H>` is now the curated public conversion name on `fret-ui-kit` / `fret`
   component-facing surfaces.
-- host-agnostic values still feed that public surface through the legacy `UiIntoElement`
-  implementation path for now.
+- already-landed raw values (`AnyElement`) now feed that public surface directly via
+  `IntoUiElement<H>`; there is no remaining `UiIntoElement` bridge in production code.
 - `UiBuilderHostBoundIntoElementExt` has now been deleted from the codebase; `UiBuilder<T>`
   lands through `IntoUiElement<H>` directly.
-- `UiIntoElement` is now doc-hidden scaffolding under `fret_ui_kit::ui_builder` rather than a
-  root-exported curated surface.
+- the legacy `UiIntoElement` name is now deleted from code; `fret_ui_kit::ui_builder` keeps only
+  the public `IntoUiElement<H>` contract plus a direct raw `AnyElement` implementation.
 
 Validation note on 2026-03-12:
 
@@ -176,8 +176,9 @@ Implementation note on 2026-03-12:
   `docs/first-hour.md` now teaches `IntoUiElement<H>`, and `fret-ui-ai` builder smoke tests
   (`elements/message.rs`, `elements/workflow/panel.rs`) now assert against the public
   `IntoUiElement<fret_app::App>` contract instead of `UiIntoElement`.
-- exported `fret-ui-kit` adapter macros now attach `IntoUiElement<H>` directly, which shrinks the
-  remaining `UiIntoElement` usage to internal `fret-ui-kit` scaffolding and source-policy tests.
+- exported `fret-ui-kit` adapter macros now attach `IntoUiElement<H>` directly, and the legacy
+  `UiIntoElement` production bridge is now deleted from `ui_builder.rs`; the old name survives
+  only in source-policy assertions and historical workstream docs.
 - the RenderOnce helper macro is now also renamed onto the public vocabulary:
   component-authoring docs should teach `fret_ui_kit::ui_component_render_once!(Ty)` rather than
   the old `ui_into_element_render_once!` name.

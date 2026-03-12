@@ -47,37 +47,20 @@ pub trait UiSupportsChrome {}
 /// Marker trait enabling `UiBuilder` layout methods for a `UiPatchTarget`.
 pub trait UiSupportsLayout {}
 
-/// Internal host-agnostic landing scaffold used to feed `IntoUiElement<H>`.
-#[doc(hidden)]
-pub trait UiIntoElement: Sized {
-    #[track_caller]
-    fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement;
-}
-
 /// Unified public conversion contract for reusable component authoring.
 ///
 /// This trait keeps `.into_element(cx)` as the one public landing operation whether the value is:
 ///
-/// - host-agnostic (internal legacy landing path), or
+/// - already-landed raw elements, or
 /// - host-bound (for example late builders that capture `H`-typed closures internally).
 pub trait IntoUiElement<H: UiHost>: Sized {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement;
 }
 
-impl<H: UiHost, T> IntoUiElement<H> for T
-where
-    T: UiIntoElement,
-{
+impl<H: UiHost> IntoUiElement<H> for AnyElement {
     #[track_caller]
-    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        UiIntoElement::into_element(self, cx)
-    }
-}
-
-impl UiIntoElement for AnyElement {
-    #[track_caller]
-    fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
+    fn into_element(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self
     }
 }
