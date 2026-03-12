@@ -543,7 +543,7 @@ impl TextSystem {
         let scaler_builder = self
             .parley_scale
             .builder(font_ref)
-            .size(glyph.font_size.max(1.0))
+            .size(prepared_glyph_scaler_size(glyph))
             .hint(false);
         apply_prepared_glyph_normalized_coords(scaler_builder, glyph).build()
     }
@@ -739,6 +739,10 @@ fn prepared_glyph_id(glyph: &ParleyGlyph) -> Option<u16> {
 
 fn prepared_glyph_size_bits(glyph: &ParleyGlyph) -> u32 {
     glyph.font_size.to_bits()
+}
+
+fn prepared_glyph_scaler_size(glyph: &ParleyGlyph) -> f32 {
+    glyph.font_size.max(1.0)
 }
 
 fn prepared_glyph_bounds_from_atlas_entry(
