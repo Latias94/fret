@@ -1,8 +1,8 @@
 pub const SOURCE: &str = include_str!("position.rs");
 
 // region: example
-use fret_core::{Axis, Edges};
-use fret_ui::element::{FlexProps, LayoutStyle, Length, SemanticsDecoration};
+use fret_ui::element::SemanticsDecoration;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -18,28 +18,14 @@ fn toast_position_key(position: shadcn::ToastPosition) -> &'static str {
 }
 
 fn wrap_controls_row<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
     gap: Space,
     children: Vec<AnyElement>,
-) -> AnyElement {
-    let theme = Theme::global(&*cx.app);
-    let gap = fret_ui_kit::MetricRef::space(gap).resolve(theme);
-
-    let mut layout = LayoutStyle::default();
-    layout.size.width = Length::Fill;
-
-    cx.flex(
-        FlexProps {
-            layout,
-            direction: Axis::Horizontal,
-            gap: gap.into(),
-            padding: Edges::all(Px(0.0)).into(),
-            justify: fret_ui::element::MainAlign::Start,
-            align: fret_ui::element::CrossAlign::Center,
-            wrap: true,
-        },
-        |_cx| children,
-    )
+) -> impl IntoUiElement<H> + use<H> {
+    ui::h_flex(move |_cx| children)
+        .gap(gap)
+        .items_center()
+        .wrap()
+        .layout(LayoutRefinement::default().w_full())
 }
 
 pub fn render<H: UiHost>(
@@ -102,7 +88,7 @@ pub fn render<H: UiHost>(
             shadcn::ToastPosition::TopRight,
         ),
     ];
-    let top_row = wrap_controls_row(cx, Space::N2, top_children);
+    let top_row = wrap_controls_row::<H>(Space::N2, top_children).into_element(cx);
 
     let bottom_children = vec![
         action_button(
@@ -124,15 +110,17 @@ pub fn render<H: UiHost>(
             shadcn::ToastPosition::BottomRight,
         ),
     ];
-    let bottom_row = wrap_controls_row(cx, Space::N2, bottom_children);
+    let bottom_row = wrap_controls_row::<H>(Space::N2, bottom_children).into_element(cx);
 
     ui::v_flex(move |cx| {
         vec![
             top_row,
             bottom_row,
-            shadcn::raw::typography::muted(
-                format!("Current toaster position: {}", toast_position_key(current)),
-            ).into_element(cx),
+            shadcn::raw::typography::muted(format!(
+                "Current toaster position: {}",
+                toast_position_key(current)
+            ))
+            .into_element(cx),
         ]
     })
     .gap(Space::N2)

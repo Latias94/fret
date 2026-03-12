@@ -1594,6 +1594,35 @@ fn selected_toast_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         ],
         &["fn centered(cx: &mut UiCx<'_>, body: AnyElement) -> AnyElement"],
     );
+
+    for relative_path in [
+        "src/ui/snippets/sonner/demo.rs",
+        "src/ui/snippets/sonner/extras.rs",
+        "src/ui/snippets/sonner/position.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "fn wrap_controls_row<H: UiHost>(gap: Space, children: Vec<AnyElement>,) -> impl IntoUiElement<H> + use<H>",
+            ],
+            &[
+                "fn wrap_controls_row<H: UiHost>(cx: &mut ElementContext<'_, H>, gap: Space, children: Vec<AnyElement>,) -> AnyElement",
+            ],
+        );
+    }
+}
+
+#[test]
+fn selected_alert_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/alert/interactive_links.rs",
+        &[
+            "fn interactive_link<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>, last_link: Model<Option<Arc<str>>>, label: &'static str, tag: &'static str, href: &'static str, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &[
+            "fn interactive_link<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>, last_link: Model<Option<Arc<str>>>, label: &'static str, tag: &'static str, href: &'static str, test_id: &'static str,) -> AnyElement",
+        ],
+    );
 }
 
 #[test]

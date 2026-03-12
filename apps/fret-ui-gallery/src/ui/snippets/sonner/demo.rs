@@ -1,34 +1,20 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret_core::{Axis, Edges};
-use fret_ui::element::{FlexProps, LayoutStyle, Length, SemanticsDecoration};
+use fret_ui::element::SemanticsDecoration;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 fn wrap_controls_row<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
     gap: Space,
     children: Vec<AnyElement>,
-) -> AnyElement {
-    let theme = Theme::global(&*cx.app);
-    let gap = fret_ui_kit::MetricRef::space(gap).resolve(theme);
-
-    let mut layout = LayoutStyle::default();
-    layout.size.width = Length::Fill;
-
-    cx.flex(
-        FlexProps {
-            layout,
-            direction: Axis::Horizontal,
-            gap: gap.into(),
-            padding: Edges::all(Px(0.0)).into(),
-            justify: fret_ui::element::MainAlign::Start,
-            align: fret_ui::element::CrossAlign::Center,
-            wrap: true,
-        },
-        |_cx| children,
-    )
+) -> impl IntoUiElement<H> + use<H> {
+    ui::h_flex(move |_cx| children)
+        .gap(gap)
+        .items_center()
+        .wrap()
+        .layout(LayoutRefinement::default().w_full())
 }
 
 pub fn render<H: UiHost>(
@@ -388,8 +374,7 @@ pub fn render<H: UiHost>(
         .flatten()
         .is_some();
 
-    let buttons = wrap_controls_row(
-        cx,
+    let buttons = wrap_controls_row::<H>(
         Space::N2,
         vec![
             give_me,
@@ -405,6 +390,7 @@ pub fn render<H: UiHost>(
             promise,
         ],
     )
+    .into_element(cx)
     .attach_semantics(
         SemanticsDecoration::default()
             .role(fret_core::SemanticsRole::Group)
@@ -414,13 +400,12 @@ pub fn render<H: UiHost>(
     ui::v_flex(move |cx| {
         vec![
             buttons,
-            shadcn::raw::typography::muted(
-                if pending {
-                    "Promise toast pending: click Promise again to resolve."
-                } else {
-                    "Promise toast idle: click Promise to start loading state."
-                },
-            ).into_element(cx),
+            shadcn::raw::typography::muted(if pending {
+                "Promise toast pending: click Promise again to resolve."
+            } else {
+                "Promise toast idle: click Promise to start loading state."
+            })
+            .into_element(cx),
         ]
     })
     .gap(Space::N2)

@@ -9,6 +9,7 @@ use fret_core::{
 };
 use fret_runtime::{Effect, Model};
 use fret_ui::element::{PressableKeyActivation, PressableProps, StyledTextProps};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn is_diag_mode() -> bool {
@@ -49,7 +50,7 @@ fn interactive_link<H: UiHost + 'static>(
     tag: &'static str,
     href: &'static str,
     test_id: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let theme = Theme::global(&*cx.app).snapshot();
     let diag_mode = is_diag_mode();
     let rich = underlined_rich_text(label);
@@ -134,7 +135,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                         "billing-information",
                         "https://example.com/billing-information",
                         "ui-gallery-alert-link-billing",
-                    ),
+                    )
+                    .into_element(cx),
                     interactive_link(
                         cx,
                         last_link.clone(),
@@ -142,7 +144,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                         "support-article",
                         "https://example.com/support-article",
                         "ui-gallery-alert-link-support",
-                    ),
+                    )
+                    .into_element(cx),
                 ])
                 .into_element(cx),
             ])
