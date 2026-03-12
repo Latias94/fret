@@ -85,45 +85,43 @@ pub(crate) fn shortcut_text_element<H: UiHost>(
     layout: LayoutRefinement,
 ) -> AnyElement {
     let rich = if shortcut_needs_symbol_font(text.as_ref()) {
-        shortcut_symbol_font_for_platform(Platform::current())
-            .map(|symbol_font| {
-                shortcut_attributed_text_with_symbol_fallback(text.clone(), symbol_font)
-            })
-            .unwrap_or_else(|| AttributedText::new(text.clone(), Arc::<[TextSpan]>::from([])))
+        shortcut_symbol_font_for_platform(Platform::current()).map(|symbol_font| {
+            shortcut_attributed_text_with_symbol_fallback(text.clone(), symbol_font)
+        })
     } else {
-        AttributedText::new(text.clone(), Arc::<[TextSpan]>::from([]))
+        None
     };
 
-    if rich.spans.is_empty() {
-        let mut out = ui::text(text)
-            .layout(layout)
-            .text_size_px(style.size)
-            .font(style.font)
-            .font_weight(style.weight)
-            .nowrap()
-            .text_color(ColorRef::Color(fg));
-
-        if let Some(line_height) = style.line_height {
-            out = out.fixed_line_box_px(line_height).line_box_in_bounds();
-        }
-
-        if let Some(letter_spacing_em) = style.letter_spacing_em {
-            out = out.letter_spacing_em(letter_spacing_em);
-        }
-
-        return out.into_element(cx);
+    if let Some(rich) = rich {
+        return cx.styled_text_props(StyledTextProps {
+            layout: decl_style::layout_style(theme, layout),
+            rich,
+            style: Some(style),
+            color: Some(fg),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: TextAlign::Start,
+            ink_overflow: Default::default(),
+        });
     }
 
-    cx.styled_text_props(StyledTextProps {
-        layout: decl_style::layout_style(theme, layout),
-        rich,
-        style: Some(style),
-        color: Some(fg),
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Clip,
-        align: TextAlign::Start,
-        ink_overflow: Default::default(),
-    })
+    let mut out = ui::text(text)
+        .layout(layout)
+        .text_size_px(style.size)
+        .font(style.font)
+        .font_weight(style.weight)
+        .nowrap()
+        .text_color(ColorRef::Color(fg));
+
+    if let Some(line_height) = style.line_height {
+        out = out.fixed_line_box_px(line_height).line_box_in_bounds();
+    }
+
+    if let Some(letter_spacing_em) = style.letter_spacing_em {
+        out = out.letter_spacing_em(letter_spacing_em);
+    }
+
+    out.into_element(cx)
 }
 
 pub(crate) fn shortcut_needs_symbol_font(text: &str) -> bool {
@@ -207,5 +205,14 @@ mod tests {
             shortcut_symbol_font_for_platform(Platform::Windows),
             Some(FontId::family("Segoe UI Symbol"))
         );
+    }
+
+    #[test]
+    fn shortcut_attributed_text_uses_valid_utf8_span_boundaries() {
+        let rich = shortcut_attributed_text_with_symbol_fallback(
+            Arc::<str>::from("⌘P"),
+            FontId::family("Apple Symbols"),
+        );
+        assert!(rich.is_valid());
     }
 }
