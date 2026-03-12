@@ -1,8 +1,9 @@
 use super::super::super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
+use fret::UiCx;
 
 pub(in crate::ui) fn preview_chrome_torture(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     popover_open: Model<bool>,
     dialog_open: Model<bool>,

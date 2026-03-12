@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default, Clone)]
@@ -10,7 +10,7 @@ struct Models {
     password: Option<Model<String>>,
 }
 
-fn ensure_models(cx: &mut ElementContext<'_, App>) -> (Model<String>, Model<String>) {
+fn ensure_models(cx: &mut UiCx<'_>) -> (Model<String>, Model<String>) {
     let state = cx.with_state(Models::default, |st| st.clone());
 
     let email = match state.email {
@@ -34,7 +34,7 @@ fn ensure_models(cx: &mut ElementContext<'_, App>) -> (Model<String>, Model<Stri
     (email, password)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let (email, password) = ensure_models(cx);
 
     let max_w_sm = LayoutRefinement::default()

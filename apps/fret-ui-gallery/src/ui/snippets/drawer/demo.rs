@@ -18,23 +18,6 @@ const GOAL_SERIES: [i32; 13] = [
     400, 300, 200, 300, 200, 278, 189, 239, 300, 200, 278, 189, 349,
 ];
 
-#[derive(Default, Clone)]
-struct Models {
-    goal: Option<Model<i32>>,
-}
-
-fn goal_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<i32> {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    match state.goal {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(350);
-            cx.with_state(Models::default, |st| st.goal = Some(model.clone()));
-            model
-        }
-    }
-}
-
 fn goal_adjust_button<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     goal: Model<i32>,
@@ -109,7 +92,7 @@ fn goal_chart<H: UiHost>(cx: &mut ElementContext<'_, H>, goal: i32) -> AnyElemen
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let goal_model = goal_model(cx);
+    let goal_model = cx.local_model(|| 350);
     let current_goal = cx.watch_model(&goal_model).copied().unwrap_or(350);
     let theme = Theme::global(&*cx.app).snapshot();
     let muted_fg = theme.color_token("muted-foreground");

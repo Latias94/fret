@@ -1,6 +1,7 @@
 use super::prelude::*;
+use fret::UiCx;
 
-fn gate_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, child: AnyElement) -> AnyElement {
+fn gate_panel(cx: &mut UiCx<'_>, theme: &Theme, child: AnyElement) -> AnyElement {
     cx.container(
         decl_style::container_props(
             theme,
@@ -17,7 +18,7 @@ fn gate_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, child: AnyElement
 }
 
 pub(super) fn word_boundary_gate(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
 ) -> AnyElement {
@@ -32,7 +33,7 @@ pub(super) fn word_boundary_gate(
 }
 
 pub(super) fn word_boundary_soft_wrap_gate(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
 ) -> AnyElement {
@@ -47,7 +48,7 @@ pub(super) fn word_boundary_soft_wrap_gate(
 }
 
 pub(super) fn a11y_selection_gate(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
 ) -> AnyElement {
@@ -62,7 +63,7 @@ pub(super) fn a11y_selection_gate(
 }
 
 pub(super) fn a11y_composition_gate(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
 ) -> AnyElement {
@@ -230,7 +231,7 @@ pub(super) fn a11y_composition_gate(
 }
 
 pub(super) fn a11y_selection_wrap_gate(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
 ) -> AnyElement {
@@ -245,7 +246,7 @@ pub(super) fn a11y_selection_wrap_gate(
 }
 
 pub(super) fn a11y_composition_wrap_gate(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
 ) -> AnyElement {
@@ -337,7 +338,7 @@ pub(super) fn a11y_composition_wrap_gate(
 }
 
 pub(super) fn a11y_composition_drag_gate(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
 ) -> AnyElement {

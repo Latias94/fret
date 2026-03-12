@@ -1,20 +1,20 @@
 pub const SOURCE: &str = include_str!("deprecated.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 const CMD_NAV_SONNER: &str = "ui_gallery.nav.select.sonner";
 
-fn centered(cx: &mut ElementContext<'_, App>, body: AnyElement) -> AnyElement {
+fn centered(cx: &mut UiCx<'_>, body: AnyElement) -> AnyElement {
     ui::h_flex(move |_cx| [body])
         .layout(LayoutRefinement::default().w_full())
         .justify_center()
         .into_element(cx)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let deprecated_card = shadcn::Card::new(vec![
         shadcn::CardHeader::new(vec![
             shadcn::CardTitle::new("Toast is deprecated").into_element(cx),

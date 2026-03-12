@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default, Clone)]
@@ -9,7 +9,7 @@ struct SliderModels {
     values: Option<Model<Vec<f32>>>,
 }
 
-fn ensure_values(cx: &mut ElementContext<'_, App>) -> Model<Vec<f32>> {
+fn ensure_values(cx: &mut UiCx<'_>) -> Model<Vec<f32>> {
     let state = cx.with_state(SliderModels::default, |st| st.clone());
     match state.values {
         Some(model) => model,
@@ -21,7 +21,7 @@ fn ensure_values(cx: &mut ElementContext<'_, App>) -> Model<Vec<f32>> {
     }
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     shadcn::Slider::new(ensure_values(cx))
         .range(0.0, 100.0)
         .step(1.0)

@@ -1,7 +1,8 @@
 use super::super::super::super::*;
+use fret::UiCx;
 
 pub(in crate::ui) fn preview_table_retained_torture(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     use fret_ui_kit::headless::table::{
@@ -310,32 +311,31 @@ pub(in crate::ui) fn preview_table_retained_torture(
                 Arc::new(|col: &ColumnDef<TableRow>| Arc::<str>::from(col.id.as_ref()));
             let row_key_at = Arc::new(|row: &TableRow, _index: usize| RowKey(row.id));
             let cell_at = Arc::new(
-                move |cx: &mut ElementContext<'_, App>,
-                      col: &ColumnDef<TableRow>,
-                      row: &TableRow| {
-                    match col.id.as_ref() {
-                        "name" => {
-                            if variable_height && row.id % 15 == 0 {
-                                ui::v_stack(|cx| {
-                                    vec![
-                                        cx.text(row.name.as_ref()),
-                                        cx.text(format!(
-                                            "Details: id={} cpu={} mem={}",
-                                            row.id, row.cpu, row.mem_mb
-                                        )),
-                                    ]
-                                })
-                                .gap(Space::N0)
-                                .into_element(cx)
-                            } else {
-                                cx.text(row.name.as_ref())
-                            }
+                move |cx: &mut UiCx<'_>, col: &ColumnDef<TableRow>, row: &TableRow| match col
+                    .id
+                    .as_ref()
+                {
+                    "name" => {
+                        if variable_height && row.id % 15 == 0 {
+                            ui::v_stack(|cx| {
+                                vec![
+                                    cx.text(row.name.as_ref()),
+                                    cx.text(format!(
+                                        "Details: id={} cpu={} mem={}",
+                                        row.id, row.cpu, row.mem_mb
+                                    )),
+                                ]
+                            })
+                            .gap(Space::N0)
+                            .into_element(cx)
+                        } else {
+                            cx.text(row.name.as_ref())
                         }
-                        "status" => cx.text(row.status.as_ref()),
-                        "cpu%" => cx.text(format!("{}%", row.cpu)),
-                        "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
-                        _ => cx.text("?"),
                     }
+                    "status" => cx.text(row.status.as_ref()),
+                    "cpu%" => cx.text(format!("{}%", row.cpu)),
+                    "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
+                    _ => cx.text("?"),
                 },
             );
 

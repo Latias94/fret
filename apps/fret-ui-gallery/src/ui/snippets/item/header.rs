@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("header.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui::Theme;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let max_w_xl = LayoutRefinement::default()
         .w_full()
         .min_w_0()

@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
@@ -15,7 +15,7 @@ struct TabsModels {
 }
 
 fn ensure_models(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
 ) -> (Model<String>, Model<String>, Model<String>, Model<String>) {
     let state = cx.with_state(TabsModels::default, |st| st.clone());
 
@@ -60,7 +60,7 @@ fn ensure_models(
 }
 
 fn field(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     label: &'static str,
     model: Model<String>,
     a11y: &'static str,
@@ -80,7 +80,7 @@ fn field(
         .into_element(cx)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let (name, username, current_password, new_password) = ensure_models(cx);
 
     let account_card = {

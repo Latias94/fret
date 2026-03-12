@@ -1,12 +1,12 @@
 use fret::router::{
-    collect_invalidated_namespaces, prefetch_intent_query_key, NamespaceInvalidationRule,
-    NavigationAction, RouteChangePolicy, RouteHooks, RouteLocation, RouteNode, RoutePrefetchIntent,
-    RouteSearchTable, RouteSearchValidationFailure, RouteTree, Router, RouterUpdate,
-    RouterUpdateWithPrefetchIntents, SearchValidationMode,
+    NamespaceInvalidationRule, NavigationAction, RouteChangePolicy, RouteHooks, RouteLocation,
+    RouteNode, RoutePrefetchIntent, RouteSearchTable, RouteSearchValidationFailure, RouteTree,
+    Router, RouterUpdate, RouterUpdateWithPrefetchIntents, SearchValidationMode,
+    collect_invalidated_namespaces, prefetch_intent_query_key,
 };
 use fret_app::{App, CommandId};
 use fret_core::AppWindowId;
-use fret_query::{with_query_client, QueryPolicy};
+use fret_query::{QueryPolicy, with_query_client};
 use fret_runtime::WindowCommandEnabledService;
 use std::sync::Arc;
 
@@ -46,8 +46,10 @@ pub(super) fn build_ui_gallery_page_router() -> Router<UiGalleryRouteId, UiGalle
     let tree = Arc::new(RouteTree::new(
         RouteNode::new(UiGalleryRouteId::Root, "/")
             .expect("root route should build")
-            .with_children(vec![RouteNode::new(UiGalleryRouteId::Gallery, "gallery")
-                .expect("gallery route should build")]),
+            .with_children(vec![
+                RouteNode::new(UiGalleryRouteId::Gallery, "gallery")
+                    .expect("gallery route should build"),
+            ]),
     ));
 
     let search_table = Arc::new(RouteSearchTable::new());

@@ -1,7 +1,5 @@
-pub const SOURCE: &str = include_str!("gallery.rs");
-
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui::Theme;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
@@ -15,12 +13,12 @@ struct Models {
     download_progress: Option<Model<f32>>,
 }
 
-fn icon(cx: &mut ElementContext<'_, App>, id: &'static str) -> AnyElement {
+fn icon(cx: &mut UiCx<'_>, id: &'static str) -> AnyElement {
     fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
 }
 
 fn icon_button(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     icon_id: &'static str,
     variant: shadcn::ButtonVariant,
     test_id: Arc<str>,
@@ -34,13 +32,13 @@ fn icon_button(
         .test_id(test_id)
 }
 
-fn outline_button(cx: &mut ElementContext<'_, App>, label: &'static str) -> AnyElement {
+fn outline_button(cx: &mut UiCx<'_>, label: &'static str) -> AnyElement {
     shadcn::Button::new(label)
         .variant(shadcn::ButtonVariant::Outline)
         .into_element(cx)
 }
 
-fn outline_button_sm(cx: &mut ElementContext<'_, App>, label: &'static str) -> AnyElement {
+fn outline_button_sm(cx: &mut UiCx<'_>, label: &'static str) -> AnyElement {
     shadcn::Button::new(label)
         .variant(shadcn::ButtonVariant::Outline)
         .size(shadcn::ButtonSize::Sm)
@@ -48,7 +46,7 @@ fn outline_button_sm(cx: &mut ElementContext<'_, App>, label: &'static str) -> A
 }
 
 fn item_basic(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     variant: shadcn::ItemVariant,
     title: &'static str,
     description: Option<&'static str>,
@@ -73,7 +71,7 @@ fn item_basic(
 }
 
 fn item_icon(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     variant: shadcn::ItemVariant,
     icon_id: &'static str,
     title: &'static str,
@@ -106,7 +104,7 @@ fn item_icon(
 }
 
 fn item_avatar(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     username: &'static str,
     message: &'static str,
     initials: &'static str,
@@ -137,11 +135,7 @@ fn item_avatar(
         .test_id(test_id)
 }
 
-fn item_team(
-    cx: &mut ElementContext<'_, App>,
-    test_id: &'static str,
-    action_test_id: &'static str,
-) -> AnyElement {
+fn item_team(cx: &mut UiCx<'_>, test_id: &'static str, action_test_id: &'static str) -> AnyElement {
     let avatars = ui::h_row(|cx| {
         vec![
             shadcn::Avatar::new([shadcn::AvatarFallback::new("CN").into_element(cx)])
@@ -180,7 +174,7 @@ fn item_team(
         .test_id(test_id)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
 
     let download_progress = cx

@@ -1,7 +1,8 @@
 use super::super::super::super::*;
+use fret::UiCx;
 
 pub(in crate::ui) fn preview_inspector_torture(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     let len: usize = std::env::var("FRET_UI_GALLERY_INSPECTOR_LEN")
@@ -34,7 +35,7 @@ pub(in crate::ui) fn preview_inspector_torture(
             .keep_alive(keep_alive);
 
     let theme = theme.clone();
-    let row = move |cx: &mut ElementContext<'_, App>, index: usize| {
+    let row = move |cx: &mut UiCx<'_>, index: usize| {
         let zebra = (index % 2) == 0;
         let background = if zebra {
             theme.color_token("muted")

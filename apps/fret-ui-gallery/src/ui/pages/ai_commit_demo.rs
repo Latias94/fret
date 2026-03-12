@@ -2,9 +2,10 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
+use fret::UiCx;
 use fret_ui_kit::ui::UiElementSinkExt as _;
 
-fn file_status_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
+fn file_status_table(cx: &mut UiCx<'_>) -> AnyElement {
     let row = |status: &'static str, label: &'static str, color: &'static str| {
         shadcn::TableRow::build(3, move |cx, out| {
             out.push_ui(cx, shadcn::TableCell::build(ui::text(status)));
@@ -40,7 +41,7 @@ fn file_status_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .into_element(cx)
 }
 
-fn parts_props_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
+fn parts_props_table(cx: &mut UiCx<'_>) -> AnyElement {
     let row = |part: &'static str, inputs: &'static str, notes: &'static str| {
         shadcn::TableRow::build(3, move |cx, out| {
             out.push_ui(cx, shadcn::TableCell::build(ui::text(part)));
@@ -87,10 +88,7 @@ fn parts_props_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .into_element(cx)
 }
 
-pub(super) fn preview_ai_commit_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
+pub(super) fn preview_ai_commit_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let demo = snippets::commit_demo::render(cx);
     let custom_children = snippets::commit_custom_children::render(cx);
     let features = doc_layout::notes(

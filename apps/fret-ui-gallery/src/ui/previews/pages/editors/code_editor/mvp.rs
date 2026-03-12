@@ -8,10 +8,11 @@ mod prelude {
 }
 
 use crate::ui::doc_layout;
+use fret::UiCx;
 use prelude::*;
 
 pub(in crate::ui) fn preview_code_editor_mvp(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     syntax_rust: Model<bool>,
     boundary_identifier: Model<bool>,

@@ -1,30 +1,15 @@
 pub const SOURCE: &str = include_str!("icon.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn icon(cx: &mut ElementContext<'_, App>, id: &'static str) -> AnyElement {
+fn icon(cx: &mut UiCx<'_>, id: &'static str) -> AnyElement {
     fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
 }
 
-fn icon_button(
-    cx: &mut ElementContext<'_, App>,
-    icon_id: &'static str,
-    variant: shadcn::ButtonVariant,
-    test_id: &'static str,
-) -> AnyElement {
-    shadcn::Button::new("")
-        .a11y_label(icon_id)
-        .variant(variant)
-        .size(shadcn::ButtonSize::Icon)
-        .icon(fret_icons::IconId::new_static(icon_id))
-        .into_element(cx)
-        .test_id(test_id)
-}
-
 fn item_icon(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     icon_id: &'static str,
     title: &'static str,
     description: &'static str,
@@ -57,7 +42,7 @@ fn item_icon(
     .test_id(test_id)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let max_w_lg = LayoutRefinement::default()
         .w_full()
         .min_w_0()

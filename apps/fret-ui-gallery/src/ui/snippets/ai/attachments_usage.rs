@@ -1,14 +1,72 @@
 pub const SOURCE: &str = include_str!("attachments_usage.rs");
 
 // region: example
-use crate::ui::snippets::aspect_ratio::landscape_image_id;
-use fret_core::Px;
+use fret_core::{ImageColorSpace, ImageId, Px};
 use fret_ui::Theme;
 use fret_ui::element::{ContainerProps, InteractivityGateProps};
 use fret_ui_ai as ui_ai;
+use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
+use std::sync::OnceLock;
+
+fn landscape_image_id<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Option<ImageId> {
+    static SOURCE: OnceLock<ImageSource> = OnceLock::new();
+    let source = SOURCE.get_or_init(|| {
+        // Keep the snippet self-contained instead of depending on repo-relative demo assets.
+        ImageSource::rgba8(
+            320,
+            192,
+            demo_preview_rgba8(320, 192, (92, 168, 255)),
+            ImageColorSpace::Srgb,
+        )
+    });
+    cx.use_image_source_state(source).image
+}
+
+fn demo_preview_rgba8(width: u32, height: u32, accent: (u8, u8, u8)) -> Vec<u8> {
+    let mut out = vec![0u8; (width as usize) * (height as usize) * 4];
+    let width_f = (width.saturating_sub(1)).max(1) as f32;
+    let height_f = (height.saturating_sub(1)).max(1) as f32;
+
+    for y in 0..height {
+        for x in 0..width {
+            let idx = ((y as usize) * (width as usize) + (x as usize)) * 4;
+            let fx = x as f32 / width_f;
+            let fy = y as f32 / height_f;
+
+            let mut r = (24.0 + accent.0 as f32 * (0.30 + 0.70 * fx)) as u8;
+            let mut g = (20.0 + accent.1 as f32 * (0.40 + 0.60 * (1.0 - fy))) as u8;
+            let mut b = (28.0 + accent.2 as f32 * (0.35 + 0.65 * (0.5 + 0.5 * (fx - fy)))) as u8;
+
+            let border = x < 3 || y < 3 || x + 3 >= width || y + 3 >= height;
+            let horizon = y > height / 2 - 3 && y < height / 2 + 3;
+            let badge = x > width / 10 && x < width / 5 && y > height / 8 && y < height / 4;
+
+            if border {
+                r = 245;
+                g = 245;
+                b = 245;
+            } else if horizon {
+                r = r.saturating_add(22);
+                g = g.saturating_add(22);
+                b = b.saturating_add(16);
+            } else if badge {
+                r = 250;
+                g = 250;
+                b = 250;
+            }
+
+            out[idx] = r;
+            out[idx + 1] = g;
+            out[idx + 2] = b;
+            out[idx + 3] = 255;
+        }
+    }
+
+    out
+}
 
 fn render_grid_attachment<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,

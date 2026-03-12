@@ -1,9 +1,10 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::select as snippets;
 
-pub(super) fn preview_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = {
         // A minimal shadcn-aligned demo (matches upstream `select-demo.tsx` example).
         let shadcn_demo = snippets::demo::render(cx);

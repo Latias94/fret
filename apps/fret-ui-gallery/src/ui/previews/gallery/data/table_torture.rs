@@ -1,7 +1,8 @@
 use super::super::super::super::*;
+use fret::UiCx;
 
 pub(in crate::ui) fn preview_data_table_torture(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     _state: Model<fret_ui_headless::table::TableState>,
 ) -> Vec<AnyElement> {

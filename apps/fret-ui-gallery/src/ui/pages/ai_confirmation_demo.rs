@@ -2,11 +2,9 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
+use fret::UiCx;
 
-pub(super) fn preview_ai_confirmation_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
+pub(super) fn preview_ai_confirmation_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let workflow = snippets::confirmation_demo::render(cx);
     let request = snippets::confirmation_request::render(cx);
     let accepted = snippets::confirmation_accepted::render(cx);

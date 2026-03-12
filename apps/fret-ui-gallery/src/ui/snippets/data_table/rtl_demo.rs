@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("rtl_demo.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::Px;
 use fret_runtime::{CommandId, Model};
 use fret_ui::Theme;
@@ -73,7 +73,7 @@ const LANG_AR: Lang = Lang {
     next: "التالي",
 };
 
-fn align_inline_start(cx: &mut ElementContext<'_, App>, child: AnyElement) -> AnyElement {
+fn align_inline_start(cx: &mut UiCx<'_>, child: AnyElement) -> AnyElement {
     let dir = shadcn::use_direction(cx, None);
     let row = ui::h_flex(move |_cx| [child]).layout(LayoutRefinement::default().w_full());
     let row = match dir {
@@ -84,7 +84,7 @@ fn align_inline_start(cx: &mut ElementContext<'_, App>, child: AnyElement) -> An
 }
 
 fn bottom_controls(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     state: Model<TableState>,
     output: Model<fret_ui_kit::declarative::table::TableViewOutput>,
     lang: Lang,
@@ -156,7 +156,7 @@ fn bottom_controls(
     .into_element(cx)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let assets = cx.with_state(
         || {
             let data: Arc<[PaymentRow]> = Arc::from(vec![

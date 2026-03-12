@@ -4,12 +4,18 @@ use std::path::{Path, PathBuf};
 
 fn find_first_internal_gallery_ref(src: &str) -> Option<&'static str> {
     // Snippet files are the copy/paste surface, so they should avoid importing UI Gallery
-    // internals. Keep this check lightweight and heuristic; it intentionally does not parse Rust.
+    // internals or repo-relative demo assets. Keep this check lightweight and heuristic; it
+    // intentionally does not parse Rust.
     let patterns = [
+        "use crate::driver::",
+        "crate::driver::",
         "use crate::ui::",
         "crate::ui::",
         "use crate::spec::",
         "crate::spec::",
+        "env!(\"CARGO_MANIFEST_DIR\")",
+        "../../assets/",
+        "Arc::<str>::from(\"textures/",
     ];
     patterns.into_iter().find(|p| src.contains(p))
 }
@@ -54,10 +60,11 @@ fn ui_snippets_do_not_import_ui_gallery_internals() {
 
         if let Some(pattern) = find_first_internal_gallery_ref(&src) {
             panic!(
-                "UI Gallery snippet references internal modules ({pattern}): {}\n\
+                "UI Gallery snippet references gallery-only glue ({pattern}): {}\n\
                  Snippets are the copy/paste surface. Prefer user-facing imports like:\n\
-                 - `use fret_ui_shadcn::prelude::*;`\n\
-                 - `use fret_ui_shadcn::{{self as shadcn, prelude::*}};`\n\
+                 - `use fret::UiCx;`\n\
+                 - `use fret_ui_shadcn::{{facade as shadcn, prelude::*}};`\n\
+                 - self-contained demo assets via `fret_ui_assets::ImageSource::rgba8(...)`\n\
                  and inline any stable command ids as `const CMD_*: &str = ...`.\n\
                  If a demo depends on gallery-only glue, keep it in `apps/fret-ui-gallery/src/ui/previews/` \
                  and avoid showing it as a snippet-backed code tab.",

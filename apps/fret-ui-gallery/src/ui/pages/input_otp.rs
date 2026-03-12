@@ -1,9 +1,10 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::input_otp as snippets;
 
-pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(super) fn preview_input_otp(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
     let pattern = snippets::pattern::render(cx);

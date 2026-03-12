@@ -1,7 +1,8 @@
 use super::prelude::*;
+use fret::UiCx;
 
 pub(super) fn word_boundary_controls(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     word_handle: code_editor::CodeEditorHandle,
     word_fixture_loaded: Rc<Cell<bool>>,
     word_idx: Rc<Cell<usize>>,
@@ -216,7 +217,7 @@ pub(super) fn word_boundary_controls(
 }
 
 pub(super) fn word_boundary_debug_view(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     word_handle: code_editor::CodeEditorHandle,
     word_debug: Rc<std::cell::RefCell<String>>,

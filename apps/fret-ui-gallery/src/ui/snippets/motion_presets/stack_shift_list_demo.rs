@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("stack_shift_list_demo.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui::Theme;
 use fret_ui::element::LayoutStyle;
 use fret_ui_kit::declarative::ModelWatchExt;
@@ -33,7 +33,7 @@ struct Models {
     stack_shift_next_id: Option<Model<u64>>,
 }
 
-fn ensure_models(cx: &mut ElementContext<'_, App>) -> (Model<Vec<StackShiftListItem>>, Model<u64>) {
+fn ensure_models(cx: &mut UiCx<'_>) -> (Model<Vec<StackShiftListItem>>, Model<u64>) {
     let state = cx.with_state(Models::default, |st| st.clone());
 
     let list = match state.stack_shift_list {
@@ -82,7 +82,7 @@ fn ensure_models(cx: &mut ElementContext<'_, App>) -> (Model<Vec<StackShiftListI
     (list, next_id)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>, theme: &Theme) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>, theme: &Theme) -> AnyElement {
     let shell_layout = LayoutRefinement::default()
         .w_full()
         .max_w(Px(760.0))

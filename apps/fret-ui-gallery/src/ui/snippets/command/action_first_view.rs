@@ -8,9 +8,8 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret::advanced::prelude::*;
-use fret::view::ViewCx;
+use fret::app::App;
 use fret_ui::CommandAvailability;
-use fret_ui::element::Elements;
 use fret_ui_shadcn::facade as shadcn;
 
 mod act {
@@ -23,21 +22,21 @@ struct ActionFirstViewRuntimeDemo {
 }
 
 impl View for ActionFirstViewRuntimeDemo {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: AppWindowId) -> Self {
         Self { last_action: None }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let last_action = self
             .last_action
             .clone()
             .expect("expected snippet to inject `last_action` model");
 
-        let count_state = cx.use_local::<u32>();
-        let count_value = count_state.layout(cx).value_or(0);
-        let last_action_value = cx.watch_model(&last_action).layout().value_or_default();
+        let count_state = cx.state().local::<u32>();
+        let count_value = count_state.watch(cx).layout().value_or(0);
+        let last_action_value = last_action.watch(cx).layout().value_or_default();
 
-        cx.on_action_notify_models::<act::Ping>({
+        cx.actions().models::<act::Ping>({
             let count_state = count_state.clone();
             let last_action = last_action.clone();
             move |models| {
@@ -51,7 +50,8 @@ impl View for ActionFirstViewRuntimeDemo {
             }
         });
 
-        cx.on_action_availability::<act::Ping>(|_host, _acx| CommandAvailability::Available);
+        cx.actions()
+            .availability::<act::Ping>(|_host, _acx| CommandAvailability::Available);
 
         ui::v_flex(|cx| {
             [
@@ -72,7 +72,7 @@ impl View for ActionFirstViewRuntimeDemo {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn render(cx: &mut ElementContext<'_, KernelApp>, last_action: Model<Arc<str>>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> AnyElement {
     cx.named("ui-gallery.command.action_first.view_runtime", |cx| {
         struct ViewSlot {
             state: Option<Rc<RefCell<fret::view::ViewWindowState<ActionFirstViewRuntimeDemo>>>>,
@@ -115,7 +115,7 @@ pub fn render(cx: &mut ElementContext<'_, KernelApp>, last_action: Model<Arc<str
 }
 
 #[cfg(target_arch = "wasm32")]
-pub fn render(cx: &mut ElementContext<'_, KernelApp>, _last_action: Model<Arc<str>>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>, _last_action: Model<Arc<str>>) -> AnyElement {
     cx.named("ui-gallery.command.action_first.view_runtime", |cx| {
         ui::v_flex(|cx| {
             [

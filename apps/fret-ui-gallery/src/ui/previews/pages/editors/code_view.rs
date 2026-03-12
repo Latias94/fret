@@ -1,5 +1,6 @@
 use super::super::super::super::*;
 use crate::ui::doc_layout;
+use fret::UiCx;
 
 pub(in crate::ui) fn code_view_torture_source() -> Arc<str> {
     static SOURCE: OnceLock<Arc<str>> = OnceLock::new();
@@ -22,7 +23,7 @@ pub(in crate::ui) fn code_view_torture_source() -> Arc<str> {
 }
 
 pub(in crate::ui) fn preview_code_view_torture(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     _theme: &Theme,
 ) -> Vec<AnyElement> {
     let header = ui::v_flex(|cx| {

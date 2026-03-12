@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("queue_demo.rs");
 
 // region: example
-use fret_core::ImageId;
+use fret_core::{ImageColorSpace, ImageId};
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
@@ -10,8 +10,7 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
-use std::sync::Arc;
-use std::{path::PathBuf, sync::OnceLock};
+use std::sync::{Arc, OnceLock};
 
 #[derive(Default)]
 struct DemoModels {
@@ -23,7 +22,7 @@ struct DemoModels {
 #[derive(Debug, Clone)]
 enum DemoMessagePart {
     Text(Arc<str>),
-    Image { filename: Arc<str> },
+    Image,
     File { filename: Arc<str> },
 }
 
@@ -42,28 +41,61 @@ struct DemoTodo {
 }
 
 fn demo_queue_image_id<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Option<ImageId> {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        static SOURCE: OnceLock<Option<ImageSource>> = OnceLock::new();
-        let source = SOURCE.get_or_init(|| {
-            let path =
-                PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../assets/textures/test.jpg");
-            path.exists()
-                .then(|| ImageSource::from_path(Arc::new(path)))
-        });
-        let state = source
-            .as_ref()
-            .map(|source| cx.use_image_source_state(source));
-        return state.and_then(|state| state.image);
+    static SOURCE: OnceLock<ImageSource> = OnceLock::new();
+    let source = SOURCE.get_or_init(|| {
+        // Keep the snippet self-contained instead of depending on repo-relative demo assets.
+        ImageSource::rgba8(
+            192,
+            120,
+            demo_queue_preview_rgba8(192, 120),
+            ImageColorSpace::Srgb,
+        )
+    });
+    cx.use_image_source_state(source).image
+}
+
+fn demo_queue_preview_rgba8(width: u32, height: u32) -> Vec<u8> {
+    let mut out = vec![0u8; (width as usize) * (height as usize) * 4];
+    let width_f = (width.saturating_sub(1)).max(1) as f32;
+    let height_f = (height.saturating_sub(1)).max(1) as f32;
+
+    for y in 0..height {
+        for x in 0..width {
+            let idx = ((y as usize) * (width as usize) + (x as usize)) * 4;
+            let fx = x as f32 / width_f;
+            let fy = y as f32 / height_f;
+
+            let mut r = (18.0 + 88.0 * fx) as u8;
+            let mut g = (24.0 + 132.0 * (1.0 - fy)) as u8;
+            let mut b = (46.0 + 164.0 * fy) as u8;
+
+            let border = x < 3 || y < 3 || x + 3 >= width || y + 3 >= height;
+            let card = x > width / 8 && x < width / 2 && y > height / 5 && y < (height * 4) / 5;
+            let status =
+                x > (width * 3) / 5 && x < (width * 7) / 8 && y > height / 3 && y < height / 2;
+
+            if border {
+                r = 245;
+                g = 245;
+                b = 245;
+            } else if card {
+                r = r.saturating_add(18);
+                g = g.saturating_add(18);
+                b = b.saturating_add(18);
+            } else if status {
+                r = 250;
+                g = 250;
+                b = 250;
+            }
+
+            out[idx] = r;
+            out[idx + 1] = g;
+            out[idx + 2] = b;
+            out[idx + 3] = 255;
+        }
     }
 
-    #[cfg(target_arch = "wasm32")]
-    {
-        static SOURCE: OnceLock<ImageSource> = OnceLock::new();
-        let source =
-            SOURCE.get_or_init(|| ImageSource::from_url(Arc::<str>::from("textures/test.jpg")));
-        return cx.use_image_source_state(source).image;
-    }
+    out
 }
 
 fn default_messages() -> Vec<DemoMessage> {
@@ -84,9 +116,7 @@ fn default_messages() -> Vec<DemoMessage> {
             id: Arc::<str>::from("msg-3"),
             parts: Arc::from([
                 DemoMessagePart::Text(Arc::<str>::from("Update the default logo to this png.")),
-                DemoMessagePart::Image {
-                    filename: Arc::<str>::from("setup-guide.png"),
-                },
+                DemoMessagePart::Image,
                 DemoMessagePart::File {
                     filename: Arc::<str>::from("setup-guide.png"),
                 },
@@ -326,7 +356,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                         for part in msg.parts.iter() {
                             match part {
                                 DemoMessagePart::Text(_) => {}
-                                DemoMessagePart::Image { filename: _ } => {
+                                DemoMessagePart::Image => {
                                     if let Some(id) = image_id {
                                         attachments
                                             .push(ui_ai::QueueItemImage::new(id).into_element(cx));

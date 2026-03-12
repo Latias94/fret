@@ -1,9 +1,10 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::tooltip as snippets;
 
-pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(super) fn preview_tooltip(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo_tooltip = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
     let long_content_tooltip = snippets::long_content::render(cx);

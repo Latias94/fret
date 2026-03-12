@@ -1,9 +1,10 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::spinner as snippets;
 
-pub(super) fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(super) fn preview_spinner(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
     let customization = snippets::customization::render(cx);
@@ -20,6 +21,7 @@ pub(super) fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
         [
             "`Spinner::new()` mirrors the upstream leaf spinner with the default loader icon, intrinsic 16px box, and continuous spin.",
             "The default icon, current-color inheritance, size-4 box, and spin animation remain recipe-owned because the upstream component source defines those defaults on the spinner itself.",
+            "`Button::leading_children(...)` / `trailing_children(...)` are the preferred Fret equivalent of the upstream `Spinner data-icon=\"inline-start|inline-end\"` composition story.",
             "Custom icon choice (`icon(...)`), explicit size (`refine_layout(...)`), and optional color (`color(...)`) remain caller-owned refinements; `speed(...)` stays a focused Fret follow-up and is documented under `Extras`, not the upstream docs path.",
             "Button, badge, and input-group spacing stay owned by those host recipes rather than the spinner itself.",
             "Spinner is a visual leaf primitive, so no generic `compose()` / children API is needed here.",

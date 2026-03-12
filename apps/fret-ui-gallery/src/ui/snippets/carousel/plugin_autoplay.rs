@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("plugin_autoplay.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, HoverRegionProps, MainAlign};
@@ -26,7 +26,7 @@ struct SlideVisual {
     line_height_px: Px,
 }
 
-fn slide_card(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual) -> AnyElement {
+fn slide_card(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
 
     let number = ui::text(format!("{idx}"))
@@ -54,7 +54,7 @@ fn slide_card(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual)
     shadcn::Card::new([content]).into_element(cx)
 }
 
-fn slide(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual) -> AnyElement {
+fn slide(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement {
     let card = slide_card(cx, idx, visual);
     ui::container(move |_cx| vec![card])
         .w_full()
@@ -62,7 +62,7 @@ fn slide(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual) -> A
         .into_element(cx)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let max_w_xs = Px(320.0);
 
     let state = cx.with_state(Models::default, |st| st.clone());

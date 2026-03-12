@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("dropdowns.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui::Invalidation;
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -27,7 +27,7 @@ fn parse_iso_date_ymd(raw: &str) -> Option<Date> {
     Date::from_calendar_date(year, month, day).ok()
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let today = std::env::var("FRET_UI_GALLERY_FIXED_TODAY")
         .ok()
         .and_then(|raw| parse_iso_date_ymd(&raw))
@@ -63,7 +63,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
     let content_month = month.clone();
     let content_selected = selected.clone();
-    let content = move |cx: &mut ElementContext<'_, App>| {
+    let content = move |cx: &mut UiCx<'_>| {
         shadcn::Calendar::new(content_month.clone(), content_selected.clone())
             .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
             .test_id_prefix("ui-gallery-date-picker-dropdowns-calendar")
@@ -71,7 +71,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     };
 
     let trigger_open = open.clone();
-    let trigger = move |cx: &mut ElementContext<'_, App>| {
+    let trigger = move |cx: &mut UiCx<'_>| {
         shadcn::Button::new("Pick a date")
             .variant(shadcn::ButtonVariant::Outline)
             .toggle_model(trigger_open.clone())

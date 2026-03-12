@@ -1,9 +1,10 @@
 use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::resizable as snippets;
+use fret::UiCx;
 
 pub(super) fn preview_resizable(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     h_fractions: Model<Vec<f32>>,
     v_fractions: Model<Vec<f32>>,
 ) -> Vec<AnyElement> {

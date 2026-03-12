@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
@@ -9,7 +9,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn slide_card(cx: &mut ElementContext<'_, App>, idx: usize) -> AnyElement {
+fn slide_card(cx: &mut UiCx<'_>, idx: usize) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
 
     let number = ui::text(format!("{idx}"))
@@ -37,7 +37,7 @@ fn slide_card(cx: &mut ElementContext<'_, App>, idx: usize) -> AnyElement {
     shadcn::Card::new([content]).into_element(cx)
 }
 
-fn slide(cx: &mut ElementContext<'_, App>, idx: usize) -> AnyElement {
+fn slide(cx: &mut UiCx<'_>, idx: usize) -> AnyElement {
     let card = slide_card(cx, idx);
     ui::container(move |_cx| vec![card])
         .w_full()
@@ -45,7 +45,7 @@ fn slide(cx: &mut ElementContext<'_, App>, idx: usize) -> AnyElement {
         .into_element(cx)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let items = (1..=3)
         .map(|idx| shadcn::CarouselItem::new(slide(cx, idx)))
         .collect::<Vec<_>>();

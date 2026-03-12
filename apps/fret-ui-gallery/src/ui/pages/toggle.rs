@@ -1,9 +1,10 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::toggle as snippets;
 
-pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(super) fn preview_toggle(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
     let outline = snippets::outline::render(cx);

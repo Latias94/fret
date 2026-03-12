@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let config: shadcn::ChartConfig = [
         (
             Arc::<str>::from("desktop"),

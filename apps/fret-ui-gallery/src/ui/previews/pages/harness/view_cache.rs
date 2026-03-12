@@ -1,8 +1,9 @@
 use super::super::super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
+use fret::UiCx;
 
 pub(in crate::ui) fn preview_view_cache(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     _theme: &Theme,
     view_cache_enabled: Model<bool>,
     view_cache_cache_shell: Model<bool>,
@@ -136,7 +137,7 @@ pub(in crate::ui) fn preview_view_cache(
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N3).into_element(cx);
 
-    let subtree_body = |cx: &mut ElementContext<'_, App>| -> Vec<AnyElement> {
+    let subtree_body = |cx: &mut UiCx<'_>| -> Vec<AnyElement> {
         let render_count = cx.with_state(
             || 0u64,
             |v| {

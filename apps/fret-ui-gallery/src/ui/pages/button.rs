@@ -1,9 +1,10 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::button as snippets;
 
-pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(super) fn preview_button(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
     let size = snippets::size::render(cx);
@@ -36,6 +37,8 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         [
             "`Button::new(label)` plus `variant(...)` covers the documented `default`, `outline`, `secondary`, `ghost`, `destructive`, and `link` recipe surface.",
             "`size(...)` covers `default`, `xs`, `sm`, `lg`, `icon`, `icon-xs`, `icon-sm`, and `icon-lg`.",
+            "`leading_children(...)` / `trailing_children(...)` are the preferred Fret equivalent of upstream `data-icon=\"inline-start|inline-end\"` child composition for dynamic affordances such as `Spinner`.",
+            "`children(...)` remains the full content override when you want to replace the entire inner row on purpose.",
             "`ButtonRender::Link` is the Fret equivalent of the second upstream `Link` section: semantic link rendering stays button-owned instead of widening the public surface with a generic `asChild`/`compose()` API.",
             "Intrinsic chrome stays recipe-owned; page-level width, wrapping, `flex-1`, `min-w-0`, and fully-rounded one-off examples stay caller-owned refinements.",
         ],
@@ -47,7 +50,7 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             "API reference: `ecosystem/fret-ui-shadcn/src/button.rs`.",
             "Gallery sections now mirror shadcn Button docs first: Demo, Usage, Cursor, Size, Default, Outline, Secondary, Ghost, Destructive, Link, Icon, With Icon, Rounded, Spinner, Button Group, Link (semantic), RTL, API Reference.",
             "`Variants Overview (Fret)` stays after the upstream path so existing variant chrome diagnostics remain easy to compare without displacing the docs order.",
-            "No mechanism bug is indicated here: the main remaining work was docs/public-surface parity, plus explicit ownership notes for cursor and call-site refinements.",
+            "The main parity fix here is recipe/public-surface work: logical inline child slots now cover spinner/icon compositions without widening `Button` into a generic `asChild` surface.",
         ],
     );
 

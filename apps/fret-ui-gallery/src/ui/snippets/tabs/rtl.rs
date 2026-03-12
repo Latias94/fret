@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     shadcn::DirectionProvider::new(shadcn::LayoutDirection::Rtl)
         .into_element(cx, |cx| {
             shadcn::Tabs::uncontrolled(Some(Arc::<str>::from("preview")))

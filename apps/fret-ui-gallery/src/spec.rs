@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 
 use fret::router::{RouteCodec, RouteLocation};
+#[cfg(feature = "gallery-dev")]
 use fret_runtime::CommandId;
 
 pub(crate) const ENV_UI_GALLERY_BISECT: &str = "FRET_UI_GALLERY_BISECT";
@@ -222,140 +223,160 @@ mod tests {
     }
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(crate) const CMD_DATA_GRID_ROW_PREFIX: &str = "ui_gallery.data_grid.row.";
+#[cfg(feature = "gallery-dev")]
 pub(crate) const DATA_GRID_ROWS: usize = 200;
 
 pub(crate) const PAGE_INTRO: &str = "intro";
 pub(crate) const PAGE_LAYOUT: &str = "layout";
 pub(crate) const PAGE_MOTION_PRESETS: &str = "motion_presets";
 pub(crate) const PAGE_VIEW_CACHE: &str = "view_cache";
-pub(crate) const PAGE_HIT_TEST_TORTURE: &str = "hit_test_torture";
-pub(crate) const PAGE_HIT_TEST_ONLY_PAINT_CACHE_PROBE: &str = "hit_test_only_paint_cache_probe";
 #[allow(dead_code)]
 pub(crate) const PAGE_EFFECTS_BLUR_TORTURE: &str = "effects_blur_torture";
 #[allow(dead_code)]
 pub(crate) const PAGE_SVG_UPLOAD_TORTURE: &str = "svg_upload_torture";
 #[allow(dead_code)]
 pub(crate) const PAGE_SVG_SCROLL_TORTURE: &str = "svg_scroll_torture";
-pub(crate) const PAGE_VIRTUAL_LIST_TORTURE: &str = "virtual_list_torture";
-pub(crate) const PAGE_UI_KIT_LIST_TORTURE: &str = "ui_kit_list_torture";
-pub(crate) const PAGE_CODE_VIEW_TORTURE: &str = "code_view_torture";
-pub(crate) const PAGE_CODE_EDITOR_MVP: &str = "code_editor_mvp";
-pub(crate) const PAGE_CODE_EDITOR_TORTURE: &str = "code_editor_torture";
-pub(crate) const PAGE_MARKDOWN_EDITOR_SOURCE: &str = "markdown_editor_source";
-pub(crate) const PAGE_TEXT_SELECTION_PERF: &str = "text_selection_perf";
-pub(crate) const PAGE_TEXT_BIDI_RTL_CONFORMANCE: &str = "text_bidi_rtl_conformance";
-pub(crate) const PAGE_TEXT_MIXED_SCRIPT_FALLBACK: &str = "text_mixed_script_fallback";
-pub(crate) const PAGE_TEXT_MEASURE_OVERLAY: &str = "text_measure_overlay";
-pub(crate) const PAGE_TEXT_FEATURE_TOGGLES: &str = "text_feature_toggles";
-pub(crate) const PAGE_TEXT_OUTLINE_STROKE: &str = "text_outline_stroke";
-pub(crate) const PAGE_WEB_IME_HARNESS: &str = "web_ime_harness";
-pub(crate) const PAGE_CHART_TORTURE: &str = "chart_torture";
-pub(crate) const PAGE_CANVAS_CULL_TORTURE: &str = "canvas_cull_torture";
-pub(crate) const PAGE_NODE_GRAPH_CULL_TORTURE: &str = "node_graph_cull_torture";
-pub(crate) const PAGE_CHROME_TORTURE: &str = "chrome_torture";
-pub(crate) const PAGE_WINDOWED_ROWS_SURFACE_TORTURE: &str = "windowed_rows_surface_torture";
-pub(crate) const PAGE_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE: &str =
-    "windowed_rows_surface_interactive_torture";
-pub(crate) const PAGE_DATA_TABLE_TORTURE: &str = "data_table_torture";
-pub(crate) const PAGE_TREE_TORTURE: &str = "tree_torture";
-pub(crate) const PAGE_TABLE_RETAINED_TORTURE: &str = "table_retained_torture";
-pub(crate) const PAGE_AI_TRANSCRIPT_TORTURE: &str = "ai_transcript_torture";
-pub(crate) const PAGE_AI_CHAT_DEMO: &str = "ai_chat_demo";
-pub(crate) const PAGE_AI_CONVERSATION_DEMO: &str = "ai_conversation_demo";
-pub(crate) const PAGE_AI_MESSAGE_DEMO: &str = "ai_message_demo";
-pub(crate) const PAGE_AI_CONTEXT_DEMO: &str = "ai_context_demo";
-pub(crate) const PAGE_AI_TERMINAL_DEMO: &str = "ai_terminal_demo";
-pub(crate) const PAGE_AI_PACKAGE_INFO_DEMO: &str = "ai_package_info_demo";
-pub(crate) const PAGE_AI_OPEN_IN_CHAT_DEMO: &str = "ai_open_in_chat_demo";
-pub(crate) const PAGE_AI_TASK_DEMO: &str = "ai_task_demo";
-pub(crate) const PAGE_AI_AUDIO_PLAYER_DEMO: &str = "ai_audio_player_demo";
-pub(crate) const PAGE_AI_TRANSCRIPTION_DEMO: &str = "ai_transcription_demo";
-pub(crate) const PAGE_AI_SPEECH_INPUT_DEMO: &str = "ai_speech_input_demo";
-pub(crate) const PAGE_AI_MIC_SELECTOR_DEMO: &str = "ai_mic_selector_demo";
-pub(crate) const PAGE_AI_VOICE_SELECTOR_DEMO: &str = "ai_voice_selector_demo";
-pub(crate) const PAGE_AI_AGENT_DEMO: &str = "ai_agent_demo";
-pub(crate) const PAGE_AI_SANDBOX_DEMO: &str = "ai_sandbox_demo";
-pub(crate) const PAGE_AI_PERSONA_DEMO: &str = "ai_persona_demo";
-pub(crate) const PAGE_AI_WORKFLOW_CHROME_DEMO: &str = "ai_workflow_chrome_demo";
-pub(crate) const PAGE_AI_WORKFLOW_CANVAS_DEMO: &str = "ai_workflow_canvas_demo";
-pub(crate) const PAGE_AI_WORKFLOW_NODE_DEMO: &str = "ai_workflow_node_demo";
-pub(crate) const PAGE_AI_WORKFLOW_EDGE_DEMO: &str = "ai_workflow_edge_demo";
-pub(crate) const PAGE_AI_WORKFLOW_CONNECTION_DEMO: &str = "ai_workflow_connection_demo";
-pub(crate) const PAGE_AI_WORKFLOW_CONTROLS_DEMO: &str = "ai_workflow_controls_demo";
-pub(crate) const PAGE_AI_WORKFLOW_PANEL_DEMO: &str = "ai_workflow_panel_demo";
-pub(crate) const PAGE_AI_WORKFLOW_TOOLBAR_DEMO: &str = "ai_workflow_toolbar_demo";
-pub(crate) const PAGE_AI_WORKFLOW_NODE_GRAPH_DEMO: &str = "ai_workflow_node_graph_demo";
-pub(crate) const PAGE_AI_CANVAS_WORLD_LAYER_SPIKE: &str = "ai_canvas_world_layer_spike";
-pub(crate) const PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = "ai_prompt_input_provider_demo";
-pub(crate) const PAGE_AI_PROMPT_INPUT_DOCS_DEMO: &str = "ai_prompt_input_docs_demo";
-pub(crate) const PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str = "ai_prompt_input_action_menu_demo";
-pub(crate) const PAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str =
-    "ai_prompt_input_referenced_sources_demo";
-pub(crate) const PAGE_AI_INLINE_CITATION_DEMO: &str = "ai_inline_citation_demo";
-pub(crate) const PAGE_AI_SOURCES_DEMO: &str = "ai_sources_demo";
-pub(crate) const PAGE_AI_ARTIFACT_DEMO: &str = "ai_artifact_demo";
-pub(crate) const PAGE_AI_SHIMMER_DEMO: &str = "ai_shimmer_demo";
-pub(crate) const PAGE_AI_REASONING_DEMO: &str = "ai_reasoning_demo";
-pub(crate) const PAGE_AI_QUEUE_DEMO: &str = "ai_queue_demo";
-pub(crate) const PAGE_AI_ATTACHMENTS_DEMO: &str = "ai_attachments_demo";
-pub(crate) const PAGE_AI_SUGGESTIONS_DEMO: &str = "ai_suggestions_demo";
-pub(crate) const PAGE_AI_MESSAGE_BRANCH_DEMO: &str = "ai_message_branch_demo";
-pub(crate) const PAGE_AI_FILE_TREE_DEMO: &str = "ai_file_tree_demo";
-pub(crate) const PAGE_AI_CODE_BLOCK_DEMO: &str = "ai_code_block_demo";
-pub(crate) const PAGE_AI_SNIPPET_DEMO: &str = "ai_snippet_demo";
-pub(crate) const PAGE_AI_COMMIT_DEMO: &str = "ai_commit_demo";
-pub(crate) const PAGE_AI_COMMIT_LARGE_DEMO: &str = "ai_commit_large_demo";
-pub(crate) const PAGE_AI_STACK_TRACE_DEMO: &str = "ai_stack_trace_demo";
-pub(crate) const PAGE_AI_STACK_TRACE_LARGE_DEMO: &str = "ai_stack_trace_large_demo";
-pub(crate) const PAGE_AI_SCHEMA_DISPLAY_DEMO: &str = "ai_schema_display_demo";
-pub(crate) const PAGE_AI_TEST_RESULTS_DEMO: &str = "ai_test_results_demo";
-pub(crate) const PAGE_AI_TEST_RESULTS_LARGE_DEMO: &str = "ai_test_results_large_demo";
-pub(crate) const PAGE_AI_CHECKPOINT_DEMO: &str = "ai_checkpoint_demo";
-pub(crate) const PAGE_AI_CONFIRMATION_DEMO: &str = "ai_confirmation_demo";
-pub(crate) const PAGE_AI_ENVIRONMENT_VARIABLES_DEMO: &str = "ai_environment_variables_demo";
-pub(crate) const PAGE_AI_PLAN_DEMO: &str = "ai_plan_demo";
-pub(crate) const PAGE_AI_TOOL_DEMO: &str = "ai_tool_demo";
-pub(crate) const PAGE_AI_WEB_PREVIEW_DEMO: &str = "ai_web_preview_demo";
-pub(crate) const PAGE_AI_MODEL_SELECTOR_DEMO: &str = "ai_model_selector_demo";
-pub(crate) const PAGE_AI_CHAIN_OF_THOUGHT_DEMO: &str = "ai_chain_of_thought_demo";
-pub(crate) const PAGE_AI_IMAGE_DEMO: &str = "ai_image_demo";
-pub(crate) const PAGE_INSPECTOR_TORTURE: &str = "inspector_torture";
-pub(crate) const PAGE_FILE_TREE_TORTURE: &str = "file_tree_torture";
+#[cfg(feature = "gallery-dev")]
+mod gallery_dev_page_ids {
+    pub(crate) const PAGE_HIT_TEST_TORTURE: &str = "hit_test_torture";
+    pub(crate) const PAGE_HIT_TEST_ONLY_PAINT_CACHE_PROBE: &str = "hit_test_only_paint_cache_probe";
+    pub(crate) const PAGE_VIRTUAL_LIST_TORTURE: &str = "virtual_list_torture";
+    pub(crate) const PAGE_UI_KIT_LIST_TORTURE: &str = "ui_kit_list_torture";
+    pub(crate) const PAGE_CODE_VIEW_TORTURE: &str = "code_view_torture";
+    pub(crate) const PAGE_CODE_EDITOR_MVP: &str = "code_editor_mvp";
+    pub(crate) const PAGE_CODE_EDITOR_TORTURE: &str = "code_editor_torture";
+    pub(crate) const PAGE_MARKDOWN_EDITOR_SOURCE: &str = "markdown_editor_source";
+    pub(crate) const PAGE_TEXT_SELECTION_PERF: &str = "text_selection_perf";
+    pub(crate) const PAGE_TEXT_BIDI_RTL_CONFORMANCE: &str = "text_bidi_rtl_conformance";
+    pub(crate) const PAGE_TEXT_MIXED_SCRIPT_FALLBACK: &str = "text_mixed_script_fallback";
+    pub(crate) const PAGE_TEXT_MEASURE_OVERLAY: &str = "text_measure_overlay";
+    pub(crate) const PAGE_TEXT_FEATURE_TOGGLES: &str = "text_feature_toggles";
+    pub(crate) const PAGE_TEXT_OUTLINE_STROKE: &str = "text_outline_stroke";
+    pub(crate) const PAGE_WEB_IME_HARNESS: &str = "web_ime_harness";
+    pub(crate) const PAGE_CHART_TORTURE: &str = "chart_torture";
+    pub(crate) const PAGE_CANVAS_CULL_TORTURE: &str = "canvas_cull_torture";
+    pub(crate) const PAGE_NODE_GRAPH_CULL_TORTURE: &str = "node_graph_cull_torture";
+    pub(crate) const PAGE_CHROME_TORTURE: &str = "chrome_torture";
+    pub(crate) const PAGE_WINDOWED_ROWS_SURFACE_TORTURE: &str = "windowed_rows_surface_torture";
+    pub(crate) const PAGE_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE: &str =
+        "windowed_rows_surface_interactive_torture";
+    pub(crate) const PAGE_DATA_TABLE_TORTURE: &str = "data_table_torture";
+    pub(crate) const PAGE_TREE_TORTURE: &str = "tree_torture";
+    pub(crate) const PAGE_TABLE_RETAINED_TORTURE: &str = "table_retained_torture";
+    pub(crate) const PAGE_AI_TRANSCRIPT_TORTURE: &str = "ai_transcript_torture";
+    pub(crate) const PAGE_AI_CHAT_DEMO: &str = "ai_chat_demo";
+    pub(crate) const PAGE_AI_AUDIO_PLAYER_DEMO: &str = "ai_audio_player_demo";
+    pub(crate) const PAGE_AI_TRANSCRIPTION_DEMO: &str = "ai_transcription_demo";
+    pub(crate) const PAGE_AI_SPEECH_INPUT_DEMO: &str = "ai_speech_input_demo";
+    pub(crate) const PAGE_AI_MIC_SELECTOR_DEMO: &str = "ai_mic_selector_demo";
+    pub(crate) const PAGE_AI_VOICE_SELECTOR_DEMO: &str = "ai_voice_selector_demo";
+    pub(crate) const PAGE_AI_AGENT_DEMO: &str = "ai_agent_demo";
+    pub(crate) const PAGE_AI_SANDBOX_DEMO: &str = "ai_sandbox_demo";
+    pub(crate) const PAGE_AI_PERSONA_DEMO: &str = "ai_persona_demo";
+    pub(crate) const PAGE_AI_WORKFLOW_CHROME_DEMO: &str = "ai_workflow_chrome_demo";
+    pub(crate) const PAGE_AI_WORKFLOW_CANVAS_DEMO: &str = "ai_workflow_canvas_demo";
+    pub(crate) const PAGE_AI_WORKFLOW_NODE_DEMO: &str = "ai_workflow_node_demo";
+    pub(crate) const PAGE_AI_WORKFLOW_EDGE_DEMO: &str = "ai_workflow_edge_demo";
+    pub(crate) const PAGE_AI_WORKFLOW_CONNECTION_DEMO: &str = "ai_workflow_connection_demo";
+    pub(crate) const PAGE_AI_WORKFLOW_CONTROLS_DEMO: &str = "ai_workflow_controls_demo";
+    pub(crate) const PAGE_AI_WORKFLOW_PANEL_DEMO: &str = "ai_workflow_panel_demo";
+    pub(crate) const PAGE_AI_WORKFLOW_TOOLBAR_DEMO: &str = "ai_workflow_toolbar_demo";
+    pub(crate) const PAGE_AI_WORKFLOW_NODE_GRAPH_DEMO: &str = "ai_workflow_node_graph_demo";
+    pub(crate) const PAGE_AI_CANVAS_WORLD_LAYER_SPIKE: &str = "ai_canvas_world_layer_spike";
+    pub(crate) const PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = "ai_prompt_input_provider_demo";
+    pub(crate) const PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str =
+        "ai_prompt_input_action_menu_demo";
+    pub(crate) const PAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str =
+        "ai_prompt_input_referenced_sources_demo";
+    pub(crate) const PAGE_AI_INLINE_CITATION_DEMO: &str = "ai_inline_citation_demo";
+    pub(crate) const PAGE_AI_SOURCES_DEMO: &str = "ai_sources_demo";
+    pub(crate) const PAGE_AI_QUEUE_DEMO: &str = "ai_queue_demo";
+    pub(crate) const PAGE_AI_ATTACHMENTS_DEMO: &str = "ai_attachments_demo";
+    pub(crate) const PAGE_AI_SUGGESTIONS_DEMO: &str = "ai_suggestions_demo";
+    pub(crate) const PAGE_AI_MESSAGE_BRANCH_DEMO: &str = "ai_message_branch_demo";
+    pub(crate) const PAGE_AI_FILE_TREE_DEMO: &str = "ai_file_tree_demo";
+    pub(crate) const PAGE_AI_COMMIT_LARGE_DEMO: &str = "ai_commit_large_demo";
+    pub(crate) const PAGE_AI_STACK_TRACE_LARGE_DEMO: &str = "ai_stack_trace_large_demo";
+    pub(crate) const PAGE_AI_TEST_RESULTS_LARGE_DEMO: &str = "ai_test_results_large_demo";
+    pub(crate) const PAGE_AI_CHECKPOINT_DEMO: &str = "ai_checkpoint_demo";
+    pub(crate) const PAGE_AI_TOOL_DEMO: &str = "ai_tool_demo";
+    pub(crate) const PAGE_AI_WEB_PREVIEW_DEMO: &str = "ai_web_preview_demo";
+    pub(crate) const PAGE_AI_MODEL_SELECTOR_DEMO: &str = "ai_model_selector_demo";
+    pub(crate) const PAGE_AI_IMAGE_DEMO: &str = "ai_image_demo";
+    pub(crate) const PAGE_INSPECTOR_TORTURE: &str = "inspector_torture";
+    pub(crate) const PAGE_FILE_TREE_TORTURE: &str = "file_tree_torture";
+}
+#[cfg(feature = "gallery-dev")]
+pub(crate) use gallery_dev_page_ids::*;
+
+#[cfg(feature = "gallery-ai")]
+mod gallery_ai_page_ids {
+    pub(crate) const PAGE_AI_CONVERSATION_DEMO: &str = "ai_conversation_demo";
+    pub(crate) const PAGE_AI_MESSAGE_DEMO: &str = "ai_message_demo";
+    pub(crate) const PAGE_AI_CONTEXT_DEMO: &str = "ai_context_demo";
+    pub(crate) const PAGE_AI_TERMINAL_DEMO: &str = "ai_terminal_demo";
+    pub(crate) const PAGE_AI_PACKAGE_INFO_DEMO: &str = "ai_package_info_demo";
+    pub(crate) const PAGE_AI_OPEN_IN_CHAT_DEMO: &str = "ai_open_in_chat_demo";
+    pub(crate) const PAGE_AI_TASK_DEMO: &str = "ai_task_demo";
+    pub(crate) const PAGE_AI_PROMPT_INPUT_DOCS_DEMO: &str = "ai_prompt_input_docs_demo";
+    pub(crate) const PAGE_AI_ARTIFACT_DEMO: &str = "ai_artifact_demo";
+    pub(crate) const PAGE_AI_SHIMMER_DEMO: &str = "ai_shimmer_demo";
+    pub(crate) const PAGE_AI_REASONING_DEMO: &str = "ai_reasoning_demo";
+    pub(crate) const PAGE_AI_CODE_BLOCK_DEMO: &str = "ai_code_block_demo";
+    pub(crate) const PAGE_AI_SNIPPET_DEMO: &str = "ai_snippet_demo";
+    pub(crate) const PAGE_AI_COMMIT_DEMO: &str = "ai_commit_demo";
+    pub(crate) const PAGE_AI_STACK_TRACE_DEMO: &str = "ai_stack_trace_demo";
+    pub(crate) const PAGE_AI_SCHEMA_DISPLAY_DEMO: &str = "ai_schema_display_demo";
+    pub(crate) const PAGE_AI_TEST_RESULTS_DEMO: &str = "ai_test_results_demo";
+    pub(crate) const PAGE_AI_CONFIRMATION_DEMO: &str = "ai_confirmation_demo";
+    pub(crate) const PAGE_AI_ENVIRONMENT_VARIABLES_DEMO: &str = "ai_environment_variables_demo";
+    pub(crate) const PAGE_AI_PLAN_DEMO: &str = "ai_plan_demo";
+    pub(crate) const PAGE_AI_CHAIN_OF_THOUGHT_DEMO: &str = "ai_chain_of_thought_demo";
+}
+#[cfg(feature = "gallery-ai")]
+pub(crate) use gallery_ai_page_ids::*;
 pub(crate) const PAGE_BUTTON: &str = "button";
 pub(crate) const PAGE_CARD: &str = "card";
 pub(crate) const PAGE_BADGE: &str = "badge";
 pub(crate) const PAGE_AVATAR: &str = "avatar";
 pub(crate) const PAGE_IMAGE_OBJECT_FIT: &str = "image_object_fit";
-pub(crate) const PAGE_MAGIC_LENS: &str = "magic_lens";
-pub(crate) const PAGE_MAGIC_MARQUEE: &str = "magic_marquee";
-pub(crate) const PAGE_MAGIC_CARD: &str = "magic_card";
-pub(crate) const PAGE_MAGIC_BORDER_BEAM: &str = "magic_border_beam";
-pub(crate) const PAGE_MAGIC_DOCK: &str = "magic_dock";
-pub(crate) const PAGE_MAGIC_PATTERNS: &str = "magic_patterns";
-pub(crate) const PAGE_MAGIC_PATTERNS_TORTURE: &str = "magic_patterns_torture";
-pub(crate) const PAGE_MAGIC_SPARKLES_TEXT: &str = "magic_sparkles_text";
-pub(crate) const PAGE_MAGIC_BLOOM: &str = "magic_bloom";
+#[cfg(feature = "gallery-dev")]
+mod gallery_dev_recipe_page_ids {
+    pub(crate) const PAGE_MAGIC_LENS: &str = "magic_lens";
+    pub(crate) const PAGE_MAGIC_MARQUEE: &str = "magic_marquee";
+    pub(crate) const PAGE_MAGIC_CARD: &str = "magic_card";
+    pub(crate) const PAGE_MAGIC_BORDER_BEAM: &str = "magic_border_beam";
+    pub(crate) const PAGE_MAGIC_DOCK: &str = "magic_dock";
+    pub(crate) const PAGE_MAGIC_PATTERNS: &str = "magic_patterns";
+    pub(crate) const PAGE_MAGIC_PATTERNS_TORTURE: &str = "magic_patterns_torture";
+    pub(crate) const PAGE_MAGIC_SPARKLES_TEXT: &str = "magic_sparkles_text";
+    pub(crate) const PAGE_MAGIC_BLOOM: &str = "magic_bloom";
+    pub(crate) const PAGE_ICONS: &str = "icons";
+    pub(crate) const PAGE_OVERLAY: &str = "overlay";
+    pub(crate) const PAGE_SHADCN_EXTRAS: &str = "shadcn_extras";
+    pub(crate) const PAGE_FORMS: &str = "forms";
+    pub(crate) const PAGE_DATA_GRID: &str = "data_grid";
+    pub(crate) const PAGE_MENUS: &str = "menus";
+    pub(crate) const PAGE_CHART: &str = "chart";
+}
+#[cfg(feature = "gallery-dev")]
+pub(crate) use gallery_dev_recipe_page_ids::*;
 pub(crate) const PAGE_SKELETON: &str = "skeleton";
 pub(crate) const PAGE_SCROLL_AREA: &str = "scroll_area";
 pub(crate) const PAGE_TOOLTIP: &str = "tooltip";
 pub(crate) const PAGE_SLIDER: &str = "slider";
-pub(crate) const PAGE_ICONS: &str = "icons";
 pub(crate) const PAGE_FIELD: &str = "field";
-pub(crate) const PAGE_OVERLAY: &str = "overlay";
-pub(crate) const PAGE_SHADCN_EXTRAS: &str = "shadcn_extras";
-pub(crate) const PAGE_FORMS: &str = "forms";
 pub(crate) const PAGE_SELECT: &str = "select";
 pub(crate) const PAGE_COMBOBOX: &str = "combobox";
 pub(crate) const PAGE_DATE_PICKER: &str = "date_picker";
 pub(crate) const PAGE_RESIZABLE: &str = "resizable";
 pub(crate) const PAGE_DATA_TABLE: &str = "data_table";
-pub(crate) const PAGE_DATA_GRID: &str = "data_grid";
 pub(crate) const PAGE_TABS: &str = "tabs";
 pub(crate) const PAGE_ACCORDION: &str = "accordion";
 pub(crate) const PAGE_TABLE: &str = "table";
 pub(crate) const PAGE_PROGRESS: &str = "progress";
-pub(crate) const PAGE_MENUS: &str = "menus";
 pub(crate) const PAGE_COMMAND: &str = "command";
 pub(crate) const PAGE_TOAST: &str = "toast";
 pub(crate) const PAGE_ALERT: &str = "alert";
@@ -365,7 +386,6 @@ pub(crate) const PAGE_BREADCRUMB: &str = "breadcrumb";
 pub(crate) const PAGE_BUTTON_GROUP: &str = "button_group";
 pub(crate) const PAGE_CALENDAR: &str = "calendar";
 pub(crate) const PAGE_CAROUSEL: &str = "carousel";
-pub(crate) const PAGE_CHART: &str = "chart";
 pub(crate) const PAGE_CHECKBOX: &str = "checkbox";
 pub(crate) const PAGE_COLLAPSIBLE: &str = "collapsible";
 pub(crate) const PAGE_CONTEXT_MENU: &str = "context_menu";
@@ -397,192 +417,238 @@ pub(crate) const PAGE_TEXTAREA: &str = "textarea";
 pub(crate) const PAGE_TOGGLE: &str = "toggle";
 pub(crate) const PAGE_TOGGLE_GROUP: &str = "toggle_group";
 pub(crate) const PAGE_TYPOGRAPHY: &str = "typography";
-pub(crate) const PAGE_MATERIAL3_GALLERY: &str = "material3_gallery";
-pub(crate) const PAGE_MATERIAL3_BUTTON: &str = "material3_button";
-pub(crate) const PAGE_MATERIAL3_ICON_BUTTON: &str = "material3_icon_button";
-pub(crate) const PAGE_MATERIAL3_CHECKBOX: &str = "material3_checkbox";
-pub(crate) const PAGE_MATERIAL3_SWITCH: &str = "material3_switch";
-pub(crate) const PAGE_MATERIAL3_SLIDER: &str = "material3_slider";
-pub(crate) const PAGE_MATERIAL3_RADIO: &str = "material3_radio";
-pub(crate) const PAGE_MATERIAL3_BADGE: &str = "material3_badge";
-pub(crate) const PAGE_MATERIAL3_SEGMENTED_BUTTON: &str = "material3_segmented_button";
-pub(crate) const PAGE_MATERIAL3_TOP_APP_BAR: &str = "material3_top_app_bar";
-pub(crate) const PAGE_MATERIAL3_BOTTOM_SHEET: &str = "material3_bottom_sheet";
-pub(crate) const PAGE_MATERIAL3_DATE_PICKER: &str = "material3_date_picker";
-pub(crate) const PAGE_MATERIAL3_TIME_PICKER: &str = "material3_time_picker";
-pub(crate) const PAGE_MATERIAL3_AUTOCOMPLETE: &str = "material3_autocomplete";
-pub(crate) const PAGE_MATERIAL3_SELECT: &str = "material3_select";
-pub(crate) const PAGE_MATERIAL3_TEXT_FIELD: &str = "material3_text_field";
-pub(crate) const PAGE_MATERIAL3_TABS: &str = "material3_tabs";
-pub(crate) const PAGE_MATERIAL3_NAVIGATION_BAR: &str = "material3_navigation_bar";
-pub(crate) const PAGE_MATERIAL3_NAVIGATION_RAIL: &str = "material3_navigation_rail";
-pub(crate) const PAGE_MATERIAL3_NAVIGATION_DRAWER: &str = "material3_navigation_drawer";
-pub(crate) const PAGE_MATERIAL3_MODAL_NAVIGATION_DRAWER: &str = "material3_modal_navigation_drawer";
-pub(crate) const PAGE_MATERIAL3_DIALOG: &str = "material3_dialog";
-pub(crate) const PAGE_MATERIAL3_MENU: &str = "material3_menu";
-pub(crate) const PAGE_MATERIAL3_LIST: &str = "material3_list";
-pub(crate) const PAGE_MATERIAL3_SNACKBAR: &str = "material3_snackbar";
-pub(crate) const PAGE_MATERIAL3_TOOLTIP: &str = "material3_tooltip";
-pub(crate) const PAGE_MATERIAL3_STATE_MATRIX: &str = "material3_state_matrix";
-pub(crate) const PAGE_MATERIAL3_TOUCH_TARGETS: &str = "material3_touch_targets";
+#[cfg(feature = "gallery-material3")]
+mod gallery_material3_page_ids {
+    pub(crate) const PAGE_MATERIAL3_GALLERY: &str = "material3_gallery";
+    pub(crate) const PAGE_MATERIAL3_BUTTON: &str = "material3_button";
+    pub(crate) const PAGE_MATERIAL3_ICON_BUTTON: &str = "material3_icon_button";
+    pub(crate) const PAGE_MATERIAL3_CHECKBOX: &str = "material3_checkbox";
+    pub(crate) const PAGE_MATERIAL3_SWITCH: &str = "material3_switch";
+    pub(crate) const PAGE_MATERIAL3_SLIDER: &str = "material3_slider";
+    pub(crate) const PAGE_MATERIAL3_RADIO: &str = "material3_radio";
+    pub(crate) const PAGE_MATERIAL3_BADGE: &str = "material3_badge";
+    pub(crate) const PAGE_MATERIAL3_SEGMENTED_BUTTON: &str = "material3_segmented_button";
+    pub(crate) const PAGE_MATERIAL3_TOP_APP_BAR: &str = "material3_top_app_bar";
+    pub(crate) const PAGE_MATERIAL3_BOTTOM_SHEET: &str = "material3_bottom_sheet";
+    pub(crate) const PAGE_MATERIAL3_DATE_PICKER: &str = "material3_date_picker";
+    pub(crate) const PAGE_MATERIAL3_TIME_PICKER: &str = "material3_time_picker";
+    pub(crate) const PAGE_MATERIAL3_AUTOCOMPLETE: &str = "material3_autocomplete";
+    pub(crate) const PAGE_MATERIAL3_SELECT: &str = "material3_select";
+    pub(crate) const PAGE_MATERIAL3_TEXT_FIELD: &str = "material3_text_field";
+    pub(crate) const PAGE_MATERIAL3_TABS: &str = "material3_tabs";
+    pub(crate) const PAGE_MATERIAL3_NAVIGATION_BAR: &str = "material3_navigation_bar";
+    pub(crate) const PAGE_MATERIAL3_NAVIGATION_RAIL: &str = "material3_navigation_rail";
+    pub(crate) const PAGE_MATERIAL3_NAVIGATION_DRAWER: &str = "material3_navigation_drawer";
+    pub(crate) const PAGE_MATERIAL3_MODAL_NAVIGATION_DRAWER: &str =
+        "material3_modal_navigation_drawer";
+    pub(crate) const PAGE_MATERIAL3_DIALOG: &str = "material3_dialog";
+    pub(crate) const PAGE_MATERIAL3_MENU: &str = "material3_menu";
+    pub(crate) const PAGE_MATERIAL3_LIST: &str = "material3_list";
+    pub(crate) const PAGE_MATERIAL3_SNACKBAR: &str = "material3_snackbar";
+    pub(crate) const PAGE_MATERIAL3_TOOLTIP: &str = "material3_tooltip";
+    pub(crate) const PAGE_MATERIAL3_STATE_MATRIX: &str = "material3_state_matrix";
+    pub(crate) const PAGE_MATERIAL3_TOUCH_TARGETS: &str = "material3_touch_targets";
+}
+#[cfg(feature = "gallery-material3")]
+pub(crate) use gallery_material3_page_ids::*;
 
 pub(crate) const CMD_NAV_INTRO: &str = "ui_gallery.nav.select.intro";
 pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
 pub(crate) const CMD_NAV_MOTION_PRESETS: &str = "ui_gallery.nav.select.motion_presets";
 pub(crate) const CMD_NAV_VIEW_CACHE: &str = "ui_gallery.nav.select.view_cache";
-pub(crate) const CMD_NAV_HIT_TEST_TORTURE: &str = "ui_gallery.nav.select.hit_test_torture";
-pub(crate) const CMD_NAV_HIT_TEST_ONLY_PAINT_CACHE_PROBE: &str =
-    "ui_gallery.nav.select.hit_test_only_paint_cache_probe";
-pub(crate) const CMD_NAV_VIRTUAL_LIST_TORTURE: &str = "ui_gallery.nav.select.virtual_list_torture";
-pub(crate) const CMD_NAV_UI_KIT_LIST_TORTURE: &str = "ui_gallery.nav.select.ui_kit_list_torture";
-pub(crate) const CMD_NAV_CODE_VIEW_TORTURE: &str = "ui_gallery.nav.select.code_view_torture";
-pub(crate) const CMD_NAV_CODE_EDITOR_MVP: &str = "ui_gallery.nav.select.code_editor_mvp";
-pub(crate) const CMD_NAV_CODE_EDITOR_TORTURE: &str = "ui_gallery.nav.select.code_editor_torture";
-pub(crate) const CMD_NAV_MARKDOWN_EDITOR_SOURCE: &str =
-    "ui_gallery.nav.select.markdown_editor_source";
-pub(crate) const CMD_NAV_TEXT_SELECTION_PERF: &str = "ui_gallery.nav.select.text_selection_perf";
-pub(crate) const CMD_NAV_TEXT_BIDI_RTL_CONFORMANCE: &str =
-    "ui_gallery.nav.select.text_bidi_rtl_conformance";
-pub(crate) const CMD_NAV_TEXT_MIXED_SCRIPT_FALLBACK: &str =
-    "ui_gallery.nav.select.text_mixed_script_fallback";
-pub(crate) const CMD_NAV_TEXT_MEASURE_OVERLAY: &str = "ui_gallery.nav.select.text_measure_overlay";
-pub(crate) const CMD_NAV_TEXT_FEATURE_TOGGLES: &str = "ui_gallery.nav.select.text_feature_toggles";
-pub(crate) const CMD_NAV_TEXT_OUTLINE_STROKE: &str = "ui_gallery.nav.select.text_outline_stroke";
-pub(crate) const CMD_NAV_WEB_IME_HARNESS: &str = "ui_gallery.nav.select.web_ime_harness";
-pub(crate) const CMD_NAV_CHART_TORTURE: &str = "ui_gallery.nav.select.chart_torture";
-pub(crate) const CMD_NAV_CANVAS_CULL_TORTURE: &str = "ui_gallery.nav.select.canvas_cull_torture";
-pub(crate) const CMD_NAV_NODE_GRAPH_CULL_TORTURE: &str =
-    "ui_gallery.nav.select.node_graph_cull_torture";
-pub(crate) const CMD_NAV_CHROME_TORTURE: &str = "ui_gallery.nav.select.chrome_torture";
-pub(crate) const CMD_NAV_WINDOWED_ROWS_SURFACE_TORTURE: &str =
-    "ui_gallery.nav.select.windowed_rows_surface_torture";
-pub(crate) const CMD_NAV_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE: &str =
-    "ui_gallery.nav.select.windowed_rows_surface_interactive_torture";
-pub(crate) const CMD_NAV_DATA_TABLE_TORTURE: &str = "ui_gallery.nav.select.data_table_torture";
-pub(crate) const CMD_NAV_TREE_TORTURE: &str = "ui_gallery.nav.select.tree_torture";
-pub(crate) const CMD_NAV_TABLE_RETAINED_TORTURE: &str =
-    "ui_gallery.nav.select.table_retained_torture";
-pub(crate) const CMD_NAV_AI_TRANSCRIPT_TORTURE: &str =
-    "ui_gallery.nav.select.ai_transcript_torture";
-pub(crate) const CMD_NAV_AI_CHAT_DEMO: &str = "ui_gallery.nav.select.ai_chat_demo";
-pub(crate) const CMD_NAV_AI_CONVERSATION_DEMO: &str = "ui_gallery.nav.select.ai_conversation_demo";
-pub(crate) const CMD_NAV_AI_MESSAGE_DEMO: &str = "ui_gallery.nav.select.ai_message_demo";
-pub(crate) const CMD_NAV_AI_CONTEXT_DEMO: &str = "ui_gallery.nav.select.ai_context_demo";
-pub(crate) const CMD_NAV_AI_TERMINAL_DEMO: &str = "ui_gallery.nav.select.ai_terminal_demo";
-pub(crate) const CMD_NAV_AI_PACKAGE_INFO_DEMO: &str = "ui_gallery.nav.select.ai_package_info_demo";
-pub(crate) const CMD_NAV_AI_OPEN_IN_CHAT_DEMO: &str = "ui_gallery.nav.select.ai_open_in_chat_demo";
-pub(crate) const CMD_NAV_AI_TASK_DEMO: &str = "ui_gallery.nav.select.ai_task_demo";
-pub(crate) const CMD_NAV_AI_AUDIO_PLAYER_DEMO: &str = "ui_gallery.nav.select.ai_audio_player_demo";
-pub(crate) const CMD_NAV_AI_TRANSCRIPTION_DEMO: &str =
-    "ui_gallery.nav.select.ai_transcription_demo";
-pub(crate) const CMD_NAV_AI_SPEECH_INPUT_DEMO: &str = "ui_gallery.nav.select.ai_speech_input_demo";
-pub(crate) const CMD_NAV_AI_MIC_SELECTOR_DEMO: &str = "ui_gallery.nav.select.ai_mic_selector_demo";
-pub(crate) const CMD_NAV_AI_VOICE_SELECTOR_DEMO: &str =
-    "ui_gallery.nav.select.ai_voice_selector_demo";
-pub(crate) const CMD_NAV_AI_AGENT_DEMO: &str = "ui_gallery.nav.select.ai_agent_demo";
-pub(crate) const CMD_NAV_AI_SANDBOX_DEMO: &str = "ui_gallery.nav.select.ai_sandbox_demo";
-pub(crate) const CMD_NAV_AI_PERSONA_DEMO: &str = "ui_gallery.nav.select.ai_persona_demo";
-pub(crate) const CMD_NAV_AI_WORKFLOW_CHROME_DEMO: &str =
-    "ui_gallery.nav.select.ai_workflow_chrome_demo";
-pub(crate) const CMD_NAV_AI_WORKFLOW_CANVAS_DEMO: &str =
-    "ui_gallery.nav.select.ai_workflow_canvas_demo";
-pub(crate) const CMD_NAV_AI_WORKFLOW_NODE_DEMO: &str =
-    "ui_gallery.nav.select.ai_workflow_node_demo";
-pub(crate) const CMD_NAV_AI_WORKFLOW_EDGE_DEMO: &str =
-    "ui_gallery.nav.select.ai_workflow_edge_demo";
-pub(crate) const CMD_NAV_AI_WORKFLOW_CONNECTION_DEMO: &str =
-    "ui_gallery.nav.select.ai_workflow_connection_demo";
-pub(crate) const CMD_NAV_AI_WORKFLOW_CONTROLS_DEMO: &str =
-    "ui_gallery.nav.select.ai_workflow_controls_demo";
-pub(crate) const CMD_NAV_AI_WORKFLOW_PANEL_DEMO: &str =
-    "ui_gallery.nav.select.ai_workflow_panel_demo";
-pub(crate) const CMD_NAV_AI_WORKFLOW_TOOLBAR_DEMO: &str =
-    "ui_gallery.nav.select.ai_workflow_toolbar_demo";
-pub(crate) const CMD_NAV_AI_WORKFLOW_NODE_GRAPH_DEMO: &str =
-    "ui_gallery.nav.select.ai_workflow_node_graph_demo";
-pub(crate) const CMD_NAV_AI_CANVAS_WORLD_LAYER_SPIKE: &str =
-    "ui_gallery.nav.select.ai_canvas_world_layer_spike";
-pub(crate) const CMD_NAV_AI_PROMPT_INPUT_PROVIDER_DEMO: &str =
-    "ui_gallery.nav.select.ai_prompt_input_provider_demo";
-pub(crate) const CMD_NAV_AI_PROMPT_INPUT_DOCS_DEMO: &str =
-    "ui_gallery.nav.select.ai_prompt_input_docs_demo";
-pub(crate) const CMD_NAV_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str =
-    "ui_gallery.nav.select.ai_prompt_input_action_menu_demo";
-pub(crate) const CMD_NAV_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str =
-    "ui_gallery.nav.select.ai_prompt_input_referenced_sources_demo";
-pub(crate) const CMD_NAV_AI_INLINE_CITATION_DEMO: &str =
-    "ui_gallery.nav.select.ai_inline_citation_demo";
-pub(crate) const CMD_NAV_AI_SOURCES_DEMO: &str = "ui_gallery.nav.select.ai_sources_demo";
-pub(crate) const CMD_NAV_AI_ARTIFACT_DEMO: &str = "ui_gallery.nav.select.ai_artifact_demo";
-pub(crate) const CMD_NAV_AI_SHIMMER_DEMO: &str = "ui_gallery.nav.select.ai_shimmer_demo";
-pub(crate) const CMD_NAV_AI_REASONING_DEMO: &str = "ui_gallery.nav.select.ai_reasoning_demo";
-pub(crate) const CMD_NAV_AI_QUEUE_DEMO: &str = "ui_gallery.nav.select.ai_queue_demo";
-pub(crate) const CMD_NAV_AI_ATTACHMENTS_DEMO: &str = "ui_gallery.nav.select.ai_attachments_demo";
-pub(crate) const CMD_NAV_AI_SUGGESTIONS_DEMO: &str = "ui_gallery.nav.select.ai_suggestions_demo";
-pub(crate) const CMD_NAV_AI_MESSAGE_BRANCH_DEMO: &str =
-    "ui_gallery.nav.select.ai_message_branch_demo";
-pub(crate) const CMD_NAV_AI_FILE_TREE_DEMO: &str = "ui_gallery.nav.select.ai_file_tree_demo";
-pub(crate) const CMD_NAV_AI_CODE_BLOCK_DEMO: &str = "ui_gallery.nav.select.ai_code_block_demo";
-pub(crate) const CMD_NAV_AI_SNIPPET_DEMO: &str = "ui_gallery.nav.select.ai_snippet_demo";
-pub(crate) const CMD_NAV_AI_COMMIT_DEMO: &str = "ui_gallery.nav.select.ai_commit_demo";
-pub(crate) const CMD_NAV_AI_COMMIT_LARGE_DEMO: &str = "ui_gallery.nav.select.ai_commit_large_demo";
-pub(crate) const CMD_NAV_AI_STACK_TRACE_DEMO: &str = "ui_gallery.nav.select.ai_stack_trace_demo";
-pub(crate) const CMD_NAV_AI_STACK_TRACE_LARGE_DEMO: &str =
-    "ui_gallery.nav.select.ai_stack_trace_large_demo";
-pub(crate) const CMD_NAV_AI_SCHEMA_DISPLAY_DEMO: &str =
-    "ui_gallery.nav.select.ai_schema_display_demo";
-pub(crate) const CMD_NAV_AI_TEST_RESULTS_DEMO: &str = "ui_gallery.nav.select.ai_test_results_demo";
-pub(crate) const CMD_NAV_AI_TEST_RESULTS_LARGE_DEMO: &str =
-    "ui_gallery.nav.select.ai_test_results_large_demo";
-pub(crate) const CMD_NAV_AI_CHECKPOINT_DEMO: &str = "ui_gallery.nav.select.ai_checkpoint_demo";
-pub(crate) const CMD_NAV_AI_CONFIRMATION_DEMO: &str = "ui_gallery.nav.select.ai_confirmation_demo";
-pub(crate) const CMD_NAV_AI_ENVIRONMENT_VARIABLES_DEMO: &str =
-    "ui_gallery.nav.select.ai_environment_variables_demo";
-pub(crate) const CMD_NAV_AI_PLAN_DEMO: &str = "ui_gallery.nav.select.ai_plan_demo";
-pub(crate) const CMD_NAV_AI_TOOL_DEMO: &str = "ui_gallery.nav.select.ai_tool_demo";
-pub(crate) const CMD_NAV_AI_WEB_PREVIEW_DEMO: &str = "ui_gallery.nav.select.ai_web_preview_demo";
-pub(crate) const CMD_NAV_AI_MODEL_SELECTOR_DEMO: &str =
-    "ui_gallery.nav.select.ai_model_selector_demo";
-pub(crate) const CMD_NAV_AI_CHAIN_OF_THOUGHT_DEMO: &str =
-    "ui_gallery.nav.select.ai_chain_of_thought_demo";
-pub(crate) const CMD_NAV_AI_IMAGE_DEMO: &str = "ui_gallery.nav.select.ai_image_demo";
-pub(crate) const CMD_NAV_INSPECTOR_TORTURE: &str = "ui_gallery.nav.select.inspector_torture";
-pub(crate) const CMD_NAV_FILE_TREE_TORTURE: &str = "ui_gallery.nav.select.file_tree_torture";
+#[cfg(feature = "gallery-dev")]
+mod gallery_dev_nav_commands {
+    pub(crate) const CMD_NAV_HIT_TEST_TORTURE: &str = "ui_gallery.nav.select.hit_test_torture";
+    pub(crate) const CMD_NAV_HIT_TEST_ONLY_PAINT_CACHE_PROBE: &str =
+        "ui_gallery.nav.select.hit_test_only_paint_cache_probe";
+    pub(crate) const CMD_NAV_VIRTUAL_LIST_TORTURE: &str =
+        "ui_gallery.nav.select.virtual_list_torture";
+    pub(crate) const CMD_NAV_UI_KIT_LIST_TORTURE: &str =
+        "ui_gallery.nav.select.ui_kit_list_torture";
+    pub(crate) const CMD_NAV_CODE_VIEW_TORTURE: &str = "ui_gallery.nav.select.code_view_torture";
+    pub(crate) const CMD_NAV_CODE_EDITOR_MVP: &str = "ui_gallery.nav.select.code_editor_mvp";
+    pub(crate) const CMD_NAV_CODE_EDITOR_TORTURE: &str =
+        "ui_gallery.nav.select.code_editor_torture";
+    pub(crate) const CMD_NAV_MARKDOWN_EDITOR_SOURCE: &str =
+        "ui_gallery.nav.select.markdown_editor_source";
+    pub(crate) const CMD_NAV_TEXT_SELECTION_PERF: &str =
+        "ui_gallery.nav.select.text_selection_perf";
+    pub(crate) const CMD_NAV_TEXT_BIDI_RTL_CONFORMANCE: &str =
+        "ui_gallery.nav.select.text_bidi_rtl_conformance";
+    pub(crate) const CMD_NAV_TEXT_MIXED_SCRIPT_FALLBACK: &str =
+        "ui_gallery.nav.select.text_mixed_script_fallback";
+    pub(crate) const CMD_NAV_TEXT_MEASURE_OVERLAY: &str =
+        "ui_gallery.nav.select.text_measure_overlay";
+    pub(crate) const CMD_NAV_TEXT_FEATURE_TOGGLES: &str =
+        "ui_gallery.nav.select.text_feature_toggles";
+    pub(crate) const CMD_NAV_TEXT_OUTLINE_STROKE: &str =
+        "ui_gallery.nav.select.text_outline_stroke";
+    pub(crate) const CMD_NAV_WEB_IME_HARNESS: &str = "ui_gallery.nav.select.web_ime_harness";
+    pub(crate) const CMD_NAV_CHART_TORTURE: &str = "ui_gallery.nav.select.chart_torture";
+    pub(crate) const CMD_NAV_CANVAS_CULL_TORTURE: &str =
+        "ui_gallery.nav.select.canvas_cull_torture";
+    pub(crate) const CMD_NAV_NODE_GRAPH_CULL_TORTURE: &str =
+        "ui_gallery.nav.select.node_graph_cull_torture";
+    pub(crate) const CMD_NAV_CHROME_TORTURE: &str = "ui_gallery.nav.select.chrome_torture";
+    pub(crate) const CMD_NAV_WINDOWED_ROWS_SURFACE_TORTURE: &str =
+        "ui_gallery.nav.select.windowed_rows_surface_torture";
+    pub(crate) const CMD_NAV_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE: &str =
+        "ui_gallery.nav.select.windowed_rows_surface_interactive_torture";
+    pub(crate) const CMD_NAV_DATA_TABLE_TORTURE: &str = "ui_gallery.nav.select.data_table_torture";
+    pub(crate) const CMD_NAV_TREE_TORTURE: &str = "ui_gallery.nav.select.tree_torture";
+    pub(crate) const CMD_NAV_TABLE_RETAINED_TORTURE: &str =
+        "ui_gallery.nav.select.table_retained_torture";
+    pub(crate) const CMD_NAV_AI_TRANSCRIPT_TORTURE: &str =
+        "ui_gallery.nav.select.ai_transcript_torture";
+    pub(crate) const CMD_NAV_AI_CHAT_DEMO: &str = "ui_gallery.nav.select.ai_chat_demo";
+    pub(crate) const CMD_NAV_AI_AUDIO_PLAYER_DEMO: &str =
+        "ui_gallery.nav.select.ai_audio_player_demo";
+    pub(crate) const CMD_NAV_AI_TRANSCRIPTION_DEMO: &str =
+        "ui_gallery.nav.select.ai_transcription_demo";
+    pub(crate) const CMD_NAV_AI_SPEECH_INPUT_DEMO: &str =
+        "ui_gallery.nav.select.ai_speech_input_demo";
+    pub(crate) const CMD_NAV_AI_MIC_SELECTOR_DEMO: &str =
+        "ui_gallery.nav.select.ai_mic_selector_demo";
+    pub(crate) const CMD_NAV_AI_VOICE_SELECTOR_DEMO: &str =
+        "ui_gallery.nav.select.ai_voice_selector_demo";
+    pub(crate) const CMD_NAV_AI_AGENT_DEMO: &str = "ui_gallery.nav.select.ai_agent_demo";
+    pub(crate) const CMD_NAV_AI_SANDBOX_DEMO: &str = "ui_gallery.nav.select.ai_sandbox_demo";
+    pub(crate) const CMD_NAV_AI_PERSONA_DEMO: &str = "ui_gallery.nav.select.ai_persona_demo";
+    pub(crate) const CMD_NAV_AI_WORKFLOW_CHROME_DEMO: &str =
+        "ui_gallery.nav.select.ai_workflow_chrome_demo";
+    pub(crate) const CMD_NAV_AI_WORKFLOW_CANVAS_DEMO: &str =
+        "ui_gallery.nav.select.ai_workflow_canvas_demo";
+    pub(crate) const CMD_NAV_AI_WORKFLOW_NODE_DEMO: &str =
+        "ui_gallery.nav.select.ai_workflow_node_demo";
+    pub(crate) const CMD_NAV_AI_WORKFLOW_EDGE_DEMO: &str =
+        "ui_gallery.nav.select.ai_workflow_edge_demo";
+    pub(crate) const CMD_NAV_AI_WORKFLOW_CONNECTION_DEMO: &str =
+        "ui_gallery.nav.select.ai_workflow_connection_demo";
+    pub(crate) const CMD_NAV_AI_WORKFLOW_CONTROLS_DEMO: &str =
+        "ui_gallery.nav.select.ai_workflow_controls_demo";
+    pub(crate) const CMD_NAV_AI_WORKFLOW_PANEL_DEMO: &str =
+        "ui_gallery.nav.select.ai_workflow_panel_demo";
+    pub(crate) const CMD_NAV_AI_WORKFLOW_TOOLBAR_DEMO: &str =
+        "ui_gallery.nav.select.ai_workflow_toolbar_demo";
+    pub(crate) const CMD_NAV_AI_WORKFLOW_NODE_GRAPH_DEMO: &str =
+        "ui_gallery.nav.select.ai_workflow_node_graph_demo";
+    pub(crate) const CMD_NAV_AI_CANVAS_WORLD_LAYER_SPIKE: &str =
+        "ui_gallery.nav.select.ai_canvas_world_layer_spike";
+    pub(crate) const CMD_NAV_AI_PROMPT_INPUT_PROVIDER_DEMO: &str =
+        "ui_gallery.nav.select.ai_prompt_input_provider_demo";
+    pub(crate) const CMD_NAV_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str =
+        "ui_gallery.nav.select.ai_prompt_input_action_menu_demo";
+    pub(crate) const CMD_NAV_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str =
+        "ui_gallery.nav.select.ai_prompt_input_referenced_sources_demo";
+    pub(crate) const CMD_NAV_AI_INLINE_CITATION_DEMO: &str =
+        "ui_gallery.nav.select.ai_inline_citation_demo";
+    pub(crate) const CMD_NAV_AI_SOURCES_DEMO: &str = "ui_gallery.nav.select.ai_sources_demo";
+    pub(crate) const CMD_NAV_AI_QUEUE_DEMO: &str = "ui_gallery.nav.select.ai_queue_demo";
+    pub(crate) const CMD_NAV_AI_ATTACHMENTS_DEMO: &str =
+        "ui_gallery.nav.select.ai_attachments_demo";
+    pub(crate) const CMD_NAV_AI_SUGGESTIONS_DEMO: &str =
+        "ui_gallery.nav.select.ai_suggestions_demo";
+    pub(crate) const CMD_NAV_AI_MESSAGE_BRANCH_DEMO: &str =
+        "ui_gallery.nav.select.ai_message_branch_demo";
+    pub(crate) const CMD_NAV_AI_FILE_TREE_DEMO: &str = "ui_gallery.nav.select.ai_file_tree_demo";
+    pub(crate) const CMD_NAV_AI_COMMIT_LARGE_DEMO: &str =
+        "ui_gallery.nav.select.ai_commit_large_demo";
+    pub(crate) const CMD_NAV_AI_STACK_TRACE_LARGE_DEMO: &str =
+        "ui_gallery.nav.select.ai_stack_trace_large_demo";
+    pub(crate) const CMD_NAV_AI_TEST_RESULTS_LARGE_DEMO: &str =
+        "ui_gallery.nav.select.ai_test_results_large_demo";
+    pub(crate) const CMD_NAV_AI_CHECKPOINT_DEMO: &str = "ui_gallery.nav.select.ai_checkpoint_demo";
+    pub(crate) const CMD_NAV_AI_TOOL_DEMO: &str = "ui_gallery.nav.select.ai_tool_demo";
+    pub(crate) const CMD_NAV_AI_WEB_PREVIEW_DEMO: &str =
+        "ui_gallery.nav.select.ai_web_preview_demo";
+    pub(crate) const CMD_NAV_AI_MODEL_SELECTOR_DEMO: &str =
+        "ui_gallery.nav.select.ai_model_selector_demo";
+    pub(crate) const CMD_NAV_AI_IMAGE_DEMO: &str = "ui_gallery.nav.select.ai_image_demo";
+    pub(crate) const CMD_NAV_INSPECTOR_TORTURE: &str = "ui_gallery.nav.select.inspector_torture";
+    pub(crate) const CMD_NAV_FILE_TREE_TORTURE: &str = "ui_gallery.nav.select.file_tree_torture";
+}
+#[cfg(feature = "gallery-dev")]
+pub(crate) use gallery_dev_nav_commands::*;
+
+#[cfg(feature = "gallery-ai")]
+mod gallery_ai_nav_commands {
+    pub(crate) const CMD_NAV_AI_CONVERSATION_DEMO: &str =
+        "ui_gallery.nav.select.ai_conversation_demo";
+    pub(crate) const CMD_NAV_AI_MESSAGE_DEMO: &str = "ui_gallery.nav.select.ai_message_demo";
+    pub(crate) const CMD_NAV_AI_CONTEXT_DEMO: &str = "ui_gallery.nav.select.ai_context_demo";
+    pub(crate) const CMD_NAV_AI_TERMINAL_DEMO: &str = "ui_gallery.nav.select.ai_terminal_demo";
+    pub(crate) const CMD_NAV_AI_PACKAGE_INFO_DEMO: &str =
+        "ui_gallery.nav.select.ai_package_info_demo";
+    pub(crate) const CMD_NAV_AI_OPEN_IN_CHAT_DEMO: &str =
+        "ui_gallery.nav.select.ai_open_in_chat_demo";
+    pub(crate) const CMD_NAV_AI_TASK_DEMO: &str = "ui_gallery.nav.select.ai_task_demo";
+    pub(crate) const CMD_NAV_AI_PROMPT_INPUT_DOCS_DEMO: &str =
+        "ui_gallery.nav.select.ai_prompt_input_docs_demo";
+    pub(crate) const CMD_NAV_AI_ARTIFACT_DEMO: &str = "ui_gallery.nav.select.ai_artifact_demo";
+    pub(crate) const CMD_NAV_AI_SHIMMER_DEMO: &str = "ui_gallery.nav.select.ai_shimmer_demo";
+    pub(crate) const CMD_NAV_AI_REASONING_DEMO: &str = "ui_gallery.nav.select.ai_reasoning_demo";
+    pub(crate) const CMD_NAV_AI_CODE_BLOCK_DEMO: &str = "ui_gallery.nav.select.ai_code_block_demo";
+    pub(crate) const CMD_NAV_AI_SNIPPET_DEMO: &str = "ui_gallery.nav.select.ai_snippet_demo";
+    pub(crate) const CMD_NAV_AI_COMMIT_DEMO: &str = "ui_gallery.nav.select.ai_commit_demo";
+    pub(crate) const CMD_NAV_AI_STACK_TRACE_DEMO: &str =
+        "ui_gallery.nav.select.ai_stack_trace_demo";
+    pub(crate) const CMD_NAV_AI_SCHEMA_DISPLAY_DEMO: &str =
+        "ui_gallery.nav.select.ai_schema_display_demo";
+    pub(crate) const CMD_NAV_AI_TEST_RESULTS_DEMO: &str =
+        "ui_gallery.nav.select.ai_test_results_demo";
+    pub(crate) const CMD_NAV_AI_CONFIRMATION_DEMO: &str =
+        "ui_gallery.nav.select.ai_confirmation_demo";
+    pub(crate) const CMD_NAV_AI_ENVIRONMENT_VARIABLES_DEMO: &str =
+        "ui_gallery.nav.select.ai_environment_variables_demo";
+    pub(crate) const CMD_NAV_AI_PLAN_DEMO: &str = "ui_gallery.nav.select.ai_plan_demo";
+    pub(crate) const CMD_NAV_AI_CHAIN_OF_THOUGHT_DEMO: &str =
+        "ui_gallery.nav.select.ai_chain_of_thought_demo";
+}
+#[cfg(feature = "gallery-ai")]
+pub(crate) use gallery_ai_nav_commands::*;
 pub(crate) const CMD_NAV_BUTTON: &str = "ui_gallery.nav.select.button";
 pub(crate) const CMD_NAV_CARD: &str = "ui_gallery.nav.select.card";
 pub(crate) const CMD_NAV_BADGE: &str = "ui_gallery.nav.select.badge";
 pub(crate) const CMD_NAV_AVATAR: &str = "ui_gallery.nav.select.avatar";
-pub(crate) const CMD_NAV_IMAGE_OBJECT_FIT: &str = "ui_gallery.nav.select.image_object_fit";
-pub(crate) const CMD_NAV_MAGIC_MARQUEE: &str = "ui_gallery.nav.select.magic_marquee";
-pub(crate) const CMD_NAV_MAGIC_CARD: &str = "ui_gallery.nav.select.magic_card";
-pub(crate) const CMD_NAV_MAGIC_LENS: &str = "ui_gallery.nav.select.magic_lens";
-pub(crate) const CMD_NAV_MAGIC_BORDER_BEAM: &str = "ui_gallery.nav.select.magic_border_beam";
-pub(crate) const CMD_NAV_MAGIC_DOCK: &str = "ui_gallery.nav.select.magic_dock";
-pub(crate) const CMD_NAV_MAGIC_PATTERNS: &str = "ui_gallery.nav.select.magic_patterns";
-pub(crate) const CMD_NAV_MAGIC_PATTERNS_TORTURE: &str =
-    "ui_gallery.nav.select.magic_patterns_torture";
-pub(crate) const CMD_NAV_MAGIC_SPARKLES_TEXT: &str = "ui_gallery.nav.select.magic_sparkles_text";
-pub(crate) const CMD_NAV_MAGIC_BLOOM: &str = "ui_gallery.nav.select.magic_bloom";
+#[cfg(feature = "gallery-dev")]
+mod gallery_dev_recipe_nav_commands {
+    pub(crate) const CMD_NAV_IMAGE_OBJECT_FIT: &str = "ui_gallery.nav.select.image_object_fit";
+    pub(crate) const CMD_NAV_MAGIC_MARQUEE: &str = "ui_gallery.nav.select.magic_marquee";
+    pub(crate) const CMD_NAV_MAGIC_CARD: &str = "ui_gallery.nav.select.magic_card";
+    pub(crate) const CMD_NAV_MAGIC_LENS: &str = "ui_gallery.nav.select.magic_lens";
+    pub(crate) const CMD_NAV_MAGIC_BORDER_BEAM: &str = "ui_gallery.nav.select.magic_border_beam";
+    pub(crate) const CMD_NAV_MAGIC_DOCK: &str = "ui_gallery.nav.select.magic_dock";
+    pub(crate) const CMD_NAV_MAGIC_PATTERNS: &str = "ui_gallery.nav.select.magic_patterns";
+    pub(crate) const CMD_NAV_MAGIC_PATTERNS_TORTURE: &str =
+        "ui_gallery.nav.select.magic_patterns_torture";
+    pub(crate) const CMD_NAV_MAGIC_SPARKLES_TEXT: &str =
+        "ui_gallery.nav.select.magic_sparkles_text";
+    pub(crate) const CMD_NAV_MAGIC_BLOOM: &str = "ui_gallery.nav.select.magic_bloom";
+    pub(crate) const CMD_NAV_ICONS: &str = "ui_gallery.nav.select.icons";
+    pub(crate) const CMD_NAV_OVERLAY: &str = "ui_gallery.nav.select.overlay";
+    pub(crate) const CMD_NAV_SHADCN_EXTRAS: &str = "ui_gallery.nav.select.shadcn_extras";
+    pub(crate) const CMD_NAV_FORMS: &str = "ui_gallery.nav.select.forms";
+    pub(crate) const CMD_NAV_DATA_GRID: &str = "ui_gallery.nav.select.data_grid";
+    pub(crate) const CMD_NAV_MENUS: &str = "ui_gallery.nav.select.menus";
+    pub(crate) const CMD_NAV_CHART: &str = "ui_gallery.nav.select.chart";
+    pub(crate) const CMD_NAV_FORM: &str = "ui_gallery.nav.select.form";
+}
+#[cfg(feature = "gallery-dev")]
+pub(crate) use gallery_dev_recipe_nav_commands::*;
 pub(crate) const CMD_NAV_SKELETON: &str = "ui_gallery.nav.select.skeleton";
 pub(crate) const CMD_NAV_SCROLL_AREA: &str = "ui_gallery.nav.select.scroll_area";
 pub(crate) const CMD_NAV_TOOLTIP: &str = "ui_gallery.nav.select.tooltip";
 pub(crate) const CMD_NAV_SLIDER: &str = "ui_gallery.nav.select.slider";
-pub(crate) const CMD_NAV_ICONS: &str = "ui_gallery.nav.select.icons";
 pub(crate) const CMD_NAV_FIELD: &str = "ui_gallery.nav.select.field";
-pub(crate) const CMD_NAV_OVERLAY: &str = "ui_gallery.nav.select.overlay";
-pub(crate) const CMD_NAV_SHADCN_EXTRAS: &str = "ui_gallery.nav.select.shadcn_extras";
-pub(crate) const CMD_NAV_FORMS: &str = "ui_gallery.nav.select.forms";
 pub(crate) const CMD_NAV_SELECT: &str = "ui_gallery.nav.select.select";
 pub(crate) const CMD_NAV_COMBOBOX: &str = "ui_gallery.nav.select.combobox";
 pub(crate) const CMD_NAV_DATE_PICKER: &str = "ui_gallery.nav.select.date_picker";
 pub(crate) const CMD_NAV_RESIZABLE: &str = "ui_gallery.nav.select.resizable";
 pub(crate) const CMD_NAV_DATA_TABLE: &str = "ui_gallery.nav.select.data_table";
-pub(crate) const CMD_NAV_DATA_GRID: &str = "ui_gallery.nav.select.data_grid";
 pub(crate) const CMD_NAV_TABS: &str = "ui_gallery.nav.select.tabs";
 pub(crate) const CMD_NAV_ACCORDION: &str = "ui_gallery.nav.select.accordion";
 pub(crate) const CMD_NAV_TABLE: &str = "ui_gallery.nav.select.table";
 pub(crate) const CMD_NAV_PROGRESS: &str = "ui_gallery.nav.select.progress";
-pub(crate) const CMD_NAV_MENUS: &str = "ui_gallery.nav.select.menus";
 pub(crate) const CMD_NAV_COMMAND: &str = "ui_gallery.nav.select.command";
 pub(crate) const CMD_NAV_TOAST: &str = "ui_gallery.nav.select.toast";
 pub(crate) const CMD_NAV_ALERT: &str = "ui_gallery.nav.select.alert";
@@ -592,7 +658,6 @@ pub(crate) const CMD_NAV_BREADCRUMB: &str = "ui_gallery.nav.select.breadcrumb";
 pub(crate) const CMD_NAV_BUTTON_GROUP: &str = "ui_gallery.nav.select.button_group";
 pub(crate) const CMD_NAV_CALENDAR: &str = "ui_gallery.nav.select.calendar";
 pub(crate) const CMD_NAV_CAROUSEL: &str = "ui_gallery.nav.select.carousel";
-pub(crate) const CMD_NAV_CHART: &str = "ui_gallery.nav.select.chart";
 pub(crate) const CMD_NAV_CHECKBOX: &str = "ui_gallery.nav.select.checkbox";
 pub(crate) const CMD_NAV_COLLAPSIBLE: &str = "ui_gallery.nav.select.collapsible";
 pub(crate) const CMD_NAV_CONTEXT_MENU: &str = "ui_gallery.nav.select.context_menu";
@@ -600,7 +665,6 @@ pub(crate) const CMD_NAV_DIALOG: &str = "ui_gallery.nav.select.dialog";
 pub(crate) const CMD_NAV_DRAWER: &str = "ui_gallery.nav.select.drawer";
 pub(crate) const CMD_NAV_DROPDOWN_MENU: &str = "ui_gallery.nav.select.dropdown_menu";
 pub(crate) const CMD_NAV_EMPTY: &str = "ui_gallery.nav.select.empty";
-pub(crate) const CMD_NAV_FORM: &str = "ui_gallery.nav.select.form";
 pub(crate) const CMD_NAV_HOVER_CARD: &str = "ui_gallery.nav.select.hover_card";
 pub(crate) const CMD_NAV_INPUT: &str = "ui_gallery.nav.select.input";
 pub(crate) const CMD_NAV_INPUT_GROUP: &str = "ui_gallery.nav.select.input_group";
@@ -624,47 +688,53 @@ pub(crate) const CMD_NAV_TEXTAREA: &str = "ui_gallery.nav.select.textarea";
 pub(crate) const CMD_NAV_TOGGLE: &str = "ui_gallery.nav.select.toggle";
 pub(crate) const CMD_NAV_TOGGLE_GROUP: &str = "ui_gallery.nav.select.toggle_group";
 pub(crate) const CMD_NAV_TYPOGRAPHY: &str = "ui_gallery.nav.select.typography";
-pub(crate) const CMD_NAV_MATERIAL3_GALLERY: &str = "ui_gallery.nav.select.material3_gallery";
-pub(crate) const CMD_NAV_MATERIAL3_BUTTON: &str = "ui_gallery.nav.select.material3_button";
-pub(crate) const CMD_NAV_MATERIAL3_ICON_BUTTON: &str =
-    "ui_gallery.nav.select.material3_icon_button";
-pub(crate) const CMD_NAV_MATERIAL3_CHECKBOX: &str = "ui_gallery.nav.select.material3_checkbox";
-pub(crate) const CMD_NAV_MATERIAL3_SWITCH: &str = "ui_gallery.nav.select.material3_switch";
-pub(crate) const CMD_NAV_MATERIAL3_SLIDER: &str = "ui_gallery.nav.select.material3_slider";
-pub(crate) const CMD_NAV_MATERIAL3_RADIO: &str = "ui_gallery.nav.select.material3_radio";
-pub(crate) const CMD_NAV_MATERIAL3_BADGE: &str = "ui_gallery.nav.select.material3_badge";
-pub(crate) const CMD_NAV_MATERIAL3_SEGMENTED_BUTTON: &str =
-    "ui_gallery.nav.select.material3_segmented_button";
-pub(crate) const CMD_NAV_MATERIAL3_TOP_APP_BAR: &str =
-    "ui_gallery.nav.select.material3_top_app_bar";
-pub(crate) const CMD_NAV_MATERIAL3_BOTTOM_SHEET: &str =
-    "ui_gallery.nav.select.material3_bottom_sheet";
-pub(crate) const CMD_NAV_MATERIAL3_DATE_PICKER: &str =
-    "ui_gallery.nav.select.material3_date_picker";
-pub(crate) const CMD_NAV_MATERIAL3_TIME_PICKER: &str =
-    "ui_gallery.nav.select.material3_time_picker";
-pub(crate) const CMD_NAV_MATERIAL3_AUTOCOMPLETE: &str =
-    "ui_gallery.nav.select.material3_autocomplete";
-pub(crate) const CMD_NAV_MATERIAL3_SELECT: &str = "ui_gallery.nav.select.material3_select";
-pub(crate) const CMD_NAV_MATERIAL3_TEXT_FIELD: &str = "ui_gallery.nav.select.material3_text_field";
-pub(crate) const CMD_NAV_MATERIAL3_TABS: &str = "ui_gallery.nav.select.material3_tabs";
-pub(crate) const CMD_NAV_MATERIAL3_NAVIGATION_BAR: &str =
-    "ui_gallery.nav.select.material3_navigation_bar";
-pub(crate) const CMD_NAV_MATERIAL3_NAVIGATION_RAIL: &str =
-    "ui_gallery.nav.select.material3_navigation_rail";
-pub(crate) const CMD_NAV_MATERIAL3_NAVIGATION_DRAWER: &str =
-    "ui_gallery.nav.select.material3_navigation_drawer";
-pub(crate) const CMD_NAV_MATERIAL3_MODAL_NAVIGATION_DRAWER: &str =
-    "ui_gallery.nav.select.material3_modal_navigation_drawer";
-pub(crate) const CMD_NAV_MATERIAL3_DIALOG: &str = "ui_gallery.nav.select.material3_dialog";
-pub(crate) const CMD_NAV_MATERIAL3_MENU: &str = "ui_gallery.nav.select.material3_menu";
-pub(crate) const CMD_NAV_MATERIAL3_LIST: &str = "ui_gallery.nav.select.material3_list";
-pub(crate) const CMD_NAV_MATERIAL3_SNACKBAR: &str = "ui_gallery.nav.select.material3_snackbar";
-pub(crate) const CMD_NAV_MATERIAL3_TOOLTIP: &str = "ui_gallery.nav.select.material3_tooltip";
-pub(crate) const CMD_NAV_MATERIAL3_STATE_MATRIX: &str =
-    "ui_gallery.nav.select.material3_state_matrix";
-pub(crate) const CMD_NAV_MATERIAL3_TOUCH_TARGETS: &str =
-    "ui_gallery.nav.select.material3_touch_targets";
+#[cfg(feature = "gallery-material3")]
+mod gallery_material3_nav_commands {
+    pub(crate) const CMD_NAV_MATERIAL3_GALLERY: &str = "ui_gallery.nav.select.material3_gallery";
+    pub(crate) const CMD_NAV_MATERIAL3_BUTTON: &str = "ui_gallery.nav.select.material3_button";
+    pub(crate) const CMD_NAV_MATERIAL3_ICON_BUTTON: &str =
+        "ui_gallery.nav.select.material3_icon_button";
+    pub(crate) const CMD_NAV_MATERIAL3_CHECKBOX: &str = "ui_gallery.nav.select.material3_checkbox";
+    pub(crate) const CMD_NAV_MATERIAL3_SWITCH: &str = "ui_gallery.nav.select.material3_switch";
+    pub(crate) const CMD_NAV_MATERIAL3_SLIDER: &str = "ui_gallery.nav.select.material3_slider";
+    pub(crate) const CMD_NAV_MATERIAL3_RADIO: &str = "ui_gallery.nav.select.material3_radio";
+    pub(crate) const CMD_NAV_MATERIAL3_BADGE: &str = "ui_gallery.nav.select.material3_badge";
+    pub(crate) const CMD_NAV_MATERIAL3_SEGMENTED_BUTTON: &str =
+        "ui_gallery.nav.select.material3_segmented_button";
+    pub(crate) const CMD_NAV_MATERIAL3_TOP_APP_BAR: &str =
+        "ui_gallery.nav.select.material3_top_app_bar";
+    pub(crate) const CMD_NAV_MATERIAL3_BOTTOM_SHEET: &str =
+        "ui_gallery.nav.select.material3_bottom_sheet";
+    pub(crate) const CMD_NAV_MATERIAL3_DATE_PICKER: &str =
+        "ui_gallery.nav.select.material3_date_picker";
+    pub(crate) const CMD_NAV_MATERIAL3_TIME_PICKER: &str =
+        "ui_gallery.nav.select.material3_time_picker";
+    pub(crate) const CMD_NAV_MATERIAL3_AUTOCOMPLETE: &str =
+        "ui_gallery.nav.select.material3_autocomplete";
+    pub(crate) const CMD_NAV_MATERIAL3_SELECT: &str = "ui_gallery.nav.select.material3_select";
+    pub(crate) const CMD_NAV_MATERIAL3_TEXT_FIELD: &str =
+        "ui_gallery.nav.select.material3_text_field";
+    pub(crate) const CMD_NAV_MATERIAL3_TABS: &str = "ui_gallery.nav.select.material3_tabs";
+    pub(crate) const CMD_NAV_MATERIAL3_NAVIGATION_BAR: &str =
+        "ui_gallery.nav.select.material3_navigation_bar";
+    pub(crate) const CMD_NAV_MATERIAL3_NAVIGATION_RAIL: &str =
+        "ui_gallery.nav.select.material3_navigation_rail";
+    pub(crate) const CMD_NAV_MATERIAL3_NAVIGATION_DRAWER: &str =
+        "ui_gallery.nav.select.material3_navigation_drawer";
+    pub(crate) const CMD_NAV_MATERIAL3_MODAL_NAVIGATION_DRAWER: &str =
+        "ui_gallery.nav.select.material3_modal_navigation_drawer";
+    pub(crate) const CMD_NAV_MATERIAL3_DIALOG: &str = "ui_gallery.nav.select.material3_dialog";
+    pub(crate) const CMD_NAV_MATERIAL3_MENU: &str = "ui_gallery.nav.select.material3_menu";
+    pub(crate) const CMD_NAV_MATERIAL3_LIST: &str = "ui_gallery.nav.select.material3_list";
+    pub(crate) const CMD_NAV_MATERIAL3_SNACKBAR: &str = "ui_gallery.nav.select.material3_snackbar";
+    pub(crate) const CMD_NAV_MATERIAL3_TOOLTIP: &str = "ui_gallery.nav.select.material3_tooltip";
+    pub(crate) const CMD_NAV_MATERIAL3_STATE_MATRIX: &str =
+        "ui_gallery.nav.select.material3_state_matrix";
+    pub(crate) const CMD_NAV_MATERIAL3_TOUCH_TARGETS: &str =
+        "ui_gallery.nav.select.material3_touch_targets";
+}
+#[cfg(feature = "gallery-material3")]
+pub(crate) use gallery_material3_nav_commands::*;
 
 pub(crate) const CMD_PROGRESS_INC: &str = "ui_gallery.progress.inc";
 pub(crate) const CMD_PROGRESS_DEC: &str = "ui_gallery.progress.dec";
@@ -673,9 +743,12 @@ pub(crate) const CMD_PROGRESS_RESET: &str = "ui_gallery.progress.reset";
 pub(crate) const CMD_VIEW_CACHE_BUMP: &str = "ui_gallery.view_cache.bump";
 pub(crate) const CMD_VIEW_CACHE_RESET: &str = "ui_gallery.view_cache.reset";
 
+#[cfg(feature = "gallery-dev")]
 pub(crate) const CMD_VIRTUAL_LIST_TORTURE_JUMP: &str = "ui_gallery.virtual_list_torture.jump";
+#[cfg(feature = "gallery-dev")]
 pub(crate) const CMD_VIRTUAL_LIST_TORTURE_SCROLL_BOTTOM: &str =
     "ui_gallery.virtual_list_torture.scroll_bottom";
+#[cfg(feature = "gallery-dev")]
 pub(crate) const CMD_VIRTUAL_LIST_TORTURE_CLEAR_EDIT: &str =
     "ui_gallery.virtual_list_torture.clear_edit";
 
@@ -2810,16 +2883,6 @@ pub(crate) fn page_spec(id: &str) -> Option<&'static PageSpec> {
         .find(|item| item.id == id)
 }
 
-pub(crate) fn page_group_title(id: &str) -> Option<&'static str> {
-    PAGE_GROUPS.iter().find_map(|group| {
-        group
-            .items
-            .iter()
-            .any(|item| item.id == id)
-            .then_some(group.title)
-    })
-}
-
 pub(crate) fn page_id_for_nav_command(command: &str) -> Option<&'static str> {
     static BY_COMMAND: OnceLock<HashMap<&'static str, &'static str>> = OnceLock::new();
     let by_command = BY_COMMAND.get_or_init(|| {
@@ -2835,11 +2898,13 @@ pub(crate) fn page_id_for_nav_command(command: &str) -> Option<&'static str> {
     by_command.get(command).copied()
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(crate) fn data_grid_row_command(row: usize) -> Option<CommandId> {
     let row = u64::try_from(row).ok()?;
     Some(CommandId::new(format!("{CMD_DATA_GRID_ROW_PREFIX}{row}")))
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(crate) fn data_grid_row_for_command(command: &str) -> Option<u64> {
     let suffix = command.strip_prefix(CMD_DATA_GRID_ROW_PREFIX)?;
     suffix.parse::<u64>().ok()

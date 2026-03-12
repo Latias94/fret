@@ -17,33 +17,35 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .test_id("ui-gallery-dropdown-menu-avatar-trigger"),
     );
 
-    shadcn::DropdownMenu::new_controllable(cx, None, false).build_parts(
-        cx,
-        trigger,
-        shadcn::DropdownMenuContent::new()
-            .align(shadcn::DropdownMenuAlign::End)
-            .side_offset(Px(4.0))
-            .min_width(Px(224.0)),
-        |_cx| {
-            [
-                shadcn::DropdownMenuGroup::new([
-                    shadcn::DropdownMenuItem::new("Account")
-                        .leading_icon(IconId::new_static("lucide.badge-check"))
-                        .into(),
-                    shadcn::DropdownMenuItem::new("Billing")
-                        .leading_icon(IconId::new_static("lucide.credit-card"))
-                        .into(),
-                    shadcn::DropdownMenuItem::new("Notifications")
-                        .leading_icon(IconId::new_static("lucide.bell"))
-                        .into(),
-                ])
-                .into(),
-                shadcn::DropdownMenuSeparator::new().into(),
-                shadcn::DropdownMenuItem::new("Sign Out")
-                    .leading_icon(IconId::new_static("lucide.log-out"))
+    super::preview_frame_with(cx, move |cx| {
+        shadcn::DropdownMenu::new_controllable(cx, None, false).build_parts(
+            cx,
+            trigger,
+            shadcn::DropdownMenuContent::new()
+                .align(shadcn::DropdownMenuAlign::End)
+                .side_offset(Px(4.0))
+                .min_width(Px(224.0)),
+            |_cx| {
+                [
+                    shadcn::DropdownMenuGroup::new([
+                        shadcn::DropdownMenuItem::new("Account")
+                            .leading_icon(IconId::new_static("lucide.badge-check"))
+                            .into(),
+                        shadcn::DropdownMenuItem::new("Billing")
+                            .leading_icon(IconId::new_static("lucide.credit-card"))
+                            .into(),
+                        shadcn::DropdownMenuItem::new("Notifications")
+                            .leading_icon(IconId::new_static("lucide.bell"))
+                            .into(),
+                    ])
                     .into(),
-            ]
-        },
-    )
+                    shadcn::DropdownMenuSeparator::new().into(),
+                    shadcn::DropdownMenuItem::new("Sign Out")
+                        .leading_icon(IconId::new_static("lucide.log-out"))
+                        .into(),
+                ]
+            },
+        )
+    })
 }
 // endregion: example

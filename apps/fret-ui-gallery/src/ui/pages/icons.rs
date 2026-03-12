@@ -1,9 +1,10 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::icons as snippets;
 
-pub(super) fn preview_icons(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(super) fn preview_icons(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let grid = snippets::grid::render(cx);
     let spinner_row = snippets::spinner::render(cx);
 

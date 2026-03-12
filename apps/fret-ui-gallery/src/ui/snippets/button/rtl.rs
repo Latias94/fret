@@ -28,17 +28,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         .variant(shadcn::ButtonVariant::Destructive)
                         .test_id("ui-gallery-button-rtl-destructive")
                         .into_element(cx),
-                    shadcn::Button::new("")
+                    shadcn::Button::new("إرسال")
                         .variant(shadcn::ButtonVariant::Outline)
-                        .children([
-                            ui::text("إرسال").font_medium().nowrap().into_element(cx),
-                            fret_ui_shadcn::icon::icon_with(
-                                cx,
-                                IconId::new_static("lucide.arrow-right"),
-                                None,
-                                None,
-                            ),
-                        ])
+                        .trailing_icon(IconId::new_static("lucide.arrow-left"))
                         .test_id("ui-gallery-button-rtl-submit")
                         .into_element(cx),
                     shadcn::Button::new("")
@@ -48,17 +40,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         .icon(IconId::new_static("lucide.plus"))
                         .test_id("ui-gallery-button-rtl-add")
                         .into_element(cx),
-                    shadcn::Button::new("")
+                    shadcn::Button::new("جاري التحميل")
                         .variant(shadcn::ButtonVariant::Secondary)
                         .disabled(true)
                         .test_id("ui-gallery-button-rtl-loading")
-                        .children([
-                            shadcn::Spinner::new().into_element(cx),
-                            ui::text("جاري التحميل")
-                                .font_medium()
-                                .nowrap()
-                                .into_element(cx),
-                        ])
+                        .leading_children([shadcn::Spinner::new().into_element(cx)])
                         .into_element(cx),
                 ]
             })

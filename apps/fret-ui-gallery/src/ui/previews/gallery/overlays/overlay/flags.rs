@@ -1,11 +1,9 @@
 use super::super::super::super::super::*;
+use fret::UiCx;
 
 use super::OverlayModels;
 
-pub(super) fn last_action_status(
-    cx: &mut ElementContext<'_, App>,
-    models: &OverlayModels,
-) -> AnyElement {
+pub(super) fn last_action_status(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement {
     let last = cx
         .app
         .models()
@@ -15,10 +13,7 @@ pub(super) fn last_action_status(
     cx.text(text).test_id("ui-gallery-overlay-last-action")
 }
 
-pub(super) fn status_flags(
-    cx: &mut ElementContext<'_, App>,
-    models: &OverlayModels,
-) -> Vec<AnyElement> {
+pub(super) fn status_flags(cx: &mut UiCx<'_>, models: &OverlayModels) -> Vec<AnyElement> {
     let popover_dismissed_flag = {
         let last = cx
             .get_model_cloned(&models.last_action, Invalidation::Layout)

@@ -1,20 +1,20 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::{FontWeight, Px};
 use fret_ui_kit::ui::UiElementSinkExt;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn make_invoice_table(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     rows: &[(&'static str, &'static str, &'static str, &'static str)],
     include_footer: bool,
     test_id: &'static str,
 ) -> AnyElement {
     let invoice_w = Px(100.0);
 
-    let body_row = |cx: &mut ElementContext<'_, App>,
+    let body_row = |cx: &mut UiCx<'_>,
                     invoice: &'static str,
                     status: &'static str,
                     method: &'static str,
@@ -100,7 +100,7 @@ fn make_invoice_table(
     .test_id(test_id)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     shadcn::DirectionProvider::new(shadcn::LayoutDirection::Rtl).into_element(cx, |cx| {
         let rows: [(&str, &str, &str, &str); 3] = [
             ("INV001", "Paid", "Credit Card", "$250.00"),

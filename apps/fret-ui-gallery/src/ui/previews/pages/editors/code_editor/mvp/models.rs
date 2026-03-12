@@ -1,4 +1,5 @@
 use super::prelude::*;
+use fret::UiCx;
 
 #[derive(Clone)]
 pub(super) struct CodeEditorMvpHandles {
@@ -14,7 +15,7 @@ pub(super) struct CodeEditorMvpHandles {
 }
 
 impl CodeEditorMvpHandles {
-    pub(super) fn get(cx: &mut ElementContext<'_, App>) -> Self {
+    pub(super) fn get(cx: &mut UiCx<'_>) -> Self {
         cx.with_state(
             || CodeEditorMvpHandles {
                 main: code_editor::CodeEditorHandle::new(code_editor_mvp_source()),
@@ -70,9 +71,7 @@ pub(super) struct CodeEditorMvpAppliedFlags {
     pub(super) boundary_identifier_enabled: Option<bool>,
 }
 
-pub(super) fn applied_flags(
-    cx: &mut ElementContext<'_, App>,
-) -> Rc<Cell<CodeEditorMvpAppliedFlags>> {
+pub(super) fn applied_flags(cx: &mut UiCx<'_>) -> Rc<Cell<CodeEditorMvpAppliedFlags>> {
     cx.with_state(
         || Rc::new(Cell::new(CodeEditorMvpAppliedFlags::default())),
         |v| v.clone(),

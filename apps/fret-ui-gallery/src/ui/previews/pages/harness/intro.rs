@@ -1,11 +1,9 @@
 use super::super::super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
+use fret::UiCx;
 
-pub(in crate::ui) fn preview_intro(
-    cx: &mut ElementContext<'_, App>,
-    theme: &Theme,
-) -> Vec<AnyElement> {
-    let card = |cx: &mut ElementContext<'_, App>, title: &str, desc: &str| -> AnyElement {
+pub(in crate::ui) fn preview_intro(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+    let card = |cx: &mut UiCx<'_>, title: &str, desc: &str| -> AnyElement {
         shadcn::Card::new(vec![
             shadcn::CardHeader::new(vec![
                 shadcn::CardTitle::new(title).into_element(cx),

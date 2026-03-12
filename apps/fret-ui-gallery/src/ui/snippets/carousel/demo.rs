@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign, SemanticsDecoration};
@@ -25,7 +25,7 @@ struct SlideVisual {
     line_height_px: Px,
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     // Match shadcn/ui v4 docs example widths (`max-w-xs`) deterministically in native builds.
     let max_w_xs = Px(320.0);
 
@@ -108,7 +108,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         }
     };
 
-    let demo_slide = |cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual| {
+    let demo_slide = |cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual| {
         let theme = Theme::global(&*cx.app).clone();
 
         let number = ui::text(format!("{idx}"))

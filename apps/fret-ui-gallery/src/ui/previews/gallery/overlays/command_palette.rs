@@ -1,7 +1,8 @@
 use super::super::super::super::*;
+use fret::UiCx;
 
 pub(in crate::ui) fn preview_command_palette(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     _open: Model<bool>,
     _query: Model<String>,
     last_action: Model<Arc<str>>,

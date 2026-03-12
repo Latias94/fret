@@ -1,9 +1,10 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::chart as snippets;
 
-pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo_cards = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
     let contracts_overview = snippets::contracts::render(cx);

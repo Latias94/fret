@@ -1,9 +1,10 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::slider as snippets;
 
-pub(super) fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(super) fn preview_slider(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     cx.keyed("ui_gallery.slider_page", |cx| {
         #[derive(Default)]
         struct SliderPageState {

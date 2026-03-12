@@ -13,11 +13,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         if let Some(variant) = variant {
             btn = btn.variant(variant);
         }
-        btn.children([
-            shadcn::Spinner::new().into_element(cx),
-            ui::text(label).font_medium().nowrap().into_element(cx),
-        ])
-        .into_element(cx)
+        btn.leading_children([shadcn::Spinner::new().into_element(cx)])
+            .into_element(cx)
     };
 
     ui::v_flex(|cx| {

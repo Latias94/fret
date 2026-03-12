@@ -1,16 +1,16 @@
 pub const SOURCE: &str = include_str!("compositions.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui::Theme;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
 
-    let cell = |cx: &mut ElementContext<'_, App>, test_id: &'static str, card: shadcn::Card| {
+    let cell = |cx: &mut UiCx<'_>, test_id: &'static str, card: shadcn::Card| {
         let card = card
             .refine_layout(LayoutRefinement::default().w_full().max_w(Px(260.0)))
             .into_element(cx)

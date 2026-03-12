@@ -1,8 +1,9 @@
 use super::super::super::super::super::*;
 use crate::ui::doc_layout;
+use fret::UiCx;
 
 pub(in crate::ui) fn preview_code_editor_torture(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     syntax_rust: Model<bool>,
     boundary_identifier: Model<bool>,

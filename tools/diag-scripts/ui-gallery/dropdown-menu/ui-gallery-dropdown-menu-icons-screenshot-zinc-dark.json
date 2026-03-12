@@ -4,9 +4,12 @@
     "name": "UI gallery: Dropdown Menu icons screenshot (zinc dark)",
     "tags": ["ui-gallery", "shadcn", "dropdown-menu", "icons", "zinc-dark", "screenshots"],
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "dropdown_menu"
+    },
     "target_hints": [
       "Sets theme preset to zinc/dark.",
-      "Navigates to the Dropdown Menu page.",
+      "Starts UI Gallery on the Dropdown Menu page.",
       "Opens the Icons menu and captures a screenshot to gate icon foreground inheritance."
     ]
   },
@@ -27,21 +30,6 @@
     { "type": "wait_frames", "n": 2 },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
-
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "dropdown" },
-    { "type": "wait_frames", "n": 2 },
-
-    {
-      "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-dropdown-menu" },
-      "delta_y": -240.0,
-      "timeout_frames": 600
-    },
-    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-dropdown-menu" } },
     {
       "type": "wait_until",
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-page-dropdown-menu" } },
@@ -71,4 +59,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-dropdown-menu-icons-zinc-dark" }
   ]
 }
-

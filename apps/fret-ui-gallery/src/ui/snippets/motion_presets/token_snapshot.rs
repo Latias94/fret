@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("token_snapshot.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui::Theme;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -9,7 +9,7 @@ fn fmt_bezier(b: fret_ui::theme::CubicBezier) -> String {
     format!("{:.2}, {:.2}, {:.2}, {:.2}", b.x1, b.y1, b.x2, b.y2)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>, theme: &Theme) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>, theme: &Theme) -> AnyElement {
     let shell_layout = LayoutRefinement::default()
         .w_full()
         .max_w(Px(760.0))

@@ -7,7 +7,6 @@
 //! Keep `ui-gallery-aspect-ratio-*` `test_id`s stable: diag scripts depend on them.
 
 mod images;
-pub(crate) use images::{landscape_image_id, portrait_image_id};
 
 pub mod demo;
 pub mod portrait;

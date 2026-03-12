@@ -1,9 +1,10 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::breadcrumb as snippets;
 
-pub(super) fn preview_breadcrumb(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(super) fn preview_breadcrumb(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
     let basic = snippets::basic::render(cx);

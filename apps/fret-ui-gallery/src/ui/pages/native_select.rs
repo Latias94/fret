@@ -1,9 +1,10 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::native_select as snippets;
 
-pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(super) fn preview_native_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     #[derive(Default)]
     struct NativeSelectPageModels {
         demo_value: Option<Model<Option<Arc<str>>>>,

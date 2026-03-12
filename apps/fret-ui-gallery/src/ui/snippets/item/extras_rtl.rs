@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("extras_rtl.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
-fn outline_button_sm(cx: &mut ElementContext<'_, App>, label: &'static str) -> AnyElement {
+fn outline_button_sm(cx: &mut UiCx<'_>, label: &'static str) -> AnyElement {
     shadcn::Button::new(label)
         .variant(shadcn::ButtonVariant::Outline)
         .size(shadcn::ButtonSize::Sm)
@@ -14,7 +14,7 @@ fn outline_button_sm(cx: &mut ElementContext<'_, App>, label: &'static str) -> A
 }
 
 fn item_basic(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     title: &'static str,
     description: &'static str,
     actions: Vec<AnyElement>,
@@ -38,7 +38,7 @@ fn item_basic(
         .test_id(test_id)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let rtl = with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
         let action = outline_button_sm(cx, "فتح");
         item_basic(

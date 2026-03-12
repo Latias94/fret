@@ -1,7 +1,8 @@
 use super::super::super::super::*;
+use fret::UiCx;
 
 pub(in crate::ui) fn preview_data_grid(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     selected_row: Model<Option<u64>>,
 ) -> Vec<AnyElement> {
     let selected = cx

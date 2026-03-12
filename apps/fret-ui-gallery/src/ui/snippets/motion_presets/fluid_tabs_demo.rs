@@ -1,14 +1,10 @@
 pub const SOURCE: &str = include_str!("fluid_tabs_demo.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn panel(
-    cx: &mut ElementContext<'_, App>,
-    title: &'static str,
-    description: &'static str,
-) -> AnyElement {
+fn panel(cx: &mut UiCx<'_>, title: &'static str, description: &'static str) -> AnyElement {
     shadcn::Alert::new([
         fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.sparkles")),
         shadcn::AlertTitle::new(title).into_element(cx),
@@ -18,7 +14,7 @@ fn panel(
     .into_element(cx)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let tabs = shadcn::Tabs::uncontrolled(Some("accounts"))
         .refine_layout(LayoutRefinement::default().w_full().min_w_0())
         .shared_indicator_motion(true)

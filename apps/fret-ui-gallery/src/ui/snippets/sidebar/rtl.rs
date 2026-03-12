@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::Px;
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -12,7 +12,7 @@ struct SidebarModels {
     selected: Option<Model<Arc<str>>>,
 }
 
-fn ensure_selected(cx: &mut ElementContext<'_, App>) -> Model<Arc<str>> {
+fn ensure_selected(cx: &mut UiCx<'_>) -> Model<Arc<str>> {
     let state = cx.with_state(SidebarModels::default, |st| st.clone());
     match state.selected {
         Some(model) => model,
@@ -27,7 +27,7 @@ fn ensure_selected(cx: &mut ElementContext<'_, App>) -> Model<Arc<str>> {
 }
 
 fn resolve_selected(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     model: &Model<Arc<str>>,
     fallback: &'static str,
 ) -> Arc<str> {
@@ -36,7 +36,7 @@ fn resolve_selected(
 }
 
 fn menu_button(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     selected_model: Model<Arc<str>>,
     active_value: &Arc<str>,
     value: &'static str,
@@ -64,7 +64,7 @@ fn menu_button(
         .into_element(cx)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let selected_model = ensure_selected(cx);
     let selected_value = resolve_selected(cx, &selected_model, "playground");
 

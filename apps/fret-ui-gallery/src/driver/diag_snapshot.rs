@@ -184,13 +184,21 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                 let cmdk_query = app.models().get_cloned(&ids.cmdk_query)?;
                 let last_action = app.models().get_cloned(&ids.last_action)?;
                 let input_file_value = app.models().get_cloned(&ids.input_file_value)?;
+                #[cfg(feature = "gallery-dev")]
                 let syntax_rust = app.models().get_cloned(&ids.code_editor_syntax_rust)?;
+                #[cfg(feature = "gallery-dev")]
                 let boundary_identifier = app
                     .models()
                     .get_cloned(&ids.code_editor_boundary_identifier)?;
+                #[cfg(feature = "gallery-dev")]
                 let soft_wrap = app.models().get_cloned(&ids.code_editor_soft_wrap)?;
+                #[cfg(feature = "gallery-dev")]
                 let folds = app.models().get_cloned(&ids.code_editor_folds)?;
+                #[cfg(feature = "gallery-dev")]
                 let inlays = app.models().get_cloned(&ids.code_editor_inlays)?;
+                #[cfg(not(feature = "gallery-dev"))]
+                let (syntax_rust, boundary_identifier, soft_wrap, folds, inlays) =
+                    (false, false, false, false, false);
                 let text_input = app.models().get_cloned(&ids.text_input)?;
                 let text_area = app.models().get_cloned(&ids.text_area)?;
 

@@ -1,11 +1,12 @@
 use super::*;
+use fret::UiCx;
 
 use crate::ui::snippets;
 
 use super::shared::{MATERIAL3_INTRO, render_material3_demo_page};
 
 pub(in crate::ui) fn preview_material3_date_picker(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     open: Model<bool>,
     month: Model<fret_ui_headless::calendar::CalendarMonth>,
     selected: Model<Option<time::Date>>,
@@ -21,7 +22,7 @@ pub(in crate::ui) fn preview_material3_date_picker(
 }
 
 pub(in crate::ui) fn preview_material3_time_picker(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     open: Model<bool>,
     selected: Model<time::Time>,
 ) -> Vec<AnyElement> {
@@ -35,7 +36,7 @@ pub(in crate::ui) fn preview_material3_time_picker(
     )
 }
 
-pub(in crate::ui) fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_material3_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::material3::select::render(cx);
 
     render_material3_demo_page(
@@ -47,7 +48,7 @@ pub(in crate::ui) fn preview_material3_select(cx: &mut ElementContext<'_, App>) 
 }
 
 pub(in crate::ui) fn preview_material3_autocomplete(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     value: Model<String>,
     disabled: Model<bool>,
     error: Model<bool>,
@@ -64,7 +65,7 @@ pub(in crate::ui) fn preview_material3_autocomplete(
 }
 
 pub(in crate::ui) fn preview_material3_text_field(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     value: Model<String>,
     disabled: Model<bool>,
     error: Model<bool>,

@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("plugin_autoplay_stop_on_focus.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign, SpacingLength, TextProps};
@@ -23,7 +23,7 @@ struct SlideVisual {
     line_height_px: Px,
 }
 
-fn slide(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual) -> AnyElement {
+fn slide(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
 
     let number = ui::text(format!("{idx}"))
@@ -63,7 +63,7 @@ fn slide(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual) -> A
         .into_element(cx)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let max_w_xs = Px(320.0);
 
     let state = cx.with_state(Models::default, |st| st.clone());

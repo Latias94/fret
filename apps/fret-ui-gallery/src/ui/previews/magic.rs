@@ -1,9 +1,10 @@
 use super::super::*;
+use fret::UiCx;
 
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui_magic as magic;
 
-pub(in crate::ui) fn preview_magic_lens(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_magic_lens(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let muted = cx.with_theme(|theme| theme.color_token("muted"));
     let border = cx.with_theme(|theme| theme.color_token("border"));
 
@@ -88,9 +89,7 @@ pub(in crate::ui) fn preview_magic_lens(cx: &mut ElementContext<'_, App>) -> Vec
     ]
 }
 
-pub(in crate::ui) fn preview_magic_border_beam(
-    cx: &mut ElementContext<'_, App>,
-) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_magic_border_beam(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let base = cx.with_theme(|theme| theme.color_token("card"));
     let border = cx.with_theme(|theme| theme.color_token("border"));
     let ring = cx.with_theme(|theme| theme.color_token("ring"));
@@ -156,7 +155,7 @@ pub(in crate::ui) fn preview_magic_border_beam(
     ]
 }
 
-pub(in crate::ui) fn preview_magic_dock(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_magic_dock(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let muted = cx.with_theme(|theme| theme.color_token("muted"));
     let border = cx.with_theme(|theme| theme.color_token("border"));
 
@@ -212,7 +211,7 @@ pub(in crate::ui) fn preview_magic_dock(cx: &mut ElementContext<'_, App>) -> Vec
     ]
 }
 
-pub(in crate::ui) fn preview_magic_bloom(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_magic_bloom(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let ring = cx.with_theme(|theme| theme.color_token("ring"));
 
     let mut panel_layout = LayoutStyle::default();
@@ -279,7 +278,7 @@ pub(in crate::ui) fn preview_magic_bloom(cx: &mut ElementContext<'_, App>) -> Ve
     ]
 }
 
-pub(in crate::ui) fn preview_magic_marquee(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_magic_marquee(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let muted = cx.with_theme(|theme| theme.color_token("muted"));
     let border = cx.with_theme(|theme| theme.color_token("border"));
 
@@ -342,7 +341,7 @@ pub(in crate::ui) fn preview_magic_marquee(cx: &mut ElementContext<'_, App>) -> 
     ]
 }
 
-pub(in crate::ui) fn preview_magic_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_magic_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let base = cx.with_theme(|theme| theme.color_token("card"));
     let border = cx.with_theme(|theme| theme.color_token("border"));
     let ring = cx.with_theme(|theme| theme.color_token("ring"));
@@ -412,7 +411,7 @@ pub(in crate::ui) fn preview_magic_card(cx: &mut ElementContext<'_, App>) -> Vec
     ]
 }
 
-pub(in crate::ui) fn preview_magic_patterns(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_magic_patterns(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let base = cx.with_theme(|theme| theme.color_token("card"));
     let border = cx.with_theme(|theme| theme.color_token("border"));
     let ring = cx.with_theme(|theme| theme.color_token("ring"));
@@ -503,9 +502,7 @@ pub(in crate::ui) fn preview_magic_patterns(cx: &mut ElementContext<'_, App>) ->
     ]
 }
 
-pub(in crate::ui) fn preview_magic_patterns_torture(
-    cx: &mut ElementContext<'_, App>,
-) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_magic_patterns_torture(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let base = cx.with_theme(|theme| theme.color_token("card"));
     let border = cx.with_theme(|theme| theme.color_token("border"));
     let ring = cx.with_theme(|theme| theme.color_token("ring"));
@@ -640,9 +637,7 @@ pub(in crate::ui) fn preview_magic_patterns_torture(
     ]
 }
 
-pub(in crate::ui) fn preview_magic_sparkles_text(
-    cx: &mut ElementContext<'_, App>,
-) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_magic_sparkles_text(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let base = cx.with_theme(|theme| theme.color_token("card"));
     let border = cx.with_theme(|theme| theme.color_token("border"));
     let ring = cx.with_theme(|theme| theme.color_token("ring"));

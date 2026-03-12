@@ -2,11 +2,9 @@ use super::super::*;
 
 use crate::ui::doc_layout::DocSection;
 use crate::ui::snippets::ai as snippets;
+use fret::UiCx;
 
-pub(super) fn preview_ai_snippet_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
+pub(super) fn preview_ai_snippet_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let demo = snippets::snippet_demo::render(cx);
     let plain = snippets::snippet_plain::render(cx);
 

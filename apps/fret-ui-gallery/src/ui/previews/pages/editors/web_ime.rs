@@ -1,8 +1,9 @@
 use super::super::super::super::*;
 use crate::ui::doc_layout;
+use fret::UiCx;
 
 pub(in crate::ui) fn preview_web_ime_harness(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     text_input: Model<String>,
     text_area: Model<String>,
@@ -49,7 +50,7 @@ pub(in crate::ui) fn preview_web_ime_harness(
             LayoutRefinement::default().w_full(),
         ),
         |cx| {
-            let body = ui::v_flex(|cx: &mut ElementContext<'_, App>| {
+            let body = ui::v_flex(|cx: &mut UiCx<'_>| {
                 vec![
                     cx.text("Editable widgets (sanity check):"),
                     shadcn::Input::new(text_input)
@@ -218,7 +219,7 @@ pub(in crate::ui) fn preview_web_ime_harness(
                     .h_px(MetricRef::Px(Px(240.0))),
             ),
             |cx| {
-                let body = ui::v_flex(|cx: &mut ElementContext<'_, App>| {
+                let body = ui::v_flex(|cx: &mut UiCx<'_>| {
                         let mut lines = vec![
                             cx.text(format!(
                                 "harness_region_ime_enabled={harness_region_ime_enabled}"

@@ -2,11 +2,12 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
+use fret::UiCx;
 use fret_ui_kit::ui::UiElementSinkExt as _;
 use fret_ui_shadcn::facade as shadcn;
 
 pub(super) fn preview_ai_chain_of_thought_demo(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     _theme: &Theme,
 ) -> Vec<AnyElement> {
     let usage = snippets::chain_of_thought_demo::render(cx);
@@ -53,7 +54,7 @@ pub(super) fn preview_ai_chain_of_thought_demo(
     vec![body.test_id("ui-gallery-page-ai-chain-of-thought-demo")]
 }
 
-fn chain_of_thought_props_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
+fn chain_of_thought_props_table(cx: &mut UiCx<'_>) -> AnyElement {
     let row = |part: &'static str,
                method: &'static str,
                ty: &'static str,

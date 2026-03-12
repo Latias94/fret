@@ -5,49 +5,6 @@ use fret_core::{Px, TextAlign};
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default, Clone)]
-struct Models {
-    desktop_open: Option<Model<bool>>,
-    mobile_open: Option<Model<bool>>,
-    email: Option<Model<String>>,
-    username: Option<Model<String>>,
-}
-
-fn models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Models {
-    cx.with_state(Models::default, |st| st.clone())
-}
-
-fn ensure_open<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    model: Option<Model<bool>>,
-    set: impl FnOnce(&mut Models, Model<bool>),
-) -> Model<bool> {
-    match model {
-        Some(model) => model,
-        None => {
-            let inserted = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| set(st, inserted.clone()));
-            inserted
-        }
-    }
-}
-
-fn ensure_text<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    model: Option<Model<String>>,
-    value: &'static str,
-    set: impl FnOnce(&mut Models, Model<String>),
-) -> Model<String> {
-    match model {
-        Some(model) => model,
-        None => {
-            let inserted = cx.app.models_mut().insert(value.to_string());
-            cx.with_state(Models::default, |st| set(st, inserted.clone()));
-            inserted
-        }
-    }
-}
-
 fn profile_field<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: &'static str,
@@ -105,17 +62,10 @@ fn profile_form<H: UiHost>(
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let st = models(cx);
-    let desktop_open = ensure_open(cx, st.desktop_open, |st, model| {
-        st.desktop_open = Some(model)
-    });
-    let mobile_open = ensure_open(cx, st.mobile_open, |st, model| st.mobile_open = Some(model));
-    let email = ensure_text(cx, st.email, "shadcn@example.com", |st, model| {
-        st.email = Some(model)
-    });
-    let username = ensure_text(cx, st.username, "@shadcn", |st, model| {
-        st.username = Some(model)
-    });
+    let desktop_open = cx.local_model_keyed("desktop_open", || false);
+    let mobile_open = cx.local_model_keyed("mobile_open", || false);
+    let email = cx.local_model_keyed("email", || String::from("shadcn@example.com"));
+    let username = cx.local_model_keyed("username", || String::from("@shadcn"));
 
     let desktop_open_trigger = desktop_open.clone();
     let mobile_open_trigger = mobile_open.clone();

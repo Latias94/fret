@@ -1,19 +1,19 @@
 pub const SOURCE: &str = include_str!("size.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let max_w_md = LayoutRefinement::default()
         .w_full()
         .min_w_0()
         .max_w(MetricRef::Px(Px(448.0)));
 
-    let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
+    let icon = |cx: &mut UiCx<'_>, id: &'static str| {
         let icon_id = fret_icons::IconId::new_static(id);
         match id {
             "lucide.badge-check" => {

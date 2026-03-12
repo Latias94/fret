@@ -1,10 +1,10 @@
 pub const SOURCE: &str = include_str!("group.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let max_w_md = LayoutRefinement::default()
         .w_full()
         .min_w_0()

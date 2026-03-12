@@ -1,9 +1,10 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::field as snippets;
 
-pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let input = snippets::input::render(cx);
     let textarea = snippets::textarea::render(cx);
     let select = snippets::select::render(cx);

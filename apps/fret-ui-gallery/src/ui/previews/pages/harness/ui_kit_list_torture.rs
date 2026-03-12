@@ -1,5 +1,6 @@
 use super::super::super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
+use fret::UiCx;
 use fret_ui::element::ContainerProps;
 
 #[derive(Default)]
@@ -8,7 +9,7 @@ struct UiKitListTortureModels {
 }
 
 pub(in crate::ui) fn preview_ui_kit_list_torture(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     let selection = cx.with_state(UiKitListTortureModels::default, |st| st.selection.clone());

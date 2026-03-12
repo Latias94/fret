@@ -1,13 +1,13 @@
 pub const SOURCE: &str = include_str!("avatar.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
 fn icon_button(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     icon_id: &'static str,
     variant: shadcn::ButtonVariant,
     test_id: &'static str,
@@ -21,11 +21,7 @@ fn icon_button(
         .test_id(test_id)
 }
 
-fn item_team(
-    cx: &mut ElementContext<'_, App>,
-    test_id: &'static str,
-    action_test_id: &'static str,
-) -> AnyElement {
+fn item_team(cx: &mut UiCx<'_>, test_id: &'static str, action_test_id: &'static str) -> AnyElement {
     let avatars = ui::h_row(|cx| {
         vec![
             shadcn::Avatar::new([shadcn::AvatarFallback::new("CN").into_element(cx)])
@@ -64,7 +60,7 @@ fn item_team(
         .test_id(test_id)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let max_w_lg = LayoutRefinement::default()
         .w_full()
         .min_w_0()

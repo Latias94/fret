@@ -2,9 +2,10 @@ use super::super::*;
 
 use crate::ui::doc_layout::DocSection;
 use crate::ui::snippets::ai as snippets;
+use fret::UiCx;
 use fret_ui_kit::ui::UiElementSinkExt as _;
 
-fn states_notes(cx: &mut ElementContext<'_, App>) -> AnyElement {
+fn states_notes(cx: &mut UiCx<'_>) -> AnyElement {
     crate::ui::doc_layout::notes(
         cx,
         [
@@ -17,7 +18,7 @@ fn states_notes(cx: &mut ElementContext<'_, App>) -> AnyElement {
     )
 }
 
-fn props_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
+fn props_table(cx: &mut UiCx<'_>) -> AnyElement {
     let row = |api: &'static str, inputs: &'static str, notes: &'static str| {
         shadcn::TableRow::build(3, move |cx, out| {
             out.push_ui(cx, shadcn::TableCell::build(ui::text(api)));
@@ -55,7 +56,7 @@ fn props_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .into_element(cx)
 }
 
-fn lifecycle_notes(cx: &mut ElementContext<'_, App>) -> AnyElement {
+fn lifecycle_notes(cx: &mut UiCx<'_>) -> AnyElement {
     crate::ui::doc_layout::notes(
         cx,
         [
@@ -66,10 +67,7 @@ fn lifecycle_notes(cx: &mut ElementContext<'_, App>) -> AnyElement {
     )
 }
 
-pub(super) fn preview_ai_persona_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
+pub(super) fn preview_ai_persona_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let interactive = snippets::persona_demo::render(cx);
     let variants = snippets::persona_variants::render(cx);
     let basic = snippets::persona_basic::render(cx);

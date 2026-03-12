@@ -1,10 +1,11 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::hover_card as snippets;
 
 pub(super) fn preview_hover_card(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     avatar_image: Model<Option<ImageId>>,
 ) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx, avatar_image);

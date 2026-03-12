@@ -1,9 +1,10 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::input_group as snippets;
 
-pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(super) fn preview_input_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let align_inline_start = snippets::align_inline_start::render(cx);
     let align_inline_end = snippets::align_inline_end::render(cx);

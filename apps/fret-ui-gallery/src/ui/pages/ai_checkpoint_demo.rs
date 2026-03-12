@@ -2,13 +2,11 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection, notes};
 use crate::ui::snippets::ai as snippets;
+use fret::UiCx;
 use fret_ui_kit::ui::UiElementSinkExt as _;
 use fret_ui_shadcn::facade as shadcn;
 
-pub(super) fn preview_ai_checkpoint_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
+pub(super) fn preview_ai_checkpoint_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let demo = snippets::checkpoint_demo::render(cx);
     let features = notes(
         cx,
@@ -92,7 +90,7 @@ pub(super) fn preview_ai_checkpoint_demo(
     vec![body]
 }
 
-fn checkpoint_props_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
+fn checkpoint_props_table(cx: &mut UiCx<'_>) -> AnyElement {
     let row = |part: &'static str,
                method: &'static str,
                ty: &'static str,

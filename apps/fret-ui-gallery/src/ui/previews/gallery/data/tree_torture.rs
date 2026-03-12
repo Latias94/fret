@@ -1,9 +1,7 @@
 use super::super::super::super::*;
+use fret::UiCx;
 
-pub(in crate::ui) fn preview_tree_torture(
-    cx: &mut ElementContext<'_, App>,
-    theme: &Theme,
-) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_tree_torture(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
     use std::collections::HashSet;
 
     use fret_ui_kit::TreeItem;

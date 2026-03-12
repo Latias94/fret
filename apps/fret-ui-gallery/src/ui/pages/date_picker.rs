@@ -1,11 +1,12 @@
 use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::date_picker as snippets;
+use fret::UiCx;
 
 use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
 
 pub(super) fn preview_date_picker(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     open: Model<bool>,
     month: Model<CalendarMonth>,
     selected: Model<Option<Date>>,

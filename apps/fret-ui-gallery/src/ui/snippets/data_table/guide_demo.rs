@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("guide_demo.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::Px;
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::AnyElement;
@@ -92,7 +92,7 @@ fn wire_selection_commands<H: UiHost + 'static>(
     );
 }
 
-fn align_end(cx: &mut ElementContext<'_, App>, child: AnyElement) -> AnyElement {
+fn align_end(cx: &mut UiCx<'_>, child: AnyElement) -> AnyElement {
     ui::h_flex(move |_cx| [child])
         .layout(LayoutRefinement::default().w_full())
         .justify_end()
@@ -100,7 +100,7 @@ fn align_end(cx: &mut ElementContext<'_, App>, child: AnyElement) -> AnyElement 
 }
 
 fn legacy_demo_content(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     state: Model<fret_ui_headless::table::TableState>,
 ) -> Vec<AnyElement> {
     let assets = cx.with_state(
@@ -622,7 +622,7 @@ fn legacy_demo_content(
     ]
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>, state: Model<TableState>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>, state: Model<TableState>) -> AnyElement {
     let legacy_content = legacy_demo_content(cx, state);
     ui::v_flex(|_cx| legacy_content)
         .gap(Space::N3)

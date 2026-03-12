@@ -2,9 +2,10 @@ use super::super::*;
 
 use crate::ui::doc_layout::DocSection;
 use crate::ui::snippets::ai as snippets;
+use fret::UiCx;
 
 pub(super) fn preview_ai_workflow_node_graph_demo(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     _theme: &Theme,
 ) -> Vec<AnyElement> {
     let demo = snippets::workflow_node_graph_demo::render(cx);

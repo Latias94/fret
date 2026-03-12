@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("image.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui::Theme;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let max_w_md = LayoutRefinement::default()
         .w_full()
         .min_w_0()

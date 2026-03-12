@@ -37,6 +37,7 @@ pub mod empty;
 pub mod field;
 pub mod form;
 pub mod hover_card;
+#[cfg(feature = "gallery-dev")]
 pub mod icons;
 pub mod image_object_fit;
 pub mod input;
@@ -59,6 +60,7 @@ pub mod resizable;
 pub mod scroll_area;
 pub mod select;
 pub mod separator;
+#[cfg(feature = "gallery-dev")]
 pub mod shadcn_extras;
 pub mod sheet;
 pub mod sidebar;

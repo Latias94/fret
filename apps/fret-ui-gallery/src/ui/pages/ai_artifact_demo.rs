@@ -2,8 +2,9 @@ use super::super::*;
 
 use crate::ui::doc_layout::DocSection;
 use crate::ui::snippets::ai as snippets;
+use fret::UiCx;
 
-fn render_notes(cx: &mut ElementContext<'_, App>) -> AnyElement {
+fn render_notes(cx: &mut UiCx<'_>) -> AnyElement {
     fret_ui_kit::ui::v_flex(move |cx| {
         vec![
             cx.text(
@@ -23,10 +24,7 @@ fn render_notes(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .into_element(cx)
 }
 
-pub(super) fn preview_ai_artifact_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
+pub(super) fn preview_ai_artifact_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let mut sections = Vec::new();
 
     #[cfg(feature = "gallery-dev")]

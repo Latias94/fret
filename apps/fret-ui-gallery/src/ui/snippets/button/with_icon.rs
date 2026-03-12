@@ -18,35 +18,14 @@ fn wrap_row<H: UiHost>(
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     wrap_row(cx, |cx| {
         vec![
-            shadcn::Button::new("")
+            shadcn::Button::new("New Branch")
                 .variant(shadcn::ButtonVariant::Outline)
-                .children([
-                    fret_ui_shadcn::icon::icon_with(
-                        cx,
-                        IconId::new_static("lucide.git-branch"),
-                        None,
-                        None,
-                    )
-                    .test_id("ui-gallery-button-with-icon-icon"),
-                    ui::text("New Branch")
-                        .font_medium()
-                        .nowrap()
-                        .into_element(cx)
-                        .test_id("ui-gallery-button-with-icon-label"),
-                ])
+                .leading_icon(IconId::new_static("lucide.git-branch"))
                 .test_id("ui-gallery-button-with-icon")
                 .into_element(cx),
-            shadcn::Button::new("")
+            shadcn::Button::new("Fork")
                 .variant(shadcn::ButtonVariant::Outline)
-                .children([
-                    ui::text("Fork").font_medium().nowrap().into_element(cx),
-                    fret_ui_shadcn::icon::icon_with(
-                        cx,
-                        IconId::new_static("lucide.git-fork"),
-                        None,
-                        None,
-                    ),
-                ])
+                .trailing_icon(IconId::new_static("lucide.git-fork"))
                 .test_id("ui-gallery-button-with-trailing-icon")
                 .into_element(cx),
         ]

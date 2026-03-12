@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("actions.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui_kit::ui::UiElementSinkExt;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
@@ -13,7 +13,7 @@ struct TableModels {
     actions_open_3: Option<Model<bool>>,
 }
 
-fn ensure_models(cx: &mut ElementContext<'_, App>) -> (Model<bool>, Model<bool>, Model<bool>) {
+fn ensure_models(cx: &mut UiCx<'_>) -> (Model<bool>, Model<bool>, Model<bool>) {
     let state = cx.with_state(TableModels::default, |st| st.clone());
     match (
         state.actions_open_1,
@@ -36,7 +36,7 @@ fn ensure_models(cx: &mut ElementContext<'_, App>) -> (Model<bool>, Model<bool>,
     }
 }
 
-fn align_end(cx: &mut ElementContext<'_, App>, child: AnyElement) -> AnyElement {
+fn align_end(cx: &mut UiCx<'_>, child: AnyElement) -> AnyElement {
     ui::h_flex(move |_cx| [child])
         .layout(LayoutRefinement::default().w_full())
         .justify_end()
@@ -44,7 +44,7 @@ fn align_end(cx: &mut ElementContext<'_, App>, child: AnyElement) -> AnyElement 
 }
 
 fn action_row(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     product: &'static str,
     price: &'static str,
     open_model: Model<bool>,
@@ -69,8 +69,9 @@ fn action_row(
                 shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Duplicate")),
                 shadcn::DropdownMenuEntry::Separator,
                 shadcn::DropdownMenuEntry::Item(
-                    shadcn::DropdownMenuItem::new("Delete")
-                        .variant(fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive),
+                    shadcn::DropdownMenuItem::new("Delete").variant(
+                        fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                    ),
                 ),
             ]
         },
@@ -86,7 +87,7 @@ fn action_row(
     .test_id(row_test_id)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let (open_1, open_2, open_3) = ensure_models(cx);
 
     shadcn::Table::build(|cx, out| {

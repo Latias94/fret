@@ -1,9 +1,10 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::navigation_menu as snippets;
 
-pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(super) fn preview_navigation_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let docs_demo = snippets::docs_demo::render(cx);
     let usage = snippets::usage::render(cx);
     let link_component = snippets::link_component::render(cx);

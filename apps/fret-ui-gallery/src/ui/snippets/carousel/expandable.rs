@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("expandable.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
@@ -16,7 +16,7 @@ struct Models {
     expandable_selected: Option<Model<Option<usize>>>,
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let max_w_xs = Px(320.0);
 
     let state = cx.with_state(Models::default, |st| st.clone());

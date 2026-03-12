@@ -2,9 +2,10 @@ use super::super::*;
 
 use crate::ui::doc_layout::DocSection;
 use crate::ui::snippets::ai as snippets;
+use fret::UiCx;
 use fret_ui_kit::ui::UiElementSinkExt as _;
 
-fn status_colors_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
+fn status_colors_table(cx: &mut UiCx<'_>) -> AnyElement {
     let row = |status: &'static str, color: &'static str, use_case: &'static str| {
         shadcn::TableRow::build(3, move |cx, out| {
             out.push_ui(cx, shadcn::TableCell::build(ui::text(status)));
@@ -40,7 +41,7 @@ fn status_colors_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .into_element(cx)
 }
 
-fn parts_props_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
+fn parts_props_table(cx: &mut UiCx<'_>) -> AnyElement {
     let row = |part: &'static str, inputs: &'static str, notes: &'static str| {
         shadcn::TableRow::build(3, move |cx, out| {
             out.push_ui(cx, shadcn::TableCell::build(ui::text(part)));
@@ -83,10 +84,7 @@ fn parts_props_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .into_element(cx)
 }
 
-pub(super) fn preview_ai_test_results_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
+pub(super) fn preview_ai_test_results_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let overview = snippets::test_results_demo::render(cx);
     let features = crate::ui::doc_layout::notes(
         cx,

@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("stagger_demo.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui::Theme;
 use fret_ui::element::LayoutStyle;
 use fret_ui_kit::declarative::ModelWatchExt;
@@ -13,7 +13,7 @@ struct Models {
     stagger_open: Option<Model<bool>>,
 }
 
-fn stagger_open_model(cx: &mut ElementContext<'_, App>) -> Model<bool> {
+fn stagger_open_model(cx: &mut UiCx<'_>) -> Model<bool> {
     cx.with_state(Models::default, |st| st.stagger_open.clone())
         .unwrap_or_else(|| {
             let model = cx.app.models_mut().insert(false);
@@ -22,7 +22,7 @@ fn stagger_open_model(cx: &mut ElementContext<'_, App>) -> Model<bool> {
         })
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>, theme: &Theme) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>, theme: &Theme) -> AnyElement {
     let shell_layout = LayoutRefinement::default()
         .w_full()
         .max_w(Px(760.0))

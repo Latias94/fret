@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("basic_demo.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::Px;
 use fret_runtime::{CommandId, Model};
 use fret_ui::Theme;
@@ -79,7 +79,7 @@ fn wire_selection_commands<H: UiHost + 'static>(
     );
 }
 
-fn align_end(cx: &mut ElementContext<'_, App>, child: AnyElement) -> AnyElement {
+fn align_end(cx: &mut UiCx<'_>, child: AnyElement) -> AnyElement {
     ui::h_flex(move |_cx| [child])
         .layout(LayoutRefinement::default().w_full())
         .justify_end()
@@ -87,7 +87,7 @@ fn align_end(cx: &mut ElementContext<'_, App>, child: AnyElement) -> AnyElement 
 }
 
 fn bottom_controls(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     state: Model<TableState>,
     output: Model<fret_ui_kit::declarative::table::TableViewOutput>,
 ) -> AnyElement {
@@ -157,7 +157,7 @@ fn bottom_controls(
     .into_element(cx)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let assets = cx.with_state(
         || {
             let data: Arc<[PaymentRow]> = Arc::from(vec![

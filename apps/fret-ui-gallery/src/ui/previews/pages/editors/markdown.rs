@@ -1,5 +1,6 @@
 use super::super::super::super::*;
 use crate::ui::doc_layout;
+use fret::UiCx;
 
 pub(in crate::ui) fn markdown_editor_source_text() -> Arc<str> {
     static SOURCE: OnceLock<Arc<str>> = OnceLock::new();
@@ -46,7 +47,7 @@ wrap (break-words) instead of forcing horizontal overflow:
 }
 
 pub(in crate::ui) fn preview_markdown_editor_source(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     soft_wrap: Model<bool>,
     folds: Model<bool>,

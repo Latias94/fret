@@ -1,13 +1,13 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::{FontWeight, Px};
 use fret_ui_kit::ui::UiElementSinkExt;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn make_invoice_table(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     rows: &[(&'static str, &'static str, &'static str, &'static str)],
     include_footer: bool,
     test_id: &'static str,
@@ -15,7 +15,7 @@ fn make_invoice_table(
     // shadcn docs: only the first column is fixed-width (`w-[100px]`).
     let invoice_w = Px(100.0);
 
-    let body_row = |cx: &mut ElementContext<'_, App>,
+    let body_row = |cx: &mut UiCx<'_>,
                     invoice: &'static str,
                     status: &'static str,
                     method: &'static str,
@@ -101,7 +101,7 @@ fn make_invoice_table(
     .test_id(test_id)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     // Tuple order matches shadcn docs: (invoice, status, method, amount).
     let invoices: [(&str, &str, &str, &str); 7] = [
         ("INV001", "Paid", "Credit Card", "$250.00"),
