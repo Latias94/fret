@@ -42,7 +42,7 @@ An old conversion name is eligible for deletion only when all of the following a
 | `AnyElement` | keep publicly as an explicit raw type | still legal and intentional on advanced/raw seams | Moved to advanced/raw only |
 | `Elements` | keep publicly as an explicit raw type; teach `Ui` instead on the app surface | still present as the raw container type behind `Ui` | Moved to advanced/raw only |
 | `UiIntoElement` | stop teaching publicly; keep only as temporary implementation scaffolding | still public at crate root but no longer curated on `fret::component::prelude::*` | Kept internally only (target) / public scaffolding (current) |
-| `UiHostBoundIntoElement<H>` | stop teaching publicly; compatibility bridge only | still public at crate root as a compatibility alias over `IntoUiElement<H>`; removed from curated component exports | Kept internally only (target) / public scaffolding (current) |
+| `UiHostBoundIntoElement<H>` | stop teaching publicly; compatibility bridge only | deleted from code; no curated or root-level export remains | Deleted |
 | `UiChildIntoElement<H>` | stop teaching publicly; app-internal/component-internal mechanism only | still public at `fret-ui-kit` root, but now only as a thin child-pipeline bridge over `IntoUiElement<H>` | Kept internally only (target) / public scaffolding (current) |
 | `UiBuilderHostBoundIntoElementExt<H>` | hidden bridge only, then delete | deleted from code; method syntax now lands through `IntoUiElement<H>` directly | Deleted |
 | legacy split public conversion vocabulary | delete from curated product surfaces | already absent from curated `fret` component exports; root-level cleanup remains | Deleted entirely from curated surfaces / not yet deleted from roots |
@@ -65,7 +65,7 @@ An old conversion name is eligible for deletion only when all of the following a
 | Old name / posture | Replacement | Delete when | Status |
 | --- | --- | --- | --- |
 | `UiIntoElement` as curated public conversion vocabulary | unified trait (`IntoUiElement<H>` or final equivalent) | component prelude only exports the unified trait and first-party reusable code is migrated | In progress |
-| `UiHostBoundIntoElement<H>` as curated public conversion vocabulary | unified trait (`IntoUiElement<H>` or final equivalent) | host-bound builders land through the unified trait and no curated docs teach the split | In progress |
+| `UiHostBoundIntoElement<H>` as curated public conversion vocabulary | unified trait (`IntoUiElement<H>` or final equivalent) | host-bound builders land through the unified trait and no curated docs teach the split | Deleted |
 | `UiChildIntoElement<H>` as curated public conversion vocabulary | unified trait for component code, `UiChild` for app-facing helpers | child pipelines and curated docs no longer require the old trait name | Not started |
 | `UiBuilderHostBoundIntoElementExt<H>` as curated public bridge trait | unified trait-backed method syntax | app/component preludes stop importing the old bridge and first-party code compiles through the unified trait | Deleted |
 | `AnyElement` as the default first-contact helper return type in app docs/examples | `impl UiChild` or `Ui` as appropriate | app-facing docs/examples are migrated and source gates are in place | In progress |

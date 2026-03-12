@@ -87,19 +87,6 @@ where
     }
 }
 
-/// Compatibility bridge for older host-bound builder implementations.
-///
-/// This remains available during migration, but new reusable component code should implement
-/// `IntoUiElement<H>` directly.
-pub trait UiHostBoundIntoElement<H: UiHost>: IntoUiElement<H> + Sized {
-    #[track_caller]
-    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        IntoUiElement::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, T> UiHostBoundIntoElement<H> for T where T: IntoUiElement<H> {}
-
 impl UiIntoElement for AnyElement {
     #[track_caller]
     fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {

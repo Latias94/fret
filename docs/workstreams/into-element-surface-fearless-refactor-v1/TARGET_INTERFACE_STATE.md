@@ -108,8 +108,7 @@ temporary scaffolding rather than stable surface.
 Current execution note on 2026-03-12:
 
 - `UiBuilderHostBoundIntoElementExt` is already deleted from the codebase.
-- `UiHostBoundIntoElement<H>` currently survives only as a compatibility alias over
-  `IntoUiElement<H>`.
+- `UiHostBoundIntoElement<H>` is already deleted from the codebase.
 - `UiChildIntoElement<H>` still survives as the child-pipeline bridge and app-internal substrate
   behind `UiChild`, but it is no longer a second reusable-component conversion story.
 

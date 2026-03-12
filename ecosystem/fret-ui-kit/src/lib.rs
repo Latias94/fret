@@ -229,8 +229,8 @@ pub use style::{
 pub use styled::{RefineStyle, Stylable, Styled, StyledExt};
 pub use ui::UiChildIntoElement;
 pub use ui_builder::{
-    IntoUiElement, UiBuilder, UiExt, UiHostBoundIntoElement, UiIntoElement, UiPatch,
-    UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
+    IntoUiElement, UiBuilder, UiExt, UiIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome,
+    UiSupportsLayout,
 };
 
 pub use overlay_controller::{
@@ -383,5 +383,17 @@ mod default_semantics_tests {
         let label = crate::ui::TextBox::new("label", crate::ui::TextPreset::Label);
         assert_eq!(label.wrap, fret_core::TextWrap::None);
         assert_eq!(label.overflow, fret_core::TextOverflow::Clip);
+    }
+}
+
+#[cfg(test)]
+mod source_policy_tests {
+    const LIB_RS: &str = include_str!("lib.rs");
+
+    #[test]
+    fn root_surface_omits_host_bound_conversion_alias() {
+        let tests_start = LIB_RS.find("#[cfg(test)]").unwrap_or(LIB_RS.len());
+        let public_surface = &LIB_RS[..tests_start];
+        assert!(!public_surface.contains("UiHostBoundIntoElement"));
     }
 }
