@@ -318,6 +318,8 @@ The same typed-constructor rule now also applies to thin public shadcn leaf help
 child list or explicit landing seam is conceptually required:
 
 - `ecosystem/fret-ui-shadcn/src/badge.rs::badge<H, T>(...)`
+- `ecosystem/fret-ui-shadcn/src/input_group.rs::input_group<H>(...)`
+- `ecosystem/fret-ui-shadcn/src/input_otp.rs::input_otp<H>(...)`
 - `ecosystem/fret-ui-shadcn/src/kbd.rs::kbd<H, T>(...)`
 - `ecosystem/fret-ui-shadcn/src/separator.rs::separator<H>()`
 

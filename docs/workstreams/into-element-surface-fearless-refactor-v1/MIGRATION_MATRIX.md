@@ -88,6 +88,8 @@ Execution note on 2026-03-12:
   landed menu-slot seam.
 - the shadcn surface gate now also records the current thin public leaf-constructor trial:
   `ecosystem/fret-ui-shadcn/src/badge.rs::badge<H, T>(...)`,
+  `ecosystem/fret-ui-shadcn/src/input_group.rs::input_group<H>(...)`,
+  `ecosystem/fret-ui-shadcn/src/input_otp.rs::input_otp<H>(...)`,
   `ecosystem/fret-ui-shadcn/src/kbd.rs::kbd<H, T>(...)`, and
   `ecosystem/fret-ui-shadcn/src/separator.rs::separator<H>()` now expose typed constructor
   outputs, while `ecosystem/fret-ui-shadcn/src/kbd.rs::kbd_icon<H>(...)` remains intentionally

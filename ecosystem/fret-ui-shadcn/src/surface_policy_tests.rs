@@ -11,6 +11,8 @@ const DIALOG_RS: &str = include_str!("dialog.rs");
 const DRAWER_RS: &str = include_str!("drawer.rs");
 const DROPDOWN_MENU_RS: &str = include_str!("dropdown_menu.rs");
 const HOVER_CARD_RS: &str = include_str!("hover_card.rs");
+const INPUT_GROUP_RS: &str = include_str!("input_group.rs");
+const INPUT_OTP_RS: &str = include_str!("input_otp.rs");
 const KBD_RS: &str = include_str!("kbd.rs");
 const MENUBAR_RS: &str = include_str!("menubar.rs");
 const POPOVER_RS: &str = include_str!("popover.rs");
@@ -310,6 +312,24 @@ fn public_leaf_constructors_prefer_typed_conversion_outputs_when_no_raw_seam_is_
             ][..],
             &[
                 "pub fn badge<H: UiHost>( cx: &mut ElementContext<'_, H>, label: impl Into<Arc<str>>, variant: BadgeVariant, ) -> AnyElement",
+            ][..],
+        ),
+        (
+            "input_group.rs",
+            INPUT_GROUP_RS,
+            &[
+                "pub fn input_group<H: UiHost>(group: InputGroup) -> impl IntoUiElement<H> + use<H> {",
+            ][..],
+            &[
+                "pub fn input_group<H: UiHost>(cx: &mut ElementContext<'_, H>, group: InputGroup) -> AnyElement",
+            ][..],
+        ),
+        (
+            "input_otp.rs",
+            INPUT_OTP_RS,
+            &["pub fn input_otp<H: UiHost>(otp: InputOtp) -> impl IntoUiElement<H> + use<H> {"][..],
+            &[
+                "pub fn input_otp<H: UiHost>(cx: &mut ElementContext<'_, H>, otp: InputOtp) -> AnyElement",
             ][..],
         ),
         (

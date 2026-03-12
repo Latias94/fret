@@ -133,9 +133,10 @@ Implementation note on 2026-03-12:
   `context_menu.rs`, `dropdown_menu.rs`, and `menubar.rs`
   now accept `IntoUiElement<H>` inputs for `menu_icon_slot(...)` instead of forcing pre-landed
   `AnyElement`, while keeping the wrapper's own output as an explicit landed menu row slot.
-- `fret-ui-shadcn` now has a thin public leaf-constructor trial:
-  `badge.rs::badge<H, T>(...)`, `kbd.rs::kbd<H, T>(...)`, and
-  `separator.rs::separator<H>()` now expose typed constructor outputs, while
+- `fret-ui-shadcn` now has a thin public constructor/wrapper trial:
+  `badge.rs::badge<H, T>(...)`, `kbd.rs::kbd<H, T>(...)`,
+  `separator.rs::separator<H>()`, `input_group.rs::input_group<H>(...)`, and
+  `input_otp.rs::input_otp<H>(...)` now expose typed constructor outputs, while
   `kbd.rs::kbd_icon<H>(...)` remains an explicit raw helper because
   `Kbd::from_children(...)` still owns a concrete `Vec<AnyElement>` child seam.
 - selected advanced/manual-assembly examples now also keep reusable helpers off raw landed return

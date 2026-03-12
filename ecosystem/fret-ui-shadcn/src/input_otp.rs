@@ -17,7 +17,8 @@ use fret_ui_kit::primitives::control_registry::{
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size as ComponentSize, Space, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, Size as ComponentSize,
+    Space, ui,
 };
 use std::sync::Arc;
 use std::time::Duration;
@@ -1053,8 +1054,8 @@ impl InputOtpPart {
     }
 }
 
-pub fn input_otp<H: UiHost>(cx: &mut ElementContext<'_, H>, otp: InputOtp) -> AnyElement {
-    otp.into_element(cx)
+pub fn input_otp<H: UiHost>(otp: InputOtp) -> impl IntoUiElement<H> + use<H> {
+    otp
 }
 
 /// shadcn/ui `InputOTP` (v4).
