@@ -1,5 +1,5 @@
 use super::atlas::{
-    GlyphAtlasEntry, GlyphKey, subpixel_bin_as_float, subpixel_bin_q4, subpixel_bin_y,
+    GlyphAtlas, GlyphAtlasEntry, GlyphKey, subpixel_bin_as_float, subpixel_bin_q4, subpixel_bin_y,
 };
 use super::{
     GlyphInstance, GlyphQuadKind, TextBlob, TextFontFaceUsage, TextLine, TextShape, TextSystem,
@@ -507,43 +507,33 @@ impl TextSystem {
     }
 
     fn insert_prepared_glyph_raster(&mut self, raster: PreparedGlyphRaster, epoch: u64) {
-        match raster.glyph_key.kind {
-            GlyphQuadKind::Mask => {
-                let _ = self.mask_atlas.get_or_insert(
-                    raster.glyph_key,
-                    raster.width,
-                    raster.height,
-                    raster.left,
-                    raster.top,
-                    raster.bytes_per_pixel,
-                    raster.data,
-                    epoch,
-                );
-            }
-            GlyphQuadKind::Color => {
-                let _ = self.color_atlas.get_or_insert(
-                    raster.glyph_key,
-                    raster.width,
-                    raster.height,
-                    raster.left,
-                    raster.top,
-                    raster.bytes_per_pixel,
-                    raster.data,
-                    epoch,
-                );
-            }
-            GlyphQuadKind::Subpixel => {
-                let _ = self.subpixel_atlas.get_or_insert(
-                    raster.glyph_key,
-                    raster.width,
-                    raster.height,
-                    raster.left,
-                    raster.top,
-                    raster.bytes_per_pixel,
-                    raster.data,
-                    epoch,
-                );
-            }
+        let PreparedGlyphRaster {
+            glyph_key,
+            width,
+            height,
+            left,
+            top,
+            bytes_per_pixel,
+            data,
+        } = raster;
+        let atlas = self.prepared_glyph_atlas_mut(glyph_key.kind);
+        let _ = atlas.get_or_insert(
+            glyph_key,
+            width,
+            height,
+            left,
+            top,
+            bytes_per_pixel,
+            data,
+            epoch,
+        );
+    }
+
+    fn prepared_glyph_atlas_mut(&mut self, kind: GlyphQuadKind) -> &mut GlyphAtlas {
+        match kind {
+            GlyphQuadKind::Mask => &mut self.mask_atlas,
+            GlyphQuadKind::Color => &mut self.color_atlas,
+            GlyphQuadKind::Subpixel => &mut self.subpixel_atlas,
         }
     }
 

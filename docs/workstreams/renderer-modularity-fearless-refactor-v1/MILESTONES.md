@@ -109,6 +109,10 @@ Current snapshot (2026-03-12):
   - prepared-glyph image-to-raster mapping now lives behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `render_prepared_glyph_raster(...)` now just composes image render and raster mapping
+- The twenty-second internal `text/mod.rs` split has landed:
+  - prepared-glyph atlas target selection now lives behind a dedicated helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `insert_prepared_glyph_raster(...)` now uses one shared atlas insertion path
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
