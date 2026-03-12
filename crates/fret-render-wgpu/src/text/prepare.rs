@@ -37,6 +37,15 @@ struct PreparedGlyphRaster {
     data: Vec<u8>,
 }
 
+struct PreparedGlyphRasterPayload {
+    width: u32,
+    height: u32,
+    left: i32,
+    top: i32,
+    bytes_per_pixel: u32,
+    data: Vec<u8>,
+}
+
 struct PreparedGlyphContext {
     glyph_id: u16,
     face_key: FontFaceKey,
@@ -1117,20 +1126,42 @@ fn prepared_glyph_raster(
     data: Vec<u8>,
 ) -> PreparedGlyphRaster {
     let glyph_key = prepared_glyph_raster_key(face_key, glyph_id, size_bits, x_bin, y_bin, kind);
-    prepared_glyph_raster_with_key(glyph_key, width, height, left, top, bytes_per_pixel, data)
+    let payload = prepared_glyph_raster_payload(width, height, left, top, bytes_per_pixel, data);
+    prepared_glyph_raster_with_key(glyph_key, payload)
 }
 
 fn prepared_glyph_raster_with_key(
     glyph_key: GlyphKey,
+    payload: PreparedGlyphRasterPayload,
+) -> PreparedGlyphRaster {
+    let PreparedGlyphRasterPayload {
+        width,
+        height,
+        left,
+        top,
+        bytes_per_pixel,
+        data,
+    } = payload;
+    PreparedGlyphRaster {
+        glyph_key,
+        width,
+        height,
+        left,
+        top,
+        bytes_per_pixel,
+        data,
+    }
+}
+
+fn prepared_glyph_raster_payload(
     width: u32,
     height: u32,
     left: i32,
     top: i32,
     bytes_per_pixel: u32,
     data: Vec<u8>,
-) -> PreparedGlyphRaster {
-    PreparedGlyphRaster {
-        glyph_key,
+) -> PreparedGlyphRasterPayload {
+    PreparedGlyphRasterPayload {
         width,
         height,
         left,
