@@ -37,7 +37,7 @@ use fret_ui_kit::{
 
 use crate::overlay_motion;
 use crate::rtl;
-use crate::shortcut_display::command_shortcut_label;
+use crate::shortcut_display::{command_shortcut_label, shortcut_text_element};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -675,18 +675,19 @@ impl MenubarShortcut {
         let font_size = theme.metric_token("font.size");
         let font_line_height = theme.metric_token("font.line_height");
         let dir = crate::use_direction(cx, None);
+        let mut style = typography::fixed_line_box_style(FontId::ui(), font_size, font_line_height);
+        style.weight = FontWeight::NORMAL;
+        style.letter_spacing_em = Some(0.12);
 
-        ui::text(self.text)
+        shortcut_text_element(
+            cx,
+            &theme,
+            self.text,
+            style,
+            fg,
             // new-york-v4: `ml-auto` to push shortcut to the trailing edge.
-            .layout(rtl::layout_refinement_margin_inline_start_auto(dir).flex_shrink_0())
-            .text_size_px(font_size)
-            .fixed_line_box_px(font_line_height)
-            .line_box_in_bounds()
-            .font_normal()
-            .letter_spacing_em(0.12)
-            .text_color(ColorRef::Color(fg))
-            .nowrap()
-            .into_element(cx)
+            rtl::layout_refinement_margin_inline_start_auto(dir).flex_shrink_0(),
+        )
     }
 }
 

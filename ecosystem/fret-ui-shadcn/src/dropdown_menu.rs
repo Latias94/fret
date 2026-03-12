@@ -38,7 +38,7 @@ use fret_ui_kit::{
 use crate::overlay_motion;
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use crate::rtl;
-use crate::shortcut_display::command_shortcut_label;
+use crate::shortcut_display::{command_shortcut_label, shortcut_text_element};
 
 fn alpha_mul(mut c: fret_core::Color, mul: f32) -> fret_core::Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -1047,17 +1047,18 @@ impl DropdownMenuShortcut {
         let font_line_height = theme
             .metric_by_key("component.dropdown_menu.shortcut.line_height")
             .unwrap_or_else(|| Px((base_line_height.0 - 2.0).max(font_size.0)));
+        let mut style = typography::fixed_line_box_style(FontId::ui(), font_size, font_line_height);
+        style.weight = FontWeight::NORMAL;
+        style.letter_spacing_em = Some(0.10);
 
-        ui::text(self.text)
-            .layout(rtl::layout_refinement_margin_inline_start_auto(dir))
-            .text_size_px(font_size)
-            .fixed_line_box_px(font_line_height)
-            .line_box_in_bounds()
-            .font_normal()
-            .letter_spacing_em(0.10)
-            .nowrap()
-            .text_color(ColorRef::Color(fg))
-            .into_element(cx)
+        shortcut_text_element(
+            cx,
+            &theme,
+            self.text,
+            style,
+            fg,
+            rtl::layout_refinement_margin_inline_start_auto(dir),
+        )
     }
 }
 

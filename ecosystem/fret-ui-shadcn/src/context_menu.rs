@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 use crate::LayoutDirection;
 use crate::test_id::test_id_slug;
 use fret_core::time::Duration;
-use fret_core::{Edges, Point, Px, Rect, Size, TextStyle};
+use fret_core::{Edges, FontId, FontWeight, Point, Px, Rect, Size, TextStyle};
 use fret_icons::{IconId, ids};
 use fret_runtime::{CommandId, Effect, Model, ModelId, TimerToken, WindowCommandGatingSnapshot};
 use fret_ui::action::{
@@ -42,7 +42,7 @@ use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide};
 use crate::overlay_motion;
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use crate::rtl;
-use crate::shortcut_display::command_shortcut_label;
+use crate::shortcut_display::{command_shortcut_label, shortcut_text_element};
 
 #[derive(Debug)]
 pub enum ContextMenuEntry {
@@ -704,17 +704,18 @@ impl ContextMenuShortcut {
         let fg = theme.color_token("muted-foreground");
         let font_size = theme.metric_token("font.size");
         let font_line_height = theme.metric_token("font.line_height");
+        let mut style = typography::fixed_line_box_style(FontId::ui(), font_size, font_line_height);
+        style.weight = FontWeight::NORMAL;
+        style.letter_spacing_em = Some(0.12);
 
-        ui::text(self.text)
-            .layout(LayoutRefinement::default().flex_none())
-            .text_size_px(font_size)
-            .fixed_line_box_px(font_line_height)
-            .line_box_in_bounds()
-            .font_normal()
-            .letter_spacing_em(0.12)
-            .nowrap()
-            .text_color(ColorRef::Color(fg))
-            .into_element(cx)
+        shortcut_text_element(
+            cx,
+            &theme,
+            self.text,
+            style,
+            fg,
+            LayoutRefinement::default().flex_none(),
+        )
     }
 }
 
