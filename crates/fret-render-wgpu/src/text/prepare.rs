@@ -314,9 +314,7 @@ impl TextSystem {
                 continue;
             };
             let face_key = self.register_prepared_glyph_face(&g, face_usage);
-
-            let (x, x_bin) = subpixel_bin_q4(g.x);
-            let (y, y_bin) = subpixel_bin_y(g.y);
+            let (x, x_bin, y, y_bin) = prepared_glyph_origin_bins(&g);
 
             let paint_span = prepared_glyph_paint_span(resolved_spans, &g);
 
@@ -670,6 +668,12 @@ fn prepared_glyph_instance(
         paint_span,
         key: glyph_key,
     }
+}
+
+fn prepared_glyph_origin_bins(glyph: &ParleyGlyph) -> (i32, u8, i32, u8) {
+    let (x, x_bin) = subpixel_bin_q4(glyph.x);
+    let (y, y_bin) = subpixel_bin_y(glyph.y);
+    (x, x_bin, y, y_bin)
 }
 
 fn prepared_glyph_offset_px(x_bin: u8, y_bin: u8) -> parley::swash::zeno::Vector {
