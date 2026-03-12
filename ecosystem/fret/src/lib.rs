@@ -104,9 +104,9 @@ pub type UiCx<'a> = fret_ui::ElementContext<'a, crate::app::App>;
 pub type ComponentCx<'a, H> = fret_ui::ElementContext<'a, H>;
 
 /// App-facing child return alias for extracted helper functions on the default surface.
-pub trait UiChild: fret_ui_kit::UiChildIntoElement<crate::app::App> {}
+pub trait UiChild: fret_ui_kit::IntoUiElement<crate::app::App> {}
 
-impl<T> UiChild for T where T: fret_ui_kit::UiChildIntoElement<crate::app::App> {}
+impl<T> UiChild for T where T: fret_ui_kit::IntoUiElement<crate::app::App> {}
 
 /// Runtime defaults applied by the `fret` facade (within the enabled crate features).
 ///
@@ -1897,6 +1897,20 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("DockPanelRegistry"));
         assert!(!app_prelude_exports_symbol("handle_dock_op"));
         assert!(!app_prelude_exports_symbol("InstallConfig"));
+    }
+
+    #[test]
+    fn ui_child_alias_uses_unified_component_conversion_trait() {
+        let tests_start = LIB_RS.find("#[cfg(test)]").unwrap_or(LIB_RS.len());
+        let public_surface = &LIB_RS[..tests_start];
+        assert!(
+            public_surface
+                .contains("pub trait UiChild: fret_ui_kit::IntoUiElement<crate::app::App>")
+        );
+        assert!(
+            !public_surface
+                .contains("pub trait UiChild: fret_ui_kit::UiChildIntoElement<crate::app::App>")
+        );
     }
 
     #[test]

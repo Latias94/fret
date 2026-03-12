@@ -13,9 +13,10 @@ use fret_ui_kit::declarative::motion::drive_tween_color_for_element;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
 use fret_ui_kit::typography;
+use fret_ui_kit::ui::UiChildIntoElement;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, Space, UiChildIntoElement,
-    UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, Space, UiPatch, UiPatchTarget,
+    UiSupportsChrome, UiSupportsLayout, ui,
 };
 
 use crate::direction::{LayoutDirection, use_direction};
@@ -1209,8 +1210,8 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, Color, Point, Px, Rect, Size};
     use fret_ui::element::{ContainerProps, ElementKind, Length, Overflow, TextProps};
-    use fret_ui_kit::ui::UiElementSinkExt as _;
     use fret_ui_kit::UiExt as _;
+    use fret_ui_kit::ui::UiElementSinkExt as _;
 
     use fret_ui::UiTree;
 

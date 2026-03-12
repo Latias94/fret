@@ -36,9 +36,10 @@ use fret_ui_kit::declarative::motion_value::{
 };
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
+use fret_ui_kit::ui::UiChildIntoElement;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, Space, UiChildIntoElement,
-    UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, Space, UiPatch, UiPatchTarget,
+    UiSupportsChrome, UiSupportsLayout, ui,
 };
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;

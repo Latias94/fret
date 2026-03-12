@@ -17,10 +17,10 @@ use fret_ui_kit::declarative::{
 };
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::portal_inherited;
+use fret_ui_kit::ui::UiChildIntoElement;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, OverlayController,
-    OverlayPresence, Space, UiChildIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome,
-    UiSupportsLayout, ui,
+    OverlayPresence, Space, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
 };
 
 use crate::layout as shadcn_layout;

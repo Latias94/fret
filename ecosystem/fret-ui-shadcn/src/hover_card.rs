@@ -24,9 +24,10 @@ use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::tooltip_provider;
+use fret_ui_kit::ui::UiChildIntoElement;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayPresence,
-    Radius, Space, UiChildIntoElement,
+    Radius, Space,
 };
 
 use crate::layout as shadcn_layout;

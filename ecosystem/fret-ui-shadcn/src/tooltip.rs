@@ -14,9 +14,10 @@ use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::tooltip as radix_tooltip;
 use fret_ui_kit::tooltip_provider;
 use fret_ui_kit::typography;
+use fret_ui_kit::ui::UiChildIntoElement;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayPresence,
-    Radius, Space, UiChildIntoElement, ui,
+    Radius, Space, ui,
 };
 use std::marker::PhantomData;
 use std::sync::Arc;

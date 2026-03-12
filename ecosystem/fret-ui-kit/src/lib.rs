@@ -21,7 +21,7 @@ macro_rules! children {
         $(
             {
                 let child = $child;
-                let element = $crate::UiChildIntoElement::into_child_element(child, &mut *$cx);
+                let element = $crate::ui::UiChildIntoElement::into_child_element(child, &mut *$cx);
                 children.push(element);
             }
         )+
@@ -48,7 +48,7 @@ macro_rules! ui_component_chrome_layout {
         impl $crate::UiSupportsChrome for $ty {}
         impl $crate::UiSupportsLayout for $ty {}
 
-        impl $crate::UiIntoElement for $ty {
+        impl $crate::ui_builder::UiIntoElement for $ty {
             #[track_caller]
             fn into_element<H: ::fret_ui::UiHost>(
                 self,
@@ -77,7 +77,7 @@ macro_rules! ui_component_layout_only {
 
         impl $crate::UiSupportsLayout for $ty {}
 
-        impl $crate::UiIntoElement for $ty {
+        impl $crate::ui_builder::UiIntoElement for $ty {
             #[track_caller]
             fn into_element<H: ::fret_ui::UiHost>(
                 self,
@@ -131,7 +131,7 @@ macro_rules! ui_component_passthrough {
             }
         }
 
-        impl $crate::UiIntoElement for $ty {
+        impl $crate::ui_builder::UiIntoElement for $ty {
             #[track_caller]
             fn into_element<H: ::fret_ui::UiHost>(
                 self,
@@ -156,13 +156,13 @@ macro_rules! ui_component_passthrough_patch_only {
     };
 }
 
-/// Implement `UiIntoElement` for a stateless component authored as `RenderOnce` (ADR 0039).
+/// Implement internal landing glue for a stateless component authored as `RenderOnce` (ADR 0039).
 ///
 /// Note: we intentionally avoid a blanket impl due to coherence restrictions on upstream types.
 #[macro_export]
 macro_rules! ui_into_element_render_once {
     ($ty:ty) => {
-        impl $crate::UiIntoElement for $ty {
+        impl $crate::ui_builder::UiIntoElement for $ty {
             #[track_caller]
             fn into_element<H: ::fret_ui::UiHost>(
                 self,
@@ -227,10 +227,9 @@ pub use style::{
     resolve_override_slot_with, resolve_slot,
 };
 pub use styled::{RefineStyle, Stylable, Styled, StyledExt};
-pub use ui::UiChildIntoElement;
+pub(crate) use ui_builder::UiIntoElement;
 pub use ui_builder::{
-    IntoUiElement, UiBuilder, UiExt, UiIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome,
-    UiSupportsLayout,
+    IntoUiElement, UiBuilder, UiExt, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
 };
 
 pub use overlay_controller::{
@@ -391,12 +390,38 @@ mod source_policy_tests {
     const LIB_RS: &str = include_str!("lib.rs");
     const DECLARATIVE_MOD_RS: &str = include_str!("declarative/mod.rs");
     const DECLARATIVE_PRELUDE_RS: &str = include_str!("declarative/prelude.rs");
+    const UI_BUILDER_RS: &str = include_str!("ui_builder.rs");
 
     #[test]
     fn root_surface_omits_host_bound_conversion_alias() {
         let tests_start = LIB_RS.find("#[cfg(test)]").unwrap_or(LIB_RS.len());
         let public_surface = &LIB_RS[..tests_start];
         assert!(!public_surface.contains("UiHostBoundIntoElement"));
+    }
+
+    #[test]
+    fn root_surface_omits_legacy_conversion_exports() {
+        let tests_start = LIB_RS.find("#[cfg(test)]").unwrap_or(LIB_RS.len());
+        let public_surface = &LIB_RS[..tests_start];
+        assert!(!public_surface.contains("pub use ui::UiChildIntoElement;"));
+        assert!(!public_surface.contains("pub use ui_builder::UiIntoElement;"));
+
+        let export_start = public_surface
+            .find("pub use ui_builder::{")
+            .expect("ui_builder export block should exist");
+        let export_tail = &public_surface[export_start..];
+        let export_end = export_tail
+            .find("};")
+            .expect("ui_builder export block should terminate");
+        let export_block = &export_tail[..export_end];
+        assert!(!export_block.contains("UiIntoElement"));
+        assert!(export_block.contains("IntoUiElement"));
+    }
+
+    #[test]
+    fn ui_into_element_scaffolding_stays_internal_to_ui_builder_module() {
+        assert!(UI_BUILDER_RS.contains("#[doc(hidden)]"));
+        assert!(UI_BUILDER_RS.contains("pub trait UiIntoElement: Sized"));
     }
 
     #[test]

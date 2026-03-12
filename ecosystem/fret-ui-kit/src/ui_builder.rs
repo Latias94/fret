@@ -47,20 +47,8 @@ pub trait UiSupportsChrome {}
 /// Marker trait enabling `UiBuilder` layout methods for a `UiPatchTarget`.
 pub trait UiSupportsLayout {}
 
-/// A type that can render itself into a declarative element.
-///
-/// This trait exists so `UiBuilder::into_element(cx)` can be implemented without relying on
-/// inherent methods.
-///
-/// In practice you usually don't call this directly in app code; you typically keep using the
-/// fluent authoring surface and call `into_element(cx)` on the `UiBuilder` wrapper.
-///
-/// ```ignore
-/// use fret_ui_kit::prelude::*;
-///
-/// // Inside a view function where `cx: &mut ElementContext<'_, App>` is available:
-/// let el = ui::text("Hello").into_element(cx);
-/// ```
+/// Internal host-agnostic landing scaffold used to feed `IntoUiElement<H>`.
+#[doc(hidden)]
 pub trait UiIntoElement: Sized {
     #[track_caller]
     fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement;
@@ -70,7 +58,7 @@ pub trait UiIntoElement: Sized {
 ///
 /// This trait keeps `.into_element(cx)` as the one public landing operation whether the value is:
 ///
-/// - host-agnostic (`UiIntoElement` legacy path), or
+/// - host-agnostic (internal legacy landing path), or
 /// - host-bound (for example late builders that capture `H`-typed closures internally).
 pub trait IntoUiElement<H: UiHost>: Sized {
     #[track_caller]

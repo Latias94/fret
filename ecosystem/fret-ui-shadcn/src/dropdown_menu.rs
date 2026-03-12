@@ -32,9 +32,10 @@ use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::typography;
+use fret_ui_kit::ui::UiChildIntoElement;
 use fret_ui_kit::{
     ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Radius, Space, UiChildIntoElement, ui,
+    Radius, Space, ui,
 };
 
 use crate::overlay_motion;

@@ -25,9 +25,9 @@ use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::primitives::presence as radix_presence;
+use fret_ui_kit::ui::UiChildIntoElement;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, OverlayPresence, Space,
-    UiChildIntoElement, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, OverlayPresence, Space, ui,
 };
 
 use crate::layout as shadcn_layout;

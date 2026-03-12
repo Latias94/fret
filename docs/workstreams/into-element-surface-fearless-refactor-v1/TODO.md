@@ -47,6 +47,8 @@ Implementation note after the first landing:
   implementation path for now.
 - `UiBuilderHostBoundIntoElementExt` has now been deleted from the codebase; `UiBuilder<T>`
   lands through `IntoUiElement<H>` directly.
+- `UiIntoElement` is now doc-hidden scaffolding under `fret_ui_kit::ui_builder` rather than a
+  root-exported curated surface.
 
 Validation note on 2026-03-12:
 
@@ -77,6 +79,9 @@ Implementation note on 2026-03-12:
   `UiBuilder<T>::into_element(cx)` resolves through the unified contract.
 - `UiHostBoundIntoElement<H>` has now also been deleted from `fret-ui-kit`; there is no remaining
   public host-bound compatibility alias in code.
+- `fret-ui-kit` no longer re-exports `UiIntoElement` or `UiChildIntoElement` from the crate root.
+- `fret::UiChild` now lands directly through `IntoUiElement<App>` rather than the child-pipeline
+  bridge trait.
 - `fret-ui-shadcn` duplicate `UiChildIntoElement<H>` impls were removed for types that already
   implement `IntoUiElement<H>` to prevent overlap with the new blanket child bridge.
 
@@ -128,9 +133,9 @@ Implementation note on 2026-03-12:
 
 ## M4 — Delete the old public surface
 
-- [ ] Remove `UiIntoElement` from curated public surfaces.
+- [x] Remove `UiIntoElement` from curated public surfaces.
 - [x] Remove `UiHostBoundIntoElement` from curated public surfaces.
-- [ ] Remove `UiChildIntoElement` from curated public surfaces.
+- [x] Remove `UiChildIntoElement` from curated public surfaces.
 - [x] Remove `UiBuilderHostBoundIntoElementExt` from curated public surfaces.
 - [x] Rewrite or delete stale docs that still teach the old names.
 

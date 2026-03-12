@@ -109,8 +109,10 @@ Current execution note on 2026-03-12:
 
 - `UiBuilderHostBoundIntoElementExt` is already deleted from the codebase.
 - `UiHostBoundIntoElement<H>` is already deleted from the codebase.
-- `UiChildIntoElement<H>` still survives as the child-pipeline bridge and app-internal substrate
-  behind `UiChild`, but it is no longer a second reusable-component conversion story.
+- `UiIntoElement` now survives only as `fret_ui_kit::ui_builder::UiIntoElement`, marked
+  `#[doc(hidden)]` and treated as internal landing scaffolding rather than public vocabulary.
+- `UiChildIntoElement<H>` still survives under `fret_ui_kit::ui` as the child-pipeline bridge,
+  but it is no longer root-exported from `fret-ui-kit` and no longer sits behind `fret::UiChild`.
 
 ## Advanced/Raw Surface
 
