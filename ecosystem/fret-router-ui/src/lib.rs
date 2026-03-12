@@ -24,7 +24,7 @@ use fret_ui::action::{ActionCx, OnActivate, OnHoverChange, UiActionHost, UiFocus
 use fret_ui::element::AnyElement;
 use fret_ui::element::{PressableKeyActivation, PressableProps, SemanticsDecoration};
 use fret_ui::{ElementContext, Invalidation};
-use fret_ui_kit::ui::UiChildIntoElement;
+use fret_ui_kit::IntoUiElement;
 
 pub mod app;
 
@@ -35,10 +35,10 @@ pub trait RouterOutletIntoElement: Sized {
 
 impl<T> RouterOutletIntoElement for T
 where
-    T: UiChildIntoElement<App>,
+    T: IntoUiElement<App>,
 {
     fn into_router_outlet_element(self, cx: &mut ElementContext<'_, App>) -> AnyElement {
-        UiChildIntoElement::into_child_element(self, cx)
+        IntoUiElement::into_element(self, cx)
     }
 }
 

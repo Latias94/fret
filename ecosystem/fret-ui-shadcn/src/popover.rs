@@ -25,7 +25,6 @@ use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::primitives::presence as radix_presence;
-use fret_ui_kit::ui::UiChildIntoElement;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, OverlayPresence, Space, ui,
 };
@@ -320,13 +319,13 @@ impl Popover {
     pub fn build<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
-        trigger: impl UiChildIntoElement<H>,
-        content: impl UiChildIntoElement<H>,
+        trigger: impl IntoUiElement<H>,
+        content: impl IntoUiElement<H>,
     ) -> AnyElement {
         self.into_element(
             cx,
-            move |cx| trigger.into_child_element(cx),
-            move |cx| content.into_child_element(cx),
+            move |cx| trigger.into_element(cx),
+            move |cx| content.into_element(cx),
         )
     }
 
@@ -1240,7 +1239,7 @@ impl PopoverTrigger {
     /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
     pub fn build<H: UiHost, T>(child: T) -> PopoverTriggerBuild<H, T>
     where
-        T: UiChildIntoElement<H>,
+        T: IntoUiElement<H>,
     {
         PopoverTriggerBuild {
             child: Some(child),
@@ -1271,7 +1270,7 @@ impl PopoverTrigger {
 
 impl<H: UiHost, T> PopoverTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     /// Mirrors [`PopoverTrigger::auto_toggle`] on the late-landing builder path.
     pub fn auto_toggle(mut self, auto_toggle: bool) -> Self {
@@ -1284,7 +1283,7 @@ where
         PopoverTrigger::new(
             self.child
                 .expect("expected popover trigger child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
         .auto_toggle(self.auto_toggle)
     }
@@ -1297,7 +1296,7 @@ where
 
 impl<H: UiHost, T> IntoUiElement<H> for PopoverTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -1330,7 +1329,7 @@ impl PopoverAnchor {
     /// keep using [`PopoverAnchor::new`] with an already-landed child.
     pub fn build<H: UiHost, T>(child: T) -> PopoverAnchorBuild<H, T>
     where
-        T: UiChildIntoElement<H>,
+        T: IntoUiElement<H>,
     {
         PopoverAnchorBuild {
             child: Some(child),
@@ -1350,14 +1349,14 @@ impl PopoverAnchor {
 
 impl<H: UiHost, T> PopoverAnchorBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     pub fn into_anchor(self, cx: &mut ElementContext<'_, H>) -> PopoverAnchor {
         PopoverAnchor::new(
             self.child
                 .expect("expected popover anchor child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
     }
 
@@ -1369,7 +1368,7 @@ where
 
 impl<H: UiHost, T> IntoUiElement<H> for PopoverAnchorBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {

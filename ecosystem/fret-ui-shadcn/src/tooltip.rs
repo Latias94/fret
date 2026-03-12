@@ -14,7 +14,6 @@ use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::tooltip as radix_tooltip;
 use fret_ui_kit::tooltip_provider;
 use fret_ui_kit::typography;
-use fret_ui_kit::ui::UiChildIntoElement;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayPresence,
     Radius, Space, ui,
@@ -591,10 +590,10 @@ impl Tooltip {
     /// Host-bound builder-first constructor that late-lands the trigger/content at the call site.
     pub fn build<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
-        trigger: impl UiChildIntoElement<H>,
+        trigger: impl IntoUiElement<H>,
         content: impl Into<TooltipContentArg>,
     ) -> Self {
-        Self::new(trigger.into_child_element(cx), content)
+        Self::new(trigger.into_element(cx), content)
     }
 
     pub fn align(mut self, align: TooltipAlign) -> Self {
@@ -1398,7 +1397,7 @@ impl TooltipTrigger {
     /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
     pub fn build<H: UiHost, T>(child: T) -> TooltipTriggerBuild<H, T>
     where
-        T: UiChildIntoElement<H>,
+        T: IntoUiElement<H>,
     {
         TooltipTriggerBuild {
             child: Some(child),
@@ -1414,14 +1413,14 @@ impl TooltipTrigger {
 
 impl<H: UiHost, T> TooltipTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     pub fn into_trigger(self, cx: &mut ElementContext<'_, H>) -> TooltipTrigger {
         TooltipTrigger::new(
             self.child
                 .expect("expected tooltip trigger child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
     }
 
@@ -1433,7 +1432,7 @@ where
 
 impl<H: UiHost, T> IntoUiElement<H> for TooltipTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -1465,7 +1464,7 @@ impl TooltipAnchor {
     /// keep using [`TooltipAnchor::new`] with an already-landed child.
     pub fn build<H: UiHost, T>(child: T) -> TooltipAnchorBuild<H, T>
     where
-        T: UiChildIntoElement<H>,
+        T: IntoUiElement<H>,
     {
         TooltipAnchorBuild {
             child: Some(child),
@@ -1485,14 +1484,14 @@ impl TooltipAnchor {
 
 impl<H: UiHost, T> TooltipAnchorBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     pub fn into_anchor(self, cx: &mut ElementContext<'_, H>) -> TooltipAnchor {
         TooltipAnchor::new(
             self.child
                 .expect("expected tooltip anchor child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
     }
 
@@ -1504,7 +1503,7 @@ where
 
 impl<H: UiHost, T> IntoUiElement<H> for TooltipAnchorBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {

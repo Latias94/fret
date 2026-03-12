@@ -4,6 +4,15 @@ const ADVANCED_RS: &str = include_str!("advanced.rs");
 const README: &str = include_str!("../README.md");
 const UI_EXT_SUPPORT_RS: &str = include_str!("ui_ext/support.rs");
 const UI_EXT_DATA_RS: &str = include_str!("ui_ext/data.rs");
+const ALERT_DIALOG_RS: &str = include_str!("alert_dialog.rs");
+const DIALOG_RS: &str = include_str!("dialog.rs");
+const DRAWER_RS: &str = include_str!("drawer.rs");
+const DROPDOWN_MENU_RS: &str = include_str!("dropdown_menu.rs");
+const HOVER_CARD_RS: &str = include_str!("hover_card.rs");
+const POPOVER_RS: &str = include_str!("popover.rs");
+const SHEET_RS: &str = include_str!("sheet.rs");
+const TABLE_RS: &str = include_str!("table.rs");
+const TOOLTIP_RS: &str = include_str!("tooltip.rs");
 const UI_BUILDER_EXT_BREADCRUMB_RS: &str = include_str!("ui_builder_ext/breadcrumb.rs");
 const UI_BUILDER_EXT_COLLAPSIBLE_RS: &str = include_str!("ui_builder_ext/collapsible.rs");
 const UI_BUILDER_EXT_COMMAND_DIALOG_RS: &str = include_str!("ui_builder_ext/command_dialog.rs");
@@ -84,6 +93,30 @@ fn ui_builder_ext_closures_accept_unified_component_conversion_trait() {
         assert!(
             source.contains("IntoUiElement<H>"),
             "{label} should accept the unified component conversion trait"
+        );
+    }
+}
+
+#[test]
+fn overlay_and_single_child_builders_drop_legacy_child_conversion_trait() {
+    for (label, source) in [
+        ("alert_dialog.rs", ALERT_DIALOG_RS),
+        ("dialog.rs", DIALOG_RS),
+        ("drawer.rs", DRAWER_RS),
+        ("dropdown_menu.rs", DROPDOWN_MENU_RS),
+        ("hover_card.rs", HOVER_CARD_RS),
+        ("popover.rs", POPOVER_RS),
+        ("sheet.rs", SHEET_RS),
+        ("table.rs", TABLE_RS),
+        ("tooltip.rs", TOOLTIP_RS),
+    ] {
+        assert!(
+            !source.contains("UiChildIntoElement"),
+            "{label} reintroduced legacy child conversion vocabulary"
+        );
+        assert!(
+            source.contains("IntoUiElement<H>"),
+            "{label} should use the unified component conversion trait"
         );
     }
 }

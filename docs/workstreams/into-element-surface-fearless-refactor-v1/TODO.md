@@ -65,16 +65,15 @@ Validation note on 2026-03-12:
 - [x] Migrate `ui::children!` to consume the unified contract.
 - [x] Migrate heterogeneous child builders (`FlexBox`, `ContainerBox`, `StackBox`, and related
   host-bound builders) to the unified contract.
-- [ ] Keep any extra bridging traits private or advanced-only if Rust still needs them
+- [x] Keep any extra bridging traits private or advanced-only if Rust still needs them
   internally.
 
 Implementation note on 2026-03-12:
 
-- `fret-ui-kit::imui::UiWriterUiKitExt::add_ui(...)` now reuses `UiChildIntoElement<H>` instead of
-  carrying a second overlapping immediate-mode conversion bridge; keep this posture until the
-  child pipeline itself is rewritten.
-- `UiChildIntoElement<H>` is now a thin child-pipeline bridge over `IntoUiElement<H>` rather than
-  a parallel conversion taxonomy.
+- `fret-ui-kit::imui::UiWriterUiKitExt::add_ui(...)` now lands directly through
+  `IntoUiElement<H>`; there is no separate immediate-mode child conversion bridge anymore.
+- `ui::children!`, `UiElementSinkExt`, and the `fret-ui-kit::ui` child-collection helpers now use
+  `IntoUiElement<H>` directly, so the old child-pipeline bridge trait is gone from code.
 - host-bound builders in `fret-ui-kit::ui` now implement `IntoUiElement<H>` directly, and
   `UiBuilder<T>::into_element(cx)` resolves through the unified contract.
 - `UiHostBoundIntoElement<H>` has now also been deleted from `fret-ui-kit`; there is no remaining
@@ -82,8 +81,8 @@ Implementation note on 2026-03-12:
 - `fret-ui-kit` no longer re-exports `UiIntoElement` or `UiChildIntoElement` from the crate root.
 - `fret::UiChild` now lands directly through `IntoUiElement<App>` rather than the child-pipeline
   bridge trait.
-- `fret-ui-shadcn` duplicate `UiChildIntoElement<H>` impls were removed for types that already
-  implement `IntoUiElement<H>` to prevent overlap with the new blanket child bridge.
+- first-party `fret-ui-shadcn` overlay/single-child builders and `fret-router-ui` route outlet
+  helpers now also accept `IntoUiElement<H>` directly instead of spelling `UiChildIntoElement<H>`.
 
 Validation note on 2026-03-12:
 

@@ -43,8 +43,7 @@ use fret_ui::{ElementContext, GlobalElementId, UiHost};
 use crate::command::ElementCommandGatingExt as _;
 use crate::primitives::menu::root as menu_root;
 use crate::primitives::popper;
-use crate::ui::UiChildIntoElement;
-use crate::{OverlayController, OverlayPresence, OverlayRequest};
+use crate::{IntoUiElement, OverlayController, OverlayPresence, OverlayRequest};
 
 pub mod adapters;
 mod floating_window_on_area;
@@ -58,9 +57,9 @@ pub trait UiWriterUiKitExt<H: UiHost>: UiWriter<H> {
     #[track_caller]
     fn add_ui<B>(&mut self, value: B)
     where
-        B: UiChildIntoElement<H>,
+        B: IntoUiElement<H>,
     {
-        let element = self.with_cx_mut(|cx| UiChildIntoElement::into_child_element(value, cx));
+        let element = self.with_cx_mut(|cx| IntoUiElement::into_element(value, cx));
         self.add(element);
     }
 }

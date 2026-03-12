@@ -17,7 +17,6 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::alert_dialog as radix_alert_dialog;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::typography::scope_description_text;
-use fret_ui_kit::ui::UiChildIntoElement;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayController,
     OverlayPresence, Radius, Space, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
@@ -350,13 +349,13 @@ impl AlertDialog {
     pub fn build<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
-        trigger: impl UiChildIntoElement<H>,
-        content: impl UiChildIntoElement<H>,
+        trigger: impl IntoUiElement<H>,
+        content: impl IntoUiElement<H>,
     ) -> AnyElement {
         self.into_element(
             cx,
-            move |cx| trigger.into_child_element(cx),
-            move |cx| content.into_child_element(cx),
+            move |cx| trigger.into_element(cx),
+            move |cx| content.into_element(cx),
         )
     }
 
@@ -766,7 +765,7 @@ impl AlertDialogTrigger {
     /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
     pub fn build<H: UiHost, T>(child: T) -> AlertDialogTriggerBuild<H, T>
     where
-        T: UiChildIntoElement<H>,
+        T: IntoUiElement<H>,
     {
         AlertDialogTriggerBuild {
             child: Some(child),
@@ -828,14 +827,14 @@ impl AlertDialogTrigger {
 
 impl<H: UiHost, T> AlertDialogTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         AlertDialogTrigger::new(
             self.child
                 .expect("expected alert dialog trigger child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
         .into_element(cx)
     }
@@ -843,7 +842,7 @@ where
 
 impl<H: UiHost, T> IntoUiElement<H> for AlertDialogTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -864,13 +863,13 @@ impl<H: UiHost> AlertDialogCompositionTriggerArg<H> for AlertDialogTrigger {
 
 impl<H: UiHost, T> AlertDialogCompositionTriggerArg<H> for AlertDialogTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     fn into_alert_dialog_trigger(self, cx: &mut ElementContext<'_, H>) -> AlertDialogTrigger {
         AlertDialogTrigger::new(
             self.child
                 .expect("expected alert dialog trigger child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
     }
 }

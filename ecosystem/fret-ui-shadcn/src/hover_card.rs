@@ -24,7 +24,6 @@ use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::tooltip_provider;
-use fret_ui_kit::ui::UiChildIntoElement;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayPresence,
     Radius, Space,
@@ -295,10 +294,10 @@ impl HoverCard {
     /// Host-bound builder-first constructor that late-lands the trigger/content at the call site.
     pub fn build<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
-        trigger: impl UiChildIntoElement<H>,
+        trigger: impl IntoUiElement<H>,
         content: impl Into<HoverCardContentArg>,
     ) -> Self {
-        Self::new(trigger.into_child_element(cx), content)
+        Self::new(trigger.into_element(cx), content)
     }
 
     /// Host-bound builder-first constructor for the controlled/uncontrolled root variant.
@@ -306,10 +305,10 @@ impl HoverCard {
         cx: &mut ElementContext<'_, H>,
         open: Option<Model<bool>>,
         default_open: bool,
-        trigger: impl UiChildIntoElement<H>,
+        trigger: impl IntoUiElement<H>,
         content: impl Into<HoverCardContentArg>,
     ) -> Self {
-        let trigger = trigger.into_child_element(cx);
+        let trigger = trigger.into_element(cx);
         Self::new_controllable(cx, open, default_open, trigger, content)
     }
 
@@ -1068,7 +1067,7 @@ impl HoverCardTrigger {
     /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
     pub fn build<H: UiHost, T>(child: T) -> HoverCardTriggerBuild<H, T>
     where
-        T: UiChildIntoElement<H>,
+        T: IntoUiElement<H>,
     {
         HoverCardTriggerBuild {
             child: Some(child),
@@ -1084,14 +1083,14 @@ impl HoverCardTrigger {
 
 impl<H: UiHost, T> HoverCardTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     pub fn into_trigger(self, cx: &mut ElementContext<'_, H>) -> HoverCardTrigger {
         HoverCardTrigger::new(
             self.child
                 .expect("expected hover card trigger child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
     }
 
@@ -1103,7 +1102,7 @@ where
 
 impl<H: UiHost, T> IntoUiElement<H> for HoverCardTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -1135,7 +1134,7 @@ impl HoverCardAnchor {
     /// keep using [`HoverCardAnchor::new`] with an already-landed child.
     pub fn build<H: UiHost, T>(child: T) -> HoverCardAnchorBuild<H, T>
     where
-        T: UiChildIntoElement<H>,
+        T: IntoUiElement<H>,
     {
         HoverCardAnchorBuild {
             child: Some(child),
@@ -1155,14 +1154,14 @@ impl HoverCardAnchor {
 
 impl<H: UiHost, T> HoverCardAnchorBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     pub fn into_anchor(self, cx: &mut ElementContext<'_, H>) -> HoverCardAnchor {
         HoverCardAnchor::new(
             self.child
                 .expect("expected hover card anchor child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
     }
 
@@ -1174,7 +1173,7 @@ where
 
 impl<H: UiHost, T> IntoUiElement<H> for HoverCardAnchorBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {

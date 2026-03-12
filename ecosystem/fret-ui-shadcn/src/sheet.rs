@@ -17,7 +17,6 @@ use fret_ui_kit::declarative::{
 };
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::portal_inherited;
-use fret_ui_kit::ui::UiChildIntoElement;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, OverlayController,
     OverlayPresence, Space, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
@@ -108,7 +107,7 @@ impl SheetTrigger {
     /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
     pub fn build<H: UiHost, T>(child: T) -> SheetTriggerBuild<H, T>
     where
-        T: UiChildIntoElement<H>,
+        T: IntoUiElement<H>,
     {
         SheetTriggerBuild {
             child: Some(child),
@@ -124,14 +123,14 @@ impl SheetTrigger {
 
 impl<H: UiHost, T> SheetTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         SheetTrigger::new(
             self.child
                 .expect("expected sheet trigger child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
         .into_element(cx)
     }
@@ -139,7 +138,7 @@ where
 
 impl<H: UiHost, T> IntoUiElement<H> for SheetTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -160,13 +159,13 @@ impl<H: UiHost> SheetCompositionTriggerArg<H> for SheetTrigger {
 
 impl<H: UiHost, T> SheetCompositionTriggerArg<H> for SheetTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     fn into_sheet_trigger(self, cx: &mut ElementContext<'_, H>) -> SheetTrigger {
         SheetTrigger::new(
             self.child
                 .expect("expected sheet trigger child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
     }
 }
@@ -1065,7 +1064,7 @@ impl SheetClose {
     pub fn build<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
-        child: impl UiChildIntoElement<H>,
+        child: impl IntoUiElement<H>,
     ) -> AnyElement {
         let open = self.open.unwrap_or_else(|| {
             inherited_sheet_open(cx).unwrap_or_else(|| {

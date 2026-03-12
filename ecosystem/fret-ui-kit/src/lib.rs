@@ -21,7 +21,7 @@ macro_rules! children {
         $(
             {
                 let child = $child;
-                let element = $crate::ui::UiChildIntoElement::into_child_element(child, &mut *$cx);
+                let element = $crate::IntoUiElement::into_element(child, &mut *$cx);
                 children.push(element);
             }
         )+
@@ -390,6 +390,8 @@ mod source_policy_tests {
     const LIB_RS: &str = include_str!("lib.rs");
     const DECLARATIVE_MOD_RS: &str = include_str!("declarative/mod.rs");
     const DECLARATIVE_PRELUDE_RS: &str = include_str!("declarative/prelude.rs");
+    const IMUI_RS: &str = include_str!("imui.rs");
+    const UI_RS: &str = include_str!("ui.rs");
     const UI_BUILDER_RS: &str = include_str!("ui_builder.rs");
 
     #[test]
@@ -422,6 +424,15 @@ mod source_policy_tests {
     fn ui_into_element_scaffolding_stays_internal_to_ui_builder_module() {
         assert!(UI_BUILDER_RS.contains("#[doc(hidden)]"));
         assert!(UI_BUILDER_RS.contains("pub trait UiIntoElement: Sized"));
+    }
+
+    #[test]
+    fn child_pipeline_stays_on_unified_component_conversion_trait() {
+        assert!(!UI_RS.contains("trait UiChildIntoElement"));
+        assert!(!IMUI_RS.contains("UiChildIntoElement"));
+        assert!(UI_RS.contains("I::Item: IntoUiElement<H>"));
+        assert!(UI_RS.contains("IntoUiElement::into_element(child, cx)"));
+        assert!(IMUI_RS.contains("B: IntoUiElement<H>"));
     }
 
     #[test]

@@ -32,7 +32,6 @@ use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::typography;
-use fret_ui_kit::ui::UiChildIntoElement;
 use fret_ui_kit::{
     ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     Radius, Space, ui,
@@ -156,7 +155,7 @@ impl DropdownMenuTrigger {
     /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
     pub fn build<H: UiHost, T>(child: T) -> DropdownMenuTriggerBuild<H, T>
     where
-        T: UiChildIntoElement<H>,
+        T: IntoUiElement<H>,
     {
         DropdownMenuTriggerBuild {
             child: Some(child),
@@ -172,14 +171,14 @@ impl DropdownMenuTrigger {
 
 impl<H: UiHost, T> DropdownMenuTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     pub fn into_trigger(self, cx: &mut ElementContext<'_, H>) -> DropdownMenuTrigger {
         DropdownMenuTrigger::new(
             self.child
                 .expect("expected dropdown-menu trigger child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
     }
 
@@ -198,7 +197,7 @@ impl<H: UiHost> IntoUiElement<H> for DropdownMenuTrigger {
 
 impl<H: UiHost, T> IntoUiElement<H> for DropdownMenuTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -1973,13 +1972,13 @@ impl DropdownMenu {
     pub fn build<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
-        trigger: impl UiChildIntoElement<H>,
+        trigger: impl IntoUiElement<H>,
         entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
     ) -> AnyElement
     where
         I: IntoIterator<Item = DropdownMenuEntry>,
     {
-        self.into_element(cx, move |cx| trigger.into_child_element(cx), entries)
+        self.into_element(cx, move |cx| trigger.into_element(cx), entries)
     }
 
     /// Part-based authoring surface aligned with shadcn/ui v4 exports.
@@ -1991,7 +1990,7 @@ impl DropdownMenu {
     pub fn build_parts<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
-        trigger: impl UiChildIntoElement<H>,
+        trigger: impl IntoUiElement<H>,
         content: impl Into<DropdownMenuContent>,
         entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
     ) -> AnyElement

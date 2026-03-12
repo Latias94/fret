@@ -36,7 +36,6 @@ use fret_ui_kit::declarative::motion_value::{
 };
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
-use fret_ui_kit::ui::UiChildIntoElement;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, Space, UiPatch, UiPatchTarget,
     UiSupportsChrome, UiSupportsLayout, ui,
@@ -844,13 +843,13 @@ impl Drawer {
     pub fn build<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
-        trigger: impl UiChildIntoElement<H>,
-        content: impl UiChildIntoElement<H>,
+        trigger: impl IntoUiElement<H>,
+        content: impl IntoUiElement<H>,
     ) -> AnyElement {
         self.into_element(
             cx,
-            move |cx| trigger.into_child_element(cx),
-            move |cx| content.into_child_element(cx),
+            move |cx| trigger.into_element(cx),
+            move |cx| content.into_element(cx),
         )
     }
 
@@ -1594,7 +1593,7 @@ impl DrawerTrigger {
     /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
     pub fn build<H: UiHost, T>(child: T) -> DrawerTriggerBuild<H, T>
     where
-        T: UiChildIntoElement<H>,
+        T: IntoUiElement<H>,
     {
         DrawerTriggerBuild {
             child: Some(child),
@@ -1610,14 +1609,14 @@ impl DrawerTrigger {
 
 impl<H: UiHost, T> DrawerTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         DrawerTrigger::new(
             self.child
                 .expect("expected drawer trigger child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
         .into_element(cx)
     }
@@ -1625,7 +1624,7 @@ where
 
 impl<H: UiHost, T> IntoUiElement<H> for DrawerTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -1646,13 +1645,13 @@ impl<H: UiHost> DrawerCompositionTriggerArg<H> for DrawerTrigger {
 
 impl<H: UiHost, T> DrawerCompositionTriggerArg<H> for DrawerTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     fn into_drawer_trigger(self, cx: &mut ElementContext<'_, H>) -> DrawerTrigger {
         DrawerTrigger::new(
             self.child
                 .expect("expected drawer trigger child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
     }
 }
@@ -1700,7 +1699,7 @@ impl DrawerClose {
     pub fn build<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
-        child: impl UiChildIntoElement<H>,
+        child: impl IntoUiElement<H>,
     ) -> AnyElement {
         self.inner.build(cx, child)
     }

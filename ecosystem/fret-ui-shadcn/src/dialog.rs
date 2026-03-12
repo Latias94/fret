@@ -22,7 +22,6 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::recipes::glass::GlassEffectRefinement;
-use fret_ui_kit::ui::UiChildIntoElement;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayController,
     OverlayPresence, Space, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
@@ -153,7 +152,7 @@ impl DialogTrigger {
     /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
     pub fn build<H: UiHost, T>(child: T) -> DialogTriggerBuild<H, T>
     where
-        T: UiChildIntoElement<H>,
+        T: IntoUiElement<H>,
     {
         DialogTriggerBuild {
             child: Some(child),
@@ -169,14 +168,14 @@ impl DialogTrigger {
 
 impl<H: UiHost, T> DialogTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         DialogTrigger::new(
             self.child
                 .expect("expected dialog trigger child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
         .into_element(cx)
     }
@@ -184,7 +183,7 @@ where
 
 impl<H: UiHost, T> IntoUiElement<H> for DialogTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -205,13 +204,13 @@ impl<H: UiHost> DialogCompositionTriggerArg<H> for DialogTrigger {
 
 impl<H: UiHost, T> DialogCompositionTriggerArg<H> for DialogTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     fn into_dialog_trigger(self, cx: &mut ElementContext<'_, H>) -> DialogTrigger {
         DialogTrigger::new(
             self.child
                 .expect("expected dialog trigger child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
     }
 }
@@ -1133,14 +1132,14 @@ impl DialogClose {
     pub fn build<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
-        child: impl UiChildIntoElement<H>,
+        child: impl IntoUiElement<H>,
     ) -> AnyElement {
         let open = self.open.clone().unwrap_or_else(|| {
             inherited_dialog_open(cx).unwrap_or_else(|| {
                 panic!("DialogClose::from_scope() must be used while rendering Dialog content")
             })
         });
-        let child = child.into_child_element(cx);
+        let child = child.into_element(cx);
         cx.pressable_add_on_activate_for(
             child.id,
             Arc::new(

@@ -1351,7 +1351,7 @@ impl<H: UiHost, F, I> IntoUiElement<H> for UiBuilder<crate::ui::ContainerPropsBo
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator,
-    I::Item: crate::ui::UiChildIntoElement<H>,
+    I::Item: crate::IntoUiElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -1363,7 +1363,7 @@ impl<H: UiHost, F, I> UiBuilder<crate::ui::ContainerPropsBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator,
-    I::Item: crate::ui::UiChildIntoElement<H>,
+    I::Item: crate::IntoUiElement<H>,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {

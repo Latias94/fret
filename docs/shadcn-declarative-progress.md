@@ -173,15 +173,14 @@ This tracker follows the repo-wide authoring reset and the focused conversion-su
 - reusable generic helpers in `fret-ui-shadcn` / `fret-ui-kit` should converge on the unified
   component conversion trait tracked in
   `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md`,
-- advanced/manual-assembly reusable helpers should prefer `IntoUiElement<H>` rather than
-  child-pipeline traits such as `UiChildIntoElement<H>`,
+- advanced/manual-assembly reusable helpers should prefer `IntoUiElement<H>` directly, including
+  heterogeneous child-collection and single-child builder seams,
 - shadcn opt-in authoring glue in `ecosystem/fret-ui-shadcn/src/ui_ext/` now also lands through
   `IntoUiElement<H>` directly, so adapter macros do not re-teach `UiIntoElement`,
 - shadcn `ui_builder_ext/*` helper closures now also accept values that implement
   `IntoUiElement<H>`, so trigger/content/cell builders do not have to pre-land into `AnyElement`,
-- `UiHostBoundIntoElement` and `UiBuilderHostBoundIntoElementExt` are already deleted from code;
-  `UiChildIntoElement` remains only as the thin heterogeneous-child bridge and should not be
-  taught on first-party shadcn surfaces,
+- `UiHostBoundIntoElement`, `UiBuilderHostBoundIntoElementExt`, and `UiChildIntoElement` are
+  already deleted from code and should not be taught on first-party shadcn surfaces,
 - keep `AnyElement` explicit only for justified raw seams such as diagnostics, overlay/controller
   internals, or low-level helper plumbing.
 
