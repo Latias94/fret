@@ -102,6 +102,10 @@ As of 2026-03-12:
     `crates/fret-render-wgpu/src/text/fonts.rs`
   - `text/mod.rs` no longer owns font enumeration, locale updates, rescan flow, or font-family
     cache reset helpers directly
+- The sixth internal text split has landed:
+  - text blob access / release / eviction helpers now live under
+    `crates/fret-render-wgpu/src/text/blobs.rs`
+  - `text/mod.rs` no longer owns released-blob LRU maintenance and blob eviction helpers directly
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
@@ -111,6 +115,10 @@ As of 2026-03-12:
   - `cargo check -p fret-launch -p fret-examples`: passed
   - `python3 tools/check_layering.py`: passed
 - Internal text split verification remains green after the font/fallback extraction:
+  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+- Internal text split verification remains green after the blob lifecycle extraction:
   - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
   - `python3 tools/check_layering.py`: passed

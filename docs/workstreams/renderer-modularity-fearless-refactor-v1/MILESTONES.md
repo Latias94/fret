@@ -44,6 +44,10 @@ Current snapshot (2026-03-12):
     `crates/fret-render-wgpu/src/text/fonts.rs`
   - `text/mod.rs` no longer owns font enumeration, locale updates, rescan flow, or font-family
     cache reset helpers directly
+- The sixth internal `text/mod.rs` split has landed:
+  - text blob access / release / eviction helpers moved into
+    `crates/fret-render-wgpu/src/text/blobs.rs`
+  - `text/mod.rs` no longer owns released-blob LRU maintenance and blob eviction helpers directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
