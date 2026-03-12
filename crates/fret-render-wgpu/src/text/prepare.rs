@@ -790,13 +790,17 @@ fn render_prepared_glyph_image_with_scaler(
     glyph_id: u16,
     offset_px: parley::swash::zeno::Vector,
 ) -> Option<parley::swash::scale::image::Image> {
-    parley::swash::scale::Render::new(&[
+    parley::swash::scale::Render::new(&prepared_glyph_render_sources())
+        .offset(offset_px)
+        .render(scaler, glyph_id)
+}
+
+fn prepared_glyph_render_sources() -> [parley::swash::scale::Source; 3] {
+    [
         parley::swash::scale::Source::ColorOutline(0),
         parley::swash::scale::Source::ColorBitmap(parley::swash::scale::StrikeWith::BestFit),
         parley::swash::scale::Source::Outline,
-    ])
-    .offset(offset_px)
-    .render(scaler, glyph_id)
+    ]
 }
 
 fn prepared_glyph_raster_from_image(

@@ -252,6 +252,10 @@ As of 2026-03-12:
   - prepared-glyph raster metadata decoding now lives behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `prepared_glyph_raster_from_image(...)` no longer owns content-kind/bytes-per-pixel mapping directly
+- The forty-third internal text split has landed:
+  - prepared-glyph render source selection now lives behind a pure helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `render_prepared_glyph_image_with_scaler(...)` no longer owns the swash source list literal directly
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
