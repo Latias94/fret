@@ -482,9 +482,7 @@ impl TextSystem {
     ) -> Option<(GlyphKey, f32, f32, f32, f32)> {
         let raster =
             self.render_prepared_glyph_raster(glyph, glyph_id, face_key, size_bits, x_bin, y_bin)?;
-        let bounds = raster.bounds(x, y);
-        self.insert_prepared_glyph_raster(raster, epoch);
-        Some(bounds)
+        Some(self.commit_prepared_glyph_raster(raster, x, y, epoch))
     }
 
     fn resolve_prepared_glyph_bounds(
@@ -575,6 +573,18 @@ impl TextSystem {
             data,
             epoch,
         );
+    }
+
+    fn commit_prepared_glyph_raster(
+        &mut self,
+        raster: PreparedGlyphRaster,
+        x: i32,
+        y: i32,
+        epoch: u64,
+    ) -> (GlyphKey, f32, f32, f32, f32) {
+        let bounds = raster.bounds(x, y);
+        self.insert_prepared_glyph_raster(raster, epoch);
+        bounds
     }
 
     fn prepared_glyph_atlas_mut(&mut self, kind: GlyphQuadKind) -> &mut GlyphAtlas {

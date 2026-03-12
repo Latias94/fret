@@ -182,6 +182,10 @@ Current snapshot (2026-03-12):
   - prepared-glyph atlas lookup-key construction now lives behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `lookup_prepared_glyph_atlas_kind(...)` no longer owns lookup-key construction directly
+- The fortieth internal `text/mod.rs` split has landed:
+  - prepared-glyph raster commit now lives behind a dedicated helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `materialize_prepared_glyph_miss(...)` no longer owns raster-bounds/atlas-insert sequencing directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
