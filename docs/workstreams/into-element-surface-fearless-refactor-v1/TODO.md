@@ -120,6 +120,9 @@ Implementation note on 2026-03-12:
 - `apps/fret-cookbook/examples/customv1_basics.rs` now uses `IntoUiElement<KernelApp>` for its
   advanced reusable `panel_shell(...)` helper instead of spelling the old
   `UiChildIntoElement<KernelApp>` child-pipeline trait.
+- `fret-ui-shadcn` `ui_ext/support.rs` and `ui_ext/data.rs` now implement
+  `IntoUiElement<H>` directly, so shadcn reusable glue no longer spells
+  `UiIntoElement` on those adapters.
 
 ## M4 — Delete the old public surface
 
@@ -147,6 +150,9 @@ Implementation note on 2026-03-12:
   `apps/fret-cookbook/src/lib.rs`,
   `apps/fret-examples/src/lib.rs`,
   and `apps/fretboard/src/scaffold/templates.rs`.
+- `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs` now guards that
+  `ui_ext/support.rs` and `ui_ext/data.rs` stay on `IntoUiElement<H>` rather than
+  reintroducing direct `UiIntoElement` glue.
 
 ## M6 — Keep advanced/raw seams explicit and justified
 

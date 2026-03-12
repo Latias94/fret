@@ -175,6 +175,8 @@ This tracker follows the repo-wide authoring reset and the focused conversion-su
   `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md`,
 - advanced/manual-assembly reusable helpers should prefer `IntoUiElement<H>` rather than
   child-pipeline traits such as `UiChildIntoElement<H>`,
+- shadcn opt-in authoring glue in `ecosystem/fret-ui-shadcn/src/ui_ext/` now also lands through
+  `IntoUiElement<H>` directly, so adapter macros do not re-teach `UiIntoElement`,
 - `UiHostBoundIntoElement` and `UiBuilderHostBoundIntoElementExt` are already deleted from code;
   `UiChildIntoElement` remains only as the thin heterogeneous-child bridge and should not be
   taught on first-party shadcn surfaces,

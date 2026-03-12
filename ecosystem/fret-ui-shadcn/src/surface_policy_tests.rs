@@ -2,6 +2,8 @@ const LIB_RS: &str = include_str!("lib.rs");
 const APP_RS: &str = include_str!("app.rs");
 const ADVANCED_RS: &str = include_str!("advanced.rs");
 const README: &str = include_str!("../README.md");
+const UI_EXT_SUPPORT_RS: &str = include_str!("ui_ext/support.rs");
+const UI_EXT_DATA_RS: &str = include_str!("ui_ext/data.rs");
 
 #[test]
 fn app_integration_stays_under_explicit_app_module() {
@@ -35,4 +37,21 @@ fn curated_facade_keeps_app_theme_and_raw_seams_explicit() {
     assert!(LIB_RS.contains("pub mod advanced;"));
     assert!(ADVANCED_RS.contains("pub fn sync_theme_from_environment("));
     assert!(ADVANCED_RS.contains("pub fn install_with_ui_services("));
+}
+
+#[test]
+fn ui_ext_glue_prefers_unified_component_conversion_trait() {
+    for (label, source) in [
+        ("ui_ext/support.rs", UI_EXT_SUPPORT_RS),
+        ("ui_ext/data.rs", UI_EXT_DATA_RS),
+    ] {
+        assert!(
+            !source.contains("::fret_ui_kit::UiIntoElement"),
+            "{label} reintroduced direct UiIntoElement glue"
+        );
+        assert!(
+            source.contains("::fret_ui_kit::IntoUiElement<H>"),
+            "{label} should use the unified IntoUiElement<H> glue"
+        );
+    }
 }

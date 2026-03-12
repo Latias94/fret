@@ -27,7 +27,7 @@ Current readout on 2026-03-12:
 | M0 | Done | target vocabulary is locked and the classification table is now recorded in `MIGRATION_MATRIX.md` |
 | M1 | Done | `IntoUiElement<H>` is the curated component conversion name; docs/preludes/tests reflect it |
 | M2 | Done | `UiBuilder<T>` and host-bound child builders now land through `IntoUiElement<H>`; `UiBuilderHostBoundIntoElementExt` is deleted; child collection is on a thin bridge over the unified contract |
-| M3 | In progress | curated `fret` / `fret-ui-kit` surfaces and the canonical todo/scaffold compare set are aligned; both host-bound bridge names are deleted, while broader shadcn/gallery/helper cleanup and `UiChildIntoElement` contraction remain |
+| M3 | In progress | curated `fret` / `fret-ui-kit` surfaces and the canonical todo/scaffold compare set are aligned; `fret-ui-shadcn` ui_ext glue now lands through `IntoUiElement<H>`, while broader shadcn/gallery/helper cleanup and `UiChildIntoElement` contraction remain |
 | M4 | In progress | prelude gates are in place and one bridge trait is deleted, but stale-name source/doc guards still need to expand |
 
 ## Milestone 0 — Lock the target conversion vocabulary
