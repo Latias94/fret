@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("mic_selector_demo.rs");
 
 // region: example
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_ai as ui_ai;
@@ -10,31 +9,9 @@ use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-#[derive(Default)]
-struct DemoModels {
-    open: Option<Model<bool>>,
-    value: Option<Model<Option<Arc<str>>>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let needs_init = cx.with_state(DemoModels::default, |st| {
-        st.open.is_none() || st.value.is_none()
-    });
-    if needs_init {
-        let open = cx.app.models_mut().insert(false);
-        let value = cx.app.models_mut().insert(None::<Arc<str>>);
-        cx.with_state(DemoModels::default, move |st| {
-            st.open = Some(open.clone());
-            st.value = Some(value.clone());
-        });
-    }
-
-    let (open, value) = cx.with_state(DemoModels::default, |st| {
-        (
-            st.open.clone().expect("open"),
-            st.value.clone().expect("value"),
-        )
-    });
+    let open = cx.local_model_keyed("open", || false);
+    let value = cx.local_model_keyed("value", || None::<Arc<str>>);
 
     let devices: Arc<[ui_ai::MicSelectorDevice]> = Arc::from(vec![
         ui_ai::MicSelectorDevice::new("default", "Default Microphone (1234:abcd)"),
@@ -42,7 +19,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         ui_ai::MicSelectorDevice::new("loopback", "Loopback"),
     ]);
 
-    let selected = cx.app.models().read(&value, |v| v.clone()).ok().flatten();
+    let selected = cx
+        .get_model_cloned(&value, Invalidation::Layout)
+        .unwrap_or(None);
 
     let marker = cx
         .text(format!(

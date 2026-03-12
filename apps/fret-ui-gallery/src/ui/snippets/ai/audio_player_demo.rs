@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("audio_player_demo.rs");
 
 // region: example
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::SemanticsProps;
 use fret_ui_ai as ui_ai;
@@ -10,47 +9,12 @@ use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default)]
-struct DemoModels {
-    playing: Option<Model<bool>>,
-    muted: Option<Model<bool>>,
-    time: Option<Model<Vec<f32>>>,
-    duration: Option<Model<f32>>,
-    volume: Option<Model<Vec<f32>>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let needs_init = cx.with_state(DemoModels::default, |st| {
-        st.playing.is_none()
-            || st.muted.is_none()
-            || st.time.is_none()
-            || st.duration.is_none()
-            || st.volume.is_none()
-    });
-    if needs_init {
-        let playing = cx.app.models_mut().insert(false);
-        let muted = cx.app.models_mut().insert(false);
-        let time = cx.app.models_mut().insert(vec![0.0]);
-        let duration = cx.app.models_mut().insert(120.0f32);
-        let volume = cx.app.models_mut().insert(vec![0.8]);
-        cx.with_state(DemoModels::default, move |st| {
-            st.playing = Some(playing.clone());
-            st.muted = Some(muted.clone());
-            st.time = Some(time.clone());
-            st.duration = Some(duration.clone());
-            st.volume = Some(volume.clone());
-        });
-    }
-
-    let (playing, muted, time, duration, volume) = cx.with_state(DemoModels::default, |st| {
-        (
-            st.playing.clone().expect("playing"),
-            st.muted.clone().expect("muted"),
-            st.time.clone().expect("time"),
-            st.duration.clone().expect("duration"),
-            st.volume.clone().expect("volume"),
-        )
-    });
+    let playing = cx.local_model_keyed("playing", || false);
+    let muted = cx.local_model_keyed("muted", || false);
+    let time = cx.local_model_keyed("time", || vec![0.0]);
+    let duration = cx.local_model_keyed("duration", || 120.0f32);
+    let volume = cx.local_model_keyed("volume", || vec![0.8]);
 
     let playing_now = cx
         .get_model_copied(&playing, Invalidation::Paint)

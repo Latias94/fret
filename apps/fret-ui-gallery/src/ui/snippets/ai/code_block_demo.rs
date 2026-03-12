@@ -2,7 +2,6 @@ pub const SOURCE: &str = include_str!("code_block_demo.rs");
 
 // region: example
 use fret_icons_lucide::generated_ids::lucide::FILE_CODE;
-use fret_runtime::Model;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -10,42 +9,12 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default)]
-struct DemoModels {
-    language: Option<Model<Option<Arc<str>>>>,
-    language_open: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
     let muted_fg = theme.color_token("muted-foreground");
 
-    let language = cx.with_state(DemoModels::default, |st| st.language.clone());
-    let language = match language {
-        Some(model) => model,
-        None => {
-            let model = cx
-                .app
-                .models_mut()
-                .insert(Some(Arc::<str>::from("typescript")));
-            cx.with_state(DemoModels::default, |st| {
-                st.language = Some(model.clone());
-            });
-            model
-        }
-    };
-
-    let language_open = cx.with_state(DemoModels::default, |st| st.language_open.clone());
-    let language_open = match language_open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(DemoModels::default, |st| {
-                st.language_open = Some(model.clone());
-            });
-            model
-        }
-    };
+    let language = cx.local_model_keyed("language", || Some(Arc::<str>::from("typescript")));
+    let language_open = cx.local_model_keyed("language_open", || false);
 
     let language_value = cx
         .watch_model(&language)

@@ -2,7 +2,6 @@ pub const SOURCE: &str = include_str!("attachments_inline.rs");
 
 // region: example
 use fret_core::{ImageColorSpace, ImageId, Px};
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::Theme;
 use fret_ui::element::{ContainerProps, InteractivityGateProps};
@@ -13,16 +12,6 @@ use fret_ui_kit::{LayoutRefinement, MetricRef, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 use std::sync::OnceLock;
-
-#[derive(Default)]
-struct DemoModels {
-    removed_ids: Option<Model<Vec<Arc<str>>>>,
-}
-
-#[derive(Default)]
-struct HoverCardModels {
-    open: Option<Model<bool>>,
-}
 
 fn landscape_image_id<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Option<ImageId> {
     static SOURCE: OnceLock<ImageSource> = OnceLock::new();
@@ -109,17 +98,7 @@ fn demo_items<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> Vec<ui_ai:
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let removed_ids = cx.with_state(DemoModels::default, |st| st.removed_ids.clone());
-    let removed_ids = match removed_ids {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Vec::<Arc<str>>::new());
-            cx.with_state(DemoModels::default, |st| {
-                st.removed_ids = Some(model.clone())
-            });
-            model
-        }
-    };
+    let removed_ids = cx.local_model_keyed("removed_ids", Vec::<Arc<str>>::new);
 
     let hidden = cx
         .get_model_cloned(&removed_ids, Invalidation::Layout)
@@ -144,15 +123,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             let on_remove = on_remove.clone();
             let key = Arc::<str>::from(format!("attachments-inline-{}", item_id.as_ref()));
             cx.keyed(key, move |cx| {
-                let open = cx.with_state(HoverCardModels::default, |st| st.open.clone());
-                let open = match open {
-                    Some(model) => model,
-                    None => {
-                        let model = cx.app.models_mut().insert(false);
-                        cx.with_state(HoverCardModels::default, |st| st.open = Some(model.clone()));
-                        model
-                    }
-                };
+                let open = cx.local_model(|| false);
                 let hover_card_test_id = (item_id.as_ref() == "att-image")
                     .then_some("ui-ai-attachment-inline-att-image-hover-card");
                 let mut attachment = ui_ai::Attachment::new(item.clone())

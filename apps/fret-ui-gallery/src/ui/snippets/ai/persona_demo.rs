@@ -14,12 +14,6 @@ use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default)]
-struct DemoModels {
-    state: Option<Model<ui_ai::PersonaState>>,
-    variant: Option<Model<ui_ai::PersonaVariant>>,
-}
-
 fn state_button<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     state_model: Model<ui_ai::PersonaState>,
@@ -68,25 +62,8 @@ fn variant_button(
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state_model = cx.with_state(DemoModels::default, |st| st.state.clone());
-    let state_model = match state_model {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(ui_ai::PersonaState::Idle);
-            cx.with_state(DemoModels::default, |st| st.state = Some(model.clone()));
-            model
-        }
-    };
-
-    let variant_model = cx.with_state(DemoModels::default, |st| st.variant.clone());
-    let variant_model = match variant_model {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(ui_ai::PersonaVariant::Obsidian);
-            cx.with_state(DemoModels::default, |st| st.variant = Some(model.clone()));
-            model
-        }
-    };
+    let state_model = cx.local_model_keyed("state", || ui_ai::PersonaState::Idle);
+    let variant_model = cx.local_model_keyed("variant", || ui_ai::PersonaVariant::Obsidian);
 
     let current_state = cx
         .get_model_copied(&state_model, Invalidation::Layout)

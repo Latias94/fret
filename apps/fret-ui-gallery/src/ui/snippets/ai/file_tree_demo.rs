@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("file_tree_demo.rs");
 
 // region: example
-use fret_runtime::Model;
 use fret_ui::action::ActionCx;
 use fret_ui::element::{AnyElement, Length, SemanticsDecoration, SizeStyle, TextProps};
 use fret_ui::{ElementContext, UiHost};
@@ -10,12 +9,6 @@ use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use std::sync::Arc;
-
-#[derive(Default)]
-struct FileTreeModels {
-    selected: Option<Model<Option<Arc<str>>>>,
-    copied: Option<Model<bool>>,
-}
 
 fn invisible_marker<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -46,31 +39,10 @@ fn invisible_marker<H: UiHost>(
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let selected = cx.with_state(FileTreeModels::default, |st| st.selected.clone());
-    let selected = match selected {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(None::<Arc<str>>);
-            cx.with_state(FileTreeModels::default, |st| {
-                st.selected = Some(model.clone())
-            });
-            model
-        }
-    };
-
+    let selected = cx.local_model_keyed("selected", || None::<Arc<str>>);
     let selected_value = cx.watch_model(&selected).layout().cloned().flatten();
 
-    let copied = cx.with_state(FileTreeModels::default, |st| st.copied.clone());
-    let copied = match copied {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(FileTreeModels::default, |st| {
-                st.copied = Some(model.clone())
-            });
-            model
-        }
-    };
+    let copied = cx.local_model_keyed("copied", || false);
     let copied_value = cx.watch_model(&copied).layout().copied().unwrap_or(false);
 
     let tree = ui_ai::FileTree::new([

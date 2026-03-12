@@ -2,7 +2,6 @@ pub const SOURCE: &str = include_str!("message_usage.rs");
 
 // region: example
 use fret_core::Px;
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::action::OnActivate;
 use fret_ui_ai as ui_ai;
@@ -12,14 +11,6 @@ use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Justify, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
-
-#[derive(Default)]
-struct DemoModels {
-    messages: Option<Model<Arc<[ui_ai::AiMessage]>>>,
-    prompt: Option<Model<String>>,
-    next_id: Option<Model<u64>>,
-    last_action: Option<Model<Option<Arc<str>>>>,
-}
 
 fn seed_messages() -> Arc<[ui_ai::AiMessage]> {
     Arc::from(
@@ -44,41 +35,14 @@ fn seed_messages() -> Arc<[ui_ai::AiMessage]> {
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let needs_init = cx.with_state(DemoModels::default, |st| {
-        st.messages.is_none()
-            || st.prompt.is_none()
-            || st.next_id.is_none()
-            || st.last_action.is_none()
+    let messages_model = cx.local_model_keyed("messages", seed_messages);
+    let prompt_model = cx.local_model_keyed("prompt", || {
+        String::from("Add a small follow-up question...")
     });
-    if needs_init {
-        let initial_messages = seed_messages();
-        let messages = cx.app.models_mut().insert(initial_messages.clone());
-        let prompt = cx
-            .app
-            .models_mut()
-            .insert(String::from("Add a small follow-up question..."));
-        let next_id = cx
-            .app
-            .models_mut()
-            .insert((initial_messages.len() as u64).saturating_add(1));
-        let last_action = cx.app.models_mut().insert(None::<Arc<str>>);
-        cx.with_state(DemoModels::default, |st| {
-            st.messages = Some(messages.clone());
-            st.prompt = Some(prompt.clone());
-            st.next_id = Some(next_id.clone());
-            st.last_action = Some(last_action.clone());
-        });
-    }
-
-    let (messages_model, prompt_model, next_id_model, last_action_model) =
-        cx.with_state(DemoModels::default, |st| {
-            (
-                st.messages.clone().expect("messages"),
-                st.prompt.clone().expect("prompt"),
-                st.next_id.clone().expect("next_id"),
-                st.last_action.clone().expect("last_action"),
-            )
-        });
+    let next_id_model = cx.local_model_keyed("next_id", || {
+        (seed_messages().len() as u64).saturating_add(1)
+    });
+    let last_action_model = cx.local_model_keyed("last_action", || None::<Arc<str>>);
 
     let messages = cx
         .get_model_cloned(&messages_model, Invalidation::Layout)

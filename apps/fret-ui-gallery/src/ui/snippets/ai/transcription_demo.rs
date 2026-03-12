@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("transcription_demo.rs");
 
 // region: example
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::Theme;
 use fret_ui::element::SemanticsProps;
@@ -12,35 +11,10 @@ use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-#[derive(Default)]
-struct DemoModels {
-    current_time: Option<Model<f32>>,
-    time: Option<Model<Vec<f32>>>,
-    duration: Option<Model<f32>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let needs_init = cx.with_state(DemoModels::default, |st| {
-        st.current_time.is_none() || st.time.is_none() || st.duration.is_none()
-    });
-    if needs_init {
-        let current_time = cx.app.models_mut().insert(0.0_f32);
-        let time = cx.app.models_mut().insert(vec![0.0_f32]);
-        let duration = cx.app.models_mut().insert(3.1_f32);
-        cx.with_state(DemoModels::default, move |st| {
-            st.current_time = Some(current_time.clone());
-            st.time = Some(time.clone());
-            st.duration = Some(duration.clone());
-        });
-    }
-
-    let (current_time, time, duration) = cx.with_state(DemoModels::default, |st| {
-        (
-            st.current_time.clone().expect("current_time"),
-            st.time.clone().expect("time"),
-            st.duration.clone().expect("duration"),
-        )
-    });
+    let current_time = cx.local_model_keyed("current_time", || 0.0_f32);
+    let time = cx.local_model_keyed("time", || vec![0.0_f32]);
+    let duration = cx.local_model_keyed("duration", || 3.1_f32);
 
     let segments: Arc<[ui_ai::TranscriptionSegmentData]> = Arc::from(vec![
         ui_ai::TranscriptionSegmentData::new(0.119, 0.219, "You"),

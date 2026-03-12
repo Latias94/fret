@@ -27,14 +27,6 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         Space,
     };
 
-    #[derive(Default)]
-    struct HarnessState {
-        graph: Option<Model<Graph>>,
-        view: Option<Model<NodeGraphViewState>>,
-        view_queue: Option<Model<NodeGraphViewQueue>>,
-        bounds: Option<Model<Option<fret_core::Rect>>>,
-    }
-
     fn build_demo_graph(graph_id: GraphId) -> Graph {
         let mut g = Graph::new(graph_id);
 
@@ -269,38 +261,10 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         }
     }
 
-    let existing = cx.with_state(HarnessState::default, |st| {
-        match (
-            st.graph.clone(),
-            st.view.clone(),
-            st.view_queue.clone(),
-            st.bounds.clone(),
-        ) {
-            (Some(graph), Some(view), Some(view_queue), Some(bounds)) => {
-                Some((graph, view, view_queue, bounds))
-            }
-            _ => None,
-        }
-    });
-
-    let (graph, view, view_queue, bounds) = if let Some(existing) = existing {
-        existing
-    } else {
-        let graph = build_demo_graph(GraphId::from_u128(42));
-        let graph = cx.app.models_mut().insert(graph);
-        let view = cx.app.models_mut().insert(NodeGraphViewState::default());
-        let view_queue = cx.app.models_mut().insert(NodeGraphViewQueue::default());
-        let bounds = cx.app.models_mut().insert(None);
-
-        cx.with_state(HarnessState::default, |st| {
-            st.graph = Some(graph.clone());
-            st.view = Some(view.clone());
-            st.view_queue = Some(view_queue.clone());
-            st.bounds = Some(bounds.clone());
-        });
-
-        (graph, view, view_queue, bounds)
-    };
+    let graph = cx.local_model_keyed("graph", || build_demo_graph(GraphId::from_u128(42)));
+    let view = cx.local_model_keyed("view", NodeGraphViewState::default);
+    let view_queue = cx.local_model_keyed("view_queue", NodeGraphViewQueue::default);
+    let bounds = cx.local_model_keyed("bounds", || None::<fret_core::Rect>);
 
     let max_w = LayoutRefinement::default()
         .w_full()
