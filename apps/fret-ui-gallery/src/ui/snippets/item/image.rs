@@ -44,7 +44,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         );
         let image = cx
             .container(props, move |cx| {
-                vec![shadcn::raw::typography::muted(cx, "IMG")]
+                vec![shadcn::raw::typography::muted("IMG").into_element(cx)]
             })
             .test_id(format!("ui-gallery-item-image-image-{idx}"));
         let media = shadcn::ItemMedia::new([image])

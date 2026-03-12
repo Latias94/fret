@@ -6,13 +6,12 @@ use std::sync::Arc;
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     shadcn::raw::typography::list(
-        cx,
         [
             Arc::<str>::from("Jokes are free speech."),
             Arc::<str>::from("Laughter improves morale."),
             Arc::<str>::from("Taxes should be fair."),
         ],
-    )
+    ).into_element(cx)
     .test_id("ui-gallery-typography-list")
 }
 // endregion: example

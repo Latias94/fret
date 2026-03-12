@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("demo.rs");
 // region: example
 use fret_core::Px;
 use fret_ui::element::SemanticsDecoration;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -23,7 +24,7 @@ fn menu_button<H: UiHost>(
     label: &'static str,
     icon: &'static str,
     test_id: Arc<str>,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let collapsed = shadcn::use_sidebar(cx).is_some_and(|ctx| !ctx.is_mobile && ctx.collapsed());
     let is_active = active_value.as_ref() == value;
     let selected_for_activate = selected_model.clone();
@@ -41,7 +42,6 @@ fn menu_button<H: UiHost>(
         .collapsed(collapsed)
         .on_activate(on_activate)
         .test_id(test_id)
-        .into_element(cx)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -62,15 +62,14 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .size(shadcn::ButtonSize::Sm)
                     .test_id("ui-gallery-sidebar-demo-focus")
                     .into_element(cx),
-                shadcn::raw::typography::muted(
-                    cx,
-                    if collapsed {
-                        "Collapsed to icon rail"
-                    } else {
-                        "Expanded"
-                    },
-                ),
-                shadcn::raw::typography::muted(cx, format!("active={}", selected_value.as_ref())),
+                shadcn::raw::typography::muted(if collapsed {
+                    "Collapsed to icon rail"
+                } else {
+                    "Expanded"
+                })
+                .into_element(cx),
+                shadcn::raw::typography::muted(format!("active={}", selected_value.as_ref()))
+                    .into_element(cx),
             ]
         })
         .gap(Space::N2)
@@ -80,45 +79,57 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         let platform = shadcn::SidebarGroup::new([
             shadcn::SidebarGroupLabel::new("Platform").into_element(cx),
             shadcn::SidebarMenu::new([
-                shadcn::SidebarMenuItem::new(menu_button(
-                    cx,
-                    selected_model.clone(),
-                    &selected_value,
-                    "playground",
-                    "Playground",
-                    "lucide.square-terminal",
-                    Arc::from("ui-gallery-sidebar-demo-item-playground"),
-                ))
+                shadcn::SidebarMenuItem::new(
+                    menu_button(
+                        cx,
+                        selected_model.clone(),
+                        &selected_value,
+                        "playground",
+                        "Playground",
+                        "lucide.square-terminal",
+                        Arc::from("ui-gallery-sidebar-demo-item-playground"),
+                    )
+                    .into_element(cx),
+                )
                 .into_element(cx),
-                shadcn::SidebarMenuItem::new(menu_button(
-                    cx,
-                    selected_model.clone(),
-                    &selected_value,
-                    "models",
-                    "Models",
-                    "lucide.bot",
-                    Arc::from("ui-gallery-sidebar-demo-item-models"),
-                ))
+                shadcn::SidebarMenuItem::new(
+                    menu_button(
+                        cx,
+                        selected_model.clone(),
+                        &selected_value,
+                        "models",
+                        "Models",
+                        "lucide.bot",
+                        Arc::from("ui-gallery-sidebar-demo-item-models"),
+                    )
+                    .into_element(cx),
+                )
                 .into_element(cx),
-                shadcn::SidebarMenuItem::new(menu_button(
-                    cx,
-                    selected_model.clone(),
-                    &selected_value,
-                    "documentation",
-                    "Documentation",
-                    "lucide.book-open",
-                    Arc::from("ui-gallery-sidebar-demo-item-documentation"),
-                ))
+                shadcn::SidebarMenuItem::new(
+                    menu_button(
+                        cx,
+                        selected_model.clone(),
+                        &selected_value,
+                        "documentation",
+                        "Documentation",
+                        "lucide.book-open",
+                        Arc::from("ui-gallery-sidebar-demo-item-documentation"),
+                    )
+                    .into_element(cx),
+                )
                 .into_element(cx),
-                shadcn::SidebarMenuItem::new(menu_button(
-                    cx,
-                    selected_model.clone(),
-                    &selected_value,
-                    "settings",
-                    "Settings",
-                    "lucide.settings-2",
-                    Arc::from("ui-gallery-sidebar-demo-item-settings"),
-                ))
+                shadcn::SidebarMenuItem::new(
+                    menu_button(
+                        cx,
+                        selected_model.clone(),
+                        &selected_value,
+                        "settings",
+                        "Settings",
+                        "lucide.settings-2",
+                        Arc::from("ui-gallery-sidebar-demo-item-settings"),
+                    )
+                    .into_element(cx),
+                )
                 .into_element(cx),
             ])
             .into_element(cx),
@@ -128,35 +139,44 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         let projects = shadcn::SidebarGroup::new([
             shadcn::SidebarGroupLabel::new("Projects").into_element(cx),
             shadcn::SidebarMenu::new([
-                shadcn::SidebarMenuItem::new(menu_button(
-                    cx,
-                    selected_model.clone(),
-                    &selected_value,
-                    "design-engineering",
-                    "Design Engineering",
-                    "lucide.frame",
-                    Arc::from("ui-gallery-sidebar-demo-item-design-engineering"),
-                ))
+                shadcn::SidebarMenuItem::new(
+                    menu_button(
+                        cx,
+                        selected_model.clone(),
+                        &selected_value,
+                        "design-engineering",
+                        "Design Engineering",
+                        "lucide.frame",
+                        Arc::from("ui-gallery-sidebar-demo-item-design-engineering"),
+                    )
+                    .into_element(cx),
+                )
                 .into_element(cx),
-                shadcn::SidebarMenuItem::new(menu_button(
-                    cx,
-                    selected_model.clone(),
-                    &selected_value,
-                    "sales-marketing",
-                    "Sales & Marketing",
-                    "lucide.chart-pie",
-                    Arc::from("ui-gallery-sidebar-demo-item-sales-marketing"),
-                ))
+                shadcn::SidebarMenuItem::new(
+                    menu_button(
+                        cx,
+                        selected_model.clone(),
+                        &selected_value,
+                        "sales-marketing",
+                        "Sales & Marketing",
+                        "lucide.chart-pie",
+                        Arc::from("ui-gallery-sidebar-demo-item-sales-marketing"),
+                    )
+                    .into_element(cx),
+                )
                 .into_element(cx),
-                shadcn::SidebarMenuItem::new(menu_button(
-                    cx,
-                    selected_model.clone(),
-                    &selected_value,
-                    "travel",
-                    "Travel",
-                    "lucide.map",
-                    Arc::from("ui-gallery-sidebar-demo-item-travel"),
-                ))
+                shadcn::SidebarMenuItem::new(
+                    menu_button(
+                        cx,
+                        selected_model.clone(),
+                        &selected_value,
+                        "travel",
+                        "Travel",
+                        "lucide.map",
+                        Arc::from("ui-gallery-sidebar-demo-item-travel"),
+                    )
+                    .into_element(cx),
+                )
                 .into_element(cx),
             ])
             .into_element(cx),
@@ -164,10 +184,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(cx);
 
         let sidebar = shadcn::Sidebar::new([
-            shadcn::SidebarHeader::new([shadcn::raw::typography::small(cx, "Acme Inc.")])
-                .into_element(cx),
+            shadcn::SidebarHeader::new([
+                shadcn::raw::typography::small("Acme Inc.").into_element(cx)
+            ])
+            .into_element(cx),
             shadcn::SidebarContent::new([platform, projects]).into_element(cx),
-            shadcn::SidebarFooter::new([shadcn::raw::typography::small(cx, "shadcn")])
+            shadcn::SidebarFooter::new([shadcn::raw::typography::small("shadcn").into_element(cx)])
                 .into_element(cx),
         ])
         .collapsible(shadcn::SidebarCollapsible::Icon)

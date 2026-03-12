@@ -171,21 +171,22 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .test_id("ui-gallery-radio-group-rtl");
 
     ui::v_flex(|cx| {
-            vec![
-                shadcn::raw::typography::muted(
-                    cx,
-                    "Extras are Fret-specific demos and regression gates (not part of upstream shadcn RadioGroupDemo).",
-                ),
-                description,
-                fieldset,
-                disabled,
-                invalid,
-                rtl,
-            ]
-        })
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()).into_element(cx)
+        vec![
+            shadcn::raw::typography::muted(
+                "Extras are Fret-specific demos and regression gates (not part of upstream shadcn RadioGroupDemo).",
+            )
+            .into_element(cx),
+            description,
+            fieldset,
+            disabled,
+            invalid,
+            rtl,
+        ]
+    })
+    .gap(Space::N6)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx)
     .test_id("ui-gallery-radio-group-extras")
 }
 

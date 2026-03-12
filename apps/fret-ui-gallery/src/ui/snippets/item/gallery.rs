@@ -1,6 +1,7 @@
 // region: example
 use fret::UiCx;
 use fret_ui::Theme;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -8,7 +9,7 @@ use std::sync::Arc;
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
-fn icon(cx: &mut UiCx<'_>, id: &'static str) -> AnyElement {
+fn icon(cx: &mut UiCx<'_>, id: &'static str) -> impl IntoUiElement<fret_app::App> + use<> {
     fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
 }
 
@@ -17,7 +18,7 @@ fn icon_button(
     icon_id: &'static str,
     variant: shadcn::ButtonVariant,
     test_id: Arc<str>,
-) -> AnyElement {
+) -> impl IntoUiElement<fret_app::App> + use<> {
     shadcn::Button::new("")
         .a11y_label(icon_id)
         .variant(variant)
@@ -27,13 +28,19 @@ fn icon_button(
         .test_id(test_id)
 }
 
-fn outline_button(cx: &mut UiCx<'_>, label: &'static str) -> AnyElement {
+fn outline_button(
+    cx: &mut UiCx<'_>,
+    label: &'static str,
+) -> impl IntoUiElement<fret_app::App> + use<> {
     shadcn::Button::new(label)
         .variant(shadcn::ButtonVariant::Outline)
         .into_element(cx)
 }
 
-fn outline_button_sm(cx: &mut UiCx<'_>, label: &'static str) -> AnyElement {
+fn outline_button_sm(
+    cx: &mut UiCx<'_>,
+    label: &'static str,
+) -> impl IntoUiElement<fret_app::App> + use<> {
     shadcn::Button::new(label)
         .variant(shadcn::ButtonVariant::Outline)
         .size(shadcn::ButtonSize::Sm)
@@ -47,7 +54,7 @@ fn item_basic(
     description: Option<&'static str>,
     actions: Vec<AnyElement>,
     test_id: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<fret_app::App> + use<> {
     let mut content_children = vec![shadcn::ItemTitle::new(title).into_element(cx)];
     if let Some(description) = description {
         content_children.push(shadcn::ItemDescription::new(description).into_element(cx));
@@ -73,8 +80,8 @@ fn item_icon(
     description: Option<&'static str>,
     actions: Vec<AnyElement>,
     test_id: &'static str,
-) -> AnyElement {
-    let media = shadcn::ItemMedia::new([icon(cx, icon_id)])
+) -> impl IntoUiElement<fret_app::App> + use<> {
+    let media = shadcn::ItemMedia::new([icon(cx, icon_id).into_element(cx)])
         .variant(shadcn::ItemMediaVariant::Icon)
         .into_element(cx);
 
@@ -105,7 +112,7 @@ fn item_avatar(
     initials: &'static str,
     test_id: Arc<str>,
     add_action_test_id: Arc<str>,
-) -> AnyElement {
+) -> impl IntoUiElement<fret_app::App> + use<> {
     let avatar = shadcn::Avatar::new([shadcn::AvatarFallback::new(initials).into_element(cx)])
         .into_element(cx);
     let media = shadcn::ItemMedia::new([avatar]).into_element(cx);
@@ -120,7 +127,8 @@ fn item_avatar(
         "lucide.plus",
         shadcn::ButtonVariant::Outline,
         add_action_test_id,
-    );
+    )
+    .into_element(cx);
     let actions = shadcn::ItemActions::new([add]).into_element(cx);
 
     shadcn::Item::new([media, content, actions])
@@ -130,7 +138,11 @@ fn item_avatar(
         .test_id(test_id)
 }
 
-fn item_team(cx: &mut UiCx<'_>, test_id: &'static str, action_test_id: &'static str) -> AnyElement {
+fn item_team(
+    cx: &mut UiCx<'_>,
+    test_id: &'static str,
+    action_test_id: &'static str,
+) -> impl IntoUiElement<fret_app::App> + use<> {
     let avatars = ui::h_row(|cx| {
         vec![
             shadcn::Avatar::new([shadcn::AvatarFallback::new("CN").into_element(cx)])
@@ -157,7 +169,8 @@ fn item_team(cx: &mut UiCx<'_>, test_id: &'static str, action_test_id: &'static 
         "lucide.chevron-right",
         shadcn::ButtonVariant::Outline,
         Arc::<str>::from(action_test_id),
-    );
+    )
+    .into_element(cx);
     let actions = shadcn::ItemActions::new([chevron])
         .refine_layout(LayoutRefinement::default().mt(Space::N1))
         .into_element(cx);
@@ -195,7 +208,8 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
             shadcn::ItemDescription::new("129 MB / 1000 MB").into_element(cx),
         ])
         .into_element(cx);
-        let actions = shadcn::ItemActions::new([outline_button_sm(cx, "Cancel")]).into_element(cx);
+        let actions = shadcn::ItemActions::new([outline_button_sm(cx, "Cancel").into_element(cx)])
+            .into_element(cx);
         let footer = shadcn::ItemFooter::new([shadcn::Progress::new(download_progress)
             .refine_layout(LayoutRefinement::default().w_full())
             .into_element(cx)])
@@ -209,7 +223,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     };
 
     let column_basic = {
-        let button_outline = outline_button(cx, "Button");
+        let button_outline = outline_button(cx, "Button").into_element(cx);
         let item_title_button = item_basic(
             cx,
             shadcn::ItemVariant::Default,
@@ -217,9 +231,10 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
             None,
             vec![button_outline],
             "ui-gallery-item-basic-default",
-        );
+        )
+        .into_element(cx);
 
-        let button_outline = outline_button(cx, "Button");
+        let button_outline = outline_button(cx, "Button").into_element(cx);
         let item_title_button_outline = item_basic(
             cx,
             shadcn::ItemVariant::Outline,
@@ -227,9 +242,10 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
             None,
             vec![button_outline],
             "ui-gallery-item-basic-outline",
-        );
+        )
+        .into_element(cx);
 
-        let button_outline = outline_button(cx, "Button");
+        let button_outline = outline_button(cx, "Button").into_element(cx);
         let item_desc_button = item_basic(
             cx,
             shadcn::ItemVariant::Default,
@@ -237,7 +253,8 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
             Some("Item Description"),
             vec![button_outline],
             "ui-gallery-item-basic-default-desc",
-        );
+        )
+        .into_element(cx);
         let item_desc_outline = item_basic(
             cx,
             shadcn::ItemVariant::Outline,
@@ -245,7 +262,8 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
             Some("Item Description"),
             Vec::new(),
             "ui-gallery-item-basic-outline-desc",
-        );
+        )
+        .into_element(cx);
         let item_desc_muted = item_basic(
             cx,
             shadcn::ItemVariant::Muted,
@@ -253,9 +271,10 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
             Some("Item Description"),
             Vec::new(),
             "ui-gallery-item-basic-muted-desc",
-        );
-        let button_a = outline_button(cx, "Button");
-        let button_b = outline_button(cx, "Button");
+        )
+        .into_element(cx);
+        let button_a = outline_button(cx, "Button").into_element(cx);
+        let button_b = outline_button(cx, "Button").into_element(cx);
         let item_desc_muted_actions = item_basic(
             cx,
             shadcn::ItemVariant::Muted,
@@ -263,7 +282,8 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
             Some("Item Description"),
             vec![button_a, button_b],
             "ui-gallery-item-basic-muted-actions",
-        );
+        )
+        .into_element(cx);
 
         let purchase = shadcn::Button::new("Purchase")
             .size(shadcn::ButtonSize::Sm)
@@ -276,7 +296,8 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
             None,
             vec![purchase],
             "ui-gallery-item-basic-ticket-outline",
-        );
+        )
+        .into_element(cx);
 
         let upgrade = shadcn::Button::new("Upgrade")
             .size(shadcn::ButtonSize::Sm)
@@ -289,7 +310,8 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
             Some("Item Description"),
             vec![upgrade],
             "ui-gallery-item-basic-ticket-muted",
-        );
+        )
+        .into_element(cx);
 
         let field = {
             let field = shadcn::Field::new([
@@ -360,14 +382,17 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
 
         let mut group_children: Vec<AnyElement> = Vec::new();
         for (idx, (username, message, initials)) in people.iter().copied().enumerate() {
-            group_children.push(item_avatar(
-                cx,
-                username,
-                message,
-                initials,
-                Arc::<str>::from(format!("ui-gallery-item-people-{idx}")),
-                Arc::<str>::from(format!("ui-gallery-item-people-{idx}-action-add")),
-            ));
+            group_children.push(
+                item_avatar(
+                    cx,
+                    username,
+                    message,
+                    initials,
+                    Arc::<str>::from(format!("ui-gallery-item-people-{idx}")),
+                    Arc::<str>::from(format!("ui-gallery-item-people-{idx}-action-add")),
+                )
+                .into_element(cx),
+            );
             if idx + 1 < people.len() {
                 group_children.push(shadcn::ItemSeparator::new().into_element(cx));
             }
@@ -378,7 +403,8 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
             .into_element(cx)
             .test_id("ui-gallery-item-people-group");
 
-        let team = item_team(cx, "ui-gallery-item-team", "ui-gallery-item-team-action");
+        let team =
+            item_team(cx, "ui-gallery-item-team", "ui-gallery-item-team-action").into_element(cx);
         ui::v_stack(|_cx| vec![group, team, item_download])
             .gap(Space::N6)
             .items_start()
@@ -436,7 +462,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
             );
             let image = cx
                 .container(props, move |cx| {
-                    vec![shadcn::raw::typography::muted(cx, "IMG")]
+                    vec![shadcn::raw::typography::muted("IMG").into_element(cx)]
                 })
                 .test_id(format!("ui-gallery-item-music-image-{idx}"));
             let media = shadcn::ItemMedia::new([image])
@@ -460,7 +486,8 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                 "lucide.download",
                 shadcn::ButtonVariant::Ghost,
                 Arc::<str>::from(format!("ui-gallery-item-music-{idx}-download")),
-            );
+            )
+            .into_element(cx);
             let actions = shadcn::ItemActions::new([download]).into_element(cx);
 
             rows.push(

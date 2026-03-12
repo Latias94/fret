@@ -6,6 +6,7 @@ use fret_genui_core::render::RenderedChildV1;
 use fret_genui_core::spec::ElementKey;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::IntoUiElement;
 use serde_json::Value;
 
 use super::ShadcnResolver;
@@ -213,7 +214,7 @@ impl ShadcnResolver {
                 continue;
             };
 
-            let trigger_label = fret_ui_shadcn::typography::small(cx, title.clone());
+            let trigger_label = fret_ui_shadcn::typography::small(title.clone()).into_element(cx);
             let trigger = fret_ui_shadcn::AccordionTrigger::new([trigger_label]);
             let content = fret_ui_shadcn::AccordionContent::new([child.rendered]);
             items.push(fret_ui_shadcn::AccordionItem::new(value, trigger, content));

@@ -12,7 +12,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let label = ui::h_row(|cx| {
         vec![
             shadcn::FieldLabel::new("Required Field").into_element(cx),
-            shadcn::raw::typography::muted(cx, "*")
+            shadcn::raw::typography::muted("*")
+                .into_element(cx)
                 .attach_semantics(SemanticsDecoration::default().label("required-star")),
         ]
     })

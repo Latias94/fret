@@ -61,7 +61,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .get_model_cloned(&selected_value, Invalidation::Paint)
             .unwrap_or_default()
             .unwrap_or_else(|| Arc::<str>::from("<none>"));
-        shadcn::raw::typography::muted(cx, Arc::<str>::from(format!("Selected: {selected}")))
+        shadcn::raw::typography::muted(Arc::<str>::from(format!("Selected: {selected}")))
+            .into_element(cx)
             .test_id("ui-gallery-select-selected-label")
     });
 

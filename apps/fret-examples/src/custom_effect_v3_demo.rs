@@ -368,7 +368,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> ViewElements 
         } else {
             "CustomV3 is unsupported on this backend"
         };
-        return vec![shadcn::raw::typography::h3(cx, msg)].into();
+        return vec![shadcn::raw::typography::h3(msg).into_element(cx)].into();
     };
 
     let enabled = cx.watch_model(&st.enabled).layout().value_or(true);
@@ -413,7 +413,8 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> ViewElements 
         user01_probe_effect,
         user0_image,
         user1_image,
-    );
+    )
+    .into_element(cx);
 
     let mut root_layout = LayoutStyle::default();
     root_layout.size.width = Length::Fill;
@@ -444,8 +445,8 @@ fn stage(
     user01_probe_effect: Option<EffectId>,
     user0_image: Option<ImageId>,
     user1_image: Option<ImageId>,
-) -> AnyElement {
-    let backdrop = animated_backdrop(cx);
+) -> impl IntoUiElement<KernelApp> + use<> {
+    let backdrop = animated_backdrop(cx).into_element(cx);
     let lenses = lens_row(
         cx,
         enabled,
@@ -459,11 +460,11 @@ fn stage(
         user1_image,
     );
 
-    let title = shadcn::raw::typography::h3(cx, "Custom Effect V3 (CustomV3)");
+    let title = shadcn::raw::typography::h3("Custom Effect V3 (CustomV3)").into_element(cx);
     let subtitle = shadcn::raw::typography::muted(
-        cx,
         "V3 can request renderer sources: src_raw + an optional bounded pyramid (for liquid glass ceilings).",
-    );
+    )
+    .into_element(cx);
     let controls = stage_controls(
         cx,
         st,
@@ -472,7 +473,8 @@ fn stage(
         show_user1_probe,
         use_non_filterable_user0,
         use_non_filterable_user1,
-    );
+    )
+    .into_element(cx);
 
     let mut header_layout = LayoutStyle::default();
     header_layout.size.width = Length::Fill;
@@ -516,6 +518,7 @@ fn stage(
             ..Default::default()
         },
         move |cx| {
+            let lenses = lenses.into_element(cx);
             vec![
                 ui::v_flex(move |_cx| [header, lenses])
                     .gap(fret_ui_kit::Space::N4)
@@ -546,7 +549,7 @@ fn stage_controls(
     show_user1_probe: bool,
     use_non_filterable_user0: bool,
     use_non_filterable_user1: bool,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let enabled_model = st.enabled.clone();
     let show_user0_probe_model = st.show_user0_probe.clone();
     let show_user1_probe_model = st.show_user1_probe.clone();
@@ -639,7 +642,7 @@ fn stage_controls(
     .into_element(cx)
 }
 
-fn animated_backdrop(cx: &mut UiCx<'_>) -> AnyElement {
+fn animated_backdrop(cx: &mut UiCx<'_>) -> impl IntoUiElement<KernelApp> + use<> {
     let viewport = cx.environment_viewport_bounds(Invalidation::Paint);
     let w = viewport.size.width.0.max(1.0);
     let h = viewport.size.height.0.max(1.0);
@@ -780,7 +783,7 @@ fn lens_row(
     user01_probe_effect: Option<EffectId>,
     user0_image: Option<ImageId>,
     user1_image: Option<ImageId>,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let radius = Px(24.0);
     let lens_w = Px(360.0);
     let lens_h = Px(260.0);
@@ -893,7 +896,7 @@ fn lens_shell(
     lens_w: Px,
     lens_h: Px,
     with_effect: Option<EffectChain>,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let mut lens_layout = LayoutStyle::default();
     lens_layout.size.width = Length::Px(lens_w);
     lens_layout.size.height = Length::Px(lens_h);

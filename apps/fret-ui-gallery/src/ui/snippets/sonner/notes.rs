@@ -14,19 +14,16 @@ pub fn render<H: UiHost>(
 
     ui::v_flex(move |cx| {
             vec![
-                shadcn::raw::typography::muted(cx, Arc::<str>::from(format!("Last action: {last}"))),
+                shadcn::raw::typography::muted( Arc::<str>::from(format!("Last action: {last}"))).into_element(cx),
                 shadcn::raw::typography::muted(
-                    cx,
                     "Preview follows `sonner-demo.tsx` (new-york-v4): buttons that trigger different toast types.",
-                ),
+                ).into_element(cx),
                 shadcn::raw::typography::muted(
-                    cx,
                     "Fret exposes extra knobs (position, pinned + swipe dismiss) for testing overlay behavior.",
-                ),
+                ).into_element(cx),
                 shadcn::raw::typography::muted(
-                    cx,
                     "API reference: `ecosystem/fret-ui-shadcn/src/sonner.rs`.",
-                ),
+                ).into_element(cx),
             ]
         })
             .gap(Space::N1)

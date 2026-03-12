@@ -155,6 +155,15 @@ Execution note on 2026-03-12:
   `ecosystem/fret-ui-shadcn/src/ui_builder_ext/*::into_element(...)` remains an intentional
   `AnyElement` landing seam and only its closure inputs are forbidden from regressing to
   `AnyElement`-typed signatures.
+- the focused shadcn surface gate now also records the completed typography lane:
+  `ecosystem/fret-ui-shadcn/src/typography.rs` keeps the `raw::typography::*` namespace but now
+  exposes typed helper outputs for `h1` / `h2` / `h3` / `h4` / `p` / `lead` / `large` / `small` /
+  `muted` / `inline_code` / `blockquote` / `list`, while first-party Gallery/examples and
+  `ecosystem/fret-genui-shadcn` now land those helpers explicitly via `.into_element(cx)` only at
+  concrete `AnyElement` seams.
+- the focused shadcn surface gate now also records the prelude ergonomics follow-up:
+  `ecosystem/fret-ui-shadcn/src/lib.rs::prelude` now re-exports `IntoUiElement`, so direct-crate
+  first-party shadcn examples do not need local trait imports just to land typed helpers.
 
 ## Hard Delete Matrix
 

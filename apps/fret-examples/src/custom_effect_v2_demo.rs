@@ -21,8 +21,8 @@ use fret_ui::element::{
     ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle, SpacerProps,
     TextProps,
 };
-use fret_ui_kit::Space;
 use fret_ui_kit::custom_effects::CustomEffectProgramV2;
+use fret_ui_kit::{IntoUiElement, Space};
 
 mod act {
     fret::actions!([Reset = "custom_effect_v2_demo.reset.v1"]);
@@ -312,11 +312,8 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut CustomEffectV2State) ->
         )
     };
     let Some(effect) = effect else {
-        return vec![shadcn::raw::typography::h3(
-            cx,
-            "Custom effects unavailable",
-        )]
-        .into();
+        return vec![shadcn::raw::typography::h3("Custom effects unavailable").into_element(cx)]
+            .into();
     };
 
     let enabled = cx.watch_model(&st.enabled).layout().value_or(true);
@@ -350,7 +347,8 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut CustomEffectV2State) ->
         input_strength,
         rim_strength,
         blur_radius_px,
-    );
+    )
+    .into_element(cx);
     let stage = stage(
         cx,
         enabled,
@@ -362,7 +360,8 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut CustomEffectV2State) ->
         rim_strength,
         blur_radius_px,
         debug_input,
-    );
+    )
+    .into_element(cx);
 
     let root = ui::h_flex(move |_cx| [inspector, stage])
         .size_full()
@@ -384,7 +383,7 @@ fn stage(
     rim_strength: f32,
     blur_radius_px: f32,
     debug_input: bool,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let lenses = lens_row(
         cx,
         enabled,
@@ -396,13 +395,14 @@ fn stage(
         rim_strength,
         blur_radius_px,
         debug_input,
-    );
+    )
+    .into_element(cx);
 
-    let title = shadcn::raw::typography::h3(cx, "Custom Effect V2 (CustomV2)");
+    let title = shadcn::raw::typography::h3("Custom Effect V2 (CustomV2)").into_element(cx);
     let subtitle = shadcn::raw::typography::muted(
-        cx,
         "CustomV2 can sample one user-provided ImageId (e.g. noise/LUT/normal map).",
-    );
+    )
+    .into_element(cx);
 
     let stripes = ui::h_flex(|cx| {
         (0..10)
@@ -523,7 +523,7 @@ fn lens_row(
     rim_strength: f32,
     blur_radius_px: f32,
     debug_input: bool,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let radius = Px(24.0);
     ui::h_flex(move |cx| {
         let effect_lens = if enabled {
@@ -551,7 +551,15 @@ fn lens_row(
     .into_element(cx)
 }
 
-fn lens_shell(cx: &mut UiCx<'_>, label: Arc<str>, radius: Px, body: AnyElement) -> AnyElement {
+fn lens_shell<B>(
+    cx: &mut UiCx<'_>,
+    label: Arc<str>,
+    radius: Px,
+    body: B,
+) -> impl IntoUiElement<KernelApp> + use<B>
+where
+    B: IntoUiElement<KernelApp>,
+{
     let mut outer_layout = LayoutStyle::default();
     outer_layout.size.width = Length::Px(Px(380.0));
     outer_layout.size.height = Length::Px(Px(240.0));
@@ -601,7 +609,7 @@ fn lens_shell(cx: &mut UiCx<'_>, label: Arc<str>, radius: Px, body: AnyElement) 
                 move |_cx| vec![title],
             );
 
-            vec![body, pill]
+            vec![body.into_element(cx), pill]
         },
     )
 }
@@ -707,7 +715,7 @@ fn inspector(
     input_strength: f32,
     rim_strength: f32,
     blur_radius_px: f32,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let theme = Theme::global(&*cx.app).snapshot();
 
     let enabled_model = st.enabled.clone();

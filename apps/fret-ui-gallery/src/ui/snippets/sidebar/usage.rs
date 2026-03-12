@@ -38,13 +38,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .into_element(cx);
 
             let sidebar = shadcn::Sidebar::new([
-                shadcn::SidebarHeader::new([shadcn::raw::typography::small(cx, "Workspace")])
-                    .into_element(cx),
+                shadcn::SidebarHeader::new([
+                    shadcn::raw::typography::small("Workspace").into_element(cx)
+                ])
+                .into_element(cx),
                 shadcn::SidebarContent::new([primary]).into_element(cx),
                 shadcn::SidebarFooter::new([shadcn::raw::typography::muted(
-                    cx,
                     "Sidebar width is owned by SidebarProvider.",
-                )])
+                )
+                .into_element(cx)])
                 .into_element(cx),
             ])
             .collapsible(shadcn::SidebarCollapsible::Icon)

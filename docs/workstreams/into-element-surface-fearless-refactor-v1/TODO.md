@@ -140,6 +140,25 @@ Implementation note on 2026-03-12:
   now expose typed constructor/wrapper outputs, while
   `kbd.rs::kbd_icon<H>(...)` remains an explicit raw helper because
   `Kbd::from_children(...)` still owns a concrete `Vec<AnyElement>` child seam.
+- `fret-ui-shadcn/src/typography.rs` now completes the dedicated typography lane:
+  `h1` / `h2` / `h3` / `h4` / `p` / `lead` / `large` / `small` / `muted` /
+  `inline_code` / `blockquote` / `list` now expose
+  `(text_or_items) -> impl IntoUiElement<H> + use<...>` rather than
+  `(cx, ...) -> AnyElement`, while intentionally keeping the `shadcn::raw::typography::*`
+  namespace stable because typography is still a docs/helper surface rather than a promoted
+  registry component contract.
+- the typography sweep is now migrated across first-party call sites:
+  `ecosystem/fret-genui-shadcn` resolvers, dedicated typography snippets/pages, prose-heavy
+  Gallery snippets (`separator` / `sidebar` / `resizable` / `accordion` / `combobox` /
+  `calendar` / `date_picker` / `scroll_area` / `sonner` / `slider` / `item` / `ai`), the
+  `previews/magic.rs` page, and the affected `apps/fret-examples/*` surfaces now all land
+  typography helpers explicitly via `.into_element(cx)` where a concrete `AnyElement` seam is
+  still required.
+- `fret-ui-shadcn::prelude::*` now re-exports `IntoUiElement`, so direct-crate first-party
+  shadcn examples do not need ad-hoc trait imports just to land typed helpers such as
+  `shadcn::raw::typography::*`.
+- typography remains decoupled from the model-heavy constructor lane:
+  this sweep does not mix with `checkbox`, `progress`, or `switch` refactors.
 - selected advanced/manual-assembly examples now also keep reusable helpers off raw landed return
   types by default:
   `apps/fret-examples/src/assets_demo.rs` (`render_image_panel`, `render_svg_panel`),

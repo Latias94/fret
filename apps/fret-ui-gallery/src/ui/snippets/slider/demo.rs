@@ -19,7 +19,7 @@ fn controlled<H: UiHost>(
     let header = ui::h_flex(|cx| {
         vec![
             shadcn::Label::new("Temperature").into_element(cx),
-            shadcn::raw::typography::muted(cx, values_text),
+            shadcn::raw::typography::muted(values_text).into_element(cx),
         ]
     })
     .layout(LayoutRefinement::default().w_full())

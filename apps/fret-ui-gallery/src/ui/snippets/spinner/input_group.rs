@@ -19,7 +19,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let validating = ui::h_row(|cx| {
         vec![
             shadcn::Spinner::new().into_element(cx),
-            shadcn::raw::typography::muted(cx, "Validating..."),
+            shadcn::raw::typography::muted("Validating...").into_element(cx),
         ]
     })
     .gap(Space::N2)

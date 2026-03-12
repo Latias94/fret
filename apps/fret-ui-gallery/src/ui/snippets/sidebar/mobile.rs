@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("mobile.rs");
 
 // region: example
 use fret_ui::element::SemanticsDecoration;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -22,7 +23,7 @@ fn menu_button<H: UiHost>(
     label: &'static str,
     icon: &'static str,
     test_id: Arc<str>,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let collapsed = shadcn::use_sidebar(cx).is_some_and(|ctx| !ctx.is_mobile && ctx.collapsed());
     let is_active = active_value.as_ref() == value;
     let selected_for_activate = selected_model.clone();
@@ -40,7 +41,6 @@ fn menu_button<H: UiHost>(
         .collapsed(collapsed)
         .on_activate(on_activate)
         .test_id(test_id)
-        .into_element(cx)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -76,11 +76,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             .test_id("ui-gallery-sidebar-mobile-external-toggle")
                             .into_element(cx),
                         shadcn::raw::typography::muted(
-                            cx,
                             "Forced mobile mode via SidebarProvider.is_mobile(true).",
-                        ),
-                        shadcn::raw::typography::muted(cx, format!("open_mobile={open_mobile_now}")),
-                        shadcn::raw::typography::muted(cx, format!("selected={}", selected_value.as_ref())),
+                        ).into_element(cx),
+                        shadcn::raw::typography::muted( format!("open_mobile={open_mobile_now}")).into_element(cx),
+                        shadcn::raw::typography::muted( format!("selected={}", selected_value.as_ref())).into_element(cx),
                     ]
                 })
                     .gap(Space::N2)
@@ -98,7 +97,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         "Playground",
                         "lucide.square-terminal",
                         Arc::from("ui-gallery-sidebar-mobile-item-playground"),
-                    ))
+                    )
+                    .into_element(cx))
                     .into_element(cx),
                     shadcn::SidebarMenuItem::new(menu_button(
                         cx,
@@ -108,7 +108,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         "Documentation",
                         "lucide.book-open",
                         Arc::from("ui-gallery-sidebar-mobile-item-documentation"),
-                    ))
+                    )
+                    .into_element(cx))
                     .into_element(cx),
                 ])
                 .into_element(cx),

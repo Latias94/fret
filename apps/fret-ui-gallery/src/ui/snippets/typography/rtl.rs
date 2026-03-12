@@ -7,15 +7,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
         ui::v_stack(|cx| {
             vec![
-                shadcn::raw::typography::h3(cx, "RTL Sample"),
+                shadcn::raw::typography::h3("RTL Sample").into_element(cx),
                 shadcn::raw::typography::p(
-                    cx,
                     "This block validates right-to-left direction in typography surfaces.",
-                ),
+                )
+                .into_element(cx),
                 shadcn::raw::typography::muted(
-                    cx,
                     "Check paragraph wrapping and heading alignment under RTL.",
-                ),
+                )
+                .into_element(cx),
             ]
         })
         .gap(Space::N2)

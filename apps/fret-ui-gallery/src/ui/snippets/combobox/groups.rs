@@ -19,8 +19,10 @@ fn state_row(
             LayoutRefinement::default().w_full().min_w_0(),
         )
     });
-    cx.container(props, move |cx| [shadcn::raw::typography::muted(cx, text)])
-        .test_id(test_id)
+    cx.container(props, move |cx| {
+        [shadcn::raw::typography::muted(text).into_element(cx)]
+    })
+    .test_id(test_id)
 }
 
 fn state_rows(
@@ -28,7 +30,7 @@ fn state_rows(
     value: &Model<Option<Arc<str>>>,
     query: &Model<String>,
     test_id_prefix: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<fret_app::App> + use<> {
     let selected: Arc<str> = cx
         .get_model_cloned(value, Invalidation::Paint)
         .unwrap_or_default()
@@ -51,7 +53,6 @@ fn state_rows(
     .gap(Space::N1)
     .items_start()
     .layout(LayoutRefinement::default().w_full().min_w_0())
-    .into_element(cx)
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
@@ -98,7 +99,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     ui::v_flex(move |cx| {
         vec![
             combo,
-            state_rows(cx, &value, &query, "ui-gallery-combobox-groups"),
+            state_rows(cx, &value, &query, "ui-gallery-combobox-groups").into_element(cx),
         ]
     })
     .gap(Space::N2)

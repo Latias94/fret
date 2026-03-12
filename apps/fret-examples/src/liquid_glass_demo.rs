@@ -1161,11 +1161,10 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                 move |cx| {
                                     vec![ui::v_flex(|cx| {
                                             vec![
-                                                shadcn::raw::typography::h4(cx, "Liquid glass"),
+                                                shadcn::raw::typography::h4( "Liquid glass").into_element(cx),
                                                 shadcn::raw::typography::muted(
-                                                    cx,
                                                     "BackdropWarpV2 (bounded), WebGPU-safe.",
-                                                ),
+                                                ).into_element(cx),
                                                 shadcn::Separator::new().into_element(cx),
                                                 ui::h_row(|cx| {
                                                         vec![

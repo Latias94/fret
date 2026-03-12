@@ -16,7 +16,8 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                         "preview",
                         "Preview",
                         vec![
-                            shadcn::raw::typography::muted(cx, "Preview panel (RTL keynav gate).")
+                            shadcn::raw::typography::muted("Preview panel (RTL keynav gate).")
+                                .into_element(cx)
                                 .test_id("ui-gallery-tabs-rtl-panel-preview"),
                         ],
                     )
@@ -25,7 +26,8 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                         "code",
                         "Code",
                         vec![
-                            shadcn::raw::typography::muted(cx, "Code panel (RTL keynav gate).")
+                            shadcn::raw::typography::muted("Code panel (RTL keynav gate).")
+                                .into_element(cx)
                                 .test_id("ui-gallery-tabs-rtl-panel-code"),
                         ],
                     )

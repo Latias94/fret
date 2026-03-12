@@ -693,5 +693,6 @@ pub mod prelude {
     pub use fret_runtime::Model;
     pub use fret_ui::element::{AnyElement, TextProps};
     pub use fret_ui::{ElementContext, Invalidation, Theme, UiHost, UiTree};
+    pub use fret_ui_kit::IntoUiElement;
     pub use fret_ui_kit::declarative::{CachedSubtreeExt, CachedSubtreeProps};
 }

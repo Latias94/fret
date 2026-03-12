@@ -538,15 +538,12 @@ impl TextSystem {
         glyph: &'a ParleyGlyph,
         font_ref: parley::swash::FontRef<'a>,
     ) -> parley::swash::scale::Scaler<'a> {
-        let mut scaler_builder = self
+        let scaler_builder = self
             .parley_scale
             .builder(font_ref)
             .size(glyph.font_size.max(1.0))
             .hint(false);
-        if !glyph.normalized_coords.is_empty() {
-            scaler_builder = scaler_builder.normalized_coords(glyph.normalized_coords.iter());
-        }
-        scaler_builder.build()
+        apply_prepared_glyph_normalized_coords(scaler_builder, glyph).build()
     }
 
     fn insert_prepared_glyph_raster(&mut self, raster: PreparedGlyphRaster, epoch: u64) {
@@ -783,6 +780,16 @@ fn prepared_glyph_origin_bins(glyph: &ParleyGlyph) -> (i32, u8, i32, u8) {
 
 fn prepared_glyph_offset_px(x_bin: u8, y_bin: u8) -> parley::swash::zeno::Vector {
     parley::swash::zeno::Vector::new(subpixel_bin_as_float(x_bin), subpixel_bin_as_float(y_bin))
+}
+
+fn apply_prepared_glyph_normalized_coords<'a>(
+    scaler_builder: parley::swash::scale::ScalerBuilder<'a>,
+    glyph: &'a ParleyGlyph,
+) -> parley::swash::scale::ScalerBuilder<'a> {
+    if glyph.normalized_coords.is_empty() {
+        return scaler_builder;
+    }
+    scaler_builder.normalized_coords(glyph.normalized_coords.iter())
 }
 
 fn render_prepared_glyph_image_with_scaler(

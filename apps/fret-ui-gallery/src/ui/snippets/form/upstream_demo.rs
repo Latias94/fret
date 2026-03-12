@@ -321,9 +321,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             .for_control(control_id)
                             .into_element(cx),
                             shadcn::raw::typography::muted(
-                                cx,
                                 "You can manage your mobile notifications in the mobile settings page.",
-                            ),
+                            ).into_element(cx),
                         ]
                     })
                         .gap(Space::N1)
@@ -351,11 +350,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         [ui::v_flex(|cx| {
             let header = ui::v_stack(|cx| {
                 vec![
-                    shadcn::raw::typography::large(cx, "Sidebar"),
+                    shadcn::raw::typography::large("Sidebar").into_element(cx),
                     shadcn::raw::typography::muted(
-                        cx,
                         "Select the items you want to display in the sidebar.",
-                    ),
+                    )
+                    .into_element(cx),
                 ]
             })
             .gap(Space::N1)
@@ -489,9 +488,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         vec![
                             shadcn::Label::new("Marketing emails").into_element(cx),
                             shadcn::raw::typography::muted(
-                                cx,
                                 "Receive emails about new products, features, and more.",
-                            ),
+                            )
+                            .into_element(cx),
                         ]
                     })
                     .gap(Space::N1)
@@ -522,9 +521,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         vec![
                             shadcn::Label::new("Security emails").into_element(cx),
                             shadcn::raw::typography::muted(
-                                cx,
                                 "Receive emails about your account security.",
-                            ),
+                            )
+                            .into_element(cx),
                         ]
                     })
                     .gap(Space::N1)
@@ -551,7 +550,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
         ui::v_flex(|cx| {
             vec![
-                shadcn::raw::typography::h3(cx, "Email Notifications"),
+                shadcn::raw::typography::h3("Email Notifications").into_element(cx),
                 ui::v_flex(|_cx| vec![marketing, security])
                     .gap(Space::N4)
                     .layout(LayoutRefinement::default().w_full().min_w_0())

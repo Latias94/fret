@@ -211,10 +211,9 @@ impl View for ThemePostprocessView {
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let Some(effect) = cx.app.global::<DemoEffect>().map(|v| v.0) else {
-            return vec![shadcn::raw::typography::h3(
-                cx,
-                "Custom effects unavailable",
-            )]
+            return vec![
+                shadcn::raw::typography::h3("Custom effects unavailable").into_element(cx),
+            ]
             .into();
         };
 
@@ -276,11 +275,15 @@ impl View for ThemePostprocessView {
             }
         });
 
-        let root = ui::h_flex(move |_cx| [inspector, stage])
-            .layout(LayoutRefinement::default().size_full())
-            .items_stretch()
-            .gap(Space::N0)
-            .into_element(cx);
+        let root = ui::h_flex(move |cx| {
+            let inspector = inspector.into_element(cx);
+            let stage = stage.into_element(cx);
+            [inspector, stage]
+        })
+        .layout(LayoutRefinement::default().size_full())
+        .items_stretch()
+        .gap(Space::N0)
+        .into_element(cx);
 
         vec![root].into()
     }
@@ -333,7 +336,7 @@ fn inspector(
     grain_scale: f32,
     retro_pixel_scale: f32,
     retro_dither: bool,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let theme_snapshot = Theme::global(&*cx.app).snapshot();
 
     let enabled_model = st.enabled.clone();
@@ -543,7 +546,7 @@ fn stage(
     grain_scale: f32,
     retro_pixel_scale: f32,
     retro_dither: bool,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;
@@ -741,7 +744,7 @@ fn stage_body(
                             .items_center()
                             .into_element(cx),
                         subtitle,
-                        shadcn::raw::typography::muted(cx, label),
+                        shadcn::raw::typography::muted(label).into_element(cx),
                     ]
                 },
             );
@@ -774,8 +777,8 @@ fn stage_cards(cx: &mut UiCx<'_>) -> impl IntoUiElement<KernelApp> + use<> {
             },
             move |cx| {
                 vec![
-                    shadcn::raw::typography::large(cx, title),
-                    shadcn::raw::typography::muted(cx, subtitle),
+                    shadcn::raw::typography::large(title).into_element(cx),
+                    shadcn::raw::typography::muted(subtitle).into_element(cx),
                     cx.spacer(SpacerProps::default()),
                     shadcn::Button::new("Primary")
                         .variant(shadcn::ButtonVariant::Default)

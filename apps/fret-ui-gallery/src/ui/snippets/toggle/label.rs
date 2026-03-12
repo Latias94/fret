@@ -37,7 +37,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             ])
             .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
             .into_element(cx),
-            shadcn::raw::typography::muted(cx, format!("Pressed: {pressed_now}"))
+            shadcn::raw::typography::muted(format!("Pressed: {pressed_now}"))
+                .into_element(cx)
                 .test_id("ui-gallery-toggle-label-state"),
         ]
     })

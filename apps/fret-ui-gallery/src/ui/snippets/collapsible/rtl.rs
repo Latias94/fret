@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -11,7 +12,7 @@ fn details_collapsible<H: UiHost>(
     open: Option<Model<bool>>,
     label: &'static str,
     status: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let container_props =
         |cx: &mut ElementContext<'_, H>, chrome: ChromeRefinement, layout: LayoutRefinement| {
             cx.with_theme(|theme| decl_style::container_props(theme, chrome, layout))
@@ -33,7 +34,7 @@ fn details_collapsible<H: UiHost>(
                     vec![
                         ui::h_flex(|cx| {
                             vec![
-                                shadcn::raw::typography::muted(cx, "Shipping address"),
+                                shadcn::raw::typography::muted("Shipping address").into_element(cx),
                                 cx.text("100 Market St, San Francisco"),
                             ]
                         })
@@ -57,7 +58,7 @@ fn details_collapsible<H: UiHost>(
                     vec![
                         ui::h_flex(|cx| {
                             vec![
-                                shadcn::raw::typography::muted(cx, "Items"),
+                                shadcn::raw::typography::muted("Items").into_element(cx),
                                 cx.text("2x Studio Headphones"),
                             ]
                         })
@@ -145,6 +146,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             "Order #4189",
             "Shipped",
         )
+        .into_element(cx)
     })
     .test_id("ui-gallery-collapsible-rtl")
 }

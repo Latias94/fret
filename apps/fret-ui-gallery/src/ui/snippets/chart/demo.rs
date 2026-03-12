@@ -302,7 +302,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                 .gap(Space::N2)
                 .items_center()
                 .into_element(cx),
-                shadcn::raw::typography::muted(cx, secondary),
+                shadcn::raw::typography::muted(secondary).into_element(cx),
             ]
         })
         .gap(Space::N2)

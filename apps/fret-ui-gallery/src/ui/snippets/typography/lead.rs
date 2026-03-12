@@ -4,6 +4,6 @@ pub const SOURCE: &str = include_str!("lead.rs");
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    shadcn::raw::typography::lead(cx, "A larger lead paragraph introduces a section.")
+    shadcn::raw::typography::lead("A larger lead paragraph introduces a section.").into_element(cx)
 }
 // endregion: example

@@ -42,7 +42,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     );
     if !selected.is_empty() {
         children.push(
-            shadcn::raw::typography::muted(cx, format!("Selected file: {selected}"))
+            shadcn::raw::typography::muted(format!("Selected file: {selected}"))
+                .into_element(cx)
                 .test_id("ui-gallery-input-file-selected"),
         );
     }

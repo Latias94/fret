@@ -73,8 +73,8 @@ fn card<H: UiHost>(
             },
             move |cx| {
                 vec![
-                    shadcn::raw::typography::large(cx, title.clone()),
-                    shadcn::raw::typography::muted(cx, subtitle.clone()),
+                    shadcn::raw::typography::large(title.clone()).into_element(cx),
+                    shadcn::raw::typography::muted(subtitle.clone()).into_element(cx),
                     cx.spacer(SpacerProps::default()),
                     shadcn::Badge::new("DropShadowV1")
                         .variant(shadcn::BadgeVariant::Secondary)
@@ -243,11 +243,11 @@ impl View for DropShadowDemoView {
                 vec![
                     ui::v_flex(|cx| {
                         vec![
-                            shadcn::raw::typography::h4(cx, "Drop shadow demo"),
+                            shadcn::raw::typography::h4("Drop shadow demo").into_element(cx),
                             shadcn::raw::typography::muted(
-                                cx,
                                 "Toggle DropShadowV1 and a small stress grid.",
-                            ),
+                            )
+                            .into_element(cx),
                             shadcn::Separator::new().into_element(cx),
                             ui::h_row(|cx| {
                                 [
@@ -275,9 +275,9 @@ impl View for DropShadowDemoView {
                             .into_element(cx),
                             shadcn::Separator::new().into_element(cx),
                             shadcn::raw::typography::muted(
-                                cx,
                                 "Perf baseline suite: drop-shadow-v1-steady",
-                            ),
+                            )
+                            .into_element(cx),
                         ]
                     })
                     .gap(Space::N3)

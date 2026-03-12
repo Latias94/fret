@@ -185,6 +185,10 @@ Current execution note on 2026-03-12:
   `#[doc(hidden)]` and treated as internal landing scaffolding rather than public vocabulary.
 - `UiChildIntoElement<H>` is now deleted from the codebase; heterogeneous child collection in
   `fret_ui_kit::ui` / `imui` lands directly through `IntoUiElement<H>`.
+- direct-crate shadcn authoring now also gets the same landing ergonomics:
+  `fret_ui_shadcn::prelude::*` re-exports `IntoUiElement`, so typed helpers such as
+  `shadcn::raw::typography::*` can land through `.into_element(cx)` without ad-hoc trait imports
+  on first-party examples.
 
 ## Advanced/Raw Surface
 

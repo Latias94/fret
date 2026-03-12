@@ -4,6 +4,7 @@ use fret_genui_core::props::ResolvedProps;
 use fret_genui_core::spec::ElementKey;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::IntoUiElement;
 
 use super::ShadcnResolver;
 
@@ -19,11 +20,11 @@ impl ShadcnResolver {
             .and_then(|v| v.as_str())
             .unwrap_or("h2");
         match level {
-            "h1" => fret_ui_shadcn::typography::h1(cx, text),
-            "h2" => fret_ui_shadcn::typography::h2(cx, text),
-            "h3" => fret_ui_shadcn::typography::h3(cx, text),
-            "h4" => fret_ui_shadcn::typography::h4(cx, text),
-            _ => fret_ui_shadcn::typography::h2(cx, text),
+            "h1" => fret_ui_shadcn::typography::h1(text).into_element(cx),
+            "h2" => fret_ui_shadcn::typography::h2(text).into_element(cx),
+            "h3" => fret_ui_shadcn::typography::h3(text).into_element(cx),
+            "h4" => fret_ui_shadcn::typography::h4(text).into_element(cx),
+            _ => fret_ui_shadcn::typography::h2(text).into_element(cx),
         }
     }
 

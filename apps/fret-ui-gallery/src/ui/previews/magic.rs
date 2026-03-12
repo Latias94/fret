@@ -36,11 +36,11 @@ pub(in crate::ui) fn preview_magic_lens(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let lens = magic::lens(cx, props, |cx| {
         let body = ui::v_flex(|cx| {
             vec![
-                shadcn::raw::typography::h4(cx, "Lens"),
+                shadcn::raw::typography::h4("Lens").into_element(cx),
                 shadcn::raw::typography::p(
-                    cx,
                     "Move the pointer to reveal a masked zoomed copy of the content.",
-                ),
+                )
+                .into_element(cx),
                 ui::h_flex(|cx| {
                     vec![
                         shadcn::Badge::new("left target")
@@ -73,12 +73,12 @@ pub(in crate::ui) fn preview_magic_lens(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     vec![
         ui::v_flex(|cx| {
             vec![
-                shadcn::raw::typography::h4(cx, "Lens (Phase 0)"),
+                shadcn::raw::typography::h4("Lens (Phase 0)").into_element(cx),
                 shadcn::raw::typography::p(
-                    cx,
                     "Built from MaskLayer + VisualTransform by duplicating the subtree. \
                      Intended for visual content in Phase 0.",
-                ),
+                )
+                .into_element(cx),
                 demo,
             ]
         })
@@ -114,12 +114,12 @@ pub(in crate::ui) fn preview_magic_border_beam(cx: &mut UiCx<'_>) -> Vec<AnyElem
             vec![
                 ui::v_flex(|cx| {
                     vec![
-                        shadcn::raw::typography::h4(cx, "BorderBeam"),
+                        shadcn::raw::typography::h4("BorderBeam").into_element(cx),
                         shadcn::raw::typography::p(
-                            cx,
                             "The beam is animated using the runner-owned frame clock; \
                              glow uses blur + additive compositing.",
-                        ),
+                        )
+                        .into_element(cx),
                         ui::h_flex(|cx| {
                             vec![
                                 shadcn::Badge::new("left")
@@ -192,12 +192,12 @@ pub(in crate::ui) fn preview_magic_dock(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     vec![
         ui::v_flex(|cx| {
             vec![
-                shadcn::raw::typography::h4(cx, "Dock (Phase 0)"),
+                shadcn::raw::typography::h4("Dock (Phase 0)").into_element(cx),
                 shadcn::raw::typography::p(
-                    cx,
                     "Pointer-proximity magnification. Phase 0 uses a fixed-size layout; \
                      hover gates magnification and reduced-motion is respected for ambient motion.",
-                ),
+                )
+                .into_element(cx),
                 ui::h_flex(|_cx| [dock])
                     .layout(LayoutRefinement::default().w_full())
                     .justify_center()
@@ -244,7 +244,7 @@ pub(in crate::ui) fn preview_magic_bloom(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                         corner_radii: Corners::all(Px(18.0)),
                         ..Default::default()
                     },
-                    |cx| vec![shadcn::raw::typography::h4(cx, "BLOOM")],
+                    |cx| vec![shadcn::raw::typography::h4("BLOOM").into_element(cx)],
                 )
                 .test_id("ui-gallery-magic-bloom-target");
 
@@ -262,12 +262,12 @@ pub(in crate::ui) fn preview_magic_bloom(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     vec![
         ui::v_flex(|cx| {
             vec![
-                shadcn::raw::typography::h4(cx, "Bloom (Tier B recipe example)"),
+                shadcn::raw::typography::h4("Bloom (Tier B recipe example)").into_element(cx),
                 shadcn::raw::typography::p(
-                    cx,
                     "Threshold -> blur -> add compositing (best-effort). \
                      Intended as an authoring example for creative effects.",
-                ),
+                )
+                .into_element(cx),
                 panel,
             ]
         })
@@ -325,12 +325,12 @@ pub(in crate::ui) fn preview_magic_marquee(cx: &mut UiCx<'_>) -> Vec<AnyElement>
     vec![
         ui::v_flex(|cx| {
             vec![
-                shadcn::raw::typography::h4(cx, "Marquee (Phase 0)"),
+                shadcn::raw::typography::h4("Marquee (Phase 0)").into_element(cx),
                 shadcn::raw::typography::p(
-                    cx,
                     "Uses runner-owned time + continuous frames; respects reduced-motion. \
                      Provide wrap_width explicitly in v1.",
-                ),
+                )
+                .into_element(cx),
                 demo,
             ]
         })
@@ -371,11 +371,11 @@ pub(in crate::ui) fn preview_magic_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             vec![
                 ui::v_flex(|cx| {
                     vec![
-                        shadcn::raw::typography::h4(cx, "MagicCard"),
+                        shadcn::raw::typography::h4("MagicCard").into_element(cx),
                         shadcn::raw::typography::p(
-                            cx,
                             "Move the pointer over the card to drive the radial highlight.",
-                        ),
+                        )
+                        .into_element(cx),
                         ui::h_flex(|cx| {
                             vec![
                                 shadcn::Badge::new("left")
@@ -433,7 +433,11 @@ pub(in crate::ui) fn preview_magic_patterns(cx: &mut UiCx<'_>) -> Vec<AnyElement
             ..Default::default()
         },
         |cx| {
-            vec![shadcn::raw::typography::p(cx, "DotGrid").test_id("ui-gallery-magic-pattern-dot")]
+            vec![
+                shadcn::raw::typography::p("DotGrid")
+                    .into_element(cx)
+                    .test_id("ui-gallery-magic-pattern-dot"),
+            ]
         },
     );
 
@@ -449,7 +453,13 @@ pub(in crate::ui) fn preview_magic_patterns(cx: &mut UiCx<'_>) -> Vec<AnyElement
             },
             ..Default::default()
         },
-        |cx| vec![shadcn::raw::typography::p(cx, "Grid").test_id("ui-gallery-magic-pattern-grid")],
+        |cx| {
+            vec![
+                shadcn::raw::typography::p("Grid")
+                    .into_element(cx)
+                    .test_id("ui-gallery-magic-pattern-grid"),
+            ]
+        },
     );
 
     let stripe = magic::stripe_pattern(
@@ -470,7 +480,8 @@ pub(in crate::ui) fn preview_magic_patterns(cx: &mut UiCx<'_>) -> Vec<AnyElement
         },
         |cx| {
             vec![
-                shadcn::raw::typography::p(cx, "Stripe (animated)")
+                shadcn::raw::typography::p("Stripe (animated)")
+                    .into_element(cx)
                     .test_id("ui-gallery-magic-pattern-stripe"),
             ]
         },
@@ -485,12 +496,12 @@ pub(in crate::ui) fn preview_magic_patterns(cx: &mut UiCx<'_>) -> Vec<AnyElement
     vec![
         ui::v_flex(|cx| {
             vec![
-                shadcn::raw::typography::h4(cx, "Patterns (Tier B materials)"),
+                shadcn::raw::typography::h4("Patterns (Tier B materials)").into_element(cx),
                 shadcn::raw::typography::p(
-                    cx,
                     "These backgrounds are Tier B procedural paints registered by the renderer \
                      and referenced via an app-owned VisualCatalog.",
-                ),
+                )
+                .into_element(cx),
                 row,
             ]
         })
@@ -593,7 +604,8 @@ pub(in crate::ui) fn preview_magic_patterns_torture(cx: &mut UiCx<'_>) -> Vec<An
     let surface_grid = ui::v_flex(|cx| {
         let mut out = Vec::with_capacity(1 + grid_rows.len());
         out.push(
-            shadcn::raw::typography::p(cx, "Material grid (animated stripes)")
+            shadcn::raw::typography::p("Material grid (animated stripes)")
+                .into_element(cx)
                 .test_id("ui-gallery-magic-patterns-torture-label"),
         );
         out.extend(grid_rows);
@@ -607,11 +619,10 @@ pub(in crate::ui) fn preview_magic_patterns_torture(cx: &mut UiCx<'_>) -> Vec<An
     vec![
         ui::v_flex(|cx| {
                 vec![
-                    shadcn::raw::typography::h4(cx, "Patterns (fill-rate torture)"),
+                    shadcn::raw::typography::h4( "Patterns (fill-rate torture)").into_element(cx),
                     shadcn::raw::typography::p(
-                        cx,
                         "A large animated Tier B material surface intended for WebGPU perf evidence collection.",
-                    ),
+                    ).into_element(cx),
                     cx.container(
                         ContainerProps {
                             layout: {
@@ -678,31 +689,32 @@ pub(in crate::ui) fn preview_magic_sparkles_text(cx: &mut UiCx<'_>) -> Vec<AnyEl
                 ..Default::default()
             },
             |cx| {
-                vec![ui::v_flex(|cx| {
-                    vec![
-                        shadcn::raw::typography::h3(cx, "SparklesText")
+                vec![
+                    ui::v_flex(|cx| {
+                        vec![
+                        shadcn::raw::typography::h3( "SparklesText").into_element(cx)
                             .test_id("ui-gallery-magic-sparkles-text-title"),
                         shadcn::raw::typography::p(
-                            cx,
                             "Phase 0: a deterministic sparkle field composited over text content. \
                                  Future: clip to glyph alpha when alpha masks mature.",
-                        ),
+                        ).into_element(cx),
                     ]
-                })
+                    })
                     .gap(Space::N3)
                     .layout(LayoutRefinement::default().w_full())
-                    .items_start().into_element(cx)]
+                    .items_start()
+                    .into_element(cx),
+                ]
             },
         )
         .test_id("ui-gallery-magic-sparkles-text");
 
     vec![ui::v_flex(|cx| {
             vec![
-                shadcn::raw::typography::h4(cx, "SparklesText (Phase 0)"),
+                shadcn::raw::typography::h4( "SparklesText (Phase 0)").into_element(cx),
                 shadcn::raw::typography::p(
-                    cx,
                     "Built from Tier B materials + additive compositing, with explicit seed/time and reduced-motion gating.",
-                ),
+                ).into_element(cx),
                 cx.container(surface, |_cx| vec![sparkles]),
             ]
         })

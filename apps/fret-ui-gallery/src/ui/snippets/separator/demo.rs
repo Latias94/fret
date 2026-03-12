@@ -7,8 +7,9 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let header = ui::v_stack(|cx| {
         vec![
-            shadcn::raw::typography::small(cx, "shadcn/ui"),
-            shadcn::raw::typography::muted(cx, "The Foundation for your Design System"),
+            shadcn::raw::typography::small("shadcn/ui").into_element(cx),
+            shadcn::raw::typography::muted("The Foundation for your Design System")
+                .into_element(cx),
         ]
     })
     .gap(Space::N1p5)
@@ -20,9 +21,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(cx);
 
     let description = shadcn::raw::typography::small(
-        cx,
         "A set of beautifully designed components that you can customize, extend, and build on.",
-    );
+    )
+    .into_element(cx);
 
     ui::v_flex(|_cx| vec![header, separator, description])
         .gap(Space::N4)

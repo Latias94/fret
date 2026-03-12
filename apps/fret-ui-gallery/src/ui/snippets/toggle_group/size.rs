@@ -33,7 +33,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     ui::v_stack(move |cx| {
         vec![
-            shadcn::raw::typography::muted(cx, "Sm / Default / Lg"),
+            shadcn::raw::typography::muted("Sm / Default / Lg").into_element(cx),
             ui::h_row(move |_cx| vec![sm, default, lg])
                 .gap(Space::N2)
                 .items_center()

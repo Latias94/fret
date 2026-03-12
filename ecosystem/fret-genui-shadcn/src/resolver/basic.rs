@@ -1,6 +1,7 @@
 use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::IntoUiElement;
 
 use super::ShadcnResolver;
 
@@ -103,16 +104,16 @@ impl ShadcnResolver {
             .unwrap_or(if muted { "muted" } else { "body" });
 
         match variant {
-            "body" => fret_ui_shadcn::typography::p(cx, text),
-            "muted" => fret_ui_shadcn::typography::muted(cx, text),
-            "small" => fret_ui_shadcn::typography::small(cx, text),
-            "lead" => fret_ui_shadcn::typography::lead(cx, text),
-            "large" => fret_ui_shadcn::typography::large(cx, text),
-            "h1" => fret_ui_shadcn::typography::h1(cx, text),
-            "h2" => fret_ui_shadcn::typography::h2(cx, text),
-            "h3" => fret_ui_shadcn::typography::h3(cx, text),
-            "h4" => fret_ui_shadcn::typography::h4(cx, text),
-            "inlineCode" => fret_ui_shadcn::typography::inline_code(cx, text),
+            "body" => fret_ui_shadcn::typography::p(text).into_element(cx),
+            "muted" => fret_ui_shadcn::typography::muted(text).into_element(cx),
+            "small" => fret_ui_shadcn::typography::small(text).into_element(cx),
+            "lead" => fret_ui_shadcn::typography::lead(text).into_element(cx),
+            "large" => fret_ui_shadcn::typography::large(text).into_element(cx),
+            "h1" => fret_ui_shadcn::typography::h1(text).into_element(cx),
+            "h2" => fret_ui_shadcn::typography::h2(text).into_element(cx),
+            "h3" => fret_ui_shadcn::typography::h3(text).into_element(cx),
+            "h4" => fret_ui_shadcn::typography::h4(text).into_element(cx),
+            "inlineCode" => fret_ui_shadcn::typography::inline_code(text).into_element(cx),
             _ => fret_ui_kit::ui::text(text).into_element(cx),
         }
     }

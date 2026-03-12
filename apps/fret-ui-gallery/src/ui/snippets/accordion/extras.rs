@@ -27,20 +27,20 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 "notifications",
                 shadcn::AccordionTrigger::new(vec![cx.text("Notifications")])
                     .test_id("ui-gallery-accordion-extras-multiple-trigger-notifications"),
-                shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
-                    cx,
-                    "Configure email, push, and in-app notifications.",
-                )])
+                shadcn::AccordionContent::new(vec![
+                    shadcn::raw::typography::p("Configure email, push, and in-app notifications.")
+                        .into_element(cx),
+                ])
                 .test_id("ui-gallery-accordion-extras-multiple-content-notifications"),
             ),
             shadcn::AccordionItem::new(
                 "security",
                 shadcn::AccordionTrigger::new(vec![cx.text("Security")])
                     .test_id("ui-gallery-accordion-extras-multiple-trigger-security"),
-                shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
-                    cx,
-                    "Manage passwords, 2FA, and active sessions.",
-                )]),
+                shadcn::AccordionContent::new(vec![
+                    shadcn::raw::typography::p("Manage passwords, 2FA, and active sessions.")
+                        .into_element(cx),
+                ]),
             ),
         ])
         .into_element(cx)
@@ -52,10 +52,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .items([shadcn::AccordionItem::new(
             "item-1",
             shadcn::AccordionTrigger::new(vec![cx.text("Disabled")]).disabled(true),
-            shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
-                cx,
-                "This item is disabled and should not be interactive.",
-            )]),
+            shadcn::AccordionContent::new(vec![
+                shadcn::raw::typography::p("This item is disabled and should not be interactive.")
+                    .into_element(cx),
+            ]),
         )])
         .into_element(cx);
 
@@ -66,10 +66,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .items([shadcn::AccordionItem::new(
                 "item-1",
                 shadcn::AccordionTrigger::new(vec![cx.text("Borders")]),
-                shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
-                    cx,
-                    "Use an outer chrome wrapper when you want a bordered surface.",
-                )]),
+                shadcn::AccordionContent::new(vec![
+                    shadcn::raw::typography::p(
+                        "Use an outer chrome wrapper when you want a bordered surface.",
+                    )
+                    .into_element(cx),
+                ]),
             )])
             .into_element(cx);
 
@@ -97,17 +99,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         "What subscription plans do you offer?",
                     )]),
                     shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
-                        cx,
                         "We offer multiple tiers with increasing storage limits, API access, and priority support.",
-                    )]),
+                    ).into_element(cx)]),
                 ),
                 shadcn::AccordionItem::new(
                     "billing",
                     shadcn::AccordionTrigger::new(vec![cx.text("How does billing work?")]),
                     shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
-                        cx,
                         "Billing occurs automatically at the start of each billing cycle. You can update your payment method anytime.",
-                    )]),
+                    ).into_element(cx)]),
                 ),
             ])
             .into_element(cx);
@@ -137,47 +137,63 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 "item-1",
                 shadcn::AccordionTrigger::new(vec![cx.text("RTL")])
                     .test_id("ui-gallery-accordion-extras-rtl-trigger"),
-                shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
-                    cx,
-                    "Ensure icons and spacing mirror correctly under RTL.",
-                )]),
+                shadcn::AccordionContent::new(vec![
+                    shadcn::raw::typography::p(
+                        "Ensure icons and spacing mirror correctly under RTL.",
+                    )
+                    .into_element(cx),
+                ]),
             )])
             .into_element(cx)
     });
 
-    let multiple_section =
-        ui::v_flex(move |cx| vec![shadcn::raw::typography::h4(cx, "Multiple"), multiple])
+    let multiple_section = ui::v_flex(move |cx| {
+        vec![
+            shadcn::raw::typography::h4("Multiple").into_element(cx),
+            multiple,
+        ]
+    })
+    .gap(Space::N3)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
+
+    let disabled_section = ui::v_flex(move |cx| {
+        vec![
+            shadcn::raw::typography::h4("Disabled").into_element(cx),
+            disabled,
+        ]
+    })
+    .gap(Space::N3)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
+
+    let borders_section = ui::v_flex(move |cx| {
+        vec![
+            shadcn::raw::typography::h4("Borders").into_element(cx),
+            borders,
+        ]
+    })
+    .gap(Space::N3)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
+
+    let card_section =
+        ui::v_flex(move |cx| vec![shadcn::raw::typography::h4("Card").into_element(cx), card])
             .gap(Space::N3)
             .items_start()
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .into_element(cx);
 
-    let disabled_section =
-        ui::v_flex(move |cx| vec![shadcn::raw::typography::h4(cx, "Disabled"), disabled])
+    let rtl_section =
+        ui::v_flex(move |cx| vec![shadcn::raw::typography::h4("RTL").into_element(cx), rtl])
             .gap(Space::N3)
             .items_start()
             .layout(LayoutRefinement::default().w_full().min_w_0())
-            .into_element(cx);
-
-    let borders_section =
-        ui::v_flex(move |cx| vec![shadcn::raw::typography::h4(cx, "Borders"), borders])
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .into_element(cx);
-
-    let card_section = ui::v_flex(move |cx| vec![shadcn::raw::typography::h4(cx, "Card"), card])
-        .gap(Space::N3)
-        .items_start()
-        .layout(LayoutRefinement::default().w_full().min_w_0())
-        .into_element(cx);
-
-    let rtl_section = ui::v_flex(move |cx| vec![shadcn::raw::typography::h4(cx, "RTL"), rtl])
-        .gap(Space::N3)
-        .items_start()
-        .layout(LayoutRefinement::default().w_full().min_w_0())
-        .into_element(cx)
-        .test_id("ui-gallery-accordion-extras-rtl-section");
+            .into_element(cx)
+            .test_id("ui-gallery-accordion-extras-rtl-section");
 
     let extras = ui::v_flex(move |_cx| {
         vec![

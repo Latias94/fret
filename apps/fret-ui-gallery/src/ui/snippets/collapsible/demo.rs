@@ -14,8 +14,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .refine_layout(LayoutRefinement::default().w_px(Px(350.0)))
             .into_element(cx, move |cx| {
                 let header = {
-                    let title =
-                        shadcn::raw::typography::small(cx, "@peduarte starred 3 repositories");
+                    let title = shadcn::raw::typography::small("@peduarte starred 3 repositories")
+                        .into_element(cx);
                     let button = shadcn::Button::new("")
                         .a11y_label("Toggle")
                         .variant(shadcn::ButtonVariant::Ghost)

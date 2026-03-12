@@ -483,24 +483,26 @@ pub(in crate::ui) fn preview_markdown_editor_source(
             .into_element(cx);
 
         ui::v_flex(move |cx| {
-                let mut out = vec![
-                    shadcn::raw::typography::muted(
-                        cx,
-                        "Interactive span gate: click the link to exercise SelectableText span activation.",
-                    ),
-                    link_row,
-                ];
-                if let Some(href) = link_gate_last.as_ref() {
-                    out.push(
-                        shadcn::raw::typography::muted(cx, format!("Activated: {href}"))
-                            .test_id("ui-gallery-markdown-span-link-activated"),
-                    );
-                }
-                out
-            })
-                .gap(Space::N1)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()).into_element(cx)
+            let mut out = vec![
+                shadcn::raw::typography::muted(
+                    "Interactive span gate: click the link to exercise SelectableText span activation.",
+                )
+                .into_element(cx),
+                link_row,
+            ];
+            if let Some(href) = link_gate_last.as_ref() {
+                out.push(
+                    shadcn::raw::typography::muted(format!("Activated: {href}"))
+                        .into_element(cx)
+                        .test_id("ui-gallery-markdown-span-link-activated"),
+                );
+            }
+            out
+        })
+        .gap(Space::N1)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full())
+        .into_element(cx)
     };
 
     let editor_panel = cx.container(

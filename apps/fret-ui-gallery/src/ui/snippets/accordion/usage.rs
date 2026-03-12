@@ -12,7 +12,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             cx.text("Is it accessible?"),
         ]))
         .content(acc::AccordionContent::new(vec![
-            shadcn::raw::typography::p(cx, "Yes. It adheres to the WAI-ARIA design pattern."),
+            shadcn::raw::typography::p("Yes. It adheres to the WAI-ARIA design pattern.")
+                .into_element(cx),
         ]));
 
     acc::AccordionRoot::single_uncontrolled(Some("item-1"))

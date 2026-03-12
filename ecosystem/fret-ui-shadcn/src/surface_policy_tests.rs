@@ -21,6 +21,7 @@ const SEPARATOR_RS: &str = include_str!("separator.rs");
 const SHEET_RS: &str = include_str!("sheet.rs");
 const TABLE_RS: &str = include_str!("table.rs");
 const TOOLTIP_RS: &str = include_str!("tooltip.rs");
+const TYPOGRAPHY_RS: &str = include_str!("typography.rs");
 const UI_BUILDER_EXT_BREADCRUMB_RS: &str = include_str!("ui_builder_ext/breadcrumb.rs");
 const UI_BUILDER_EXT_COLLAPSIBLE_RS: &str = include_str!("ui_builder_ext/collapsible.rs");
 const UI_BUILDER_EXT_COMMAND_DIALOG_RS: &str = include_str!("ui_builder_ext/command_dialog.rs");
@@ -62,6 +63,7 @@ fn curated_facade_keeps_app_theme_and_raw_seams_explicit() {
     assert!(LIB_RS.contains("pub use crate::shadcn_themes::{"));
     assert!(LIB_RS.contains("pub use crate::*;"));
     assert!(LIB_RS.contains("pub mod advanced;"));
+    assert!(LIB_RS.contains("pub use fret_ui_kit::IntoUiElement;"));
     assert!(ADVANCED_RS.contains("pub fn sync_theme_from_environment("));
     assert!(ADVANCED_RS.contains("pub fn install_with_ui_services("));
 }
@@ -408,6 +410,55 @@ fn kbd_icon_stays_an_explicit_raw_helper_for_kbd_child_lists() {
         assert!(
             !normalized.contains(&marker),
             "kbd.rs should not pretend the `kbd_icon(...)` helper is typed while `Kbd::from_children(...)` still owns a raw child list"
+        );
+    }
+}
+
+#[test]
+fn typography_helpers_keep_raw_namespace_but_expose_typed_conversion_outputs() {
+    let normalized = normalize_ws(TYPOGRAPHY_RS);
+
+    let required_markers = [
+        "pub fn h1<H: UiHost, T>(text: T) -> impl IntoUiElement<H> + use<H, T> where T: Into<Arc<str>>,",
+        "pub fn h2<H: UiHost, T>(text: T) -> impl IntoUiElement<H> + use<H, T> where T: Into<Arc<str>>,",
+        "pub fn h3<H: UiHost, T>(text: T) -> impl IntoUiElement<H> + use<H, T> where T: Into<Arc<str>>,",
+        "pub fn h4<H: UiHost, T>(text: T) -> impl IntoUiElement<H> + use<H, T> where T: Into<Arc<str>>,",
+        "pub fn p<H: UiHost, T>(text: T) -> impl IntoUiElement<H> + use<H, T> where T: Into<Arc<str>>,",
+        "pub fn lead<H: UiHost, T>(text: T) -> impl IntoUiElement<H> + use<H, T> where T: Into<Arc<str>>,",
+        "pub fn large<H: UiHost, T>(text: T) -> impl IntoUiElement<H> + use<H, T> where T: Into<Arc<str>>,",
+        "pub fn small<H: UiHost, T>(text: T) -> impl IntoUiElement<H> + use<H, T> where T: Into<Arc<str>>,",
+        "pub fn muted<H: UiHost, T>(text: T) -> impl IntoUiElement<H> + use<H, T> where T: Into<Arc<str>>,",
+        "pub fn inline_code<H: UiHost, T>(text: T) -> impl IntoUiElement<H> + use<H, T> where T: Into<Arc<str>>,",
+        "pub fn blockquote<H: UiHost, T>(text: T) -> impl IntoUiElement<H> + use<H, T> where T: Into<Arc<str>>,",
+        "pub fn list<H: UiHost, I, T>(items: I) -> impl IntoUiElement<H> + use<H, I, T> where I: IntoIterator<Item = T>, T: Into<Arc<str>>,",
+    ];
+    let forbidden_markers = [
+        "pub fn h1<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
+        "pub fn h2<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
+        "pub fn h3<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
+        "pub fn h4<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
+        "pub fn p<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
+        "pub fn lead<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
+        "pub fn large<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
+        "pub fn small<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
+        "pub fn muted<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
+        "pub fn inline_code<H: UiHost>( cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>, ) -> AnyElement",
+        "pub fn blockquote<H: UiHost>( cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>, ) -> AnyElement",
+        "pub fn list<H: UiHost>( cx: &mut ElementContext<'_, H>, items: impl IntoIterator<Item = Arc<str>>, ) -> AnyElement",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "typography.rs should keep the raw namespace while exposing typed helper outputs"
+        );
+    }
+    for marker in forbidden_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            !normalized.contains(&marker),
+            "typography.rs reintroduced pre-landed AnyElement helper signatures"
         );
     }
 }

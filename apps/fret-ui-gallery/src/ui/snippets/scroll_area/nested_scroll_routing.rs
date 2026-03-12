@@ -49,7 +49,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         .refine_style(ChromeRefinement::default().rounded(Radius::Md))
                         .refine_layout(LayoutRefinement::default().w_px(Px(160.0)).h_px(Px(96.0)))
                         .into_element(cx);
-                    let caption = shadcn::raw::typography::muted(cx, format!("Item {i}"));
+                    let caption =
+                        shadcn::raw::typography::muted(format!("Item {i}")).into_element(cx);
                     ui::v_stack(|_cx| vec![card, caption])
                         .gap(Space::N2)
                         .items_start()

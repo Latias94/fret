@@ -21,10 +21,10 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             ui_ai::CommitMetadata::new([
                 ui_ai::CommitHash::new(short_hash).into_element(cx),
                 ui_ai::CommitSeparator::default()
-                    .children([shadcn::raw::typography::muted(cx, "/")])
+                    .children([shadcn::raw::typography::muted("/").into_element(cx)])
                     .into_element(cx),
                 ui_ai::CommitTimestamp::new(timestamp)
-                    .children([shadcn::raw::typography::muted(cx, "2 hours ago")])
+                    .children([shadcn::raw::typography::muted("2 hours ago").into_element(cx)])
                     .into_element(cx),
             ])
             .into_element(cx),

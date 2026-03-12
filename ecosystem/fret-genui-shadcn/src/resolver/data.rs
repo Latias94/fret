@@ -7,6 +7,7 @@ use fret_runtime::Model;
 use fret_ui::action::{ActionCx, OnActivate, UiActionHost, UiActionHostExt};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::ui::UiElementSinkExt as _;
 use serde_json::{Map, Value};
 
@@ -209,7 +210,7 @@ impl ShadcnResolver {
         if items.is_empty() {
             let msg = Arc::<str>::from(empty_message);
             return fret_ui_shadcn::Card::new([fret_ui_shadcn::CardContent::new([
-                fret_ui_shadcn::typography::muted(cx, msg),
+                fret_ui_shadcn::typography::muted(msg).into_element(cx),
             ])
             .into_element(cx)])
             .into_element(cx);
