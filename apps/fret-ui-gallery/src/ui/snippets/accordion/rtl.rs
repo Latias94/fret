@@ -18,9 +18,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 "item-1",
                 shadcn::AccordionTrigger::new(vec![cx.text("RTL")])
                     .test_id("ui-gallery-accordion-rtl-trigger"),
-                shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
-                    "Ensure icons and spacing mirror correctly under RTL.",
-                ).into_element(cx)]),
+                shadcn::AccordionContent::new(ui::children![
+                    cx;
+                    shadcn::raw::typography::p("Ensure icons and spacing mirror correctly under RTL.")
+                ]),
             )])
             .into_element(cx)
     })

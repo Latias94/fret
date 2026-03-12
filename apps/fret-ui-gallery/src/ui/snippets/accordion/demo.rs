@@ -17,13 +17,14 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             shadcn::AccordionItem::new(
                 "item-1",
                 shadcn::AccordionTrigger::new(vec![cx.text("Product Information")]),
-                shadcn::AccordionContent::new(vec![
+                shadcn::AccordionContent::new(ui::children![
+                    cx;
                     shadcn::raw::typography::p(
                         "Our flagship product combines cutting-edge technology with sleek design. Built with premium materials, it offers unparalleled performance and reliability.",
-                    ).into_element(cx),
+                    ),
                     shadcn::raw::typography::p(
                         "Key features include advanced processing capabilities, and an intuitive user interface designed for both beginners and experts.",
-                    ).into_element(cx),
+                    )
                 ])
                 .gap(Space::N4),
             ),
@@ -31,13 +32,14 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 "item-2",
                 shadcn::AccordionTrigger::new(vec![cx.text("Shipping Details")])
                     .test_id("ui-gallery-accordion-demo-shipping-trigger"),
-                shadcn::AccordionContent::new(vec![
+                shadcn::AccordionContent::new(ui::children![
+                    cx;
                     shadcn::raw::typography::p(
                         "We offer worldwide shipping through trusted courier partners. Standard delivery takes 3-5 business days, while express shipping ensures delivery within 1-2 business days.",
-                    ).into_element(cx),
+                    ),
                     shadcn::raw::typography::p(
                         "All orders are carefully packaged and fully insured. Track your shipment in real-time through our dedicated tracking portal.",
-                    ).into_element(cx),
+                    )
                 ])
                 .gap(Space::N4)
                 .test_id("ui-gallery-accordion-demo-shipping-content"),
@@ -47,13 +49,14 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 "item-3",
                 shadcn::AccordionTrigger::new(vec![cx.text("Return Policy")])
                     .test_id("ui-gallery-accordion-demo-returns-trigger"),
-                shadcn::AccordionContent::new(vec![
+                shadcn::AccordionContent::new(ui::children![
+                    cx;
                     shadcn::raw::typography::p(
                         "We stand behind our products with a comprehensive 30-day return policy. If you're not completely satisfied, simply return the item in its original condition.",
-                    ).into_element(cx),
+                    ),
                     shadcn::raw::typography::p(
                         "Our hassle-free return process includes free return shipping and full refunds processed within 48 hours of receiving the returned item.",
-                    ).into_element(cx),
+                    )
                 ])
                 .gap(Space::N4)
                 .test_id("ui-gallery-accordion-demo-returns-content"),

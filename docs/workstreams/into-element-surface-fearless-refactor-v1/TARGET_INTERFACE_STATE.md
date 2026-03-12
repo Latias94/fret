@@ -189,6 +189,10 @@ Current execution note on 2026-03-12:
   `fret_ui_shadcn::prelude::*` re-exports `IntoUiElement`, so typed helpers such as
   `shadcn::raw::typography::*` can land through `.into_element(cx)` without ad-hoc trait imports
   on first-party examples.
+- when a first-party shadcn example still targets an eager constructor that owns
+  `new(children: Vec<AnyElement>)`, the teaching surface should prefer
+  `ui::children![cx; ...]` over `vec![...into_element(cx)]` so typed values remain the visible
+  authoring vocabulary even before that constructor grows a late-landing builder path.
 
 ## Advanced/Raw Surface
 

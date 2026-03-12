@@ -18,9 +18,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .items([shadcn::AccordionItem::new(
             "item-1",
             shadcn::AccordionTrigger::new(vec![cx.text("Borders")]),
-            shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
-                "Use an outer chrome wrapper when you want a bordered surface.",
-            ).into_element(cx)]),
+            shadcn::AccordionContent::new(ui::children![
+                cx;
+                shadcn::raw::typography::p(
+                    "Use an outer chrome wrapper when you want a bordered surface.",
+                )
+            ]),
         )])
         .into_element(cx);
 

@@ -154,6 +154,10 @@ Implementation note on 2026-03-12:
   `previews/magic.rs` page, and the affected `apps/fret-examples/*` surfaces now all land
   typography helpers explicitly via `.into_element(cx)` where a concrete `AnyElement` seam is
   still required.
+- first-party direct-crate shadcn teaching is now starting to normalize the eager child-list path
+  as well: where a component still intentionally owns `new(children: Vec<AnyElement>)`, Gallery
+  snippets should prefer `ui::children![cx; ...]` over ad-hoc `vec![...into_element(cx)]`
+  assembly so typed helpers can still read like component values at the call site.
 - `fret-ui-shadcn::prelude::*` now re-exports `IntoUiElement`, so direct-crate first-party
   shadcn examples do not need ad-hoc trait imports just to land typed helpers such as
   `shadcn::raw::typography::*`.

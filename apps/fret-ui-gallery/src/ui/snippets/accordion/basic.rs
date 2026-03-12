@@ -17,16 +17,20 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             shadcn::AccordionItem::new(
                 "item-1",
                 shadcn::AccordionTrigger::new(vec![cx.text("Is it accessible?")]),
-                shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
-                    "Yes. It adheres to the WAI-ARIA design pattern.",
-                ).into_element(cx)]),
+                shadcn::AccordionContent::new(ui::children![
+                    cx;
+                    shadcn::raw::typography::p("Yes. It adheres to the WAI-ARIA design pattern.")
+                ]),
             ),
             shadcn::AccordionItem::new(
                 "item-2",
                 shadcn::AccordionTrigger::new(vec![cx.text("Is it styled?")]),
-                shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
-                    "Yes. It ships with shadcn-style trigger, chevron, spacing, and motion defaults.",
-                ).into_element(cx)]),
+                shadcn::AccordionContent::new(ui::children![
+                    cx;
+                    shadcn::raw::typography::p(
+                        "Yes. It ships with shadcn-style trigger, chevron, spacing, and motion defaults.",
+                    )
+                ]),
             ),
         ])
         .into_element(cx)

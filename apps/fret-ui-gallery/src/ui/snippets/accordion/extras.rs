@@ -27,9 +27,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 "notifications",
                 shadcn::AccordionTrigger::new(vec![cx.text("Notifications")])
                     .test_id("ui-gallery-accordion-extras-multiple-trigger-notifications"),
-                shadcn::AccordionContent::new(vec![
+                shadcn::AccordionContent::new(ui::children![
+                    cx;
                     shadcn::raw::typography::p("Configure email, push, and in-app notifications.")
-                        .into_element(cx),
                 ])
                 .test_id("ui-gallery-accordion-extras-multiple-content-notifications"),
             ),
@@ -37,9 +37,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 "security",
                 shadcn::AccordionTrigger::new(vec![cx.text("Security")])
                     .test_id("ui-gallery-accordion-extras-multiple-trigger-security"),
-                shadcn::AccordionContent::new(vec![
+                shadcn::AccordionContent::new(ui::children![
+                    cx;
                     shadcn::raw::typography::p("Manage passwords, 2FA, and active sessions.")
-                        .into_element(cx),
                 ]),
             ),
         ])
@@ -52,9 +52,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .items([shadcn::AccordionItem::new(
             "item-1",
             shadcn::AccordionTrigger::new(vec![cx.text("Disabled")]).disabled(true),
-            shadcn::AccordionContent::new(vec![
+            shadcn::AccordionContent::new(ui::children![
+                cx;
                 shadcn::raw::typography::p("This item is disabled and should not be interactive.")
-                    .into_element(cx),
             ]),
         )])
         .into_element(cx);
@@ -66,11 +66,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .items([shadcn::AccordionItem::new(
                 "item-1",
                 shadcn::AccordionTrigger::new(vec![cx.text("Borders")]),
-                shadcn::AccordionContent::new(vec![
+                shadcn::AccordionContent::new(ui::children![
+                    cx;
                     shadcn::raw::typography::p(
                         "Use an outer chrome wrapper when you want a bordered surface.",
                     )
-                    .into_element(cx),
                 ]),
             )])
             .into_element(cx);
@@ -98,16 +98,22 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     shadcn::AccordionTrigger::new(vec![cx.text(
                         "What subscription plans do you offer?",
                     )]),
-                    shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
-                        "We offer multiple tiers with increasing storage limits, API access, and priority support.",
-                    ).into_element(cx)]),
+                    shadcn::AccordionContent::new(ui::children![
+                        cx;
+                        shadcn::raw::typography::p(
+                            "We offer multiple tiers with increasing storage limits, API access, and priority support.",
+                        )
+                    ]),
                 ),
                 shadcn::AccordionItem::new(
                     "billing",
                     shadcn::AccordionTrigger::new(vec![cx.text("How does billing work?")]),
-                    shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
-                        "Billing occurs automatically at the start of each billing cycle. You can update your payment method anytime.",
-                    ).into_element(cx)]),
+                    shadcn::AccordionContent::new(ui::children![
+                        cx;
+                        shadcn::raw::typography::p(
+                            "Billing occurs automatically at the start of each billing cycle. You can update your payment method anytime.",
+                        )
+                    ]),
                 ),
             ])
             .into_element(cx);
@@ -137,11 +143,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 "item-1",
                 shadcn::AccordionTrigger::new(vec![cx.text("RTL")])
                     .test_id("ui-gallery-accordion-extras-rtl-trigger"),
-                shadcn::AccordionContent::new(vec![
+                shadcn::AccordionContent::new(ui::children![
+                    cx;
                     shadcn::raw::typography::p(
                         "Ensure icons and spacing mirror correctly under RTL.",
                     )
-                    .into_element(cx),
                 ]),
             )])
             .into_element(cx)

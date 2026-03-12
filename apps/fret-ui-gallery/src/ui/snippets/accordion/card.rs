@@ -11,16 +11,22 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             shadcn::AccordionItem::new(
                 "plans",
                 shadcn::AccordionTrigger::new(vec![cx.text("What subscription plans do you offer?")]),
-                shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
-                    "We offer multiple tiers with increasing storage limits, API access, and priority support.",
-                ).into_element(cx)]),
+                shadcn::AccordionContent::new(ui::children![
+                    cx;
+                    shadcn::raw::typography::p(
+                        "We offer multiple tiers with increasing storage limits, API access, and priority support.",
+                    )
+                ]),
             ),
             shadcn::AccordionItem::new(
                 "billing",
                 shadcn::AccordionTrigger::new(vec![cx.text("How does billing work?")]),
-                shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
-                    "Billing occurs automatically at the start of each billing cycle. You can update your payment method anytime.",
-                ).into_element(cx)]),
+                shadcn::AccordionContent::new(ui::children![
+                    cx;
+                    shadcn::raw::typography::p(
+                        "Billing occurs automatically at the start of each billing cycle. You can update your payment method anytime.",
+                    )
+                ]),
             ),
         ])
         .into_element(cx);
