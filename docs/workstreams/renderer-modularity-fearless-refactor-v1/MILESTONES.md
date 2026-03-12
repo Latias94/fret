@@ -36,6 +36,9 @@ Current snapshot (2026-03-12):
   - text quality state/gamma helpers moved into
     `crates/fret-render-wgpu/src/text/quality.rs`
   - `text/mod.rs` no longer owns text quality configuration/state internals directly
+- The fourth internal `text/mod.rs` split has landed:
+  - tests moved into `crates/fret-render-wgpu/src/text/tests.rs`
+  - `text/mod.rs` now keeps only a `#[cfg(test)] mod tests;` declaration for the test entrypoint
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
@@ -44,6 +47,7 @@ Current snapshot (2026-03-12):
 - Internal text split verification is green:
   - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
 - The strongest current risks are:
   - wildcard facade exports,
   - oversized backend public surface,
