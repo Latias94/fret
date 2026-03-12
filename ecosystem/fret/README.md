@@ -188,7 +188,11 @@ directly, use `fret_ui_shadcn::advanced::*`. Reusable ecosystem bundles can shar
 `fret::integration::InstallIntoApp`; ordinary app docs/examples should still teach plain installer
 functions first. For small app-local composition, it is also acceptable to write
 `.setup((install_a, install_b))`; prefer a named bundle type once that composition becomes
-reusable or crate-facing API.
+reusable or crate-facing API. Because Rust does not let a trait-bound-only `fn(&mut App)`
+implementation accept plain function items without explicit casts, `InstallIntoApp` stays broad in
+implementation. Treat that as an internal accommodation: keep `.setup(...)` on named installer
+functions, tuples, or named bundles, and reserve `.setup_with(...)` for one-off inline closures or
+runtime-captured values.
 
 That makes `fret` suitable for both general-purpose desktop apps and many editor-style customizations
 before you need to depend on `fret-bootstrap` or `fret-launch` directly.

@@ -196,7 +196,10 @@ pub trait InstallIntoApp {
     fn install_into_app(self, app: &mut App);
 }
 
-impl InstallIntoApp for fn(&mut App) {
+impl<F> InstallIntoApp for F
+where
+    F: FnOnce(&mut App),
+{
     fn install_into_app(self, app: &mut App) {
         (self)(app);
     }
@@ -208,9 +211,17 @@ Rules:
 - this is an app-layer integration trait, not a component trait,
 - it does not belong in `crates/fret-ui`,
 - it wraps existing installer functions rather than replacing them,
+- the broad `FnOnce(&mut App)` implementation is an ergonomics accommodation for Rust fn-item /
+  trait-bound coercion limits, not a license to teach `.setup(|app| ...)` as the default path,
 - it must remain safe to call once per app lifetime,
 - advanced builder-only install hooks can stay on explicit builder extension traits until a shared
   need appears.
+
+Teaching rule:
+
+- ordinary app docs keep `.setup(...)` on named installers, tuples, or named bundle types,
+- inline closures stay on `UiAppBuilder::setup_with(...)`,
+- first-party source gates should reject `.setup(|app| ...)` on the default app-author path.
 
 Use cases:
 

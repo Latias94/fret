@@ -62,7 +62,8 @@
 //!   `fret::shadcn::raw::advanced::*`
 //! - use `fret::integration::InstallIntoApp` for reusable app-install bundles; small app-local
 //!   composition can also use `.setup((install_a, install_b))` while ordinary app code keeps
-//!   passing plain installer functions to `.setup(...)`
+//!   passing named installer functions to `.setup(...)` and keeps inline one-off closures or
+//!   runtime-captured config on `UiAppBuilder::setup_with(...)`
 use crate::advanced::KernelApp;
 
 /// Canonical app-facing window identity alias for the default authoring surface.
@@ -418,15 +419,15 @@ pub mod advanced {
         pub use crate::interop::embedded_viewport;
         pub use crate::interop::run_native_with_compat_driver;
     }
-    #[cfg(feature = "desktop")]
-    /// Low-level kernel facade kept off the default crate root.
-    pub use fret_framework as kernel;
     pub use crate::view::AppUiRawStateExt;
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::{UiAppBuilder, UiAppDriver};
     pub use fret_app::App as KernelApp;
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use fret_bootstrap::ui_app_driver::ViewElements;
+    #[cfg(feature = "desktop")]
+    /// Low-level kernel facade kept off the default crate root.
+    pub use fret_framework as kernel;
 
     /// Create a golden-path native UI app builder on the explicit advanced surface.
     ///
@@ -517,7 +518,8 @@ pub mod advanced {
             *c = config;
         });
 
-        let builder = crate::apply_desktop_defaults(builder).map_err(crate::BootstrapError::from)?;
+        let builder =
+            crate::apply_desktop_defaults(builder).map_err(crate::BootstrapError::from)?;
 
         builder.run().map_err(crate::RunnerError::from)?;
         Ok(())
@@ -534,7 +536,8 @@ pub mod advanced {
             *c = config;
         });
 
-        let builder = crate::apply_desktop_defaults(builder).map_err(crate::BootstrapError::from)?;
+        let builder =
+            crate::apply_desktop_defaults(builder).map_err(crate::BootstrapError::from)?;
 
         builder.run().map_err(crate::RunnerError::from)?;
         Ok(())
@@ -621,12 +624,12 @@ pub mod advanced {
 
     /// Common imports for advanced/manual-assembly application code.
     pub mod prelude {
-        pub use crate::advanced::*;
-        pub use crate::component::prelude::*;
         #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
         pub use crate::advanced::interop::embedded_viewport::{
             EmbeddedViewportForeignUiAppDriverExt, EmbeddedViewportUiAppDriverExt,
         };
+        pub use crate::advanced::*;
+        pub use crate::component::prelude::*;
         pub use crate::view::UiCxDataExt as _;
         pub use crate::view::{LocalState, TrackedStateExt, View};
         pub use crate::{AppUi, Ui, UiCx};
@@ -896,12 +899,22 @@ impl<S: 'static> UiAppBuilder<S> {
         }
     }
 
+    /// Run one-off app setup inline on the builder path.
+    ///
+    /// Use this when the setup needs to capture runtime values or is intentionally local to this
+    /// call site. Prefer [`setup`](Self::setup) with named installer functions, tuples, or named
+    /// [`crate::integration::InstallIntoApp`] bundles for reusable/default app wiring.
     pub fn setup_with(self, f: impl FnOnce(&mut crate::app::App)) -> Self {
         Self {
             inner: self.inner.init_app(f),
         }
     }
 
+    /// Run app setup through the stable installer/bundle seam.
+    ///
+    /// Prefer this for named installer functions, small app-local tuples, and reusable
+    /// [`crate::integration::InstallIntoApp`] bundles. Keep inline closures on
+    /// [`setup_with`](Self::setup_with) so the default `.setup(...)` story stays explicit.
     pub fn setup<T>(self, setup: T) -> Self
     where
         T: crate::integration::InstallIntoApp + 'static,
@@ -1522,16 +1535,16 @@ mod authoring_surface_policy_tests {
         let advanced_surface = advanced_prelude_source();
         let rustdoc = crate_rustdoc();
 
-        assert!(CRATE_README.contains(
-            "`fret::advanced::interop::run_native_with_compat_driver(...)`"
-        ));
-        assert!(rustdoc.contains(
-            "`fret::advanced::interop::run_native_with_compat_driver(...)`"
-        ));
+        assert!(
+            CRATE_README.contains("`fret::advanced::interop::run_native_with_compat_driver(...)`")
+        );
+        assert!(rustdoc.contains("`fret::advanced::interop::run_native_with_compat_driver(...)`"));
         assert!(!public_surface.contains("pub fn run_native_with_compat_driver("));
         assert!(!public_surface.contains("pub mod interop;"));
         assert!(advanced_surface.contains("pub mod interop {"));
-        assert!(advanced_surface.contains("pub use crate::interop::run_native_with_compat_driver;"));
+        assert!(
+            advanced_surface.contains("pub use crate::interop::run_native_with_compat_driver;")
+        );
         assert!(INTEROP_RS.contains("pub fn run_native_with_compat_driver<"));
     }
 
@@ -1541,40 +1554,42 @@ mod authoring_surface_policy_tests {
         let rustdoc = crate_rustdoc();
 
         assert!(CRATE_README.contains("`fret::advanced::run_native_with_fn_driver(...)`"));
-        assert!(CRATE_README.contains(
-            "`fret::advanced::run_native_with_fn_driver_with_hooks(...)`"
-        ));
-        assert!(CRATE_README.contains(
-            "`fret::advanced::run_native_with_configured_fn_driver(...)`"
-        ));
+        assert!(
+            CRATE_README.contains("`fret::advanced::run_native_with_fn_driver_with_hooks(...)`")
+        );
+        assert!(
+            CRATE_README.contains("`fret::advanced::run_native_with_configured_fn_driver(...)`")
+        );
         assert!(rustdoc.contains("`fret::advanced::run_native_with_fn_driver(...)`"));
-        assert!(rustdoc.contains(
-            "`fret::advanced::run_native_with_fn_driver_with_hooks(...)`"
-        ));
-        assert!(rustdoc.contains(
-            "`fret::advanced::run_native_with_configured_fn_driver(...)`"
-        ));
+        assert!(rustdoc.contains("`fret::advanced::run_native_with_fn_driver_with_hooks(...)`"));
+        assert!(rustdoc.contains("`fret::advanced::run_native_with_configured_fn_driver(...)`"));
         assert!(!public_surface.contains("pub fn run_native_with_fn_driver("));
         assert!(!public_surface.contains("pub fn run_native_with_fn_driver_with_hooks("));
         assert!(!public_surface.contains("pub fn run_native_with_configured_fn_driver("));
         assert!(LIB_RS.contains("pub fn run_native_with_fn_driver<D: 'static, S: 'static>("));
-        assert!(LIB_RS.contains(
-            "pub fn run_native_with_fn_driver_with_hooks<D: 'static, S: 'static>("
-        ));
-        assert!(LIB_RS.contains(
-            "pub fn run_native_with_configured_fn_driver<D: 'static, S: 'static>("
-        ));
+        assert!(
+            LIB_RS.contains("pub fn run_native_with_fn_driver_with_hooks<D: 'static, S: 'static>(")
+        );
+        assert!(
+            LIB_RS.contains("pub fn run_native_with_configured_fn_driver<D: 'static, S: 'static>(")
+        );
     }
 
     #[test]
     fn readme_and_rustdoc_expose_install_into_app_as_explicit_bundle_seam() {
         assert!(CRATE_README.contains("`fret::integration::InstallIntoApp`"));
         assert!(CRATE_README.contains("`.setup((install_a, install_b))`"));
+        assert!(CRATE_README.contains("keep `.setup(...)` on named installer"));
+        assert!(CRATE_README.contains("reserve `.setup_with(...)`"));
 
         let rustdoc = crate_rustdoc();
         let public_surface = crate_public_surface_source();
         assert!(rustdoc.contains("`fret::integration::InstallIntoApp`"));
         assert!(rustdoc.contains("`.setup((install_a, install_b))`"));
+        assert!(rustdoc.contains("named installer functions to `.setup(...)`"));
+        assert!(rustdoc.contains("`UiAppBuilder::setup_with(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`UiAppBuilder::setup_with(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("should still avoid `.setup(|app| ...)`"));
         assert!(public_surface.contains("pub mod integration;"));
         assert!(!app_prelude_exports_symbol("InstallIntoApp"));
     }

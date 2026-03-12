@@ -333,6 +333,12 @@ mod authoring_surface_policy_tests {
         assert!(!normalized.contains(".run_view::<"));
     }
 
+    fn assert_setup_surface_keeps_inline_closures_off_setup(src: &str) {
+        let normalized = src.split_whitespace().collect::<String>();
+        assert!(!normalized.contains(".setup(|"));
+        assert!(!normalized.contains(".setup(move|"));
+    }
+
     fn assert_prefers_grouped_data_surface(src: &str) {
         assert!(
             src.contains("cx.data().selector(")
@@ -420,7 +426,6 @@ mod authoring_surface_policy_tests {
             EMPTY_IDLE_DEMO,
             EXTRAS_MARQUEE_PERF_DEMO,
             GENUI_DEMO,
-            HELLO_COUNTER_DEMO,
             HELLO_WORLD_COMPARE_DEMO,
             IMAGE_HEAVY_MEMORY_DEMO,
             IMUI_EDITOR_PROOF_DEMO,
@@ -575,6 +580,41 @@ mod authoring_surface_policy_tests {
                     trimmed
                 );
             }
+        }
+    }
+
+    #[test]
+    fn examples_source_tree_keeps_setup_on_named_installers() {
+        for path in examples_rust_sources() {
+            if path.ends_with("src/lib.rs") {
+                continue;
+            }
+
+            let source = std::fs::read_to_string(&path).unwrap();
+            assert_setup_surface_keeps_inline_closures_off_setup(&source);
+        }
+    }
+
+    #[test]
+    fn examples_source_tree_limits_setup_with_to_explicit_one_off_case() {
+        for path in examples_rust_sources() {
+            if path.ends_with("src/lib.rs") {
+                continue;
+            }
+
+            let source = std::fs::read_to_string(&path).unwrap();
+            let normalized = source.split_whitespace().collect::<String>();
+            if !normalized.contains(".setup_with(") {
+                continue;
+            }
+
+            assert_eq!(
+                path.file_name().and_then(|name| name.to_str()),
+                Some("imui_editor_proof_demo.rs"),
+                "{} unexpectedly used setup_with(...)",
+                path.display()
+            );
+            assert!(normalized.contains(".setup_with(move|"));
         }
     }
 

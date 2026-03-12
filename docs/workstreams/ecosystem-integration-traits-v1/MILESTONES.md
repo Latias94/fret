@@ -16,6 +16,9 @@ Current status on 2026-03-11:
 - `FretApp::setup(...)` and `UiAppBuilder::setup(...)` both accept `InstallIntoApp`.
 - Small tuple composition is now intentionally supported for app-local setup bundles; slice/vec
   composition remains deferred.
+- The broad `InstallIntoApp` impl is now explicitly treated as a Rust ergonomics accommodation:
+  first-party docs/examples keep `.setup(...)` on named installers/tuples/bundles and reserve
+  `UiAppBuilder::setup_with(...)` for one-off inline closures or captured runtime values.
 - The first in-tree bundle example is landed in
   `apps/fret-cookbook/examples/docking_basics.rs`.
 - `CommandCatalog` ownership is now locked to `fret-ui-kit::command`.

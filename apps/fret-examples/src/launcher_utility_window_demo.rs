@@ -26,6 +26,21 @@ const TEST_ID_TOGGLE_ALWAYS_ON_TOP: &str = "utility-window.always_on_top";
 const TEST_ID_QUIT: &str = "utility-window.quit";
 const TEST_ID_STYLE_TEXT: &str = "utility-window.style_effective";
 
+fn install_commands(app: &mut KernelApp) {
+    app.commands_mut().register(
+        CommandId::from(CMD_BLINK),
+        fret_app::CommandMeta::new("Blink (hide + show)"),
+    );
+    app.commands_mut().register(
+        CommandId::from(CMD_TOGGLE_ALWAYS_ON_TOP),
+        fret_app::CommandMeta::new("Toggle always on top"),
+    );
+    app.commands_mut().register(
+        CommandId::from(CMD_QUIT),
+        fret_app::CommandMeta::new("Quit"),
+    );
+}
+
 pub fn run() -> anyhow::Result<()> {
     ui_app_with_hooks(
         "launcher-utility-window-demo",
@@ -43,20 +58,7 @@ pub fn run() -> anyhow::Result<()> {
             ..Default::default()
         };
     })
-    .setup_with(|app: &mut KernelApp| {
-        app.commands_mut().register(
-            CommandId::from(CMD_BLINK),
-            fret_app::CommandMeta::new("Blink (hide + show)"),
-        );
-        app.commands_mut().register(
-            CommandId::from(CMD_TOGGLE_ALWAYS_ON_TOP),
-            fret_app::CommandMeta::new("Toggle always on top"),
-        );
-        app.commands_mut().register(
-            CommandId::from(CMD_QUIT),
-            fret_app::CommandMeta::new("Quit"),
-        );
-    })
+    .setup(install_commands)
     .run()
     .map_err(anyhow::Error::from)
 }

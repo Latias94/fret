@@ -56,7 +56,16 @@ Composition rule:
 - keep a single installer function as the first documented path,
 - allow small tuple composition directly for app-local wiring,
 - require named `InstallIntoApp` bundle types for reusable/published ecosystem packs,
+- reserve `UiAppBuilder::setup_with(...)` for explicit one-off inline closures or captured runtime
+  values,
 - keep slice/vec-style dynamic composition out of v1 until a concrete use case appears.
+
+Rust note:
+
+- `InstallIntoApp` may stay broad in implementation (`FnOnce(&mut App)`) because a trait-bound-only
+  `fn(&mut App)` impl would force explicit casts for plain function items.
+- That implementation detail does not widen the default teaching surface: first-party docs/examples
+  and source gates should still reject `.setup(|app| ...)` on the default app-author path.
 
 ## 3. Per-Ecosystem Target Shape
 

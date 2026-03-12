@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret::advanced::kernel::core::{ImageColorSpace, SvgId};
 use fret::advanced::kernel::ui::element::{ImageProps, SvgIconProps};
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_ui_assets::{UiAssets, image_asset_state, svg_asset_state};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ColorRef, LayoutRefinement, Radius, Space};
@@ -26,18 +26,20 @@ struct AssetsDemoImageEvents {
     failed: u64,
 }
 
+fn install_demo_theme(app: &mut KernelApp) {
+    shadcn::themes::apply_shadcn_new_york(
+        app,
+        shadcn::themes::ShadcnBaseColor::Slate,
+        shadcn::themes::ShadcnColorScheme::Light,
+    );
+}
+
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("assets-demo")
         .window("assets_demo", (720.0, 520.0))
         .view_with_hooks::<AssetsDemoView>(|d| d.on_event(on_event))?
         .with_ui_assets_budgets(64 * 1024 * 1024, 2048, 16 * 1024 * 1024, 4096)
-        .setup_with(|app| {
-            shadcn::themes::apply_shadcn_new_york(
-                app,
-                shadcn::themes::ShadcnBaseColor::Slate,
-                shadcn::themes::ShadcnColorScheme::Light,
-            );
-        })
+        .setup(install_demo_theme)
         .on_gpu_ready(|app, _context, renderer| {
             let services = renderer as &mut dyn UiServices;
             let (_key, svg, _stats) =

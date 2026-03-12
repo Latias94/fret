@@ -4,6 +4,13 @@
 //! Implement [`InstallIntoApp`] when a crate wants to compose multiple installers into one
 //! reusable app-facing bundle without widening the default app-author surface. For small app-local
 //! composition, tuples are also supported directly.
+//!
+//! The implementation intentionally accepts any `FnOnce(&mut App)` rather than only
+//! `fn(&mut App)`. Rust does not let plain function items satisfy a trait-bound-only
+//! `fn(&mut App)` implementation without explicit casts at call sites, so the broad impl is the
+//! least noisy option. Treat that as an implementation accommodation, not a teaching change:
+//! first-party docs/examples should keep `.setup(...)` on named installers, tuples, or named
+//! bundles and reserve `UiAppBuilder::setup_with(...)` for one-off inline closures.
 
 use crate::app::App;
 
@@ -12,7 +19,9 @@ use crate::app::App;
 /// This trait belongs at the `fret` ecosystem facade layer rather than in `crates/fret-ui`.
 /// Keep the default app-author story boring: free installer functions remain valid and are still
 /// the first thing docs should teach. Implement this trait when a crate needs to package multiple
-/// installers behind one reusable `.setup(...)` value.
+/// installers behind one reusable `.setup(...)` value. Inline closures remain supported by the
+/// broad implementation for ergonomic reasons, but first-party docs/examples should keep those on
+/// `UiAppBuilder::setup_with(...)`.
 pub trait InstallIntoApp {
     /// Install app-owned globals, commands, and other early app wiring.
     fn install_into_app(self, app: &mut App);
@@ -69,14 +78,27 @@ mod tests {
         }
     }
 
+    fn install_marker(app: &mut App) {
+        app.set_global(Marker(1));
+    }
+
     #[test]
     fn function_installers_implement_install_into_app() {
         let mut app = App::new();
-        let install = |app: &mut App| app.set_global(Marker(1));
 
-        install.install_into_app(&mut app);
+        install_marker.install_into_app(&mut app);
 
         assert_eq!(app.global::<Marker>().copied(), Some(Marker(1)));
+    }
+
+    #[test]
+    fn inline_closures_still_implement_install_into_app_for_ergonomics() {
+        let mut app = App::new();
+        let marker_value = 5;
+
+        (move |app: &mut App| app.set_global(Marker(marker_value))).install_into_app(&mut app);
+
+        assert_eq!(app.global::<Marker>().copied(), Some(Marker(5)));
     }
 
     #[test]

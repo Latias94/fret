@@ -121,8 +121,10 @@ App-level ecosystem integration seam:
 - `FretApp::setup(fn(&mut App))` is the canonical builder hook for app-level integrations such as
   command registration, theme/bootstrap setup, optional shadcn installs, router/query defaults,
   and other non-reusable product wiring.
-- `UiAppBuilder::setup_with(|app| ...)` is the inline closure variant for one-off app setup that
-  still belongs on the default app path.
+- `FretApp::setup(...)` should be taught with named installer functions, small tuples, or named
+  `InstallIntoApp` bundles rather than inline closures.
+- `UiAppBuilder::setup_with(|app| ...)` is the explicit one-off inline closure seam for setup that
+  needs captured runtime values or intentionally local call-site wiring.
 - lower-level raw bootstrap builders may keep mechanism-oriented names such as
   `fret_bootstrap::ui_app(...).init_app(...)`; that naming does not define the default authoring
   vocabulary.

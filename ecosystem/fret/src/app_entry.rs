@@ -87,7 +87,10 @@ impl FretApp {
     ///
     /// This is the canonical ecosystem integration seam for app-level add-ons such as command
     /// registration, theme/bootstrap setup, icon-pack app installers, optional recipe-crate
-    /// globals, or reusable app integration bundles that implement [`InstallIntoApp`].
+    /// globals, or reusable app integration bundles that implement [`InstallIntoApp`]. Prefer
+    /// named installer functions, small tuples of installers, or named bundle types here. Keep
+    /// inline one-off closures on [`UiAppBuilder::setup_with`](crate::UiAppBuilder::setup_with) so
+    /// the default `.setup(...)` story stays stable and grep-friendly.
     pub fn setup<T>(mut self, setup: T) -> Self
     where
         T: InstallIntoApp + 'static,

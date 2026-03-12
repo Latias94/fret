@@ -22,6 +22,8 @@ surface, lock these decisions before adding public API:
 - prefer a free function, registry, factory, or codec before adding a trait
 - use `fret::integration::InstallIntoApp` only for reusable app-install bundles; keep ordinary app
   docs/examples on plain installer functions
+- if you really need an inline closure with captured runtime values, keep it on
+  `UiAppBuilder::setup_with(...)` instead of teaching `.setup(|app| ...)`
 - keep typed routes on `RouteCodec`, dockable panel contributions on `DockPanelFactory`, and host
   command catalog ownership in `fret-ui-kit::command`
 - keep selector/query integration optional for reusable kits; do not add a universal `Component`
@@ -30,6 +32,13 @@ surface, lock these decisions before adding public API:
   `docs/workstreams/ecosystem-integration-traits-v1/DESIGN.md`,
   `docs/workstreams/ecosystem-integration-traits-v1/TARGET_INTERFACE_STATE.md`, and
   `docs/workstreams/ecosystem-integration-traits-v1/MIGRATION_MATRIX.md`
+
+Rust note:
+
+- `InstallIntoApp` stays broad in implementation because a trait-bound-only `fn(&mut App)` impl
+  would force explicit casts for plain function items at call sites.
+- That implementation detail should not change the teaching surface: first-party docs/examples
+  should still avoid `.setup(|app| ...)`.
 
 ## Quick rules of thumb
 

@@ -221,14 +221,15 @@ pub fn run() -> anyhow::Result<()> {
     FretApp::new("embedded-viewport-demo")
         .window("embedded_viewport_demo", (1120.0, 720.0))
         .view_with_hooks::<EmbeddedViewportDemoView>(|d| d.drive_embedded_viewport())?
-        .setup_with(|app| {
-            shadcn::themes::apply_shadcn_new_york(
-                app,
-                shadcn::themes::ShadcnBaseColor::Slate,
-                shadcn::themes::ShadcnColorScheme::Light,
-            );
-            fret_icons_lucide::app::install(app);
-        })
+        .setup((install_demo_theme, fret_icons_lucide::app::install))
         .run()?;
     Ok(())
+}
+
+fn install_demo_theme(app: &mut KernelApp) {
+    shadcn::themes::apply_shadcn_new_york(
+        app,
+        shadcn::themes::ShadcnBaseColor::Slate,
+        shadcn::themes::ShadcnColorScheme::Light,
+    );
 }

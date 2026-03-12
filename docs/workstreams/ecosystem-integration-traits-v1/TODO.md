@@ -61,7 +61,10 @@ surface.
     `fret-router-ui` now exposes command-registration setup through `crate::app::install(...)`,
     and the `fret::router` facade mirrors the same `app::install` seam instead of a root
     `install_app(...)` exception.
-- [ ] Keep `FretApp::setup(...)` as the canonical app authoring story in docs and templates.
+- [x] Keep `FretApp::setup(...)` as the canonical app authoring story in docs and templates.
+  - Extended on 2026-03-12: first-party docs/examples now document `.setup(...)` for named
+    installers/tuples/bundles, keep inline closures on `UiAppBuilder::setup_with(...)`, and gate
+    against `.setup(|app| ...)` on the default app-author path.
 - [ ] Audit first-party crates for root-level exports that bypass curated facades.
   - Landed first-pass migration on 2026-03-11 for
     `fret-ui-assets`, `fret-icons-lucide`, `fret-icons-radix`, and `fret-node`; keep auditing the
@@ -84,6 +87,10 @@ surface.
   `fn(&mut App)` installers without forcing app authors onto traits.
   - Landed on 2026-03-11: `InstallIntoApp` has a blanket implementation for installer functions
     and is accepted by both `FretApp::setup(...)` and `UiAppBuilder::setup(...)`.
+  - Clarified on 2026-03-12: the blanket implementation stays in place because Rust would
+    otherwise require explicit casts for plain function items under a trait bound. First-party docs
+    and source gates now keep `.setup(...)` on named installers/tuples/bundles and reserve
+    `setup_with(...)` for explicit inline closures.
 - [x] Decide whether tuple/slice/vec bundle composition should be supported directly or left to
   small app-owned wrapper types.
   - Decision on 2026-03-11:

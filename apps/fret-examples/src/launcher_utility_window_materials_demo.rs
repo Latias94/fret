@@ -23,6 +23,25 @@ const TEST_ID_TO_MICA: &str = "utility-window.materials.to_mica";
 const TEST_ID_TO_ACRYLIC: &str = "utility-window.materials.to_acrylic";
 const TEST_ID_STYLE_TEXT: &str = "utility-window.materials.style_effective";
 
+fn install_commands(app: &mut KernelApp) {
+    app.commands_mut().register(
+        CommandId::from(CMD_TO_NONE),
+        fret_app::CommandMeta::new("Background material: None"),
+    );
+    app.commands_mut().register(
+        CommandId::from(CMD_TO_MICA),
+        fret_app::CommandMeta::new("Background material: Mica"),
+    );
+    app.commands_mut().register(
+        CommandId::from(CMD_TO_ACRYLIC),
+        fret_app::CommandMeta::new("Background material: Acrylic"),
+    );
+    app.commands_mut().register(
+        CommandId::from(CMD_QUIT),
+        fret_app::CommandMeta::new("Quit"),
+    );
+}
+
 pub fn run() -> anyhow::Result<()> {
     ui_app_with_hooks(
         "launcher-utility-window-materials-demo",
@@ -41,24 +60,7 @@ pub fn run() -> anyhow::Result<()> {
             ..Default::default()
         };
     })
-    .setup_with(|app: &mut KernelApp| {
-        app.commands_mut().register(
-            CommandId::from(CMD_TO_NONE),
-            fret_app::CommandMeta::new("Background material: None"),
-        );
-        app.commands_mut().register(
-            CommandId::from(CMD_TO_MICA),
-            fret_app::CommandMeta::new("Background material: Mica"),
-        );
-        app.commands_mut().register(
-            CommandId::from(CMD_TO_ACRYLIC),
-            fret_app::CommandMeta::new("Background material: Acrylic"),
-        );
-        app.commands_mut().register(
-            CommandId::from(CMD_QUIT),
-            fret_app::CommandMeta::new("Quit"),
-        );
-    })
+    .setup(install_commands)
     .run()
     .map_err(anyhow::Error::from)
 }

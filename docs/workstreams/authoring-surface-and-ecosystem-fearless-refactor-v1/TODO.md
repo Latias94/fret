@@ -219,6 +219,10 @@ Companion docs:
 - [x] Add source gates that keep default docs/examples/templates on `view::<V>()?.run()`.
 - [x] Add a gate that README/docs/first-hour agree on the default action model.
 - [x] Add source gates that keep default selector/query teaching on grouped `cx.data()` helpers.
+- [x] Add a gate that keeps `.setup(...)` on named installers/tuples/bundles and reserves inline
+  closures for `setup_with(...)`.
+  - Landed on 2026-03-12 in `ecosystem/fret` authoring-surface policy tests and
+    `apps/fret-examples` source-policy tests.
 - [x] Add a source gate that keeps default extracted helper teaching on `UiCx` instead of raw
   `ElementContext`.
 - [x] Add focused UI Gallery source gates for the first migrated teaching surfaces:

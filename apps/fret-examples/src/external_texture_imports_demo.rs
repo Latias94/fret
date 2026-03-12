@@ -972,9 +972,11 @@ pub fn run() -> anyhow::Result<()> {
                 .on_event(on_event)
                 .record_engine_frame(record_engine_frame)
         })?
-        .setup_with(|app| {
-            app.set_global(PlatformCapabilities::default());
-        });
+        .setup(install_platform_capabilities);
 
     builder.run().context("run external_texture_imports_demo")
+}
+
+fn install_platform_capabilities(app: &mut App) {
+    app.set_global(PlatformCapabilities::default());
 }
