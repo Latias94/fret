@@ -540,8 +540,12 @@ impl TextSystem {
         glyph: &'a ParleyGlyph,
         font_ref: parley::swash::FontRef<'a>,
     ) -> parley::swash::scale::Scaler<'a> {
-        let scaler_builder = prepared_glyph_scaler_builder(&mut self.parley_scale, glyph, font_ref);
-        apply_prepared_glyph_normalized_coords(scaler_builder, glyph).build()
+        let scaler_builder = prepared_glyph_scaler_builder_with_normalized_coords(
+            &mut self.parley_scale,
+            glyph,
+            font_ref,
+        );
+        scaler_builder.build()
     }
 
     fn insert_prepared_glyph_raster(&mut self, raster: PreparedGlyphRaster, epoch: u64) {
@@ -754,6 +758,15 @@ fn prepared_glyph_scaler_builder<'a>(
         .builder(font_ref)
         .size(prepared_glyph_scaler_size(glyph))
         .hint(false)
+}
+
+fn prepared_glyph_scaler_builder_with_normalized_coords<'a>(
+    parley_scale: &'a mut parley::swash::scale::ScaleContext,
+    glyph: &'a ParleyGlyph,
+    font_ref: parley::swash::FontRef<'a>,
+) -> parley::swash::scale::ScalerBuilder<'a> {
+    let scaler_builder = prepared_glyph_scaler_builder(parley_scale, glyph, font_ref);
+    apply_prepared_glyph_normalized_coords(scaler_builder, glyph)
 }
 
 fn prepared_glyph_bounds_from_atlas_entry(

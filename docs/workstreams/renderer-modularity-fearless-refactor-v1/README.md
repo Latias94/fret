@@ -348,6 +348,10 @@ As of 2026-03-12:
   - prepared-glyph normalized-coords builder injection now lives behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `apply_prepared_glyph_normalized_coords(...)` no longer owns `normalized_coords.iter()` builder injection directly
+- The sixty-sixth internal text split has landed:
+  - prepared-glyph scaler-builder normalized-coords assembly now lives behind a dedicated helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `build_prepared_glyph_scaler(...)` no longer owns normalized-coords builder assembly directly
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
