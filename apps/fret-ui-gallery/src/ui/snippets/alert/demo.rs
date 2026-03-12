@@ -9,6 +9,7 @@ use fret_core::{
 };
 use fret_runtime::Effect;
 use fret_ui::element::{PressableKeyActivation, PressableProps, StyledTextProps};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn is_diag_mode() -> bool {
@@ -71,7 +72,7 @@ fn interactive_link_text<H: UiHost + 'static>(
     underlined_fragment: &'static str,
     href: &'static str,
     test_id: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let (rich, _range) = link_like_rich_text(text, underlined_fragment);
     let theme = Theme::global(&*cx.app).snapshot();
     let diag_mode = is_diag_mode();
@@ -123,7 +124,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     "link",
                     "https://example.com/alert-title-link",
                     "ui-gallery-alert-demo-title-link-inline",
-                )])
+                )
+                .into_element(cx)])
                 .into_element(cx),
             ])
             .variant(shadcn::AlertVariant::Default)
@@ -139,14 +141,16 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                         "link",
                         "https://example.com/alert-description-link",
                         "ui-gallery-alert-demo-description-link-primary",
-                    ),
+                    )
+                    .into_element(cx),
                     interactive_link_text(
                         cx,
                         "It also demonstrates a second link in the same description block.",
                         "second link",
                         "https://example.com/alert-description-second-link",
                         "ui-gallery-alert-demo-description-link-secondary",
-                    ),
+                    )
+                    .into_element(cx),
                 ])
                 .into_element(cx),
             ])

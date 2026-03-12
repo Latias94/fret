@@ -815,9 +815,11 @@ fn selected_context_menu_snippet_helpers_prefer_into_ui_element_over_anyelement(
         "src/ui/snippets/context_menu/sides.rs",
         &[
             "fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            "fn side_menu<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, side: shadcn::DropdownMenuSide, trigger_test_id: &'static str, content_test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
         ],
         &[
             "fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, test_id: &'static str,) -> AnyElement",
+            "fn side_menu<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, side: shadcn::DropdownMenuSide, trigger_test_id: &'static str, content_test_id: &'static str,) -> AnyElement",
         ],
     );
 }
@@ -1621,6 +1623,16 @@ fn selected_alert_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         ],
         &[
             "fn interactive_link<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>, last_link: Model<Option<Arc<str>>>, label: &'static str, tag: &'static str, href: &'static str, test_id: &'static str,) -> AnyElement",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/alert/demo.rs",
+        &[
+            "fn interactive_link_text<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>, text: &'static str, underlined_fragment: &'static str, href: &'static str, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &[
+            "fn interactive_link_text<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>, text: &'static str, underlined_fragment: &'static str, href: &'static str, test_id: &'static str,) -> AnyElement",
         ],
     );
 }

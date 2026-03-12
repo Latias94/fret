@@ -50,7 +50,7 @@ fn side_menu<H: UiHost>(
     side: shadcn::DropdownMenuSide,
     trigger_test_id: &'static str,
     content_test_id: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     shadcn::ContextMenu::new_controllable(cx, None, false)
         .content_test_id(content_test_id)
         .into_element_parts(
@@ -109,28 +109,32 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     shadcn::DropdownMenuSide::Top,
                     "ui-gallery-context-menu-sides-top-trigger",
                     "ui-gallery-context-menu-sides-top-content",
-                ),
+                )
+                .into_element(cx),
                 side_menu(
                     cx,
                     "Right click (right)",
                     shadcn::DropdownMenuSide::Right,
                     "ui-gallery-context-menu-sides-right-trigger",
                     "ui-gallery-context-menu-sides-right-content",
-                ),
+                )
+                .into_element(cx),
                 side_menu(
                     cx,
                     "Right click (bottom)",
                     shadcn::DropdownMenuSide::Bottom,
                     "ui-gallery-context-menu-sides-bottom-trigger",
                     "ui-gallery-context-menu-sides-bottom-content",
-                ),
+                )
+                .into_element(cx),
                 side_menu(
                     cx,
                     "Right click (left)",
                     shadcn::DropdownMenuSide::Left,
                     "ui-gallery-context-menu-sides-left-trigger",
                     "ui-gallery-context-menu-sides-left-content",
-                ),
+                )
+                .into_element(cx),
             ]
         },
     )
