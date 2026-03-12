@@ -342,6 +342,10 @@ Current snapshot (2026-03-12):
   - prepared-glyph raster assembly helpers now live in
     `crates/fret-render-wgpu/src/text/prepare/glyph_raster.rs`
   - `crates/fret-render-wgpu/src/text/prepare.rs` no longer hosts the raster data structs and low-level raster assembly chain inline
+- The seventy-ninth internal `text/mod.rs` split has landed:
+  - prepared-glyph atlas lookup and hit-or-miss bounds helpers now live in
+    `crates/fret-render-wgpu/src/text/prepare/glyph_bounds.rs`
+  - `crates/fret-render-wgpu/src/text/prepare.rs` no longer hosts the prepared-glyph atlas lookup chain inline
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
