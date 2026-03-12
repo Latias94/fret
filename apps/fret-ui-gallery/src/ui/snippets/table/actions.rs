@@ -2,15 +2,18 @@ pub const SOURCE: &str = include_str!("actions.rs");
 
 // region: example
 use fret::UiCx;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::ui::UiElementSinkExt;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-fn align_end(cx: &mut UiCx<'_>, child: AnyElement) -> AnyElement {
-    ui::h_flex(move |_cx| [child])
+fn align_end<B>(child: B) -> impl IntoUiElement<fret_app::App> + use<B>
+where
+    B: IntoUiElement<fret_app::App>,
+{
+    ui::h_flex(move |cx| ui::children![cx; child])
         .layout(LayoutRefinement::default().w_full())
         .justify_end()
-        .into_element(cx)
 }
 
 fn action_row(
@@ -19,7 +22,7 @@ fn action_row(
     price: &'static str,
     open_model: Model<bool>,
     key: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<fret_app::App> + use<> {
     let row_test_id = format!("ui-gallery-table-actions-row-{key}");
     let trigger_id = format!("ui-gallery-table-actions-trigger-{key}");
 
@@ -48,7 +51,7 @@ fn action_row(
     );
 
     shadcn::TableRow::build(3, move |cx, out| {
-        let action_cell = align_end(cx, dropdown);
+        let action_cell = align_end(dropdown).into_element(cx);
         out.push_ui(cx, shadcn::TableCell::build(ui::text(product)));
         out.push_ui(cx, shadcn::TableCell::build(ui::text(price)));
         out.push_ui(cx, shadcn::TableCell::build(action_cell));
@@ -92,15 +95,14 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         out.push_ui(
             cx,
             shadcn::TableBody::build(|cx, out| {
-                out.push(action_row(cx, "Gaming Mouse", "$129.99", open_1, "row-1"));
-                out.push(action_row(
-                    cx,
-                    "Mechanical Keyboard",
-                    "$89.99",
-                    open_2,
-                    "row-2",
-                ));
-                out.push(action_row(cx, "4K Monitor", "$299.99", open_3, "row-3"));
+                out.push(
+                    action_row(cx, "Gaming Mouse", "$129.99", open_1, "row-1").into_element(cx),
+                );
+                out.push(
+                    action_row(cx, "Mechanical Keyboard", "$89.99", open_2, "row-2")
+                        .into_element(cx),
+                );
+                out.push(action_row(cx, "4K Monitor", "$299.99", open_3, "row-3").into_element(cx));
             }),
         );
     })

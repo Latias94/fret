@@ -3,22 +3,22 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 // region: example
 use fret::UiCx;
 use fret_core::{FontWeight, Px};
-use fret_ui_kit::ui::UiElementSinkExt;
+use fret_ui_kit::{IntoUiElement, ui::UiElementSinkExt};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn make_invoice_table(
-    cx: &mut UiCx<'_>,
     rows: &[(&'static str, &'static str, &'static str, &'static str)],
     include_footer: bool,
     test_id: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<fret_app::App> + use<> {
     let invoice_w = Px(100.0);
+    let rows = rows.to_vec();
 
-    let body_row = |cx: &mut UiCx<'_>,
-                    invoice: &'static str,
-                    status: &'static str,
-                    method: &'static str,
-                    amount: &'static str| {
+    let body_row = move |cx: &mut UiCx<'_>,
+                         invoice: &'static str,
+                         status: &'static str,
+                         method: &'static str,
+                         amount: &'static str| {
         let invoice_slug = invoice.to_ascii_lowercase();
         let row_test_id = format!("{test_id}-row-{invoice_slug}");
         shadcn::TableRow::build(4, move |cx, out| {
@@ -38,7 +38,7 @@ fn make_invoice_table(
         .test_id(row_test_id)
     };
 
-    shadcn::Table::build(|cx, out| {
+    shadcn::Table::build(move |cx, out| {
         out.push_ui(
             cx,
             shadcn::TableHeader::build(|cx, out| {
@@ -65,7 +65,7 @@ fn make_invoice_table(
         out.push_ui(
             cx,
             shadcn::TableBody::build(|cx, out| {
-                for &(invoice, status, method, amount) in rows {
+                for (invoice, status, method, amount) in rows.iter().copied() {
                     out.push(body_row(cx, invoice, status, method, amount));
                 }
             }),
@@ -95,8 +95,8 @@ fn make_invoice_table(
         }
         out.push(shadcn::TableCaption::new("A list of your recent invoices.").into_element(cx));
     })
-    .refine_layout(LayoutRefinement::default().w_full())
-    .into_element(cx)
+    .ui()
+    .w_full()
     .test_id(test_id)
 }
 
@@ -108,7 +108,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
             ("INV003", "Unpaid", "Bank Transfer", "$350.00"),
         ];
 
-        make_invoice_table(cx, &rows, true, "ui-gallery-table-rtl")
+        make_invoice_table(&rows, true, "ui-gallery-table-rtl").into_element(cx)
     })
 }
 

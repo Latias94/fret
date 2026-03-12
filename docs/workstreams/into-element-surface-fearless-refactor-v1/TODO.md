@@ -163,6 +163,12 @@ Implementation note on 2026-03-12:
   `DialogContent`, `DialogHeader`, `DialogFooter`, `SheetContent`, `SheetHeader`,
   `SheetFooter`, `DrawerContent`, `DrawerHeader`, and `DrawerFooter` children through
   `ui::children![cx; ...]` instead of manually pre-landing every child.
+- the same child-list normalization now also covers selected `popover` form snippets:
+  `PopoverContent`, `PopoverHeader`, `FieldGroup`, and `Field` now teach
+  `ui::children![cx; ...]` rather than manual `AnyElement` assembly on first-party examples.
+- helper ergonomics are also tightening around render-local `cx` ownership:
+  where a helper can remain fully late-landed, Gallery examples should drop the `cx` parameter
+  instead of carrying it only to attach `.into_element(cx)` / `test_id(...)` at helper scope.
 - `fret-ui-shadcn::prelude::*` now re-exports `IntoUiElement`, so direct-crate first-party
   shadcn examples do not need ad-hoc trait imports just to land typed helpers such as
   `shadcn::raw::typography::*`.

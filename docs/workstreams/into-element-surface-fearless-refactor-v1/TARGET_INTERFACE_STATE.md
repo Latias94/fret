@@ -196,6 +196,11 @@ Current execution note on 2026-03-12:
 - this now explicitly includes first-party modal/form section examples such as
   `DialogContent` / `DialogHeader` / `DialogFooter`, `SheetContent` / `SheetHeader` /
   `SheetFooter`, and `DrawerContent` / `DrawerHeader` / `DrawerFooter`.
+- the same eager child-list guidance now also covers selected popover form snippets such as
+  `PopoverContent` / `PopoverHeader` / `FieldGroup` / `Field`.
+- when a reusable helper can stay fully late-landed, it should not keep a render-local `cx`
+  parameter just to attach layout or semantics; first-party table helpers such as
+  `make_invoice_table(...)` now return typed builders and land only at the call site.
 
 ## Advanced/Raw Surface
 
