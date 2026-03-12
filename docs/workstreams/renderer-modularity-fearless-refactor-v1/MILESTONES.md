@@ -269,6 +269,10 @@ Current snapshot (2026-03-12):
   - prepared-glyph atlas-hit fallback dispatch now lives behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `resolve_prepared_glyph_bounds(...)` no longer owns atlas-hit vs miss-fallback branching directly
+- The sixty-first internal `text/mod.rs` split has landed:
+  - prepared-glyph bin-offset image render dispatch now lives behind a dedicated helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `render_prepared_glyph_image(...)` no longer owns bin-offset derivation plus scaler render call directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed

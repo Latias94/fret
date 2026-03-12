@@ -532,8 +532,7 @@ impl TextSystem {
     ) -> Option<parley::swash::scale::image::Image> {
         let font_ref = prepared_glyph_font_ref(glyph)?;
         let mut scaler = self.build_prepared_glyph_scaler(glyph, font_ref);
-        let offset_px = prepared_glyph_offset_px(x_bin, y_bin);
-        render_prepared_glyph_image_with_scaler(&mut scaler, glyph_id, offset_px)
+        render_prepared_glyph_image_at_bins(&mut scaler, glyph_id, x_bin, y_bin)
     }
 
     fn build_prepared_glyph_scaler<'a>(
@@ -849,6 +848,16 @@ fn prepared_glyph_origin_bins(glyph: &ParleyGlyph) -> (i32, u8, i32, u8) {
 
 fn prepared_glyph_offset_px(x_bin: u8, y_bin: u8) -> parley::swash::zeno::Vector {
     parley::swash::zeno::Vector::new(subpixel_bin_as_float(x_bin), subpixel_bin_as_float(y_bin))
+}
+
+fn render_prepared_glyph_image_at_bins(
+    scaler: &mut parley::swash::scale::Scaler<'_>,
+    glyph_id: u16,
+    x_bin: u8,
+    y_bin: u8,
+) -> Option<parley::swash::scale::image::Image> {
+    let offset_px = prepared_glyph_offset_px(x_bin, y_bin);
+    render_prepared_glyph_image_with_scaler(scaler, glyph_id, offset_px)
 }
 
 fn apply_prepared_glyph_normalized_coords<'a>(
