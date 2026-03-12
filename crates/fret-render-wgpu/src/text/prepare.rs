@@ -321,19 +321,10 @@ impl TextSystem {
             let paint_span = prepared_glyph_paint_span(resolved_spans, &g);
 
             let size_bits = g.font_size.to_bits();
-            let atlas_hit =
-                self.lookup_prepared_glyph_atlas(face_key, g.id, size_bits, x_bin, y_bin, epoch);
-
-            let (glyph_key, x0_px, y0_px, w_px, h_px) = if let Some((glyph_key, entry)) = atlas_hit
-            {
-                prepared_glyph_bounds_from_atlas_entry(glyph_key, entry, x, y)
-            } else {
-                let Some(glyph_bounds) = self.materialize_prepared_glyph_miss(
-                    &g, glyph_id, face_key, size_bits, x_bin, y_bin, x, y, epoch,
-                ) else {
-                    continue;
-                };
-                glyph_bounds
+            let Some((glyph_key, x0_px, y0_px, w_px, h_px)) = self.resolve_prepared_glyph_bounds(
+                &g, glyph_id, face_key, size_bits, x_bin, y_bin, x, y, epoch,
+            ) else {
+                continue;
             };
 
             glyphs.push(GlyphInstance {
@@ -444,6 +435,31 @@ impl TextSystem {
         let bounds = raster.bounds(x, y);
         self.insert_prepared_glyph_raster(raster, epoch);
         Some(bounds)
+    }
+
+    fn resolve_prepared_glyph_bounds(
+        &mut self,
+        glyph: &ParleyGlyph,
+        glyph_id: u16,
+        face_key: FontFaceKey,
+        size_bits: u32,
+        x_bin: u8,
+        y_bin: u8,
+        x: i32,
+        y: i32,
+        epoch: u64,
+    ) -> Option<(GlyphKey, f32, f32, f32, f32)> {
+        if let Some((glyph_key, entry)) =
+            self.lookup_prepared_glyph_atlas(face_key, glyph.id, size_bits, x_bin, y_bin, epoch)
+        {
+            return Some(prepared_glyph_bounds_from_atlas_entry(
+                glyph_key, entry, x, y,
+            ));
+        }
+
+        self.materialize_prepared_glyph_miss(
+            glyph, glyph_id, face_key, size_bits, x_bin, y_bin, x, y, epoch,
+        )
     }
 
     fn render_prepared_glyph_raster(
