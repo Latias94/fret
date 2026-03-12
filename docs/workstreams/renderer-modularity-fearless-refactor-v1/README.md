@@ -404,6 +404,10 @@ As of 2026-03-12:
   - prepared-glyph atlas lookup and hit-or-miss bounds helpers now live in
     `crates/fret-render-wgpu/src/text/prepare/glyph_bounds.rs`
   - `crates/fret-render-wgpu/src/text/prepare.rs` no longer hosts the prepared-glyph atlas lookup chain inline
+- The eightieth internal text split has landed:
+  - prepared-glyph image and raster render helpers now live in
+    `crates/fret-render-wgpu/src/text/prepare/glyph_render.rs`
+  - `crates/fret-render-wgpu/src/text/prepare.rs` no longer hosts the prepared-glyph render/scaler chain inline
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
