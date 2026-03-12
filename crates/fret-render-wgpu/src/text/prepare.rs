@@ -399,8 +399,7 @@ impl TextSystem {
         glyph: &ParleyGlyph,
         face_usage: &mut HashMap<FontFaceKey, (u32, u32)>,
     ) -> FontFaceKey {
-        let font_data_id = glyph.font.data.id();
-        let face_index = glyph.font.index;
+        let (font_data_id, face_index) = prepared_glyph_font_identity(glyph);
         let face_key = prepared_glyph_face_key(glyph, font_data_id, face_index);
         self.cache_prepared_glyph_face_data(glyph, face_key, font_data_id, face_index);
         record_prepared_glyph_face_usage(face_usage, face_key, glyph.id);
@@ -767,6 +766,10 @@ fn prepared_glyph_face_key(glyph: &ParleyGlyph, font_data_id: u64, face_index: u
         synthesis_embolden: prepared_glyph_synthesis_embolden(glyph),
         synthesis_skew_degrees: prepared_glyph_synthesis_skew_degrees(glyph),
     }
+}
+
+fn prepared_glyph_font_identity(glyph: &ParleyGlyph) -> (u64, u32) {
+    (glyph.font.data.id(), glyph.font.index)
 }
 
 fn prepared_glyph_variation_key(glyph: &ParleyGlyph) -> u64 {

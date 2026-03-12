@@ -315,6 +315,10 @@ As of 2026-03-12:
   - prepared-glyph id conversion now lives behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `prepare_prepared_glyph_context(...)` no longer owns `glyph.id -> u16` conversion directly
+- The fifty-eighth internal text split has landed:
+  - prepared-glyph font identity derivation now lives behind a pure helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `register_prepared_glyph_face(...)` no longer owns `font_data_id/face_index` extraction directly
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
