@@ -261,6 +261,10 @@ Current snapshot (2026-03-12):
   - prepared-glyph font identity derivation now lives behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `register_prepared_glyph_face(...)` no longer owns `font_data_id/face_index` extraction directly
+- The fifty-ninth internal `text/mod.rs` split has landed:
+  - prepared-glyph context assembly now lives behind a pure helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `prepare_prepared_glyph_context(...)` no longer owns `PreparedGlyphContext` field packing directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
