@@ -28,6 +28,10 @@ Current snapshot (2026-03-12):
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals
+- The second internal `text/mod.rs` split has landed:
+  - diagnostics/debug snapshot helpers moved into
+    `crates/fret-render-wgpu/src/text/diagnostics.rs`
+  - `text/mod.rs` no longer owns text diagnostics/debug helper implementations directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed

@@ -86,6 +86,10 @@ As of 2026-03-12:
 - The first internal text split has landed:
   - glyph atlas bookkeeping now lives under `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` no longer owns atlas/page/upload/eviction internals directly
+- The second internal text split has landed:
+  - text diagnostics/debug snapshot code now lives under
+    `crates/fret-render-wgpu/src/text/diagnostics.rs`
+  - `text/mod.rs` no longer owns atlas/debug/perf snapshot helpers directly
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed

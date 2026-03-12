@@ -110,6 +110,8 @@ ID format:
   - Landed so far:
     - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
     - `text/mod.rs` now goes through atlas accessors instead of touching atlas internals directly
+    - diagnostics/debug snapshot code moved into `crates/fret-render-wgpu/src/text/diagnostics.rs`
+    - `text/mod.rs` no longer owns atlas/debug/perf snapshot helper implementations directly
 - [ ] RMFR-text-031 Keep `fret_render_text` as the low-level text contract crate and avoid moving
   backend-specific state there prematurely.
 - [ ] RMFR-text-032 Add focused tests around any extracted text subdomain whose behavior was
