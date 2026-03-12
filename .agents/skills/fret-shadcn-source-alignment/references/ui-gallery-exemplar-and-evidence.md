@@ -45,6 +45,15 @@ Guidance:
 - Do not reintroduce `use fret_ui_shadcn as shadcn;` or `use fret_ui_shadcn::{self as shadcn, ...};`.
 - For app-facing starter/documentation surfaces, align with the current `fret` guidance in
   `docs/crate-usage-guide.md` instead of copying direct-crate examples blindly.
+- Keep copyable first-party snippets aligned with the active authoring target state:
+  - app-facing teaching snippets/pages prefer `Ui`, `UiChild`, and `UiCx`,
+  - generic reusable snippet helpers should converge on the unified component conversion trait
+    tracked in `docs/workstreams/into-element-surface-fearless-refactor-v1/`,
+  - advanced/manual-assembly reusable helpers should prefer `IntoUiElement<H>` rather than
+    child-pipeline traits such as `UiChildIntoElement<H>`,
+  - `AnyElement` stays for explicit raw/diagnostics/helper seams only,
+  - do not teach the legacy split conversion trait names in copyable snippet tabs unless the
+    example is explicitly documenting a raw/advanced seam.
 
 ## 3) Stable automation requires stable `test_id`
 
@@ -108,3 +117,4 @@ Use both when a layout dispute also affects visible clipping or overflow.
 - Script corpus examples: `tools/diag-scripts/ui-gallery/`
 - Canonical shadcn migration guidance: `docs/shadcn-declarative-progress.md`
 - Crate/layer selection guidance: `docs/crate-usage-guide.md`
+- Into-element conversion cleanup: `docs/workstreams/into-element-surface-fearless-refactor-v1/`

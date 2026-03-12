@@ -25,6 +25,7 @@ description: "Align shadcn/ui v4 + Radix behavior and composition to Fret. Use w
 - What is the upstream source of truth (Radix docs vs shadcn composition/source)?
 - Which authoring surface is drifting: `fret` app-facing snippets, direct `fret_ui_shadcn` usage, or internal recipe code?
 - Is this actually a public-surface drift (upstream prop-driven API vs Fret model-only authoring surface)?
+- Is this actually a conversion-surface drift (`Ui` / `UiChild` / unified component conversion trait) rather than a widget recipe mismatch?
 - Which layer should own the change (mechanism vs policy vs recipe)?
 - What regression protection is required: unit test, parity harness case, and/or diag script?
 - Do we need a new stable `test_id` surface for automation?
@@ -103,6 +104,31 @@ Check the intended surface first:
 If the mismatch is “our example code teaches the wrong import/build pattern”, fix the exemplar surface
 first, then the component internals if they still block the intended authoring flow.
 
+If the mismatch is really about helper return types or explicit conversion trait names showing up
+in curated examples, consult:
+
+- `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
+
+Current target:
+
+- app-facing teaching prefers `Ui` / `UiChild`,
+- reusable generic helpers should converge on one public component conversion trait,
+- advanced/manual-assembly reusable helpers should use `IntoUiElement<H>` (for example
+  `IntoUiElement<KernelApp>`) rather than child-pipeline traits,
+- `AnyElement` stays explicit only for raw/advanced seams.
+
+Do not expand first-party shadcn teaching surfaces by reintroducing `UiIntoElement`,
+`UiChildIntoElement`, `UiHostBoundIntoElement`, or `UiBuilderHostBoundIntoElementExt` unless the
+task is explicitly about migrating them away.
+
+Current implementation status to remember while aligning examples:
+
+- `UiHostBoundIntoElement` and `UiBuilderHostBoundIntoElementExt` are already deleted from code.
+- `UiChildIntoElement` still exists only as the thin heterogeneous-child bridge.
+- If a first-party snippet/helper still teaches those names, the problem is authoring-surface drift,
+  not shadcn parity success.
+
 ### 0.5) Audit public surface parity before inventing helpers
 
 When the app authoring surface feels heavier than upstream, the problem may not be layout or
@@ -112,6 +138,9 @@ was ported as a model-only Fret authoring surface.
 Run this check before adding app-side helpers or broad `IntoModel<T>` conversions:
 
 - `.agents/skills/fret-shadcn-source-alignment/references/public-surface-parity.md`
+
+If the complaint is "this snippet/helper still has to spell legacy conversion trait names", treat
+that as conversion-surface drift first, not widget parity.
 
 ### 0) Run the mechanism checklist first (don’t chase pixels yet)
 
@@ -211,6 +240,7 @@ Prefer bounded, fast gates:
 - Layout footguns checklist (this skill): `.agents/skills/fret-shadcn-source-alignment/references/layout-parity-footguns.md`
 - Public-surface parity checklist (this skill): `.agents/skills/fret-shadcn-source-alignment/references/public-surface-parity.md`
 - UI Gallery exemplar + evidence note (this skill): `.agents/skills/fret-shadcn-source-alignment/references/ui-gallery-exemplar-and-evidence.md`
+- Into-element conversion cleanup: `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
 - Action hooks (component-owned policy): `docs/action-hooks.md`
 - Overlay ADRs:
   - `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
