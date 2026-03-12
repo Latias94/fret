@@ -819,7 +819,10 @@ fn gpu_ready(
     context: &WgpuContext,
     renderer: &mut Renderer,
 ) {
-    app.set_global(RendererCapabilities::from_wgpu_context(context));
+    app.set_global(RendererCapabilities::from_adapter_device(
+        &context.adapter,
+        &context.device,
+    ));
     CustomEffectV2GlassChromeWebDriver::install_custom_effect_and_input(app, context, renderer);
 }
 

@@ -35,12 +35,12 @@ ID format:
 - [x] RMFR-audit-003 Confirm the current topology seam.
   - `Renderer::new(adapter, device)` and `render_scene(device, queue, ...)` already permit
     host-provided GPU objects.
-- [ ] RMFR-audit-004 Inventory every public export from `crates/fret-render-wgpu/src/lib.rs` and
+- [x] RMFR-audit-004 Inventory every public export from `crates/fret-render-wgpu/src/lib.rs` and
   classify it:
   - stable facade surface,
   - backend-only but intentionally public,
   - likely accidental public export.
-- [ ] RMFR-audit-005 Inventory all first-party consumers of `fret_render::*` and group them by
+- [x] RMFR-audit-005 Inventory all first-party consumers of `fret_render::*` and group them by
   dependency pattern:
   - bootstrap only,
   - diagnostics only,
@@ -66,7 +66,7 @@ ID format:
 
 ## B. Facade and Contract Closure
 
-- [ ] RMFR-facade-010 Replace wildcard re-export in `crates/fret-render` with an explicit export
+- [x] RMFR-facade-010 Replace wildcard re-export in `crates/fret-render` with an explicit export
   list.
 - [ ] RMFR-facade-011 Decide the stable v1 facade surface for:
   - `Renderer`
@@ -75,7 +75,7 @@ ID format:
   - `WgpuContext`
   - capability snapshots
   - perf/report stores
-- [ ] RMFR-facade-012 Decide which current `fret-render-wgpu` exports should stop being re-exported
+- [~] RMFR-facade-012 Decide which current `fret-render-wgpu` exports should stop being re-exported
   by the default facade.
 - [ ] RMFR-facade-013 Move or alias portable value contracts from backend-owned exports to
   `fret-render-core` where that improves ownership clarity.
@@ -85,9 +85,9 @@ ID format:
 
 ## C. Host-Provided GPU Topology Closure
 
-- [ ] RMFR-topology-020 Add capability helpers that work from adapter/device inputs directly rather
+- [x] RMFR-topology-020 Add capability helpers that work from adapter/device inputs directly rather
   than requiring `WgpuContext`.
-- [ ] RMFR-topology-021 Review surface/bootstrap helpers and confirm they stay usable for
+- [~] RMFR-topology-021 Review surface/bootstrap helpers and confirm they stay usable for
   engine-hosted integration.
 - [ ] RMFR-topology-022 Add or update at least one smoke path that exercises the host-provided GPU
   topology explicitly.
@@ -137,7 +137,7 @@ ID format:
 
 ## E. Public Export Tightening
 
-- [ ] RMFR-exports-060 Review cache/registry-style exports and remove public visibility where no
+- [~] RMFR-exports-060 Review cache/registry-style exports and remove public visibility where no
   real consumer exists.
 - [ ] RMFR-exports-061 Decide whether backend-only diagnostics stores belong in the stable default
   facade or under a more explicit backend namespace.
@@ -150,7 +150,7 @@ ID format:
 ## F. Gates and Evidence
 
 - [x] RMFR-gates-070 Establish backend baseline gates before refactor work.
-- [ ] RMFR-gates-071 Add a surface snapshot note or test proving the intended `fret-render` export
+- [~] RMFR-gates-071 Add a surface snapshot note or test proving the intended `fret-render` export
   set after facade curation.
 - [ ] RMFR-gates-072 Add targeted smoke coverage for host-provided GPU topology if absent.
 - [ ] RMFR-gates-073 Keep render-plan semantics guardrails green for any planning/execution change.
@@ -161,13 +161,13 @@ ID format:
 ## G. Docs and Contract Follow-up
 
 - [x] RMFR-docs-080 Create this workstream doc set.
+- [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [ ] RMFR-docs-081 Update this tracker as refactor stages land.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:
   - `EVIDENCE_AND_GATES.md`
   - `OPEN_QUESTIONS.md`
-  - `SURFACE_INVENTORY.md`
   - `MIGRATION_MATRIX.md`
 
 ---

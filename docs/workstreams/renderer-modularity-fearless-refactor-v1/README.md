@@ -79,6 +79,14 @@ As of 2026-03-12:
 - `Renderer::new(adapter, device)` and `render_scene(device, queue, ...)` already make
   host-provided GPU objects possible, but some convenience/diagnostics surfaces still privilege
   `WgpuContext`.
+- The first code slice has landed:
+  - `crates/fret-render` now uses an explicit facade export list instead of wildcard re-export.
+  - `RendererCapabilities::from_adapter_device(...)` now exists and is used by first-party runner
+    paths.
+- Slice 1 verification passed after the first facade/topology changes:
+  - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
 - Baseline gates passed during the pre-workstream audit:
   - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
   - `python3 tools/check_layering.py`: passed
@@ -108,6 +116,7 @@ As of 2026-03-12:
 - Design: `docs/workstreams/renderer-modularity-fearless-refactor-v1/DESIGN.md`
 - TODO: `docs/workstreams/renderer-modularity-fearless-refactor-v1/TODO.md`
 - Milestones: `docs/workstreams/renderer-modularity-fearless-refactor-v1/MILESTONES.md`
+- Surface inventory: `docs/workstreams/renderer-modularity-fearless-refactor-v1/SURFACE_INVENTORY.md`
 
 ## Locked v1 Decisions
 
