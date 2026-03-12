@@ -395,16 +395,8 @@ impl TextSystem {
     ) -> FontFaceKey {
         let font_data_id = glyph.font.data.id();
         let face_index = glyph.font.index;
-        self.font_data_by_face
-            .entry((font_data_id, face_index))
-            .or_insert_with(|| glyph.font.clone());
-
         let face_key = prepared_glyph_face_key(glyph, font_data_id, face_index);
-        if !glyph.normalized_coords.is_empty() {
-            self.font_instance_coords_by_face
-                .entry(face_key)
-                .or_insert_with(|| glyph.normalized_coords.clone());
-        }
+        self.cache_prepared_glyph_face_data(glyph, face_key, font_data_id, face_index);
 
         let usage = face_usage.entry(face_key).or_insert((0, 0));
         usage.0 = usage.0.saturating_add(1);
@@ -413,6 +405,23 @@ impl TextSystem {
         }
 
         face_key
+    }
+
+    fn cache_prepared_glyph_face_data(
+        &mut self,
+        glyph: &ParleyGlyph,
+        face_key: FontFaceKey,
+        font_data_id: u64,
+        face_index: u32,
+    ) {
+        self.font_data_by_face
+            .entry((font_data_id, face_index))
+            .or_insert_with(|| glyph.font.clone());
+        if !glyph.normalized_coords.is_empty() {
+            self.font_instance_coords_by_face
+                .entry(face_key)
+                .or_insert_with(|| glyph.normalized_coords.clone());
+        }
     }
 
     fn lookup_prepared_glyph_atlas(
