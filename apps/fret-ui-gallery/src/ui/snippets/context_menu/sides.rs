@@ -6,6 +6,7 @@ use fret_core::scene::DashPatternV1;
 use fret_runtime::CommandId;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, GridProps};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -13,8 +14,7 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 fn trigger_surface<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: &'static str,
-    test_id: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let theme = Theme::global(&*cx.app);
     let border = theme.color_token("border");
     let bg = theme.color_token("background");
@@ -42,8 +42,6 @@ fn trigger_surface<H: UiHost>(
                 .bg(ColorRef::Color(bg)),
         )
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(240.0)))
-        .into_element(cx)
-        .test_id(test_id)
 }
 
 fn side_menu<H: UiHost>(
@@ -57,7 +55,13 @@ fn side_menu<H: UiHost>(
         .content_test_id(content_test_id)
         .into_element_parts(
             cx,
-            |cx| shadcn::ContextMenuTrigger::new(trigger_surface(cx, label, trigger_test_id)),
+            |cx| {
+                shadcn::ContextMenuTrigger::new(
+                    trigger_surface(cx, label)
+                        .into_element(cx)
+                        .test_id(trigger_test_id),
+                )
+            },
             shadcn::ContextMenuContent::new().side(side),
             |_cx| {
                 vec![
