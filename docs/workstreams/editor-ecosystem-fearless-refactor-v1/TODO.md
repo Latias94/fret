@@ -40,7 +40,8 @@ Interaction contract:
       reset actions keep subtle idle chrome, and field-status badges now use short labels plus
       border-defined semantic tones instead of raw filled pills. Default inspector hierarchy tokens
       now also give property groups taller headers, stronger header/body contrast, and a bit more
-      panel/content separation.
+      panel/content separation. `InspectorPanel` now renders its own header band/separator instead
+      of letting search/toolbar chrome visually merge into the first section.
       Remaining work: separators, group hierarchy, and the final balance between neutral default and
       editor-specific contrast still need another screenshot-driven pass.
 - [ ] `EER-BASE-111` Finish `EditorWidgetVisuals` convergence for the existing starter-set controls

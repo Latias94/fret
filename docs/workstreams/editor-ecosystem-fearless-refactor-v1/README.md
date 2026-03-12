@@ -50,6 +50,8 @@ Current checkpoint:
   markers than ad-hoc demo labels,
 - default inspector hierarchy tokens now bias a little more toward editor-style section structure:
   taller group headers, more content/panel spacing, and clearer header/body contrast bands,
+- `InspectorPanel` now also renders a true header band with a bottom separator so search/toolbar
+  chrome does not visually collapse into the first property group,
 - the default proof surface can produce reviewable overview / typing / validation screenshots,
 - and the remaining foundation cleanup is rerun-safe screenshot automation plus follow-up tuning for
   wide-inspector slack after the new lane grammar landed.

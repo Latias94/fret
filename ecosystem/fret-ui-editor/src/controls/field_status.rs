@@ -137,10 +137,10 @@ fn status_badge_palette(theme: &Theme, status: &FieldStatus) -> (Color, Color, C
     let destructive = theme.color_token("destructive");
 
     let (tint, bg_mix, border_mix, fg_mix) = match status {
-        FieldStatus::Loading => (muted_foreground, 0.10, 0.20, 0.35),
-        FieldStatus::Dirty => (accent, 0.22, 0.50, 0.12),
-        FieldStatus::Mixed => (secondary, 0.18, 0.34, 0.08),
-        FieldStatus::Error(_) => (destructive, 0.24, 0.62, 0.04),
+        FieldStatus::Loading => (muted_foreground, 0.05, 0.14, 0.20),
+        FieldStatus::Dirty => (accent, 0.10, 0.28, 0.10),
+        FieldStatus::Mixed => (secondary, 0.08, 0.18, 0.06),
+        FieldStatus::Error(_) => (destructive, 0.12, 0.34, 0.03),
     };
 
     (

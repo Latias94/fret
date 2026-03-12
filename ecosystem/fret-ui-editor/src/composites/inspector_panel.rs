@@ -7,17 +7,17 @@
 
 use std::sync::Arc;
 
-use fret_core::{Axis, Edges, Px};
+use fret_core::{Axis, Corners, Edges, Px};
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle, SpacerProps,
-    SpacingLength,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle,
+    SpacerProps, SpacingLength,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use crate::controls::{MiniSearchBox, MiniSearchBoxOptions};
-use crate::primitives::EditorDensity;
 use crate::primitives::inspector_layout::InspectorLayoutMetrics;
+use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 #[derive(Debug, Clone)]
 pub struct InspectorPanelOptions {
@@ -108,14 +108,51 @@ impl InspectorPanel {
         contents: impl FnOnce(&mut ElementContext<'_, H>, &InspectorPanelCx) -> Vec<AnyElement>,
     ) -> AnyElement {
         cx.scope(|cx| {
-            let (density, gap, header_gap, padding) = {
+            let (
+                density,
+                gap,
+                header_gap,
+                padding,
+                header_bg,
+                header_border,
+                panel_bg,
+                panel_border,
+                radius,
+            ) = {
                 let theme = Theme::global(&*cx.app);
                 let metrics = InspectorLayoutMetrics::resolve(theme);
                 let density = metrics.density;
                 let gap = self.options.gap.unwrap_or(metrics.panel_gap);
                 let header_gap = self.options.header_gap.unwrap_or(metrics.panel_header_gap);
                 let padding = self.options.padding.unwrap_or_else(|| Edges::all(Px(0.0)));
-                (density, gap, header_gap, padding)
+                let header_bg = theme
+                    .color_by_key(EditorTokenKeys::PROPERTY_HEADER_BG)
+                    .or_else(|| theme.color_by_key("muted"))
+                    .unwrap_or_else(|| theme.color_token("background"));
+                let header_border = theme
+                    .color_by_key(EditorTokenKeys::PROPERTY_HEADER_BORDER)
+                    .or_else(|| theme.color_by_key("border"))
+                    .unwrap_or_else(|| theme.color_token("foreground"));
+                let panel_bg = theme
+                    .color_by_key(EditorTokenKeys::PROPERTY_PANEL_BG)
+                    .or_else(|| theme.color_by_key("card"))
+                    .unwrap_or_else(|| theme.color_token("background"));
+                let panel_border = theme
+                    .color_by_key(EditorTokenKeys::PROPERTY_PANEL_BORDER)
+                    .or_else(|| theme.color_by_key("border"))
+                    .unwrap_or_else(|| theme.color_token("foreground"));
+                let radius = theme.metric_token("metric.radius.sm");
+                (
+                    density,
+                    gap,
+                    header_gap,
+                    padding,
+                    header_bg,
+                    header_border,
+                    panel_bg,
+                    panel_border,
+                    radius,
+                )
             };
 
             let query = self
@@ -223,8 +260,8 @@ impl InspectorPanel {
                     out.push(search_el);
                 }
 
-                let mut header = cx.flex(
-                    FlexProps {
+                let mut header = cx.container(
+                    ContainerProps {
                         layout: LayoutStyle {
                             size: SizeStyle {
                                 width: Length::Fill,
@@ -233,14 +270,38 @@ impl InspectorPanel {
                             },
                             ..Default::default()
                         },
-                        direction: Axis::Vertical,
-                        gap: SpacingLength::Px(header_gap),
-                        padding: Edges::all(Px(0.0)).into(),
-                        justify: MainAlign::Start,
-                        align: CrossAlign::Stretch,
-                        wrap: false,
+                        padding: Edges::all(density.padding_x).into(),
+                        background: Some(header_bg),
+                        border: Edges {
+                            top: Px(0.0),
+                            right: Px(0.0),
+                            bottom: Px(1.0),
+                            left: Px(0.0),
+                        },
+                        border_color: Some(header_border),
+                        ..Default::default()
                     },
-                    move |_cx| out,
+                    move |cx| {
+                        vec![cx.flex(
+                            FlexProps {
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Auto,
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                direction: Axis::Vertical,
+                                gap: SpacingLength::Px(header_gap),
+                                padding: Edges::all(Px(0.0)).into(),
+                                justify: MainAlign::Start,
+                                align: CrossAlign::Stretch,
+                                wrap: false,
+                            },
+                            move |_cx| out,
+                        )]
+                    },
                 );
 
                 if let Some(test_id) = self.options.header_test_id.as_ref() {
@@ -273,23 +334,43 @@ impl InspectorPanel {
                 content = content.test_id(test_id.clone());
             }
 
-            let mut root = cx.flex(
-                FlexProps {
+            let mut root = cx.container(
+                ContainerProps {
                     layout: self.options.layout,
-                    direction: Axis::Vertical,
-                    gap: SpacingLength::Px(gap),
                     padding: padding.into(),
-                    justify: MainAlign::Start,
-                    align: CrossAlign::Stretch,
-                    wrap: false,
+                    background: Some(panel_bg),
+                    border: Edges::all(Px(1.0)),
+                    border_color: Some(panel_border),
+                    corner_radii: Corners::all(radius),
+                    ..Default::default()
                 },
-                move |_cx| {
-                    let mut out = Vec::new();
-                    if let Some(header) = header {
-                        out.push(header);
-                    }
-                    out.push(content);
-                    out
+                move |cx| {
+                    vec![cx.flex(
+                        FlexProps {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Auto,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            direction: Axis::Vertical,
+                            gap: SpacingLength::Px(gap),
+                            padding: Edges::all(Px(0.0)).into(),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Stretch,
+                            wrap: false,
+                        },
+                        move |_cx| {
+                            let mut out = Vec::new();
+                            if let Some(header) = header {
+                                out.push(header);
+                            }
+                            out.push(content);
+                            out
+                        },
+                    )]
                 },
             );
 
