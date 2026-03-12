@@ -48,6 +48,13 @@ Current snapshot (2026-03-12):
   - text blob access / release / eviction helpers moved into
     `crates/fret-render-wgpu/src/text/blobs.rs`
   - `text/mod.rs` no longer owns released-blob LRU maintenance and blob eviction helpers directly
+- The seventh internal `text/mod.rs` split has landed:
+  - text measurement helpers moved into `crates/fret-render-wgpu/src/text/measure.rs`
+  - `text/mod.rs` no longer owns the plain/attributed measurement entrypoints directly
+- The eighth internal `text/mod.rs` split has landed:
+  - caret / hit-test / selection / line-metrics helpers moved into
+    `crates/fret-render-wgpu/src/text/queries.rs`
+  - `text/mod.rs` no longer owns text query helpers directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed

@@ -106,6 +106,13 @@ As of 2026-03-12:
   - text blob access / release / eviction helpers now live under
     `crates/fret-render-wgpu/src/text/blobs.rs`
   - `text/mod.rs` no longer owns released-blob LRU maintenance and blob eviction helpers directly
+- The seventh internal text split has landed:
+  - text measurement helpers now live under `crates/fret-render-wgpu/src/text/measure.rs`
+  - `text/mod.rs` no longer owns the plain/attributed measurement entrypoints directly
+- The eighth internal text split has landed:
+  - caret / hit-test / selection / line-metrics helpers now live under
+    `crates/fret-render-wgpu/src/text/queries.rs`
+  - `text/mod.rs` no longer owns text query helpers directly
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
@@ -119,6 +126,10 @@ As of 2026-03-12:
   - `cargo check -p fret-launch -p fret-examples`: passed
   - `python3 tools/check_layering.py`: passed
 - Internal text split verification remains green after the blob lifecycle extraction:
+  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+- Internal text split verification remains green after the measure/query extraction:
   - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
   - `python3 tools/check_layering.py`: passed
