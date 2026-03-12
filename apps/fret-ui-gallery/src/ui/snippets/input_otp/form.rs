@@ -7,24 +7,8 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 const CONTROL_ID: &str = "ui-gallery-input-otp-form-verification";
 
-#[derive(Default, Clone)]
-struct Models {
-    otp: Option<Model<String>>,
-}
-
-fn ensure_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    if let Some(model) = state.otp {
-        return model;
-    }
-
-    let model = cx.app.models_mut().insert(String::new());
-    cx.with_state(Models::default, |st| st.otp = Some(model.clone()));
-    model
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let otp = ensure_model(cx);
+    let otp = cx.local_model(String::new);
     let card_layout = LayoutRefinement::default()
         .w_full()
         .min_w_0()

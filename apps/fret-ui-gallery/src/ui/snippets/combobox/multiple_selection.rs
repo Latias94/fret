@@ -1,43 +1,14 @@
 pub const SOURCE: &str = include_str!("multiple_selection.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default, Clone)]
-struct Models {
-    values: Option<Model<Vec<Arc<str>>>>,
-    open: Option<Model<bool>>,
-    query: Option<Model<String>>,
-}
-
-fn ensure_models(
-    cx: &mut ElementContext<'_, App>,
-) -> (Model<Vec<Arc<str>>>, Model<bool>, Model<String>) {
-    let state = cx.with_state(Models::default, |st| st.clone());
-
-    let values = state.values.unwrap_or_else(|| {
-        let model = cx.app.models_mut().insert(Vec::<Arc<str>>::new());
-        cx.with_state(Models::default, |st| st.values = Some(model.clone()));
-        model
-    });
-    let open = state.open.unwrap_or_else(|| {
-        let model = cx.app.models_mut().insert(false);
-        cx.with_state(Models::default, |st| st.open = Some(model.clone()));
-        model
-    });
-    let query = state.query.unwrap_or_else(|| {
-        let model = cx.app.models_mut().insert(String::new());
-        cx.with_state(Models::default, |st| st.query = Some(model.clone()));
-        model
-    });
-
-    (values, open, query)
-}
-
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let (values, open, query) = ensure_models(cx);
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+    let values = cx.local_model_keyed("values", Vec::<Arc<str>>::new);
+    let open = cx.local_model_keyed("open", || false);
+    let query = cx.local_model_keyed("query", String::new);
 
     let combo = shadcn::ComboboxChips::new(values.clone(), open.clone())
         .a11y_label("Combobox multiple selection")

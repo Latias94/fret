@@ -5,25 +5,8 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use shadcn::raw::breadcrumb::primitives as bc;
 use std::sync::Arc;
 
-#[derive(Default, Clone)]
-struct Models {
-    open: Option<Model<bool>>,
-}
-
-fn open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    match state.open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.open = Some(model.clone()));
-            model
-        }
-    }
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let open = open_model(cx);
+    let open = cx.local_model(|| false);
     let dropdown = shadcn::DropdownMenu::new(open.clone()).align(shadcn::DropdownMenuAlign::Start);
 
     let crumb = bc::Breadcrumb::new().into_element(cx, |cx| {

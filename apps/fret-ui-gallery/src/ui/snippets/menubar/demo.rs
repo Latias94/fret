@@ -6,46 +6,10 @@ use fret_runtime::CommandId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default, Clone)]
-struct Models {
-    view_bookmarks_bar: Option<Model<bool>>,
-    view_full_urls: Option<Model<bool>>,
-    profile: Option<Model<Option<Arc<str>>>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state = cx.with_state(Models::default, |st| st.clone());
-
-    let view_bookmarks_bar = match state.view_bookmarks_bar {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.view_bookmarks_bar = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let view_full_urls = match state.view_full_urls {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(true);
-            cx.with_state(Models::default, |st| {
-                st.view_full_urls = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let profile = match state.profile {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Some(Arc::<str>::from("benoit")));
-            cx.with_state(Models::default, |st| st.profile = Some(model.clone()));
-            model
-        }
-    };
+    let view_bookmarks_bar = cx.local_model_keyed("view_bookmarks_bar", || false);
+    let view_full_urls = cx.local_model_keyed("view_full_urls", || true);
+    let profile = cx.local_model_keyed("profile", || Some(Arc::<str>::from("benoit")));
 
     let file = shadcn::MenubarMenu::new("File").entries([
         shadcn::MenubarEntry::Group(shadcn::MenubarGroup::new([

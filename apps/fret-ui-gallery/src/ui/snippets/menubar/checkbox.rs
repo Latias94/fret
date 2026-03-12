@@ -4,74 +4,14 @@ pub const SOURCE: &str = include_str!("checkbox.rs");
 use fret_core::Px;
 use fret_runtime::CommandId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
-use std::sync::Arc;
-
-#[derive(Default, Clone)]
-struct Models {
-    view_bookmarks_bar: Option<Model<bool>>,
-    view_full_urls: Option<Model<bool>>,
-    format_strikethrough: Option<Model<bool>>,
-    format_code: Option<Model<bool>>,
-    format_superscript: Option<Model<bool>>,
-    _unused: Option<Model<Option<Arc<str>>>>,
-}
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state = cx.with_state(Models::default, |st| st.clone());
     let width = LayoutRefinement::default().w_px(Px(288.0)).min_w_0();
-
-    let view_bookmarks_bar = match state.view_bookmarks_bar {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.view_bookmarks_bar = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let view_full_urls = match state.view_full_urls {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(true);
-            cx.with_state(Models::default, |st| {
-                st.view_full_urls = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let format_strikethrough = match state.format_strikethrough {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(true);
-            cx.with_state(Models::default, |st| {
-                st.format_strikethrough = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let format_code = match state.format_code {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.format_code = Some(model.clone()));
-            model
-        }
-    };
-
-    let format_superscript = match state.format_superscript {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.format_superscript = Some(model.clone())
-            });
-            model
-        }
-    };
+    let view_bookmarks_bar = cx.local_model_keyed("view_bookmarks_bar", || false);
+    let view_full_urls = cx.local_model_keyed("view_full_urls", || true);
+    let format_strikethrough = cx.local_model_keyed("format_strikethrough", || true);
+    let format_code = cx.local_model_keyed("format_code", || false);
+    let format_superscript = cx.local_model_keyed("format_superscript", || false);
 
     let view = shadcn::MenubarMenu::new("View").entries([
         shadcn::MenubarEntry::CheckboxItem(

@@ -4,29 +4,9 @@ pub const SOURCE: &str = include_str!("sizes.rs");
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default)]
-struct Models {
-    size_small: Option<Model<bool>>,
-    size_default: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (size_small, size_default) = cx.with_state(Models::default, |st| {
-        (st.size_small.clone(), st.size_default.clone())
-    });
-
-    let (size_small, size_default) = match (size_small, size_default) {
-        (Some(size_small), Some(size_default)) => (size_small, size_default),
-        _ => {
-            let size_small = cx.app.models_mut().insert(false);
-            let size_default = cx.app.models_mut().insert(true);
-            cx.with_state(Models::default, |st| {
-                st.size_small = Some(size_small.clone());
-                st.size_default = Some(size_default.clone());
-            });
-            (size_small, size_default)
-        }
-    };
+    let size_small = cx.local_model_keyed("size_small", || false);
+    let size_default = cx.local_model_keyed("size_default", || true);
 
     let small = ui::h_row(|cx| {
         vec![

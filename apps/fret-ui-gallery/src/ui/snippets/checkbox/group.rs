@@ -3,38 +3,10 @@ pub const SOURCE: &str = include_str!("group.rs");
 // region: example
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default)]
-struct Models {
-    group_security: Option<Model<bool>>,
-    group_updates: Option<Model<bool>>,
-    group_marketing: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (group_security, group_updates, group_marketing) = cx.with_state(Models::default, |st| {
-        (
-            st.group_security.clone(),
-            st.group_updates.clone(),
-            st.group_marketing.clone(),
-        )
-    });
-    let (group_security, group_updates, group_marketing) =
-        match (group_security, group_updates, group_marketing) {
-            (Some(group_security), Some(group_updates), Some(group_marketing)) => {
-                (group_security, group_updates, group_marketing)
-            }
-            _ => {
-                let group_security = cx.app.models_mut().insert(true);
-                let group_updates = cx.app.models_mut().insert(false);
-                let group_marketing = cx.app.models_mut().insert(false);
-                cx.with_state(Models::default, |st| {
-                    st.group_security = Some(group_security.clone());
-                    st.group_updates = Some(group_updates.clone());
-                    st.group_marketing = Some(group_marketing.clone());
-                });
-                (group_security, group_updates, group_marketing)
-            }
-        };
+    let group_security = cx.local_model_keyed("group_security", || true);
+    let group_updates = cx.local_model_keyed("group_updates", || false);
+    let group_marketing = cx.local_model_keyed("group_marketing", || false);
 
     let group_item = |cx: &mut ElementContext<'_, H>,
                       label: &'static str,

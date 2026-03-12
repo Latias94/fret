@@ -4,21 +4,8 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default)]
-struct Models {
-    rtl: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let rtl = cx.with_state(Models::default, |st| st.rtl.clone());
-    let rtl = match rtl {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.rtl = Some(model.clone()));
-            model
-        }
-    };
+    let rtl = cx.local_model(|| false);
 
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
         shadcn::Field::new([

@@ -4,42 +4,11 @@ pub const SOURCE: &str = include_str!("table.rs");
 use fret_ui_kit::ui::UiElementSinkExt;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default)]
-struct Models {
-    table_all: Option<Model<bool>>,
-    table_row_1: Option<Model<bool>>,
-    table_row_2: Option<Model<bool>>,
-    table_row_3: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (table_all, table_row_1, table_row_2, table_row_3) = cx.with_state(Models::default, |st| {
-        (
-            st.table_all.clone(),
-            st.table_row_1.clone(),
-            st.table_row_2.clone(),
-            st.table_row_3.clone(),
-        )
-    });
-    let (table_all, table_row_1, table_row_2, table_row_3) =
-        match (table_all, table_row_1, table_row_2, table_row_3) {
-            (Some(table_all), Some(table_row_1), Some(table_row_2), Some(table_row_3)) => {
-                (table_all, table_row_1, table_row_2, table_row_3)
-            }
-            _ => {
-                let table_all = cx.app.models_mut().insert(false);
-                let table_row_1 = cx.app.models_mut().insert(true);
-                let table_row_2 = cx.app.models_mut().insert(false);
-                let table_row_3 = cx.app.models_mut().insert(false);
-                cx.with_state(Models::default, |st| {
-                    st.table_all = Some(table_all.clone());
-                    st.table_row_1 = Some(table_row_1.clone());
-                    st.table_row_2 = Some(table_row_2.clone());
-                    st.table_row_3 = Some(table_row_3.clone());
-                });
-                (table_all, table_row_1, table_row_2, table_row_3)
-            }
-        };
+    let table_all = cx.local_model_keyed("table_all", || false);
+    let table_row_1 = cx.local_model_keyed("table_row_1", || true);
+    let table_row_2 = cx.local_model_keyed("table_row_2", || false);
+    let table_row_3 = cx.local_model_keyed("table_row_3", || false);
 
     let table_row = |cx: &mut ElementContext<'_, H>,
                      id: &'static str,

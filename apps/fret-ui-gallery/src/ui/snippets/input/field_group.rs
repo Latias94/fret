@@ -4,31 +4,9 @@ pub const SOURCE: &str = include_str!("field_group.rs");
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default, Clone)]
-struct Models {
-    name: Option<Model<String>>,
-    email: Option<Model<String>>,
-}
-
-fn ensure_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> (Model<String>, Model<String>) {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    match (state.name, state.email) {
-        (Some(name), Some(email)) => (name, email),
-        _ => {
-            let models = cx.app.models_mut();
-            let name = models.insert(String::new());
-            let email = models.insert(String::new());
-            cx.with_state(Models::default, |st| {
-                st.name = Some(name.clone());
-                st.email = Some(email.clone());
-            });
-            (name, email)
-        }
-    }
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (name, email) = ensure_models(cx);
+    let name = cx.local_model_keyed("name", String::new);
+    let email = cx.local_model_keyed("email", String::new);
     let max_w_xs = LayoutRefinement::default().w_full().max_w(Px(320.0));
 
     shadcn::FieldGroup::new([

@@ -3,18 +3,8 @@ pub const SOURCE: &str = include_str!("with_title.rs");
 // region: example
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default)]
-struct Models {
-    with_title: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let with_title = cx.with_state(Models::default, |st| st.with_title.clone());
-    let with_title = with_title.unwrap_or_else(|| {
-        let model = cx.app.models_mut().insert(true);
-        cx.with_state(Models::default, |st| st.with_title = Some(model.clone()));
-        model
-    });
+    let with_title = cx.local_model(|| true);
 
     shadcn::FieldGroup::new([
         shadcn::FieldLabel::new("Enable notifications")

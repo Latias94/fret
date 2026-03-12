@@ -9,13 +9,6 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default, Clone)]
-struct Models {
-    show_bookmarks: Option<Model<bool>>,
-    show_full_urls: Option<Model<bool>>,
-    people: Option<Model<Option<Arc<str>>>>,
-}
-
 fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let theme = Theme::global(&*cx.app);
     let border = theme.color_token("border");
@@ -49,38 +42,9 @@ fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state = cx.with_state(Models::default, |st| st.clone());
-
-    let show_bookmarks = match state.show_bookmarks {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(true);
-            cx.with_state(Models::default, |st| {
-                st.show_bookmarks = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let show_full_urls = match state.show_full_urls {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.show_full_urls = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let people = match state.people {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Some(Arc::<str>::from("pedro")));
-            cx.with_state(Models::default, |st| st.people = Some(model.clone()));
-            model
-        }
-    };
+    let show_bookmarks = cx.local_model_keyed("show_bookmarks", || true);
+    let show_full_urls = cx.local_model_keyed("show_full_urls", || false);
+    let people = cx.local_model_keyed("people", || Some(Arc::<str>::from("pedro")));
 
     shadcn::ContextMenu::new_controllable(cx, None, false)
         .content_test_id("ui-gallery-context-menu-demo-content")

@@ -4,25 +4,8 @@ pub const SOURCE: &str = include_str!("button_group.rs");
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default, Clone)]
-struct Models {
-    value: Option<Model<String>>,
-}
-
-fn value_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    match state.value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| st.value = Some(model.clone()));
-            model
-        }
-    }
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let value = value_model(cx);
+    let value = cx.local_model(String::new);
     let max_w_sm = LayoutRefinement::default().w_full().max_w(Px(420.0));
 
     shadcn::Field::new([

@@ -5,11 +5,6 @@ use fret_runtime::CommandId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default, Clone)]
-struct Models {
-    theme_mode: Option<Model<Option<Arc<str>>>>,
-}
-
 fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str) -> AnyElement {
     shadcn::Button::new(label)
         .variant(shadcn::ButtonVariant::Outline)
@@ -18,16 +13,7 @@ fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static st
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state = cx.with_state(Models::default, |st| st.clone());
-
-    let theme_mode = match state.theme_mode {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Some(Arc::<str>::from("system")));
-            cx.with_state(Models::default, |st| st.theme_mode = Some(model.clone()));
-            model
-        }
-    };
+    let theme_mode = cx.local_model_keyed("theme_mode", || Some(Arc::<str>::from("system")));
 
     shadcn::ContextMenu::new_controllable(cx, None, false)
         .content_test_id("ui-gallery-context-menu-radio-content")

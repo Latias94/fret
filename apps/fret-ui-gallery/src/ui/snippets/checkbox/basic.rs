@@ -3,18 +3,8 @@ pub const SOURCE: &str = include_str!("basic.rs");
 // region: example
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default)]
-struct Models {
-    model: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let model = cx.with_state(Models::default, |st| st.model.clone());
-    let model = model.unwrap_or_else(|| {
-        let model = cx.app.models_mut().insert(false);
-        cx.with_state(Models::default, |st| st.model = Some(model.clone()));
-        model
-    });
+    let model = cx.local_model(|| false);
 
     shadcn::Field::new([
         shadcn::Checkbox::new(model)

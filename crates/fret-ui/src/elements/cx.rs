@@ -71,6 +71,16 @@ struct ProvidedState<T> {
     value: Option<T>,
 }
 
+struct LocalModelSlot<T> {
+    model: Option<Model<T>>,
+}
+
+impl<T> Default for LocalModelSlot<T> {
+    fn default() -> Self {
+        Self { model: None }
+    }
+}
+
 impl<T> Default for ProvidedState<T> {
     fn default() -> Self {
         Self { value: None }
@@ -553,6 +563,31 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.callsite_state_slot_id(loc, Some(stable_hash(&key)))
     }
 
+    /// Returns a helper-local model handle stored under a synthetic callsite-derived slot.
+    ///
+    /// This is the model-handle counterpart to [`Self::slot_state`]: the slot identity is local to
+    /// this helper invocation and stable across frames, so callers can create copy-paste-friendly
+    /// local `Model<T>` state without abusing root-scoped [`Self::with_state`].
+    #[track_caller]
+    pub fn local_model<T: Any>(&mut self, init: impl FnOnce() -> T) -> Model<T> {
+        let slot = self.slot_id();
+        self.local_model_for(slot, init)
+    }
+
+    /// Like [`Self::local_model`], but keys the synthetic slot by `(callsite, key)`.
+    ///
+    /// Prefer this when one helper is invoked from a reorderable collection or when several local
+    /// models are authored through a shared helper and need explicit, stable names.
+    #[track_caller]
+    pub fn local_model_keyed<K: Hash, T: Any>(
+        &mut self,
+        key: K,
+        init: impl FnOnce() -> T,
+    ) -> Model<T> {
+        let slot = self.keyed_slot_id(key);
+        self.local_model_for(slot, init)
+    }
+
     /// Accesses state stored under an explicit element identity.
     pub fn state_for<S: Any, R>(
         &mut self,
@@ -571,6 +606,24 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         f: impl FnOnce(&mut S) -> R,
     ) -> R {
         self.state_for(element, init, f)
+    }
+
+    fn local_model_for<T: Any>(
+        &mut self,
+        slot: GlobalElementId,
+        init: impl FnOnce() -> T,
+    ) -> Model<T> {
+        let model = self.state_for(slot, LocalModelSlot::<T>::default, |st| st.model.clone());
+        match model {
+            Some(model) => model,
+            None => {
+                let model = self.app.models_mut().insert(init());
+                self.state_for(slot, LocalModelSlot::<T>::default, |st| {
+                    st.model = Some(model.clone());
+                });
+                model
+            }
+        }
     }
 
     /// Installs `value` as an inherited provider value for the current subtree.

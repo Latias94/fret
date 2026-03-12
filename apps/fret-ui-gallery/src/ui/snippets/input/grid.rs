@@ -4,31 +4,9 @@ pub const SOURCE: &str = include_str!("grid.rs");
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default, Clone)]
-struct Models {
-    first: Option<Model<String>>,
-    last: Option<Model<String>>,
-}
-
-fn ensure_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> (Model<String>, Model<String>) {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    match (state.first, state.last) {
-        (Some(first), Some(last)) => (first, last),
-        _ => {
-            let models = cx.app.models_mut();
-            let first = models.insert(String::new());
-            let last = models.insert(String::new());
-            cx.with_state(Models::default, |st| {
-                st.first = Some(first.clone());
-                st.last = Some(last.clone());
-            });
-            (first, last)
-        }
-    }
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (first, last) = ensure_models(cx);
+    let first = cx.local_model_keyed("first", String::new);
+    let last = cx.local_model_keyed("last", String::new);
     let max_w_sm = LayoutRefinement::default().w_full().max_w(Px(420.0));
 
     ui::h_row(|cx| {

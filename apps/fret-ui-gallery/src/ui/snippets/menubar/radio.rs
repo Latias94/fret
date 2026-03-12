@@ -6,33 +6,10 @@ use fret_runtime::CommandId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default, Clone)]
-struct Models {
-    profile: Option<Model<Option<Arc<str>>>>,
-    theme: Option<Model<Option<Arc<str>>>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state = cx.with_state(Models::default, |st| st.clone());
     let width = LayoutRefinement::default().w_px(Px(288.0)).min_w_0();
-
-    let profile = match state.profile {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Some(Arc::<str>::from("benoit")));
-            cx.with_state(Models::default, |st| st.profile = Some(model.clone()));
-            model
-        }
-    };
-
-    let theme = match state.theme {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Some(Arc::<str>::from("system")));
-            cx.with_state(Models::default, |st| st.theme = Some(model.clone()));
-            model
-        }
-    };
+    let profile = cx.local_model_keyed("profile", || Some(Arc::<str>::from("benoit")));
+    let theme = cx.local_model_keyed("theme", || Some(Arc::<str>::from("system")));
 
     let profiles = shadcn::MenubarMenu::new("Profiles").entries([
         shadcn::MenubarEntry::RadioGroup(
