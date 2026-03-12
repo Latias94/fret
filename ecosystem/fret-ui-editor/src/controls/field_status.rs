@@ -6,7 +6,7 @@
 use std::sync::Arc;
 
 use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Edges, Px, TextAlign, TextStyle};
+use fret_core::{Color, Corners, Edges, FontWeight, Px, TextAlign, TextStyle};
 use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, SizeStyle, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::typography;
@@ -76,32 +76,12 @@ impl FieldStatusBadge {
         let theme = Theme::global(&*cx.app);
         let density = EditorDensity::resolve(theme);
 
-        let (bg, fg, label) = match &self.status {
-            FieldStatus::Loading => (
-                theme.color_token("muted"),
-                theme.color_token("muted-foreground"),
-                self.status.label(),
-            ),
-            FieldStatus::Dirty => (
-                theme.color_token("accent"),
-                theme.color_token("accent-foreground"),
-                self.status.label(),
-            ),
-            FieldStatus::Mixed => (
-                theme.color_token("secondary"),
-                theme.color_token("secondary-foreground"),
-                self.status.label(),
-            ),
-            FieldStatus::Error(msg) => (
-                theme.color_token("destructive"),
-                theme.color_token("destructive-foreground"),
-                Arc::from(format!("Error: {msg}")),
-            ),
-        };
+        let (bg, border, fg, label) = status_badge_palette(theme, &self.status);
 
-        let badge_h = Px((density.row_height.0 * 0.8).max(12.0));
+        let badge_h = Px((density.row_height.0 - 4.0).max(14.0));
         let text_style = typography::as_control_text(TextStyle {
             size: Px(10.0),
+            weight: FontWeight::SEMIBOLD,
             line_height: Some(badge_h),
             ..Default::default()
         });
@@ -111,7 +91,9 @@ impl FieldStatusBadge {
                 layout: self.options.layout,
                 padding: Edges::symmetric(Px(6.0), Px(0.0)).into(),
                 background: Some(bg),
-                corner_radii: fret_core::Corners::all(Px(6.0)),
+                border: Edges::all(Px(1.0)),
+                border_color: Some(border),
+                corner_radii: Corners::all(Px(6.0)),
                 ..Default::default()
             },
             move |cx| {
@@ -134,5 +116,71 @@ impl FieldStatusBadge {
                 })]
             },
         )
+    }
+}
+
+fn status_badge_palette(theme: &Theme, status: &FieldStatus) -> (Color, Color, Color, Arc<str>) {
+    let surface = theme.color_token("background");
+    let border_base = theme
+        .color_by_key("border")
+        .or_else(|| theme.color_by_key("component.text_field.border"))
+        .unwrap_or_else(|| theme.color_token("foreground"));
+    let foreground = theme.color_token("foreground");
+    let muted_foreground = theme
+        .color_by_key("muted-foreground")
+        .or_else(|| theme.color_by_key("muted_foreground"))
+        .unwrap_or(foreground);
+    let accent = theme.color_token("accent");
+    let secondary = theme
+        .color_by_key("secondary")
+        .unwrap_or_else(|| theme.color_token("muted"));
+    let destructive = theme.color_token("destructive");
+
+    let (tint, bg_mix, border_mix, fg_mix) = match status {
+        FieldStatus::Loading => (muted_foreground, 0.10, 0.20, 0.35),
+        FieldStatus::Dirty => (accent, 0.22, 0.50, 0.12),
+        FieldStatus::Mixed => (secondary, 0.18, 0.34, 0.08),
+        FieldStatus::Error(_) => (destructive, 0.24, 0.62, 0.04),
+    };
+
+    (
+        mix(surface, tint, bg_mix),
+        mix(border_base, tint, border_mix),
+        mix(foreground, tint, fg_mix),
+        status.label(),
+    )
+}
+
+fn lerp(a: f32, b: f32, t: f32) -> f32 {
+    a + (b - a) * t
+}
+
+fn mix(a: Color, b: Color, t: f32) -> Color {
+    let t = t.clamp(0.0, 1.0);
+    Color {
+        r: lerp(a.r, b.r, t),
+        g: lerp(a.g, b.g, t),
+        b: lerp(a.b, b.b, t),
+        a: lerp(a.a, b.a, t),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use fret_app::App;
+    use fret_ui::Theme;
+
+    use super::{FieldStatus, status_badge_palette};
+
+    #[test]
+    fn error_badge_palette_keeps_short_visible_label() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+
+        let (_, _, _, label) = status_badge_palette(theme, &FieldStatus::Error(Arc::from("stub")));
+
+        assert_eq!(label.as_ref(), "Error");
     }
 }

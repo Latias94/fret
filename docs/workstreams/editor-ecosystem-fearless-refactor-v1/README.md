@@ -45,6 +45,11 @@ Current checkpoint:
 - the row grammar is now explicit (`label lane -> value lane -> reset slot -> status/actions slot`),
 - editor trailing affordances now converge on a row-height-square baseline across property-row
   reset actions, joined-input clear/remove buttons, and gradient-row icon actions,
+- status badges and reset affordances now carry explicit idle chrome instead of relying on bare text
+  or fully filled pills, which makes dirty/mixed/loading/error cues read more like inspector state
+  markers than ad-hoc demo labels,
+- default inspector hierarchy tokens now bias a little more toward editor-style section structure:
+  taller group headers, more content/panel spacing, and clearer header/body contrast bands,
 - the default proof surface can produce reviewable overview / typing / validation screenshots,
 - and the remaining foundation cleanup is rerun-safe screenshot automation plus follow-up tuning for
   wide-inspector slack after the new lane grammar landed.

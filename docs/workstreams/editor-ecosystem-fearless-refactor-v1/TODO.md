@@ -34,8 +34,15 @@ Interaction contract:
 
 ## Phase B - Foundation closure before component growth
 
-- [ ] `EER-BASE-110` Fix the default editor baseline visual hierarchy:
+- [~] `EER-BASE-110` Fix the default editor baseline visual hierarchy:
       field chrome, contrast bands, separators, label/readout clarity, and group hierarchy.
+      Recent progress: trailing affordances now use a shared row-height-square baseline, property-row
+      reset actions keep subtle idle chrome, and field-status badges now use short labels plus
+      border-defined semantic tones instead of raw filled pills. Default inspector hierarchy tokens
+      now also give property groups taller headers, stronger header/body contrast, and a bit more
+      panel/content separation.
+      Remaining work: separators, group hierarchy, and the final balance between neutral default and
+      editor-specific contrast still need another screenshot-driven pass.
 - [ ] `EER-BASE-111` Finish `EditorWidgetVisuals` convergence for the existing starter-set controls
       before promoting more components.
 - [~] `EER-BASE-112` Define and land inspector/property layout grammar:

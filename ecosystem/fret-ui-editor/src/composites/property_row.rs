@@ -2,7 +2,7 @@
 use std::sync::Arc;
 
 use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Corners, Edges, Px, TextAlign, TextStyle};
+use fret_core::{Axis, Corners, Edges, FontWeight, Px, TextAlign, TextStyle};
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexItemStyle, FlexProps, LayoutStyle, Length,
@@ -292,9 +292,23 @@ impl PropertyRow {
                     let theme = Theme::global(&*cx.app);
                     let hovered = st.hovered || st.hovered_raw;
                     let pressed = st.pressed;
-                    let bg = editor_icon_button_bg(theme, true, hovered, pressed);
-                    let border = editor_icon_button_border(theme, true, hovered, pressed);
-                    let border_width = if border.is_some() { Px(1.0) } else { Px(0.0) };
+                    let mut idle_bg = theme
+                        .color_by_key("muted")
+                        .unwrap_or_else(|| theme.color_token("background"));
+                    idle_bg.a = (idle_bg.a * 0.35).clamp(0.0, 1.0);
+                    let idle_border = theme
+                        .color_by_key("border")
+                        .or_else(|| theme.color_by_key("component.text_field.border"))
+                        .unwrap_or(reset_fg);
+                    let bg =
+                        editor_icon_button_bg(theme, true, hovered, pressed).unwrap_or(idle_bg);
+                    let border = editor_icon_button_border(theme, true, hovered, pressed)
+                        .unwrap_or(idle_border);
+                    let fg = if hovered || pressed {
+                        theme.color_token("foreground")
+                    } else {
+                        reset_fg
+                    };
 
                     vec![cx.container(
                         ContainerProps {
@@ -306,9 +320,9 @@ impl PropertyRow {
                                 },
                                 ..Default::default()
                             },
-                            background: bg,
-                            border: Edges::all(border_width),
-                            border_color: border,
+                            background: Some(bg),
+                            border: Edges::all(Px(1.0)),
+                            border_color: Some(border),
                             corner_radii: Corners::all(Px(6.0)),
                             ..Default::default()
                         },
@@ -325,11 +339,12 @@ impl PropertyRow {
                                 text: glyph.clone(),
                                 style: Some(typography::as_control_text(TextStyle {
                                     // Keep this conservative: allow the theme's defaults to dominate.
-                                    size: Px(12.0),
+                                    size: Px(11.0),
+                                    weight: FontWeight::SEMIBOLD,
                                     line_height: Some(affordance_extent),
                                     ..Default::default()
                                 })),
-                                color: Some(reset_fg),
+                                color: Some(fg),
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
                                 align: TextAlign::Center,

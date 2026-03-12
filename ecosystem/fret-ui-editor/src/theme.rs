@@ -113,10 +113,15 @@ fn editor_theme_patch_v1() -> ThemeConfig {
     metric(&mut cfg, EditorTokenKeys::PROPERTY_VALUE_MAX_WIDTH, 640.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_STATUS_SLOT_WIDTH, 72.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_RESET_SLOT_WIDTH, 24.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_GROUP_CONTENT_GAP, 6.0);
+    metric(
+        &mut cfg,
+        EditorTokenKeys::PROPERTY_GROUP_HEADER_HEIGHT,
+        26.0,
+    );
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_GROUP_CONTENT_GAP, 8.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_AUTO_STACK_BELOW, 520.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_GAP, 10.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_HEADER_GAP, 8.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_GAP, 12.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_HEADER_GAP, 10.0);
 
     // Text-field-like metrics (used by MiniSearchBox / NumericInput / ColorEdit).
     metric(&mut cfg, "component.text_field.padding_x", 6.0);
@@ -142,10 +147,10 @@ fn editor_theme_patch_v1() -> ThemeConfig {
     color(&mut cfg, "accent", "#355a86");
     color(&mut cfg, "ring", "#7faee8");
 
-    color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BG, "#10161e");
-    color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BORDER, "#313d4b");
-    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BG, "#1a212b");
-    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BORDER, "#313d4b");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BG, "#0f151d");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BORDER, "#364454");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BG, "#1d2631");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BORDER, "#3a495a");
     color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_FG, "#edf3fa");
 
     color(&mut cfg, EditorTokenKeys::NUMERIC_ERROR_FG, "#ffd3d6");
@@ -188,12 +193,12 @@ fn imgui_like_dense_patch_v1() -> ThemeConfig {
     metric(
         &mut cfg,
         EditorTokenKeys::PROPERTY_GROUP_HEADER_HEIGHT,
-        22.0,
+        23.0,
     );
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_GROUP_CONTENT_GAP, 4.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_GROUP_CONTENT_GAP, 5.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_AUTO_STACK_BELOW, 480.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_GAP, 8.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_HEADER_GAP, 6.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_GAP, 9.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_HEADER_GAP, 7.0);
     metric(&mut cfg, EditorTokenKeys::CHECKBOX_SIZE, 14.0);
     metric(&mut cfg, EditorTokenKeys::CHECKBOX_RADIUS, 2.0);
     metric(&mut cfg, EditorTokenKeys::VEC_AUTO_STACK_BELOW, 400.0);
@@ -222,10 +227,10 @@ fn imgui_like_dense_patch_v1() -> ThemeConfig {
     color(&mut cfg, "accent", "#4c88c7");
     color(&mut cfg, "ring", "#6ea8e0");
 
-    color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BG, "#202328");
-    color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BORDER, "#454d59");
-    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BG, "#2a2d33");
-    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BORDER, "#454d59");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BG, "#1d2127");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BORDER, "#4a5562");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BG, "#2b3138");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BORDER, "#56616f");
     color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_FG, "#e6e8eb");
 
     color(&mut cfg, EditorTokenKeys::NUMERIC_ERROR_FG, "#ffcbc7");
@@ -294,15 +299,19 @@ mod tests {
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_GROUP_CONTENT_GAP),
-            Some(Px(6.0))
+            Some(Px(8.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_PANEL_GAP),
-            Some(Px(10.0))
+            Some(Px(12.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_GAP),
-            Some(Px(8.0))
+            Some(Px(10.0))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::PROPERTY_GROUP_HEADER_HEIGHT),
+            Some(Px(26.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::SLIDER_THUMB_DIAMETER),
@@ -314,7 +323,7 @@ mod tests {
         );
         assert_eq!(
             theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_BG),
-            Some(Color::from_srgb_hex_rgb(0x10_16_1e))
+            Some(Color::from_srgb_hex_rgb(0x0f_15_1d))
         );
     }
 
@@ -350,15 +359,19 @@ mod tests {
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_GROUP_CONTENT_GAP),
-            Some(Px(4.0))
+            Some(Px(5.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_PANEL_GAP),
-            Some(Px(8.0))
+            Some(Px(9.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_GAP),
-            Some(Px(6.0))
+            Some(Px(7.0))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::PROPERTY_GROUP_HEADER_HEIGHT),
+            Some(Px(23.0))
         );
         assert_eq!(
             theme.metric_by_key("component.text_field.radius"),
@@ -372,6 +385,10 @@ mod tests {
             theme.color_by_key("border"),
             Some(Color::from_srgb_hex_rgb(0x45_4d_59))
         );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_BG),
+            Some(Color::from_srgb_hex_rgb(0x1d_21_27))
+        );
     }
 
     #[test]
@@ -381,7 +398,7 @@ mod tests {
         install_editor_theme_preset_v1(&mut app, EditorThemePresetV1::Default);
 
         let expected_field_bg = Some(Color::from_srgb_hex_rgb(0x14_1b_24));
-        let expected_panel_bg = Some(Color::from_srgb_hex_rgb(0x10_16_1e));
+        let expected_panel_bg = Some(Color::from_srgb_hex_rgb(0x0f_15_1d));
         assert_eq!(
             Theme::global(&app).color_by_key("component.text_field.bg"),
             expected_field_bg
