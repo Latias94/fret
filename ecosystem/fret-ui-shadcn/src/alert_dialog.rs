@@ -77,12 +77,6 @@ impl AlertDialogOverlay {
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 
-#[derive(Default, Clone)]
-struct AlertDialogHandleState {
-    active_trigger: Option<Model<Option<GlobalElementId>>>,
-    content_element: Option<Model<Option<GlobalElementId>>>,
-}
-
 #[derive(Clone)]
 pub struct AlertDialogHandle {
     open: Model<bool>,
@@ -115,27 +109,8 @@ impl AlertDialogHandle {
             .default_open(default_open)
             .open_model(cx);
 
-        let state = cx.with_state(AlertDialogHandleState::default, |st| st.clone());
-        let active_trigger = match state.active_trigger {
-            Some(model) => model,
-            None => {
-                let model = cx.app.models_mut().insert(None::<GlobalElementId>);
-                cx.with_state(AlertDialogHandleState::default, |st| {
-                    st.active_trigger = Some(model.clone())
-                });
-                model
-            }
-        };
-        let content_element = match state.content_element {
-            Some(model) => model,
-            None => {
-                let model = cx.app.models_mut().insert(None::<GlobalElementId>);
-                cx.with_state(AlertDialogHandleState::default, |st| {
-                    st.content_element = Some(model.clone())
-                });
-                model
-            }
-        };
+        let active_trigger = cx.local_model_keyed("active_trigger", || None::<GlobalElementId>);
+        let content_element = cx.local_model_keyed("content_element", || None::<GlobalElementId>);
 
         Self {
             open,
@@ -425,7 +400,9 @@ impl AlertDialog {
                 .unwrap_or(id);
             let overlay_root_name = radix_alert_dialog::alert_dialog_root_name(id);
             let prev_content_element =
-                cx.with_state(AlertDialogA11yState::default, |st| st.content_element);
+                cx.keyed_slot_state("a11y", AlertDialogA11yState::default, |st| {
+                    st.content_element
+                });
 
             let motion = OverlayController::transition_with_durations_and_cubic_bezier_duration(
                 cx,
@@ -574,7 +551,7 @@ impl AlertDialog {
                                 *value = Some(content_element)
                             });
                     }
-                    cx.with_state(AlertDialogA11yState::default, |st| {
+                    cx.keyed_slot_state("a11y", AlertDialogA11yState::default, |st| {
                         st.content_element = Some(content_element)
                     });
                 }

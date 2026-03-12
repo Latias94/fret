@@ -461,7 +461,7 @@ impl Dialog {
             let id = trigger.id;
             let overlay_root_name = radix_dialog::dialog_root_name(id);
             let prev_content_element =
-                cx.with_state(DialogA11yState::default, |st| st.content_element);
+                cx.keyed_slot_state("a11y", DialogA11yState::default, |st| st.content_element);
 
             let motion = OverlayController::transition_with_durations_and_cubic_bezier_duration(
                 cx,
@@ -495,7 +495,7 @@ impl Dialog {
             }
 
             let focused_element = cx.focused_element();
-            let restore_element = cx.with_state(DialogFocusRestoreState::default, |st| {
+            let restore_element = cx.slot_state(DialogFocusRestoreState::default, |st| {
                 if is_open && !st.was_open {
                     st.restore_element = focused_element;
                     st.was_open = true;
@@ -664,7 +664,7 @@ impl Dialog {
                 );
 
                 if let Some(content_element) = content_element_for_trigger.get() {
-                    cx.with_state(DialogA11yState::default, |st| {
+                    cx.keyed_slot_state("a11y", DialogA11yState::default, |st| {
                         st.content_element = Some(content_element)
                     });
                 }
@@ -2384,7 +2384,11 @@ mod tests {
                         ))
                         .portal(DialogPortal::new())
                         .overlay(DialogOverlay::new())
-                        .content(DialogContent::new([cx.text("Content")]).into_element(cx))
+                        .content(
+                            DialogContent::new([cx.text("Content")])
+                                .show_close_button(false)
+                                .into_element(cx),
+                        )
                         .into_element(cx),
                 ]
             },
@@ -5310,7 +5314,9 @@ mod tests {
                             },
                         );
 
-                        DialogContent::new(vec![first, second]).into_element(cx)
+                        DialogContent::new(vec![first, second])
+                            .show_close_button(false)
+                            .into_element(cx)
                     },
                 );
 
@@ -5424,7 +5430,9 @@ mod tests {
                             },
                         );
 
-                        DialogContent::new(vec![first, second]).into_element(cx)
+                        DialogContent::new(vec![first, second])
+                            .show_close_button(false)
+                            .into_element(cx)
                     },
                 );
                 vec![dialog]
