@@ -24,15 +24,8 @@ fn tailwind_transition_ease_in_out(t: f32) -> f32 {
     fret_ui_kit::headless::easing::CubicBezier::new(0.4, 0.0, 0.2, 1.0).sample(t)
 }
 
-#[derive(Debug, Default)]
-struct ItemSizeProviderState {
-    current: Option<ItemSize>,
-}
-
 fn item_size_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> ItemSize {
-    cx.inherited_state_where::<ItemSizeProviderState>(|st| st.current.is_some())
-        .and_then(|st| st.current)
-        .unwrap_or_default()
+    cx.provided::<ItemSize>().copied().unwrap_or_default()
 }
 
 #[track_caller]
@@ -41,16 +34,7 @@ fn with_item_size_provider<H: UiHost, R>(
     size: ItemSize,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(ItemSizeProviderState::default, |st| {
-        let prev = st.current;
-        st.current = Some(size);
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(ItemSizeProviderState::default, |st| {
-        st.current = prev;
-    });
-    out
+    cx.provide(size, f)
 }
 
 /// Build an item and its parts inside a size provider.

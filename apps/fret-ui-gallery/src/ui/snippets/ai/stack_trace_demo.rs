@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("stack_trace_demo.rs");
 
 // region: example
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
@@ -9,24 +8,10 @@ use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-#[derive(Default)]
-struct DemoModels {
-    status: Option<Model<Arc<str>>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let status = cx.with_state(DemoModels::default, |st| st.status.clone());
-    let status = match status {
-        Some(model) => model,
-        None => {
-            let model = cx
-                .app
-                .models_mut()
-                .insert(Arc::<str>::from("Ready for copy or file-open actions."));
-            cx.with_state(DemoModels::default, |st| st.status = Some(model.clone()));
-            model
-        }
-    };
+    let status = cx.local_model_keyed("status", || {
+        Arc::<str>::from("Ready for copy or file-open actions.")
+    });
 
     let status_text = cx
         .get_model_cloned(&status, Invalidation::Layout)

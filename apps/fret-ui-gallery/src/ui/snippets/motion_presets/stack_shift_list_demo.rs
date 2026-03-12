@@ -27,68 +27,37 @@ struct StackShiftListItem {
     exit_slot: usize,
 }
 
-#[derive(Default, Clone)]
-struct Models {
-    stack_shift_list: Option<Model<Vec<StackShiftListItem>>>,
-    stack_shift_next_id: Option<Model<u64>>,
-}
-
-fn ensure_models(cx: &mut UiCx<'_>) -> (Model<Vec<StackShiftListItem>>, Model<u64>) {
-    let state = cx.with_state(Models::default, |st| st.clone());
-
-    let list = match state.stack_shift_list {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(vec![
-                StackShiftListItem {
-                    id: 1,
-                    exiting: false,
-                    exit_slot: 0,
-                },
-                StackShiftListItem {
-                    id: 2,
-                    exiting: false,
-                    exit_slot: 0,
-                },
-                StackShiftListItem {
-                    id: 3,
-                    exiting: false,
-                    exit_slot: 0,
-                },
-                StackShiftListItem {
-                    id: 4,
-                    exiting: false,
-                    exit_slot: 0,
-                },
-            ]);
-            cx.with_state(Models::default, |st| {
-                st.stack_shift_list = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let next_id = match state.stack_shift_next_id {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(5u64);
-            cx.with_state(Models::default, |st| {
-                st.stack_shift_next_id = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    (list, next_id)
-}
-
 pub fn render(cx: &mut UiCx<'_>, theme: &Theme) -> AnyElement {
     let shell_layout = LayoutRefinement::default()
         .w_full()
         .max_w(Px(760.0))
         .min_w_0();
 
-    let (stack_shift_list, stack_shift_next_id) = ensure_models(cx);
+    let stack_shift_list = cx.local_model_keyed("stack_shift_list", || {
+        vec![
+            StackShiftListItem {
+                id: 1,
+                exiting: false,
+                exit_slot: 0,
+            },
+            StackShiftListItem {
+                id: 2,
+                exiting: false,
+                exit_slot: 0,
+            },
+            StackShiftListItem {
+                id: 3,
+                exiting: false,
+                exit_slot: 0,
+            },
+            StackShiftListItem {
+                id: 4,
+                exiting: false,
+                exit_slot: 0,
+            },
+        ]
+    });
+    let stack_shift_next_id = cx.local_model_keyed("stack_shift_next_id", || 5u64);
 
     let shift_duration_ms = theme.duration_ms_token("duration.motion.stack.shift");
     let shift_duration = Duration::from_millis(shift_duration_ms as u64);

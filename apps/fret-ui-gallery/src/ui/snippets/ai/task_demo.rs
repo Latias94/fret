@@ -7,21 +7,8 @@ use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, R
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default)]
-struct DemoModels {
-    preset: Option<Model<u8>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let preset = cx.with_state(DemoModels::default, |st| st.preset.clone());
-    let preset = match preset {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(0_u8);
-            cx.with_state(DemoModels::default, |st| st.preset = Some(model.clone()));
-            model
-        }
-    };
+    let preset = cx.local_model_keyed("preset", || 0_u8);
     let preset_value = cx.app.models().read(&preset, |v| *v).unwrap_or(0);
 
     let preset_for_react = preset.clone();

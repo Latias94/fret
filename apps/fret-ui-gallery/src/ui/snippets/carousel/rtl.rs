@@ -10,11 +10,6 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default, Clone)]
-struct Models {
-    api_handle: Option<Model<Option<shadcn::CarouselApi>>>,
-}
-
 #[derive(Debug, Clone, Copy)]
 struct SlideVisual {
     text_px: Px,
@@ -60,15 +55,7 @@ fn slide(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement {
 pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let max_w_xs = Px(320.0);
 
-    let state = cx.with_state(Models::default, |st| st.clone());
-    let api_handle = match state.api_handle {
-        Some(model) => model,
-        None => {
-            let model: Model<Option<shadcn::CarouselApi>> = cx.app.models_mut().insert(None);
-            cx.with_state(Models::default, |st| st.api_handle = Some(model.clone()));
-            model
-        }
-    };
+    let api_handle = cx.local_model_keyed("api_handle", || None::<shadcn::CarouselApi>);
 
     let visual = SlideVisual {
         text_px: Px(36.0),

@@ -3,25 +3,8 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 // region: example
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default, Clone)]
-struct Models {
-    query: Option<Model<String>>,
-}
-
-fn query_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    match state.query {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| st.query = Some(model.clone()));
-            model
-        }
-    }
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let query = query_model(cx);
+    let query = cx.local_model_keyed("query", String::new);
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
         let icon =
             fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.folder-search"));

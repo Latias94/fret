@@ -14,11 +14,6 @@ pub use fret_ui::overlay_placement::LayoutDirection;
 
 use fret_ui::{ElementContext, UiHost};
 
-#[derive(Debug, Default)]
-struct DirectionProviderState {
-    current: Option<LayoutDirection>,
-}
-
 /// Resolve direction using the Radix rule: `local || inherited || Ltr`.
 pub fn use_direction(
     local: Option<LayoutDirection>,
@@ -32,8 +27,7 @@ pub fn use_direction(
 /// This models the observable outcome of Radix `DirectionProvider` + `useDirection()`, without
 /// requiring a dedicated runtime context system.
 pub fn inherited_direction<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<LayoutDirection> {
-    cx.inherited_state_where::<DirectionProviderState>(|st| st.current.is_some())
-        .and_then(|st| st.current)
+    cx.provided::<LayoutDirection>().copied()
 }
 
 /// Runs `f` with `dir` installed as the current inherited direction for the subtree.
@@ -45,16 +39,7 @@ pub fn with_direction_provider<H: UiHost, R>(
     dir: LayoutDirection,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(DirectionProviderState::default, |st| {
-        let prev = st.current;
-        st.current = Some(dir);
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(DirectionProviderState::default, |st| {
-        st.current = prev;
-    });
-    out
+    cx.provide(dir, f)
 }
 
 /// Resolve direction from an optional local override plus any inherited provider.

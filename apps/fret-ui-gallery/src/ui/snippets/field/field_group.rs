@@ -4,31 +4,9 @@ pub const SOURCE: &str = include_str!("field_group.rs");
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default, Clone)]
-struct Models {
-    checkbox_a: Option<Model<bool>>,
-    checkbox_b: Option<Model<bool>>,
-}
-
-fn ensure_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> (Model<bool>, Model<bool>) {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    match (state.checkbox_a, state.checkbox_b) {
-        (Some(a), Some(b)) => (a, b),
-        _ => {
-            let models = cx.app.models_mut();
-            let a = models.insert(true);
-            let b = models.insert(false);
-            cx.with_state(Models::default, |st| {
-                st.checkbox_a = Some(a.clone());
-                st.checkbox_b = Some(b.clone());
-            });
-            (a, b)
-        }
-    }
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (checkbox_a, checkbox_b) = ensure_models(cx);
+    let checkbox_a = cx.local_model_keyed("checkbox_a", || true);
+    let checkbox_b = cx.local_model_keyed("checkbox_b", || false);
     let max_w_md = LayoutRefinement::default().w_full().max_w(Px(520.0));
 
     shadcn::FieldGroup::new([

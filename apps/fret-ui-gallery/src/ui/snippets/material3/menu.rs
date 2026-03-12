@@ -8,27 +8,12 @@ use fret_ui_kit::{ColorRef, WidgetStateProperty};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default)]
-struct MenuPageModels {
-    override_open: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     last_action: Model<Arc<str>>,
 ) -> AnyElement {
-    let override_open = cx.with_state(MenuPageModels::default, |st| st.override_open.clone());
-    let override_open = match override_open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(MenuPageModels::default, |st| {
-                st.override_open = Some(model.clone())
-            });
-            model
-        }
-    };
+    let override_open = cx.local_model_keyed("override_open", || false);
 
     fn on_select(id: &'static str, last_action: Model<Arc<str>>) -> OnActivate {
         Arc::new(move |host, action_cx, _reason| {

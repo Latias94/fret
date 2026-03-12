@@ -10,11 +10,6 @@ use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default)]
-struct DemoModels {
-    state: Option<Model<ui_ai::PersonaState>>,
-}
-
 fn state_button(
     state_model: Model<ui_ai::PersonaState>,
     current_state: ui_ai::PersonaState,
@@ -37,15 +32,7 @@ fn state_button(
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state_model = cx.with_state(DemoModels::default, |st| st.state.clone());
-    let state_model = match state_model {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(ui_ai::PersonaState::Idle);
-            cx.with_state(DemoModels::default, |st| st.state = Some(model.clone()));
-            model
-        }
-    };
+    let state_model = cx.local_model_keyed("state", || ui_ai::PersonaState::Idle);
 
     let current_state = cx
         .get_model_copied(&state_model, Invalidation::Layout)

@@ -3,28 +3,9 @@ pub const SOURCE: &str = include_str!("fieldset.rs");
 // region: example
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default)]
-struct Models {
-    text_input: Option<Model<String>>,
-    text_area: Option<Model<String>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (text_input, text_area) = cx.with_state(Models::default, |st| {
-        (st.text_input.clone(), st.text_area.clone())
-    });
-    let (text_input, text_area) = match (text_input, text_area) {
-        (Some(text_input), Some(text_area)) => (text_input, text_area),
-        _ => {
-            let text_input = cx.app.models_mut().insert(String::new());
-            let text_area = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| {
-                st.text_input = Some(text_input.clone());
-                st.text_area = Some(text_area.clone());
-            });
-            (text_input, text_area)
-        }
-    };
+    let text_input = cx.local_model_keyed("text_input", String::new);
+    let text_area = cx.local_model_keyed("text_area", String::new);
 
     let max_w_md = LayoutRefinement::default()
         .w_full()

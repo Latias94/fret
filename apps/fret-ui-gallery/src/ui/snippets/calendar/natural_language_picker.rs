@@ -132,62 +132,12 @@ fn parse_natural_date_en(raw: &str, base: Date) -> Option<Date> {
     }
 }
 
-#[derive(Default)]
-struct Models {
-    open: Option<Model<bool>>,
-    month: Option<Model<CalendarMonth>>,
-    selected: Option<Model<Option<Date>>>,
-    value: Option<Model<String>>,
-    last_selected: Option<Date>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (open, month, selected, value) = cx.with_state(Models::default, |st| {
-        (
-            st.open.clone(),
-            st.month.clone(),
-            st.selected.clone(),
-            st.value.clone(),
-        )
-    });
-
     let today = today_from_env_or_now();
-
-    let open = match open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.open = Some(model.clone()));
-            model
-        }
-    };
-
-    let month = match month {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(CalendarMonth::from_date(today));
-            cx.with_state(Models::default, |st| st.month = Some(model.clone()));
-            model
-        }
-    };
-
-    let selected = match selected {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(None);
-            cx.with_state(Models::default, |st| st.selected = Some(model.clone()));
-            model
-        }
-    };
-
-    let value = match value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| st.value = Some(model.clone()));
-            model
-        }
-    };
+    let open = cx.local_model_keyed("open", || false);
+    let month = cx.local_model_keyed("month", || CalendarMonth::from_date(today));
+    let selected = cx.local_model_keyed("selected", || None::<Date>);
+    let value = cx.local_model_keyed("value", String::new);
 
     let current_value = cx
         .app
@@ -206,18 +156,21 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     }
 
     let selected_now = cx.app.models().read(&selected, |v| *v).ok().flatten();
-    let next_value = cx.with_state(Models::default, |st| {
-        if selected_now != st.last_selected {
-            st.last_selected = selected_now;
-            Some(
-                selected_now
-                    .map(format_date_month_dd_yyyy_en)
-                    .unwrap_or_default(),
-            )
-        } else {
-            None
-        }
-    });
+    let next_value = cx.slot_state(
+        || None::<Date>,
+        |st| {
+            if selected_now != *st {
+                *st = selected_now;
+                Some(
+                    selected_now
+                        .map(format_date_month_dd_yyyy_en)
+                        .unwrap_or_default(),
+                )
+            } else {
+                None
+            }
+        },
+    );
     if let Some(next) = next_value {
         let _ = cx.app.models_mut().update(&value, |v| *v = next);
     }

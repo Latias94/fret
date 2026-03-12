@@ -8,32 +8,9 @@ use std::sync::Arc;
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 const CMD_APP_SAVE: &str = "ui_gallery.app.save";
 
-#[derive(Default, Clone)]
-struct Models {
-    rows_per_page: Option<Model<Option<Arc<str>>>>,
-    rows_per_page_open: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    let rows_per_page = match state.rows_per_page {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Some(Arc::<str>::from("25")));
-            cx.with_state(Models::default, |st| st.rows_per_page = Some(model.clone()));
-            model
-        }
-    };
-    let rows_per_page_open = match state.rows_per_page_open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.rows_per_page_open = Some(model.clone())
-            });
-            model
-        }
-    };
+    let rows_per_page = cx.local_model_keyed("rows_per_page", || Some(Arc::<str>::from("25")));
+    let rows_per_page_open = cx.local_model_keyed("rows_per_page_open", || false);
 
     let page_number = |cx: &mut ElementContext<'_, H>, label: &'static str| {
         fret_ui_kit::ui::text(label).tabular_nums().into_element(cx)

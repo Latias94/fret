@@ -4,12 +4,6 @@ pub const SOURCE: &str = include_str!("with_form.rs");
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default, Clone)]
-struct Models {
-    width: Option<Model<String>>,
-    height: Option<Model<String>>,
-}
-
 fn centered<H: UiHost>(cx: &mut ElementContext<'_, H>, body: AnyElement) -> AnyElement {
     ui::h_flex(move |_cx| [body])
         .layout(LayoutRefinement::default().w_full())
@@ -18,23 +12,8 @@ fn centered<H: UiHost>(cx: &mut ElementContext<'_, H>, body: AnyElement) -> AnyE
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    let width = match state.width {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::from("100%"));
-            cx.with_state(Models::default, |st| st.width = Some(model.clone()));
-            model
-        }
-    };
-    let height = match state.height {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::from("25px"));
-            cx.with_state(Models::default, |st| st.height = Some(model.clone()));
-            model
-        }
-    };
+    let width = cx.local_model_keyed("width", || String::from("100%"));
+    let height = cx.local_model_keyed("height", || String::from("25px"));
 
     let content = shadcn::PopoverContent::new([
         shadcn::PopoverHeader::new([

@@ -22,50 +22,10 @@ pub fn render<H: UiHost>(
     let error_now = cx
         .get_model_copied(&error, Invalidation::Layout)
         .unwrap_or(false);
-
-    #[derive(Default)]
-    struct LocalState {
-        selected_value: Option<Model<Option<Arc<str>>>>,
-        exposed_selected_value: Option<Model<Option<Arc<str>>>>,
-        exposed_query: Option<Model<String>>,
-    }
-
-    let selected_value = cx.with_state(LocalState::default, |st| st.selected_value.clone());
-    let selected_value = if let Some(model) = selected_value {
-        model
-    } else {
-        let model = cx.app.models_mut().insert(None::<Arc<str>>);
-        cx.with_state(LocalState::default, |st| {
-            st.selected_value = Some(model.clone())
-        });
-        model
-    };
-
+    let selected_value = cx.local_model_keyed("selected_value", || None::<Arc<str>>);
     let exposed_selected_value =
-        cx.with_state(LocalState::default, |st| st.exposed_selected_value.clone());
-    let exposed_selected_value = if let Some(model) = exposed_selected_value {
-        model
-    } else {
-        let model = cx
-            .app
-            .models_mut()
-            .insert(Some(Arc::<str>::from("beta")) as Option<Arc<str>>);
-        cx.with_state(LocalState::default, |st| {
-            st.exposed_selected_value = Some(model.clone())
-        });
-        model
-    };
-
-    let exposed_query = cx.with_state(LocalState::default, |st| st.exposed_query.clone());
-    let exposed_query = if let Some(model) = exposed_query {
-        model
-    } else {
-        let model = cx.app.models_mut().insert(String::new());
-        cx.with_state(LocalState::default, |st| {
-            st.exposed_query = Some(model.clone())
-        });
-        model
-    };
+        cx.local_model_keyed("exposed_selected_value", || Some(Arc::<str>::from("beta")));
+    let exposed_query = cx.local_model_keyed("exposed_query", String::new);
 
     let query_now = cx
         .get_model_cloned(&value, Invalidation::Layout)

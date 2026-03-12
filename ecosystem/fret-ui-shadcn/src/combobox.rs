@@ -100,11 +100,6 @@ pub fn use_combobox_anchor(child: AnyElement) -> PopoverAnchor {
     PopoverAnchor::new(child)
 }
 
-#[derive(Default)]
-struct ComboboxState {
-    clear_query_on_close: kit_combobox::ClearQueryOnCloseState,
-}
-
 pub use kit_combobox::ComboboxOpenChangeReason;
 
 type OnOpenChange = kit_combobox::OnOpenChange;
@@ -1246,7 +1241,7 @@ fn combobox_with_patch<H: UiHost>(
         );
         let selected = cx.watch_model(&model).cloned().unwrap_or_default();
         if let Some(handler) = on_value_change.as_ref() {
-            let value_change = cx.with_state(
+            let value_change = cx.slot_state(
                 kit_combobox::ValueChangeCallbackState::<Arc<str>>::default,
                 |state| kit_combobox::value_change_event(state, selected.clone()),
             );
@@ -1262,7 +1257,7 @@ fn combobox_with_patch<H: UiHost>(
             .unwrap_or(None)
             .unwrap_or(ComboboxOpenChangeReason::None);
         let (open_change, open_change_complete) = cx
-            .with_state(kit_combobox::OpenChangeCallbackState::default, |state| {
+            .slot_state(kit_combobox::OpenChangeCallbackState::default, |state| {
                 kit_combobox::open_change_events(state, is_open, is_open, false)
             });
         if let (Some(open), Some(handler)) = (open_change, on_open_change.as_ref()) {
@@ -1283,8 +1278,8 @@ fn combobox_with_patch<H: UiHost>(
             cx.local_model_keyed("query", String::new)
         };
 
-        let should_clear_query = cx.with_state(ComboboxState::default, |st| {
-            kit_combobox::should_clear_query_on_close(&mut st.clear_query_on_close, is_open)
+        let should_clear_query = cx.slot_state(kit_combobox::ClearQueryOnCloseState::default, |state| {
+            kit_combobox::should_clear_query_on_close(state, is_open)
         });
         if should_clear_query {
             let _ = cx.app.models_mut().update(&query_model, |v| v.clear());

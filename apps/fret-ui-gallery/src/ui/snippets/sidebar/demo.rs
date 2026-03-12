@@ -6,25 +6,6 @@ use fret_ui::element::SemanticsDecoration;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default, Clone)]
-struct SidebarModels {
-    selected: Option<Model<Arc<str>>>,
-}
-
-fn ensure_selected<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Arc<str>> {
-    let state = cx.with_state(SidebarModels::default, |st| st.clone());
-    match state.selected {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Arc::<str>::from("playground"));
-            cx.with_state(SidebarModels::default, |st| {
-                st.selected = Some(model.clone())
-            });
-            model
-        }
-    }
-}
-
 fn resolve_selected<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     model: &Model<Arc<str>>,
@@ -64,7 +45,7 @@ fn menu_button<H: UiHost>(
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let selected_model = ensure_selected(cx);
+    let selected_model = cx.local_model_keyed("selected", || Arc::<str>::from("playground"));
 
     let content = shadcn::SidebarProvider::new().with(cx, |cx| {
         let selected_value = resolve_selected(cx, &selected_model, "playground");

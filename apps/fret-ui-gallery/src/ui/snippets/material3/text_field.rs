@@ -11,21 +11,7 @@ pub fn render<H: UiHost>(
     disabled: Model<bool>,
     error: Model<bool>,
 ) -> AnyElement {
-    #[derive(Default)]
-    struct LocalState {
-        icons_value: Option<Model<String>>,
-    }
-
-    let icons_value = cx.with_state(LocalState::default, |st| st.icons_value.clone());
-    let icons_value = if let Some(model) = icons_value {
-        model
-    } else {
-        let model = cx.app.models_mut().insert(String::new());
-        cx.with_state(LocalState::default, |st| {
-            st.icons_value = Some(model.clone())
-        });
-        model
-    };
+    let icons_value = cx.local_model_keyed("icons_value", String::new);
 
     let disabled_now = cx
         .get_model_copied(&disabled, Invalidation::Layout)

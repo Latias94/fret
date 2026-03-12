@@ -3,7 +3,6 @@ pub const SOURCE: &str = include_str!("prompt_input_docs_demo.rs");
 // region: example
 use fret_core::Px;
 use fret_icons::IconId;
-use fret_runtime::Model;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -13,74 +12,12 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default)]
-struct DemoModels {
-    text: Option<Model<String>>,
-    attachments: Option<Model<Vec<ui_ai::AttachmentData>>>,
-    use_web_search: Option<Model<bool>>,
-    model: Option<Model<Option<Arc<str>>>>,
-    model_open: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let text = cx.with_state(DemoModels::default, |st| st.text.clone());
-    let text = match text {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(DemoModels::default, |st| st.text = Some(model.clone()));
-            model
-        }
-    };
-
-    let attachments = cx.with_state(DemoModels::default, |st| st.attachments.clone());
-    let attachments = match attachments {
-        Some(model) => model,
-        None => {
-            let model = cx
-                .app
-                .models_mut()
-                .insert(Vec::<ui_ai::AttachmentData>::new());
-            cx.with_state(DemoModels::default, |st| {
-                st.attachments = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let use_web_search = cx.with_state(DemoModels::default, |st| st.use_web_search.clone());
-    let use_web_search = match use_web_search {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(DemoModels::default, |st| {
-                st.use_web_search = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let model_value = cx.with_state(DemoModels::default, |st| st.model.clone());
-    let model_value = match model_value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Some(Arc::<str>::from("gpt-4o")));
-            cx.with_state(DemoModels::default, |st| st.model = Some(model.clone()));
-            model
-        }
-    };
-
-    let model_open = cx.with_state(DemoModels::default, |st| st.model_open.clone());
-    let model_open = match model_open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(DemoModels::default, |st| {
-                st.model_open = Some(model.clone())
-            });
-            model
-        }
-    };
+    let text = cx.local_model_keyed("text", String::new);
+    let attachments = cx.local_model_keyed("attachments", Vec::<ui_ai::AttachmentData>::new);
+    let use_web_search = cx.local_model_keyed("use_web_search", || false);
+    let model_value = cx.local_model_keyed("model_value", || Some(Arc::<str>::from("gpt-4o")));
+    let model_open = cx.local_model_keyed("model_open", || false);
 
     let on_send: fret_ui::action::OnActivate = Arc::new(|host, action_cx, _reason| {
         host.notify(action_cx);

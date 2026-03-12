@@ -8,27 +8,13 @@ use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::time::Duration;
 
-#[derive(Default, Clone)]
-struct Models {
-    stagger_open: Option<Model<bool>>,
-}
-
-fn stagger_open_model(cx: &mut UiCx<'_>) -> Model<bool> {
-    cx.with_state(Models::default, |st| st.stagger_open.clone())
-        .unwrap_or_else(|| {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.stagger_open = Some(model.clone()));
-            model
-        })
-}
-
 pub fn render(cx: &mut UiCx<'_>, theme: &Theme) -> AnyElement {
     let shell_layout = LayoutRefinement::default()
         .w_full()
         .max_w(Px(760.0))
         .min_w_0();
 
-    let stagger_open = stagger_open_model(cx);
+    let stagger_open = cx.local_model_keyed("stagger_open", || false);
     let is_open = cx
         .watch_model(&stagger_open)
         .paint()

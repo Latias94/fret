@@ -7,6 +7,7 @@ use fret_runtime::{CommandId, Model};
 use fret_ui::element::AnyElement;
 use fret_ui_headless::table::{ColumnDef, RowKey, Table, TableState};
 use fret_ui_kit::declarative::ModelWatchExt as _;
+use fret_ui_kit::declarative::table::TableViewOutput;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -24,16 +25,6 @@ struct DemoProcessRow {
 struct DemoProcessTableAssets {
     data: Arc<[DemoProcessRow]>,
     columns: Arc<[ColumnDef<DemoProcessRow>]>,
-}
-
-#[derive(Default)]
-struct DemoProcessTableFacetsState {
-    status_facets: Option<Model<HashMap<Arc<str>, usize>>>,
-}
-
-#[derive(Default)]
-struct DemoProcessTableToolbarResponsiveState {
-    use_container_query: Option<Model<bool>>,
 }
 
 const CMD_SELECT_ALL_PAGE: &str = "ui_gallery.data_table.select_all_page";
@@ -103,7 +94,7 @@ fn legacy_demo_content(
     cx: &mut UiCx<'_>,
     state: Model<fret_ui_headless::table::TableState>,
 ) -> Vec<AnyElement> {
-    let assets = cx.with_state(
+    let assets = cx.slot_state(
         || {
             let data: Arc<[DemoProcessRow]> = Arc::from(vec![
                 DemoProcessRow {
@@ -205,29 +196,7 @@ fn legacy_demo_content(
         |st| st.clone(),
     );
 
-    let output = cx.with_state(
-        || None::<Model<fret_ui_kit::declarative::table::TableViewOutput>>,
-        |st| st.clone(),
-    );
-    let output = match output {
-        Some(m) => m,
-        None => {
-            let m = cx
-                .app
-                .models_mut()
-                .insert(fret_ui_kit::declarative::table::TableViewOutput::default());
-            let m_for_state = m.clone();
-            cx.with_state(
-                || None::<Model<fret_ui_kit::declarative::table::TableViewOutput>>,
-                move |st| {
-                    if st.is_none() {
-                        *st = Some(m_for_state);
-                    }
-                },
-            );
-            m
-        }
-    };
+    let output = cx.local_model_keyed("output", TableViewOutput::default);
 
     let normalize_col_id =
         |id: &str| -> Arc<str> { Arc::<str>::from(id.replace('%', "pct").replace('_', "-")) };
@@ -246,40 +215,15 @@ fn legacy_demo_content(
         .test_id("ui-gallery-data-table-add-task")
         .into_element(cx);
 
-    let status_facets = cx.with_state(DemoProcessTableFacetsState::default, |st| {
-        st.status_facets.clone()
+    let status_facets = cx.local_model_keyed("status_facets", || {
+        let mut facets: HashMap<Arc<str>, usize> = HashMap::new();
+        for row in assets.data.iter() {
+            *facets.entry(row.status.clone()).or_insert(0) += 1;
+        }
+        facets
     });
-    let status_facets = match status_facets {
-        Some(m) => m,
-        None => {
-            let mut facets: HashMap<Arc<str>, usize> = HashMap::new();
-            for row in assets.data.iter() {
-                *facets.entry(row.status.clone()).or_insert(0) += 1;
-            }
-            let m = cx.app.models_mut().insert(facets);
-            let m_for_state = m.clone();
-            cx.with_state(DemoProcessTableFacetsState::default, move |st| {
-                st.status_facets = Some(m_for_state);
-            });
-            m
-        }
-    };
 
-    let use_container_query = cx
-        .with_state(DemoProcessTableToolbarResponsiveState::default, |st| {
-            st.use_container_query.clone()
-        });
-    let use_container_query = match use_container_query {
-        Some(m) => m,
-        None => {
-            let m = cx.app.models_mut().insert(false);
-            let m_for_state = m.clone();
-            cx.with_state(DemoProcessTableToolbarResponsiveState::default, move |st| {
-                st.use_container_query = Some(m_for_state);
-            });
-            m
-        }
-    };
+    let use_container_query = cx.local_model_keyed("use_container_query", || false);
 
     let faceted_badges_query = if cx
         .watch_model(&use_container_query)
@@ -397,23 +341,7 @@ fn legacy_demo_content(
                     Some(false)
                 };
 
-                let model = cx.with_state(|| None::<Model<Option<bool>>>, |st| st.clone());
-                let model = match model {
-                    Some(m) => m,
-                    None => {
-                        let m = cx.app.models_mut().insert(checked);
-                        let m_for_state = m.clone();
-                        cx.with_state(
-                            || None::<Model<Option<bool>>>,
-                            move |st| {
-                                if st.is_none() {
-                                    *st = Some(m_for_state);
-                                }
-                            },
-                        );
-                        m
-                    }
-                };
+                let model = cx.local_model_keyed("select_all_checked", || checked);
                 let _ = cx.app.models_mut().update(&model, |v| *v = checked);
 
                 Some(vec![
@@ -430,23 +358,7 @@ fn legacy_demo_content(
                     "select" => {
                         let checked = state_value.row_selection.contains(&RowKey(row.id));
                         cx.keyed(("ui-gallery-data-table-select-row", row.id), |cx| {
-                            let model = cx.with_state(|| None::<Model<bool>>, |st| st.clone());
-                            let model = match model {
-                                Some(m) => m,
-                                None => {
-                                    let m = cx.app.models_mut().insert(checked);
-                                    let m_for_state = m.clone();
-                                    cx.with_state(
-                                        || None::<Model<bool>>,
-                                        move |st| {
-                                            if st.is_none() {
-                                                *st = Some(m_for_state);
-                                            }
-                                        },
-                                    );
-                                    m
-                                }
-                            };
+                            let model = cx.local_model(|| checked);
                             let _ = cx.app.models_mut().update(&model, |v| *v = checked);
 
                             shadcn::Checkbox::new(model)
@@ -464,23 +376,7 @@ fn legacy_demo_content(
                     "cpu%" => cx.text(format!("{}%", row.cpu)),
                     "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
                     "actions" => cx.keyed(("ui-gallery-data-table-row-actions", row.id), |cx| {
-                        let open = cx.with_state(|| None::<Model<bool>>, |st| st.clone());
-                        let open = match open {
-                            Some(m) => m,
-                            None => {
-                                let m = cx.app.models_mut().insert(false);
-                                let m_for_state = m.clone();
-                                cx.with_state(
-                                    || None::<Model<bool>>,
-                                    move |st| {
-                                        if st.is_none() {
-                                            *st = Some(m_for_state);
-                                        }
-                                    },
-                                );
-                                m
-                            }
-                        };
+                        let open = cx.local_model(|| false);
 
                         let trigger = shadcn::Button::new("")
                             .a11y_label("Open menu")
@@ -554,25 +450,12 @@ fn legacy_demo_content(
 
     let table = table.test_id("ui-gallery-data-table-root");
 
-    #[derive(Default)]
-    struct ListLikeDataTableModels {
-        state: Option<Model<TableState>>,
-    }
-
-    let list_like_state = cx.with_state(ListLikeDataTableModels::default, |st| st.state.clone());
-    let list_like_state = match list_like_state {
-        Some(state) => state,
-        None => {
-            let mut state_value = TableState::default();
-            state_value.pagination.page_size = assets.data.len();
-            state_value.pagination.page_index = 0;
-            let state = cx.app.models_mut().insert(state_value);
-            cx.with_state(ListLikeDataTableModels::default, |st| {
-                st.state = Some(state.clone());
-            });
-            state
-        }
-    };
+    let list_like_state = cx.local_model_keyed("list_like_state", || {
+        let mut state_value = TableState::default();
+        state_value.pagination.page_size = assets.data.len();
+        state_value.pagination.page_index = 0;
+        state_value
+    });
 
     let list_like_columns: Arc<[ColumnDef<DemoProcessRow>]> = Arc::from(
         assets

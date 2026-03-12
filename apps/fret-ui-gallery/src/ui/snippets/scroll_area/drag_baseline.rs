@@ -3,7 +3,6 @@ pub const SOURCE: &str = include_str!("drag_baseline.rs");
 // region: example
 use fret_core::{Point, Px, SemanticsRole, TimerToken};
 use fret_runtime::Effect;
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::SemanticsDecoration;
 use fret_ui::element::SemanticsProps;
@@ -12,48 +11,12 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 use std::time::Duration;
 
-#[derive(Default)]
-struct DemoModels {
-    arm_grow: Option<Model<bool>>,
-    grew: Option<Model<bool>>,
-    timer_token: Option<Model<Option<TimerToken>>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     cx.named("ui-gallery.scroll_area.drag_baseline", |cx| {
-        let scroll_handle = cx.with_state(ScrollHandle::default, |h| h.clone());
-
-        let arm_grow = cx.with_state(DemoModels::default, |st| st.arm_grow.clone());
-        let arm_grow = match arm_grow {
-            Some(model) => model,
-            None => {
-                let model = cx.app.models_mut().insert(false);
-                cx.with_state(DemoModels::default, |st| st.arm_grow = Some(model.clone()));
-                model
-            }
-        };
-
-        let grew = cx.with_state(DemoModels::default, |st| st.grew.clone());
-        let grew = match grew {
-            Some(model) => model,
-            None => {
-                let model = cx.app.models_mut().insert(false);
-                cx.with_state(DemoModels::default, |st| st.grew = Some(model.clone()));
-                model
-            }
-        };
-
-        let timer_token = cx.with_state(DemoModels::default, |st| st.timer_token.clone());
-        let timer_token = match timer_token {
-            Some(model) => model,
-            None => {
-                let model = cx.app.models_mut().insert(None::<TimerToken>);
-                cx.with_state(DemoModels::default, |st| {
-                    st.timer_token = Some(model.clone())
-                });
-                model
-            }
-        };
+        let scroll_handle = cx.slot_state(ScrollHandle::default, |h| h.clone());
+        let arm_grow = cx.local_model_keyed("arm_grow", || false);
+        let grew = cx.local_model_keyed("grew", || false);
+        let timer_token = cx.local_model_keyed("timer_token", || None::<TimerToken>);
 
         let arm_grow_for_timer = arm_grow.clone();
         let grew_for_timer = grew.clone();

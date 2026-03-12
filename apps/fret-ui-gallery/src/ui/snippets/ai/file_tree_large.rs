@@ -2,7 +2,6 @@ pub const SOURCE: &str = include_str!("file_tree_large.rs");
 
 // region: example
 use fret_core::{Px, TextAlign, TextOverflow, TextWrap};
-use fret_runtime::Model;
 use fret_ui::action::ActionCx;
 use fret_ui::element::{AnyElement, Length, SemanticsDecoration, SizeStyle, TextProps};
 use fret_ui::{ElementContext, UiHost};
@@ -10,11 +9,6 @@ use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::{LayoutRefinement, Space, ui};
 use std::sync::Arc;
-
-#[derive(Default)]
-struct LargeFileTreeModels {
-    selected: Option<Model<Option<Arc<str>>>>,
-}
 
 fn invisible_marker<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -45,17 +39,7 @@ fn invisible_marker<H: UiHost>(
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let selected = cx.with_state(LargeFileTreeModels::default, |st| st.selected.clone());
-    let selected = match selected {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(None::<Arc<str>>);
-            cx.with_state(LargeFileTreeModels::default, |st| {
-                st.selected = Some(model.clone())
-            });
-            model
-        }
-    };
+    let selected = cx.local_model_keyed("selected", || None::<Arc<str>>);
 
     let selected_value = cx.watch_model(&selected).layout().cloned().flatten();
 

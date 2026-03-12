@@ -2,7 +2,6 @@ pub const SOURCE: &str = include_str!("attachments_list.rs");
 
 // region: example
 use fret_core::{ImageColorSpace, ImageId, Px};
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
 use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
@@ -10,11 +9,6 @@ use fret_ui_kit::{LayoutRefinement, MetricRef, Space, ui};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 use std::sync::OnceLock;
-
-#[derive(Default)]
-struct DemoModels {
-    removed_ids: Option<Model<Vec<Arc<str>>>>,
-}
 
 fn landscape_image_id<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Option<ImageId> {
     static SOURCE: OnceLock<ImageSource> = OnceLock::new();
@@ -135,17 +129,7 @@ fn render_list_attachment<H: UiHost + 'static>(
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let removed_ids = cx.with_state(DemoModels::default, |st| st.removed_ids.clone());
-    let removed_ids = match removed_ids {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Vec::<Arc<str>>::new());
-            cx.with_state(DemoModels::default, |st| {
-                st.removed_ids = Some(model.clone())
-            });
-            model
-        }
-    };
+    let removed_ids = cx.local_model_keyed("removed_ids", Vec::<Arc<str>>::new);
 
     let hidden = cx
         .get_model_cloned(&removed_ids, Invalidation::Layout)

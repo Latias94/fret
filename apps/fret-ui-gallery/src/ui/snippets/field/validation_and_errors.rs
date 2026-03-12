@@ -4,25 +4,8 @@ pub const SOURCE: &str = include_str!("validation_and_errors.rs");
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default, Clone)]
-struct Models {
-    email_invalid: Option<Model<String>>,
-}
-
-fn email_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    match state.email_invalid {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| st.email_invalid = Some(model.clone()));
-            model
-        }
-    }
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let email_invalid = email_model(cx);
+    let email_invalid = cx.local_model(String::new);
     let max_w_md = LayoutRefinement::default().w_full().max_w(Px(520.0));
 
     shadcn::Field::new([

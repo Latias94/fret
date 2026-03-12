@@ -3,21 +3,8 @@ pub const SOURCE: &str = include_str!("parts.rs");
 // region: example
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default, Clone)]
-struct Models {
-    open: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    let open = match state.open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.open = Some(model.clone()));
-            model
-        }
-    };
+    let open = cx.local_model_keyed("open", || false);
 
     let trigger = shadcn::DialogTrigger::new(
         shadcn::Button::new("Open Dialog (Parts)")

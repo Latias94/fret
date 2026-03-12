@@ -150,27 +150,20 @@ pub fn viewport_breakpoints<H, T: Copy>(
 where
     H: UiHost,
 {
-    // Ensure each callsite gets its own stable element identity for hysteresis state.
-    cx.scope(|cx| {
-        let width = cx.environment_viewport_width(invalidation);
-        cx.with_state(ViewportBreakpointsState::default, |st| {
-            if !st.initialized {
-                st.active_index = viewport_breakpoints_init_active_index(width, breakpoints);
-                st.initialized = true;
-            }
+    let width = cx.environment_viewport_width(invalidation);
+    cx.slot_state(ViewportBreakpointsState::default, |st| {
+        if !st.initialized {
+            st.active_index = viewport_breakpoints_init_active_index(width, breakpoints);
+            st.initialized = true;
+        }
 
-            st.active_index = viewport_breakpoints_apply_hysteresis(
-                width,
-                breakpoints,
-                hysteresis,
-                st.active_index,
-            );
+        st.active_index =
+            viewport_breakpoints_apply_hysteresis(width, breakpoints, hysteresis, st.active_index);
 
-            breakpoints
-                .get(st.active_index.saturating_sub(1))
-                .map(|(_, v)| *v)
-                .unwrap_or(base)
-        })
+        breakpoints
+            .get(st.active_index.saturating_sub(1))
+            .map(|(_, v)| *v)
+            .unwrap_or(base)
     })
 }
 
@@ -184,19 +177,16 @@ pub fn viewport_width_at_least<H: UiHost>(
     threshold: Px,
     hysteresis: ViewportQueryHysteresis,
 ) -> bool {
-    cx.scope(|cx| {
-        let width = cx.environment_viewport_width(invalidation);
-        cx.with_state(ViewportWidthAtLeastState::default, |st| {
-            if !st.initialized {
-                st.active = viewport_dimension_at_least_init(width, threshold);
-                st.initialized = true;
-            }
+    let width = cx.environment_viewport_width(invalidation);
+    cx.slot_state(ViewportWidthAtLeastState::default, |st| {
+        if !st.initialized {
+            st.active = viewport_dimension_at_least_init(width, threshold);
+            st.initialized = true;
+        }
 
-            st.active = viewport_dimension_at_least_apply_hysteresis(
-                width, threshold, hysteresis, st.active,
-            );
-            st.active
-        })
+        st.active =
+            viewport_dimension_at_least_apply_hysteresis(width, threshold, hysteresis, st.active);
+        st.active
     })
 }
 
@@ -257,19 +247,16 @@ pub fn viewport_height_at_least<H: UiHost>(
     threshold: Px,
     hysteresis: ViewportQueryHysteresis,
 ) -> bool {
-    cx.scope(|cx| {
-        let height = cx.environment_viewport_height(invalidation);
-        cx.with_state(ViewportHeightAtLeastState::default, |st| {
-            if !st.initialized {
-                st.active = viewport_dimension_at_least_init(height, threshold);
-                st.initialized = true;
-            }
+    let height = cx.environment_viewport_height(invalidation);
+    cx.slot_state(ViewportHeightAtLeastState::default, |st| {
+        if !st.initialized {
+            st.active = viewport_dimension_at_least_init(height, threshold);
+            st.initialized = true;
+        }
 
-            st.active = viewport_dimension_at_least_apply_hysteresis(
-                height, threshold, hysteresis, st.active,
-            );
-            st.active
-        })
+        st.active =
+            viewport_dimension_at_least_apply_hysteresis(height, threshold, hysteresis, st.active);
+        st.active
     })
 }
 
@@ -287,26 +274,20 @@ pub fn viewport_height_breakpoints<H, T: Copy>(
 where
     H: UiHost,
 {
-    cx.scope(|cx| {
-        let height = cx.environment_viewport_height(invalidation);
-        cx.with_state(ViewportBreakpointsState::default, |st| {
-            if !st.initialized {
-                st.active_index = viewport_breakpoints_init_active_index(height, breakpoints);
-                st.initialized = true;
-            }
+    let height = cx.environment_viewport_height(invalidation);
+    cx.slot_state(ViewportBreakpointsState::default, |st| {
+        if !st.initialized {
+            st.active_index = viewport_breakpoints_init_active_index(height, breakpoints);
+            st.initialized = true;
+        }
 
-            st.active_index = viewport_breakpoints_apply_hysteresis(
-                height,
-                breakpoints,
-                hysteresis,
-                st.active_index,
-            );
+        st.active_index =
+            viewport_breakpoints_apply_hysteresis(height, breakpoints, hysteresis, st.active_index);
 
-            breakpoints
-                .get(st.active_index.saturating_sub(1))
-                .map(|(_, v)| *v)
-                .unwrap_or(base)
-        })
+        breakpoints
+            .get(st.active_index.saturating_sub(1))
+            .map(|(_, v)| *v)
+            .unwrap_or(base)
     })
 }
 

@@ -3,25 +3,8 @@ pub const SOURCE: &str = include_str!("small.rs");
 // region: example
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default, Clone)]
-struct Models {
-    open: Option<Model<bool>>,
-}
-
-fn open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    match state.open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.open = Some(model.clone()));
-            model
-        }
-    }
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let open = open_model(cx);
+    let open = cx.local_model_keyed("open", || false);
     let open_for_trigger = open.clone();
     let open_for_children = open.clone();
 

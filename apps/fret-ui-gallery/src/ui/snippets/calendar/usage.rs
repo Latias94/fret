@@ -4,11 +4,6 @@ pub const SOURCE: &str = include_str!("usage.rs");
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
 
-#[derive(Default)]
-struct Models {
-    selected: Option<Model<Option<Date>>>,
-}
-
 fn parse_iso_date_ymd(raw: &str) -> Option<Date> {
     let raw = raw.trim();
     let (year, rest) = raw.split_once('-')?;
@@ -31,16 +26,7 @@ fn today_from_env_or_now() -> Date {
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let today = today_from_env_or_now();
-    let selected = cx.with_state(Models::default, |st| st.selected.clone());
-
-    let selected = match selected {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Some(today));
-            cx.with_state(Models::default, |st| st.selected = Some(model.clone()));
-            model
-        }
-    };
+    let selected = cx.local_model_keyed("selected", || Some(today));
 
     shadcn::Calendar::new_controllable(cx, Some(selected), Some(today))
         .test_id_prefix("ui-gallery.calendar.usage")

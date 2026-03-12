@@ -4,16 +4,6 @@ pub const SOURCE: &str = include_str!("shortcuts.rs");
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default)]
-struct Models {
-    query: Option<Model<String>>,
-    disable_pointer_selection: Option<Model<bool>>,
-    demo_filter_query: Option<Model<String>>,
-    demo_disable_filtering: Option<Model<bool>>,
-    demo_filter_value: Option<Model<Option<Arc<str>>>>,
-    demo_group_force_query: Option<Model<String>>,
-}
-
 fn on_select_for_last_action(
     last_action: Model<Arc<str>>,
 ) -> impl Fn(Arc<str>) -> fret_ui::action::OnActivate + Clone {
@@ -39,90 +29,13 @@ pub fn render<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     last_action: Model<Arc<str>>,
 ) -> AnyElement {
-    let (
-        query,
-        disable_pointer_selection,
-        demo_filter_query,
-        demo_disable_filtering,
-        demo_filter_value,
-        demo_group_force_query,
-    ) = cx.with_state(Models::default, |st| {
-        (
-            st.query.clone(),
-            st.disable_pointer_selection.clone(),
-            st.demo_filter_query.clone(),
-            st.demo_disable_filtering.clone(),
-            st.demo_filter_value.clone(),
-            st.demo_group_force_query.clone(),
-        )
-    });
-
-    let query = match query {
-        Some(query) => query,
-        None => {
-            let query = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| st.query = Some(query.clone()));
-            query
-        }
-    };
-
-    let disable_pointer_selection = match disable_pointer_selection {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.disable_pointer_selection = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let demo_filter_query = match demo_filter_query {
-        Some(query) => query,
-        None => {
-            let query = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| {
-                st.demo_filter_query = Some(query.clone())
-            });
-            query
-        }
-    };
-
-    let demo_disable_filtering = match demo_disable_filtering {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.demo_disable_filtering = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let demo_filter_value = match demo_filter_value {
-        Some(model) => model,
-        None => {
-            let model = cx
-                .app
-                .models_mut()
-                .insert(Some(Arc::<str>::from("Calendar")));
-            cx.with_state(Models::default, |st| {
-                st.demo_filter_value = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let demo_group_force_query = match demo_group_force_query {
-        Some(query) => query,
-        None => {
-            let query = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| {
-                st.demo_group_force_query = Some(query.clone())
-            });
-            query
-        }
-    };
+    let query = cx.local_model_keyed("query", String::new);
+    let disable_pointer_selection = cx.local_model_keyed("disable_pointer_selection", || false);
+    let demo_filter_query = cx.local_model_keyed("demo_filter_query", String::new);
+    let demo_disable_filtering = cx.local_model_keyed("demo_disable_filtering", || false);
+    let demo_filter_value =
+        cx.local_model_keyed("demo_filter_value", || Some(Arc::<str>::from("Calendar")));
+    let demo_group_force_query = cx.local_model_keyed("demo_group_force_query", String::new);
 
     let on_select = on_select_for_last_action(last_action.clone());
 

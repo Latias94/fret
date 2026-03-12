@@ -5,11 +5,6 @@ use fret_core::Axis;
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default, Clone)]
-struct Models {
-    fractions: Option<Model<Vec<f32>>>,
-}
-
 fn panel<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str) -> AnyElement {
     ui::v_flex(move |cx| vec![shadcn::raw::typography::small(cx, label)])
         .layout(LayoutRefinement::default().w_full().h_full())
@@ -19,12 +14,7 @@ fn panel<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str) -> AnyE
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    let fractions = state.fractions.unwrap_or_else(|| {
-        let model = cx.app.models_mut().insert(vec![0.5, 0.5]);
-        cx.with_state(Models::default, |st| st.fractions = Some(model.clone()));
-        model
-    });
+    let fractions = cx.local_model_keyed("fractions", || vec![0.5, 0.5]);
 
     shadcn::ResizablePanelGroup::new(fractions)
         .axis(Axis::Horizontal)

@@ -7,12 +7,6 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 use time::Date;
 
-#[derive(Default)]
-struct Models {
-    month: Option<Model<CalendarMonth>>,
-    selected: Option<Model<Option<Date>>>,
-}
-
 fn parse_iso_date_ymd(raw: &str) -> Option<Date> {
     let raw = raw.trim();
     let (year, rest) = raw.split_once('-')?;
@@ -34,34 +28,11 @@ fn today_from_env_or_now() -> Date {
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (month, selected) = cx.with_state(Models::default, |st| {
-        (st.month.clone(), st.selected.clone())
-    });
-
     let today = today_from_env_or_now();
     let preset_date = time::Date::from_calendar_date(today.year(), time::Month::February, 12)
         .expect("valid preset date");
-
-    let month = match month {
-        Some(model) => model,
-        None => {
-            let model = cx
-                .app
-                .models_mut()
-                .insert(CalendarMonth::from_date(preset_date));
-            cx.with_state(Models::default, |st| st.month = Some(model.clone()));
-            model
-        }
-    };
-
-    let selected = match selected {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Some(preset_date));
-            cx.with_state(Models::default, |st| st.selected = Some(model.clone()));
-            model
-        }
-    };
+    let month = cx.local_model_keyed("month", || CalendarMonth::from_date(preset_date));
+    let selected = cx.local_model_keyed("selected", || Some(preset_date));
 
     let preset_button = |cx: &mut ElementContext<'_, H>,
                          label: &'static str,

@@ -8,6 +8,7 @@ use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
 use fret_ui_kit::declarative::ModelWatchExt as _;
+use fret_ui_kit::declarative::table::TableViewOutput;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -17,12 +18,6 @@ struct InvoiceRow {
     status: Arc<str>,
     customer_email: Arc<str>,
     amount_usd: u64,
-}
-
-#[derive(Default)]
-struct DefaultDemoState {
-    state: Option<Model<TableState>>,
-    output: Option<Model<fret_ui_kit::declarative::table::TableViewOutput>>,
 }
 
 fn align_end(cx: &mut UiCx<'_>, child: AnyElement) -> AnyElement {
@@ -35,7 +30,7 @@ fn align_end(cx: &mut UiCx<'_>, child: AnyElement) -> AnyElement {
 fn footer(
     cx: &mut UiCx<'_>,
     state: Model<TableState>,
-    output: Model<fret_ui_kit::declarative::table::TableViewOutput>,
+    output: Model<TableViewOutput>,
 ) -> AnyElement {
     let state_value = cx.watch_model(&state).layout().cloned().unwrap_or_default();
     let output_value = cx
@@ -104,7 +99,7 @@ fn footer(
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
-    let assets = cx.with_state(
+    let assets = cx.slot_state(
         || {
             let data: Arc<[InvoiceRow]> = Arc::from(vec![
                 InvoiceRow {
@@ -160,36 +155,12 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         |state| state.clone(),
     );
 
-    let state = cx.with_state(DefaultDemoState::default, |demo| demo.state.clone());
-    let state = match state {
-        Some(model) => model,
-        None => {
-            let mut table_state = TableState::default();
-            table_state.pagination.page_size = 2;
-            let model = cx.app.models_mut().insert(table_state);
-            let model_for_state = model.clone();
-            cx.with_state(DefaultDemoState::default, move |demo| {
-                demo.state = Some(model_for_state)
-            });
-            model
-        }
-    };
-
-    let output = cx.with_state(DefaultDemoState::default, |demo| demo.output.clone());
-    let output = match output {
-        Some(model) => model,
-        None => {
-            let model = cx
-                .app
-                .models_mut()
-                .insert(fret_ui_kit::declarative::table::TableViewOutput::default());
-            let model_for_state = model.clone();
-            cx.with_state(DefaultDemoState::default, move |demo| {
-                demo.output = Some(model_for_state)
-            });
-            model
-        }
-    };
+    let state = cx.local_model_keyed("state", || {
+        let mut table_state = TableState::default();
+        table_state.pagination.page_size = 2;
+        table_state
+    });
+    let output = cx.local_model_keyed("output", TableViewOutput::default);
 
     let toolbar =
         shadcn::DataTableToolbar::new(state.clone(), assets.1.clone(), |col| Arc::clone(&col.id))

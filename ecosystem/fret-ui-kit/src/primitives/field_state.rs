@@ -18,14 +18,8 @@ pub struct FieldState {
     pub disabled: bool,
 }
 
-#[derive(Debug, Default)]
-struct FieldStateProviderState {
-    current: Option<FieldState>,
-}
-
 pub fn inherited_field_state<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<FieldState> {
-    cx.inherited_state_where::<FieldStateProviderState>(|st| st.current.is_some())
-        .and_then(|st| st.current)
+    cx.provided::<FieldState>().copied()
 }
 
 pub fn use_field_state_in_scope<H: UiHost>(
@@ -41,16 +35,7 @@ pub fn with_field_state_provider<H: UiHost, R>(
     state: FieldState,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(FieldStateProviderState::default, |st| {
-        let prev = st.current;
-        st.current = Some(state);
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(FieldStateProviderState::default, |st| {
-        st.current = prev;
-    });
-    out
+    cx.provide(state, f)
 }
 
 #[cfg(test)]

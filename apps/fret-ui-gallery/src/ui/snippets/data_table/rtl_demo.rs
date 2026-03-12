@@ -9,6 +9,7 @@ use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
 use fret_ui_kit::declarative::ModelWatchExt as _;
+use fret_ui_kit::declarative::table::TableViewOutput;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -86,7 +87,7 @@ fn align_inline_start(cx: &mut UiCx<'_>, child: AnyElement) -> AnyElement {
 fn bottom_controls(
     cx: &mut UiCx<'_>,
     state: Model<TableState>,
-    output: Model<fret_ui_kit::declarative::table::TableViewOutput>,
+    output: Model<TableViewOutput>,
     lang: Lang,
 ) -> AnyElement {
     let state_value = cx.watch_model(&state).layout().cloned().unwrap_or_default();
@@ -157,7 +158,7 @@ fn bottom_controls(
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
-    let assets = cx.with_state(
+    let assets = cx.slot_state(
         || {
             let data: Arc<[PaymentRow]> = Arc::from(vec![
                 PaymentRow {
@@ -220,54 +221,9 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         |st| st.clone(),
     );
 
-    #[derive(Default)]
-    struct RtlDemoState {
-        dir_rtl: Option<Model<bool>>,
-        state: Option<Model<TableState>>,
-        output: Option<Model<fret_ui_kit::declarative::table::TableViewOutput>>,
-    }
-
-    let dir_rtl = cx.with_state(RtlDemoState::default, |st| st.dir_rtl.clone());
-    let dir_rtl = match dir_rtl {
-        Some(m) => m,
-        None => {
-            let m = cx.app.models_mut().insert(true);
-            let m_for_state = m.clone();
-            cx.with_state(RtlDemoState::default, move |st| {
-                st.dir_rtl = Some(m_for_state)
-            });
-            m
-        }
-    };
-
-    let state = cx.with_state(RtlDemoState::default, |st| st.state.clone());
-    let state = match state {
-        Some(m) => m,
-        None => {
-            let m = cx.app.models_mut().insert(TableState::default());
-            let m_for_state = m.clone();
-            cx.with_state(RtlDemoState::default, move |st| {
-                st.state = Some(m_for_state)
-            });
-            m
-        }
-    };
-
-    let output = cx.with_state(RtlDemoState::default, |st| st.output.clone());
-    let output = match output {
-        Some(m) => m,
-        None => {
-            let m = cx
-                .app
-                .models_mut()
-                .insert(fret_ui_kit::declarative::table::TableViewOutput::default());
-            let m_for_state = m.clone();
-            cx.with_state(RtlDemoState::default, move |st| {
-                st.output = Some(m_for_state)
-            });
-            m
-        }
-    };
+    let dir_rtl = cx.local_model_keyed("dir_rtl", || true);
+    let state = cx.local_model_keyed("state", TableState::default);
+    let output = cx.local_model_keyed("output", TableViewOutput::default);
 
     let is_rtl = cx.watch_model(&dir_rtl).layout().copied().unwrap_or(true);
     let lang = if is_rtl { LANG_AR } else { LANG_EN };
@@ -335,23 +291,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                         align_inline_start(cx, amount_text)
                     }
                     "actions" => cx.keyed(("ui-gallery-data-table-rtl-row-actions", row.key), |cx| {
-                        let open = cx.with_state(|| None::<Model<bool>>, |st| st.clone());
-                        let open = match open {
-                            Some(m) => m,
-                            None => {
-                                let m = cx.app.models_mut().insert(false);
-                                let m_for_state = m.clone();
-                                cx.with_state(
-                                    || None::<Model<bool>>,
-                                    move |st| {
-                                        if st.is_none() {
-                                            *st = Some(m_for_state);
-                                        }
-                                    },
-                                );
-                                m
-                            }
-                        };
+                        let open = cx.local_model(|| false);
 
                         let trigger = shadcn::Button::new("")
                             .a11y_label(lang.open_menu)

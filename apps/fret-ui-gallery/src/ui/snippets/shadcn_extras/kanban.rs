@@ -4,26 +4,16 @@ pub const SOURCE: &str = include_str!("kanban.rs");
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default)]
-struct KanbanModels {
-    items: Option<Model<Vec<shadcn::raw::extras::KanbanItem>>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     cx.named("shadcn-extras-kanban-demo", |cx| {
-        let items = cx.with_state(KanbanModels::default, |st| st.items.clone());
-        let items = items.unwrap_or_else(|| {
-            let model = cx.app.models_mut().insert(vec![
+        let items = cx.local_model_keyed("items", || {
+            vec![
                 shadcn::raw::extras::KanbanItem::new("card-1", "Write docs", "backlog"),
                 shadcn::raw::extras::KanbanItem::new("card-2", "Port block", "backlog"),
                 shadcn::raw::extras::KanbanItem::new("card-3", "Add gates", "in_progress"),
                 shadcn::raw::extras::KanbanItem::new("card-4", "Fix regressions", "in_progress"),
                 shadcn::raw::extras::KanbanItem::new("card-5", "Ship", "done"),
-            ]);
-            cx.with_state(KanbanModels::default, |st| {
-                st.items = Some(model.clone());
-            });
-            model
+            ]
         });
 
         let columns = vec![

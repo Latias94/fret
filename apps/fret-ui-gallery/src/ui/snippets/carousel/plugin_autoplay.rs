@@ -10,11 +10,6 @@ use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::time::Duration;
 
-#[derive(Default, Clone)]
-struct Models {
-    autoplay_api: Option<Model<Option<shadcn::CarouselAutoplayApi>>>,
-}
-
 #[derive(Default)]
 struct HoverState {
     hovered: bool,
@@ -65,16 +60,7 @@ fn slide(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement {
 pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let max_w_xs = Px(320.0);
 
-    let state = cx.with_state(Models::default, |st| st.clone());
-    let autoplay_api = match state.autoplay_api {
-        Some(model) => model,
-        None => {
-            let model: Model<Option<shadcn::CarouselAutoplayApi>> =
-                cx.app.models_mut().insert(None);
-            cx.with_state(Models::default, |st| st.autoplay_api = Some(model.clone()));
-            model
-        }
-    };
+    let autoplay_api = cx.local_model_keyed("autoplay_api", || None::<shadcn::CarouselAutoplayApi>);
 
     let visual = SlideVisual {
         text_px: Px(36.0),
@@ -115,7 +101,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                 ),
             },
             move |cx, hovered| {
-                let changed = cx.with_state(HoverState::default, |st| {
+                let changed = cx.slot_state(HoverState::default, |st| {
                     let changed = st.hovered != hovered;
                     st.hovered = hovered;
                     changed

@@ -5,21 +5,8 @@ use fret_core::Px;
 use fret_ui_kit::primitives::control_registry::ControlId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default)]
-struct Models {
-    value: Option<Model<Vec<f32>>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let value = cx.with_state(Models::default, |st| st.value.clone());
-    let value = match value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(vec![50.0]);
-            cx.with_state(Models::default, |st| st.value = Some(model.clone()));
-            model
-        }
-    };
+    let value = cx.local_model_keyed("value", || vec![50.0]);
 
     let control_id = ControlId::from("ui-gallery-slider-label");
     let slider = shadcn::Slider::new(value)

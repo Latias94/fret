@@ -7,13 +7,6 @@ use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
 
-#[derive(Default, Clone)]
-struct Models {
-    open: Option<Model<bool>>,
-    month: Option<Model<CalendarMonth>>,
-    selected: Option<Model<Option<Date>>>,
-}
-
 fn parse_iso_date_ymd(raw: &str) -> Option<Date> {
     let raw = raw.trim();
     let (year, rest) = raw.split_once('-')?;
@@ -33,26 +26,9 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         .and_then(|raw| parse_iso_date_ymd(&raw))
         .unwrap_or_else(|| time::OffsetDateTime::now_utc().date());
 
-    let (open, month, selected) = cx.with_state(Models::default, |st| {
-        (st.open.clone(), st.month.clone(), st.selected.clone())
-    });
-
-    let (open, month, selected) = match (open, month, selected) {
-        (Some(open), Some(month), Some(selected)) => (open, month, selected),
-        _ => {
-            let open = cx.app.models_mut().insert(false);
-            let month = cx.app.models_mut().insert(CalendarMonth::from_date(today));
-            let selected = cx.app.models_mut().insert(None::<Date>);
-
-            cx.with_state(Models::default, |st| {
-                st.open = Some(open.clone());
-                st.month = Some(month.clone());
-                st.selected = Some(selected.clone());
-            });
-
-            (open, month, selected)
-        }
-    };
+    let open = cx.local_model_keyed("open", || false);
+    let month = cx.local_model_keyed("month", || CalendarMonth::from_date(today));
+    let selected = cx.local_model_keyed("selected", || None::<Date>);
 
     let is_desktop = fret_ui_kit::declarative::viewport_queries::viewport_width_at_least(
         cx,

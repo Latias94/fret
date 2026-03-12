@@ -4,11 +4,6 @@ pub const SOURCE: &str = include_str!("handle.rs");
 use fret_core::Axis;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default, Clone)]
-struct Models {
-    fractions: Option<Model<Vec<f32>>>,
-}
-
 fn box_group<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutRefinement,
@@ -38,12 +33,7 @@ fn panel<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str) -> AnyE
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    let fractions = state.fractions.unwrap_or_else(|| {
-        let model = cx.app.models_mut().insert(vec![0.25, 0.75]);
-        cx.with_state(Models::default, |st| st.fractions = Some(model.clone()));
-        model
-    });
+    let fractions = cx.local_model_keyed("fractions", || vec![0.25, 0.75]);
 
     let group = shadcn::ResizablePanelGroup::new(fractions)
         .axis(Axis::Horizontal)

@@ -5,18 +5,8 @@ use fret_core::Px;
 use fret_ui_kit::primitives::control_registry::ControlId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default)]
-struct Models {
-    pressed: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let pressed = cx.with_state(Models::default, |st| st.pressed.clone());
-    let pressed = pressed.unwrap_or_else(|| {
-        let model = cx.app.models_mut().insert(false);
-        cx.with_state(Models::default, |st| st.pressed = Some(model.clone()));
-        model
-    });
+    let pressed = cx.local_model_keyed("pressed", || false);
     let pressed_now = cx
         .get_model_cloned(&pressed, Invalidation::Paint)
         .unwrap_or(false);

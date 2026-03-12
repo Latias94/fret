@@ -24,7 +24,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             }
         }
 
-        let handles = cx.with_state(NestedScrollRoutingHandles::default, |h| h.clone());
+        let handles = cx.slot_state(NestedScrollRoutingHandles::default, |h| h.clone());
         let outer_handle = handles.outer.clone();
         let inner_handle = handles.inner.clone();
 

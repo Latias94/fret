@@ -6,29 +6,6 @@ use fret_ui::element::SemanticsDecoration;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default, Clone)]
-struct SidebarModels {
-    open: Option<Model<bool>>,
-    selected: Option<Model<Arc<str>>>,
-}
-
-fn ensure_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> (Model<bool>, Model<Arc<str>>) {
-    let state = cx.with_state(SidebarModels::default, |st| st.clone());
-    match (state.open, state.selected) {
-        (Some(open), Some(selected)) => (open, selected),
-        _ => {
-            let models = cx.app.models_mut();
-            let open = models.insert(true);
-            let selected = models.insert(Arc::<str>::from("design-engineering"));
-            cx.with_state(SidebarModels::default, |st| {
-                st.open = Some(open.clone());
-                st.selected = Some(selected.clone());
-            });
-            (open, selected)
-        }
-    }
-}
-
 fn resolve_selected<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     model: &Model<Arc<str>>,
@@ -68,7 +45,8 @@ fn menu_button<H: UiHost>(
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (open, selected) = ensure_models(cx);
+    let open = cx.local_model_keyed("open", || true);
+    let selected = cx.local_model_keyed("selected", || Arc::<str>::from("design-engineering"));
 
     let content = shadcn::SidebarProvider::new()
         .open(Some(open.clone()))

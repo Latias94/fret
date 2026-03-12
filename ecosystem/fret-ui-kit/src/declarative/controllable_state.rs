@@ -62,27 +62,19 @@ pub fn use_controllable_model<T: Clone + 'static, H: UiHost>(
         }
     }
 
-    // `with_state` is keyed by (current element id, state type). When multiple uncontrolled models
-    // of the same state type are created under the same element scope, they must not collide.
-    //
-    // We allocate a dedicated child scope per invocation (React hook-like slot semantics), so each
-    // call gets its own stable element id and can store an independent internal model.
-    let mut default_value = Some(default_value);
-    let model = cx.scope(|cx| {
-        let model = cx.with_state(UncontrolledModelState::<T>::default, |st| st.model.clone());
-        if let Some(model) = model {
-            return model;
-        }
-
-        let default_value = default_value
-            .take()
-            .expect("default_value closure must be called at most once");
+    let slot = cx.slot_id();
+    let model = cx.state_for(slot, UncontrolledModelState::<T>::default, |st| {
+        st.model.clone()
+    });
+    let model = if let Some(model) = model {
+        model
+    } else {
         let model = cx.app.models_mut().insert(default_value());
-        cx.with_state(UncontrolledModelState::<T>::default, |st| {
+        cx.state_for(slot, UncontrolledModelState::<T>::default, |st| {
             st.model = Some(model.clone());
         });
         model
-    });
+    };
 
     ControllableModel {
         model,
@@ -195,6 +187,76 @@ mod tests {
         });
 
         assert_eq!(called.get(), 0);
+    }
+
+    #[track_caller]
+    fn bump_root_scoped_counter<H: UiHost>(cx: &mut ElementContext<'_, H>) -> u32 {
+        cx.with_state(u32::default, |value| {
+            *value = value.saturating_add(1);
+            *value
+        })
+    }
+
+    #[track_caller]
+    fn bump_callsite_scoped_counter<H: UiHost>(cx: &mut ElementContext<'_, H>) -> u32 {
+        cx.slot_state(u32::default, |value| {
+            *value = value.saturating_add(1);
+            *value
+        })
+    }
+
+    fn two_root_scoped_counters<H: UiHost>(cx: &mut ElementContext<'_, H>) -> (u32, u32) {
+        let a = bump_root_scoped_counter(cx);
+        let b = bump_root_scoped_counter(cx);
+        (a, b)
+    }
+
+    fn two_callsite_scoped_counters<H: UiHost>(cx: &mut ElementContext<'_, H>) -> (u32, u32) {
+        let a = bump_callsite_scoped_counter(cx);
+        let b = bump_callsite_scoped_counter(cx);
+        (a, b)
+    }
+
+    #[test]
+    fn with_state_is_root_scoped_shared_slot_per_type() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let first =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "with-state", |cx| {
+                two_root_scoped_counters(cx)
+            });
+        let second =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "with-state", |cx| {
+                two_root_scoped_counters(cx)
+            });
+
+        assert_eq!(first, (1, 2));
+        assert_eq!(second, (3, 4));
+    }
+
+    #[test]
+    fn slot_state_is_independent_per_callsite() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let first = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "with-callsite-state",
+            |cx| two_callsite_scoped_counters(cx),
+        );
+        let second = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "with-callsite-state",
+            |cx| two_callsite_scoped_counters(cx),
+        );
+
+        assert_eq!(first, (1, 1));
+        assert_eq!(second, (2, 2));
     }
 
     #[test]

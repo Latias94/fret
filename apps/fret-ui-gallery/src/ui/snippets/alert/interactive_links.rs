@@ -11,11 +11,6 @@ use fret_runtime::{Effect, Model};
 use fret_ui::element::{PressableKeyActivation, PressableProps, StyledTextProps};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default)]
-struct DemoModels {
-    last_link: Option<Model<Option<Arc<str>>>>,
-}
-
 fn is_diag_mode() -> bool {
     std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
 }
@@ -103,17 +98,7 @@ fn interactive_link<H: UiHost + 'static>(
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let last_link = cx.with_state(DemoModels::default, |state| state.last_link.clone());
-    let last_link = match last_link {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(None::<Arc<str>>);
-            cx.with_state(DemoModels::default, |state| {
-                state.last_link = Some(model.clone())
-            });
-            model
-        }
-    };
+    let last_link = cx.local_model_keyed("last_link", || None::<Arc<str>>);
 
     let last_link_value = cx
         .app

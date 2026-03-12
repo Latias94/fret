@@ -12,65 +12,14 @@ use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default)]
-struct ChipModels {
-    filter_selected: Option<Model<bool>>,
-    filter_unselected: Option<Model<bool>>,
-    input_selected: Option<Model<bool>>,
-    input_unselected: Option<Model<bool>>,
-}
-
 fn render_chips<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
-    let filter_selected = cx.with_state(ChipModels::default, |st| st.filter_selected.clone());
-    let filter_selected = match filter_selected {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(true);
-            cx.with_state(ChipModels::default, |st| {
-                st.filter_selected = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let filter_unselected = cx.with_state(ChipModels::default, |st| st.filter_unselected.clone());
-    let filter_unselected = match filter_unselected {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(ChipModels::default, |st| {
-                st.filter_unselected = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let input_selected = cx.with_state(ChipModels::default, |st| st.input_selected.clone());
-    let input_selected = match input_selected {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(true);
-            cx.with_state(ChipModels::default, |st| {
-                st.input_selected = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let input_unselected = cx.with_state(ChipModels::default, |st| st.input_unselected.clone());
-    let input_unselected = match input_unselected {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(ChipModels::default, |st| {
-                st.input_unselected = Some(model.clone())
-            });
-            model
-        }
-    };
+    let filter_selected = cx.local_model_keyed("filter_selected", || true);
+    let filter_unselected = cx.local_model_keyed("filter_unselected", || false);
+    let input_selected = cx.local_model_keyed("input_selected", || true);
+    let input_unselected = cx.local_model_keyed("input_unselected", || false);
 
     let last_action_for_activate = last_action.clone();
     let activate: OnActivate = Arc::new(move |host, _acx, _reason| {
@@ -579,49 +528,10 @@ fn render_fab<H: UiHost>(
     ]
 }
 
-#[derive(Default)]
-struct SearchViewModels {
-    open: Option<Model<bool>>,
-    query: Option<Model<String>>,
-    selected: Option<Model<Arc<str>>>,
-}
-
 fn render_search_view<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Vec<AnyElement> {
-    let open = cx.with_state(SearchViewModels::default, |st| st.open.clone());
-    let open = match open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(SearchViewModels::default, |st| {
-                st.open = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let query = cx.with_state(SearchViewModels::default, |st| st.query.clone());
-    let query = match query {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(SearchViewModels::default, |st| {
-                st.query = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let selected = cx.with_state(SearchViewModels::default, |st| st.selected.clone());
-    let selected = match selected {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Arc::<str>::from("alpha"));
-            cx.with_state(SearchViewModels::default, |st| {
-                st.selected = Some(model.clone())
-            });
-            model
-        }
-    };
+    let open = cx.local_model_keyed("open", || false);
+    let query = cx.local_model_keyed("query", String::new);
+    let selected = cx.local_model_keyed("selected", || Arc::<str>::from("alpha"));
 
     let suggestions = material3::List::new(selected)
         .a11y_label("Suggestions")

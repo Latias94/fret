@@ -11,14 +11,6 @@ use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default)]
-struct CarouselPageState {
-    demo_inner_clicked: Option<Model<bool>>,
-    demo_dnd_pointer: Option<Model<Option<fret_core::PointerId>>>,
-    demo_dnd_dragging: Option<Model<bool>>,
-    demo_dnd_long_press_pointer: Option<Model<Option<fret_core::PointerId>>>,
-}
-
 #[derive(Debug, Clone, Copy)]
 struct SlideVisual {
     text_px: Px,
@@ -31,19 +23,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
 
     // Demo: include a descendant pressable so diag scripts can gate pointer propagation
     // (drag-from-descendant should not activate; click should).
-    let demo_inner_clicked = cx.with_state(CarouselPageState::default, |st| {
-        st.demo_inner_clicked.clone()
-    });
-    let demo_inner_clicked = match demo_inner_clicked {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(CarouselPageState::default, |st| {
-                st.demo_inner_clicked = Some(model.clone());
-            });
-            model
-        }
-    };
+    let demo_inner_clicked = cx.local_model_keyed("demo_inner_clicked", || false);
     let demo_inner_clicked_now = cx
         .watch_model(&demo_inner_clicked)
         .copied()
@@ -64,49 +44,18 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     // carousel swipe gesture.
     const DEMO_DND_KIND: fret_runtime::DragKindId = fret_runtime::DragKindId(101);
     let demo_dnd_pointer =
-        cx.with_state(CarouselPageState::default, |st| st.demo_dnd_pointer.clone());
-    let demo_dnd_pointer = match demo_dnd_pointer {
-        Some(model) => model,
-        None => {
-            let model: Model<Option<fret_core::PointerId>> = cx.app.models_mut().insert(None);
-            cx.with_state(CarouselPageState::default, |st| {
-                st.demo_dnd_pointer = Some(model.clone());
-            });
-            model
-        }
-    };
-
-    let demo_dnd_dragging = cx.with_state(CarouselPageState::default, |st| {
-        st.demo_dnd_dragging.clone()
-    });
-    let demo_dnd_dragging = match demo_dnd_dragging {
-        Some(model) => model,
-        None => {
-            let model: Model<bool> = cx.app.models_mut().insert(false);
-            cx.with_state(CarouselPageState::default, |st| {
-                st.demo_dnd_dragging = Some(model.clone());
-            });
-            model
-        }
-    };
+        cx.local_model_keyed("demo_dnd_pointer", || None::<fret_core::PointerId>);
+    let demo_dnd_dragging = cx.local_model_keyed("demo_dnd_dragging", || false);
     let demo_dnd_dragging_now = cx.watch_model(&demo_dnd_dragging).copied().unwrap_or(false);
     let demo_dnd_frame_id = cx.frame_id;
     let demo_dnd_scope = fret_ui_kit::dnd::DndScopeId(cx.root_id().0);
     let demo_dnd_service = fret_ui_kit::dnd::dnd_service_model(cx);
 
-    let demo_dnd_long_press_pointer = cx.with_state(CarouselPageState::default, |st| {
-        st.demo_dnd_long_press_pointer.clone()
-    });
-    let demo_dnd_long_press_pointer = match demo_dnd_long_press_pointer {
-        Some(model) => model,
-        None => {
-            let model: Model<Option<fret_core::PointerId>> = cx.app.models_mut().insert(None);
-            cx.with_state(CarouselPageState::default, |st| {
-                st.demo_dnd_long_press_pointer = Some(model.clone());
-            });
-            model
-        }
-    };
+    let demo_dnd_long_press_pointer =
+        cx.local_model_keyed(
+            "demo_dnd_long_press_pointer",
+            || None::<fret_core::PointerId>,
+        );
 
     let demo_slide = |cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual| {
         let theme = Theme::global(&*cx.app).clone();

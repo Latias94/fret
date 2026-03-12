@@ -11,25 +11,10 @@ use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default, Clone)]
-struct Models {
-    expandable_selected: Option<Model<Option<usize>>>,
-}
-
 pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let max_w_xs = Px(320.0);
 
-    let state = cx.with_state(Models::default, |st| st.clone());
-    let expandable_selected = match state.expandable_selected {
-        Some(model) => model,
-        None => {
-            let model: Model<Option<usize>> = cx.app.models_mut().insert(None);
-            cx.with_state(Models::default, |st| {
-                st.expandable_selected = Some(model.clone())
-            });
-            model
-        }
-    };
+    let expandable_selected = cx.local_model_keyed("expandable_selected", || None::<usize>);
     let expandable_selected_now = cx
         .watch_model(&expandable_selected)
         .copied()

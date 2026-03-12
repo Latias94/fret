@@ -2,7 +2,6 @@ pub const SOURCE: &str = include_str!("transcript_torture.rs");
 
 // region: example
 use fret_core::Px;
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::action::OnActivate;
 use fret_ui::scroll::VirtualListScrollHandle;
@@ -25,11 +24,6 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .unwrap_or(5_000);
     let append_batch: usize = 100;
 
-    #[derive(Default)]
-    struct TranscriptModels {
-        messages: Option<Model<Arc<[ui_ai::ConversationMessage]>>>,
-    }
-
     let message_text = |i: u64| -> Arc<str> {
         if variable_height && i % 7 == 0 {
             Arc::<str>::from(format!(
@@ -43,29 +37,19 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         }
     };
 
-    let messages_model = cx.with_state(TranscriptModels::default, |st| st.messages.clone());
-    let messages_model = match messages_model {
-        Some(model) => model,
-        None => {
-            let mut out: Vec<ui_ai::ConversationMessage> = Vec::with_capacity(message_count);
-            for i in 0..message_count as u64 {
-                let role = match i % 4 {
-                    0 => ui_ai::MessageRole::User,
-                    1 => ui_ai::MessageRole::Assistant,
-                    2 => ui_ai::MessageRole::Tool,
-                    _ => ui_ai::MessageRole::System,
-                };
-                out.push(ui_ai::ConversationMessage::new(i, role, message_text(i)));
-            }
-
-            let out: Arc<[ui_ai::ConversationMessage]> = Arc::from(out);
-            let model = cx.app.models_mut().insert(out);
-            cx.with_state(TranscriptModels::default, |st| {
-                st.messages = Some(model.clone())
-            });
-            model
+    let messages_model = cx.local_model_keyed("messages", || {
+        let mut out: Vec<ui_ai::ConversationMessage> = Vec::with_capacity(message_count);
+        for i in 0..message_count as u64 {
+            let role = match i % 4 {
+                0 => ui_ai::MessageRole::User,
+                1 => ui_ai::MessageRole::Assistant,
+                2 => ui_ai::MessageRole::Tool,
+                _ => ui_ai::MessageRole::System,
+            };
+            out.push(ui_ai::ConversationMessage::new(i, role, message_text(i)));
         }
-    };
+        Arc::<[ui_ai::ConversationMessage]>::from(out)
+    });
     let messages = cx
         .get_model_cloned(&messages_model, Invalidation::Layout)
         .unwrap_or_else(|| Arc::from([]));
@@ -117,7 +101,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
     let transcript =
         cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
-            let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+            let scroll_handle = cx.slot_state(VirtualListScrollHandle::new, |h| h.clone());
             let revision = messages.len().min(u64::MAX as usize) as u64;
 
             let transcript = ui_ai::ConversationTranscript::from_arc(messages.clone())

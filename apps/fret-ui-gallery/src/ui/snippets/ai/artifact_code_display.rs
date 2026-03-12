@@ -10,11 +10,6 @@ use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-#[derive(Default)]
-struct DemoModels {
-    status: Option<Model<Arc<str>>>,
-}
-
 fn status_action(status: Model<Arc<str>>, message: &'static str) -> OnActivate {
     Arc::new(move |host, action_cx, _reason| {
         let _ = host
@@ -25,17 +20,9 @@ fn status_action(status: Model<Arc<str>>, message: &'static str) -> OnActivate {
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let status = cx.with_state(DemoModels::default, |st| st.status.clone());
-    let status = match status {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Arc::<str>::from(
-                "Ready to run, copy, regenerate, download, or share.",
-            ));
-            cx.with_state(DemoModels::default, |st| st.status = Some(model.clone()));
-            model
-        }
-    };
+    let status = cx.local_model_keyed("status", || {
+        Arc::<str>::from("Ready to run, copy, regenerate, download, or share.")
+    });
 
     let status_text = cx
         .get_model_cloned(&status, Invalidation::Layout)

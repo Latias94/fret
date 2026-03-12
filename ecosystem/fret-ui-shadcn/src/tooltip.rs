@@ -847,7 +847,7 @@ impl Tooltip {
                 .copied()
                 .unwrap_or(false);
 
-            let left_hover = cx.with_state(TooltipTriggerHoverEdgeState::default, |st| {
+            let left_hover = cx.slot_state(TooltipTriggerHoverEdgeState::default, |st| {
                 let left = st.was_hovered && !hovered;
                 st.was_hovered = hovered;
                 left

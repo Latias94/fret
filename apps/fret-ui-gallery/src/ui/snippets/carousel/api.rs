@@ -11,14 +11,6 @@ use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default, Clone)]
-struct Models {
-    api_handle: Option<Model<Option<shadcn::CarouselApi>>>,
-    api_cursor: Option<Model<shadcn::CarouselEventCursor>>,
-    api_effect_current: Option<Model<usize>>,
-    api_effect_count: Option<Model<usize>>,
-}
-
 #[derive(Debug, Clone, Copy)]
 struct SlideVisual {
     text_px: Px,
@@ -56,46 +48,10 @@ fn slide_card(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement 
 pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let max_w_xs = Px(320.0);
 
-    let state = cx.with_state(Models::default, |st| st.clone());
-    let api_handle = match state.api_handle {
-        Some(model) => model,
-        None => {
-            let model: Model<Option<shadcn::CarouselApi>> = cx.app.models_mut().insert(None);
-            cx.with_state(Models::default, |st| st.api_handle = Some(model.clone()));
-            model
-        }
-    };
-    let api_cursor = match state.api_cursor {
-        Some(model) => model,
-        None => {
-            let model: Model<shadcn::CarouselEventCursor> = cx
-                .app
-                .models_mut()
-                .insert(shadcn::CarouselEventCursor::default());
-            cx.with_state(Models::default, |st| st.api_cursor = Some(model.clone()));
-            model
-        }
-    };
-    let api_effect_current = match state.api_effect_current {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(0usize);
-            cx.with_state(Models::default, |st| {
-                st.api_effect_current = Some(model.clone())
-            });
-            model
-        }
-    };
-    let api_effect_count = match state.api_effect_count {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(0usize);
-            cx.with_state(Models::default, |st| {
-                st.api_effect_count = Some(model.clone())
-            });
-            model
-        }
-    };
+    let api_handle = cx.local_model_keyed("api_handle", || None::<shadcn::CarouselApi>);
+    let api_cursor = cx.local_model_keyed("api_cursor", shadcn::CarouselEventCursor::default);
+    let api_effect_current = cx.local_model_keyed("api_effect_current", || 0usize);
+    let api_effect_count = cx.local_model_keyed("api_effect_count", || 0usize);
 
     // Upstream uses `setApi` + `api.on("select"|"reInit", ...)` to update counters.
     // Here we poll a cursor for the same outcomes.

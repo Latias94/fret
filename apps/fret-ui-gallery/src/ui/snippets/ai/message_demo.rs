@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("message_demo.rs");
 
 // region: example
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::action::OnActivate;
 use fret_ui_ai as ui_ai;
@@ -10,23 +9,8 @@ use fret_ui_kit::{Justify, LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-#[derive(Default)]
-struct DemoModels {
-    last_action: Option<Model<Option<Arc<str>>>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let needs_init = cx.with_state(DemoModels::default, |st| st.last_action.is_none());
-    if needs_init {
-        let model = cx.app.models_mut().insert(None::<Arc<str>>);
-        cx.with_state(DemoModels::default, |st| {
-            st.last_action = Some(model.clone())
-        });
-    }
-
-    let last_action_model = cx
-        .with_state(DemoModels::default, |st| st.last_action.clone())
-        .expect("last_action");
+    let last_action_model = cx.local_model_keyed("last_action", || None::<Arc<str>>);
     let last_action = cx
         .get_model_cloned(&last_action_model, Invalidation::Paint)
         .flatten()

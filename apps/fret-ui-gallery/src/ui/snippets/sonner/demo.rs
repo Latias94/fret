@@ -6,12 +6,6 @@ use fret_ui::element::{FlexProps, LayoutStyle, Length, SemanticsDecoration};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default, Clone)]
-struct Models {
-    pending_promise: Option<Model<Option<shadcn::ToastId>>>,
-    active_type: Option<Model<Arc<str>>>,
-}
-
 fn wrap_controls_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     gap: Space,
@@ -47,29 +41,8 @@ pub fn render<H: UiHost>(
 
     let sonner = shadcn::Sonner::global(&mut *cx.app);
 
-    let (pending_promise, active_type) = cx.with_state(Models::default, |st| {
-        (st.pending_promise.clone(), st.active_type.clone())
-    });
-
-    let pending_promise = match pending_promise {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(None::<shadcn::ToastId>);
-            cx.with_state(Models::default, |st| {
-                st.pending_promise = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let active_type = match active_type {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Arc::<str>::from("Default"));
-            cx.with_state(Models::default, |st| st.active_type = Some(model.clone()));
-            model
-        }
-    };
+    let pending_promise = cx.local_model_keyed("pending_promise", || None::<shadcn::ToastId>);
+    let active_type = cx.local_model_keyed("active_type", || Arc::<str>::from("Default"));
 
     let current_active = cx
         .get_model_cloned(&active_type, Invalidation::Layout)

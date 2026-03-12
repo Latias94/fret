@@ -55,11 +55,6 @@ fn parse_date_month_dd_yyyy_en(raw: &str) -> Option<Date> {
     Date::from_calendar_date(year, month, day).ok()
 }
 
-#[derive(Default)]
-struct Models {
-    last_selected: Option<Date>,
-}
-
 pub fn render<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
@@ -84,18 +79,21 @@ pub fn render<H: UiHost>(
     }
 
     let selected_now = cx.app.models().read(&selected, |v| *v).ok().flatten();
-    let next_value = cx.with_state(Models::default, |st| {
-        if selected_now != st.last_selected {
-            st.last_selected = selected_now;
-            Some(
-                selected_now
-                    .map(format_date_month_dd_yyyy_en)
-                    .unwrap_or_default(),
-            )
-        } else {
-            None
-        }
-    });
+    let next_value = cx.slot_state(
+        || None::<Date>,
+        |st| {
+            if selected_now != *st {
+                *st = selected_now;
+                Some(
+                    selected_now
+                        .map(format_date_month_dd_yyyy_en)
+                        .unwrap_or_default(),
+                )
+            } else {
+                None
+            }
+        },
+    );
     if let Some(next) = next_value {
         let _ = cx.app.models_mut().update(&value, |v| *v = next);
     }

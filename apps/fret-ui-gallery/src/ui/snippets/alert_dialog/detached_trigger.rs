@@ -3,18 +3,20 @@ pub const SOURCE: &str = include_str!("detached_trigger.rs");
 // region: example
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default, Clone)]
-struct Models {
-    handle: Option<shadcn::AlertDialogHandle>,
-}
-
 fn handle<H: UiHost>(cx: &mut ElementContext<'_, H>) -> shadcn::AlertDialogHandle {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    match state.handle {
+    let slot = cx.keyed_slot_id("handle");
+    let current = cx.state_for(slot, || None::<shadcn::AlertDialogHandle>, |st| st.clone());
+    match current {
         Some(handle) => handle,
         None => {
             let handle = shadcn::AlertDialogHandle::new_controllable(cx, None, false);
-            cx.with_state(Models::default, |st| st.handle = Some(handle.clone()));
+            cx.state_for(
+                slot,
+                || None::<shadcn::AlertDialogHandle>,
+                |st| {
+                    *st = Some(handle.clone());
+                },
+            );
             handle
         }
     }

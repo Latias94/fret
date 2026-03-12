@@ -2,7 +2,6 @@ pub const SOURCE: &str = include_str!("checkpoint_demo.rs");
 
 // region: example
 use fret_core::Px;
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::action::OnActivate;
 use fret_ui_ai as ui_ai;
@@ -47,27 +46,9 @@ const INITIAL_CHECKPOINTS: &[DemoCheckpoint] = &[DemoCheckpoint {
     tooltip: "Restores workspace and chat to this point",
 }];
 
-#[derive(Default)]
-struct CheckpointDemoModels {
-    visible_message_count: Option<Model<usize>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let needs_init = cx.with_state(CheckpointDemoModels::default, |st| {
-        st.visible_message_count.is_none()
-    });
-    if needs_init {
-        let model = cx.app.models_mut().insert(INITIAL_MESSAGES.len());
-        cx.with_state(CheckpointDemoModels::default, |st| {
-            st.visible_message_count = Some(model.clone())
-        });
-    }
-
-    let visible_message_count_model = cx
-        .with_state(CheckpointDemoModels::default, |st| {
-            st.visible_message_count.clone()
-        })
-        .expect("visible_message_count");
+    let visible_message_count_model =
+        cx.local_model_keyed("visible_message_count", || INITIAL_MESSAGES.len());
     let visible_message_count = cx
         .get_model_copied(&visible_message_count_model, Invalidation::Layout)
         .unwrap_or(INITIAL_MESSAGES.len())

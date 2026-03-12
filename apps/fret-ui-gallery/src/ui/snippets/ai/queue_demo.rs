@@ -2,7 +2,6 @@ pub const SOURCE: &str = include_str!("queue_demo.rs");
 
 // region: example
 use fret_core::{ImageColorSpace, ImageId};
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
 use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
@@ -11,13 +10,6 @@ use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::{Arc, OnceLock};
-
-#[derive(Default)]
-struct DemoModels {
-    messages: Option<Model<Vec<DemoMessage>>>,
-    todos: Option<Model<Vec<DemoTodo>>>,
-    action_revision: Option<Model<u64>>,
-}
 
 #[derive(Debug, Clone)]
 enum DemoMessagePart {
@@ -185,37 +177,9 @@ fn default_todos() -> Vec<DemoTodo> {
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let messages = cx.with_state(DemoModels::default, |st| st.messages.clone());
-    let messages = match messages {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(default_messages());
-            cx.with_state(DemoModels::default, |st| st.messages = Some(model.clone()));
-            model
-        }
-    };
-
-    let todos = cx.with_state(DemoModels::default, |st| st.todos.clone());
-    let todos = match todos {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(default_todos());
-            cx.with_state(DemoModels::default, |st| st.todos = Some(model.clone()));
-            model
-        }
-    };
-
-    let action_revision = cx.with_state(DemoModels::default, |st| st.action_revision.clone());
-    let action_revision = match action_revision {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(0_u64);
-            cx.with_state(DemoModels::default, |st| {
-                st.action_revision = Some(model.clone())
-            });
-            model
-        }
-    };
+    let messages = cx.local_model_keyed("messages", default_messages);
+    let todos = cx.local_model_keyed("todos", default_todos);
+    let action_revision = cx.local_model_keyed("action_revision", || 0_u64);
 
     let messages_snapshot = cx
         .get_model_cloned(&messages, Invalidation::Layout)

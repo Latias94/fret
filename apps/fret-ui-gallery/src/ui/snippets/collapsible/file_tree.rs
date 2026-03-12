@@ -7,36 +7,6 @@ use fret_ui::element::VisualTransformProps;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default, Clone)]
-struct Models {
-    tree_components_open: Option<Model<bool>>,
-    tree_src_open: Option<Model<bool>>,
-    tree_src_ui_open: Option<Model<bool>>,
-}
-
-fn get_or_init_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Models {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    if state.tree_components_open.is_some()
-        && state.tree_src_open.is_some()
-        && state.tree_src_ui_open.is_some()
-    {
-        return state;
-    }
-
-    let tree_components_open = cx.app.models_mut().insert(true);
-    let tree_src_open = cx.app.models_mut().insert(false);
-    let tree_src_ui_open = cx.app.models_mut().insert(false);
-
-    let out = Models {
-        tree_components_open: Some(tree_components_open.clone()),
-        tree_src_open: Some(tree_src_open.clone()),
-        tree_src_ui_open: Some(tree_src_ui_open.clone()),
-    };
-
-    cx.with_state(Models::default, |st| *st = out.clone());
-    out
-}
-
 fn rotated_lucide<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     id: &'static str,
@@ -160,19 +130,9 @@ fn folder<H: UiHost>(
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let models = get_or_init_models(cx);
-    let tree_components_open = models
-        .tree_components_open
-        .clone()
-        .expect("models.init sets tree_components_open");
-    let tree_src_open = models
-        .tree_src_open
-        .clone()
-        .expect("models.init sets tree_src_open");
-    let tree_src_ui_open = models
-        .tree_src_ui_open
-        .clone()
-        .expect("models.init sets tree_src_ui_open");
+    let tree_components_open = cx.local_model_keyed("tree_components_open", || true);
+    let tree_src_open = cx.local_model_keyed("tree_src_open", || false);
+    let tree_src_ui_open = cx.local_model_keyed("tree_src_ui_open", || false);
 
     let ui_button = file_leaf(cx, "src-ui-button", "button.rs");
     let ui_dialog = file_leaf(cx, "src-ui-dialog", "dialog.rs");

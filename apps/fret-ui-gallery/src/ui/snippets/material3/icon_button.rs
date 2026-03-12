@@ -6,21 +6,8 @@ use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-#[derive(Default)]
-struct Models {
-    toggle_checked: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let toggle_checked = cx.with_state(Models::default, |st| st.toggle_checked.clone());
-    let toggle_checked = match toggle_checked {
-        Some(m) => m,
-        None => {
-            let m = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.toggle_checked = Some(m.clone()));
-            m
-        }
-    };
+    let toggle_checked = cx.local_model_keyed("toggle_checked", || false);
 
     let row = |cx: &mut ElementContext<'_, H>,
                variant: material3::IconButtonVariant,

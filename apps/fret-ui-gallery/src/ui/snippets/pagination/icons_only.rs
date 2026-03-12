@@ -9,32 +9,9 @@ use std::sync::Arc;
 const CMD_APP_OPEN: &str = "ui_gallery.pagination.icons_only.open";
 const CMD_APP_SAVE: &str = "ui_gallery.pagination.icons_only.save";
 
-#[derive(Default, Clone)]
-struct Models {
-    rows_per_page: Option<Model<Option<Arc<str>>>>,
-    rows_per_page_open: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    let rows_per_page = match state.rows_per_page {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Some(Arc::<str>::from("25")));
-            cx.with_state(Models::default, |st| st.rows_per_page = Some(model.clone()));
-            model
-        }
-    };
-    let rows_per_page_open = match state.rows_per_page_open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.rows_per_page_open = Some(model.clone())
-            });
-            model
-        }
-    };
+    let rows_per_page = cx.local_model_keyed("rows_per_page", || Some(Arc::<str>::from("25")));
+    let rows_per_page_open = cx.local_model_keyed("rows_per_page_open", || false);
 
     let rows_per_page = shadcn::Select::new(rows_per_page.clone(), rows_per_page_open.clone())
         .value(shadcn::SelectValue::new().placeholder("25"))

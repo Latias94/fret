@@ -13,17 +13,11 @@ use crate::ColorRef;
 use fret_ui::Theme;
 use fret_ui::{ElementContext, UiHost};
 
-#[derive(Debug, Default)]
-struct CurrentColorProviderState {
-    current: Option<ColorRef>,
-}
-
 /// Returns the nearest inherited `currentColor` for the current element scope stack.
 ///
 /// When unset, callers should apply their own fallback (typically a theme token).
 pub fn inherited_current_color<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<ColorRef> {
-    cx.inherited_state_where::<CurrentColorProviderState>(|st| st.current.is_some())
-        .and_then(|st| st.current.clone())
+    cx.provided::<ColorRef>().cloned()
 }
 
 /// Runs `f` with `color` installed as the inherited `currentColor` for the subtree.
@@ -35,16 +29,7 @@ pub fn with_current_color_provider<H: UiHost, R>(
     color: ColorRef,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(CurrentColorProviderState::default, |st| {
-        let prev = st.current.clone();
-        st.current = Some(color.clone());
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(CurrentColorProviderState::default, |st| {
-        st.current = prev;
-    });
-    out
+    cx.provide(color, f)
 }
 
 /// Returns a wrapper element that installs `color` as the inherited foreground for one explicit

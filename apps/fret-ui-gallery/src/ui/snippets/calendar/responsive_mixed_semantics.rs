@@ -6,13 +6,6 @@ use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
 
-#[derive(Default)]
-struct Models {
-    popover_open: Option<Model<bool>>,
-    range_month: Option<Model<CalendarMonth>>,
-    range_selected: Option<Model<DateRangeSelection>>,
-}
-
 fn parse_iso_date_ymd(raw: &str) -> Option<Date> {
     let raw = raw.trim();
     let (year, rest) = raw.split_once('-')?;
@@ -34,51 +27,16 @@ fn today_from_env_or_now() -> Date {
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (popover_open, range_month, range_selected) = cx.with_state(Models::default, |st| {
-        (
-            st.popover_open.clone(),
-            st.range_month.clone(),
-            st.range_selected.clone(),
-        )
-    });
-
     let today = today_from_env_or_now();
     let range_from = time::Date::from_calendar_date(today.year(), time::Month::January, 12)
         .expect("valid range start date");
     let range_to = range_from + time::Duration::days(30);
-
-    let popover_open = match popover_open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.popover_open = Some(model.clone()));
-            model
-        }
-    };
-    let range_month = match range_month {
-        Some(model) => model,
-        None => {
-            let model = cx
-                .app
-                .models_mut()
-                .insert(CalendarMonth::from_date(range_from));
-            cx.with_state(Models::default, |st| st.range_month = Some(model.clone()));
-            model
-        }
-    };
-    let range_selected = match range_selected {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(DateRangeSelection {
-                from: Some(range_from),
-                to: Some(range_to),
-            });
-            cx.with_state(Models::default, |st| {
-                st.range_selected = Some(model.clone())
-            });
-            model
-        }
-    };
+    let popover_open = cx.local_model_keyed("popover_open", || false);
+    let range_month = cx.local_model_keyed("range_month", || CalendarMonth::from_date(range_from));
+    let range_selected = cx.local_model_keyed("range_selected", || DateRangeSelection {
+        from: Some(range_from),
+        to: Some(range_to),
+    });
 
     let panel_calendar = shadcn::CalendarRange::new(range_month.clone(), range_selected.clone())
         .number_of_months(2)

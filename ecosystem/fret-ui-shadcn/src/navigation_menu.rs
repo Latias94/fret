@@ -1413,7 +1413,7 @@ impl NavigationMenu {
                     let selected: Option<Arc<str>> =
                         cx.watch_model(&value_model).layout().cloned().flatten();
                     if let Some(handler) = on_value_change.as_ref() {
-                        let changed = cx.with_state(
+                        let changed = cx.slot_state(
                             NavigationMenuValueChangeCallbackState::default,
                             |state| navigation_menu_value_change_event(state, selected.clone()),
                         );

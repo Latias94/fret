@@ -26,16 +26,7 @@ const TRANSCRIPT_SAMPLES: &[&str] = &[
     "Draft a short status update for the release channel.",
 ];
 
-#[derive(Default, Clone)]
-struct DemoModels {
-    listening: Option<Model<bool>>,
-    processing: Option<Model<bool>>,
-    transcript: Option<Model<String>>,
-    next_sample: Option<Model<usize>>,
-    timer_token: Option<Model<Option<TimerToken>>>,
-}
-
-fn ensure_models<H: UiHost + 'static>(
+fn speech_models<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
 ) -> (
     Model<bool>,
@@ -44,38 +35,13 @@ fn ensure_models<H: UiHost + 'static>(
     Model<usize>,
     Model<Option<TimerToken>>,
 ) {
-    let state = cx.with_state(DemoModels::default, |st| st.clone());
-    match (
-        state.listening,
-        state.processing,
-        state.transcript,
-        state.next_sample,
-        state.timer_token,
-    ) {
-        (
-            Some(listening),
-            Some(processing),
-            Some(transcript),
-            Some(next_sample),
-            Some(timer_token),
-        ) => (listening, processing, transcript, next_sample, timer_token),
-        _ => {
-            let models = cx.app.models_mut();
-            let listening = models.insert(false);
-            let processing = models.insert(false);
-            let transcript = models.insert(String::new());
-            let next_sample = models.insert(0usize);
-            let timer_token = models.insert(None::<TimerToken>);
-            cx.with_state(DemoModels::default, |st| {
-                st.listening = Some(listening.clone());
-                st.processing = Some(processing.clone());
-                st.transcript = Some(transcript.clone());
-                st.next_sample = Some(next_sample.clone());
-                st.timer_token = Some(timer_token.clone());
-            });
-            (listening, processing, transcript, next_sample, timer_token)
-        }
-    }
+    (
+        cx.local_model_keyed("listening", || false),
+        cx.local_model_keyed("processing", || false),
+        cx.local_model_keyed("transcript", String::new),
+        cx.local_model_keyed("next_sample", || 0usize),
+        cx.local_model_keyed("timer_token", || None::<TimerToken>),
+    )
 }
 
 fn push_transcript_line(current: &mut String, sample_ix: usize) {
@@ -194,7 +160,7 @@ fn clear_action<H: UiHost + 'static>(
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (listening, processing, transcript, next_sample, timer_token) = ensure_models(cx);
+    let (listening, processing, transcript, next_sample, timer_token) = speech_models(cx);
 
     cx.keyed("ui-gallery.ai.speech-input.demo", move |cx| {
         let listening_for_timer = listening.clone();

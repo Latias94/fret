@@ -14,231 +14,32 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .min_w_0()
         .max_w(Px(384.0));
 
-    #[derive(Default)]
-    struct FormDemoModels {
-        form_state: Option<Model<FormState>>,
-        username: Option<Model<String>>,
-        email: Option<Model<Option<Arc<str>>>>,
-        email_open: Option<Model<bool>>,
-        bio: Option<Model<String>>,
-        notify_type: Option<Model<Option<Arc<str>>>>,
-        mobile: Option<Model<bool>>,
-        sidebar_recents: Option<Model<bool>>,
-        sidebar_home: Option<Model<bool>>,
-        sidebar_applications: Option<Model<bool>>,
-        sidebar_desktop: Option<Model<bool>>,
-        sidebar_downloads: Option<Model<bool>>,
-        sidebar_documents: Option<Model<bool>>,
-        sidebar_items: Option<Model<Vec<Arc<str>>>>,
-        dob_open: Option<Model<bool>>,
-        dob_month: Option<Model<CalendarMonth>>,
-        dob_selected: Option<Model<Option<Date>>>,
-        marketing_emails: Option<Model<bool>>,
-        security_emails: Option<Model<bool>>,
-    }
-
-    let (
-        form_state,
-        username,
-        email,
-        email_open,
-        bio,
-        notify_type,
-        mobile,
-        sidebar_recents,
-        sidebar_home,
-        sidebar_applications,
-        sidebar_desktop,
-        sidebar_downloads,
-        sidebar_documents,
-        sidebar_items,
-        dob_open,
-        dob_month,
-        dob_selected,
-        marketing_emails,
-        security_emails,
-    ) = cx.with_state(FormDemoModels::default, |st| {
-        (
-            st.form_state.clone(),
-            st.username.clone(),
-            st.email.clone(),
-            st.email_open.clone(),
-            st.bio.clone(),
-            st.notify_type.clone(),
-            st.mobile.clone(),
-            st.sidebar_recents.clone(),
-            st.sidebar_home.clone(),
-            st.sidebar_applications.clone(),
-            st.sidebar_desktop.clone(),
-            st.sidebar_downloads.clone(),
-            st.sidebar_documents.clone(),
-            st.sidebar_items.clone(),
-            st.dob_open.clone(),
-            st.dob_month.clone(),
-            st.dob_selected.clone(),
-            st.marketing_emails.clone(),
-            st.security_emails.clone(),
-        )
-    });
-
     let today = time::OffsetDateTime::now_utc().date();
     let min_dob = Date::from_calendar_date(1900, time::Month::January, 1).expect("valid date");
     let items_initial: Vec<Arc<str>> = vec![Arc::<str>::from("recents"), Arc::<str>::from("home")];
 
-    let (
-        form_state,
-        username,
-        email,
-        email_open,
-        bio,
-        notify_type,
-        mobile,
-        sidebar_recents,
-        sidebar_home,
-        sidebar_applications,
-        sidebar_desktop,
-        sidebar_downloads,
-        sidebar_documents,
-        sidebar_items,
-        dob_open,
-        dob_month,
-        dob_selected,
-        marketing_emails,
-        security_emails,
-    ) = match (
-        form_state,
-        username,
-        email,
-        email_open,
-        bio,
-        notify_type,
-        mobile,
-        sidebar_recents,
-        sidebar_home,
-        sidebar_applications,
-        sidebar_desktop,
-        sidebar_downloads,
-        sidebar_documents,
-        sidebar_items,
-        dob_open,
-        dob_month,
-        dob_selected,
-        marketing_emails,
-        security_emails,
-    ) {
-        (
-            Some(form_state),
-            Some(username),
-            Some(email),
-            Some(email_open),
-            Some(bio),
-            Some(notify_type),
-            Some(mobile),
-            Some(sidebar_recents),
-            Some(sidebar_home),
-            Some(sidebar_applications),
-            Some(sidebar_desktop),
-            Some(sidebar_downloads),
-            Some(sidebar_documents),
-            Some(sidebar_items),
-            Some(dob_open),
-            Some(dob_month),
-            Some(dob_selected),
-            Some(marketing_emails),
-            Some(security_emails),
-        ) => (
-            form_state,
-            username,
-            email,
-            email_open,
-            bio,
-            notify_type,
-            mobile,
-            sidebar_recents,
-            sidebar_home,
-            sidebar_applications,
-            sidebar_desktop,
-            sidebar_downloads,
-            sidebar_documents,
-            sidebar_items,
-            dob_open,
-            dob_month,
-            dob_selected,
-            marketing_emails,
-            security_emails,
-        ),
-        _ => {
-            let form_state = cx.app.models_mut().insert(FormState {
-                validate_mode: FormValidateMode::OnSubmit,
-                ..FormState::default()
-            });
-            let username = cx.app.models_mut().insert(String::new());
-            let email = cx.app.models_mut().insert(None::<Arc<str>>);
-            let email_open = cx.app.models_mut().insert(false);
-            let bio = cx.app.models_mut().insert(String::new());
-            let notify_type = cx.app.models_mut().insert(None::<Arc<str>>);
-            let mobile = cx.app.models_mut().insert(false);
-
-            let sidebar_recents = cx.app.models_mut().insert(true);
-            let sidebar_home = cx.app.models_mut().insert(true);
-            let sidebar_applications = cx.app.models_mut().insert(false);
-            let sidebar_desktop = cx.app.models_mut().insert(false);
-            let sidebar_downloads = cx.app.models_mut().insert(false);
-            let sidebar_documents = cx.app.models_mut().insert(false);
-            let sidebar_items = cx.app.models_mut().insert(items_initial.clone());
-
-            let dob_open = cx.app.models_mut().insert(false);
-            let dob_month = cx.app.models_mut().insert(CalendarMonth::from_date(today));
-            let dob_selected = cx.app.models_mut().insert(None::<Date>);
-
-            let marketing_emails = cx.app.models_mut().insert(false);
-            let security_emails = cx.app.models_mut().insert(true);
-
-            cx.with_state(FormDemoModels::default, |st| {
-                st.form_state = Some(form_state.clone());
-                st.username = Some(username.clone());
-                st.email = Some(email.clone());
-                st.email_open = Some(email_open.clone());
-                st.bio = Some(bio.clone());
-                st.notify_type = Some(notify_type.clone());
-                st.mobile = Some(mobile.clone());
-                st.sidebar_recents = Some(sidebar_recents.clone());
-                st.sidebar_home = Some(sidebar_home.clone());
-                st.sidebar_applications = Some(sidebar_applications.clone());
-                st.sidebar_desktop = Some(sidebar_desktop.clone());
-                st.sidebar_downloads = Some(sidebar_downloads.clone());
-                st.sidebar_documents = Some(sidebar_documents.clone());
-                st.sidebar_items = Some(sidebar_items.clone());
-                st.dob_open = Some(dob_open.clone());
-                st.dob_month = Some(dob_month.clone());
-                st.dob_selected = Some(dob_selected.clone());
-                st.marketing_emails = Some(marketing_emails.clone());
-                st.security_emails = Some(security_emails.clone());
-            });
-
-            (
-                form_state,
-                username,
-                email,
-                email_open,
-                bio,
-                notify_type,
-                mobile,
-                sidebar_recents,
-                sidebar_home,
-                sidebar_applications,
-                sidebar_desktop,
-                sidebar_downloads,
-                sidebar_documents,
-                sidebar_items,
-                dob_open,
-                dob_month,
-                dob_selected,
-                marketing_emails,
-                security_emails,
-            )
-        }
-    };
+    let form_state = cx.local_model_keyed("form_state", || FormState {
+        validate_mode: FormValidateMode::OnSubmit,
+        ..FormState::default()
+    });
+    let username = cx.local_model_keyed("username", String::new);
+    let email = cx.local_model_keyed("email", || None::<Arc<str>>);
+    let email_open = cx.local_model_keyed("email_open", || false);
+    let bio = cx.local_model_keyed("bio", String::new);
+    let notify_type = cx.local_model_keyed("notify_type", || None::<Arc<str>>);
+    let mobile = cx.local_model_keyed("mobile", || false);
+    let sidebar_recents = cx.local_model_keyed("sidebar_recents", || true);
+    let sidebar_home = cx.local_model_keyed("sidebar_home", || true);
+    let sidebar_applications = cx.local_model_keyed("sidebar_applications", || false);
+    let sidebar_desktop = cx.local_model_keyed("sidebar_desktop", || false);
+    let sidebar_downloads = cx.local_model_keyed("sidebar_downloads", || false);
+    let sidebar_documents = cx.local_model_keyed("sidebar_documents", || false);
+    let sidebar_items = cx.local_model_keyed("sidebar_items", || items_initial.clone());
+    let dob_open = cx.local_model_keyed("dob_open", || false);
+    let dob_month = cx.local_model_keyed("dob_month", || CalendarMonth::from_date(today));
+    let dob_selected = cx.local_model_keyed("dob_selected", || None::<Date>);
+    let marketing_emails = cx.local_model_keyed("marketing_emails", || false);
+    let security_emails = cx.local_model_keyed("security_emails", || true);
 
     let read_bool = |m: &Model<bool>| cx.app.models().read(m, |v| *v).ok().unwrap_or(false);
     let selected_items = {

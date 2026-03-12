@@ -5,36 +5,10 @@ use fret_core::Px;
 use fret_ui_kit::ui::UiElementSinkExt as _;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default, Clone)]
-struct Models {
-    street: Option<Model<String>>,
-    city: Option<Model<String>>,
-    zip: Option<Model<String>>,
-}
-
-fn ensure_models<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> (Model<String>, Model<String>, Model<String>) {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    match (state.street, state.city, state.zip) {
-        (Some(street), Some(city), Some(zip)) => (street, city, zip),
-        _ => {
-            let models = cx.app.models_mut();
-            let street = models.insert(String::new());
-            let city = models.insert(String::new());
-            let zip = models.insert(String::new());
-            cx.with_state(Models::default, |st| {
-                st.street = Some(street.clone());
-                st.city = Some(city.clone());
-                st.zip = Some(zip.clone());
-            });
-            (street, city, zip)
-        }
-    }
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (street, city, zip) = ensure_models(cx);
+    let street = cx.local_model_keyed("street", String::new);
+    let city = cx.local_model_keyed("city", String::new);
+    let zip = cx.local_model_keyed("zip", String::new);
     let max_w_md = LayoutRefinement::default().w_full().max_w(Px(520.0));
 
     let row = ui::h_flex(|cx| {

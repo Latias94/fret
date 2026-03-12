@@ -6,23 +6,12 @@ use fret_core::Edges;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default, Clone)]
-struct Models {
-    dropdown_open: Option<Model<bool>>,
-}
-
 fn icon(cx: &mut UiCx<'_>, id: &'static str) -> AnyElement {
     fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
-    let dropdown_open = cx
-        .with_state(Models::default, |st| st.dropdown_open.clone())
-        .unwrap_or_else(|| {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.dropdown_open = Some(model.clone()));
-            model
-        });
+    let dropdown_open = cx.local_model_keyed("dropdown_open", || false);
 
     let people = [
         ("shadcn", "S", "shadcn@vercel.com"),

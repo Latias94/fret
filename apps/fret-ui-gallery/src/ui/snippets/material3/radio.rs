@@ -7,26 +7,11 @@ use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-#[derive(Default)]
-struct Models {
-    standalone_selected: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     group_value: Model<Option<Arc<str>>>,
 ) -> AnyElement {
-    let standalone_selected = cx.with_state(Models::default, |st| st.standalone_selected.clone());
-    let standalone_selected = match standalone_selected {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.standalone_selected = Some(model.clone())
-            });
-            model
-        }
-    };
+    let standalone_selected = cx.local_model_keyed("standalone_selected", || false);
 
     let current = cx
         .get_model_cloned(&group_value, Invalidation::Layout)

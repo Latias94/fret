@@ -5,29 +5,6 @@ use fret_ui::element::SemanticsDecoration;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default, Clone)]
-struct SidebarModels {
-    open_mobile: Option<Model<bool>>,
-    selected: Option<Model<Arc<str>>>,
-}
-
-fn ensure_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> (Model<bool>, Model<Arc<str>>) {
-    let state = cx.with_state(SidebarModels::default, |st| st.clone());
-    match (state.open_mobile, state.selected) {
-        (Some(open_mobile), Some(selected)) => (open_mobile, selected),
-        _ => {
-            let models = cx.app.models_mut();
-            let open_mobile = models.insert(false);
-            let selected = models.insert(Arc::<str>::from("playground"));
-            cx.with_state(SidebarModels::default, |st| {
-                st.open_mobile = Some(open_mobile.clone());
-                st.selected = Some(selected.clone());
-            });
-            (open_mobile, selected)
-        }
-    }
-}
-
 fn resolve_selected<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     model: &Model<Arc<str>>,
@@ -67,7 +44,8 @@ fn menu_button<H: UiHost>(
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (open_mobile, selected) = ensure_models(cx);
+    let open_mobile = cx.local_model_keyed("open_mobile", || false);
+    let selected = cx.local_model_keyed("selected", || Arc::<str>::from("playground"));
 
     let content = shadcn::SidebarProvider::new()
         .default_open(false)

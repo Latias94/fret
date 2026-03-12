@@ -8,11 +8,6 @@ use std::sync::Arc;
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
-#[derive(Default, Clone)]
-struct Models {
-    download_progress: Option<Model<f32>>,
-}
-
 fn icon(cx: &mut UiCx<'_>, id: &'static str) -> AnyElement {
     fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
 }
@@ -177,15 +172,7 @@ fn item_team(cx: &mut UiCx<'_>, test_id: &'static str, action_test_id: &'static 
 pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
 
-    let download_progress = cx
-        .with_state(Models::default, |st| st.download_progress.clone())
-        .unwrap_or_else(|| {
-            let model = cx.app.models_mut().insert(50.0);
-            cx.with_state(Models::default, |st| {
-                st.download_progress = Some(model.clone())
-            });
-            model
-        });
+    let download_progress = cx.local_model_keyed("download_progress", || 50.0);
 
     let max_w_sm = LayoutRefinement::default()
         .w_full()

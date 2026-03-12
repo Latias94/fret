@@ -4,38 +4,9 @@ pub const SOURCE: &str = include_str!("demo.rs");
 use fret::UiCx;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default, Clone)]
-struct Models {
-    email: Option<Model<String>>,
-    password: Option<Model<String>>,
-}
-
-fn ensure_models(cx: &mut UiCx<'_>) -> (Model<String>, Model<String>) {
-    let state = cx.with_state(Models::default, |st| st.clone());
-
-    let email = match state.email {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| st.email = Some(model.clone()));
-            model
-        }
-    };
-
-    let password = match state.password {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| st.password = Some(model.clone()));
-            model
-        }
-    };
-
-    (email, password)
-}
-
 pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
-    let (email, password) = ensure_models(cx);
+    let email = cx.local_model_keyed("email", String::new);
+    let password = cx.local_model_keyed("password", String::new);
 
     let max_w_sm = LayoutRefinement::default()
         .w_full()

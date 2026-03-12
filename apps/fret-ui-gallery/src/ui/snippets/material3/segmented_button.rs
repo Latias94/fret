@@ -7,41 +7,13 @@ use std::sync::Arc;
 use fret_ui_material3::{SegmentedButtonItem, SegmentedButtonSet};
 use fret_ui_shadcn::prelude::*;
 
-#[derive(Default)]
-struct SegmentedButtonPageModels {
-    single_value: Option<Model<Arc<str>>>,
-    multi_value: Option<Model<BTreeSet<Arc<str>>>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let single_value = cx.with_state(SegmentedButtonPageModels::default, |st| {
-        st.single_value.clone()
+    let single_value = cx.local_model_keyed("single_value", || Arc::<str>::from("alpha"));
+    let multi_value = cx.local_model_keyed("multi_value", || {
+        [Arc::<str>::from("alpha")]
+            .into_iter()
+            .collect::<BTreeSet<_>>()
     });
-    let single_value = match single_value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Arc::<str>::from("alpha"));
-            cx.with_state(SegmentedButtonPageModels::default, |st| {
-                st.single_value = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let multi_value = cx.with_state(SegmentedButtonPageModels::default, |st| {
-        st.multi_value.clone()
-    });
-    let multi_value = match multi_value {
-        Some(model) => model,
-        None => {
-            let initial: BTreeSet<Arc<str>> = [Arc::<str>::from("alpha")].into_iter().collect();
-            let model = cx.app.models_mut().insert(initial);
-            cx.with_state(SegmentedButtonPageModels::default, |st| {
-                st.multi_value = Some(model.clone())
-            });
-            model
-        }
-    };
 
     let single_current = cx
         .get_model_cloned(&single_value, Invalidation::Layout)
