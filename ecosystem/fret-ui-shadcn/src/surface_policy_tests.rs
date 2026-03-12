@@ -6,6 +6,7 @@ const BADGE_RS: &str = include_str!("badge.rs");
 const UI_EXT_SUPPORT_RS: &str = include_str!("ui_ext/support.rs");
 const UI_EXT_DATA_RS: &str = include_str!("ui_ext/data.rs");
 const ALERT_DIALOG_RS: &str = include_str!("alert_dialog.rs");
+const COMMAND_RS: &str = include_str!("command.rs");
 const CONTEXT_MENU_RS: &str = include_str!("context_menu.rs");
 const DIALOG_RS: &str = include_str!("dialog.rs");
 const DRAWER_RS: &str = include_str!("drawer.rs");
@@ -302,7 +303,8 @@ fn internal_menu_slot_wrappers_accept_unified_component_conversion_trait() {
 }
 
 #[test]
-fn public_leaf_constructors_prefer_typed_conversion_outputs_when_no_raw_seam_is_required() {
+fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_raw_seam_is_required()
+ {
     for (label, source, required_markers, forbidden_markers) in [
         (
             "badge.rs",
@@ -312,6 +314,16 @@ fn public_leaf_constructors_prefer_typed_conversion_outputs_when_no_raw_seam_is_
             ][..],
             &[
                 "pub fn badge<H: UiHost>( cx: &mut ElementContext<'_, H>, label: impl Into<Arc<str>>, variant: BadgeVariant, ) -> AnyElement",
+            ][..],
+        ),
+        (
+            "command.rs",
+            COMMAND_RS,
+            &[
+                "pub fn command<H: UiHost, I, F, T>(f: F) -> impl IntoUiElement<H> + use<H, I, F, T> where F: FnOnce(&mut ElementContext<'_, H>) -> I, I: IntoIterator<Item = T>, T: IntoUiElement<H>,",
+            ][..],
+            &[
+                "pub fn command<H: UiHost, I, F>(cx: &mut ElementContext<'_, H>, f: F) -> AnyElement where F: FnOnce(&mut ElementContext<'_, H>) -> I, I: IntoIterator<Item = AnyElement>,",
             ][..],
         ),
         (
@@ -354,14 +366,14 @@ fn public_leaf_constructors_prefer_typed_conversion_outputs_when_no_raw_seam_is_
             let marker = normalize_ws(marker);
             assert!(
                 normalized.contains(&marker),
-                "{label} should expose a typed leaf constructor when no raw seam is conceptually required"
+                "{label} should expose a typed constructor or wrapper when no raw seam is conceptually required"
             );
         }
         for marker in forbidden_markers {
             let marker = normalize_ws(marker);
             assert!(
                 !normalized.contains(&marker),
-                "{label} reintroduced a pre-landed AnyElement leaf constructor"
+                "{label} reintroduced a pre-landed AnyElement constructor or wrapper"
             );
         }
     }

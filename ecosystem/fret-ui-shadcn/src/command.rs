@@ -2,6 +2,7 @@ use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use std::marker::PhantomData;
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -39,7 +40,9 @@ use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::typography;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, Radius, Space, ui,
+};
 
 use crate::layout as shadcn_layout;
 use crate::rtl;
@@ -4095,12 +4098,49 @@ fn command_palette_value_change_event(
     None
 }
 
-pub fn command<H: UiHost, I, F>(cx: &mut ElementContext<'_, H>, f: F) -> AnyElement
+pub struct CommandBuild<H, B> {
+    build: Option<B>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B, I, T> CommandBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = (self.build.expect("command build closure already taken"))(cx)
+            .into_iter()
+            .map(|child| child.into_element(cx))
+            .collect::<Vec<_>>();
+        Command::new(children).into_element(cx)
+    }
+}
+
+impl<H: UiHost, B, I, T> IntoUiElement<H> for CommandBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CommandBuild::into_element(self, cx)
+    }
+}
+
+pub fn command<H: UiHost, I, F, T>(f: F) -> impl IntoUiElement<H> + use<H, I, F, T>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
-    Command::new(f(cx)).into_element(cx)
+    CommandBuild {
+        build: Some(f),
+        _phantom: PhantomData,
+    }
 }
 
 #[cfg(test)]

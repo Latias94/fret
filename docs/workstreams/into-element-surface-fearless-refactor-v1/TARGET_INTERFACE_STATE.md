@@ -314,10 +314,11 @@ The same input rule also applies to internal shadcn menu-slot wrappers:
 - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs::menu_icon_slot<H, B>(...)`
 - `ecosystem/fret-ui-shadcn/src/menubar.rs::menu_icon_slot<H, B>(...)`
 
-The same typed-constructor rule now also applies to thin public shadcn leaf helpers where no raw
-child list or explicit landing seam is conceptually required:
+The same typed-constructor rule now also applies to thin public shadcn constructors or wrappers
+where no raw child list or explicit landing seam is conceptually required:
 
 - `ecosystem/fret-ui-shadcn/src/badge.rs::badge<H, T>(...)`
+- `ecosystem/fret-ui-shadcn/src/command.rs::command<H, I, F, T>(...)`
 - `ecosystem/fret-ui-shadcn/src/input_group.rs::input_group<H>(...)`
 - `ecosystem/fret-ui-shadcn/src/input_otp.rs::input_otp<H>(...)`
 - `ecosystem/fret-ui-shadcn/src/kbd.rs::kbd<H, T>(...)`
