@@ -1511,6 +1511,1155 @@ real editors.
   non-port picker routing through the private `canvas/widget/sticky_wire_connect.rs` and
   `canvas/widget/sticky_wire_targets.rs` seams, so retained sticky-wire pointer reducers no
   longer stay embedded in one mixed surface.
+- `sticky_wire.rs` now also routes pointer-down eligibility/new-wire extraction
+  and target resolution through the private `canvas/widget/sticky_wire/checks.rs` and
+  `canvas/widget/sticky_wire/target.rs` seams, while `sticky_wire_targets.rs` now routes
+  non-port hit inspection and picker-open finalization through the private
+  `canvas/widget/sticky_wire_targets/inspect.rs` and
+  `canvas/widget/sticky_wire_targets/picker.rs` seams, so the retained sticky-wire reducers keep
+  shrinking toward façade-only orchestration.
+- `pending_connection_session.rs` now routes pending edge-insert and pending
+  wire promotion through the private `canvas/widget/pending_connection_session/edge.rs` and
+  `canvas/widget/pending_connection_session/wire.rs` seams, so retained connection-session helpers
+  keep shrinking toward façade-only orchestration.
+- `pending_wire_drag.rs` now routes drag-threshold preparation and
+  activation side effects through the private `canvas/widget/pending_wire_drag/checks.rs` and
+  `canvas/widget/pending_wire_drag/activate.rs` seams, while
+  `pointer_up_pending/wire_drag.rs` now routes click-connect promotion predicates and activation
+  through the private `canvas/widget/pointer_up_pending/wire_drag/checks.rs` and
+  `canvas/widget/pointer_up_pending/wire_drag/activate.rs` seams, so retained wire-entry reducers
+  keep shrinking toward façade-only orchestration.
+- `edge_insert_drag/pending.rs` now routes drag-threshold preparation and
+  activation through the private `canvas/widget/edge_insert_drag/pending/checks.rs` and
+  `canvas/widget/edge_insert_drag/pending/activate.rs` seams, so retained edge-insert pending move
+  reducers keep shrinking toward façade-only orchestration.
+- `left_click/connection_hits/port.rs` now routes connectability resolution,
+  click-connect target handling, and wire-kind arming through the private
+  `canvas/widget/left_click/connection_hits/port/connectable.rs`,
+  `canvas/widget/left_click/connection_hits/port/click_connect.rs`, and
+  `canvas/widget/left_click/connection_hits/port/kind.rs` seams, so retained connection-port
+  reducers keep shrinking toward façade-only orchestration.
+- `edge_insert_drag/pointer_up.rs` now routes pending-release cleanup and
+  active picker-opening tail handling through the private
+  `canvas/widget/edge_insert_drag/pointer_up/pending.rs` and
+  `canvas/widget/edge_insert_drag/pointer_up/active.rs` seams, so retained edge-insert left-up
+  reducers keep shrinking toward façade-only orchestration.
+- `left_click/connection_hits/edge_anchor.rs` now routes shared edge
+  selectable/focus/selection reduction through the private
+  `canvas/widget/left_click/edge_selection.rs` seam and reconnect arming through
+  `canvas/widget/left_click/connection_hits/edge_anchor/arm.rs`, while
+  `left_click/element_hits/edge.rs` now routes the same shared edge-selection seam plus
+  drag-vs-insert arming through `canvas/widget/left_click/element_hits/edge/drag.rs`, so retained
+  edge-hit reducers keep shrinking toward façade-only orchestration.
+- `left_click/element_hits/node.rs` now routes node
+  selectable/draggable capability lookup, shared node-selection reducers, and pending-drag
+  planning through the private `canvas/widget/left_click/node_selection.rs`,
+  `canvas/widget/left_click/element_hits/node/capabilities.rs`, and
+  `canvas/widget/left_click/element_hits/node/drag.rs` seams, while
+  `left_click/element_hits/resize.rs` now routes the same shared node-selection seam plus
+  pending-resize seed construction through `canvas/widget/left_click/element_hits/resize/state.rs`,
+  so retained node/resize hit reducers keep shrinking toward façade-only orchestration.
+- `pending_resize.rs` now routes node-resize drag-threshold checks and
+  activation through the private `canvas/widget/pending_resize/checks.rs` and
+  `canvas/widget/pending_resize/activate.rs` seams, while `edge_insert_drag/drag.rs` now routes
+  active edge-insert drag state writeback and invalidate tail handling through the private
+  `canvas/widget/edge_insert_drag/drag/state.rs` and
+  `canvas/widget/edge_insert_drag/drag/tail.rs` seams, so both retained move reducers keep
+  shrinking toward façade-only orchestration.
+- `pointer_move_dispatch/primary.rs` now routes surface pan/marquee,
+  group drag/resize, node pending drag/resize, and pending connection move arbitration through the
+  private `canvas/widget/pointer_move_dispatch/primary/surface.rs`,
+  `canvas/widget/pointer_move_dispatch/primary/group.rs`,
+  `canvas/widget/pointer_move_dispatch/primary/node.rs`, and
+  `canvas/widget/pointer_move_dispatch/primary/connection.rs` seams, so retained primary
+  pointer-move ordering keeps shrinking toward façade-only orchestration.
+- `pointer_move_dispatch/secondary.rs` now routes active node
+  resize/drag, active connection drag arbitration, and pending insert-node drag promotion through
+  the private `canvas/widget/pointer_move_dispatch/secondary/node.rs`,
+  `canvas/widget/pointer_move_dispatch/secondary/connection.rs`, and
+  `canvas/widget/pointer_move_dispatch/secondary/insert.rs` seams, so retained secondary
+  pointer-move ordering keeps shrinking toward façade-only orchestration.
+- `insert_execution.rs` now routes reroute-candidate detection, plan
+  delegates, feedback delegates, and local regression tests through the private
+  `canvas/widget/insert_execution/candidate.rs`,
+  `canvas/widget/insert_execution/plan.rs`,
+  `canvas/widget/insert_execution/feedback.rs`, and
+  `canvas/widget/insert_execution/tests.rs` seams, so the root retained insert-execution file now
+  mainly keeps module wiring and façade exports explicit.
+- `command_router.rs` now routes direct insert/group/view/focus/edit
+  execution through the private `canvas/widget/command_router/insert.rs`,
+  `canvas/widget/command_router/group.rs`,
+  `canvas/widget/command_router/view.rs`,
+  `canvas/widget/command_router/focus.rs`, and
+  `canvas/widget/command_router/edit.rs` seams, so the root command router now mainly keeps
+  nudge/align precedence and direct-route orchestration explicit.
+- `paint_edge_anchors.rs` now routes target-edge reconnectability
+  lookup, hover/active interaction state resolution, anchor paint-style calculation, and scene-op
+  push through the private `canvas/widget/paint_edge_anchors/resolve.rs`,
+  `canvas/widget/paint_edge_anchors/state.rs`,
+  `canvas/widget/paint_edge_anchors/style.rs`, and
+  `canvas/widget/paint_edge_anchors/render.rs` seams, so the root edge-anchor painter now mainly
+  keeps draw-order and endpoint iteration orchestration explicit.
+- `paint_root_helpers.rs` now routes static-scene paint-token key
+  writes and geometry-token key writes through the private
+  `canvas/widget/paint_root_helpers/paint.rs` and
+  `canvas/widget/paint_root_helpers/geometry.rs` seams, so the root paint-root helper file now
+  mainly keeps static-scene style-key wiring explicit.
+- `paint_root/cache_plan.rs` now routes hovered-edge resolution and
+  static-scene cache eligibility / tile / rect planning through the private
+  `canvas/widget/paint_root/cache_plan/hover.rs` and
+  `canvas/widget/paint_root/cache_plan/tiles.rs` seams, so the root paint-root cache-plan file now
+  mainly keeps derived-output publish and cache-plan orchestration explicit.
+- `widget_surface.rs` now routes retained-only runtime constants through
+  the private `canvas/widget/widget_surface/constants.rs` seam, so the root widget-surface file
+  now mainly keeps module wiring and the noop `new` constructor explicit while keeping the public
+  widget contract unchanged.
+- `widget_surface/runtime.rs` now routes render-cull/debug helpers,
+  interaction activity grouping, and edge-path resolution through the private
+  `canvas/widget/widget_surface/runtime/render.rs`,
+  `canvas/widget/widget_surface/runtime/interaction.rs`, and
+  `canvas/widget/widget_surface/runtime/edge.rs` seams, so the runtime façade now mainly keeps
+  retained helper routing explicit without changing the app-facing surface.
+- `paint_root/frame.rs` now routes begin-frame cache bookkeeping,
+  path-cache diagnostics publication, and canvas background fill through the private
+  `canvas/widget/paint_root/frame/cache.rs` and
+  `canvas/widget/paint_root/frame/background.rs` seams while reusing the shared
+  `paint_grid_plan_support::resolve_canvas_chrome_hint` helper, so the root frame file now mainly
+  keeps viewport/cull setup and grid bootstrap explicit.
+- `paint_root/cached_edges/edges.rs` now routes uncached fallback
+  rendering, cache replay/store helpers, single-rect cache build, and tiled cache build through
+  the private `canvas/widget/paint_root/cached_edges/edges/fallback.rs`,
+  `canvas/widget/paint_root/cached_edges/edges/replay.rs`,
+  `canvas/widget/paint_root/cached_edges/edges/single.rs`, and
+  `canvas/widget/paint_root/cached_edges/edges/tiled.rs` seams, so the root cached-edge file now
+  mainly keeps the retained façade surface explicit.
+- `paint_root/cached_edges/labels.rs` now routes label-cache
+  replay/store helpers, single-rect label build, and tiled label build through the private
+  `canvas/widget/paint_root/cached_edges/labels/replay.rs`,
+  `canvas/widget/paint_root/cached_edges/labels/single.rs`, and
+  `canvas/widget/paint_root/cached_edges/labels/tiled.rs` seams, so the root cached-edge label
+  file now mainly keeps the retained façade surface explicit.
+- `paint_root/cached_edges/build_state.rs` now routes clip-op stack
+  assembly, initial cached-edge/label state allocation, and budget-step advancement through the
+  private `canvas/widget/paint_root/cached_edges/build_state/ops.rs`,
+  `canvas/widget/paint_root/cached_edges/build_state/init.rs`, and
+  `canvas/widget/paint_root/cached_edges/build_state/step.rs` seams, so the root build-state file
+  now mainly keeps the retained façade surface explicit.
+- static group/node scene-cache orchestration now also routes through
+  the private `canvas/widget/paint_root/static_layer.rs` seam, so `cached_groups.rs` and
+  `cached_nodes.rs` stop re-embedding the same layer-target replay/store routing while keeping
+  each layer's render-data collection, static paint body, and overlay tail explicit.
+- `paint_root/edge_anchor.rs` now routes target edge-id selection,
+  render-data target lookup, and geometry-based target reconstruction through the private
+  `canvas/widget/paint_root/edge_anchor/target_id.rs`,
+  `canvas/widget/paint_root/edge_anchor/render.rs`, and
+  `canvas/widget/paint_root/edge_anchor/geometry.rs` seams, so the root edge-anchor file now
+  mainly keeps the retained façade surface explicit.
+- `paint_root/cached_edges/mod.rs` now routes anchor-target
+  resolution, tiled vs single-rect dispatch, and cache-disabled uncached fallback through the
+  private `canvas/widget/paint_root/cached_edges/anchor_target.rs`,
+  `canvas/widget/paint_root/cached_edges/dispatch.rs`, and
+  `canvas/widget/paint_root/cached_edges/fallback.rs` seams, so the root cached-edge orchestration
+  file now mainly keeps retained cache routing explicit.
+- `paint_nodes/static_node_chrome.rs` now routes node
+  paint-style resolution, shadow effect setup, static chrome quads, and title/body text paint
+  through the private `canvas/widget/paint_nodes/static_node_chrome/style.rs`,
+  `canvas/widget/paint_nodes/static_node_chrome/shadow.rs`,
+  `canvas/widget/paint_nodes/static_node_chrome/quads.rs`, and
+  `canvas/widget/paint_nodes/static_node_chrome/text.rs` seams, so the root static-node chrome
+  file now mainly keeps retained node-chrome orchestration explicit.
+- `paint_nodes/static_ports.rs` now routes label text paint,
+  inner-scale port geometry, fill-path fallback paint, stroke-path fallback paint, and top-level
+  shape iteration through the private `canvas/widget/paint_nodes/static_ports/labels.rs`,
+  `canvas/widget/paint_nodes/static_ports/geometry.rs`,
+  `canvas/widget/paint_nodes/static_ports/fill.rs`,
+  `canvas/widget/paint_nodes/static_ports/stroke.rs`, and
+  `canvas/widget/paint_nodes/static_ports/shapes.rs` seams, so the root static-port file now
+  mainly keeps retained port-paint orchestration explicit without changing port chrome/path
+  behavior.
+- focused `cargo check -p fret-node --features compat-retained-canvas --tests`
+  and `cargo nextest run -p fret-node --features compat-retained-canvas` coverage now also locks
+  `skin_port_chrome_hints_apply_fill_stroke_and_inner_scale_paint_only`,
+  `skin_port_shape_hint_renders_path_ops_for_non_circle_shapes`, and
+  `preset_exec_ports_use_triangle_shape_and_emit_path_ops` after the static-port split.
+- `paint_edges/markers_support.rs` now routes marker paint-binding
+  resolution, scene path replay, route-marker path preparation, and custom-marker/custom-wire path
+  preparation through the private `canvas/widget/paint_edges/markers_support/paint.rs`,
+  `canvas/widget/paint_edges/markers_support/route.rs`, and
+  `canvas/widget/paint_edges/markers_support/custom.rs` seams, so the root marker-support file now
+  mainly keeps the retained helper façade explicit without changing marker budget or wire replay
+  behavior.
+- focused `cargo nextest run -p fret-node --features compat-retained-canvas`
+  coverage now also locks `paint_overrides_can_drive_edge_marker_paint_binding`,
+  `bezier_markers_align_with_bezier_start_end_tangents`, and
+  `custom_edge_marker_falls_back_to_from_to_tangent_when_path_has_no_tangents` after the marker
+  helper split.
+- `paint_edges/cached_budgeted.rs` now routes retained static-edge
+  wire/marker warmup and label warmup through the private
+  `canvas/widget/paint_edges/cached_budgeted/wires.rs` and
+  `canvas/widget/paint_edges/cached_budgeted/labels.rs` seams, so the root cached-budgeted file
+  now mainly keeps the cache-facing façade explicit without changing tile-budget or label
+  placement behavior.
+- focused `cargo nextest run -p fret-node --features compat-retained-canvas`
+  coverage now also locks `cached_edge_paths_match_between_tiled_and_single_tile_cache_modes`,
+  `paint_warms_edge_scene_cache_incrementally`, and
+  `paint_warms_edge_label_scene_cache_incrementally_for_large_viewport_tiles` after the
+  cached-budgeted split.
+- `paint_render_data/edges.rs` now routes edge candidate enumeration,
+  normalized hint/paint-override resolution, cull-bounds gating, and per-edge render payload
+  append through the private `canvas/widget/paint_render_data/edges/candidate.rs`,
+  `canvas/widget/paint_render_data/edges/hint.rs`,
+  `canvas/widget/paint_render_data/edges/cull.rs`, and
+  `canvas/widget/paint_render_data/edges/append.rs` seams, so the root edge render-data file now
+  mainly keeps the top-level collection loop and stable sort explicit without changing edge
+  payload semantics.
+- focused `cargo nextest run -p fret-node --features compat-retained-canvas`
+  coverage now also locks `edge_render_hint_is_resolved_in_stage_order_presenter_edge_types_skin`,
+  `edge_label_border_uses_edge_render_hint_color_override`,
+  `paint_reuses_static_edge_scene_cache_without_revisiting_presenter`, and
+  `cached_edge_paths_match_between_tiled_and_single_tile_cache_modes` after the edge render-data
+  split.
+- `paint_render_data/nodes.rs` now routes node visibility
+  filtering/order, label-overhead sizing, node tuple append, and port label/pin payload append
+  through the private `canvas/widget/paint_render_data/nodes/visible.rs`,
+  `canvas/widget/paint_render_data/nodes/overhead.rs`,
+  `canvas/widget/paint_render_data/nodes/append.rs`, and
+  `canvas/widget/paint_render_data/nodes/ports.rs` seams, so the root node render-data file now
+  mainly keeps the retained façade entry points explicit without changing node/port payload
+  semantics.
+- focused `cargo nextest run -p fret-node --features compat-retained-canvas`
+  coverage now also locks `elevate_nodes_on_select_draws_selected_node_body_last`,
+  `skin_port_chrome_hints_apply_fill_stroke_and_inner_scale_paint_only`,
+  `per_node_header_palette_draws_distinct_header_quads`, and
+  `paint_reuses_static_node_scene_cache_without_revisiting_presenter` after the node render-data
+  split.
+- `paint_render_data/collect.rs` now also routes render-selection
+  snapshot extraction and the graph-read collection body through the private
+  `canvas/widget/paint_render_data/collect/selection.rs` and
+  `canvas/widget/paint_render_data/collect/body.rs` seams, so the root collect file now mainly
+  keeps the retained render-data façade explicit without changing collect-time grouping,
+  visibility, or edge ordering semantics.
+- focused `cargo test -p fret-node --features compat-retained-canvas`
+  coverage now also locks `edge_render_hint_is_resolved_in_stage_order_presenter_edge_types_skin`,
+  `elevate_nodes_on_select_draws_selected_node_body_last`,
+  `skin_wire_outline_selected_draws_outline_path_before_core`, and
+  `edges_are_sorted_by_endpoint_z_order` after the render-data collect split.
+- `paint_render_data/selected_nodes.rs` now also routes selected-node
+  snapshot extraction and the graph-read selected-node append/sort body through the private
+  `canvas/widget/paint_render_data/selected_nodes/selection.rs` and
+  `canvas/widget/paint_render_data/selected_nodes/body.rs` seams, so the root selected-node
+  render-data file now mainly keeps the retained façade explicit without changing elevate-on-select
+  filtering, append, or rank-sort semantics.
+- focused `cargo test -p fret-node --features compat-retained-canvas`
+  coverage now also locks `elevate_nodes_on_select_draws_selected_node_body_last`,
+  `selection_updates_do_not_rebuild_geometry_when_elevate_nodes_on_select_is_enabled`, and
+  `paint_reuses_static_node_scene_cache_without_revisiting_presenter` after the selected-node
+  render-data split.
+- `paint_overlay_menu.rs` now also routes menu frame/background
+  layout and per-item highlight/text painting through the private
+  `canvas/widget/paint_overlay_menu/frame.rs` and
+  `canvas/widget/paint_overlay_menu/items.rs` seams, so the root context-menu paint file now
+  mainly keeps the retained overlay façade explicit without changing overlay sizing, hover, or text
+  placement semantics.
+- focused `cargo test -p fret-node --features compat-retained-canvas`
+  coverage now also locks `overlay_menu_searcher_conformance`,
+  `right_click_cancels_wire_drag_and_opens_context_menu`,
+  `right_pan_drag_does_not_open_context_menu`,
+  `overlay_state_changes_do_not_rebuild_derived_geometry_or_spatial_index`, and
+  `overlay_hover_and_scroll_updates_do_not_rebuild_derived_geometry_or_spatial_index` after the
+  context-menu paint split.
+- `paint_searcher.rs` now also routes searcher frame/background
+  layout, text-style preparation, and shared text constraints through the private
+  `canvas/widget/paint_searcher/frame.rs` seam, so the root searcher paint file now mainly keeps
+  query/row orchestration explicit without changing searcher sizing, query chrome, or row paint
+  semantics.
+- focused `cargo test -p fret-node --features compat-retained-canvas`
+  coverage now also locks `overlay_menu_searcher_conformance`,
+  `overlay_state_changes_do_not_rebuild_derived_geometry_or_spatial_index`, and
+  `overlay_hover_and_scroll_updates_do_not_rebuild_derived_geometry_or_spatial_index` after the
+  searcher frame split.
+- `paint_overlay_wire_hint.rs` now also routes wire-hint text/layout
+  preparation and final quad/text scene emission through the private
+  `canvas/widget/paint_overlay_wire_hint/layout.rs` and
+  `canvas/widget/paint_overlay_wire_hint/draw.rs` seams, so the root wire-hint paint file now
+  mainly keeps message/border resolution orchestration explicit without changing invalid-hover,
+  bundle/yank hint, or wire-hint placement semantics.
+- focused `cargo test -p fret-node --features compat-retained-canvas`
+  coverage now also locks `invalid_hover_message_prefers_hover_diagnostic`,
+  `hint_text_reports_bundle_and_yank_counts`,
+  `resolved_hint_border_color_uses_context_border_for_valid_hover`,
+  `diagnostic_hint_border_color_prefers_convertible_warning_color`, and
+  `hover_state_updates_do_not_rebuild_canvas_derived_geometry_or_spatial_index` after the
+  wire-hint split.
+- `paint_overlay_toast.rs` now also routes final toast quad/text
+  scene emission through the private `canvas/widget/paint_overlay_toast/draw.rs` seam, so the root
+  toast paint file now mainly keeps style/layout orchestration explicit without changing toast
+  border-color, box sizing, or viewport anchoring semantics.
+- focused `cargo test -p fret-node --features compat-retained-canvas`
+  coverage now also locks `toast_border_color_matches_diagnostic_severity`,
+  `toast_rect_clamps_box_width_to_minimum`,
+  `toast_rect_clamps_box_width_to_maximum`, and
+  `toast_rect_places_box_at_viewport_bottom_left` after the toast draw split.
+- `paint_grid_plan_support.rs` now also routes canvas chrome-hint
+  lookup, grid width / thickness / tile-size metric resolution, tile scratch population, and
+  pattern-size validation through the private `canvas/widget/paint_grid_plan_support/hint.rs`,
+  `canvas/widget/paint_grid_plan_support/metrics.rs`,
+  `canvas/widget/paint_grid_plan_support/tiles.rs`, and
+  `canvas/widget/paint_grid_plan_support/validate.rs` seams, so the root grid-plan support file now
+  mainly keeps the retained façade explicit without changing grid-plan preparation semantics.
+- focused `cargo test -p fret-node --features compat-retained-canvas`
+  coverage now also locks `background_style_updates_do_not_rebuild_canvas_derived_geometry`,
+  `background_style_override_survives_color_mode_theme_sync`,
+  `dots_pattern_emits_rounded_quads`, and
+  `cross_pattern_emits_axis_aligned_segments` after the grid-plan-support split.
+- `pointer_down_double_click_background.rs` now also routes
+  background zoom preflight gating, background hit testing, and double-click zoom application
+  through the private `canvas/widget/pointer_down_double_click_background/preflight.rs`,
+  `canvas/widget/pointer_down_double_click_background/hit.rs`, and
+  `canvas/widget/pointer_down_double_click_background/apply.rs` seams, so the root
+  background-double-click reducer now mainly keeps the retained façade explicit without changing
+  zoom-on-double-click gating, hit exclusion, or viewport move callback semantics.
+- focused `cargo test -p fret-node --features compat-retained-canvas`
+  coverage now also locks `double_click_background_zooms_in_about_pointer`,
+  `shift_double_click_background_zooms_out_about_pointer`, and
+  `double_click_background_zoom_emits_move_start_and_move_end` after the background-double-click
+  split.
+- `paint_grid_cache.rs` now also routes warmup orchestration,
+  per-tile op generation, and cache-key construction through the private
+  `canvas/widget/paint_grid_cache/warm.rs`,
+  `canvas/widget/paint_grid_cache/ops.rs`, and
+  `canvas/widget/paint_grid_cache/key.rs` seams, so the root grid-cache file now mainly keeps tile
+  warmup stats plus the retained façade explicit without changing grid cache warmup or key
+  semantics.
+- focused `cargo test -p fret-node --features compat-retained-canvas`
+  coverage now also locks `background_style_updates_do_not_rebuild_canvas_derived_geometry`,
+  `background_style_override_survives_color_mode_theme_sync`,
+  `dots_pattern_emits_rounded_quads`, and
+  `cross_pattern_emits_axis_aligned_segments` after the grid-cache split.
+- `pointer_wheel_zoom.rs` now also routes wheel-zoom factor
+  resolution, pinch-zoom factor resolution, and shared viewport zoom application through the
+  private `canvas/widget/pointer_wheel_zoom/wheel.rs`,
+  `canvas/widget/pointer_wheel_zoom/pinch.rs`, and
+  `canvas/widget/pointer_wheel_zoom/apply.rs` seams, so the root wheel-zoom reducer now mainly
+  keeps the retained facade entry points explicit without changing wheel/pinch gating, viewport
+  move debounce, or zoom-about-pointer semantics.
+- focused `cargo test -p fret-node --features compat-retained-canvas`
+  coverage now also locks `wheel_zoom_zooms_about_pointer`,
+  `wheel_zoom_emits_move_start_and_debounced_move_end`,
+  `pinch_gesture_zooms_in_about_pointer`,
+  `pinch_gesture_respects_toggle`,
+  `pinch_zoom_emits_move_start_and_debounced_move_end`, and
+  `wheel_pan_then_wheel_zoom_ends_pan_and_starts_zoom` after the wheel-zoom split.
+- `pointer_wheel_pan.rs` now also routes scroll-pan gating,
+  mode/platform delta resolution, and shared viewport pan application through the private
+  `canvas/widget/pointer_wheel_pan/gate.rs`,
+  `canvas/widget/pointer_wheel_pan/resolve.rs`, and
+  `canvas/widget/pointer_wheel_pan/apply.rs` seams, so the root wheel-pan reducer now mainly keeps
+  the retained facade entry point explicit without changing pan-on-scroll enablement, shift
+  remapping, viewport move debounce, or state update semantics.
+- focused `cargo test -p fret-node --features compat-retained-canvas`
+  coverage now also locks `pan_on_scroll_mode_horizontal_ignores_vertical_wheel_delta`,
+  `pan_on_scroll_shift_maps_vertical_wheel_to_horizontal_on_windows`,
+  `space_enables_pan_on_scroll_even_when_pan_on_scroll_is_disabled`,
+  `wheel_pan_emits_move_start_and_debounced_move_end`, and
+  `wheel_pan_then_wheel_zoom_ends_pan_and_starts_zoom` after the wheel-pan split.
+- `pointer_up_node_drag_parent.rs` now also routes drag-release
+  parent-change collection, node-rect construction, and best-parent-group selection through the
+  private `canvas/widget/pointer_up_node_drag_parent/collect.rs`,
+  `canvas/widget/pointer_up_node_drag_parent/rect.rs`, and
+  `canvas/widget/pointer_up_node_drag_parent/target.rs` seams, so the root node-drag-parent helper
+  now mainly keeps the retained facade entry point explicit without changing release-time
+  reparenting, group-override precedence, or smallest-containing-group selection semantics.
+- focused `cargo test -p fret-node --features compat-retained-canvas`
+  coverage now also locks `best_parent_group_prefers_smallest_containing_group`,
+  `best_parent_group_uses_group_override_bounds`,
+  `best_parent_group_returns_none_when_rect_is_not_fully_contained`,
+  `group_drag_drives_canvas_derived_preview_and_edge_index`, and
+  `group_drag_preview_cache_reuses_geometry_across_preview_rev_updates` after the node-drag-parent
+  split.
+- `focus_nav_ports_hints.rs` now also routes focused-port hint
+  refresh preflight, connection-hint evaluation, and interaction-state writeback through the
+  private `canvas/widget/focus_nav_ports_hints/preflight.rs`,
+  `canvas/widget/focus_nav_ports_hints/evaluate.rs`, and
+  `canvas/widget/focus_nav_ports_hints/apply.rs` seams, so the root focus-nav hint helper now
+  mainly keeps the retained facade entry point explicit without changing focused-port clearing,
+  connection-mode-aware validity checks, conversion fallback checks, or late state-apply guards.
+- focused `cargo test -p fret-node --features compat-retained-canvas`
+  coverage now also locks `focus_next_port_filters_by_wire_direction` and
+  `activate_starts_and_commits_wire_drag` after the focus-nav-hints split.
+- `focus_nav_ports_activation.rs` now also routes focused-port
+  activation preflight, click-connect start arming, and click-connect commit/position sync through
+  the private `canvas/widget/focus_nav_ports_activation/preflight.rs`,
+  `canvas/widget/focus_nav_ports_activation/start.rs`, and
+  `canvas/widget/focus_nav_ports_activation/commit.rs` seams, so the root focus-nav activation
+  helper now mainly keeps the retained facade entry point explicit without changing activation
+  gating, activation-point lookup, click-connect state reset, or forced-target commit semantics.
+- focused `cargo test -p fret-node --features compat-retained-canvas`
+  coverage now also locks `activate_starts_and_commits_wire_drag`,
+  `click_connect_emits_connect_start_and_committed_end`, and
+  `click_connect_target_port_click_commits_wire_and_clears_click_connect_state` after the
+  focus-nav-activation split.
+- `focus_nav_traversal_port.rs` now also routes traversal
+  preflight, candidate-port collection, next-port selection, and final focus/apply through the
+  private `canvas/widget/focus_nav_traversal_port/preflight.rs`,
+  `canvas/widget/focus_nav_traversal_port/collect.rs`,
+  `canvas/widget/focus_nav_traversal_port/select.rs`, and
+  `canvas/widget/focus_nav_traversal_port/apply.rs` seams, so the root focus-nav traversal helper
+  now mainly keeps the retained facade entry point explicit without changing focused-node fallback,
+  wire-direction filtering, cycling order, or focused-port apply semantics.
+- focused `cargo test -p fret-node --features compat-retained-canvas`
+  coverage now also locks `focus_next_port_cycles_ports_within_focused_node` and
+  `focus_next_port_filters_by_wire_direction` after the focus-nav-traversal split.
+- `focus_nav_traversal_node.rs` now also routes traversal
+  snapshot preflight, selectable-node ordering, next-node selection, and final focus/apply +
+  optional auto-pan through the private
+  `canvas/widget/focus_nav_traversal_node/preflight.rs`,
+  `canvas/widget/focus_nav_traversal_node/collect.rs`,
+  `canvas/widget/focus_nav_traversal_node/select.rs`, and
+  `canvas/widget/focus_nav_traversal_node/apply.rs` seams, so the root node-traversal helper now
+  mainly keeps the retained facade entry point explicit without changing draw-order-first
+  traversal, unselectable-node skipping, current-node fallback, or focus-driven auto-pan
+  semantics.
+- focused `cargo test -p fret-node --features compat-retained-canvas`
+  coverage now also locks `focus_next_cycles_nodes_and_updates_selection`,
+  `focus_next_skips_unselectable_nodes`, and
+  `focus_next_can_pan_viewport_when_auto_pan_on_node_focus_is_enabled` after the
+  focus-nav-node-traversal split.
+- `focus_port_direction_candidate.rs` now also routes
+  directional candidate center projection and best-candidate search through the private
+  `canvas/widget/focus_port_direction_candidate/center.rs` and
+  `canvas/widget/focus_port_direction_candidate/search.rs` seams, so the root directional-port
+  candidate helper now mainly keeps the retained facade entry points explicit without changing
+  required-direction filtering, rank-based comparison, or neighbor-port selection semantics.
+- focused `cargo test -p fret-node --features compat-retained-canvas`
+  coverage now also locks `focus_port_right_moves_to_neighbor_node`,
+  `focus_port_left_moves_back`, and
+  `better_directional_rank_prefers_smaller_angle_then_parallel_then_distance` after the
+  direction-candidate split.
+- `focus_nav_ports_center.rs` now also routes focused-port center
+  lookup and activation-point fallback resolution through the private
+  `canvas/widget/focus_nav_ports_center/port.rs` and
+  `canvas/widget/focus_nav_ports_center/activation.rs` seams, so the root focused-port center
+  helper now mainly keeps the retained facade entry points explicit without changing port-center
+  preference, last-pointer fallback, or bounds-center fallback semantics.
+- focused `cargo test -p fret-node --features compat-retained-canvas`
+  coverage now also locks `resolve_activation_point_prefers_port_center`,
+  `resolve_activation_point_falls_back_to_last_pos`,
+  `resolve_activation_point_falls_back_to_bounds_center`,
+  `activate_starts_and_commits_wire_drag`, and
+  `focus_port_right_moves_to_neighbor_node` after the focus-nav-center split.
+- `move_ops/align_distribute/support.rs` now also routes support
+  types, element collection, per-mode delta planning, extent-shift computation, and group/node op
+  application through the private `canvas/widget/move_ops/align_distribute/support/types.rs`,
+  `canvas/widget/move_ops/align_distribute/support/collect.rs`,
+  `canvas/widget/move_ops/align_distribute/support/delta.rs`,
+  `canvas/widget/move_ops/align_distribute/support/shift.rs`, and
+  `canvas/widget/move_ops/align_distribute/support/append.rs` seams, so the root support file now
+  mainly keeps the retained re-export surface explicit without changing align/distribute planning,
+  extent clamping, or graph-op emission semantics.
+- focused `cargo test -p fret-node --features compat-retained-canvas`
+  coverage now also locks `align_left_moves_selected_nodes_and_records_history_entry`,
+  `align_center_x_preserves_alignment_under_node_extent_bounds`,
+  `distribute_x_clamps_selected_group_children_to_node_extent_rect_like_xyflow`, and
+  `distribute_x_clamps_selected_group_children_to_node_extent_rect_from_node_extents` after the
+  align-distribute-support split.
+- `view_state/viewport.rs` now also routes viewport request
+  application, view-state normalization + callback emission, and focused-point visibility
+  adjustment through the private `canvas/widget/view_state/viewport/set.rs`,
+  `canvas/widget/view_state/viewport/update.rs`, and
+  `canvas/widget/view_state/viewport/visible.rs` seams, so the root viewport file now mainly keeps
+  the retained private module split explicit without changing viewport clamping, view-callback
+  emission, or focus-driven auto-pan semantics.
+- focused `cargo test -p fret-node --features compat-retained-canvas`
+  coverage now also locks `set_viewport_via_view_queue_updates_pan_and_zoom`,
+  `set_viewport_via_view_queue_clamps_zoom_to_style_limits`,
+  `set_viewport_clamps_pan_to_translate_extent`,
+  `translate_extent_centers_when_viewport_is_larger_than_extent`, and
+  `focus_next_can_pan_viewport_when_auto_pan_on_node_focus_is_enabled` after the viewport split.
+- `press_session/prepare/surface.rs` now also routes
+  surface-session clear sequences, focus-session clearing, and local regression fixtures through
+  the private `canvas/widget/press_session/prepare/surface/clear.rs`,
+  `canvas/widget/press_session/prepare/surface/focus.rs`, and
+  `canvas/widget/press_session/prepare/surface/tests.rs` seams, while
+  `press_session/prepare/target.rs` now also routes target-hit clear sequences, focus-session
+  clearing, and local regression fixtures through the private
+  `canvas/widget/press_session/prepare/target/clear.rs`,
+  `canvas/widget/press_session/prepare/target/focus.rs`, and
+  `canvas/widget/press_session/prepare/target/tests.rs` seams, with shared fixture state in
+  `canvas/widget/press_session/prepare/test_support.rs`, so both root prepare files now mainly keep
+  the retained re-export surfaces explicit without changing press-session clearing or
+  hover/focus-reset semantics.
+- focused `cargo test -p fret-node --features compat-retained-canvas`
+  coverage now also locks `prepare_for_pan_begin_preserves_edge_insert_sessions`,
+  `prepare_for_background_interaction_clears_all_surface_pointer_sessions`,
+  `prepare_for_port_hit_preserves_node_resize_but_clears_competing_pointer_sessions`, and
+  `prepare_for_edge_anchor_hit_clears_hover_edge_and_node_resize` after the press-session-prepare
+  split.
+- `wire_drag/move_update/hover.rs` now also routes
+  source-port extraction, hover hit-picking, hover validity/diagnostic evaluation, and conversion
+  probing through the private `canvas/widget/wire_drag/move_update/hover/source.rs`,
+  `canvas/widget/wire_drag/move_update/hover/pick.rs`,
+  `canvas/widget/wire_drag/move_update/hover/validity.rs`, and
+  `canvas/widget/wire_drag/move_update/hover/convertible.rs` seams, so the root hover file now
+  mainly keeps the retained façade entry points explicit without changing wire-hover hit
+  resolution, invalid-connection diagnostics, or conversion probing semantics.
+- focused `cargo test -p fret-node --features compat-retained-canvas`
+  coverage now also locks `wire_drag_hover_tracks_invalid_port_in_strict_mode`,
+  `wire_drag_hover_tracks_non_connectable_end_port_as_invalid`, and
+  `wire_drag_hover_marks_valid_target_port_as_valid` after the wire-drag-hover split.
+- `selection/box_edges.rs` now also routes box-select mode
+  resolution, graph fallback edge collection, store-backed connection harvesting, and local
+  regression fixtures through the private `canvas/widget/selection/box_edges/mode.rs`,
+  `canvas/widget/selection/box_edges/graph.rs`,
+  `canvas/widget/selection/box_edges/store.rs`,
+  `canvas/widget/selection/box_edges/test_support.rs`, and
+  `canvas/widget/selection/box_edges/tests.rs` seams, so the root box-edges file now mainly keeps
+  the retained facade module surface explicit without changing box-select edge eligibility or
+  store-fallback semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, and focused
+  `cargo test -p fret-node --features compat-retained-canvas collect_box_select_edges_`
+  coverage now also locks
+  `collect_box_select_edges_connected_selects_any_connected_endpoint`,
+  `collect_box_select_edges_both_endpoints_requires_both_nodes_selected`, and
+  `collect_box_select_edges_respects_global_selection_gates` after the selection-box-edges split.
+- `interaction_policy/port.rs` now also routes
+  port connectability predicates, bundle-candidate filtering, and local regression fixtures through
+  the private `canvas/widget/interaction_policy/port/connectable.rs`,
+  `canvas/widget/interaction_policy/port/bundle.rs`,
+  `canvas/widget/interaction_policy/port/test_support.rs`, and
+  `canvas/widget/interaction_policy/port/tests.rs` seams, so the root port-policy file now mainly
+  keeps the retained facade module surface explicit without changing port-connectable or
+  bundle-dedup semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas
+  port_connectable_helpers_respect_node_and_port_overrides`, and focused
+  `cargo test -p fret-node --features compat-retained-canvas
+  should_add_bundle_port_requires_unique_same_direction_candidate` now also lock the
+  interaction-policy-port split.
+- `wire_math.rs` now also routes route-kind distance/closest-point
+  helpers and local regression tests through the private `canvas/widget/wire_math/route.rs` and
+  `canvas/widget/wire_math/tests.rs` seams, while keeping the root wire-math file as the retained
+  facade over existing `path/segment/step` helpers without changing bezier/step/path geometry
+  semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas path_distance2_on_line_is_zeroish`,
+  focused `cargo test -p fret-node --features compat-retained-canvas
+  path_midpoint_and_normal_is_finite`, and focused
+  `cargo test -p fret-node --features compat-retained-canvas
+  path_start_end_tangents_follow_control_points` now also lock the wire-math split.
+- `delete_ops_builder.rs` now also routes delete-op
+  orchestration and shared regression fixtures through the private
+  `canvas/widget/delete_ops_builder/assemble.rs`,
+  `canvas/widget/delete_ops_builder/test_support.rs`, and
+  `canvas/widget/delete_ops_builder/tests.rs` seams, while existing edge/group/node helpers remain
+  in place, so the root delete-ops builder file now mainly keeps the retained facade surface
+  explicit without changing delete ordering or edge-dedup semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas
+  delete_selection_ops_does_not_double_remove_edges_already_owned_by_removed_nodes`, and focused
+  `cargo test -p fret-node --features compat-retained-canvas
+  collect_node_edges_deduplicates_edges_already_marked_removed` now also lock the
+  delete-ops-builder split.
+- `paint_grid_tiles.rs` now also routes tile-op assembly
+  and local regression coverage through the private `canvas/widget/paint_grid_tiles/ops.rs` and
+  `canvas/widget/paint_grid_tiles/tests.rs` seams, while keeping `GridTileSpec` rooted in the
+  existing support module, so the root paint-grid-tiles file now mainly keeps the retained facade
+  surface explicit without changing line/dot/cross tile-op semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas dots_pattern_emits_rounded_quads`,
+  and focused `cargo test -p fret-node --features compat-retained-canvas
+  cross_pattern_emits_axis_aligned_segments` now also lock the paint-grid-tiles split.
+- `context_menu/key_navigation.rs` now also routes local
+  regression fixtures and root test coverage through the private
+  `canvas/widget/context_menu/key_navigation/test_support.rs` and
+  `canvas/widget/context_menu/key_navigation/tests.rs` seams, so the root key-navigation file now
+  mainly keeps the retained facade entry points explicit without changing context-menu active item,
+  hover, or typeahead semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas advance_active_item_skips_disabled_entries`,
+  and focused `cargo test -p fret-node --features compat-retained-canvas
+  sync_hovered_item_promotes_enabled_item_and_clears_typeahead` now also lock the
+  context-menu-key-navigation split.
+- `group_draw_order.rs` now also routes shared regression
+  fixtures and root test coverage through the private
+  `canvas/widget/group_draw_order/test_support.rs` and
+  `canvas/widget/group_draw_order/tests.rs` seams, so the root group-draw-order file now mainly
+  keeps the retained facade entry points explicit without changing selected-group ordering
+  semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas
+  bring_to_front_preserves_existing_draw_order_for_selected_groups`, and focused
+  `cargo test -p fret-node --features compat-retained-canvas
+  send_to_back_preserves_existing_draw_order_for_selected_groups` now also lock the
+  group-draw-order split.
+- `pending_resize_session.rs` now also routes shared
+  pending-resize regression fixtures and root test coverage through the private
+  `canvas/widget/pending_resize_session/test_support.rs` and
+  `canvas/widget/pending_resize_session/tests.rs` seams, so the root pending-resize-session file
+  now mainly keeps the retained facade entry points explicit without changing pending→active resize
+  activation semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas
+  activate_pending_group_resize_moves_pending_into_active`, and focused
+  `cargo test -p fret-node --features compat-retained-canvas
+  activate_pending_node_resize_moves_pending_into_active` now also lock the
+  pending-resize-session split.
+- `context_menu/target_selection.rs` now also routes shared
+  regression fixtures and root test coverage through the private
+  `canvas/widget/context_menu/target_selection/test_support.rs` and
+  `canvas/widget/context_menu/target_selection/tests.rs` seams, so the root target-selection file
+  now mainly keeps the retained facade entry points explicit without changing edge/group
+  context-target selection semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas
+  select_group_context_target_clears_node_and_edge_selection`, and focused
+  `cargo test -p fret-node --features compat-retained-canvas
+  select_edge_context_target_clears_node_and_group_selection` now also lock the
+  context-menu-target-selection split.
+- `context_menu/background_execution.rs` now also routes shared
+  background-insert regression fixtures and root test coverage through the private
+  `canvas/widget/context_menu/background_execution/test_support.rs` and
+  `canvas/widget/context_menu/background_execution/tests.rs` seams, so the root
+  background-execution file now mainly keeps the insert plan enum plus retained execution facade
+  entry points explicit without changing background insert planning or rejection semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, and focused
+  `cargo test -p fret-node --features compat-retained-canvas
+  background_insert_menu_plan_surfaces_create_node_errors` now also lock the
+  context-menu-background-execution test seam split.
+- `context_menu/connection_execution.rs` now also routes shared
+  connection-insert / conversion regression fixtures and root test coverage through the private
+  `canvas/widget/context_menu/connection_execution/test_support.rs` and
+  `canvas/widget/context_menu/connection_execution/tests.rs` seams, so the root
+  connection-execution file now mainly keeps the insert/conversion plan enums explicit without
+  changing connection insert or conversion rejection semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas
+  connection_insert_menu_plan_surfaces_create_node_errors`, and focused
+  `cargo test -p fret-node --features compat-retained-canvas
+  connection_conversion_menu_plan_rejects_missing_template` now also lock the
+  context-menu-connection-execution test seam split.
+- `context_menu/item_builders.rs` now also routes root test coverage
+  through the private `canvas/widget/context_menu/item_builders/tests.rs` seam, so the root
+  item-builders file now mainly keeps the retained context-menu builder facade explicit without
+  changing background/group/edge menu item ordering or command wiring semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, and focused
+  `cargo test -p fret-node --features compat-retained-canvas
+  context_menu::item_builders::tests` now also locks the context-menu-item-builders test seam
+  split.
+- `context_menu/selection_activation/payload.rs` now also routes shared
+  activation payload regression fixtures and local test coverage through the private
+  `canvas/widget/context_menu/selection_activation/payload/test_support.rs` and
+  `canvas/widget/context_menu/selection_activation/payload/tests.rs` seams, so the payload module
+  now mainly keeps activation payload extraction explicit without changing enabled-item or
+  out-of-range index handling semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, and focused
+  `cargo test -p fret-node --features compat-retained-canvas
+  selection_activation::payload::tests` now also locks the selection-activation payload test seam
+  split.
+- `command_router_align.rs` and `command_router_nudge.rs` now also route
+  local command mapping test coverage through the private
+  `canvas/widget/command_router_align/tests.rs` and
+  `canvas/widget/command_router_nudge/tests.rs` seams, so the root command-router helper files now
+  mainly keep align/distribute and nudge request mapping explicit without changing command dispatch
+  semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas command_router_align::tests`, and
+  focused `cargo test -p fret-node --features compat-retained-canvas command_router_nudge::tests`
+  now also lock the command-router mapping test seam split.
+- `command_view/frame.rs` and `command_view/zoom.rs` now also route local
+  helper test coverage through the private `canvas/widget/command_view/frame/tests.rs` and
+  `canvas/widget/command_view/zoom/tests.rs` seams, so the command-view helper files now mainly
+  keep framing node-id collection plus reset/zoom viewport helper logic explicit without changing
+  view command semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas command_view::frame::tests`, and
+  focused `cargo test -p fret-node --features compat-retained-canvas command_view::zoom::tests`
+  now also lock the command-view helper test seam split.
+- `command_open_insert/fallback.rs` and `command_router/dispatch.rs`
+  now also route local fallback / direct-command route test coverage through the private
+  `canvas/widget/command_open_insert/fallback/tests.rs` and
+  `canvas/widget/command_router/dispatch/tests.rs` seams, so the helper files now mainly keep
+  insert-picker fallback projection plus direct command route lookup explicit without changing
+  command-open-insert or command-router behavior.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas command_open_insert::fallback::tests`,
+  and focused
+  `cargo test -p fret-node --features compat-retained-canvas command_router::dispatch::tests` now
+  also lock the command-open-insert / command-router test seam split.
+- `cursor_gate.rs`, `cursor_resolve/edge.rs`, and `cursor_resolve/resize.rs`
+  now also route local cursor helper test coverage through the private
+  `canvas/widget/cursor_gate/tests.rs`,
+  `canvas/widget/cursor_resolve/edge/tests.rs`, and
+  `canvas/widget/cursor_resolve/resize/tests.rs` seams, so the helper files now mainly keep cursor
+  gating plus anchor/resize cursor resolution rules explicit without changing runtime cursor
+  semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas cursor_gate::tests`, focused
+  `cargo test -p fret-node --features compat-retained-canvas cursor_resolve::edge::tests`, and
+  focused `cargo test -p fret-node --features compat-retained-canvas
+  cursor_resolve::resize::tests` now also lock the cursor helper test seam split.
+- `hover/state.rs` and `hover/target.rs` now also route local hover helper
+  test coverage through the private `canvas/widget/hover/state/tests.rs` and
+  `canvas/widget/hover/target/tests.rs` seams, so the hover helper files now mainly keep hover
+  state synchronization plus anchor target resolution explicit without changing hover behavior.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas hover::state::tests`, and focused
+  `cargo test -p fret-node --features compat-retained-canvas hover::target::tests` now also lock
+  the hover helper test seam split.
+- `insert_candidates/menu.rs` and `insert_candidates/reroute.rs` now also
+  route local insert-candidate helper test coverage through the private
+  `canvas/widget/insert_candidates/menu/tests.rs` and
+  `canvas/widget/insert_candidates/reroute/tests.rs` seams, so the helper files now mainly keep
+  insert-candidate menu projection plus reroute prepending explicit without changing
+  candidate-list semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas insert_candidates::menu::tests`, and
+  focused `cargo test -p fret-node --features compat-retained-canvas
+  insert_candidates::reroute::tests` now also lock the insert-candidates helper test seam split.
+- `overlay_hit/context_menu.rs` and `overlay_hit/searcher.rs` now also
+  route local overlay-hit helper test coverage through the private
+  `canvas/widget/overlay_hit/context_menu/tests.rs` and
+  `canvas/widget/overlay_hit/searcher/tests.rs` seams, so the helper files now mainly keep overlay
+  rect sizing plus pointer-hit row/item mapping explicit without changing overlay-hit semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas overlay_hit::context_menu::tests`,
+  and focused
+  `cargo test -p fret-node --features compat-retained-canvas overlay_hit::searcher::tests` now
+  also lock the overlay-hit helper test seam split.
+- `interaction_gate/cache.rs`, `interaction_gate/detail.rs`,
+  `interaction_gate/hover.rs`, and `interaction_gate/motion.rs` now also route local interaction
+  gate test coverage through the private
+  `canvas/widget/interaction_gate/cache/tests.rs`,
+  `canvas/widget/interaction_gate/detail/tests.rs`,
+  `canvas/widget/interaction_gate/hover/tests.rs`, and
+  `canvas/widget/interaction_gate/motion/tests.rs` seams, so the helper files now mainly keep
+  cache/detail/hover/motion gating rules explicit without changing runtime interaction behavior.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas interaction_gate::cache::tests`,
+  focused `cargo test -p fret-node --features compat-retained-canvas
+  interaction_gate::detail::tests`, focused `cargo test -p fret-node --features
+  compat-retained-canvas interaction_gate::hover::tests`, and focused `cargo test -p fret-node
+  --features compat-retained-canvas interaction_gate::motion::tests` now also lock the
+  interaction-gate helper test seam split.
+- `keyboard_shortcuts_gate/editing.rs`,
+  `keyboard_shortcuts_gate/modifier.rs`, `keyboard_shortcuts_gate/navigation.rs`,
+  `keyboard_shortcuts_map/modifier.rs`, and `keyboard_shortcuts_map/navigation.rs` now also route
+  local shortcut gate/map test coverage through the private
+  `canvas/widget/keyboard_shortcuts_gate/editing/tests.rs`,
+  `canvas/widget/keyboard_shortcuts_gate/modifier/tests.rs`,
+  `canvas/widget/keyboard_shortcuts_gate/navigation/tests.rs`,
+  `canvas/widget/keyboard_shortcuts_map/modifier/tests.rs`, and
+  `canvas/widget/keyboard_shortcuts_map/navigation/tests.rs` seams, so the helper files now mainly
+  keep shortcut gating and command mapping explicit without changing keyboard shortcut semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas
+  keyboard_shortcuts_gate::editing::tests`, focused `cargo test -p fret-node --features
+  compat-retained-canvas keyboard_shortcuts_gate::modifier::tests`, focused
+  `cargo test -p fret-node --features compat-retained-canvas
+  keyboard_shortcuts_gate::navigation::tests`, focused `cargo test -p fret-node --features
+  compat-retained-canvas keyboard_shortcuts_map::modifier::tests`, and focused `cargo test -p
+  fret-node --features compat-retained-canvas keyboard_shortcuts_map::navigation::tests` now also
+  lock the keyboard-shortcuts helper test seam split.
+- `focus_session/focus.rs`, `focus_session/selection.rs`,
+  `focus_session/hints.rs`, `view_math_viewport/snap.rs`, and
+  `view_math_viewport/viewport.rs` now also route local focus/view helper test coverage through the
+  private `canvas/widget/focus_session/focus/tests.rs`,
+  `canvas/widget/focus_session/selection/tests.rs`,
+  `canvas/widget/focus_session/hints/tests.rs`,
+  `canvas/widget/view_math_viewport/snap/tests.rs`, and
+  `canvas/widget/view_math_viewport/viewport/tests.rs` seams, so the helper files now mainly keep
+  focus-state mutation and viewport math explicit without changing runtime semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas focus_session::focus::tests`,
+  focused `cargo test -p fret-node --features compat-retained-canvas
+  focus_session::selection::tests`, focused `cargo test -p fret-node --features
+  compat-retained-canvas focus_session::hints::tests`, focused `cargo test -p fret-node
+  --features compat-retained-canvas view_math_viewport::snap::tests`, and focused `cargo test -p
+  fret-node --features compat-retained-canvas view_math_viewport::viewport::tests` now also lock
+  the focus/view helper test seam split.
+- `left_click/edge_selection.rs`, `left_click/node_selection.rs`,
+  `left_click/connection_hits/port/kind.rs`, and
+  `left_click/connection_hits/port/click_connect.rs` now also route local left-click helper test
+  coverage through the private `canvas/widget/left_click/edge_selection/tests.rs`,
+  `canvas/widget/left_click/node_selection/tests.rs`,
+  `canvas/widget/left_click/connection_hits/port/kind/tests.rs`, and
+  `canvas/widget/left_click/connection_hits/port/click_connect/tests.rs` seams, so these helper
+  files now mainly keep edge/node selection plus port-hit wire-drag/click-connect logic explicit
+  without changing left-click runtime semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas left_click::edge_selection::tests`,
+  focused `cargo test -p fret-node --features compat-retained-canvas
+  left_click::node_selection::tests`, focused `cargo test -p fret-node --features
+  compat-retained-canvas left_click::connection_hits::port::kind::tests`, and focused `cargo test
+  -p fret-node --features compat-retained-canvas
+  left_click::connection_hits::port::click_connect::tests` now also lock the first left-click
+  helper test seam split.
+- `left_click/element_hits/edge/drag.rs`,
+  `left_click/element_hits/node/drag.rs`, and `left_click/element_hits/resize/state.rs` now also
+  route local left-click element-hit helper test coverage through the private
+  `canvas/widget/left_click/element_hits/edge/drag/tests.rs`,
+  `canvas/widget/left_click/element_hits/node/drag/tests.rs`, and
+  `canvas/widget/left_click/element_hits/resize/state/tests.rs` seams, so these helper files now
+  mainly keep edge/node-drag arming and resize-start sizing explicit without changing element-hit
+  runtime semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas
+  left_click::element_hits::edge::drag::tests`, focused `cargo test -p fret-node --features
+  compat-retained-canvas left_click::element_hits::node::drag::tests`, and focused `cargo test -p
+  fret-node --features compat-retained-canvas left_click::element_hits::resize::state::tests` now
+  also lock the second left-click helper test seam split.
+- `graph_construction/node.rs` and `graph_construction/group.rs` now also route local
+  graph-construction helper test coverage through the private
+  `canvas/widget/graph_construction/node/tests.rs` and
+  `canvas/widget/graph_construction/group/tests.rs` seams, so these helper files now mainly keep
+  reroute-create op assembly plus centered group creation/selection reducers explicit without
+  changing retained graph-construction runtime semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas graph_construction::node::tests`, and
+  focused `cargo test -p fret-node --features compat-retained-canvas
+  graph_construction::group::tests` now also lock the graph-construction helper test seam split.
+- `pending_connection_session/edge.rs` and `pending_connection_session/wire.rs` now also route
+  local pending-connection helper test coverage through the private
+  `canvas/widget/pending_connection_session/edge/tests.rs` and
+  `canvas/widget/pending_connection_session/wire/tests.rs` seams, so these helper files now mainly
+  keep pending edge-insert activation plus pending wire-drag promotion explicit without changing
+  retained connection-session runtime semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas pending_connection_session::edge::tests`,
+  and focused `cargo test -p fret-node --features compat-retained-canvas
+  pending_connection_session::wire::tests` now also lock the pending-connection helper test seam
+  split.
+- `paint_overlay_toast/layout.rs` and `paint_overlay_toast/style.rs` now also route local
+  toast-overlay helper test coverage through the private
+  `canvas/widget/paint_overlay_toast/layout/tests.rs` and
+  `canvas/widget/paint_overlay_toast/style/tests.rs` seams, so these helper files now mainly keep
+  toast rect layout math plus severity border-color mapping explicit without changing retained
+  toast-overlay runtime semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas paint_overlay_toast::layout::tests`,
+  and focused `cargo test -p fret-node --features compat-retained-canvas
+  paint_overlay_toast::style::tests` now also lock the toast-overlay helper test seam split.
+- `paint_overlay_wire_hint/message.rs` and `paint_overlay_wire_hint/style.rs` now also route local
+  wire-hint helper test coverage through the private
+  `canvas/widget/paint_overlay_wire_hint/message/tests.rs` and
+  `canvas/widget/paint_overlay_wire_hint/style/tests.rs` seams, so these helper files now mainly
+  keep invalid-hover/bundle/yank hint text plus diagnostic border-color resolution explicit
+  without changing retained wire-hint runtime semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas paint_overlay_wire_hint::message::tests`,
+  and focused `cargo test -p fret-node --features compat-retained-canvas
+  paint_overlay_wire_hint::style::tests` now also lock the wire-hint helper test seam split.
+- `pointer_up_pending/click_select.rs`, `pointer_up_pending/wire_drag.rs`,
+  `pointer_up_session/cleanup.rs`, and `pointer_up_session/release.rs` now also route local
+  pointer-up helper test coverage through the private
+  `canvas/widget/pointer_up_pending/click_select/tests.rs`,
+  `canvas/widget/pointer_up_pending/wire_drag/tests.rs`,
+  `canvas/widget/pointer_up_session/cleanup/tests.rs`, and
+  `canvas/widget/pointer_up_session/release/tests.rs` seams, so these helper files now mainly keep
+  click-release thresholding, pending wire promotion gating, snap-guide cleanup, and active
+  release clearing explicit without changing retained pointer-up runtime semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas pointer_up_pending::click_select::tests`,
+  focused `cargo test -p fret-node --features compat-retained-canvas
+  pointer_up_pending::wire_drag::tests`, focused `cargo test -p fret-node --features
+  compat-retained-canvas pointer_up_session::cleanup::tests`, and focused `cargo test -p
+  fret-node --features compat-retained-canvas pointer_up_session::release::tests` now also lock
+  the pointer-up helper test seam split.
+- `pointer_up_commit_resize/group.rs`, `pointer_up_commit_resize/node.rs`,
+  `reconnect/edges.rs`, and `reconnect/flags.rs` now also route local resize/reconnect helper test
+  coverage through the private `canvas/widget/pointer_up_commit_resize/group/tests.rs`,
+  `canvas/widget/pointer_up_commit_resize/node/tests.rs`,
+  `canvas/widget/reconnect/edges/tests.rs`, and `canvas/widget/reconnect/flags/tests.rs` seams, so
+  these helper files now mainly keep group and node resize op assembly plus reconnect
+  yank/reconnectable-flag resolution explicit without changing retained pointer-up or reconnect
+  runtime semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas pointer_up_commit_resize::group::tests`,
+  focused `cargo test -p fret-node --features compat-retained-canvas
+  pointer_up_commit_resize::node::tests`, focused `cargo test -p fret-node --features
+  compat-retained-canvas reconnect::edges::tests`, and focused `cargo test -p fret-node
+  --features compat-retained-canvas reconnect::flags::tests` now also lock the
+  resize/reconnect helper test seam split.
+- `rect_math_core.rs`, `rect_math_path.rs`, `threshold.rs`, and `right_click/threshold.rs` now
+  also route local math/threshold helper test coverage through the private
+  `canvas/widget/rect_math_core/tests.rs`, `canvas/widget/rect_math_path/tests.rs`,
+  `canvas/widget/threshold/tests.rs`, and `canvas/widget/right_click/threshold/tests.rs` seams, so
+  these helper files now mainly keep rect extents/intersection math, path bounds derivation,
+  generic drag-threshold checks, and pending right-click threshold checks explicit without changing
+  retained input/runtime semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas rect_math_core::tests`, focused
+  `cargo test -p fret-node --features compat-retained-canvas rect_math_path::tests`, focused
+  `cargo test -p fret-node --features compat-retained-canvas threshold::tests`, and focused
+  `cargo test -p fret-node --features compat-retained-canvas right_click::threshold::tests` now
+  also lock the math/threshold helper test seam split.
+- `pointer_up_commit_group_drag.rs`, `pointer_up_left_route/double_click.rs`,
+  `pointer_up_node_drag_parent/target.rs`, and `pointer_up_state/sync.rs` now also route local
+  pointer-up/drag helper test coverage through the private
+  `canvas/widget/pointer_up_commit_group_drag/tests.rs`,
+  `canvas/widget/pointer_up_left_route/double_click/tests.rs`,
+  `canvas/widget/pointer_up_node_drag_parent/target/tests.rs`, and
+  `canvas/widget/pointer_up_state/sync/tests.rs` seams, so these helper files now mainly keep
+  group-drag op assembly, edge-insert double-click gating, parent-group targeting, and pointer-up
+  state sync math explicit without changing retained pointer-up runtime semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas pointer_up_commit_group_drag::tests`,
+  focused `cargo test -p fret-node --features compat-retained-canvas
+  pointer_up_left_route::double_click::tests`, focused `cargo test -p fret-node --features
+  compat-retained-canvas pointer_up_node_drag_parent::target::tests`, and focused `cargo test -p
+  fret-node --features compat-retained-canvas pointer_up_state::sync::tests` now also lock the
+  pointer-up/drag helper test seam split.
+- `searcher_activation_hit/candidate.rs`, `searcher_activation_state/clear.rs`,
+  `searcher_input_nav/step.rs`, and `searcher_input_query/query.rs` now also route local searcher
+  helper test coverage through the private
+  `canvas/widget/searcher_activation_hit/candidate/tests.rs`,
+  `canvas/widget/searcher_activation_state/clear/tests.rs`,
+  `canvas/widget/searcher_input_nav/step/tests.rs`, and
+  `canvas/widget/searcher_input_query/query/tests.rs` seams, so these helper files now mainly keep
+  searcher row-to-candidate resolution, overlay clearing, active-row stepping, and query key
+  filtering explicit without changing retained searcher runtime semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas
+  searcher_activation_hit::candidate::tests`, focused `cargo test -p fret-node --features
+  compat-retained-canvas searcher_activation_state::clear::tests`, focused `cargo test -p
+  fret-node --features compat-retained-canvas searcher_input_nav::step::tests`, and focused
+  `cargo test -p fret-node --features compat-retained-canvas searcher_input_query::query::tests`
+  now also lock the searcher helper test seam split.
+- `searcher_pointer_hover/state.rs`, `searcher_pointer_wheel/delta.rs`,
+  `searcher_row_activation/item.rs`, and `selection/selectable.rs` now also route local
+  searcher/selection helper test coverage through the private
+  `canvas/widget/searcher_pointer_hover/state/tests.rs`,
+  `canvas/widget/searcher_pointer_wheel/delta/tests.rs`,
+  `canvas/widget/searcher_row_activation/item/tests.rs`, and
+  `canvas/widget/selection/selectable/tests.rs` seams, so these helper files now mainly keep
+  hovered-row promotion, wheel-scroll clamping, row activation item synthesis, and selectable
+  guard checks explicit without changing retained searcher or selection runtime semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas searcher_pointer_hover::state::tests`,
+  focused `cargo test -p fret-node --features compat-retained-canvas
+  searcher_pointer_wheel::delta::tests`, focused `cargo test -p fret-node --features
+  compat-retained-canvas searcher_row_activation::item::tests`, and focused `cargo test -p
+  fret-node --features compat-retained-canvas selection::selectable::tests` now also lock the
+  searcher/selection helper test seam split.
+- `cancel_gesture_state/sessions.rs`, `cancel_session/pan.rs`, `cancel_session/residuals.rs`, and
+  `event_keyboard_state.rs` now also route local cancel/keyboard helper test coverage through the
+  private `canvas/widget/cancel_gesture_state/sessions/tests.rs`,
+  `canvas/widget/cancel_session/pan/tests.rs`, `canvas/widget/cancel_session/residuals/tests.rs`,
+  and `canvas/widget/event_keyboard_state/tests.rs` seams, so these helper files now mainly keep
+  gesture-session clearing, pan reset, cancel residual cleanup, and keyboard modifier sync explicit
+  without changing retained cancel/input runtime semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas cancel_gesture_state::sessions::tests`,
+  focused `cargo test -p fret-node --features compat-retained-canvas
+  cancel_session::pan::tests`, focused `cargo test -p fret-node --features compat-retained-canvas
+  cancel_session::residuals::tests`, and focused `cargo test -p fret-node --features
+  compat-retained-canvas event_keyboard_state::tests` now also lock the cancel/keyboard helper
+  test seam split.
+- `pending_resize/checks.rs`, `pending_wire_drag/checks.rs`, `sticky_wire/checks.rs`,
+  `edge_insert_drag/pending/checks.rs`, and `edge_insert_drag/drag/state.rs` now also route local
+  pending/sticky edge-drag helper test coverage through the private
+  `canvas/widget/pending_resize/checks/tests.rs`,
+  `canvas/widget/pending_wire_drag/checks/tests.rs`,
+  `canvas/widget/sticky_wire/checks/tests.rs`,
+  `canvas/widget/edge_insert_drag/pending/checks/tests.rs`, and
+  `canvas/widget/edge_insert_drag/drag/state/tests.rs` seams, so these helper files now mainly
+  keep pending activation thresholds, sticky-wire gating, and edge-insert drag state updates
+  explicit without changing retained drag/runtime semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas pending_resize::checks::tests`,
+  focused `cargo test -p fret-node --features compat-retained-canvas
+  pending_wire_drag::checks::tests`, focused `cargo test -p fret-node --features
+  compat-retained-canvas sticky_wire::checks::tests`, focused `cargo test -p fret-node --features
+  compat-retained-canvas edge_insert_drag::pending::checks::tests`, and focused `cargo test -p
+  fret-node --features compat-retained-canvas edge_insert_drag::drag::state::tests` now also lock
+  the pending/sticky edge-drag helper test seam split.
+- `focus_nav_ports_center/activation.rs`, `focus_port_direction_rank.rs`,
+  `focus_port_direction_wire.rs`, and `view_math_rect.rs` now also route local focus/view helper
+  test coverage through the private
+  `canvas/widget/focus_nav_ports_center/activation/tests.rs`,
+  `canvas/widget/focus_port_direction_rank/tests.rs`,
+  `canvas/widget/focus_port_direction_wire/tests.rs`, and
+  `canvas/widget/view_math_rect/tests.rs` seams, so these helper files now mainly keep
+  activation-point fallback, directional port ranking, wire direction resolution, and view rect
+  containment math explicit without changing retained focus/navigation semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas focus_nav_ports_center::activation::tests`,
+  focused `cargo test -p fret-node --features compat-retained-canvas
+  focus_port_direction_rank::tests`, focused `cargo test -p fret-node --features
+  compat-retained-canvas focus_port_direction_wire::tests`, and focused `cargo test -p fret-node
+  --features compat-retained-canvas view_math_rect::tests` now also lock the focus/view helper
+  test seam split.
+- `event_pointer_down_route/dispatch.rs`, `event_pointer_down_state.rs`,
+  `event_pointer_move_state.rs`, `event_pointer_wheel_state.rs`, `delete_ops_builder/node.rs`,
+  `node_resize/math.rs`, and `paint_grid_tiles/support.rs` now also route local event/math helper
+  test coverage through the private
+  `canvas/widget/event_pointer_down_route/dispatch/tests.rs`,
+  `canvas/widget/event_pointer_down_state/tests.rs`,
+  `canvas/widget/event_pointer_move_state/tests.rs`,
+  `canvas/widget/event_pointer_wheel_state/tests.rs`,
+  `canvas/widget/delete_ops_builder/node/tests.rs`,
+  `canvas/widget/node_resize/math/tests.rs`, and
+  `canvas/widget/paint_grid_tiles/support/tests.rs` seams, so these helper files now mainly keep
+  pointer-event routing/state sync, delete-op edge deduping, node-resize math, and grid-tile
+  support math explicit without changing retained runtime semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas
+  event_pointer_down_route::dispatch::tests`, focused `cargo test -p fret-node --features
+  compat-retained-canvas event_pointer_down_state::tests`, focused `cargo test -p fret-node
+  --features compat-retained-canvas event_pointer_move_state::tests`, focused `cargo test -p
+  fret-node --features compat-retained-canvas event_pointer_wheel_state::tests`, focused `cargo
+  test -p fret-node --features compat-retained-canvas delete_ops_builder::node::tests`, focused
+  `cargo test -p fret-node --features compat-retained-canvas node_resize::math::tests`, and
+  focused `cargo test -p fret-node --features compat-retained-canvas
+  paint_grid_tiles::support::tests` now also lock the event/math helper test seam split.
+- `interaction_policy/node.rs`, `pending_drag_session/group.rs`, `pending_drag_session/node.rs`,
+  `split_edge_execution.rs`, and `stores/internals.rs` now also route local
+  interaction/pending/store helper test coverage through the private
+  `canvas/widget/interaction_policy/node/tests.rs`,
+  `canvas/widget/pending_drag_session/group/tests.rs`,
+  `canvas/widget/pending_drag_session/node/tests.rs`,
+  `canvas/widget/split_edge_execution/tests.rs`, and
+  `canvas/widget/stores/internals/tests.rs` seams, so these helper files now mainly keep node
+  draggable/connectable policy, pending drag activation, split-edge rejection toast fallback, and
+  internals edge-center math explicit without changing retained runtime semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas interaction_policy::node::tests`,
+  focused `cargo test -p fret-node --features compat-retained-canvas
+  pending_drag_session::group::tests`, focused `cargo test -p fret-node --features
+  compat-retained-canvas pending_drag_session::node::tests`, focused `cargo test -p fret-node
+  --features compat-retained-canvas split_edge_execution::tests`, and focused `cargo test -p
+  fret-node --features compat-retained-canvas stores::internals::tests` now also lock the
+  interaction/pending/store helper test seam split.
+- `paint_edge_anchors/{resolve,state,style}.rs`, `paint_groups/{chrome,overlay}.rs`,
+  `paint_root_helpers/{geometry,paint}.rs`, and `paint_root/cache_plan/{hover,tiles}.rs` now also
+  route local paint/cache helper test coverage through the private
+  `canvas/widget/paint_edge_anchors/resolve/tests.rs`,
+  `canvas/widget/paint_edge_anchors/state/tests.rs`,
+  `canvas/widget/paint_edge_anchors/style/tests.rs`,
+  `canvas/widget/paint_groups/chrome/tests.rs`,
+  `canvas/widget/paint_groups/overlay/tests.rs`,
+  `canvas/widget/paint_root_helpers/geometry/tests.rs`,
+  `canvas/widget/paint_root_helpers/paint/tests.rs`,
+  `canvas/widget/paint_root/cache_plan/hover/tests.rs`, and
+  `canvas/widget/paint_root/cache_plan/tiles/tests.rs` seams, so these helper files now mainly
+  keep edge-anchor paint gating, group chrome/overlay selection, static-scene cache key
+  derivation, and paint-root hover/tile planning math explicit without changing retained paint
+  runtime semantics.
+- `cargo check -p fret-node --features compat-retained-canvas --tests`,
+  `cargo fmt -p fret-node --check`, focused
+  `cargo test -p fret-node --features compat-retained-canvas paint_edge_anchors::resolve::tests`,
+  focused `cargo test -p fret-node --features compat-retained-canvas
+  paint_edge_anchors::state::tests`, focused `cargo test -p fret-node --features
+  compat-retained-canvas paint_edge_anchors::style::tests`, focused `cargo test -p fret-node
+  --features compat-retained-canvas paint_groups::chrome::tests`, focused `cargo test -p
+  fret-node --features compat-retained-canvas paint_groups::overlay::tests`, focused `cargo test
+  -p fret-node --features compat-retained-canvas paint_root_helpers::geometry::tests`, focused
+  `cargo test -p fret-node --features compat-retained-canvas paint_root_helpers::paint::tests`,
+  focused `cargo test -p fret-node --features compat-retained-canvas
+  paint_root::cache_plan::hover::tests`, and focused `cargo test -p fret-node --features
+  compat-retained-canvas paint_root::cache_plan::tiles::tests` now also lock the paint/cache
+  helper test seam split.
+- `paint_edges/pass.rs` now routes edge-pass budget initialization,
+  batch paint replay, and budget-driven redraw requests through the private
+  `canvas/widget/paint_edges/pass/budgets.rs`,
+  `canvas/widget/paint_edges/pass/batch.rs`, and
+  `canvas/widget/paint_edges/pass/redraw.rs` seams, so the root pass file now mainly keeps the
+  retained pass state type plus façade entry points explicit without changing edge-pass ordering or
+  budget semantics.
+- focused `cargo nextest run -p fret-node --features compat-retained-canvas`
+  coverage now also locks `skin_wire_outline_selected_draws_outline_path_before_core`,
+  `skin_wire_highlight_selected_draws_highlight_after_core`,
+  `paint_overrides_can_drive_edge_marker_paint_binding`, and
+  `bezier_markers_align_with_bezier_start_end_tangents` after the edge-pass split.
+- `paint_edges/prepare.rs` now routes edge paint-model
+  construction, insert-marker projection, and batch partitioning through the private
+  `canvas/widget/paint_edges/prepare/build.rs`,
+  `canvas/widget/paint_edges/prepare/marker.rs`, and
+  `canvas/widget/paint_edges/prepare/batches.rs` seams, so the root prepare file now mainly keeps
+  the retained edge-paint state types plus façade entry points explicit without changing
+  insert-marker or edge-batch semantics.
+- focused `cargo nextest run -p fret-node --features compat-retained-canvas`
+  coverage now also locks `skin_wire_outline_selected_draws_outline_path_before_core`,
+  `paint_overrides_can_drive_edge_marker_paint_binding`,
+  `alt_drag_edge_opens_insert_node_picker_when_enabled`, and
+  `custom_edge_marker_falls_back_to_from_to_tangent_when_path_has_no_tangents` after the edge
+  prepare split.
+- `paint_edges/labels.rs` now routes label-tail budgeted
+  paint/repaint handling and cache-stat publication through the private
+  `canvas/widget/paint_edges/labels/tail.rs` and
+  `canvas/widget/paint_edges/labels/stats.rs` seams, so the root label file now mainly keeps the
+  retained façade entry points explicit without changing label-tail or budget-stat semantics.
+- focused `cargo nextest run -p fret-node --features compat-retained-canvas`
+  coverage now also locks `edge_label_anchor_matches_bezier_route_math`,
+  `edge_label_border_uses_edge_render_hint_color_override`,
+  `cached_edge_labels_match_between_tiled_and_single_tile_cache_modes`,
+  `paint_warms_edge_label_scene_cache_incrementally`, and
+  `paint_warms_edge_label_scene_cache_incrementally_for_large_viewport_tiles` after the edge-label
+  split.
+- `paint_edges/main.rs` now also routes interaction-hint /
+  custom-path frame preparation and optional drop-marker emission through the private
+  `canvas/widget/paint_edges/main/context.rs` and
+  `canvas/widget/paint_edges/main/markers.rs` seams, so the root edge main file now mainly keeps
+  the top-level pass/labels/preview orchestration explicit without changing edge-main behavior.
+- focused `cargo nextest run -p fret-node --features compat-retained-canvas`
+  coverage now also locks `skin_wire_outline_selected_draws_outline_path_before_core`,
+  `skin_wire_highlight_hovered_draws_highlight_after_core`,
+  `alt_drag_edge_opens_insert_node_picker_when_enabled`,
+  `paint_warms_edge_label_scene_cache_incrementally`, and
+  `paint_warms_edge_label_scene_cache_incrementally_for_large_viewport_tiles` after the edge-main
+  split.
+- `paint_edges/preview.rs` now routes preview target/style
+  resolution, drop-marker quads, and preview wire draw/effect tails through the private
+  `canvas/widget/paint_edges/preview/target.rs`,
+  `canvas/widget/paint_edges/preview/marker.rs`, and
+  `canvas/widget/paint_edges/preview/draw.rs` seams, so the root edge-preview file now mainly
+  keeps retained preview orchestration explicit.
+- `paint_edges/chrome.rs` now routes wire outline paint,
+  selected-edge glow effect setup, and selected/hovered highlight resolution through the private
+  `canvas/widget/paint_edges/chrome/outline.rs`,
+  `canvas/widget/paint_edges/chrome/glow.rs`, and
+  `canvas/widget/paint_edges/chrome/highlight.rs` seams, so the root edge-chrome file now mainly
+  keeps retained chrome orchestration explicit.
 - `pointer_move_release.rs` now routes pan-release cleanup, right-click pan
   arming, missing-left-release finalization, and last-pointer-state sync through the
   private `canvas/widget/pointer_move_release_pan.rs`,
@@ -1706,6 +2855,10 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/menu_session.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/insert_candidates.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/insert_execution.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/insert_execution/candidate.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/insert_execution/plan.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/insert_execution/feedback.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/insert_execution/tests.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/insert_execution_feedback.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/insert_execution_plan.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/insert_execution_point.rs`
@@ -1739,6 +2892,11 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/callbacks_graph.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/callbacks_view.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_router.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/command_router/insert.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/command_router/group.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/command_router/view.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/command_router/focus.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/command_router/edit.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_router_align.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_router_nudge.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_focus.rs`
@@ -1787,6 +2945,98 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_tiles_lines.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_tiles_dots.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_tiles_cross.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edge_anchors.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edge_anchors/resolve.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edge_anchors/state.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edge_anchors/style.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edge_anchors/render.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root_helpers.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root_helpers/paint.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root_helpers/geometry.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cache_plan.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cache_plan/hover.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cache_plan/tiles.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame/cache.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame/background.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/edges.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/edges/fallback.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/edges/replay.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/edges/single.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/edges/tiled.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/labels.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/labels/replay.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/labels/single.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/labels/tiled.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/build_state.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/build_state/ops.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/build_state/init.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/build_state/step.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/static_layer.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/edge_anchor.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/edge_anchor/target_id.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/edge_anchor/render.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/edge_anchor/geometry.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/mod.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/anchor_target.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/dispatch.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/fallback.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/static_node_chrome.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/static_node_chrome/style.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/static_node_chrome/shadow.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/static_node_chrome/quads.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/static_node_chrome/text.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/static_ports.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/static_ports/labels.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/static_ports/geometry.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/static_ports/fill.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/static_ports/stroke.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/static_ports/shapes.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/markers_support.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/markers_support/paint.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/markers_support/route.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/markers_support/custom.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/cached_budgeted.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/cached_budgeted/wires.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/cached_budgeted/labels.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/edges.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/edges/candidate.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/edges/hint.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/edges/cull.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/edges/append.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/nodes.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/nodes/visible.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/nodes/overhead.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/nodes/append.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/nodes/ports.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/collect.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/collect/selection.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/collect/body.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/selected_nodes.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/selected_nodes/selection.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/selected_nodes/body.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/pass.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/pass/budgets.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/pass/batch.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/pass/redraw.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/prepare.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/prepare/build.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/prepare/marker.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/prepare/batches.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/labels.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/labels/tail.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/labels/stats.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/main.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/main/context.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/main/markers.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/preview.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/preview/target.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/preview/marker.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/preview/draw.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/chrome.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/chrome/outline.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/chrome/glow.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/chrome/highlight.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_open.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_open_conversion.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_open_edge.rs`
@@ -1839,8 +3089,12 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/focus_port_direction_apply.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/focus_port_direction_candidate.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/sticky_wire.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/sticky_wire/checks.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/sticky_wire/target.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_connect.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_targets.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_targets/inspect.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_targets/picker.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move_state.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move_tail.rs`
@@ -1849,13 +3103,28 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release_left.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release_pan.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/surface.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/group.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/node.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/connection.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/secondary.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/secondary/node.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/secondary/connection.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/secondary/insert.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel_state.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel_route.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_motion.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_pan.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_pan/gate.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_pan/resolve.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_pan/apply.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_viewport.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom/wheel.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom/pinch.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom/apply.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_clipboard.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_clipboard_pending.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_clipboard_feedback.rs`
@@ -1865,6 +3134,92 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/event_router_pointer_wheel.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_router_system.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_router_system_input.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_node_drag_parent.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_node_drag_parent/collect.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_node_drag_parent/rect.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_node_drag_parent/target.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_ports_hints.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_ports_hints/preflight.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_ports_hints/evaluate.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_ports_hints/apply.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_ports_activation.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_ports_activation/preflight.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_ports_activation/start.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_ports_activation/commit.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_traversal_port.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_traversal_port/preflight.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_traversal_port/collect.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_traversal_port/select.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_traversal_port/apply.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_traversal_node.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_traversal_node/preflight.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_traversal_node/collect.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_traversal_node/select.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_traversal_node/apply.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_port_direction_candidate.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_port_direction_candidate/center.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_port_direction_candidate/search.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_ports_center.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_ports_center/port.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_ports_center/activation.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/move_ops/align_distribute/support.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/move_ops/align_distribute/support/types.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/move_ops/align_distribute/support/collect.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/move_ops/align_distribute/support/delta.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/move_ops/align_distribute/support/shift.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/move_ops/align_distribute/support/append.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/view_state/viewport.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/view_state/viewport/set.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/view_state/viewport/update.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/view_state/viewport/visible.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/press_session/prepare.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/press_session/prepare/test_support.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/press_session/prepare/surface.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/press_session/prepare/surface/clear.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/press_session/prepare/surface/focus.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/press_session/prepare/surface/tests.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/press_session/prepare/target.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/press_session/prepare/target/clear.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/press_session/prepare/target/focus.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/press_session/prepare/target/tests.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/move_update/hover.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/move_update/hover/source.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/move_update/hover/pick.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/move_update/hover/validity.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/move_update/hover/convertible.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/selection/box_edges.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/selection/box_edges/mode.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/selection/box_edges/graph.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/selection/box_edges/store.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/selection/box_edges/test_support.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/selection/box_edges/tests.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/interaction_policy/port.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/interaction_policy/port/connectable.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/interaction_policy/port/bundle.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/interaction_policy/port/test_support.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/interaction_policy/port/tests.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/wire_math.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/wire_math/route.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/wire_math/tests.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/delete_ops_builder.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/delete_ops_builder/assemble.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/delete_ops_builder/test_support.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/delete_ops_builder/tests.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_tiles.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_tiles/ops.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_tiles/tests.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/test_support.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/tests.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order/test_support.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order/tests.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_resize_session.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_resize_session/test_support.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_resize_session/tests.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection/test_support.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection/tests.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_router_system_lifecycle.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/diag.rs`
@@ -1884,6 +3239,11 @@ real editors.
 - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_support.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/widget_surface.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/widget_surface/constants.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/widget_surface/runtime.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/widget_surface/runtime/render.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/widget_surface/runtime/interaction.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/widget_surface/runtime/edge.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/interaction_gate.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/focus_session.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/cancel_session.rs`
@@ -1892,6 +3252,17 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/pending_resize_session.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pending_drag_session.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pending_connection_session.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_connection_session/edge.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_connection_session/wire.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_wire_drag.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_wire_drag/checks.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_wire_drag/activate.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/wire_drag.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/wire_drag/checks.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/wire_drag/activate.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pending.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pending/checks.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pending/activate.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/session.rs`
 - `ecosystem/fret-node/src/ui/canvas/paint.rs`
 - `ecosystem/fret-node/src/ui/canvas/paint/paint_wire.rs`
@@ -1956,13 +3327,78 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_snap.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_preview.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_constraints.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/group_drag.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_group_drag.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/group_resize.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_group_resize.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_resize.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_resize/checks.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_resize/activate.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/left_click/group_background.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit/resize.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/left_click/element_hits.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/left_click/connection_hits.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/left_click/connection_hits/port.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/left_click/connection_hits/port/connectable.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/left_click/connection_hits/port/click_connect.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/left_click/connection_hits/port/kind.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/left_click/edge_selection.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/left_click/connection_hits/edge_anchor.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/left_click/connection_hits/edge_anchor/arm.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/left_click/element_hits/edge.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/left_click/element_hits/edge/drag.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/left_click/node_selection.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/left_click/element_hits/node.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/left_click/element_hits/node/capabilities.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/left_click/element_hits/node/drag.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/left_click/element_hits/resize.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/left_click/element_hits/resize/state.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pointer_up.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pointer_up/pending.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pointer_up/active.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/drag.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/drag/state.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/drag/tail.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/left_click/hit.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/dispatch.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/release.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_grid.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move_tail.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_up.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_router_pointer_button.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_down.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_down_route.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_gesture_start.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_background.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_background/preflight.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_background/hit.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_background/apply.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_plan_support.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_plan_support/hint.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_plan_support/metrics.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_plan_support/tiles.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_plan_support/validate.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_cache.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_plan.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_stats.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_tiles.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_cache/warm.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_cache/ops.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_cache/key.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_elements.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_menu.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_menu/frame.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_menu/items.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_searcher.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_searcher/frame.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_wire_hint.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_wire_hint/layout.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_wire_hint/draw.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_toast.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_toast/draw.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_guides.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_feedback.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit.rs`

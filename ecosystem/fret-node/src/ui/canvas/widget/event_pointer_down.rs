@@ -1,3 +1,6 @@
+mod dispatch;
+mod prelude;
+
 use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
@@ -11,10 +14,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         click_count: u8,
         zoom: f32,
     ) {
-        super::event_pointer_down_state::prepare_pointer_down_state(
-            self, cx, snapshot, position, modifiers,
-        );
-        super::event_pointer_down_route::route_pointer_down(
+        prelude::prepare_pointer_down_state(self, cx, snapshot, position, modifiers);
+        dispatch::route_pointer_down(
             self,
             cx,
             snapshot,

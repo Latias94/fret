@@ -1,7 +1,9 @@
+mod activate;
+mod checks;
+
 use fret_core::{Modifiers, Point};
 use fret_ui::UiHost;
 
-use super::threshold::exceeds_drag_threshold;
 use super::wire_drag;
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use crate::ui::canvas::state::ViewSnapshot;
@@ -14,23 +16,13 @@ pub(super) fn handle_pending_wire_drag_move<H: UiHost, M: NodeGraphCanvasMiddlew
     modifiers: Modifiers,
     zoom: f32,
 ) -> bool {
-    if canvas.interaction.wire_drag.is_some() {
-        return false;
-    }
-    let Some(pending) = canvas.interaction.pending_wire_drag.clone() else {
-        return false;
+    let pending = match checks::prepare_pending_wire_drag_move(canvas, snapshot, position, zoom) {
+        checks::PendingWireDragMovePrep::NotHandled => return false,
+        checks::PendingWireDragMovePrep::Handled => return true,
+        checks::PendingWireDragMovePrep::Ready(pending) => pending,
     };
 
-    let threshold_screen = snapshot.interaction.connection_drag_threshold.max(0.0);
-    if !exceeds_drag_threshold(pending.start_pos, position, threshold_screen, zoom) {
-        return true;
-    }
-
-    let kind = super::pending_connection_session::activate_pending_wire_drag(
-        &mut canvas.interaction,
-        pending,
-    );
-    canvas.emit_connect_start(snapshot, &kind);
+    activate::activate_pending_wire_drag(canvas, snapshot, pending);
 
     wire_drag::handle_wire_drag_move(canvas, cx, snapshot, position, modifiers, zoom)
 }

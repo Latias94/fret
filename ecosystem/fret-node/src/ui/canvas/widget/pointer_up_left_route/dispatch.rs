@@ -1,9 +1,11 @@
+mod active;
+mod commit;
+mod pending;
+
 use fret_core::Point;
 use fret_ui::UiHost;
 
-use super::super::{
-    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, pointer_up_commit, pointer_up_pending,
-};
+use super::super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use crate::ui::canvas::state::ViewSnapshot;
 
 pub(in super::super) fn handle_left_release_chain<H: UiHost, M: NodeGraphCanvasMiddleware>(
@@ -17,51 +19,15 @@ pub(in super::super) fn handle_left_release_chain<H: UiHost, M: NodeGraphCanvasM
         return true;
     }
 
-    if pointer_up_commit::handle_node_resize_release(canvas, cx) {
+    if commit::handle_commit_release_chain(canvas, cx, snapshot) {
         return true;
     }
 
-    if pointer_up_commit::handle_group_resize_release(canvas, cx) {
+    if pending::handle_pending_release_chain(canvas, cx, snapshot, position, zoom) {
         return true;
     }
 
-    if pointer_up_commit::handle_group_drag_release(canvas, cx) {
-        return true;
-    }
-
-    if pointer_up_commit::handle_node_drag_release(canvas, cx, snapshot) {
-        return true;
-    }
-
-    if pointer_up_pending::handle_pending_group_drag_release(canvas, cx) {
-        return true;
-    }
-
-    if pointer_up_pending::handle_pending_group_resize_release(canvas, cx) {
-        return true;
-    }
-
-    if pointer_up_pending::handle_pending_node_drag_release(canvas, cx, snapshot, position, zoom) {
-        return true;
-    }
-
-    if pointer_up_pending::handle_pending_node_resize_release(canvas, cx) {
-        return true;
-    }
-
-    if pointer_up_pending::handle_pending_wire_drag_release(canvas, cx, snapshot, position) {
-        return true;
-    }
-
-    if super::super::wire_drag::handle_wire_left_up(canvas, cx, snapshot, zoom) {
-        return true;
-    }
-
-    if super::super::edge_insert_drag::handle_edge_insert_left_up(canvas, cx, position) {
-        return true;
-    }
-
-    if super::super::edge_drag::handle_edge_left_up(canvas, cx) {
+    if active::handle_active_release_chain(canvas, cx, snapshot, position, zoom) {
         return true;
     }
 

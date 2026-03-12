@@ -1,10 +1,10 @@
+mod draw;
+mod marker;
+mod target;
+
 use crate::ui::canvas::widget::paint_render_data::RenderData;
 use crate::ui::canvas::widget::*;
 use fret_core::scene::DashPatternV1;
-use fret_core::scene::DropShadowV1;
-use fret_core::{EffectChain, EffectMode, EffectQuality, EffectStep};
-
-use super::support::glow_bounds_for_edge_route;
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct PreviewTargetState {
@@ -95,48 +95,7 @@ impl PreviewTargetState {
 }
 
 pub(super) fn push_drop_marker(scene: &mut fret_core::Scene, pos: Point, color: Color, zoom: f32) {
-    let z = zoom.max(1.0e-6);
-    let r = 7.0 / z;
-    let border_w = 2.0 / z;
-    let rect = Rect::new(
-        Point::new(Px(pos.x.0 - r), Px(pos.y.0 - r)),
-        Size::new(Px(2.0 * r), Px(2.0 * r)),
-    );
-    scene.push(SceneOp::Quad {
-        order: DrawOrder(4),
-        rect,
-        background: fret_core::Paint::TRANSPARENT.into(),
-        border: Edges::all(Px(border_w)),
-        border_paint: fret_core::Paint::Solid(color).into(),
-        corner_radii: Corners::all(Px(r)),
-    });
-
-    let arm = 10.0 / z;
-    let thick = (2.0 / z).max(0.5 / z);
-    let h_rect = Rect::new(
-        Point::new(Px(pos.x.0 - arm * 0.5), Px(pos.y.0 - thick * 0.5)),
-        Size::new(Px(arm), Px(thick)),
-    );
-    let v_rect = Rect::new(
-        Point::new(Px(pos.x.0 - thick * 0.5), Px(pos.y.0 - arm * 0.5)),
-        Size::new(Px(thick), Px(arm)),
-    );
-    scene.push(SceneOp::Quad {
-        order: DrawOrder(4),
-        rect: h_rect,
-        background: fret_core::Paint::Solid(color).into(),
-        border: Edges::all(Px(0.0)),
-        border_paint: fret_core::Paint::TRANSPARENT.into(),
-        corner_radii: Corners::all(Px(0.0)),
-    });
-    scene.push(SceneOp::Quad {
-        order: DrawOrder(4),
-        rect: v_rect,
-        background: fret_core::Paint::Solid(color).into(),
-        border: Edges::all(Px(0.0)),
-        border_paint: fret_core::Paint::TRANSPARENT.into(),
-        corner_radii: Corners::all(Px(0.0)),
-    });
+    marker::push_drop_marker(scene, pos, color, zoom);
 }
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
@@ -154,19 +113,18 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return;
         };
 
-        let target_state = PreviewTargetState::from_widget(self);
-        let to = target_state.resolve_target(geom, wire_drag.pos);
-        let style =
-            target_state.resolve_style(interaction_hint, self.style.paint.wire_color_preview);
+        let preview =
+            target::resolve_preview_target_and_style(self, geom, wire_drag.pos, interaction_hint);
 
         let mut draw_preview = |from: Point| {
-            self.push_preview_wire_path(
+            draw::push_preview_wire_path(
+                self,
                 cx,
                 from,
-                to,
+                preview.to,
                 zoom,
                 interaction_hint,
-                style,
+                preview.style,
                 outline_budget,
                 outline_budget_skipped,
             );
@@ -197,110 +155,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     }
                 }
             }
-        }
-    }
-
-    fn push_preview_wire_path<H: UiHost>(
-        &mut self,
-        cx: &mut PaintCx<'_, H>,
-        from: Point,
-        to: Point,
-        zoom: f32,
-        interaction_hint: crate::ui::InteractionChromeHint,
-        style: PreviewWireStyle,
-        outline_budget: &mut WorkBudget,
-        outline_budget_skipped: &mut u32,
-    ) {
-        if let Some(outline) = interaction_hint.wire_outline_preview
-            && outline.width_mul.is_finite()
-            && outline.width_mul > 1.0e-3
-            && outline.color.a > 0.0
-        {
-            if !outline_budget.try_consume(1) {
-                *outline_budget_skipped = outline_budget_skipped.saturating_add(1);
-            } else {
-                let outline_width = self.style.geometry.wire_width * outline.width_mul.max(0.0);
-                if let Some(path) = self.paint_cache.wire_path(
-                    cx.services,
-                    EdgeRouteKind::Bezier,
-                    from,
-                    to,
-                    zoom,
-                    cx.scale_factor,
-                    outline_width,
-                    style.dash,
-                ) {
-                    cx.scene.push(SceneOp::Path {
-                        order: DrawOrder(2),
-                        origin: Point::new(Px(0.0), Px(0.0)),
-                        path,
-                        paint: outline.color.into(),
-                    });
-                }
-            }
-        }
-
-        let glow = interaction_hint.wire_glow_preview;
-        let glow_bounds = glow.and_then(|g| {
-            glow_bounds_for_edge_route(
-                EdgeRouteKind::Bezier,
-                from,
-                to,
-                zoom,
-                self.style.geometry.wire_width,
-                g.blur_radius_px,
-            )
-        });
-        let mut glow_pushed = false;
-        if let Some(glow) = glow
-            && let Some(bounds) = glow_bounds
-        {
-            let z = zoom.max(1.0e-6);
-            let blur_canvas = (glow.blur_radius_px / z).max(0.0);
-            let mut glow_color = style.color;
-            let alpha_mul = if glow.alpha_mul.is_finite() {
-                glow.alpha_mul.clamp(0.0, 1.0)
-            } else {
-                0.0
-            };
-            glow_color.a = (glow_color.a * alpha_mul).clamp(0.0, 1.0);
-            cx.scene.push(SceneOp::PushEffect {
-                bounds,
-                mode: EffectMode::FilterContent,
-                chain: EffectChain::from_steps(&[EffectStep::DropShadowV1(
-                    DropShadowV1 {
-                        offset_px: Point::new(Px(0.0), Px(0.0)),
-                        blur_radius_px: Px(blur_canvas),
-                        downsample: glow.downsample,
-                        color: glow_color,
-                    }
-                    .sanitize(),
-                )]),
-                quality: EffectQuality::Auto,
-            });
-            glow_pushed = true;
-        }
-
-        if let Some(path) = self.paint_cache.wire_path(
-            cx.services,
-            EdgeRouteKind::Bezier,
-            from,
-            to,
-            zoom,
-            cx.scale_factor,
-            self.style.geometry.wire_width,
-            style.dash,
-        ) {
-            cx.scene.push(SceneOp::Path {
-                order: DrawOrder(2),
-                origin: Point::new(Px(0.0), Px(0.0)),
-                path,
-                paint: style.color.into(),
-            });
-        }
-
-        if glow_pushed {
-            cx.scene.push(SceneOp::PopEffect);
         }
     }
 }

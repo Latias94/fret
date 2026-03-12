@@ -1,9 +1,20 @@
+#[path = "main/context.rs"]
+mod context;
+#[path = "main/markers.rs"]
+mod markers;
+
 use crate::ui::canvas::widget::paint_render_data::RenderData;
 use crate::ui::canvas::widget::*;
 
 use super::pass::EdgePaintBudgets;
 use super::prepare::PreparedEdgePaintBatches;
-use super::preview::push_drop_marker;
+
+struct PreparedEdgePaintFrame {
+    interaction_hint: crate::ui::InteractionChromeHint,
+    custom_paths: std::collections::HashMap<EdgeId, crate::ui::edge_types::EdgeCustomPath>,
+    bezier_steps: usize,
+    batches: PreparedEdgePaintBatches,
+}
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn paint_edges<H: UiHost>(
@@ -15,24 +26,19 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         zoom: f32,
         view_interacting: bool,
     ) {
-        let interaction_hint = if let Some(skin) = self.skin.as_ref() {
-            self.graph
-                .read_ref(cx.app, |g| skin.interaction_chrome_hint(g, &self.style))
-                .ok()
-                .unwrap_or_default()
-        } else {
-            crate::ui::InteractionChromeHint::default()
-        };
-
-        let custom_paths = self.collect_custom_edge_paths(&*cx.app, &render.edges, zoom);
-        let bezier_steps = usize::from(snapshot.interaction.bezier_hit_test_steps.max(1));
-        let PreparedEdgePaintBatches {
-            edges_normal,
-            edges_selected,
-            edges_hovered,
-            edge_insert_marker,
-            insert_node_drag_marker,
-        } = self.prepare_edge_paint_batches(snapshot, render, &custom_paths, zoom);
+        let PreparedEdgePaintFrame {
+            interaction_hint,
+            custom_paths,
+            bezier_steps,
+            batches:
+                PreparedEdgePaintBatches {
+                    edges_normal,
+                    edges_selected,
+                    edges_hovered,
+                    edge_insert_marker,
+                    insert_node_drag_marker,
+                },
+        } = context::prepare_edge_paint_frame(self, cx, snapshot, render, zoom);
 
         let mut budgets = EdgePaintBudgets::new(self, view_interacting);
         self.paint_edge_batches(
@@ -48,12 +54,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         );
         Self::request_edge_budget_redraws(cx, &budgets);
 
-        if let Some((pos, color)) = edge_insert_marker {
-            push_drop_marker(cx.scene, pos, color, zoom);
-        }
-        if let Some((pos, color)) = insert_node_drag_marker {
-            push_drop_marker(cx.scene, pos, color, zoom);
-        }
+        markers::push_optional_drop_marker(cx.scene, edge_insert_marker, zoom);
+        markers::push_optional_drop_marker(cx.scene, insert_node_drag_marker, zoom);
 
         self.paint_edge_labels_tail(
             cx,

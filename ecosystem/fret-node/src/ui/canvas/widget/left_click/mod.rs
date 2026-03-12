@@ -2,10 +2,12 @@ use fret_core::{Modifiers, Point, Rect};
 use fret_ui::UiHost;
 
 mod connection_hits;
+mod edge_selection;
 mod element_hits;
 mod group_background;
 mod handlers;
 mod hit;
+mod node_selection;
 
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use crate::ui::canvas::state::ViewSnapshot;

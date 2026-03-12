@@ -1,6 +1,41 @@
 use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
+    pub fn with_presenter(mut self, presenter: impl NodeGraphPresenter + 'static) -> Self {
+        self.presenter = Box::new(FallbackMeasuredNodeGraphPresenter::new(
+            presenter,
+            self.auto_measured.clone(),
+        ));
+        self
+    }
+
+    pub fn with_skin(mut self, skin: NodeGraphSkinRef) -> Self {
+        self.skin = Some(skin);
+        self.skin_last_rev = None;
+        self
+    }
+
+    pub fn with_paint_overrides(mut self, overrides: NodeGraphPaintOverridesRef) -> Self {
+        self.paint_overrides = Some(overrides);
+        self.paint_overrides_last_rev = None;
+        self
+    }
+
+    pub fn with_edge_types(mut self, edge_types: NodeGraphEdgeTypes) -> Self {
+        self.edge_types = Some(edge_types);
+        self
+    }
+
+    pub fn with_callbacks(mut self, callbacks: impl NodeGraphCallbacks) -> Self {
+        self.callbacks = Some(Box::new(callbacks));
+        self
+    }
+
+    pub fn with_close_command(mut self, command: CommandId) -> Self {
+        self.close_command = Some(command);
+        self
+    }
+
     fn reset_style_state(mut self) -> Self {
         self.background_override = None;
         self.color_mode = None;

@@ -1,6 +1,8 @@
 mod close_button;
+mod menu;
 mod pan_start;
 mod pending_right_click;
+mod sticky;
 
 use super::*;
 
@@ -22,8 +24,7 @@ pub(super) fn handle_context_menu_pointer_down<H: UiHost, M: NodeGraphCanvasMidd
     button: MouseButton,
     zoom: f32,
 ) -> bool {
-    canvas.interaction.context_menu.is_some()
-        && context_menu::handle_context_menu_pointer_down(canvas, cx, position, button, zoom)
+    menu::handle_context_menu_pointer_down(canvas, cx, position, button, zoom)
 }
 
 pub(super) fn handle_pending_right_click_start<H: UiHost, M: NodeGraphCanvasMiddleware>(
@@ -44,7 +45,7 @@ pub(super) fn handle_sticky_wire_pointer_down<H: UiHost, M: NodeGraphCanvasMiddl
     button: MouseButton,
     zoom: f32,
 ) -> bool {
-    sticky_wire::handle_sticky_wire_pointer_down(canvas, cx, snapshot, position, button, zoom)
+    sticky::handle_sticky_wire_pointer_down(canvas, cx, snapshot, position, button, zoom)
 }
 
 pub(super) fn handle_pan_start_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(

@@ -1,3 +1,6 @@
+mod dispatch;
+mod prelude;
+
 use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
@@ -11,25 +14,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         modifiers: fret_core::Modifiers,
         zoom: f32,
     ) {
-        self.interaction.last_modifiers = modifiers;
-        self.interaction.multi_selection_active = snapshot
-            .interaction
-            .multi_selection_key
-            .is_pressed(modifiers);
+        prelude::sync_pointer_up_modifier_state(self, snapshot, modifiers);
 
-        if right_click::handle_pending_right_click_pointer_up(
-            self, cx, snapshot, position, button, zoom,
-        ) {
+        if dispatch::handle_pointer_up_guards(self, cx, snapshot, position, button, zoom) {
             return;
         }
 
-        if button == MouseButton::Left
-            && searcher::handle_searcher_pointer_up(self, cx, position, button, zoom)
-        {
-            return;
-        }
-
-        let _ = pointer_up::handle_pointer_up(
+        let _ = dispatch::dispatch_pointer_up(
             self,
             cx,
             snapshot,

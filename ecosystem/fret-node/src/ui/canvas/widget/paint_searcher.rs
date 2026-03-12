@@ -1,4 +1,17 @@
+#[path = "paint_searcher/frame.rs"]
+mod frame;
+
 use super::*;
+
+struct SearcherPaintLayout {
+    inner_x: f32,
+    inner_y: f32,
+    inner_w: f32,
+    item_h: f32,
+    pad: f32,
+    text_style: fret_core::TextStyle,
+    constraints: TextConstraints,
+}
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn paint_searcher<H: UiHost>(
@@ -7,63 +20,31 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         searcher: &SearcherState,
         zoom: f32,
     ) {
-        let visible_rows = searcher_visible_rows(searcher);
-        let rect = searcher_rect_at(&self.style, searcher.origin, visible_rows, zoom);
-        let border_w = Px(1.0 / zoom);
-        let radius = Px(self.style.paint.context_menu_corner_radius / zoom);
-
-        cx.scene.push(SceneOp::Quad {
-            order: DrawOrder(55),
-            rect,
-            background: fret_core::Paint::Solid(self.style.paint.context_menu_background).into(),
-            border: Edges::all(border_w),
-            border_paint: fret_core::Paint::Solid(self.style.paint.context_menu_border).into(),
-            corner_radii: Corners::all(radius),
-        });
-
-        let pad = self.style.paint.context_menu_padding / zoom;
-        let item_h = self.style.paint.context_menu_item_height / zoom;
-        let inner_x = rect.origin.x.0 + pad;
-        let inner_y = rect.origin.y.0 + pad;
-        let inner_w = (rect.size.width.0 - 2.0 * pad).max(0.0);
-
-        let mut text_style = self.style.geometry.context_menu_text_style.clone();
-        text_style.size = Px(text_style.size.0 / zoom);
-        if let Some(line_height) = text_style.line_height.as_mut() {
-            line_height.0 /= zoom;
-        }
-
-        let constraints = TextConstraints {
-            max_width: Some(Px(inner_w)),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: effective_scale_factor(cx.scale_factor, zoom),
-        };
+        let layout = frame::paint_searcher_frame(self, cx.scene, searcher, cx.scale_factor, zoom);
 
         let list_y0 = super::paint_searcher_query::paint_searcher_query(
             self,
             cx,
             searcher,
-            &text_style,
-            constraints,
-            inner_x,
-            inner_y,
-            inner_w,
-            item_h,
-            pad,
+            &layout.text_style,
+            layout.constraints,
+            layout.inner_x,
+            layout.inner_y,
+            layout.inner_w,
+            layout.item_h,
+            layout.pad,
             zoom,
         );
         super::paint_searcher_rows::paint_searcher_rows(
             self,
             cx,
             searcher,
-            &text_style,
-            constraints,
-            inner_x,
+            &layout.text_style,
+            layout.constraints,
+            layout.inner_x,
             list_y0,
-            inner_w,
-            item_h,
+            layout.inner_w,
+            layout.item_h,
             zoom,
         );
     }

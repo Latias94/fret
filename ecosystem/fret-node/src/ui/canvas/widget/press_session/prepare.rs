@@ -1,5 +1,7 @@
 mod surface;
 mod target;
+#[cfg(test)]
+mod test_support;
 
 pub(in super::super) use surface::{
     prepare_for_background_interaction, prepare_for_group_drag, prepare_for_group_resize,

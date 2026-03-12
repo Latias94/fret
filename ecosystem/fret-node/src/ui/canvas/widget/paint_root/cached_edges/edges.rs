@@ -1,6 +1,12 @@
-use super::geometry::cache_tile_rect;
-use super::keys;
-use crate::ui::canvas::widget::paint_render_data::RenderData;
+#[path = "edges/fallback.rs"]
+mod fallback;
+#[path = "edges/replay.rs"]
+mod replay;
+#[path = "edges/single.rs"]
+mod single;
+#[path = "edges/tiled.rs"]
+mod tiled;
+
 use crate::ui::canvas::widget::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
@@ -10,12 +16,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         state: &EdgesBuildState,
         replay_delta: Point,
     ) {
-        cx.scene.replay_ops_translated(&state.ops, replay_delta);
-        self.paint_cache.touch_paths_in_scene_ops(&state.ops);
+        replay::replay_cached_edge_build_state(self, cx, state, replay_delta);
     }
 
     fn store_finished_edge_build_state(&mut self, key: u64, state: EdgesBuildState) {
-        self.edges_scene_cache.store_ops(key, state.ops);
+        replay::store_finished_edge_build_state(self, key, state);
     }
 
     pub(super) fn paint_root_edges_uncached<H: UiHost>(
@@ -29,20 +34,17 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         zoom: f32,
         view_interacting: bool,
     ) {
-        self.edges_build_states.clear();
-        let render_edges: RenderData = self.collect_render_data(
-            &*cx.app,
+        fallback::paint_root_edges_uncached(
+            self,
+            cx,
             snapshot,
-            Arc::clone(geom),
-            Arc::clone(index),
+            geom,
+            index,
             render_cull_rect,
-            zoom,
             hovered_edge,
-            false,
-            false,
-            true,
+            zoom,
+            view_interacting,
         );
-        self.paint_edges(cx, snapshot, &render_edges, geom, zoom, view_interacting);
     }
 
     pub(super) fn try_replay_cached_edges<H: UiHost>(
@@ -51,10 +53,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         key: u64,
         replay_delta: Point,
     ) -> bool {
-        self.edges_scene_cache
-            .try_replay_with(key, cx.scene, replay_delta, |ops| {
-                self.paint_cache.touch_paths_in_scene_ops(ops);
-            })
+        replay::try_replay_cached_edges(self, cx, key, replay_delta)
     }
 
     pub(super) fn build_single_rect_edges_cache<H: UiHost>(
@@ -69,58 +68,18 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         view_interacting: bool,
         replay_delta: Point,
     ) {
-        if self.try_replay_cached_edges(cx, edges_key, replay_delta) {
-            self.edges_build_states.remove(&edges_key);
-            return;
-        }
-
-        let mut state = self
-            .edges_build_states
-            .remove(&edges_key)
-            .unwrap_or_else(|| {
-                self.init_edges_build_state(
-                    &*cx.app,
-                    snapshot,
-                    geom,
-                    index,
-                    edges_cache_rect,
-                    edges_cache_rect,
-                    zoom,
-                )
-            });
-
-        let wire_budget_limit = Self::EDGE_WIRE_BUILD_BUDGET_PER_FRAME.select(view_interacting);
-        let marker_budget_limit = Self::EDGE_MARKER_BUILD_BUDGET_PER_FRAME.select(view_interacting);
-        let mut wire_budget = WorkBudget::new(wire_budget_limit);
-        let mut marker_budget = WorkBudget::new(marker_budget_limit);
-
-        let mut tmp = fret_core::Scene::default();
-        if self.paint_edges_build_state_step(
-            &mut tmp,
-            &*cx.app,
-            cx.services,
+        single::build_single_rect_edges_cache(
+            self,
+            cx,
+            snapshot,
+            geom,
+            index,
+            edges_key,
+            edges_cache_rect,
             zoom,
-            cx.scale_factor,
-            &mut state,
-            &mut wire_budget,
-            &mut marker_budget,
-        ) {
-            super::super::redraw_request::request_paint_redraw(cx);
-        }
-
-        if state.edges.is_empty() {
-            self.edges_scene_cache.store_ops(edges_key, Vec::new());
-        } else if state.ops.len() > 2 {
-            self.replay_cached_edge_build_state(cx, &state, replay_delta);
-            if state.next_edge >= state.edges.len() {
-                self.store_finished_edge_build_state(edges_key, state);
-            } else {
-                self.edges_build_states.insert(edges_key, state);
-            }
-        } else {
-            self.paint_cache.touch_paths_in_scene_ops(&state.ops);
-            self.edges_build_states.insert(edges_key, state);
-        }
+            view_interacting,
+            replay_delta,
+        );
     }
 
     pub(super) fn paint_tiled_edges_cache<H: UiHost>(
@@ -137,84 +96,19 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         view_interacting: bool,
         replay_delta: Point,
     ) {
-        let edges_base_key =
-            keys::edges_tiles_base_key(base_key, style_key, edges_cache_tile_size_canvas);
-
-        let wire_budget_limit = Self::EDGE_WIRE_BUILD_BUDGET_PER_FRAME.select(view_interacting);
-        let marker_budget_limit = Self::EDGE_MARKER_BUILD_BUDGET_PER_FRAME.select(view_interacting);
-        let tile_budget_limit =
-            Self::EDGE_TILE_BUILD_BUDGET_TILES_PER_FRAME.select(view_interacting);
-        let mut wire_budget = WorkBudget::new(wire_budget_limit);
-        let mut marker_budget = WorkBudget::new(marker_budget_limit);
-        let mut tile_budget = WorkBudget::new(tile_budget_limit);
-
-        let mut skipped = false;
-
-        for tile in tiles.iter().copied() {
-            let tile_key = tile_cache_key(edges_base_key, tile);
-            self.edges_tile_keys_scratch.push(tile_key);
-
-            if self.try_replay_cached_edges(cx, tile_key, replay_delta) {
-                self.edges_build_states.remove(&tile_key);
-                continue;
-            }
-
-            if !tile_budget.try_consume(1) {
-                skipped = true;
-                continue;
-            }
-
-            let tile_rect = cache_tile_rect(tile, edges_cache_tile_size_canvas);
-            let tile_cull_rect = self.cache_tile_cull_rect(tile_rect, zoom);
-
-            let mut state = self
-                .edges_build_states
-                .remove(&tile_key)
-                .unwrap_or_else(|| {
-                    self.init_edges_build_state(
-                        &*cx.app,
-                        snapshot,
-                        geom,
-                        index,
-                        tile_rect,
-                        tile_cull_rect,
-                        zoom,
-                    )
-                });
-
-            let mut tmp = fret_core::Scene::default();
-            if self.paint_edges_build_state_step(
-                &mut tmp,
-                &*cx.app,
-                cx.services,
-                zoom,
-                cx.scale_factor,
-                &mut state,
-                &mut wire_budget,
-                &mut marker_budget,
-            ) {
-                skipped = true;
-            }
-
-            if state.edges.is_empty() {
-                self.edges_scene_cache.store_ops(tile_key, Vec::new());
-                continue;
-            }
-
-            if state.ops.len() > 2 {
-                self.replay_cached_edge_build_state(cx, &state, replay_delta);
-            }
-
-            if state.next_edge >= state.edges.len() {
-                self.store_finished_edge_build_state(tile_key, state);
-            } else {
-                self.edges_build_states.insert(tile_key, state);
-            }
-        }
-
-        self.edges_build_states
-            .retain(|key, _| self.edges_tile_keys_scratch.contains(key));
-
-        super::super::redraw_request::request_paint_redraw_if(cx, skipped);
+        tiled::paint_tiled_edges_cache(
+            self,
+            cx,
+            snapshot,
+            geom,
+            index,
+            tiles,
+            base_key,
+            style_key,
+            edges_cache_tile_size_canvas,
+            zoom,
+            view_interacting,
+            replay_delta,
+        );
     }
 }

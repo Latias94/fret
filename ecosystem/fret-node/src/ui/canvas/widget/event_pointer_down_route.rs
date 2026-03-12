@@ -1,5 +1,7 @@
 mod dispatch;
 mod double_click;
+mod preflight;
+mod starts;
 
 use super::*;
 
@@ -13,17 +15,7 @@ pub(super) fn route_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
     click_count: u8,
     zoom: f32,
 ) {
-    if searcher::handle_searcher_pointer_down(canvas, cx, position, button, zoom) {
-        return;
-    }
-
-    if pointer_down_gesture_start::handle_close_button_pointer_down(
-        canvas, cx, snapshot, position, button, zoom,
-    ) {
-        return;
-    }
-
-    if double_click::handle_left_button_double_click_routes(
+    if preflight::handle_pointer_down_preflight(
         canvas,
         cx,
         snapshot,
@@ -35,28 +27,7 @@ pub(super) fn route_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
     ) {
         return;
     }
-
-    if pointer_down_gesture_start::handle_context_menu_pointer_down(
-        canvas, cx, position, button, zoom,
-    ) {
-        return;
-    }
-
-    if pointer_down_gesture_start::handle_pending_right_click_start(
-        canvas, cx, snapshot, position, button,
-    ) {
-        return;
-    }
-
-    if pointer_down_gesture_start::handle_sticky_wire_pointer_down(
-        canvas, cx, snapshot, position, button, zoom,
-    ) {
-        return;
-    }
-
-    if pointer_down_gesture_start::handle_pan_start_pointer_down(
-        canvas, cx, snapshot, position, button, modifiers,
-    ) {
+    if starts::handle_pointer_down_starts(canvas, cx, snapshot, position, button, modifiers, zoom) {
         return;
     }
 

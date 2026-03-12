@@ -1,3 +1,6 @@
+mod group;
+mod node;
+
 use fret_ui::UiHost;
 
 use super::super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
@@ -9,10 +12,7 @@ pub(in super::super) fn handle_pending_group_drag_release<
     canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
 ) -> bool {
-    super::super::pointer_up_session::finish_pending_release(
-        &mut canvas.interaction.pending_group_drag,
-        cx,
-    )
+    group::handle_pending_group_drag_release(canvas, cx)
 }
 
 pub(in super::super) fn handle_pending_group_resize_release<
@@ -22,10 +22,7 @@ pub(in super::super) fn handle_pending_group_resize_release<
     canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
 ) -> bool {
-    super::super::pointer_up_session::finish_pending_release(
-        &mut canvas.interaction.pending_group_resize,
-        cx,
-    )
+    group::handle_pending_group_resize_release(canvas, cx)
 }
 
 pub(in super::super) fn handle_pending_node_resize_release<
@@ -35,8 +32,5 @@ pub(in super::super) fn handle_pending_node_resize_release<
     canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
 ) -> bool {
-    super::super::pointer_up_session::finish_pending_release(
-        &mut canvas.interaction.pending_node_resize,
-        cx,
-    )
+    node::handle_pending_node_resize_release(canvas, cx)
 }

@@ -14,9 +14,10 @@ use super::prelude::{
     node_drag, node_resize, pending_drag, pointer_up, wire_drag,
 };
 use super::{
-    NullServices, TestUiHostImpl, event_cx, insert_view, make_test_graph_two_nodes_with_size,
+    NullServices, TestUiHostImpl, event_cx, insert_view,
+    make_test_graph_two_nodes_with_ports_spaced_x, make_test_graph_two_nodes_with_size,
 };
-use crate::ui::canvas::state::{EdgeDrag, WireDragKind};
+use crate::ui::canvas::state::{EdgeDrag, PendingGroupDrag, PendingGroupResize, WireDragKind};
 use crate::ui::canvas::state::{GroupResize, NodeDrag, NodeResize, NodeResizeHandle};
 use fret_ui::retained_bridge::Widget as _;
 
@@ -927,6 +928,215 @@ fn group_resize_is_previewed_and_committed_on_pointer_up() {
         .unwrap();
     assert!(rect_after_commit.size.width > start_rect.size.width);
     assert!(rect_after_commit.size.height > start_rect.size.height);
+}
+
+#[test]
+fn group_header_click_selects_group_and_arms_pending_group_drag() {
+    let mut host = TestUiHostImpl::default();
+    let mut graph_value = Graph::new(GraphId::new());
+
+    let group_id = crate::core::GroupId::new();
+    let group_rect = crate::core::CanvasRect {
+        origin: CanvasPoint { x: 0.0, y: 0.0 },
+        size: CanvasSize {
+            width: 200.0,
+            height: 120.0,
+        },
+    };
+    graph_value.groups.insert(
+        group_id,
+        crate::core::Group {
+            title: "G".to_string(),
+            rect: group_rect,
+            color: None,
+        },
+    );
+
+    let graph = host.models.insert(graph_value);
+    let view = insert_view(&mut host);
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.elements_selectable = true;
+        s.selected_nodes.clear();
+        s.selected_edges.clear();
+        s.selected_groups.clear();
+        s.group_draw_order.clear();
+    });
+
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
+
+    assert!(left_click::handle_left_click_pointer_down(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(20.0), Px(12.0)),
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    let selected_groups = view
+        .read_ref(&host, |s| s.selected_groups.clone())
+        .unwrap_or_default();
+    assert_eq!(selected_groups, vec![group_id]);
+
+    let group_draw_order = view
+        .read_ref(&host, |s| s.group_draw_order.clone())
+        .unwrap_or_default();
+    assert_eq!(group_draw_order, vec![group_id]);
+
+    let pending = canvas
+        .interaction
+        .pending_group_drag
+        .as_ref()
+        .expect("pending group drag");
+    assert_eq!(pending.group, group_id);
+    assert_eq!(pending.start_rect, group_rect);
+    assert!(canvas.interaction.group_drag.is_none());
+    assert!(canvas.interaction.pending_group_resize.is_none());
+    assert!(canvas.interaction.group_resize.is_none());
+}
+
+#[test]
+fn pending_group_drag_release_clears_session_without_committing() {
+    let mut host = TestUiHostImpl::default();
+    let mut graph_value = Graph::new(GraphId::new());
+
+    let group_id = crate::core::GroupId::new();
+    let group_rect = crate::core::CanvasRect {
+        origin: CanvasPoint { x: 0.0, y: 0.0 },
+        size: CanvasSize {
+            width: 200.0,
+            height: 120.0,
+        },
+    };
+    graph_value.groups.insert(
+        group_id,
+        crate::core::Group {
+            title: "G".to_string(),
+            rect: group_rect,
+            color: None,
+        },
+    );
+
+    let graph = host.models.insert(graph_value);
+    let view = insert_view(&mut host);
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let snapshot = canvas.sync_view_state(&mut host);
+    canvas.interaction.pending_group_drag = Some(PendingGroupDrag {
+        group: group_id,
+        start_pos: Point::new(Px(10.0), Px(10.0)),
+        start_rect: group_rect,
+    });
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
+
+    assert!(pointer_up::handle_pointer_up(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(10.0), Px(10.0)),
+        fret_core::MouseButton::Left,
+        1,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    assert!(canvas.interaction.pending_group_drag.is_none());
+    assert!(canvas.interaction.group_drag.is_none());
+    let rect_after = graph
+        .read_ref(cx.app, |g| g.groups.get(&group_id).map(|gr| gr.rect))
+        .unwrap()
+        .unwrap();
+    assert_eq!(rect_after, group_rect);
+}
+
+#[test]
+fn pending_group_resize_release_clears_session_without_committing() {
+    let mut host = TestUiHostImpl::default();
+    let mut graph_value = Graph::new(GraphId::new());
+
+    let group_id = crate::core::GroupId::new();
+    let group_rect = crate::core::CanvasRect {
+        origin: CanvasPoint { x: 0.0, y: 0.0 },
+        size: CanvasSize {
+            width: 200.0,
+            height: 120.0,
+        },
+    };
+    graph_value.groups.insert(
+        group_id,
+        crate::core::Group {
+            title: "G".to_string(),
+            rect: group_rect,
+            color: None,
+        },
+    );
+
+    let graph = host.models.insert(graph_value);
+    let view = insert_view(&mut host);
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let snapshot = canvas.sync_view_state(&mut host);
+    canvas.interaction.pending_group_resize = Some(PendingGroupResize {
+        group: group_id,
+        start_pos: Point::new(Px(10.0), Px(10.0)),
+        start_rect: group_rect,
+    });
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
+
+    assert!(pointer_up::handle_pointer_up(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(10.0), Px(10.0)),
+        fret_core::MouseButton::Left,
+        1,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    assert!(canvas.interaction.pending_group_resize.is_none());
+    assert!(canvas.interaction.group_resize.is_none());
+    let rect_after = graph
+        .read_ref(cx.app, |g| g.groups.get(&group_id).map(|gr| gr.rect))
+        .unwrap()
+        .unwrap();
+    assert_eq!(rect_after, group_rect);
 }
 
 #[test]
@@ -2358,6 +2568,70 @@ fn port_connectable_override_allows_start_even_when_nodes_connectable_is_false()
 
     assert!(canvas.interaction.pending_wire_drag.is_some());
     assert!(canvas.interaction.wire_drag.is_none());
+}
+
+#[test]
+fn click_connect_target_port_click_commits_wire_and_clears_click_connect_state() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, _a, _a_in, a_out, _b, b_in) =
+        make_test_graph_two_nodes_with_ports_spaced_x(260.0);
+    let graph = host.models.insert(graph_value);
+    let view = insert_view(&mut host);
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.nodes_connectable = true;
+        s.interaction.connect_on_click = true;
+    });
+
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let snapshot = canvas.sync_view_state(&mut host);
+    let geom = canvas.canvas_geometry(&host, &snapshot);
+    let pos = geom.port_center(b_in).expect("target port center");
+
+    canvas.interaction.click_connect = true;
+    canvas.interaction.pending_wire_drag = Some(crate::ui::canvas::state::PendingWireDrag {
+        kind: WireDragKind::New {
+            from: a_out,
+            bundle: vec![a_out],
+        },
+        start_pos: Point::new(Px(0.0), Px(0.0)),
+    });
+    canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
+        kind: WireDragKind::New {
+            from: a_out,
+            bundle: vec![a_out],
+        },
+        pos: Point::new(Px(0.0), Px(0.0)),
+    });
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
+    assert!(left_click::handle_left_click_pointer_down(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        pos,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    assert!(!canvas.interaction.click_connect);
+    assert!(canvas.interaction.pending_wire_drag.is_none());
+    assert!(canvas.interaction.wire_drag.is_none());
+    let edge_count = graph
+        .read_ref(&mut host, |g| g.edges.len())
+        .unwrap_or_default();
+    assert_eq!(edge_count, 1);
 }
 
 #[test]

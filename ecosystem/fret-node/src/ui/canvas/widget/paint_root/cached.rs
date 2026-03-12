@@ -10,6 +10,8 @@ mod cached_nodes;
 mod cached_pass;
 #[path = "static_cache.rs"]
 mod static_cache;
+#[path = "static_layer.rs"]
+mod static_layer;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn paint_root<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {

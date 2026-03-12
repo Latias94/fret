@@ -1,3 +1,6 @@
+mod cursor;
+mod timer;
+
 use super::*;
 
 pub(super) fn dispatch_pointer_move_tail<H: UiHost, M: NodeGraphCanvasMiddleware>(
@@ -9,12 +12,11 @@ pub(super) fn dispatch_pointer_move_tail<H: UiHost, M: NodeGraphCanvasMiddleware
     modifiers: fret_core::Modifiers,
     zoom: f32,
 ) {
-    cursor::update_cursors(canvas, cx, snapshot, position, zoom);
+    cursor::update_pointer_move_cursors(canvas, cx, snapshot, position, zoom);
 
     pointer_move_dispatch::dispatch_pointer_move_handlers(
         canvas, cx, snapshot, position, buttons, modifiers, zoom,
     );
 
-    let snapshot = canvas.sync_view_state(cx.app);
-    canvas.sync_auto_pan_timer(cx.app, cx.window, &snapshot, cx.bounds);
+    timer::sync_pointer_move_auto_pan_timer(canvas, cx);
 }
