@@ -1004,26 +1004,6 @@ impl Default for CarouselRuntime {
     }
 }
 
-#[derive(Default)]
-struct CarouselState {
-    index: Option<Model<usize>>,
-    offset: Option<Model<Px>>,
-    runtime: Option<Model<CarouselRuntime>>,
-    extent: Option<Model<Px>>,
-    viewport_width: Option<Model<Px>>,
-    options: Option<Model<CarouselOptions>>,
-    snaps: Option<Model<Arc<[Px]>>>,
-    slides: Option<Model<Arc<[headless_carousel::CarouselSlide1D]>>>,
-    max_offset: Option<Model<Px>>,
-    embla_engine: Option<Model<Option<headless_embla::engine::Engine>>>,
-    api_commands: Option<Model<CarouselCommandQueue>>,
-    autoplay_commands: Option<Model<CarouselAutoplayCommandQueue>>,
-    autoplay_snapshot: Option<Model<CarouselAutoplayApiSnapshot>>,
-    autoplay_delays: Option<Model<Option<Arc<[Duration]>>>>,
-    slides_in_view_tracker: Option<Model<headless_embla::slides_in_view::SlidesInViewTracker>>,
-    slide_content_ids: Option<Model<Arc<[fret_ui::elements::GlobalElementId]>>>,
-}
-
 #[derive(Debug, Clone, Default)]
 struct CarouselCommandQueue {
     pending: Vec<CarouselCommand>,
@@ -1074,228 +1054,74 @@ fn carousel_models<H: UiHost>(
     Model<Px>,
     Model<Option<headless_embla::engine::Engine>>,
 ) {
-    let needs_init = cx.with_state(CarouselState::default, |st| {
-        st.index.is_none()
-            || st.offset.is_none()
-            || st.runtime.is_none()
-            || st.extent.is_none()
-            || st.viewport_width.is_none()
-            || st.options.is_none()
-            || st.snaps.is_none()
-            || st.slides.is_none()
-            || st.max_offset.is_none()
-            || st.embla_engine.is_none()
-    });
-
-    if needs_init {
-        let index = cx.app.models_mut().insert(options_base.start_snap);
-        let offset = cx.app.models_mut().insert(Px(0.0));
-        let runtime = cx.app.models_mut().insert(CarouselRuntime::default());
-        let _ = cx.app.models_mut().update(&runtime, |st| {
-            st.api_last_selected_index = options_base.start_snap
-        });
-        let extent = cx.app.models_mut().insert(Px(0.0));
-        let viewport_width = cx.app.models_mut().insert(Px(0.0));
-        let options = cx.app.models_mut().insert(options_base);
-        let snaps: Arc<[Px]> = Arc::from(Vec::<Px>::new());
-        let snaps = cx.app.models_mut().insert(snaps);
-        let slides: Arc<[headless_carousel::CarouselSlide1D]> =
-            Arc::from(Vec::<headless_carousel::CarouselSlide1D>::new());
-        let slides = cx.app.models_mut().insert(slides);
-        let max_offset = cx.app.models_mut().insert(Px(0.0));
-        let embla_engine: Option<headless_embla::engine::Engine> = None;
-        let embla_engine = cx.app.models_mut().insert(embla_engine);
-        cx.with_state(CarouselState::default, |st| {
-            st.index = Some(index.clone());
-            st.offset = Some(offset.clone());
-            st.runtime = Some(runtime.clone());
-            st.extent = Some(extent.clone());
-            st.viewport_width = Some(viewport_width.clone());
-            st.options = Some(options.clone());
-            st.snaps = Some(snaps.clone());
-            st.slides = Some(slides.clone());
-            st.max_offset = Some(max_offset.clone());
-            st.embla_engine = Some(embla_engine.clone());
-        });
-        return (
-            index,
-            offset,
-            runtime,
-            extent,
-            viewport_width,
-            options,
-            snaps,
-            slides,
-            max_offset,
-            embla_engine,
-        );
-    }
-
-    let (
-        index,
-        offset,
-        runtime,
-        extent,
-        viewport_width,
-        options,
-        snaps,
-        slides,
-        max_offset,
-        embla_engine,
-    ) = cx.with_state(CarouselState::default, |st| {
-        (
-            st.index.clone().expect("index"),
-            st.offset.clone().expect("offset"),
-            st.runtime.clone().expect("runtime"),
-            st.extent.clone().expect("extent"),
-            st.viewport_width.clone().expect("viewport_width"),
-            st.options.clone().expect("options"),
-            st.snaps.clone().expect("snaps"),
-            st.slides.clone().expect("slides"),
-            st.max_offset.clone().expect("max_offset"),
-            st.embla_engine.clone().expect("embla_engine"),
-        )
-    });
     (
-        index,
-        offset,
-        runtime,
-        extent,
-        viewport_width,
-        options,
-        snaps,
-        slides,
-        max_offset,
-        embla_engine,
+        cx.local_model_keyed("index", || options_base.start_snap),
+        cx.local_model_keyed("offset", || Px(0.0)),
+        cx.local_model_keyed("runtime", || {
+            let mut runtime = CarouselRuntime::default();
+            runtime.api_last_selected_index = options_base.start_snap;
+            runtime
+        }),
+        cx.local_model_keyed("extent", || Px(0.0)),
+        cx.local_model_keyed("viewport_width", || Px(0.0)),
+        cx.local_model_keyed("options", || options_base),
+        cx.local_model_keyed("snaps", || Arc::from(Vec::<Px>::new())),
+        cx.local_model_keyed("slides", || {
+            Arc::from(Vec::<headless_carousel::CarouselSlide1D>::new())
+        }),
+        cx.local_model_keyed("max_offset", || Px(0.0)),
+        cx.local_model_keyed("embla_engine", || None::<headless_embla::engine::Engine>),
     )
 }
 
 fn carousel_api_commands_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> Model<CarouselCommandQueue> {
-    let existing = cx.with_state(CarouselState::default, |st| st.api_commands.clone());
-    if let Some(existing) = existing {
-        return existing;
-    }
-
-    let model = cx.app.models_mut().insert(CarouselCommandQueue::default());
-    cx.with_state(CarouselState::default, |st| {
-        st.api_commands = Some(model.clone());
-    });
-    model
+    cx.local_model_keyed("api_commands", CarouselCommandQueue::default)
 }
 
 fn carousel_autoplay_commands_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> Model<CarouselAutoplayCommandQueue> {
-    let existing = cx.with_state(CarouselState::default, |st| st.autoplay_commands.clone());
-    if let Some(existing) = existing {
-        return existing;
-    }
-
-    let model = cx
-        .app
-        .models_mut()
-        .insert(CarouselAutoplayCommandQueue::default());
-    cx.with_state(CarouselState::default, |st| {
-        st.autoplay_commands = Some(model.clone());
-    });
-    model
+    cx.local_model_keyed("autoplay_commands", CarouselAutoplayCommandQueue::default)
 }
 
 fn carousel_autoplay_snapshot_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> Model<CarouselAutoplayApiSnapshot> {
-    let existing = cx.with_state(CarouselState::default, |st| st.autoplay_snapshot.clone());
-    if let Some(existing) = existing {
-        return existing;
-    }
-
-    let model = cx
-        .app
-        .models_mut()
-        .insert(CarouselAutoplayApiSnapshot::default());
-    cx.with_state(CarouselState::default, |st| {
-        st.autoplay_snapshot = Some(model.clone());
-    });
-    model
+    cx.local_model_keyed("autoplay_snapshot", CarouselAutoplayApiSnapshot::default)
 }
 
 fn carousel_autoplay_delays_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> Model<Option<Arc<[Duration]>>> {
-    let existing = cx.with_state(CarouselState::default, |st| st.autoplay_delays.clone());
-    if let Some(existing) = existing {
-        return existing;
-    }
-
-    let model = cx.app.models_mut().insert(None::<Arc<[Duration]>>);
-    cx.with_state(CarouselState::default, |st| {
-        st.autoplay_delays = Some(model.clone());
-    });
-    model
+    cx.local_model_keyed("autoplay_delays", || None::<Arc<[Duration]>>)
 }
 
 fn carousel_slides_in_view_tracker_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> Model<headless_embla::slides_in_view::SlidesInViewTracker> {
-    let existing = cx.with_state(CarouselState::default, |st| {
-        st.slides_in_view_tracker.clone()
-    });
-    if let Some(existing) = existing {
-        return existing;
-    }
-
-    let tracker = cx
-        .app
-        .models_mut()
-        .insert(headless_embla::slides_in_view::SlidesInViewTracker::default());
-    cx.with_state(CarouselState::default, |st| {
-        st.slides_in_view_tracker = Some(tracker.clone());
-    });
-    tracker
+    cx.local_model_keyed(
+        "slides_in_view_tracker",
+        headless_embla::slides_in_view::SlidesInViewTracker::default,
+    )
 }
 
 fn carousel_slide_content_ids_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> Model<Arc<[fret_ui::elements::GlobalElementId]>> {
-    let existing = cx.with_state(CarouselState::default, |st| st.slide_content_ids.clone());
-    if let Some(existing) = existing {
-        return existing;
-    }
-
-    let ids: Arc<[fret_ui::elements::GlobalElementId]> =
-        Arc::from(Vec::<fret_ui::elements::GlobalElementId>::new());
-    let model = cx.app.models_mut().insert(ids);
-    cx.with_state(CarouselState::default, |st| {
-        st.slide_content_ids = Some(model.clone());
-    });
-    model
-}
-
-#[derive(Default)]
-struct CarouselPartsModelsState {
-    api_handle: Option<Model<Option<CarouselApi>>>,
-    api_snapshot: Option<Model<CarouselApiSnapshot>>,
+    cx.local_model_keyed("slide_content_ids", || {
+        Arc::from(Vec::<fret_ui::elements::GlobalElementId>::new())
+    })
 }
 
 fn carousel_parts_models<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> (Model<Option<CarouselApi>>, Model<CarouselApiSnapshot>) {
-    let (handle, snapshot) = cx.with_state(CarouselPartsModelsState::default, |st| {
-        (st.api_handle.clone(), st.api_snapshot.clone())
-    });
-    if let (Some(handle), Some(snapshot)) = (handle, snapshot) {
-        return (handle, snapshot);
-    }
-
-    let handle = cx.app.models_mut().insert(None::<CarouselApi>);
-    let snapshot = cx.app.models_mut().insert(CarouselApiSnapshot::default());
-    cx.with_state(CarouselPartsModelsState::default, |st| {
-        st.api_handle = Some(handle.clone());
-        st.api_snapshot = Some(snapshot.clone());
-    });
-    (handle, snapshot)
+    (
+        cx.local_model_keyed("api_handle", || None::<CarouselApi>),
+        cx.local_model_keyed("api_snapshot", CarouselApiSnapshot::default),
+    )
 }
 
 impl Default for Carousel {

@@ -10,9 +10,9 @@ use fret_core::{
     TextAlign, TextOverflow, TextSpan, TextStyle, TextWrap,
 };
 use fret_icons::{IconId, ids};
+use fret_runtime::Model;
 use fret_runtime::WindowCommandGatingSnapshot;
 use fret_runtime::{CommandId, Platform};
-use fret_runtime::Model;
 use fret_ui::action::ActivateReason;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
@@ -26,8 +26,7 @@ use fret_ui_headless::cmdk_score;
 use fret_ui_headless::cmdk_selection;
 use fret_ui_kit::command::{
     CommandCatalogEntry as UiKitCommandCatalogEntry,
-    CommandCatalogGroup as UiKitCommandCatalogGroup,
-    CommandCatalogItem as UiKitCommandCatalogItem,
+    CommandCatalogGroup as UiKitCommandCatalogGroup, CommandCatalogItem as UiKitCommandCatalogItem,
 };
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
@@ -85,13 +84,6 @@ fn command_dialog_open_change_reason_from_dismiss_reason(
         fret_ui::action::DismissReason::FocusOutside => CommandDialogOpenChangeReason::FocusOut,
         fret_ui::action::DismissReason::Scroll => CommandDialogOpenChangeReason::None,
     }
-}
-
-#[derive(Default)]
-struct CommandDialogState {
-    open_change_reason: Option<Arc<std::sync::Mutex<Option<CommandDialogOpenChangeReason>>>>,
-    pending_dispatch: Option<Arc<std::sync::Mutex<Option<PendingCommandDispatch>>>>,
-    close_complete: Option<Arc<std::sync::Mutex<bool>>>,
 }
 
 #[derive(Debug, Clone)]
@@ -3936,47 +3928,18 @@ impl CommandDialog {
         let open_model = open.clone();
         let query = self.query;
         let query_model = query.clone();
-        let open_change_reason_cell = {
-            let existing = cx.with_state(CommandDialogState::default, |st| {
-                st.open_change_reason.clone()
-            });
-            if let Some(cell) = existing {
-                cell
-            } else {
-                let cell = Arc::new(std::sync::Mutex::new(None));
-                cx.with_state(CommandDialogState::default, |st| {
-                    st.open_change_reason = Some(cell.clone())
-                });
-                cell
-            }
-        };
-        let pending_dispatch_cell = {
-            let existing = cx.with_state(CommandDialogState::default, |st| {
-                st.pending_dispatch.clone()
-            });
-            if let Some(cell) = existing {
-                cell
-            } else {
-                let cell = Arc::new(std::sync::Mutex::new(None));
-                cx.with_state(CommandDialogState::default, |st| {
-                    st.pending_dispatch = Some(cell.clone())
-                });
-                cell
-            }
-        };
-        let close_complete_cell = {
-            let existing =
-                cx.with_state(CommandDialogState::default, |st| st.close_complete.clone());
-            if let Some(cell) = existing {
-                cell
-            } else {
-                let cell = Arc::new(std::sync::Mutex::new(false));
-                cx.with_state(CommandDialogState::default, |st| {
-                    st.close_complete = Some(cell.clone())
-                });
-                cell
-            }
-        };
+        let open_change_reason_cell = cx.slot_state(
+            || Arc::new(std::sync::Mutex::new(None::<CommandDialogOpenChangeReason>)),
+            |cell| cell.clone(),
+        );
+        let pending_dispatch_cell = cx.slot_state(
+            || Arc::new(std::sync::Mutex::new(None::<PendingCommandDispatch>)),
+            |cell| cell.clone(),
+        );
+        let close_complete_cell = cx.slot_state(
+            || Arc::new(std::sync::Mutex::new(false)),
+            |cell| cell.clone(),
+        );
         let entries = self.entries;
         let a11y_label = self
             .a11y_label
