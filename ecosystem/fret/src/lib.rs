@@ -23,6 +23,8 @@
 //! - `fret::advanced::interop::run_native_with_compat_driver(...)` is an advanced low-level
 //!   interop path (non-default) for retained/bridge integrations that still implement
 //!   `fret_launch::WinitAppDriver` directly.
+//! - `fret::advanced::kernel::*` and `fret::advanced::interop::*` keep low-level runtime,
+//!   rendering, and viewport/foreign-surface seams explicit on the advanced lane.
 //!
 //! ## Getting started (desktop)
 //!
@@ -196,7 +198,7 @@ impl Default for Defaults {
 
 /// Interop helpers for embedding foreign UI as isolated surfaces (desktop builds).
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-pub mod interop;
+mod interop;
 
 /// Dev-only helpers (hotpatch/dev-state) for iteration workflows.
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop", feature = "devloop"))]
@@ -208,15 +210,15 @@ pub mod dev {
 
 /// Re-export the kernel facade (desktop builds).
 #[cfg(feature = "desktop")]
-pub use fret_framework as kernel;
+use fret_framework as kernel;
 
 /// App-facing imports for ordinary Fret application code.
 pub mod app {
     /// Canonical app-facing runtime handle on the default `fret` surface.
     ///
-    /// This is the same underlying runtime type as the raw kernel alias exported at the crate
-    /// root; prefer this name in ordinary app code and keep the raw alias for advanced/manual
-    /// integration seams.
+    /// This is the same underlying runtime type as the raw kernel alias exposed on
+    /// `fret::advanced::kernel`; prefer this name in ordinary app code and keep the raw alias for
+    /// advanced/manual integration seams.
     pub use fret_app::App;
 
     /// Common imports for app code on the default authoring surface.
@@ -411,9 +413,14 @@ pub mod docking {
 /// Explicit advanced/manual-assembly imports for power users and integration code.
 pub mod advanced {
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-    pub use crate::interop;
+    /// Low-level interop helpers kept off the default crate root.
+    pub mod interop {
+        pub use crate::interop::embedded_viewport;
+        pub use crate::interop::run_native_with_compat_driver;
+    }
     #[cfg(feature = "desktop")]
-    pub use crate::kernel;
+    /// Low-level kernel facade kept off the default crate root.
+    pub use fret_framework as kernel;
     pub use crate::view::AppUiRawStateExt;
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::{UiAppBuilder, UiAppDriver};
@@ -617,7 +624,7 @@ pub mod advanced {
         pub use crate::advanced::*;
         pub use crate::component::prelude::*;
         #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-        pub use crate::interop::embedded_viewport::{
+        pub use crate::advanced::interop::embedded_viewport::{
             EmbeddedViewportForeignUiAppDriverExt, EmbeddedViewportUiAppDriverExt,
         };
         pub use crate::view::UiCxDataExt as _;
@@ -1512,6 +1519,7 @@ mod authoring_surface_policy_tests {
     #[test]
     fn readme_and_rustdoc_quarantine_compat_runner_under_advanced_interop() {
         let public_surface = crate_public_surface_source();
+        let advanced_surface = advanced_prelude_source();
         let rustdoc = crate_rustdoc();
 
         assert!(CRATE_README.contains(
@@ -1521,7 +1529,9 @@ mod authoring_surface_policy_tests {
             "`fret::advanced::interop::run_native_with_compat_driver(...)`"
         ));
         assert!(!public_surface.contains("pub fn run_native_with_compat_driver("));
-        assert!(public_surface.contains("pub mod interop;"));
+        assert!(!public_surface.contains("pub mod interop;"));
+        assert!(advanced_surface.contains("pub mod interop {"));
+        assert!(advanced_surface.contains("pub use crate::interop::run_native_with_compat_driver;"));
         assert!(INTEROP_RS.contains("pub fn run_native_with_compat_driver<"));
     }
 
@@ -1891,8 +1901,10 @@ mod authoring_surface_policy_tests {
         let advanced_prelude = advanced_prelude_source();
         assert!(!root_header.contains("pub use fret_app::App as KernelApp;"));
         assert!(!root_header.contains("pub use fret_bootstrap::ui_app_driver::ViewElements;"));
+        assert!(!root_header.contains("pub use fret_framework as kernel;"));
         assert!(advanced_prelude.contains("pub use fret_app::App as KernelApp;"));
         assert!(advanced_prelude.contains("pub use fret_bootstrap::ui_app_driver::ViewElements;"));
+        assert!(advanced_prelude.contains("pub use fret_framework as kernel;"));
         assert!(LIB_RS.contains("pub type AppUi<'cx, 'a, H = crate::app::App>"));
         assert!(
             LIB_RS.contains("pub type UiCx<'a> = fret_ui::ElementContext<'a, crate::app::App>;")

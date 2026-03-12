@@ -154,6 +154,7 @@ Related workstream: `docs/workstreams/fret-launch-app-surface-fearless-refactor-
 - Advanced integration with `FnDriver` hooks preserved: `fret::advanced::run_native_with_fn_driver_with_hooks(...)`
 - Advanced integration with a preconfigured `FnDriver`: `fret::advanced::run_native_with_configured_fn_driver(...)`
 - Advanced low-level interop driver path (compat seam, non-default): `fret::advanced::interop::run_native_with_compat_driver(...)`
+- Advanced low-level runtime/render/viewport seams: `fret::advanced::{kernel::*, interop::*}`
 
 ## What remains first-class on `fret`
 
@@ -166,6 +167,7 @@ following seams first-class:
 - `fret::advanced::UiAppBuilderAdvancedExt::{install(...), on_gpu_ready(...), install_custom_effects(...)}`
 - `UiAppDriver::{window_create_spec, window_created, before_close_window}`
 - `UiAppDriver::{record_engine_frame, viewport_input, handle_global_command}`
+- `fret::advanced::{kernel::*, interop::*}`
 
 The default builder chain stays small and app-facing on `fret`. Advanced users still keep the same
 extension seams without dropping to `fret-launch` immediately, but the GPU/effects/bootstrap hooks
@@ -209,6 +211,7 @@ Mapping (rough):
 - `fret::advanced::run_native_with_fn_driver_with_hooks(...)` -> `fret_bootstrap::BootstrapBuilder::new_fn_with_hooks(...)`
 - `fret::advanced::run_native_with_configured_fn_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new(...)` with a preconfigured `FnDriver`
 - `fret::advanced::interop::run_native_with_compat_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new(...)` for advanced low-level interop / retained driver cases
+- `fret::advanced::kernel::*` -> `fret-framework::*`
 
 The recommended manual-assembly entry point remains `fret-bootstrap`, keeping the underlying driver
 hotpatch-friendly (function-pointer `FnDriver` surface, per ADR 0105 / 0110).

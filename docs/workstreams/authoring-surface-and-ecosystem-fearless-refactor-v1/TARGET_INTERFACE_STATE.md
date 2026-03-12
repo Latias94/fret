@@ -162,6 +162,8 @@ Target rule:
 Target exports:
 
 - `ui_app(...)` / `ui_app_with_hooks(...)` for explicit golden-path manual assembly
+- `fret::advanced::kernel::*` for low-level runtime/render contracts
+- `fret::advanced::interop::*` for viewport embedding and foreign-surface interop
 - advanced builder extension traits (for `UiServices`, GPU-ready hooks, custom effects)
 - driver hooks
 - viewport embedding / interop seams

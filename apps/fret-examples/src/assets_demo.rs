@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use fret::kernel::core::{ImageColorSpace, SvgId};
-use fret::kernel::ui::element::{ImageProps, SvgIconProps};
 use fret::{FretApp, advanced::prelude::*, shadcn};
+use fret::advanced::kernel::core::{ImageColorSpace, SvgId};
+use fret::advanced::kernel::ui::element::{ImageProps, SvgIconProps};
 use fret_ui_assets::{UiAssets, image_asset_state, svg_asset_state};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ColorRef, LayoutRefinement, Radius, Space};
