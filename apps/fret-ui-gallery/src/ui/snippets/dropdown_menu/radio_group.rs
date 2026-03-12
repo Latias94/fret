@@ -32,8 +32,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             shadcn::DropdownMenuContent::new()
                 .align(shadcn::DropdownMenuAlign::Start)
                 .side_offset(Px(4.0))
-                // shadcn/ui docs: `DropdownMenuContent className="w-32"`.
-                .min_width(Px(128.0)),
+                // new-york-v4 dropdown-menu-radio-group: `DropdownMenuContent className="w-56"`.
+                .min_width(Px(224.0)),
             |_cx| {
                 [shadcn::DropdownMenuGroup::new([
                     shadcn::DropdownMenuLabel::new("Panel Position").into(),
