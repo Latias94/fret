@@ -185,6 +185,9 @@ Implementation note on 2026-03-12:
   `UiElementTestIdExt`, `UiElementA11yExt`, and `UiElementKeyContextExt` wrappers land through
   `IntoUiElement<H>` directly, so `declarative/semantics.rs` no longer depends on
   `UiIntoElement` outside tests.
+- built-in text primitives now also bypass the hidden bridge:
+  `ui::TextBox` and `ui::RawTextBox` implement `IntoUiElement<H>` directly, so the remaining
+  `UiIntoElement` production usage is now concentrated in `ui_builder.rs`.
 - typography remains decoupled from the model-heavy constructor lane:
   this sweep does not mix with `checkbox`, `progress`, or `switch` refactors.
 - selected advanced/manual-assembly examples now also keep reusable helpers off raw landed return

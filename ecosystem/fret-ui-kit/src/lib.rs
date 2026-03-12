@@ -227,7 +227,6 @@ pub use style::{
     resolve_override_slot_with, resolve_slot,
 };
 pub use styled::{RefineStyle, Stylable, Styled, StyledExt};
-pub(crate) use ui_builder::UiIntoElement;
 pub use ui_builder::{
     IntoUiElement, UiBuilder, UiExt, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
 };
@@ -410,6 +409,7 @@ mod source_policy_tests {
         let public_surface = &LIB_RS[..tests_start];
         assert!(!public_surface.contains("pub use ui::UiChildIntoElement;"));
         assert!(!public_surface.contains("pub use ui_builder::UiIntoElement;"));
+        assert!(!public_surface.contains("pub(crate) use ui_builder::UiIntoElement;"));
 
         let export_start = public_surface
             .find("pub use ui_builder::{")
@@ -448,6 +448,19 @@ mod source_policy_tests {
         assert!(UI_RS.contains("I::Item: IntoUiElement<H>"));
         assert!(UI_RS.contains("IntoUiElement::into_element(child, cx)"));
         assert!(IMUI_RS.contains("B: IntoUiElement<H>"));
+    }
+
+    #[test]
+    fn ui_builtin_text_primitives_land_through_public_conversion_trait() {
+        let tests_start = UI_RS.find("#[cfg(test)]").unwrap_or(UI_RS.len());
+        let public_surface = &UI_RS[..tests_start];
+
+        assert!(
+            !public_surface.contains("UiIntoElement"),
+            "ui.rs production surface should not depend on UiIntoElement"
+        );
+        assert!(public_surface.contains("IntoUiElement<H> for TextBox"));
+        assert!(public_surface.contains("IntoUiElement<H> for RawTextBox"));
     }
 
     #[test]

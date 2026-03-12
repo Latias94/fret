@@ -190,6 +190,9 @@ Current execution note on 2026-03-12:
   `UiElementTestIdExt`, `UiElementA11yExt`, and `UiElementKeyContextExt` wrap values that land
   through `IntoUiElement<H>` directly, so `UiIntoElement` no longer leaks into the production
   implementation of `declarative/semantics.rs`.
+- built-in text primitives now also land directly through the public trait:
+  `ui::TextBox` and `ui::RawTextBox` implement `IntoUiElement<H>` directly, so the remaining
+  `UiIntoElement` production scaffold is concentrated in `ui_builder.rs`.
 - `UiChildIntoElement<H>` is now deleted from the codebase; heterogeneous child collection in
   `fret_ui_kit::ui` / `imui` lands directly through `IntoUiElement<H>`.
 - direct-crate shadcn authoring now also gets the same landing ergonomics:

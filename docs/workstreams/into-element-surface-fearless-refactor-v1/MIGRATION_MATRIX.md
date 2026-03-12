@@ -101,6 +101,10 @@ Execution note on 2026-03-12:
   where `UiElementTestIdExt`, `UiElementA11yExt`, and `UiElementKeyContextExt` wrappers now land
   through `IntoUiElement<H>` directly, with a source-policy gate asserting that the production
   semantics helper surface no longer depends on `UiIntoElement`.
+- the built-in text primitive surface now also records
+  `ecosystem/fret-ui-kit/src/ui.rs`,
+  where `TextBox` and `RawTextBox` now implement `IntoUiElement<H>` directly, with a source-policy
+  gate asserting that the production `ui.rs` surface no longer depends on `UiIntoElement`.
 - the focused `selected_*` source gate now also covers
   `apps/fret-ui-gallery/src/ui/snippets/sidebar/{demo,controlled,mobile,rtl}.rs`,
   where `menu_button(...)` moved from raw `AnyElement` returns to `IntoUiElement`-based helper

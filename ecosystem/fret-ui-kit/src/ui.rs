@@ -23,7 +23,7 @@ use crate::declarative::style as decl_style;
 use crate::declarative::text as decl_text;
 use crate::{
     ChromeRefinement, IntoUiElement, Items, Justify, LayoutRefinement, LengthRefinement, MetricRef,
-    Space, UiBuilder, UiIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
+    Space, UiBuilder, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
 };
 
 fn collect_ui_children<H: UiHost, I>(
@@ -1518,8 +1518,8 @@ impl UiPatchTarget for TextBox {
 
 impl UiSupportsLayout for TextBox {}
 
-impl UiIntoElement for TextBox {
-    fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+impl<H: UiHost> IntoUiElement<H> for TextBox {
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let TextBox {
             layout: layout_refinement,
             text,
@@ -1709,8 +1709,8 @@ impl UiPatchTarget for RawTextBox {
 
 impl UiSupportsLayout for RawTextBox {}
 
-impl UiIntoElement for RawTextBox {
-    fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+impl<H: UiHost> IntoUiElement<H> for RawTextBox {
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let RawTextBox {
             layout: layout_refinement,
             text,
@@ -1781,7 +1781,7 @@ mod tests {
         );
     }
 
-    // Compile-only: ensure `ui::*` layout constructors accept `UiIntoElement` children
+    // Compile-only: ensure `ui::*` layout constructors accept `IntoUiElement<H>` children
     // (e.g. `UiBuilder<TextBox>`) without requiring call-site `.into_element(cx)`.
     #[allow(dead_code)]
     fn h_flex_accepts_ui_builder_children<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -1885,7 +1885,7 @@ mod tests {
             .into_element(cx)
     }
 
-    // Compile-only: ensure `UiIntoElement`-level semantics decorators can be applied before
+    // Compile-only: ensure public-trait semantics decorators can be applied before
     // `into_element(cx)` (so callsites can avoid "decorate-only" early landing).
     #[allow(dead_code)]
     fn h_flex_accepts_decorated_children<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
