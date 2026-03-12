@@ -540,11 +540,7 @@ impl TextSystem {
         glyph: &'a ParleyGlyph,
         font_ref: parley::swash::FontRef<'a>,
     ) -> parley::swash::scale::Scaler<'a> {
-        let scaler_builder = self
-            .parley_scale
-            .builder(font_ref)
-            .size(prepared_glyph_scaler_size(glyph))
-            .hint(false);
+        let scaler_builder = prepared_glyph_scaler_builder(&mut self.parley_scale, glyph, font_ref);
         apply_prepared_glyph_normalized_coords(scaler_builder, glyph).build()
     }
 
@@ -743,6 +739,17 @@ fn prepared_glyph_size_bits(glyph: &ParleyGlyph) -> u32 {
 
 fn prepared_glyph_scaler_size(glyph: &ParleyGlyph) -> f32 {
     glyph.font_size.max(1.0)
+}
+
+fn prepared_glyph_scaler_builder<'a>(
+    parley_scale: &'a mut parley::swash::scale::ScaleContext,
+    glyph: &'a ParleyGlyph,
+    font_ref: parley::swash::FontRef<'a>,
+) -> parley::swash::scale::ScalerBuilder<'a> {
+    parley_scale
+        .builder(font_ref)
+        .size(prepared_glyph_scaler_size(glyph))
+        .hint(false)
 }
 
 fn prepared_glyph_bounds_from_atlas_entry(
