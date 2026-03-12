@@ -389,11 +389,46 @@ mod default_semantics_tests {
 #[cfg(test)]
 mod source_policy_tests {
     const LIB_RS: &str = include_str!("lib.rs");
+    const DECLARATIVE_MOD_RS: &str = include_str!("declarative/mod.rs");
+    const DECLARATIVE_PRELUDE_RS: &str = include_str!("declarative/prelude.rs");
 
     #[test]
     fn root_surface_omits_host_bound_conversion_alias() {
         let tests_start = LIB_RS.find("#[cfg(test)]").unwrap_or(LIB_RS.len());
         let public_surface = &LIB_RS[..tests_start];
         assert!(!public_surface.contains("UiHostBoundIntoElement"));
+    }
+
+    #[test]
+    fn declarative_semantics_ext_names_drop_legacy_conversion_prefix() {
+        for (label, source) in [
+            ("declarative/mod.rs", DECLARATIVE_MOD_RS),
+            ("declarative/prelude.rs", DECLARATIVE_PRELUDE_RS),
+        ] {
+            assert!(
+                source.contains("UiElementA11yExt"),
+                "{label} should export UiElementA11yExt"
+            );
+            assert!(
+                source.contains("UiElementKeyContextExt"),
+                "{label} should export UiElementKeyContextExt"
+            );
+            assert!(
+                source.contains("UiElementTestIdExt"),
+                "{label} should export UiElementTestIdExt"
+            );
+            assert!(
+                !source.contains("UiIntoElementA11yExt"),
+                "{label} reintroduced UiIntoElementA11yExt"
+            );
+            assert!(
+                !source.contains("UiIntoElementKeyContextExt"),
+                "{label} reintroduced UiIntoElementKeyContextExt"
+            );
+            assert!(
+                !source.contains("UiIntoElementTestIdExt"),
+                "{label} reintroduced UiIntoElementTestIdExt"
+            );
+        }
     }
 }

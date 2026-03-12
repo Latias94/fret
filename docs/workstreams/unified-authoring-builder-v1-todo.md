@@ -31,7 +31,7 @@ Goal:
 Backlog:
 
 - [x] Expose `test_id(...)` on the fluent authoring path (applied during `.into_element(cx)`).
-  - Implemented as `UiIntoElementTestIdExt` (no early landing required for patch targets).
+  - Implemented as `UiElementTestIdExt` (no early landing required for patch targets).
   - Evidence: `ecosystem/fret-ui-kit/src/declarative/semantics.rs`
 - [x] Expose minimal semantics decorators on the fluent builder path (applied during `.into_element(cx)`).
   - Implemented on `UiBuilder<T>` as late-landing semantics decoration:

@@ -241,17 +241,17 @@ pub mod app {
         pub use fret_ui_kit::command::ElementCommandGatingExt as _;
         pub use fret_ui_kit::declarative::icon;
         pub use fret_ui_kit::declarative::{
-            AnyElementSemanticsExt, ElementContextThemeExt, UiIntoElementA11yExt,
-            UiIntoElementKeyContextExt, UiIntoElementTestIdExt, accent_color,
-            container_breakpoints, container_query_region, container_query_region_with_id,
-            container_width_at_least, contrast_preference, forced_colors_active,
-            forced_colors_mode, occlusion_insets, occlusion_insets_or_zero, preferred_color_scheme,
-            prefers_dark_color_scheme, prefers_more_contrast, prefers_reduced_motion,
-            prefers_reduced_transparency, primary_pointer_can_hover, primary_pointer_is_coarse,
-            primary_pointer_type, safe_area_insets, safe_area_insets_or_zero, tailwind,
-            text_scale_factor, viewport_aspect_ratio, viewport_breakpoints,
-            viewport_height_at_least, viewport_height_breakpoints, viewport_is_landscape,
-            viewport_is_portrait, viewport_orientation, viewport_tailwind, viewport_width_at_least,
+            AnyElementSemanticsExt, ElementContextThemeExt, UiElementA11yExt,
+            UiElementKeyContextExt, UiElementTestIdExt, accent_color, container_breakpoints,
+            container_query_region, container_query_region_with_id, container_width_at_least,
+            contrast_preference, forced_colors_active, forced_colors_mode, occlusion_insets,
+            occlusion_insets_or_zero, preferred_color_scheme, prefers_dark_color_scheme,
+            prefers_more_contrast, prefers_reduced_motion, prefers_reduced_transparency,
+            primary_pointer_can_hover, primary_pointer_is_coarse, primary_pointer_type,
+            safe_area_insets, safe_area_insets_or_zero, tailwind, text_scale_factor,
+            viewport_aspect_ratio, viewport_breakpoints, viewport_height_at_least,
+            viewport_height_breakpoints, viewport_is_landscape, viewport_is_portrait,
+            viewport_orientation, viewport_tailwind, viewport_width_at_least,
             window_insets_padding_refinement_or_zero,
         };
         pub use fret_ui_kit::ui;
@@ -281,8 +281,8 @@ pub mod component {
         pub use fret_ui_kit::command::ElementCommandGatingExt as _;
         pub use fret_ui_kit::declarative::prelude::{
             ActionHooksExt, AnyElementSemanticsExt, CollectionSemanticsExt, ElementContextThemeExt,
-            GlobalWatchExt, ModelWatchExt, UiIntoElementA11yExt, UiIntoElementKeyContextExt,
-            UiIntoElementTestIdExt, accent_color, container_breakpoints, container_query_region,
+            GlobalWatchExt, ModelWatchExt, UiElementA11yExt, UiElementKeyContextExt,
+            UiElementTestIdExt, accent_color, container_breakpoints, container_query_region,
             container_query_region_with_id, container_width_at_least, contrast_preference,
             forced_colors_active, forced_colors_mode, preferred_color_scheme,
             prefers_dark_color_scheme, prefers_more_contrast, prefers_reduced_motion,
@@ -1246,7 +1246,9 @@ mod builder_surface_tests {
 
     #[test]
     fn fret_app_setup_accepts_install_into_app_bundles() {
-        let _guard = INSTALL_INTO_APP_TEST_LOCK.lock().expect("lock should not be poisoned");
+        let _guard = INSTALL_INTO_APP_TEST_LOCK
+            .lock()
+            .expect("lock should not be poisoned");
         INSTALL_INTO_APP_CALLS.store(0, Ordering::SeqCst);
 
         let app = FretApp::new("builder-view-bundle-setup").setup(BundleInstaller);
@@ -1258,7 +1260,9 @@ mod builder_surface_tests {
 
     #[test]
     fn ui_app_builder_setup_accepts_install_into_app_bundles() {
-        let _guard = INSTALL_INTO_APP_TEST_LOCK.lock().expect("lock should not be poisoned");
+        let _guard = INSTALL_INTO_APP_TEST_LOCK
+            .lock()
+            .expect("lock should not be poisoned");
         INSTALL_INTO_APP_CALLS.store(0, Ordering::SeqCst);
 
         let builder = FretApp::new("builder-view-bundle-setup-ui-builder")
@@ -1272,7 +1276,9 @@ mod builder_surface_tests {
 
     #[test]
     fn fret_app_setup_accepts_small_tuple_composition() {
-        let _guard = INSTALL_INTO_APP_TEST_LOCK.lock().expect("lock should not be poisoned");
+        let _guard = INSTALL_INTO_APP_TEST_LOCK
+            .lock()
+            .expect("lock should not be poisoned");
         INSTALL_INTO_APP_CALLS.store(0, Ordering::SeqCst);
 
         let app = FretApp::new("builder-view-tuple-setup")
@@ -1877,9 +1883,9 @@ mod authoring_surface_policy_tests {
         assert!(app_prelude.contains("pub use fret_ui::{Theme, ThemeSnapshot};"));
         assert!(app_prelude.contains("pub use fret_selector::{DepsSignature, ui::DepsBuilder};"));
         assert!(app_prelude.contains("pub use fret_ui_kit::declarative::icon;"));
-        assert!(app_prelude.contains("UiIntoElementA11yExt"));
-        assert!(app_prelude.contains("UiIntoElementKeyContextExt"));
-        assert!(app_prelude.contains("UiIntoElementTestIdExt"));
+        assert!(app_prelude.contains("UiElementA11yExt"));
+        assert!(app_prelude.contains("UiElementKeyContextExt"));
+        assert!(app_prelude.contains("UiElementTestIdExt"));
         assert!(app_prelude.contains("ElementContextThemeExt"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::declarative::prelude::*;"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::IntoUiElement;"));

@@ -283,7 +283,7 @@ Constraints:
 Backlog:
 
 - [x] AUE-semantics-120 Add a decorator surface for stable diagnostics selectors before `.into_element(cx)`:
-  - Implemented as a `UiIntoElement` extension: `UiIntoElementTestIdExt` (`test_id(...)`).
+  - Implemented as a semantic element extension: `UiElementTestIdExt` (`test_id(...)`).
   - Evidence:
     - `ecosystem/fret-ui-kit/src/declarative/semantics.rs`
     - cookbook usage: `apps/fret-cookbook/examples/hello.rs`

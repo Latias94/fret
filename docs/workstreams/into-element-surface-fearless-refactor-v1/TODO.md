@@ -164,6 +164,9 @@ Implementation note on 2026-03-12:
   `IntoUiElement<H>` on the curated component-authoring lane.
 - `ecosystem/fret-ui-kit/tests/curated_conversion_surface_docs.rs` now guards curated docs against
   legacy conversion trait names.
+- semantic decorator helper names are now neutralized to `UiElement*Ext`, and
+  `ecosystem/fret-ui-kit::source_policy_tests` guards against reintroducing the old
+  `UiIntoElement*Ext` export names on declarative surfaces.
 
 ## M6 — Keep advanced/raw seams explicit and justified
 
