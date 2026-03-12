@@ -77,6 +77,7 @@ pub mod kbd;
 pub mod label;
 mod layout;
 pub mod media_image;
+mod menu_authoring;
 pub mod menubar;
 pub mod native_select;
 pub mod navigation_menu;

@@ -37,6 +37,7 @@ use fret_ui_kit::{
     Radius, Space, WidgetState, WidgetStateProperty, WidgetStates, ui,
 };
 
+use crate::menu_authoring;
 use crate::overlay_motion;
 use crate::rtl;
 use crate::shortcut_display::{command_shortcut_label, shortcut_text_element};
@@ -60,76 +61,10 @@ fn estimate_text_width(text: &str, font_size: Px) -> Px {
     Px(text.chars().count() as f32 * avg)
 }
 
-type OnCheckedChange = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, bool) + 'static>;
-type OnValueChange = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>;
-
-#[derive(Debug, Clone)]
-pub enum MenubarCheckboxChecked {
-    Model(Model<bool>),
-    Value(bool),
-}
-
-impl MenubarCheckboxChecked {
-    fn snapshot<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> bool {
-        match self {
-            Self::Model(model) => cx.watch_model(model).copied().unwrap_or(false),
-            Self::Value(value) => *value,
-        }
-    }
-
-    fn toggle(&self, host: &mut dyn UiActionHost) -> bool {
-        match self {
-            Self::Model(model) => {
-                let next = !host.models_mut().get_copied(model).unwrap_or(false);
-                let _ = host.models_mut().update(model, |value| *value = next);
-                next
-            }
-            Self::Value(value) => !*value,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum MenubarRadioValue {
-    Model(Model<Option<Arc<str>>>),
-    Value(Option<Arc<str>>),
-}
-
-impl MenubarRadioValue {
-    fn snapshot<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> Option<Arc<str>> {
-        match self {
-            Self::Model(model) => cx.watch_model(model).cloned().flatten(),
-            Self::Value(value) => value.clone(),
-        }
-    }
-
-    fn select(&self, host: &mut dyn UiActionHost, value: &Arc<str>) -> Option<Arc<str>> {
-        match self {
-            Self::Model(model) => {
-                let current = host
-                    .models_mut()
-                    .read(model, |selected| selected.clone())
-                    .ok()
-                    .flatten();
-                if menu::radio_group::is_selected(current.as_ref(), value) {
-                    return None;
-                }
-                let next = Some(value.clone());
-                let _ = host
-                    .models_mut()
-                    .update(model, |selected| *selected = next.clone());
-                next
-            }
-            Self::Value(current) => {
-                if menu::radio_group::is_selected(current.as_ref(), value) {
-                    None
-                } else {
-                    Some(value.clone())
-                }
-            }
-        }
-    }
-}
+type OnCheckedChange = menu_authoring::OnCheckedChange;
+type OnValueChange = menu_authoring::OnValueChange;
+pub type MenubarCheckboxChecked = menu_authoring::MenuCheckboxChecked;
+pub type MenubarRadioValue = menu_authoring::MenuRadioValue;
 
 fn menu_panel_desired_size(
     entries: &[MenubarEntry],

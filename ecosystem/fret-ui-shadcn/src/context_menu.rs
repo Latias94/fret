@@ -39,6 +39,7 @@ use fret_ui_kit::{
 };
 
 use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide};
+use crate::menu_authoring;
 use crate::overlay_motion;
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use crate::rtl;
@@ -334,76 +335,10 @@ const CONTEXT_MENU_CANCEL_OPEN_DELAY: Duration = Duration::from_millis(500);
 const CONTEXT_MENU_CANCEL_OPEN_MOVE_THRESHOLD_PX: f32 = 1.0;
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
-type OnCheckedChange = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, bool) + 'static>;
-type OnValueChange = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>;
-
-#[derive(Debug, Clone)]
-pub enum ContextMenuCheckboxChecked {
-    Model(Model<bool>),
-    Value(bool),
-}
-
-impl ContextMenuCheckboxChecked {
-    fn snapshot<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> bool {
-        match self {
-            Self::Model(model) => cx.watch_model(model).copied().unwrap_or(false),
-            Self::Value(value) => *value,
-        }
-    }
-
-    fn toggle(&self, host: &mut dyn UiActionHost) -> bool {
-        match self {
-            Self::Model(model) => {
-                let next = !host.models_mut().get_copied(model).unwrap_or(false);
-                let _ = host.models_mut().update(model, |value| *value = next);
-                next
-            }
-            Self::Value(value) => !*value,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum ContextMenuRadioValue {
-    Model(Model<Option<Arc<str>>>),
-    Value(Option<Arc<str>>),
-}
-
-impl ContextMenuRadioValue {
-    fn snapshot<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> Option<Arc<str>> {
-        match self {
-            Self::Model(model) => cx.watch_model(model).cloned().flatten(),
-            Self::Value(value) => value.clone(),
-        }
-    }
-
-    fn select(&self, host: &mut dyn UiActionHost, value: &Arc<str>) -> Option<Arc<str>> {
-        match self {
-            Self::Model(model) => {
-                let current = host
-                    .models_mut()
-                    .read(model, |selected| selected.clone())
-                    .ok()
-                    .flatten();
-                if menu::radio_group::is_selected(current.as_ref(), value) {
-                    return None;
-                }
-                let next = Some(value.clone());
-                let _ = host
-                    .models_mut()
-                    .update(model, |selected| *selected = next.clone());
-                next
-            }
-            Self::Value(current) => {
-                if menu::radio_group::is_selected(current.as_ref(), value) {
-                    None
-                } else {
-                    Some(value.clone())
-                }
-            }
-        }
-    }
-}
+type OnCheckedChange = menu_authoring::OnCheckedChange;
+type OnValueChange = menu_authoring::OnValueChange;
+pub type ContextMenuCheckboxChecked = menu_authoring::MenuCheckboxChecked;
+pub type ContextMenuRadioValue = menu_authoring::MenuRadioValue;
 
 #[derive(Default)]
 struct ContextMenuOpenChangeCallbackState {
