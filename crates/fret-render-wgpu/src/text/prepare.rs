@@ -454,7 +454,15 @@ impl TextSystem {
         epoch: u64,
     ) -> Option<(GlyphKey, GlyphAtlasEntry)> {
         let glyph_key = prepared_glyph_key(face_key, glyph_id, size_bits, x_bin, y_bin, kind);
-        self.prepared_glyph_atlas_mut(kind)
+        self.lookup_prepared_glyph_atlas_entry(glyph_key, epoch)
+    }
+
+    fn lookup_prepared_glyph_atlas_entry(
+        &mut self,
+        glyph_key: GlyphKey,
+        epoch: u64,
+    ) -> Option<(GlyphKey, GlyphAtlasEntry)> {
+        self.prepared_glyph_atlas_mut(glyph_key.kind)
             .get(glyph_key, epoch)
             .map(|entry| (glyph_key, entry))
     }
