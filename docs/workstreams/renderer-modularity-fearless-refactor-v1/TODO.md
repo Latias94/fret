@@ -154,6 +154,9 @@ ID format:
     - prepared-glyph atlas key construction and atlas lookup now live behind dedicated helpers in
       `crates/fret-render-wgpu/src/text/prepare.rs`
     - `materialize_prepared_line(...)` no longer owns atlas-hit search directly
+    - prepared-glyph atlas-miss rasterization now lives behind a dedicated helper in
+      `crates/fret-render-wgpu/src/text/prepare.rs`
+    - `materialize_prepared_line(...)` no longer owns the atlas-miss branch directly
 - [ ] RMFR-text-031 Keep `fret_render_text` as the low-level text contract crate and avoid moving
   backend-specific state there prematurely.
 - [ ] RMFR-text-032 Add focused tests around any extracted text subdomain whose behavior was
@@ -210,7 +213,7 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: prepared-glyph atlas lookup helpers in `text/prepare.rs`.
+  - Latest landed slice: prepared-glyph atlas-miss helper in `text/prepare.rs`.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

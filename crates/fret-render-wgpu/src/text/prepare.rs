@@ -312,101 +312,12 @@ impl TextSystem {
                     entry.h as f32,
                 )
             } else {
-                let Some(font_ref) =
-                    parley::swash::FontRef::from_index(g.font.data.data(), g.font.index as usize)
-                else {
+                let Some(glyph_bounds) = self.materialize_prepared_glyph_miss(
+                    &g, glyph_id, face_key, size_bits, x_bin, y_bin, x, y, epoch,
+                ) else {
                     continue;
                 };
-
-                let mut scaler_builder = self
-                    .parley_scale
-                    .builder(font_ref)
-                    .size(g.font_size.max(1.0))
-                    .hint(false);
-                if !g.normalized_coords.is_empty() {
-                    scaler_builder = scaler_builder.normalized_coords(g.normalized_coords.iter());
-                }
-                let mut scaler = scaler_builder.build();
-
-                let offset_px = parley::swash::zeno::Vector::new(
-                    subpixel_bin_as_float(x_bin),
-                    subpixel_bin_as_float(y_bin),
-                );
-
-                let Some(image) = parley::swash::scale::Render::new(&[
-                    parley::swash::scale::Source::ColorOutline(0),
-                    parley::swash::scale::Source::ColorBitmap(
-                        parley::swash::scale::StrikeWith::BestFit,
-                    ),
-                    parley::swash::scale::Source::Outline,
-                ])
-                .offset(offset_px)
-                .render(&mut scaler, glyph_id) else {
-                    continue;
-                };
-
-                if image.placement.width == 0 || image.placement.height == 0 {
-                    continue;
-                }
-
-                let placement = image.placement;
-                let (kind, bytes_per_pixel) = match image.content {
-                    parley::swash::scale::image::Content::Mask => (GlyphQuadKind::Mask, 1),
-                    parley::swash::scale::image::Content::Color => (GlyphQuadKind::Color, 4),
-                    parley::swash::scale::image::Content::SubpixelMask => {
-                        (GlyphQuadKind::Subpixel, 4)
-                    }
-                };
-
-                let glyph_key = prepared_glyph_key(face_key, g.id, size_bits, x_bin, y_bin, kind);
-
-                let data = image.data;
-                match kind {
-                    GlyphQuadKind::Mask => {
-                        let _ = self.mask_atlas.get_or_insert(
-                            glyph_key,
-                            placement.width,
-                            placement.height,
-                            placement.left,
-                            placement.top,
-                            bytes_per_pixel,
-                            data,
-                            epoch,
-                        );
-                    }
-                    GlyphQuadKind::Color => {
-                        let _ = self.color_atlas.get_or_insert(
-                            glyph_key,
-                            placement.width,
-                            placement.height,
-                            placement.left,
-                            placement.top,
-                            bytes_per_pixel,
-                            data,
-                            epoch,
-                        );
-                    }
-                    GlyphQuadKind::Subpixel => {
-                        let _ = self.subpixel_atlas.get_or_insert(
-                            glyph_key,
-                            placement.width,
-                            placement.height,
-                            placement.left,
-                            placement.top,
-                            bytes_per_pixel,
-                            data,
-                            epoch,
-                        );
-                    }
-                }
-
-                (
-                    glyph_key,
-                    x as f32 + placement.left as f32,
-                    y as f32 - placement.top as f32,
-                    placement.width as f32,
-                    placement.height as f32,
-                )
+                glyph_bounds
             };
 
             glyphs.push(GlyphInstance {
@@ -498,6 +409,111 @@ impl TextSystem {
         self.mask_atlas
             .get(mask_key, epoch)
             .map(|entry| (mask_key, entry))
+    }
+
+    fn materialize_prepared_glyph_miss(
+        &mut self,
+        glyph: &ParleyGlyph,
+        glyph_id: u16,
+        face_key: FontFaceKey,
+        size_bits: u32,
+        x_bin: u8,
+        y_bin: u8,
+        x: i32,
+        y: i32,
+        epoch: u64,
+    ) -> Option<(GlyphKey, f32, f32, f32, f32)> {
+        let Some(font_ref) =
+            parley::swash::FontRef::from_index(glyph.font.data.data(), glyph.font.index as usize)
+        else {
+            return None;
+        };
+
+        let mut scaler_builder = self
+            .parley_scale
+            .builder(font_ref)
+            .size(glyph.font_size.max(1.0))
+            .hint(false);
+        if !glyph.normalized_coords.is_empty() {
+            scaler_builder = scaler_builder.normalized_coords(glyph.normalized_coords.iter());
+        }
+        let mut scaler = scaler_builder.build();
+
+        let offset_px = parley::swash::zeno::Vector::new(
+            subpixel_bin_as_float(x_bin),
+            subpixel_bin_as_float(y_bin),
+        );
+
+        let Some(image) = parley::swash::scale::Render::new(&[
+            parley::swash::scale::Source::ColorOutline(0),
+            parley::swash::scale::Source::ColorBitmap(parley::swash::scale::StrikeWith::BestFit),
+            parley::swash::scale::Source::Outline,
+        ])
+        .offset(offset_px)
+        .render(&mut scaler, glyph_id) else {
+            return None;
+        };
+
+        if image.placement.width == 0 || image.placement.height == 0 {
+            return None;
+        }
+
+        let placement = image.placement;
+        let (kind, bytes_per_pixel) = match image.content {
+            parley::swash::scale::image::Content::Mask => (GlyphQuadKind::Mask, 1),
+            parley::swash::scale::image::Content::Color => (GlyphQuadKind::Color, 4),
+            parley::swash::scale::image::Content::SubpixelMask => (GlyphQuadKind::Subpixel, 4),
+        };
+
+        let glyph_key = prepared_glyph_key(face_key, glyph.id, size_bits, x_bin, y_bin, kind);
+
+        let data = image.data;
+        match kind {
+            GlyphQuadKind::Mask => {
+                let _ = self.mask_atlas.get_or_insert(
+                    glyph_key,
+                    placement.width,
+                    placement.height,
+                    placement.left,
+                    placement.top,
+                    bytes_per_pixel,
+                    data,
+                    epoch,
+                );
+            }
+            GlyphQuadKind::Color => {
+                let _ = self.color_atlas.get_or_insert(
+                    glyph_key,
+                    placement.width,
+                    placement.height,
+                    placement.left,
+                    placement.top,
+                    bytes_per_pixel,
+                    data,
+                    epoch,
+                );
+            }
+            GlyphQuadKind::Subpixel => {
+                let _ = self.subpixel_atlas.get_or_insert(
+                    glyph_key,
+                    placement.width,
+                    placement.height,
+                    placement.left,
+                    placement.top,
+                    bytes_per_pixel,
+                    data,
+                    epoch,
+                );
+            }
+        }
+
+        Some((
+            glyph_key,
+            x as f32 + placement.left as f32,
+            y as f32 - placement.top as f32,
+            placement.width as f32,
+            placement.height as f32,
+        ))
     }
 
     pub(super) fn maybe_record_font_trace_entry(
