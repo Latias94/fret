@@ -350,6 +350,10 @@ Current snapshot (2026-03-12):
   - prepared-glyph image and raster render helpers now live in
     `crates/fret-render-wgpu/src/text/prepare/glyph_render.rs`
   - `crates/fret-render-wgpu/src/text/prepare.rs` no longer hosts the prepared-glyph render/scaler chain inline
+- The eighty-first internal `text/mod.rs` split has landed:
+  - prepared-glyph face registration and context helpers now live in
+    `crates/fret-render-wgpu/src/text/prepare/glyph_face.rs`
+  - `crates/fret-render-wgpu/src/text/prepare.rs` no longer hosts the prepared-glyph face/context chain inline
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
