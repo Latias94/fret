@@ -64,6 +64,10 @@ Current snapshot (2026-03-12):
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `text/mod.rs` no longer owns plain/attributed prepare entrypoints or prepare support helpers
     directly
+- The eleventh internal `text/mod.rs` split has landed:
+  - blob-cache fast-path reuse and prepared-blob finalization helpers moved into
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `text/mod.rs` no longer owns prepare cache reuse or prepared-blob finalization directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed

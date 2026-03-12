@@ -9,7 +9,6 @@ use std::{
 };
 
 use fret_render_text::cache_keys::{TextBlobKey, TextShapeKey};
-use fret_render_text::decorations::decorations_for_lines;
 
 #[cfg(test)]
 use fret_render_text::cache_keys::spans_paint_fingerprint;
@@ -321,38 +320,8 @@ impl TextSystem {
         let scale = effective_text_scale_factor(constraints.scale_factor);
         let snap_vertical = scale.fract().abs() > 1e-4;
 
-        if let Some(id) = self.blob_cache.get(&key).copied() {
-            let mut hit: Option<(TextMetrics, u32, Arc<TextShape>, bool)> = None;
-            if let Some(blob) = self.blobs.get_mut(id) {
-                self.perf_frame_blob_cache_hits = self.perf_frame_blob_cache_hits.saturating_add(1);
-                let was_released = blob.ref_count == 0;
-                blob.ref_count = blob.ref_count.saturating_add(1);
-                hit = Some((
-                    blob.shape.metrics,
-                    blob.shape.missing_glyphs,
-                    blob.shape.clone(),
-                    was_released,
-                ));
-            }
-
-            if let Some((metrics, missing_glyphs, shape, was_released)) = hit {
-                if was_released {
-                    self.remove_released_blob(id);
-                }
-                if missing_glyphs > 0 {
-                    self.perf_frame_missing_glyphs = self
-                        .perf_frame_missing_glyphs
-                        .saturating_add(u64::from(missing_glyphs));
-                    self.perf_frame_texts_with_missing_glyphs =
-                        self.perf_frame_texts_with_missing_glyphs.saturating_add(1);
-                }
-                self.maybe_record_font_trace_entry(text.as_ref(), style, constraints, &shape);
-                return (id, metrics);
-            }
-
-            // Stale cache entry (shouldn't happen, but keep it robust).
-            self.blob_cache.remove(&key);
-            self.blob_key_by_id.remove(&id);
+        if let Some(hit) = self.try_reuse_cached_blob(&key, text.as_ref(), style, constraints) {
+            return hit;
         }
         self.perf_frame_blob_cache_misses = self.perf_frame_blob_cache_misses.saturating_add(1);
 
@@ -1317,39 +1286,17 @@ impl TextSystem {
             shape
         };
 
-        let decoration_metrics = self.decoration_metrics_for_shape(style, scale, &shape);
-        let decorations: Vec<TextDecoration> = resolved_spans
-            .as_deref()
-            .map(|spans| {
-                decorations_for_lines(
-                    shape.lines.as_ref(),
-                    spans,
-                    decoration_metrics,
-                    scale,
-                    snap_vertical,
-                )
-            })
-            .unwrap_or_default();
-
-        let metrics = shape.metrics;
-        if shape.missing_glyphs > 0 {
-            self.perf_frame_missing_glyphs = self
-                .perf_frame_missing_glyphs
-                .saturating_add(u64::from(shape.missing_glyphs));
-            self.perf_frame_texts_with_missing_glyphs =
-                self.perf_frame_texts_with_missing_glyphs.saturating_add(1);
-        }
-        self.maybe_record_font_trace_entry(text.as_ref(), style, constraints, &shape);
-        let id = self.blobs.insert(TextBlob {
+        self.finalize_prepared_blob(
+            key,
+            text.as_ref(),
+            style,
+            constraints,
             shape,
+            resolved_spans.as_deref(),
             paint_palette,
-            decorations: Arc::from(decorations),
-            ref_count: 1,
-        });
-        self.perf_frame_blobs_created = self.perf_frame_blobs_created.saturating_add(1);
-        self.blob_cache.insert(key.clone(), id);
-        self.blob_key_by_id.insert(id, key);
-        (id, metrics)
+            scale,
+            snap_vertical,
+        )
     }
 }
 
