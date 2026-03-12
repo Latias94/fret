@@ -13,6 +13,10 @@ impl EditorTokenKeys {
     pub const DENSITY_HIT_THICKNESS: &'static str = "editor.density.hit_thickness";
     pub const DENSITY_ICON_SIZE: &'static str = "editor.density.icon_size";
 
+    pub const CONTROL_INVALID_FG: &'static str = "editor.control.invalid_fg";
+    pub const CONTROL_INVALID_BORDER: &'static str = "editor.control.invalid_border";
+    pub const CONTROL_INVALID_BG: &'static str = "editor.control.invalid_bg";
+
     pub const NUMERIC_SCRUB_SPEED: &'static str = "editor.numeric.scrub_speed";
     pub const NUMERIC_SCRUB_SLOW_MULTIPLIER: &'static str = "editor.numeric.scrub_slow_multiplier";
     pub const NUMERIC_SCRUB_FAST_MULTIPLIER: &'static str = "editor.numeric.scrub_fast_multiplier";

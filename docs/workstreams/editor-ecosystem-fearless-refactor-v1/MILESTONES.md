@@ -57,7 +57,8 @@ Deliverables:
 
 - clearer default editor visual hierarchy and token ownership,
 - editor-owned baseline replay that survives host theme resets and environment-driven theme sync,
-- broader `EditorWidgetVisuals` coverage across reusable editor controls,
+- broader `EditorWidgetVisuals` coverage across reusable editor controls, including shared
+  typed-edit and invalid semantics for field-like surfaces,
 - shared property-grid / inspector layout metrics for label, value, reset, status, group, and panel
   lanes,
 - one editor-owned trailing affordance baseline so reset/clear/remove/icon actions stop drifting

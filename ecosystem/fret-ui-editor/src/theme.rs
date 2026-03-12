@@ -153,6 +153,9 @@ fn editor_theme_patch_v1() -> ThemeConfig {
     color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BORDER, "#3a495a");
     color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_FG, "#edf3fa");
 
+    color(&mut cfg, EditorTokenKeys::CONTROL_INVALID_FG, "#ffd3d6");
+    color(&mut cfg, EditorTokenKeys::CONTROL_INVALID_BORDER, "#c76f77");
+    color(&mut cfg, EditorTokenKeys::CONTROL_INVALID_BG, "#2a171c");
     color(&mut cfg, EditorTokenKeys::NUMERIC_ERROR_FG, "#ffd3d6");
     color(&mut cfg, EditorTokenKeys::NUMERIC_ERROR_BORDER, "#c76f77");
     color(&mut cfg, EditorTokenKeys::NUMERIC_ERROR_BG, "#2a171c");
@@ -233,6 +236,9 @@ fn imgui_like_dense_patch_v1() -> ThemeConfig {
     color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BORDER, "#56616f");
     color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_FG, "#e6e8eb");
 
+    color(&mut cfg, EditorTokenKeys::CONTROL_INVALID_FG, "#ffcbc7");
+    color(&mut cfg, EditorTokenKeys::CONTROL_INVALID_BORDER, "#d06a6a");
+    color(&mut cfg, EditorTokenKeys::CONTROL_INVALID_BG, "#362225");
     color(&mut cfg, EditorTokenKeys::NUMERIC_ERROR_FG, "#ffcbc7");
     color(&mut cfg, EditorTokenKeys::NUMERIC_ERROR_BORDER, "#d06a6a");
     color(&mut cfg, EditorTokenKeys::NUMERIC_ERROR_BG, "#362225");
@@ -325,6 +331,10 @@ mod tests {
             theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_BG),
             Some(Color::from_srgb_hex_rgb(0x0f_15_1d))
         );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::CONTROL_INVALID_BORDER),
+            Some(Color::from_srgb_hex_rgb(0xc7_6f_77))
+        );
     }
 
     #[test]
@@ -388,6 +398,10 @@ mod tests {
         assert_eq!(
             theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_BG),
             Some(Color::from_srgb_hex_rgb(0x1d_21_27))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::CONTROL_INVALID_BG),
+            Some(Color::from_srgb_hex_rgb(0x36_22_25))
         );
     }
 

@@ -52,6 +52,9 @@ Current checkpoint:
   taller group headers, more content/panel spacing, and clearer header/body contrast bands,
 - `InspectorPanel` now also renders a true header band with a bottom separator so search/toolbar
   chrome does not visually collapse into the first property group,
+- input-like editor controls now share one state grammar for focus, typed-edit, and invalid
+  semantics through `EditorWidgetVisuals` and shared `editor.control.invalid.*` tokens instead of
+  mixing per-widget error/focus overrides,
 - the default proof surface can produce reviewable overview / typing / validation screenshots,
 - and the remaining foundation cleanup is rerun-safe screenshot automation plus follow-up tuning for
   wide-inspector slack after the new lane grammar landed.

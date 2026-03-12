@@ -20,7 +20,7 @@ use fret_ui_kit::primitives::checkbox::{
 
 use crate::primitives::EditorTokenKeys;
 use crate::primitives::style::EditorStyle;
-use crate::primitives::visuals::{EditorFrameState, EditorWidgetVisuals};
+use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
 
 #[derive(Debug, Clone)]
 pub struct CheckboxOptions {
@@ -213,6 +213,7 @@ impl Checkbox {
                         pressed: st.pressed,
                         focused: st.focused,
                         open: false,
+                        semantic: EditorFrameSemanticState::default(),
                     },
                     bg_unchecked,
                     bg_checked,

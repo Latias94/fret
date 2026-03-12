@@ -18,7 +18,7 @@ use crate::primitives::input_group::{
     editor_text_segment,
 };
 use crate::primitives::style::EditorStyle;
-use crate::primitives::visuals::{EditorFrameState, EditorWidgetVisuals};
+use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
 use crate::primitives::{DragValueCore, DragValueCoreOptions};
 use fret_core::text::{TextOverflow, TextWrap};
 use fret_core::{Corners, Edges, Px, TextAlign, TextStyle};
@@ -227,6 +227,7 @@ where
                         pressed: resp.dragging || resp.pressed,
                         focused: resp.focused || cx.is_focused_element(scrub_id),
                         open: false,
+                        semantic: EditorFrameSemanticState::default(),
                     },
                 );
 

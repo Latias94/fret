@@ -30,7 +30,7 @@ use crate::primitives::input_group::{
     editor_input_group_row,
 };
 use crate::primitives::style::EditorStyle;
-use crate::primitives::visuals::EditorFrameState;
+use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 #[derive(Debug, Clone)]
@@ -256,6 +256,7 @@ impl EnumSelect {
                         pressed: _st.pressed,
                         focused: _st.focused,
                         open: is_open,
+                        semantic: EditorFrameSemanticState::default(),
                     },
                     move |cx, visuals| {
                         let text_el = cx.text_props(TextProps {

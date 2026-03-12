@@ -11,7 +11,7 @@ use std::panic::Location;
 use std::sync::{Arc, Mutex};
 
 use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Color, Edges, KeyCode, Px, TextAlign, TextStyle};
+use fret_core::{Axis, Edges, KeyCode, Px, TextAlign, TextStyle};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, UiFocusActionHost};
 use fret_ui::element::{
@@ -102,20 +102,6 @@ pub struct NumericInput<T> {
     validate: Option<NumericValidateFn<T>>,
     on_outcome: Option<OnNumericInputOutcome>,
     options: NumericInputOptions,
-}
-
-fn lerp(a: f32, b: f32, t: f32) -> f32 {
-    a + (b - a) * t
-}
-
-fn mix(a: Color, b: Color, t: f32) -> Color {
-    let t = t.clamp(0.0, 1.0);
-    Color {
-        r: lerp(a.r, b.r, t),
-        g: lerp(a.g, b.g, t),
-        b: lerp(a.b, b.b, t),
-        a: lerp(a.a, b.a, t),
-    }
 }
 
 impl<T> NumericInput<T>
@@ -210,7 +196,6 @@ where
         let error_icon_test_id = derived_test_id(options.test_id.as_ref(), "error");
         let error_text_test_id = derived_test_id(options.test_id.as_ref(), "error-text");
 
-        let frame_bg = frame_chrome.bg;
         let field = editor_joined_input_frame_segments_with_overrides(
             cx,
             LayoutStyle {
@@ -226,38 +211,17 @@ where
             enabled_for_paint,
             false,
             options.test_id.clone(),
-            move |cx, _focused| {
+            move |cx, focused| {
                 let has_error = cx
                     .get_model_cloned(&error_for_frame, Invalidation::Paint)
                     .unwrap_or(None)
                     .is_some();
-                if has_error {
-                    let theme = Theme::global(&*cx.app);
-                    let error_border = theme
-                        .color_by_key(EditorTokenKeys::NUMERIC_ERROR_BORDER)
-                        .or_else(|| theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
-                        .unwrap_or_else(|| theme.color_token("destructive"));
-                    let error_bg = theme
-                        .color_by_key(EditorTokenKeys::NUMERIC_ERROR_BG)
-                        .unwrap_or_else(|| {
-                            let mut out = mix(
-                                frame_bg,
-                                Color {
-                                    a: 1.0,
-                                    ..error_border
-                                },
-                                0.08,
-                            );
-                            out.a = 1.0;
-                            out
-                        });
-
-                    EditorInputGroupFrameOverrides {
-                        bg: Some(error_bg),
-                        border: Some(error_border),
-                    }
-                } else {
-                    EditorInputGroupFrameOverrides::none()
+                EditorInputGroupFrameOverrides {
+                    semantic: Some(crate::primitives::visuals::EditorFrameSemanticState {
+                        typing: focused,
+                        invalid: has_error,
+                    }),
+                    ..EditorInputGroupFrameOverrides::none()
                 }
             },
             move |cx| {
@@ -457,7 +421,9 @@ where
                 let error_border = {
                     let theme = Theme::global(&*cx.app);
                     theme
-                        .color_by_key(EditorTokenKeys::NUMERIC_ERROR_BORDER)
+                        .color_by_key(EditorTokenKeys::CONTROL_INVALID_BORDER)
+                        .or_else(|| theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_BORDER))
+                        .or_else(|| theme.color_by_key(EditorTokenKeys::CONTROL_INVALID_FG))
                         .or_else(|| theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
                         .unwrap_or_else(|| theme.color_token("destructive"))
                 };
@@ -484,7 +450,8 @@ where
         let error_color = {
             let theme = Theme::global(&*cx.app);
             theme
-                .color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG)
+                .color_by_key(EditorTokenKeys::CONTROL_INVALID_FG)
+                .or_else(|| theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
                 .unwrap_or_else(|| theme.color_token("destructive"))
         };
         let show_inline_error = matches!(

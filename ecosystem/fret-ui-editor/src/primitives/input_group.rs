@@ -20,7 +20,7 @@ use fret_ui_kit::typography;
 use super::EditorDensity;
 use super::chrome::ResolvedEditorFrameChrome;
 use super::icons::{editor_icon, editor_icon_with};
-use super::visuals::{EditorFrameState, EditorWidgetVisuals};
+use super::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
 use super::visuals::{editor_icon_button_bg, editor_icon_button_border};
 
 pub(crate) fn editor_input_group_frame<H: UiHost>(
@@ -49,6 +49,7 @@ pub(crate) fn editor_input_group_frame<H: UiHost>(
 pub(crate) struct EditorInputGroupFrameOverrides {
     pub(crate) bg: Option<Color>,
     pub(crate) border: Option<Color>,
+    pub(crate) semantic: Option<EditorFrameSemanticState>,
 }
 
 impl EditorInputGroupFrameOverrides {
@@ -56,6 +57,7 @@ impl EditorInputGroupFrameOverrides {
         Self {
             bg: None,
             border: None,
+            semantic: None,
         }
     }
 }
@@ -74,6 +76,11 @@ pub(crate) fn editor_input_group_frame_with_overrides<H: UiHost>(
 ) -> AnyElement {
     if layout.size.min_height.is_none() {
         layout.size.min_height = Some(Length::Px(density.row_height));
+    }
+
+    let mut state = state;
+    if let Some(semantic) = overrides.semantic {
+        state.semantic = semantic;
     }
 
     let theme = Theme::global(&*cx.app);
@@ -408,7 +415,13 @@ pub(crate) fn editor_joined_input_frame<H: UiHost>(
         enabled_for_paint,
         open,
         frame_test_id,
-        |_cx, _focused| EditorInputGroupFrameOverrides::none(),
+        |_cx, focused| EditorInputGroupFrameOverrides {
+            semantic: Some(EditorFrameSemanticState {
+                typing: focused,
+                invalid: false,
+            }),
+            ..EditorInputGroupFrameOverrides::none()
+        },
         |_cx| Vec::new(),
         build_input,
         build_trailing_segments,
@@ -571,6 +584,7 @@ pub(crate) fn editor_joined_input_frame_with_overrides<H: UiHost>(
                         pressed: enabled_for_paint && pressed,
                         focused,
                         open,
+                        semantic: EditorFrameSemanticState::default(),
                     },
                     overrides,
                     move |_cx, _visuals| vec![contents.root],

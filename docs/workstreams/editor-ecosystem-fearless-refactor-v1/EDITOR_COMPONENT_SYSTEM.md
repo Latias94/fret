@@ -11,7 +11,7 @@ Related docs:
 
 Status: Active design note (workstream contract, not an ADR)
 
-Last updated: 2026-03-11
+Last updated: 2026-03-12
 
 ## Purpose
 
@@ -240,6 +240,9 @@ These should be resolved centrally through shared visuals rather than ad-hoc pai
 - `disabled`
 
 `EditorWidgetVisuals` should remain the main owner of this class-level state model.
+Field-like controls should not hand-paint their own "editing" and "invalid" frames; they should
+route those semantics through the shared visuals policy so text fields, numeric inputs, slider
+typing paths, and select triggers continue to read as one control family.
 
 ### Semantic overlays
 
@@ -257,6 +260,13 @@ Rule:
 - keep core widget-state visuals centralized,
 - layer semantic meanings on top with small, explicit cues,
 - do not fork a new style system for every semantic variation.
+
+Current baseline:
+
+- `typing` and `invalid` are shared field-level semantic overlays owned by `EditorWidgetVisuals`,
+- editor text-like controls should prefer shared `editor.control.invalid.*` tokens before
+  introducing widget-local error chrome,
+- and per-control overrides should be a last resort rather than the primary styling path.
 
 ### Focus treatment
 
@@ -348,6 +358,7 @@ Prefer extending shared editor families before inventing new per-component token
 
 Good first choices:
 
+- `editor.control.*`
 - `editor.density.*`
 - `editor.numeric.*`
 - `editor.property.*`

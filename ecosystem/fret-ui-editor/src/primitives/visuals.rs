@@ -7,7 +7,7 @@
 use fret_core::Color;
 use fret_ui::Theme;
 
-use super::chrome::ResolvedEditorFrameChrome;
+use super::{EditorTokenKeys, chrome::ResolvedEditorFrameChrome};
 
 /// Shared editor-grade widget visuals policy.
 ///
@@ -126,12 +126,11 @@ impl<'a> EditorWidgetVisuals<'a> {
         // reduce contrast too much on dark themes.
         let disabled_alpha = if state.enabled { 1.0 } else { 0.55 };
 
-        let icon = alpha_mul(self.muted_foreground(), disabled_alpha);
-
         let accent = self.theme.color_token("accent");
         let mut bg = alpha_mul(chrome.bg, disabled_alpha);
         let mut border = alpha_mul(chrome.border, disabled_alpha);
         let fg = alpha_mul(chrome.fg, disabled_alpha);
+        let mut icon = alpha_mul(self.muted_foreground(), disabled_alpha);
 
         if state.hovered && state.enabled {
             bg = mix(bg, accent, 0.08);
@@ -144,6 +143,36 @@ impl<'a> EditorWidgetVisuals<'a> {
         if (state.focused || state.open) && state.enabled {
             bg = mix(bg, accent, 0.08);
             border = chrome.border_focus;
+        }
+        if state.semantic.typing && state.enabled {
+            bg = mix(
+                bg,
+                accent,
+                if state.focused || state.open {
+                    0.14
+                } else {
+                    0.11
+                },
+            );
+            border = mix(border, chrome.border_focus, 0.72);
+            icon = mix(icon, chrome.border_focus, 0.24);
+        }
+        if state.semantic.invalid && state.enabled {
+            let invalid_fg = self.control_invalid_fg();
+            let invalid_border = self.control_invalid_border();
+            let invalid_bg = self.control_invalid_bg(chrome.bg, invalid_border);
+
+            bg = mix(
+                bg,
+                invalid_bg,
+                if state.semantic.typing { 0.90 } else { 0.96 },
+            );
+            border = if state.focused || state.open {
+                mix(invalid_border, chrome.border_focus, 0.12)
+            } else {
+                invalid_border
+            };
+            icon = mix(icon, invalid_fg, 0.36);
         }
 
         EditorFrameVisuals {
@@ -208,12 +237,19 @@ impl<'a> EditorWidgetVisuals<'a> {
 }
 
 #[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct EditorFrameSemanticState {
+    pub(crate) typing: bool,
+    pub(crate) invalid: bool,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
 pub(crate) struct EditorFrameState {
     pub(crate) enabled: bool,
     pub(crate) hovered: bool,
     pub(crate) pressed: bool,
     pub(crate) focused: bool,
     pub(crate) open: bool,
+    pub(crate) semantic: EditorFrameSemanticState,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -240,6 +276,38 @@ fn mix(a: Color, b: Color, t: f32) -> Color {
         g: lerp(a.g, b.g, t),
         b: lerp(a.b, b.b, t),
         a: lerp(a.a, b.a, t),
+    }
+}
+
+impl<'a> EditorWidgetVisuals<'a> {
+    fn control_invalid_fg(&self) -> Color {
+        self.theme
+            .color_by_key(EditorTokenKeys::CONTROL_INVALID_FG)
+            .or_else(|| self.theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
+            .unwrap_or_else(|| self.theme.color_token("destructive"))
+    }
+
+    fn control_invalid_border(&self) -> Color {
+        self.theme
+            .color_by_key(EditorTokenKeys::CONTROL_INVALID_BORDER)
+            .or_else(|| {
+                self.theme
+                    .color_by_key(EditorTokenKeys::NUMERIC_ERROR_BORDER)
+            })
+            .or_else(|| self.theme.color_by_key(EditorTokenKeys::CONTROL_INVALID_FG))
+            .or_else(|| self.theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
+            .unwrap_or_else(|| self.theme.color_token("destructive"))
+    }
+
+    fn control_invalid_bg(&self, base: Color, border: Color) -> Color {
+        self.theme
+            .color_by_key(EditorTokenKeys::CONTROL_INVALID_BG)
+            .or_else(|| self.theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_BG))
+            .unwrap_or_else(|| {
+                let mut out = mix(base, Color { a: 1.0, ..border }, 0.10);
+                out.a = 1.0;
+                out
+            })
     }
 }
 
@@ -348,5 +416,63 @@ mod tests {
 
         assert!(visuals.bg.a < selected_bg.a);
         assert!(visuals.fg.a < selected_fg.a);
+    }
+
+    #[test]
+    fn frame_visuals_tint_typing_state_more_than_focus_only() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+        let chrome = test_chrome();
+        let visuals_focus = EditorWidgetVisuals::new(theme).frame_visuals(
+            chrome,
+            EditorFrameState {
+                enabled: true,
+                focused: true,
+                ..Default::default()
+            },
+        );
+        let visuals_typing = EditorWidgetVisuals::new(theme).frame_visuals(
+            chrome,
+            EditorFrameState {
+                enabled: true,
+                focused: true,
+                semantic: EditorFrameSemanticState {
+                    typing: true,
+                    invalid: false,
+                },
+                ..Default::default()
+            },
+        );
+
+        assert_ne!(visuals_focus.bg, visuals_typing.bg);
+        assert_eq!(visuals_focus.border, chrome.border_focus);
+        assert_eq!(visuals_typing.border, chrome.border_focus);
+    }
+
+    #[test]
+    fn frame_visuals_use_shared_invalid_chrome() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+        let widget_visuals = EditorWidgetVisuals::new(theme);
+        let invalid_border = widget_visuals.control_invalid_border();
+        let invalid_bg = widget_visuals.control_invalid_bg(test_chrome().bg, invalid_border);
+        let visuals = EditorWidgetVisuals::new(theme).frame_visuals(
+            test_chrome(),
+            EditorFrameState {
+                enabled: true,
+                semantic: EditorFrameSemanticState {
+                    typing: false,
+                    invalid: true,
+                },
+                ..Default::default()
+            },
+        );
+
+        assert_eq!(visuals.border, invalid_border);
+        assert_eq!(visuals.bg, mix(test_chrome().bg, invalid_bg, 0.96));
+        assert_eq!(
+            widget_visuals.control_invalid_fg(),
+            theme.color_token("destructive")
+        );
     }
 }

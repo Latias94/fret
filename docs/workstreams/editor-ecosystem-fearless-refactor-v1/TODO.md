@@ -44,8 +44,12 @@ Interaction contract:
       of letting search/toolbar chrome visually merge into the first section.
       Remaining work: separators, group hierarchy, and the final balance between neutral default and
       editor-specific contrast still need another screenshot-driven pass.
-- [ ] `EER-BASE-111` Finish `EditorWidgetVisuals` convergence for the existing starter-set controls
+- [~] `EER-BASE-111` Finish `EditorWidgetVisuals` convergence for the existing starter-set controls
       before promoting more components.
+      Shared field-state grammar now routes joined text fields/search boxes, numeric inputs,
+      drag-value / slider typing paths, axis drag values, and enum-select triggers through the same
+      editor-owned `EditorWidgetVisuals` baseline. Remaining work: extend that convergence to the
+      remaining secondary widgets and keep pruning residual per-control chrome heuristics.
 - [~] `EER-BASE-112` Define and land inspector/property layout grammar:
       shared `InspectorLayoutMetrics` now feed `PropertyRow`, `PropertyGrid`,
       `PropertyGridVirtualized`, `PropertyGroup`, and `InspectorPanel`, and the row grammar is now
@@ -54,8 +58,14 @@ Interaction contract:
       clear/remove segments, and gradient-row icon actions.
       Remaining work: tune wide-inspector slack, badge/status lane balance, and any dense-mode
       overrides from screenshot review rather than ad-hoc per-demo tweaks.
-- [ ] `EER-BASE-113` Make typed-edit, focus, active, and invalid states visually explicit across
+- [x] `EER-BASE-113` Make typed-edit, focus, active, and invalid states visually explicit across
       numeric, text, and select-like controls.
+      `EditorWidgetVisuals` now owns a shared semantic layer for typed-edit and invalid field
+      states, joined text-like controls default to a stronger editing treatment while focused, and
+      numeric/drag/slider typing paths plus enum-select triggers now reuse the same control-state
+      grammar instead of hand-tuned per-widget error/focus chrome. The promoted default screenshot
+      proof (`r25`) now shows a more explicit typed-edit tint and a shared invalid frame treatment
+      on the review-only inspector surface.
 - [~] `EER-BASE-114` Clean up proof-surface composition so overview / typing / error screenshots are
       directly reviewable instead of relying on accidental window placement or hidden states.
       `imui_editor_proof_demo` now exposes `FRET_IMUI_EDITOR_PROOF_LAYOUT=editor_review`, and the

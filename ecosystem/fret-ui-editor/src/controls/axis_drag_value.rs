@@ -31,7 +31,7 @@ use crate::primitives::input_group::{
     editor_text_segment,
 };
 use crate::primitives::style::EditorStyle;
-use crate::primitives::visuals::EditorFrameState;
+use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
 use crate::primitives::{DragValueCore, DragValueCoreOptions};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -300,6 +300,7 @@ where
                         pressed: resp.dragging || resp.pressed,
                         focused: resp.focused || cx.is_focused_element(scrub_id),
                         open: false,
+                        semantic: EditorFrameSemanticState::default(),
                     },
                     move |cx, visuals| {
                         let affix_color = {
@@ -552,9 +553,7 @@ where
             .is_some();
 
         let typing_field = {
-            let theme = Theme::global(&*cx.app);
             let divider = frame_chrome.border;
-            let error_border = theme.color_token("destructive");
             let reset_action = self.options.reset.clone();
             let enabled_for_paint = self.options.enabled;
             let prefix = prefix.clone();
@@ -573,11 +572,12 @@ where
                     pressed: false,
                     focused: is_focused,
                     open: false,
+                    semantic: EditorFrameSemanticState {
+                        typing: true,
+                        invalid: has_error,
+                    },
                 },
-                EditorInputGroupFrameOverrides {
-                    bg: None,
-                    border: has_error.then_some(error_border),
-                },
+                EditorInputGroupFrameOverrides::none(),
                 move |cx, visuals| {
                     let affix_color = {
                         let theme = Theme::global(&*cx.app);

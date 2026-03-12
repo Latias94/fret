@@ -20,7 +20,7 @@ use crate::primitives::input_group::{
     editor_input_group_segment,
 };
 use crate::primitives::style::EditorStyle;
-use crate::primitives::visuals::EditorFrameState;
+use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
 use fret_core::text::{TextOverflow, TextWrap};
 use fret_core::{
     Axis, Corners, CursorIcon, Edges, MouseButton, PointerId, Px, TextAlign, TextStyle,
@@ -588,6 +588,7 @@ where
                         pressed,
                         focused,
                         open: false,
+                        semantic: EditorFrameSemanticState::default(),
                     },
                     move |cx, frame_visuals| {
                         let track = cx.flex(
