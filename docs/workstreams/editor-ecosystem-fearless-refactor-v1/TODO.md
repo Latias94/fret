@@ -85,8 +85,11 @@ Interaction contract:
       that path instead of hand-rolling a local replay hook. Remaining work: apply the same helper
       pattern to adjacent promoted editor/workspace surfaces and decide how much of this should be
       lifted into broader app-integration guidance.
-- [ ] `EER-BASE-116` Decide whether `imgui_like_dense` should get matching screenshot proof coverage
+- [x] `EER-BASE-116` Decide whether `imgui_like_dense` should get matching screenshot proof coverage
       now or only after the default baseline is acceptable.
+      Decision: yes. The dense preset now has matching overview / typing / validation screenshot
+      proof coverage via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-imgui-like-dense.json`.
 - [ ] `EER-BASE-117` Close baseline editor text/numeric policy where visuals and interaction are
       coupled:
       Enter/Escape semantics, selection defaults, clear affordances, affix behavior, and error

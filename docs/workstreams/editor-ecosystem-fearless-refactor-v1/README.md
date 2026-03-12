@@ -59,6 +59,8 @@ Current checkpoint:
   a reusable "host theme sync, then editor preset replay" path for `WindowMetricsService`-driven
   resets, and the promoted proof demo uses that shared ordering,
 - the default proof surface can produce reviewable overview / typing / validation screenshots,
+- `imgui_like_dense` now has a matching screenshot proof so default-vs-dense baseline review does
+  not depend on ad-hoc manual launches,
 - and the remaining foundation cleanup is rerun-safe screenshot automation plus follow-up tuning for
   wide-inspector slack after the new lane grammar landed.
 
