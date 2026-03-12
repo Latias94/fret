@@ -1,13 +1,21 @@
-use super::{TextBlob, TextFontFaceUsage, TextLine, TextShape, TextSystem};
+use super::atlas::{
+    GlyphAtlasEntry, GlyphKey, subpixel_bin_as_float, subpixel_bin_q4, subpixel_bin_y,
+};
+use super::{
+    GlyphInstance, GlyphQuadKind, TextBlob, TextFontFaceUsage, TextLine, TextShape, TextSystem,
+};
 use fret_core::{
     AttributedText, TextBlobId, TextConstraints, TextInputRef, TextMetrics, TextSpan, TextStyle,
     geometry::Px,
 };
 use fret_render_text::cache_keys::{TextBlobKey, TextShapeKey};
 use fret_render_text::decorations::TextDecorationMetricsPx;
-use fret_render_text::font_instance_key::FontFaceKey;
+use fret_render_text::font_instance_key::{FontFaceKey, variation_key_from_normalized_coords};
 use fret_render_text::font_trace::FontTraceFamilyResolved;
-use fret_render_text::spans::ResolvedSpan;
+use fret_render_text::{
+    prepare_layout::PreparedLine,
+    spans::{ResolvedSpan, paint_span_for_text_range},
+};
 use std::{collections::HashMap, sync::Arc};
 
 pub(super) struct PrepareShapeBuildContext {
@@ -223,7 +231,7 @@ impl TextSystem {
 
     pub(super) fn finish_prepared_shape(
         &self,
-        glyphs: Vec<super::GlyphInstance>,
+        glyphs: Vec<GlyphInstance>,
         lines: Vec<TextLine>,
         face_usage: HashMap<FontFaceKey, (u32, u32)>,
         metrics: TextMetrics,
@@ -260,6 +268,225 @@ impl TextSystem {
             missing_glyphs,
             font_faces: Arc::from(face_usages),
         })
+    }
+
+    pub(super) fn materialize_prepared_line(
+        &mut self,
+        prepared_line: PreparedLine,
+        resolved_spans: Option<&[ResolvedSpan]>,
+        scale: f32,
+        epoch: u64,
+        glyphs: &mut Vec<GlyphInstance>,
+        face_usage: &mut HashMap<FontFaceKey, (u32, u32)>,
+        lines: &mut Vec<TextLine>,
+    ) {
+        let PreparedLine {
+            layout,
+            glyphs: prepared_glyphs,
+        } = prepared_line;
+        lines.push(layout);
+
+        for g in prepared_glyphs {
+            let Ok(glyph_id) = u16::try_from(g.id) else {
+                continue;
+            };
+            let font_data_id = g.font.data.id();
+            let face_index = g.font.index;
+            self.font_data_by_face
+                .entry((font_data_id, face_index))
+                .or_insert_with(|| g.font.clone());
+
+            let variation_key = variation_key_from_normalized_coords(&g.normalized_coords);
+            let synthesis_embolden = g.synthesis.embolden();
+            let synthesis_skew_degrees =
+                g.synthesis
+                    .skew()
+                    .unwrap_or(0.0)
+                    .clamp(i8::MIN as f32, i8::MAX as f32) as i8;
+
+            let face_key = FontFaceKey {
+                font_data_id,
+                face_index,
+                variation_key,
+                synthesis_embolden,
+                synthesis_skew_degrees,
+            };
+            if !g.normalized_coords.is_empty() {
+                self.font_instance_coords_by_face
+                    .entry(face_key)
+                    .or_insert_with(|| g.normalized_coords.clone());
+            }
+
+            let usage = face_usage.entry(face_key).or_insert((0, 0));
+            usage.0 = usage.0.saturating_add(1);
+            if g.id == 0 {
+                usage.1 = usage.1.saturating_add(1);
+            }
+
+            let (x, x_bin) = subpixel_bin_q4(g.x);
+            let (y, y_bin) = subpixel_bin_y(g.y);
+
+            let paint_span = resolved_spans
+                .and_then(|spans| paint_span_for_text_range(spans, &g.text_range, g.is_rtl));
+
+            let size_bits = g.font_size.to_bits();
+            let mut atlas_hit: Option<(GlyphKey, GlyphAtlasEntry)> = None;
+            let color_key = GlyphKey {
+                font: face_key,
+                glyph_id: g.id,
+                size_bits,
+                x_bin,
+                y_bin,
+                kind: GlyphQuadKind::Color,
+            };
+            if let Some(entry) = self.color_atlas.get(color_key, epoch) {
+                atlas_hit = Some((color_key, entry));
+            } else {
+                let subpixel_key = GlyphKey {
+                    font: face_key,
+                    glyph_id: g.id,
+                    size_bits,
+                    x_bin,
+                    y_bin,
+                    kind: GlyphQuadKind::Subpixel,
+                };
+                if let Some(entry) = self.subpixel_atlas.get(subpixel_key, epoch) {
+                    atlas_hit = Some((subpixel_key, entry));
+                } else {
+                    let mask_key = GlyphKey {
+                        font: face_key,
+                        glyph_id: g.id,
+                        size_bits,
+                        x_bin,
+                        y_bin,
+                        kind: GlyphQuadKind::Mask,
+                    };
+                    if let Some(entry) = self.mask_atlas.get(mask_key, epoch) {
+                        atlas_hit = Some((mask_key, entry));
+                    }
+                }
+            }
+
+            let (glyph_key, x0_px, y0_px, w_px, h_px) = if let Some((glyph_key, entry)) = atlas_hit
+            {
+                (
+                    glyph_key,
+                    x as f32 + entry.placement_left as f32,
+                    y as f32 - entry.placement_top as f32,
+                    entry.w as f32,
+                    entry.h as f32,
+                )
+            } else {
+                let Some(font_ref) =
+                    parley::swash::FontRef::from_index(g.font.data.data(), g.font.index as usize)
+                else {
+                    continue;
+                };
+
+                let mut scaler_builder = self
+                    .parley_scale
+                    .builder(font_ref)
+                    .size(g.font_size.max(1.0))
+                    .hint(false);
+                if !g.normalized_coords.is_empty() {
+                    scaler_builder = scaler_builder.normalized_coords(g.normalized_coords.iter());
+                }
+                let mut scaler = scaler_builder.build();
+
+                let offset_px = parley::swash::zeno::Vector::new(
+                    subpixel_bin_as_float(x_bin),
+                    subpixel_bin_as_float(y_bin),
+                );
+
+                let Some(image) = parley::swash::scale::Render::new(&[
+                    parley::swash::scale::Source::ColorOutline(0),
+                    parley::swash::scale::Source::ColorBitmap(
+                        parley::swash::scale::StrikeWith::BestFit,
+                    ),
+                    parley::swash::scale::Source::Outline,
+                ])
+                .offset(offset_px)
+                .render(&mut scaler, glyph_id) else {
+                    continue;
+                };
+
+                if image.placement.width == 0 || image.placement.height == 0 {
+                    continue;
+                }
+
+                let placement = image.placement;
+                let (kind, bytes_per_pixel) = match image.content {
+                    parley::swash::scale::image::Content::Mask => (GlyphQuadKind::Mask, 1),
+                    parley::swash::scale::image::Content::Color => (GlyphQuadKind::Color, 4),
+                    parley::swash::scale::image::Content::SubpixelMask => {
+                        (GlyphQuadKind::Subpixel, 4)
+                    }
+                };
+
+                let glyph_key = GlyphKey {
+                    font: face_key,
+                    glyph_id: g.id,
+                    size_bits,
+                    x_bin,
+                    y_bin,
+                    kind,
+                };
+
+                let data = image.data;
+                match kind {
+                    GlyphQuadKind::Mask => {
+                        let _ = self.mask_atlas.get_or_insert(
+                            glyph_key,
+                            placement.width,
+                            placement.height,
+                            placement.left,
+                            placement.top,
+                            bytes_per_pixel,
+                            data,
+                            epoch,
+                        );
+                    }
+                    GlyphQuadKind::Color => {
+                        let _ = self.color_atlas.get_or_insert(
+                            glyph_key,
+                            placement.width,
+                            placement.height,
+                            placement.left,
+                            placement.top,
+                            bytes_per_pixel,
+                            data,
+                            epoch,
+                        );
+                    }
+                    GlyphQuadKind::Subpixel => {
+                        let _ = self.subpixel_atlas.get_or_insert(
+                            glyph_key,
+                            placement.width,
+                            placement.height,
+                            placement.left,
+                            placement.top,
+                            bytes_per_pixel,
+                            data,
+                            epoch,
+                        );
+                    }
+                }
+
+                (
+                    glyph_key,
+                    x as f32 + placement.left as f32,
+                    y as f32 - placement.top as f32,
+                    placement.width as f32,
+                    placement.height as f32,
+                )
+            };
+
+            glyphs.push(GlyphInstance {
+                rect: [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
+                paint_span,
+                key: glyph_key,
+            });
+        }
     }
 
     pub(super) fn maybe_record_font_trace_entry(

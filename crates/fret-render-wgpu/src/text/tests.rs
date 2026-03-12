@@ -1,13 +1,10 @@
-use super::{
-    TextBlobKey, TextShapeKey, paint_span_for_text_range, spans_paint_fingerprint,
-    subpixel_mask_to_alpha,
-};
+use super::{TextBlobKey, TextShapeKey, spans_paint_fingerprint, subpixel_mask_to_alpha};
 use fret_core::{
     AttributedText, Color, DecorationLineStyle, FontWeight, Px, TextConstraints, TextOverflow,
     TextPaintStyle, TextShapingStyle, TextSpan, TextStyle, TextWrap, UnderlineStyle,
 };
 use fret_render_text::cache_keys::{TextMeasureKey, spans_shaping_fingerprint};
-use fret_render_text::spans::{ResolvedSpan, sanitize_spans_for_text};
+use fret_render_text::spans::{ResolvedSpan, paint_span_for_text_range, sanitize_spans_for_text};
 use std::sync::Arc;
 
 fn pending_upload_bytes_for_key(text: &super::TextSystem, key: super::GlyphKey) -> Vec<u8> {

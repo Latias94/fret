@@ -75,6 +75,10 @@ Current snapshot (2026-03-12):
   - shape-build prelude and shape-finalization helpers moved into
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `text/mod.rs` no longer owns prepare shape-build setup or `TextShape` finalization directly
+- The fourteenth internal `text/mod.rs` split has landed:
+  - prepared-line glyph materialization moved into
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `text/mod.rs` no longer owns active prepared-line glyph materialization directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
