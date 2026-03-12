@@ -327,11 +327,9 @@ impl TextSystem {
                 continue;
             };
 
-            glyphs.push(GlyphInstance {
-                rect: [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
-                paint_span,
-                key: glyph_key,
-            });
+            glyphs.push(prepared_glyph_instance(
+                glyph_key, x0_px, y0_px, w_px, h_px, paint_span, scale,
+            ));
         }
     }
 
@@ -656,6 +654,22 @@ fn prepared_glyph_bounds_from_atlas_entry(
         entry.w as f32,
         entry.h as f32,
     )
+}
+
+fn prepared_glyph_instance(
+    glyph_key: GlyphKey,
+    x0_px: f32,
+    y0_px: f32,
+    w_px: f32,
+    h_px: f32,
+    paint_span: Option<u16>,
+    scale: f32,
+) -> GlyphInstance {
+    GlyphInstance {
+        rect: [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
+        paint_span,
+        key: glyph_key,
+    }
 }
 
 fn prepared_glyph_offset_px(x_bin: u8, y_bin: u8) -> parley::swash::zeno::Vector {
