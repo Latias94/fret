@@ -41,6 +41,7 @@ use crate::menu_authoring;
 use crate::overlay_motion;
 use crate::rtl;
 use crate::shortcut_display::{command_shortcut_label, shortcut_text_element};
+use crate::test_id::test_id_slug;
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -59,6 +60,18 @@ fn estimate_text_width(text: &str, font_size: Px) -> Px {
     // length, matching shadcn's "min-width but grow to fit" behavior closely enough for goldens.
     let avg = font_size.0 * 0.537;
     Px(text.chars().count() as f32 * avg)
+}
+
+fn derive_item_test_id(
+    explicit: Option<Arc<str>>,
+    test_id_prefix: Option<&Arc<str>>,
+    value: &Arc<str>,
+) -> Option<Arc<str>> {
+    explicit.or_else(|| {
+        test_id_prefix.map(|prefix| {
+            Arc::<str>::from(format!("{prefix}-item-{}", test_id_slug(value.as_ref())))
+        })
+    })
 }
 
 type OnCheckedChange = menu_authoring::OnCheckedChange;
@@ -1606,12 +1619,6 @@ impl Menubar {
     }
 }
 
-#[derive(Default)]
-struct MenubarMenuState {
-    open: Option<Model<bool>>,
-    keyboard_focus_last_on_open: Option<Model<bool>>,
-}
-
 #[derive(Debug, Default, Clone)]
 struct MenubarProviderState {
     disabled: bool,
@@ -1635,6 +1642,7 @@ pub struct MenubarMenu {
     label: Arc<str>,
     disabled: bool,
     test_id: Option<Arc<str>>,
+    test_id_prefix: Option<Arc<str>>,
     window_margin: Px,
     side_offset: Px,
     min_width: Px,
@@ -1662,6 +1670,7 @@ impl MenubarMenu {
             label: label.into(),
             disabled: false,
             test_id: None,
+            test_id_prefix: None,
             window_margin: Px(8.0),
             side_offset: Px(8.0),
             min_width: Px(192.0),
@@ -1672,12 +1681,14 @@ impl MenubarMenu {
 
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(id.into());
+        self.test_id_prefix = None;
         self
     }
 
     pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
         let prefix = prefix.into();
         self.test_id = Some(Arc::<str>::from(format!("{prefix}-trigger")));
+        self.test_id_prefix = Some(prefix);
         self
     }
 
@@ -1803,27 +1814,9 @@ impl MenubarMenuEntries {
             let group_active = menubar_trigger_row::ensure_group_active_model(cx, group);
             let trigger_registry = menubar_trigger_row::ensure_group_registry_model(cx, group);
 
-            let open = cx.with_state(MenubarMenuState::default, |st| st.open.clone());
-            let open = if let Some(open) = open {
-                open
-            } else {
-                let open = cx.app.models_mut().insert(false);
-                cx.with_state(MenubarMenuState::default, |st| st.open = Some(open.clone()));
-                open
-            };
-
-            let keyboard_focus_last_on_open = cx.with_state(MenubarMenuState::default, |st| {
-                st.keyboard_focus_last_on_open.clone()
-            });
-            let keyboard_focus_last_on_open = if let Some(model) = keyboard_focus_last_on_open {
-                model
-            } else {
-                let model = cx.app.models_mut().insert(false);
-                cx.with_state(MenubarMenuState::default, |st| {
-                    st.keyboard_focus_last_on_open = Some(model.clone())
-                });
-                model
-            };
+            let open = cx.local_model_keyed("open", || false);
+            let keyboard_focus_last_on_open =
+                cx.local_model_keyed("keyboard_focus_last_on_open", || false);
 
             let theme = Theme::global(&*cx.app).snapshot();
             let enabled = !(menu.disabled || menubar_disabled_in_scope(cx));
@@ -1842,6 +1835,7 @@ impl MenubarMenuEntries {
 
             let label = menu.label.clone();
             let test_id = menu.test_id.clone();
+            let test_id_prefix = menu.test_id_prefix.clone();
 
             control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
                 let (patient_click_sticky, patient_click_timer) =
@@ -2244,6 +2238,8 @@ impl MenubarMenuEntries {
                         let submenu_for_panel_for_content = submenu_for_panel.clone();
                         let group_active_for_content = group_active.clone();
                         let group_active_for_submenu = group_active.clone();
+                        let test_id_prefix_for_content = test_id_prefix.clone();
+                        let test_id_prefix_for_submenu = test_id_prefix.clone();
                         let text_style_for_content = text_style.clone();
                         let text_style_for_submenu = text_style.clone();
                         let trigger_registry_for_overlay_for_content =
@@ -2821,6 +2817,11 @@ impl MenubarMenuEntries {
                                                                 trailing,
                                                                 variant,
                                                             } = item;
+                                                            let test_id = derive_item_test_id(
+                                                                test_id,
+                                                                test_id_prefix_for_content.as_ref(),
+                                                                &value,
+                                                            );
                                                             let item_enabled = !disabled
                                                                 && enabled
                                                                 && !crate::command_gating::command_is_disabled_by_gating(
@@ -3306,14 +3307,14 @@ impl MenubarMenuEntries {
                             geometry: Option<menu::sub::MenuSubmenuGeometry>,
                         }
 
-                        let (last_value, last_geometry) = cx.with_state(SubmenuLast::default, |st| {
-                            if let Some((open_value, geometry)) = open_submenu.as_ref() {
-                                st.open_value = Some(open_value.clone());
-                                st.geometry = Some(*geometry);
-                            }
-                            (st.open_value.clone(), st.geometry)
-                        },
-                        );
+                        let (last_value, last_geometry) =
+                            cx.keyed_slot_state("submenu_last", SubmenuLast::default, |st| {
+                                if let Some((open_value, geometry)) = open_submenu.as_ref() {
+                                    st.open_value = Some(open_value.clone());
+                                    st.geometry = Some(*geometry);
+                                }
+                                (st.open_value.clone(), st.geometry)
+                            });
 
                         if submenu_motion.present {
                             let open_value = open_submenu
@@ -3945,6 +3946,11 @@ impl MenubarMenuEntries {
                                                                             trailing,
                                                                             variant,
                                                                         } = item;
+                                                                        let test_id = derive_item_test_id(
+                                                                            test_id,
+                                                                            test_id_prefix_for_submenu.as_ref(),
+                                                                            &value,
+                                                                        );
                                                                         let chrome_test_id = test_id
                                                                             .clone()
                                                                             .map(|id| Arc::<str>::from(format!("{id}.chrome")));
@@ -4341,35 +4347,14 @@ mod tests {
             fret_core::Size::new(Px(480.0), Px(240.0)),
         );
 
-        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
-        OverlayController::begin_frame(&mut app, window);
-        let root = fret_ui::declarative::render_root(
+        render_frame_with_test_id_prefix(
             &mut ui,
             &mut app,
             &mut services,
             window,
             bounds,
-            "menubar-prefix-items",
-            |cx| {
-                vec![
-                    Menubar::new(vec![
-                        MenubarMenu::new("File")
-                            .test_id_prefix("menu-file")
-                            .entries(vec![
-                                MenubarEntry::Item(MenubarItem::new("New")),
-                                MenubarEntry::Separator,
-                                MenubarEntry::Item(MenubarItem::new("Open")),
-                            ]),
-                    ])
-                    .into_element(cx),
-                ]
-            },
+            "menu-file",
         );
-        ui.set_root(root);
-        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
-        ui.request_semantics_snapshot();
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
-
         let snap0 = ui.semantics_snapshot().expect("semantics snapshot");
         let file = menu_trigger_node_id(snap0, "File");
         ui.set_focus(Some(file));
@@ -4383,52 +4368,22 @@ mod tests {
             },
         );
 
-        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
-        let changed_models = app.take_changed_models();
-        let changed_globals = app.take_changed_globals();
-        let _ = fret_ui::frame_pipeline::propagate_changes(
-            &mut ui,
-            &mut app,
-            &changed_models,
-            &changed_globals,
-        );
-        OverlayController::begin_frame(&mut app, window);
-        let root = fret_ui::declarative::render_root(
+        render_frame_with_test_id_prefix(
             &mut ui,
             &mut app,
             &mut services,
             window,
             bounds,
-            "menubar-prefix-items",
-            |cx| {
-                vec![
-                    Menubar::new(vec![
-                        MenubarMenu::new("File")
-                            .test_id_prefix("menu-file")
-                            .entries(vec![
-                                MenubarEntry::Item(MenubarItem::new("New")),
-                                MenubarEntry::Separator,
-                                MenubarEntry::Item(MenubarItem::new("Open")),
-                            ]),
-                    ])
-                    .into_element(cx),
-                ]
-            },
+            "menu-file",
         );
-        ui.set_root(root);
-        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
-        ui.request_semantics_snapshot();
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
-
         let snap1 = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(menu_trigger_expanded(snap1, "File"));
         assert!(
             snap1
                 .nodes
                 .iter()
                 .any(|n| n.test_id.as_deref() == Some("menu-file-item-new"))
         );
-
-        let _ = root;
     }
 
     #[test]
@@ -4611,6 +4566,44 @@ mod tests {
             "menubar-custom-entries",
             move |cx| {
                 vec![Menubar::new(vec![MenubarMenu::new("View").entries(entries)]).into_element(cx)]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+    }
+
+    fn render_frame_with_test_id_prefix(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        prefix: &'static str,
+    ) {
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "menubar-prefix-items",
+            move |cx| {
+                vec![
+                    Menubar::new(vec![
+                        MenubarMenu::new("File")
+                            .test_id_prefix(prefix)
+                            .entries(vec![
+                                MenubarEntry::Item(MenubarItem::new("New")),
+                                MenubarEntry::Separator,
+                                MenubarEntry::Item(MenubarItem::new("Open")),
+                            ]),
+                    ])
+                    .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
