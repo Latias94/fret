@@ -24,7 +24,7 @@ Migration posture:
 
 - Existing `WinitAppDriver` integrations remain supported.
 - New docs/examples should prefer `FnDriver`.
-- If you still want bootstrap defaults, pair `fret-launch::FnDriver` with `fret_bootstrap::BootstrapBuilder::new_fn(...)` or `fret::run_native_with_fn_driver(...)`.
+- If you still want bootstrap defaults, pair `fret-launch::FnDriver` with `fret_bootstrap::BootstrapBuilder::new_fn(...)` or `fret::advanced::run_native_with_fn_driver(...)`.
 
 ## Module ownership map
 

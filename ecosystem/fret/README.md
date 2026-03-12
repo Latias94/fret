@@ -150,9 +150,9 @@ Related workstream: `docs/workstreams/fret-launch-app-surface-fearless-refactor-
 
 - App authors (default recommendation): `fret::FretApp::new(...).window(...).view::<V>()?`
 - App authors with driver hooks: `fret::FretApp::new(...).window(...).view_with_hooks::<V>(...)?`
-- Advanced integration with `fret` defaults: `fret::run_native_with_fn_driver(...)`
-- Advanced integration with `FnDriver` hooks preserved: `fret::run_native_with_fn_driver_with_hooks(...)`
-- Advanced integration with a preconfigured `FnDriver`: `fret::run_native_with_configured_fn_driver(...)`
+- Advanced integration with `fret` defaults: `fret::advanced::run_native_with_fn_driver(...)`
+- Advanced integration with `FnDriver` hooks preserved: `fret::advanced::run_native_with_fn_driver_with_hooks(...)`
+- Advanced integration with a preconfigured `FnDriver`: `fret::advanced::run_native_with_configured_fn_driver(...)`
 - Advanced low-level interop driver path (compat seam, non-default): `fret::advanced::interop::run_native_with_compat_driver(...)`
 
 ## What remains first-class on `fret`
@@ -205,9 +205,9 @@ Mapping (rough):
 
 - `fret::UiAppBuilder` -> `fret_bootstrap::UiAppBootstrapBuilder`
 - `fret::UiAppDriver` -> `fret_bootstrap::ui_app_driver::UiAppDriver`
-- `fret::run_native_with_fn_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new_fn(...)`
-- `fret::run_native_with_fn_driver_with_hooks(...)` -> `fret_bootstrap::BootstrapBuilder::new_fn_with_hooks(...)`
-- `fret::run_native_with_configured_fn_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new(...)` with a preconfigured `FnDriver`
+- `fret::advanced::run_native_with_fn_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new_fn(...)`
+- `fret::advanced::run_native_with_fn_driver_with_hooks(...)` -> `fret_bootstrap::BootstrapBuilder::new_fn_with_hooks(...)`
+- `fret::advanced::run_native_with_configured_fn_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new(...)` with a preconfigured `FnDriver`
 - `fret::advanced::interop::run_native_with_compat_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new(...)` for advanced low-level interop / retained driver cases
 
 The recommended manual-assembly entry point remains `fret-bootstrap`, keeping the underlying driver

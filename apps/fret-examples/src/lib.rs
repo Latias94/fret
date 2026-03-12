@@ -28,7 +28,7 @@ pub(crate) fn run_native_with_fn_driver_with_hooks<D: 'static, S: 'static>(
     render: for<'d, 'cx> fn(&'d mut D, fret_launch::WinitRenderContext<'cx, S>),
     configure_hooks: impl FnOnce(&mut fret_launch::FnDriverHooks<D, S>),
 ) -> anyhow::Result<()> {
-    fret::run_native_with_fn_driver_with_hooks(
+    fret::advanced::run_native_with_fn_driver_with_hooks(
         config,
         app,
         driver_state,

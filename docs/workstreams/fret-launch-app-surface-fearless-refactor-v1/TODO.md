@@ -56,7 +56,7 @@ Companion docs:
   - [x] `install_custom_effects(...)`
   - [x] window create/close hooks
   - [x] engine-frame customization
-- [x] Add a high-level `FnDriver` bootstrap escape hatch (`fret_bootstrap::BootstrapBuilder::new_fn(...)`, `fret_bootstrap::BootstrapBuilder::new_fn_with_hooks(...)`, `fret::run_native_with_fn_driver(...)`, `fret::run_native_with_fn_driver_with_hooks(...)`, `fret::run_native_with_configured_fn_driver(...)`).
+- [x] Add a high-level `FnDriver` bootstrap escape hatch (`fret_bootstrap::BootstrapBuilder::new_fn(...)`, `fret_bootstrap::BootstrapBuilder::new_fn_with_hooks(...)`, `fret::advanced::run_native_with_fn_driver(...)`, `fret::advanced::run_native_with_fn_driver_with_hooks(...)`, `fret::advanced::run_native_with_configured_fn_driver(...)`).
 
 ## Docs / Examples
 

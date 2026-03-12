@@ -231,7 +231,7 @@ def main() -> None:
             lib_rustdoc_text,
             snippets=[
                 "fret::FretApp::new(...).window(...).view::<V>()?",
-                "fret::run_native_with_fn_driver(...)",
+                "fret::advanced::run_native_with_fn_driver(...)",
             ],
         )
     )

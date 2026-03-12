@@ -204,6 +204,8 @@ Companion docs:
   - [x] 2026-03-12: removed the naked root `fret::run_native_with_compat_driver(...)` entry;
     retained low-level interop now stays on the explicit
     `fret::advanced::interop::run_native_with_compat_driver(...)` path.
+  - [x] 2026-03-12: removed the naked root `fret::run_native_with_fn_driver*` helpers; advanced
+    runner escape hatches now stay on the explicit `fret::advanced::*` path.
 - [ ] Remove dead docs and stale guidance after the migration is complete.
 
 ## M6 — Add gates so the surface stays clean

@@ -213,7 +213,7 @@ Evidence anchors:
   the existing free-hook surface, taking the remaining direct impl inventory down to seven.
 - `docking_demo` tightens the conclusion further: the only blocker there was an app-facing helper
   gap for preconfigured `.with_init(...)` `FnDriver` values, not a missing hook. Adding
-  `fret::run_native_with_configured_fn_driver(...)` closes that posture gap and reduces the
+  `fret::advanced::run_native_with_configured_fn_driver(...)` closes that posture gap and reduces the
   remaining direct impl inventory to six.
 - `container_queries_docking_demo` confirms the helper is generic enough for another docking-heavy
   example with container-query behavior, reducing the remaining direct impl inventory again to five

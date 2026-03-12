@@ -3559,7 +3559,7 @@ pub fn run() -> anyhow::Result<()> {
         None
     };
 
-    fret::run_native_with_configured_fn_driver(
+    fret::advanced::run_native_with_configured_fn_driver(
         config,
         app,
         build_fn_driver(

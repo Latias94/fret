@@ -4561,6 +4561,6 @@ pub fn run() -> anyhow::Result<()> {
     let app = build_app();
     let config = build_runner_config();
 
-    fret::run_native_with_configured_fn_driver(config, app, build_fn_driver())
+    fret::advanced::run_native_with_configured_fn_driver(config, app, build_fn_driver())
         .context("run gizmo3d_demo app")
 }

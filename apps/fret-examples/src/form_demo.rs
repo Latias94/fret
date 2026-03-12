@@ -445,7 +445,7 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    fret::run_native_with_fn_driver_with_hooks(
+    fret::advanced::run_native_with_fn_driver_with_hooks(
         config,
         app,
         FormDemoDriver::default(),

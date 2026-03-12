@@ -763,6 +763,6 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    fret::run_native_with_configured_fn_driver(config, app, build_fn_driver())
+    fret::advanced::run_native_with_configured_fn_driver(config, app, build_fn_driver())
         .context("run container_queries_docking_demo app")
 }

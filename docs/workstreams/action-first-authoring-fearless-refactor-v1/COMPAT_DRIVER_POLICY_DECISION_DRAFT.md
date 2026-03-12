@@ -23,7 +23,7 @@ Recommended decision:
 In short:
 
 - **default app path** = `App::view::<V>()` / `App::view_with_hooks::<V>(...)`
-- **advanced runner path** = `run_native_with_fn_driver(...)` family
+- **advanced runner path** = `fret::advanced::run_native_with_fn_driver(...)` family
 - **advanced low-level interop path kept** =
   `fret::advanced::interop::run_native_with_compat_driver(...)`
 
@@ -67,7 +67,7 @@ The repo should continue to teach:
 
 - `App::view::<V>()`
 - `App::view_with_hooks::<V>(...)`
-- `run_native_with_fn_driver(...)` family when advanced runner customization is needed
+- `fret::advanced::run_native_with_fn_driver(...)` family when advanced runner customization is needed
 
 and describe `run_native_with_compat_driver(...)` only as:
 
@@ -122,7 +122,7 @@ reconstructing the patch plan ad hoc.
 Preferred future shape if reduction becomes desirable:
 
 - keep default users on `App::view::<V>()`
-- keep most advanced users on `run_native_with_fn_driver(...)`
+- keep most advanced users on `fret::advanced::run_native_with_fn_driver(...)`
 - move `run_native_with_compat_driver(...)` behind a more explicit compat/interop naming boundary
 
 What should **not** happen:

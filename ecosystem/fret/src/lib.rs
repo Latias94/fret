@@ -15,10 +15,11 @@
 //! - `fret::advanced::ui_app(...)` and `fret::advanced::ui_app_with_hooks(...)` are the
 //!   recommended explicit manual-assembly entry points when you want the golden-path UI app
 //!   builder without depending on `fret-bootstrap` directly.
-//! - `fret::run_native_with_fn_driver(...)`, `fret::run_native_with_fn_driver_with_hooks(...)`,
-//!   and `fret::run_native_with_configured_fn_driver(...)` are the recommended advanced escape
-//!   hatches when you need runner-level customization but
-//!   still want the `fret` defaults/bootstrap story.
+//! - `fret::advanced::run_native_with_fn_driver(...)`,
+//!   `fret::advanced::run_native_with_fn_driver_with_hooks(...)`, and
+//!   `fret::advanced::run_native_with_configured_fn_driver(...)` are the recommended advanced
+//!   escape hatches when you need runner-level customization but still want the `fret`
+//!   defaults/bootstrap story.
 //! - `fret::advanced::interop::run_native_with_compat_driver(...)` is an advanced low-level
 //!   interop path (non-default) for retained/bridge integrations that still implement
 //!   `fret_launch::WinitAppDriver` directly.
@@ -450,6 +451,86 @@ pub mod advanced {
             KernelApp::new(),
             driver,
         ))
+    }
+
+    /// Run a native desktop app using the advanced `FnDriver` escape hatch.
+    ///
+    /// This is the recommended low-level path when the app wants the `fret`
+    /// bootstrap/defaults story but needs runner-level customization without teaching
+    /// `WinitAppDriver` as the primary model.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    pub fn run_native_with_fn_driver<D: 'static, S: 'static>(
+        config: fret_launch::WinitRunnerConfig,
+        app: KernelApp,
+        driver_state: D,
+        create_window_state: fn(&mut D, &mut KernelApp, fret_core::AppWindowId) -> S,
+        handle_event: for<'d, 'cx, 'e> fn(
+            &'d mut D,
+            fret_launch::WinitEventContext<'cx, S>,
+            &'e fret_core::Event,
+        ),
+        render: for<'d, 'cx> fn(&'d mut D, fret_launch::WinitRenderContext<'cx, S>),
+    ) -> crate::Result<()> {
+        run_native_with_fn_driver_with_hooks(
+            config,
+            app,
+            driver_state,
+            create_window_state,
+            handle_event,
+            render,
+            |_hooks| {},
+        )
+    }
+
+    /// Run a native desktop app using the advanced `FnDriver` escape hatch, preserving hook
+    /// configuration.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    pub fn run_native_with_fn_driver_with_hooks<D: 'static, S: 'static>(
+        config: fret_launch::WinitRunnerConfig,
+        app: KernelApp,
+        driver_state: D,
+        create_window_state: fn(&mut D, &mut KernelApp, fret_core::AppWindowId) -> S,
+        handle_event: for<'d, 'cx, 'e> fn(
+            &'d mut D,
+            fret_launch::WinitEventContext<'cx, S>,
+            &'e fret_core::Event,
+        ),
+        render: for<'d, 'cx> fn(&'d mut D, fret_launch::WinitRenderContext<'cx, S>),
+        configure_hooks: impl FnOnce(&mut fret_launch::FnDriverHooks<D, S>),
+    ) -> crate::Result<()> {
+        let builder = fret_bootstrap::BootstrapBuilder::new_fn_with_hooks(
+            app,
+            driver_state,
+            create_window_state,
+            handle_event,
+            render,
+            configure_hooks,
+        )
+        .configure(move |c| {
+            *c = config;
+        });
+
+        let builder = crate::apply_desktop_defaults(builder).map_err(crate::BootstrapError::from)?;
+
+        builder.run().map_err(crate::RunnerError::from)?;
+        Ok(())
+    }
+
+    /// Run a native desktop app using a preconfigured advanced `FnDriver` instance.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    pub fn run_native_with_configured_fn_driver<D: 'static, S: 'static>(
+        config: fret_launch::WinitRunnerConfig,
+        app: KernelApp,
+        driver: fret_launch::FnDriver<D, S>,
+    ) -> crate::Result<()> {
+        let builder = fret_bootstrap::BootstrapBuilder::new(app, driver).configure(move |c| {
+            *c = config;
+        });
+
+        let builder = crate::apply_desktop_defaults(builder).map_err(crate::BootstrapError::from)?;
+
+        builder.run().map_err(crate::RunnerError::from)?;
+        Ok(())
     }
 
     /// Advanced builder hooks that intentionally stay off the default `FretApp` surface.
@@ -934,85 +1015,6 @@ pub(crate) fn apply_desktop_defaults<D: fret_launch::WinitAppDriver + 'static>(
     apply_desktop_defaults_with(builder, Defaults::default())
 }
 
-/// Run a native desktop app using the advanced `FnDriver` escape hatch.
-///
-/// This is the recommended low-level path when the app wants the `fret` bootstrap/defaults story
-/// but needs runner-level customization without teaching `WinitAppDriver` as the primary model.
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-pub fn run_native_with_fn_driver<D: 'static, S: 'static>(
-    config: fret_launch::WinitRunnerConfig,
-    app: KernelApp,
-    driver_state: D,
-    create_window_state: fn(&mut D, &mut KernelApp, fret_core::AppWindowId) -> S,
-    handle_event: for<'d, 'cx, 'e> fn(
-        &'d mut D,
-        fret_launch::WinitEventContext<'cx, S>,
-        &'e fret_core::Event,
-    ),
-    render: for<'d, 'cx> fn(&'d mut D, fret_launch::WinitRenderContext<'cx, S>),
-) -> Result<()> {
-    run_native_with_fn_driver_with_hooks(
-        config,
-        app,
-        driver_state,
-        create_window_state,
-        handle_event,
-        render,
-        |_hooks| {},
-    )
-}
-
-/// Run a native desktop app using the advanced `FnDriver` escape hatch, preserving hook
-/// configuration.
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-pub fn run_native_with_fn_driver_with_hooks<D: 'static, S: 'static>(
-    config: fret_launch::WinitRunnerConfig,
-    app: KernelApp,
-    driver_state: D,
-    create_window_state: fn(&mut D, &mut KernelApp, fret_core::AppWindowId) -> S,
-    handle_event: for<'d, 'cx, 'e> fn(
-        &'d mut D,
-        fret_launch::WinitEventContext<'cx, S>,
-        &'e fret_core::Event,
-    ),
-    render: for<'d, 'cx> fn(&'d mut D, fret_launch::WinitRenderContext<'cx, S>),
-    configure_hooks: impl FnOnce(&mut fret_launch::FnDriverHooks<D, S>),
-) -> Result<()> {
-    let builder = fret_bootstrap::BootstrapBuilder::new_fn_with_hooks(
-        app,
-        driver_state,
-        create_window_state,
-        handle_event,
-        render,
-        configure_hooks,
-    )
-    .configure(move |c| {
-        *c = config;
-    });
-
-    let builder = apply_desktop_defaults(builder).map_err(BootstrapError::from)?;
-
-    builder.run().map_err(RunnerError::from)?;
-    Ok(())
-}
-
-/// Run a native desktop app using a preconfigured advanced `FnDriver` instance.
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-pub fn run_native_with_configured_fn_driver<D: 'static, S: 'static>(
-    config: fret_launch::WinitRunnerConfig,
-    app: KernelApp,
-    driver: fret_launch::FnDriver<D, S>,
-) -> Result<()> {
-    let builder = fret_bootstrap::BootstrapBuilder::new(app, driver).configure(move |c| {
-        *c = config;
-    });
-
-    let builder = apply_desktop_defaults(builder).map_err(BootstrapError::from)?;
-
-    builder.run().map_err(RunnerError::from)?;
-    Ok(())
-}
-
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop", feature = "shadcn"))]
 fn shadcn_sync_theme_from_environment_on_global_changes<S>(
     app: &mut KernelApp,
@@ -1052,7 +1054,7 @@ mod builder_surface_tests {
     use fret_core::{AppWindowId, DockOp, Event, UiServices, ViewportInputEvent};
     use fret_runtime::{CommandId, FrameId, TickId};
 
-    fn install_app(_app: &mut App) {}
+    fn install_bundle_fixture(_app: &mut App) {}
 
     static INSTALL_INTO_APP_CALLS: AtomicUsize = AtomicUsize::new(0);
 
@@ -1167,7 +1169,7 @@ mod builder_surface_tests {
     fn app_builder_view_with_hooks_smoke() {
         let _builder = FretApp::new("builder-view-smoke")
             .window("Builder View Smoke", (640.0, 480.0))
-            .setup(install_app)
+            .setup(install_bundle_fixture)
             .install(install)
             .view_with_hooks::<SmokeView>(|driver| {
                 driver
@@ -1266,7 +1268,7 @@ mod builder_surface_tests {
             configure_hook_driver,
         )
         .with_main_window("Advanced UI App Hooks Smoke", (720.0, 420.0))
-        .setup(install_app)
+        .setup(install_bundle_fixture)
         .install(install)
         .configure(|config| {
             assert_eq!(config.main_window_title, "Advanced UI App Hooks Smoke");
@@ -1524,6 +1526,37 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn readme_and_rustdoc_quarantine_fn_driver_helpers_under_advanced() {
+        let public_surface = crate_public_surface_source();
+        let rustdoc = crate_rustdoc();
+
+        assert!(CRATE_README.contains("`fret::advanced::run_native_with_fn_driver(...)`"));
+        assert!(CRATE_README.contains(
+            "`fret::advanced::run_native_with_fn_driver_with_hooks(...)`"
+        ));
+        assert!(CRATE_README.contains(
+            "`fret::advanced::run_native_with_configured_fn_driver(...)`"
+        ));
+        assert!(rustdoc.contains("`fret::advanced::run_native_with_fn_driver(...)`"));
+        assert!(rustdoc.contains(
+            "`fret::advanced::run_native_with_fn_driver_with_hooks(...)`"
+        ));
+        assert!(rustdoc.contains(
+            "`fret::advanced::run_native_with_configured_fn_driver(...)`"
+        ));
+        assert!(!public_surface.contains("pub fn run_native_with_fn_driver("));
+        assert!(!public_surface.contains("pub fn run_native_with_fn_driver_with_hooks("));
+        assert!(!public_surface.contains("pub fn run_native_with_configured_fn_driver("));
+        assert!(LIB_RS.contains("pub fn run_native_with_fn_driver<D: 'static, S: 'static>("));
+        assert!(LIB_RS.contains(
+            "pub fn run_native_with_fn_driver_with_hooks<D: 'static, S: 'static>("
+        ));
+        assert!(LIB_RS.contains(
+            "pub fn run_native_with_configured_fn_driver<D: 'static, S: 'static>("
+        ));
+    }
+
+    #[test]
     fn readme_and_rustdoc_expose_install_into_app_as_explicit_bundle_seam() {
         assert!(CRATE_README.contains("`fret::integration::InstallIntoApp`"));
         assert!(CRATE_README.contains("`.setup((install_a, install_b))`"));
@@ -1545,14 +1578,15 @@ mod authoring_surface_policy_tests {
         );
 
         let rustdoc = crate_rustdoc();
+        let public_surface = crate_public_surface_source();
         assert!(rustdoc.contains(
             "`fret::router::{app::install, RouterUiStore, RouterOutlet, router_link, ...}`"
         ));
         assert!(rustdoc.contains("`RouterUiStore::{back_on_action, forward_on_action}`"));
-        assert!(LIB_RS.contains("pub mod router {"));
-        assert!(LIB_RS.contains("pub mod app {"));
-        assert!(LIB_RS.contains("pub fn install(app: &mut crate::app::App) {"));
-        assert!(!LIB_RS.contains("pub fn install_app(app: &mut crate::app::App) {"));
+        assert!(public_surface.contains("pub mod router {"));
+        assert!(public_surface.contains("pub mod app {"));
+        assert!(public_surface.contains("pub fn install(app: &mut crate::app::App) {"));
+        assert!(!public_surface.contains("pub fn install_app(app: &mut crate::app::App) {"));
     }
 
     #[test]
