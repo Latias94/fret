@@ -869,6 +869,16 @@ mod authoring_surface_policy_tests {
                 "fn card<H: UiHost>(cx: &mut ElementContext<'_, H>, title: Arc<str>, subtitle: Arc<str>, enabled: bool) -> AnyElement",
             ],
         );
+
+        assert_advanced_generic_helpers_prefer_into_ui_element(
+            MARKDOWN_DEMO,
+            &[
+                "fn render_image_placeholder<H: fret_ui::UiHost>(cx: &mut fret_ui::ElementContext<'_, H>, theme: fret_ui::ThemeSnapshot, on_link_activate: Option<markdown::OnLinkActivate>, link: markdown::LinkInfo) -> impl IntoUiElement<H> + use<H>",
+            ],
+            &[
+                "fn render_image_placeholder<H: fret_ui::UiHost>(cx: &mut fret_ui::ElementContext<'_, H>, theme: fret_ui::ThemeSnapshot, on_link_activate: Option<markdown::OnLinkActivate>, link: markdown::LinkInfo) -> AnyElement",
+            ],
+        );
     }
 
     #[test]

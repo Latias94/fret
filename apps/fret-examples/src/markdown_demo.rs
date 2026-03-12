@@ -15,13 +15,13 @@ use fret_markdown as markdown;
 use fret_query::{QueryError, QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ImageProps, LayoutQueryRegionProps, LayoutStyle, Length, PressableProps,
-    SvgIconProps, TextProps,
+    ImageProps, LayoutQueryRegionProps, LayoutStyle, Length, PressableProps, SvgIconProps,
+    TextProps,
 };
 use fret_ui::{Invalidation, Theme, ThemeConfig};
 use fret_ui_assets::image_asset_state;
 use fret_ui_kit::declarative::QueryHandleWatchExt as _;
-use fret_ui_kit::{ColorRef, Space, ui};
+use fret_ui_kit::{ColorRef, IntoUiElement, Space, ui};
 use fret_ui_shadcn::facade as shadcn;
 
 mod act {
@@ -508,7 +508,7 @@ $$
                             .as_ref()
                             .map(|e| e.to_string())
                             .unwrap_or_else(|| "unknown error".to_string());
-                        return render_image_placeholder(
+                        let placeholder = render_image_placeholder(
                             cx,
                             theme,
                             on_link_activate.clone(),
@@ -517,6 +517,7 @@ $$
                                 text: Arc::<str>::from(format!("[image error: {msg}]")),
                             },
                         );
+                        return placeholder.into_element(cx);
                     }
                     QueryStatus::Success => {
                         let Some(data) = state.data.as_ref() else {
@@ -586,19 +587,22 @@ $$
                     props.color = theme.color_token("foreground");
                     cx.svg_icon_props(props)
                 }
-                _ => render_image_placeholder(
-                    cx,
-                    theme,
-                    on_link_activate.clone(),
-                    markdown::LinkInfo {
-                        href: info.src.clone(),
-                        text: if info.alt.trim().is_empty() {
-                            Arc::<str>::from("[image]".to_string())
-                        } else {
-                            Arc::<str>::from(format!("[image: {}]", info.alt.trim()))
+                _ => {
+                    let placeholder = render_image_placeholder(
+                        cx,
+                        theme,
+                        on_link_activate.clone(),
+                        markdown::LinkInfo {
+                            href: info.src.clone(),
+                            text: if info.alt.trim().is_empty() {
+                                Arc::<str>::from("[image]".to_string())
+                            } else {
+                                Arc::<str>::from(format!("[image: {}]", info.alt.trim()))
+                            },
                         },
-                    },
-                ),
+                    );
+                    placeholder.into_element(cx)
+                }
             };
 
             ui::container(|_cx| [inner])
@@ -721,7 +725,7 @@ fn render_image_placeholder<H: fret_ui::UiHost>(
     theme: fret_ui::ThemeSnapshot,
     on_link_activate: Option<markdown::OnLinkActivate>,
     link: markdown::LinkInfo,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let label = link.text.clone();
 
     let text = Arc::<str>::from(format!("{} ({})", label, link.href));
