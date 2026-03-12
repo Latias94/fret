@@ -141,6 +141,10 @@ As of 2026-03-12:
   - prepared-glyph face bookkeeping and paint-span resolution now live behind dedicated helpers in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `materialize_prepared_line(...)` no longer owns font-face bookkeeping directly
+- The sixteenth internal text split has landed:
+  - prepared-glyph atlas key construction and atlas lookup now live behind dedicated helpers in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `materialize_prepared_line(...)` no longer owns atlas-hit search directly
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
@@ -186,6 +190,10 @@ As of 2026-03-12:
   - `cargo check -p fret-launch -p fret-examples`: passed
   - `python3 tools/check_layering.py`: passed
 - Internal text split verification remains green after the prepared-glyph bookkeeping extraction:
+  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+- Internal text split verification remains green after the prepared-glyph atlas lookup extraction:
   - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
   - `python3 tools/check_layering.py`: passed

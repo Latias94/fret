@@ -83,6 +83,10 @@ Current snapshot (2026-03-12):
   - prepared-glyph face bookkeeping and paint-span resolution now live behind dedicated helpers in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `materialize_prepared_line(...)` no longer owns font-face bookkeeping directly
+- The sixteenth internal `text/mod.rs` split has landed:
+  - prepared-glyph atlas key construction and atlas lookup now live behind dedicated helpers in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `materialize_prepared_line(...)` no longer owns atlas-hit search directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed

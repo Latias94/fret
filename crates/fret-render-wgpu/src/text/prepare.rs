@@ -299,42 +299,8 @@ impl TextSystem {
             let paint_span = prepared_glyph_paint_span(resolved_spans, &g);
 
             let size_bits = g.font_size.to_bits();
-            let mut atlas_hit: Option<(GlyphKey, GlyphAtlasEntry)> = None;
-            let color_key = GlyphKey {
-                font: face_key,
-                glyph_id: g.id,
-                size_bits,
-                x_bin,
-                y_bin,
-                kind: GlyphQuadKind::Color,
-            };
-            if let Some(entry) = self.color_atlas.get(color_key, epoch) {
-                atlas_hit = Some((color_key, entry));
-            } else {
-                let subpixel_key = GlyphKey {
-                    font: face_key,
-                    glyph_id: g.id,
-                    size_bits,
-                    x_bin,
-                    y_bin,
-                    kind: GlyphQuadKind::Subpixel,
-                };
-                if let Some(entry) = self.subpixel_atlas.get(subpixel_key, epoch) {
-                    atlas_hit = Some((subpixel_key, entry));
-                } else {
-                    let mask_key = GlyphKey {
-                        font: face_key,
-                        glyph_id: g.id,
-                        size_bits,
-                        x_bin,
-                        y_bin,
-                        kind: GlyphQuadKind::Mask,
-                    };
-                    if let Some(entry) = self.mask_atlas.get(mask_key, epoch) {
-                        atlas_hit = Some((mask_key, entry));
-                    }
-                }
-            }
+            let atlas_hit =
+                self.lookup_prepared_glyph_atlas(face_key, g.id, size_bits, x_bin, y_bin, epoch);
 
             let (glyph_key, x0_px, y0_px, w_px, h_px) = if let Some((glyph_key, entry)) = atlas_hit
             {
@@ -392,14 +358,7 @@ impl TextSystem {
                     }
                 };
 
-                let glyph_key = GlyphKey {
-                    font: face_key,
-                    glyph_id: g.id,
-                    size_bits,
-                    x_bin,
-                    y_bin,
-                    kind,
-                };
+                let glyph_key = prepared_glyph_key(face_key, g.id, size_bits, x_bin, y_bin, kind);
 
                 let data = image.data;
                 match kind {
@@ -493,6 +452,52 @@ impl TextSystem {
         }
 
         face_key
+    }
+
+    fn lookup_prepared_glyph_atlas(
+        &mut self,
+        face_key: FontFaceKey,
+        glyph_id: u32,
+        size_bits: u32,
+        x_bin: u8,
+        y_bin: u8,
+        epoch: u64,
+    ) -> Option<(GlyphKey, GlyphAtlasEntry)> {
+        let color_key = prepared_glyph_key(
+            face_key,
+            glyph_id,
+            size_bits,
+            x_bin,
+            y_bin,
+            GlyphQuadKind::Color,
+        );
+        if let Some(entry) = self.color_atlas.get(color_key, epoch) {
+            return Some((color_key, entry));
+        }
+
+        let subpixel_key = prepared_glyph_key(
+            face_key,
+            glyph_id,
+            size_bits,
+            x_bin,
+            y_bin,
+            GlyphQuadKind::Subpixel,
+        );
+        if let Some(entry) = self.subpixel_atlas.get(subpixel_key, epoch) {
+            return Some((subpixel_key, entry));
+        }
+
+        let mask_key = prepared_glyph_key(
+            face_key,
+            glyph_id,
+            size_bits,
+            x_bin,
+            y_bin,
+            GlyphQuadKind::Mask,
+        );
+        self.mask_atlas
+            .get(mask_key, epoch)
+            .map(|entry| (mask_key, entry))
     }
 
     pub(super) fn maybe_record_font_trace_entry(
@@ -597,4 +602,22 @@ fn prepared_glyph_paint_span(
 ) -> Option<u16> {
     resolved_spans
         .and_then(|spans| paint_span_for_text_range(spans, &glyph.text_range, glyph.is_rtl))
+}
+
+fn prepared_glyph_key(
+    face_key: FontFaceKey,
+    glyph_id: u32,
+    size_bits: u32,
+    x_bin: u8,
+    y_bin: u8,
+    kind: GlyphQuadKind,
+) -> GlyphKey {
+    GlyphKey {
+        font: face_key,
+        glyph_id,
+        size_bits,
+        x_bin,
+        y_bin,
+        kind,
+    }
 }
