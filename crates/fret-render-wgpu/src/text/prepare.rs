@@ -472,21 +472,8 @@ impl TextSystem {
         x_bin: u8,
         y_bin: u8,
     ) -> Option<parley::swash::scale::image::Image> {
-        let Some(font_ref) =
-            parley::swash::FontRef::from_index(glyph.font.data.data(), glyph.font.index as usize)
-        else {
-            return None;
-        };
-
-        let mut scaler_builder = self
-            .parley_scale
-            .builder(font_ref)
-            .size(glyph.font_size.max(1.0))
-            .hint(false);
-        if !glyph.normalized_coords.is_empty() {
-            scaler_builder = scaler_builder.normalized_coords(glyph.normalized_coords.iter());
-        }
-        let mut scaler = scaler_builder.build();
+        let font_ref = prepared_glyph_font_ref(glyph)?;
+        let mut scaler = self.build_prepared_glyph_scaler(glyph, font_ref);
 
         let offset_px = parley::swash::zeno::Vector::new(
             subpixel_bin_as_float(x_bin),
@@ -504,6 +491,22 @@ impl TextSystem {
         };
 
         Some(image)
+    }
+
+    fn build_prepared_glyph_scaler<'a>(
+        &'a mut self,
+        glyph: &'a ParleyGlyph,
+        font_ref: parley::swash::FontRef<'a>,
+    ) -> parley::swash::scale::Scaler<'a> {
+        let mut scaler_builder = self
+            .parley_scale
+            .builder(font_ref)
+            .size(glyph.font_size.max(1.0))
+            .hint(false);
+        if !glyph.normalized_coords.is_empty() {
+            scaler_builder = scaler_builder.normalized_coords(glyph.normalized_coords.iter());
+        }
+        scaler_builder.build()
     }
 
     fn insert_prepared_glyph_raster(&mut self, raster: PreparedGlyphRaster, epoch: u64) {
@@ -639,6 +642,10 @@ fn prepared_glyph_paint_span(
 ) -> Option<u16> {
     resolved_spans
         .and_then(|spans| paint_span_for_text_range(spans, &glyph.text_range, glyph.is_rtl))
+}
+
+fn prepared_glyph_font_ref<'a>(glyph: &'a ParleyGlyph) -> Option<parley::swash::FontRef<'a>> {
+    parley::swash::FontRef::from_index(glyph.font.data.data(), glyph.font.index as usize)
 }
 
 fn prepared_glyph_raster_from_image(

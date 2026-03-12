@@ -113,6 +113,10 @@ Current snapshot (2026-03-12):
   - prepared-glyph atlas target selection now lives behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `insert_prepared_glyph_raster(...)` now uses one shared atlas insertion path
+- The twenty-third internal `text/mod.rs` split has landed:
+  - prepared-glyph font-ref/scaler setup now lives behind dedicated helpers in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `render_prepared_glyph_image(...)` no longer owns `FontRef` and scaler construction directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
