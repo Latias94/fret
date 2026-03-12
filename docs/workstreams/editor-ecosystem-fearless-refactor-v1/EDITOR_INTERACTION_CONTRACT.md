@@ -156,6 +156,10 @@ During scrubbing or typing:
 - typed numeric entry should default to a select-all-equivalent replace-on-first-edit behavior when
   focus enters the editor-owned text-entry path, unless a control opts into preserving the draft
   instead.
+- diagnostics that claim to exercise typed numeric replacement should model the real input
+  pipeline: the first replacement decision is armed by `KeyDown`, while character insertion still
+  arrives through `TextInput` or IME commit. `press_key` alone is not sufficient evidence of a
+  completed typed-edit path.
 
 ### Commit
 
@@ -191,6 +195,73 @@ Default editor expectations:
 
 These may remain configurable, but the default mapping should not drift casually across controls.
 
+## Text-field edit-session contract
+
+Buffered editor text entry should follow an explicit edit-session model once it is promoted as
+reusable editor UI.
+
+### Start
+
+For buffered `TextField` surfaces, the edit session starts when the input/textarea gains focus and
+begins editing against a local draft initialized from the current bound model value.
+
+### Live updates
+
+While the field is focused:
+
+- typing updates the local draft immediately,
+- the input surface should reflect the draft,
+- but unrelated external readouts that observe the bound model should not change until commit.
+
+This keeps editor text entry closer to other session-based controls instead of generic app-form
+"every keystroke is already committed" behavior.
+
+### Commit
+
+Default commit points for the current buffered editor baseline:
+
+- blur commits by default,
+- single-line Enter commits explicitly,
+- multiline `Ctrl/Cmd+Enter` commits explicitly while plain Enter remains text insertion.
+
+Editor-owned extension hooks already permitted on top of that baseline:
+
+- password-mode rendering for single-line fields,
+- explicit commit/cancel outcome callbacks for editor integrations,
+- and assistive semantics hooks (`active_descendant`, controlled popup relationship, expanded
+  state) for completion/history surfaces owned outside the field itself.
+
+No-op sessions should stay silent:
+
+- focusing and blurring a buffered field without changing the draft should close the local session,
+- but should not emit misleading commit/cancel outcome callbacks.
+
+### Cancel
+
+Escape should restore the pre-edit value for buffered editor text fields, including multiline
+surfaces.
+
+This is distinct from search/filter box policy:
+
+- general `TextField` -> Escape cancels/reverts the edit session,
+- `MiniSearchBox` / search-like fields -> Escape may clear the query by explicit search policy.
+
+### Assistive text-surface proof baseline
+
+The current promoted completion/history proof is intentionally input-owned.
+
+Rules already exercised by `imui_editor_proof_demo` and its focused diag gate:
+
+- keyboard focus stays on the text field while the assist/history list is open,
+- the popup is exposed as a controlled listbox relationship from the field,
+- the active option is exposed through `active_descendant`,
+- Arrow/Home/Page navigation and Enter-accept may be handled by outer editor policy glue rather
+  than by growing the base `TextField` API.
+
+Current evidence anchor:
+
+- `tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-history.json`
+
 ## Keyboard and focus rules
 
 Reusable editor controls should follow explicit keyboard/focus defaults rather than per-widget
@@ -201,8 +272,18 @@ Rules:
 - keyboard focus must remain distinct from pointer hover,
 - focus treatment must remain visible even on compact controls,
 - Enter/Escape behavior should be documented for controls that enter edit sessions,
+- buffered `TextField` should not leak draft text into the bound model until commit/cancel closes
+  the session,
+- multiline `TextField` should treat plain Enter as text insertion and reserve `Ctrl/Cmd+Enter` for
+  explicit commit,
+- general editor text fields should preserve caret/selection by default and only use
+  select-all-on-focus when the surface opts in explicitly,
 - search/filter boxes may use Escape-to-clear as an editor policy default, but general text fields
   should only do so when the surface explicitly opts into that behavior,
+- search/filter boxes may also default to select-all-on-focus on refocus when fast query
+  replacement is more important than caret placement,
+- input-owned completion/history surfaces should keep primary focus on the text field by default
+  and expose popup/list state semantically rather than stealing focus for the suggestion list,
 - popup-owning controls should define whether focus remains on trigger, moves into content, or
   restores on close,
 - command/keybinding behavior should not fire through active text input or IME composition
@@ -243,6 +324,7 @@ High-priority gate targets:
 
 - edit-session commit/cancel
 - repeated-control identity correctness
+- input-owned text-assist/history semantics
 - popup open/close correctness
 - keyboard focus traversal for composites
 

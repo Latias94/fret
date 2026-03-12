@@ -14,8 +14,14 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::{ChromeRefinement, Size};
 
 use crate::primitives::chrome::{joined_text_input_style, resolve_editor_text_field_style};
-use crate::primitives::input_group::{editor_clear_button_segment, editor_joined_input_frame};
+use crate::primitives::input_group::{
+    derived_test_id, editor_clear_button_segment, editor_joined_input_frame,
+};
 use crate::primitives::style::EditorStyle;
+use crate::primitives::text_entry::{
+    EditorTextCancelBehavior, EditorTextSelectionBehavior, editor_text_entry_focus_state,
+    sync_editor_text_entry_focus_selection,
+};
 
 #[derive(Debug, Clone)]
 pub struct MiniSearchBoxOptions {
@@ -25,7 +31,10 @@ pub struct MiniSearchBoxOptions {
     pub enabled: bool,
     pub focusable: bool,
     pub test_id: Option<Arc<str>>,
+    pub input_test_id: Option<Arc<str>>,
     pub clear_test_id: Option<Arc<str>>,
+    pub selection_behavior: EditorTextSelectionBehavior,
+    pub cancel_behavior: EditorTextCancelBehavior,
 }
 
 impl Default for MiniSearchBoxOptions {
@@ -44,7 +53,10 @@ impl Default for MiniSearchBoxOptions {
             enabled: true,
             focusable: true,
             test_id: None,
+            input_test_id: None,
             clear_test_id: None,
+            selection_behavior: EditorTextSelectionBehavior::SelectAllOnFocus,
+            cancel_behavior: EditorTextCancelBehavior::Clear,
         }
     }
 }
@@ -76,6 +88,13 @@ impl MiniSearchBox {
             .read_model_ref(&model, Invalidation::Layout, |s| !s.is_empty())
             .unwrap_or(false);
         let enabled_for_paint = options.enabled;
+        let selection_behavior = options.selection_behavior;
+        let clear_test_id = options.clear_test_id.clone();
+        let input_test_id = options
+            .input_test_id
+            .clone()
+            .or_else(|| derived_test_id(options.test_id.as_ref(), "input"));
+        let focus_state = editor_text_entry_focus_state(cx);
 
         let (density, frame_chrome, chrome, text_style) = {
             let theme = Theme::global(&*cx.app);
@@ -100,8 +119,10 @@ impl MiniSearchBox {
         input_props.enabled = options.enabled;
         input_props.focusable = options.focusable;
         input_props.placeholder = options.placeholder.clone();
-        input_props.test_id = None;
-        input_props.cancel_command = Some("text.clear".into());
+        input_props.test_id = input_test_id;
+        if matches!(options.cancel_behavior, EditorTextCancelBehavior::Clear) {
+            input_props.cancel_command = Some("text.clear".into());
+        }
 
         // Joined field: the frame is drawn by the input group. Keep the inner text input
         // transparent and borderless to avoid double chrome.
@@ -118,7 +139,20 @@ impl MiniSearchBox {
             enabled_for_paint,
             false,
             options.test_id.clone(),
-            move |cx| cx.text_input(input_props),
+            move |cx| {
+                let input = cx.text_input(input_props);
+                let input_id = input.id;
+                let is_focused = cx.is_focused_element(input_id);
+                sync_editor_text_entry_focus_selection(
+                    cx,
+                    &focus_state,
+                    input_id,
+                    is_focused,
+                    has_value,
+                    selection_behavior,
+                );
+                input
+            },
             move |cx| {
                 if !has_value {
                     return Vec::new();
@@ -136,7 +170,7 @@ impl MiniSearchBox {
                     density,
                     enabled_for_paint,
                     Arc::from("Clear search"),
-                    options.clear_test_id.clone(),
+                    clear_test_id.clone(),
                     on_activate,
                 )]
             },

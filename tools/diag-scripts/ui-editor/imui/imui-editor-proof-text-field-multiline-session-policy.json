@@ -1,0 +1,273 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "imui-editor-proof-text-field-multiline-session-policy",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui_editor", "imui", "text_field", "multiline", "regression"],
+    "target_hints": [
+      "Uses the full imui_editor_proof_demo layout.",
+      "Proves buffered multiline TextField draft-vs-committed readouts, blur-to-commit, Ctrl+Enter explicit commit, and Escape cancel."
+    ],
+    "env_defaults": {
+      "FRET_IMUI_EDITOR_PROOF_LAYOUT": "full"
+    }
+  },
+  "window": "lowest_id",
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.object.notes" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.object.notes.committed-lines"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.object.notes.outcome" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.object.buffered-name" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.object.notes.committed-lines"
+        },
+        "text": "3 lines committed"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.object.notes.outcome" },
+        "text": "Idle"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.object.notes" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.object.notes" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.object.notes" },
+      "text": "Line A\nLine B"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.object.notes" },
+        "text": "Line A\nLine B"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.object.notes.committed-lines"
+        },
+        "text": "3 lines committed"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.object.buffered-name" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.object.buffered-name" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.object.notes.committed-lines"
+        },
+        "text": "2 lines committed"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.object.notes.outcome" },
+        "text": "Committed"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.object.notes" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.object.notes" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.object.notes" },
+      "text": "Only one committed line"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.object.notes" },
+        "text": "Only one committed line"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.object.notes.committed-lines"
+        },
+        "text": "2 lines committed"
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "enter", "modifiers": { "ctrl": true } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.object.notes.committed-lines"
+        },
+        "text": "1 line committed"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.object.notes.outcome" },
+        "text": "Committed"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.object.notes" },
+      "text": "Canceled draft line"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.object.notes" },
+        "text": "Canceled draft line"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.object.notes.committed-lines"
+        },
+        "text": "1 line committed"
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.object.notes" },
+        "text": "Only one committed line"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.object.notes.committed-lines"
+        },
+        "text": "1 line committed"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.object.notes.outcome" },
+        "text": "Canceled"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "capture_bundle",
+      "label": "imui-editor-proof-text-field-multiline-session-policy"
+    }
+  ]
+}

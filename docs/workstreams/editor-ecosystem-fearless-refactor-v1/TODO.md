@@ -48,8 +48,11 @@ Interaction contract:
       before promoting more components.
       Shared field-state grammar now routes joined text fields/search boxes, numeric inputs,
       drag-value / slider typing paths, axis drag values, and enum-select triggers through the same
-      editor-owned `EditorWidgetVisuals` baseline. Remaining work: extend that convergence to the
-      remaining secondary widgets and keep pruning residual per-control chrome heuristics.
+      editor-owned `EditorWidgetVisuals` baseline, and numeric typing now also uses the same
+      row-height line box as the surrounding non-typing affordances so editor rows stop visibly
+      jumping when scrub/value displays switch into text-entry mode. Remaining work: extend that
+      convergence to the remaining secondary widgets and keep pruning residual per-control chrome
+      heuristics.
 - [~] `EER-BASE-112` Define and land inspector/property layout grammar:
       shared `InspectorLayoutMetrics` now feed `PropertyRow`, `PropertyGrid`,
       `PropertyGridVirtualized`, `PropertyGroup`, and `InspectorPanel`, and the row grammar is now
@@ -70,8 +73,13 @@ Interaction contract:
       directly reviewable instead of relying on accidental window placement or hidden states.
       `imui_editor_proof_demo` now exposes `FRET_IMUI_EDITOR_PROOF_LAYOUT=editor_review`, and the
       default screenshot proof script uses that mode to capture inspector-only baseline states.
-      Remaining work: keep this composition stable while token/layout cleanup continues and extend
-      the same review discipline to adjacent proof surfaces.
+      The full-layout authoring parity surface now also has a focused affordance screenshot proof
+      via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-authoring-affordances-screenshots-default.json`,
+      which pins populated text-field clear buttons plus percent slider readouts on the proof
+      surface where the original visual regressions showed up.
+      Remaining work: keep these compositions stable while token/layout cleanup continues and
+      extend the same review discipline to adjacent proof surfaces.
 - [x] `EER-BASE-115` Add screenshot/diag coverage for the neutral default editor baseline.
       The default screenshot proof now exists via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-default.json`,
@@ -96,14 +104,32 @@ Interaction contract:
       presentation.
       Recent progress: editor numeric text-entry now defaults to a select-all-equivalent
       replace-on-first-edit policy on focus, `DragValue` / `Slider` typing paths can opt through
-      the same shared setting instead of hand-rolling their own draft replacement behavior, and
-      `AxisDragValue` typing now clears stale validation state while the user edits and exposes the
-      same trailing error affordance class as the other joined numeric editors. `MiniSearchBox`
-      Escape-clear also now routes through the runtime text-input cancel command instead of a
-      widget-local key hook.
-      Remaining work: decide how much of that entry/clear policy should become configurable for
-      general text fields, and whether broader text-selection defaults need a stronger runtime hook
-      than the current editor-owned numeric entry policy.
+      the same shared setting instead of hand-rolling their own draft replacement behavior,
+      double-click typing now uses a shared delayed focus handoff so nested numeric text inputs are
+      reliably focusable before the first edit, and `AxisDragValue` typing now clears stale
+      validation state while the user edits and exposes the same trailing error affordance class as
+      the other joined numeric editors. Text-like controls now also expose a lightweight shared
+      policy split: `TextField` can opt into select-all-on-focus without inheriting search-box
+      Escape behavior, while `MiniSearchBox` defaults to select-all-on-focus and still routes
+      Escape-clear through the runtime text-input cancel command instead of a widget-local key
+      hook. Buffered `TextField` now also runs as an editor session baseline on both single-line
+      and multiline surfaces: typing stays in a local draft, blur commits by default, Escape
+      restores the pre-edit value, single-line Enter commits explicitly, and multiline
+      `Ctrl/Cmd+Enter` commits explicitly while plain Enter stays newline insertion. The proof
+      surface now exposes stable committed-value / committed-line-count / outcome readouts so diag
+      can prove draft-vs-committed behavior directly without conflating it with search-box
+      semantics, and no-op focus/blur cycles no longer emit misleading commit/cancel outcomes. The
+      same control also exposes password-mode rendering, a commit/cancel outcome hook, and
+      assistive semantics placeholders for future completion/history surfaces while keeping that
+      policy in the ecosystem layer. Authoring-parity percent sliders now also treat
+      `percent_0_1_format(0)` as the sole `%` source, and the shared icon-button segment now
+      centers trailing clear affordance icons so proof-surface text/numeric controls stop drifting
+      on obvious visual seams.
+      Remaining work: lift the new completion/history proof into reusable `fret-ui-kit`
+      focus/overlay/active-descendant glue, decide on the formal popup/list-surface abstraction
+      for editor completion/history, decide where editor surfaces should opt into
+      `BlurBehavior::Cancel` / `PreserveDraft`, and keep tightening multiline/editor proof coverage
+      before new promoted components land.
 - [ ] `EER-BASE-118` Do not promote new reusable editor components until `EER-BASE-110` through
       `EER-BASE-117` are in materially better shape.
 
@@ -113,8 +139,23 @@ Interaction contract:
       controls; do not allow a second implementation tree to form.
 - [ ] `EER-EDITOR-121` Close `DragValue` for real editor workflows:
       prefix/suffix, clamp policy, step, decimals policy, unit helpers, and consistent commit/cancel.
-- [ ] `EER-EDITOR-122` Close editor-grade text input policy beyond the baseline layer:
+- [~] `EER-EDITOR-122` Close editor-grade text input policy beyond the baseline layer:
       password mode, completion/history hook placeholders, and richer editing hooks.
+      Recent progress: buffered `TextField` now covers both single-line and multiline edit sessions
+      instead of direct model mutation, with default blur commit, multiline `Ctrl/Cmd+Enter`
+      explicit commit, Escape cancel/revert, password-mode rendering for single-line fields, an
+      explicit commit/cancel outcome hook, and assistive semantics placeholders for future
+      completion/history surfaces. The first dedicated reusable landing zone for that next step now
+      also exists as `fret-ui-headless::text_assist` (re-exported by `fret-ui-kit::headless`),
+      which holds query/filter/highlight/navigation math without coupling editor visuals to a
+      specific popup or recipe. `imui_editor_proof_demo` now also exercises that seam with a
+      minimal `Name assist` completion/history surface: the input keeps focus, a controlled
+      listbox is exposed through assistive semantics, Arrow/Home/Page navigation is handled by
+      outer editor policy glue, and Enter accepts the active suggestion on the promoted proof
+      surface. The remaining work is now about lifting that proof into reusable
+      `fret-ui-kit` focus/overlay/active-descendant glue, deciding the formal popup/list
+      abstraction, deciding where specialized blur policies belong, and adding richer editor
+      integrations above the shared baseline rather than re-litigating commit/cancel semantics.
 - [ ] `EER-EDITOR-123` Freeze the v1 reusable starter set:
       `TextField`, `Checkbox`, `DragValue`, `Slider`, `EnumSelect`, `ColorEdit`, `VecNEdit`,
       `TransformEdit`, `PropertyGrid`, and `InspectorPanel`.
@@ -145,15 +186,39 @@ Interaction contract:
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-numeric-input-validation.json`, and
       Escape/cancel coverage now exists via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-numeric-input-escape-cancel.json`.
-- [ ] `EER-GATE-131` Add state-identity regression coverage for loop-built or repeated controls.
+      Replace-on-first-edit plus affix/search regression coverage now also exists via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-text-numeric-baseline-policy.json`,
+      which now also covers buffered single-line `TextField` draft/commit/cancel behavior,
+      password-mode outcome hooks, opt-in text-field select-all-on-focus, and search-box refocus
+      replacement, and models the first numeric typed edit as paired `press_key` + `type_text`
+      steps so the gate matches the real keydown-plus-text-input path. Multiline buffered
+      text-session coverage now also exists via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-text-field-multiline-session-policy.json`,
+      which proves blur commit, explicit `Ctrl/Cmd+Enter` commit, and Escape cancel against the
+      promoted proof readouts.
+- [x] `EER-GATE-131` Add state-identity regression coverage for loop-built or repeated controls.
+      Repeated gradient-stop rows now have focused identity coverage via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-identity.json`, which
+      proves edited stop values remain attached to stable stop ids across remove-first/add-new row
+      churn instead of drifting with visual row order.
 - [~] `EER-GATE-132` Keep `imui_editor_proof_demo` and the promoted workspace-shell proof surfaces
       as the primary evidence anchors for this workstream.
+      `imui_editor_proof_demo` now also carries the promoted `Name assist` text-assist/history
+      proof, and
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-history.json` locks the
+      expanded/collapsed state readouts, input-owned listbox semantics, keyboard navigation, and
+      Enter-accept path on the same proof surface that already hosts buffered text-session
+      evidence. Remaining work: add a second consumer before extracting more formal kit-level
+      popup/focus glue.
 - [~] `EER-GATE-133` Keep screenshot coverage tied to actual baseline-review states, not just
       arbitrary captures.
       The neutral default baseline now has a screenshot proof via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-default.json`;
-      its next job is to drive token/layout cleanup, not just exist, and to stay aligned with the
-      new shared inspector lane grammar.
+      the full authoring parity surface now also has a focused screenshot proof via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-authoring-affordances-screenshots-default.json`.
+      Their next job is to drive token/layout cleanup, not just exist, and to stay aligned with the
+      new shared inspector lane grammar plus the authoring proof surfaces where clear-affordance
+      and affix regressions tend to show up first.
 - [x] `EER-GATE-136` Close the screenshot-runner finalization gap for editor typed-edit proof.
       The default baseline script now resets the proof search field up front so repeated runs do
       not strand the next session in a filtered state, the launched `diag run` command exits

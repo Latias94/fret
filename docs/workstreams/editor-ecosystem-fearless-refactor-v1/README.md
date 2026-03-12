@@ -15,6 +15,9 @@ system.
   policy-light.
 - `ecosystem/fret-ui-editor` is the single source of truth for reusable editor widgets and
   composites.
+- `ecosystem/fret-ui-headless` owns reusable query/filter/highlight math for searchable suggestion
+  surfaces; `ecosystem/fret-ui-kit` re-exports that logic and owns focus/overlay/active-descendant
+  glue above it.
 - `ecosystem/fret-workspace` owns editor shell chrome and shell-level command/focus coordination.
 - `ecosystem/fret-docking` owns dock-graph-aware tabs, drop surfaces, split previews, and docking
   interaction policy.
@@ -57,16 +60,52 @@ Current checkpoint:
   mixing per-widget error/focus overrides,
 - editor numeric text-entry now also has a shared baseline policy for "replace current value on
   initial typed edit", so affixed `NumericInput` / `DragValue` / `Slider` flows behave more like
-  editor fields than generic app forms, and `AxisDragValue` no longer lags behind on validation
-  affordances while typing,
+  editor fields than generic app forms, `DragValue` / `Slider` double-click typing now routes
+  focus through a shared delayed handoff so the nested text input becomes reliably focusable
+  before the first edit, and `AxisDragValue` no longer lags behind on validation affordances while
+  typing,
+- editor text-like controls now also have an explicit lightweight policy split: general
+  `TextField`s preserve caret/selection by default but can opt into select-all-on-focus, while
+  `MiniSearchBox` defaults to select-all-on-focus plus Escape-to-clear and exposes a dedicated
+  input `test_id` anchor for diagnostics,
+- buffered `TextField` now has an editor-owned session baseline on both single-line and multiline
+  surfaces: typing edits a local draft first, blur commits by default, Escape restores the pre-edit
+  value, single-line Enter commits explicitly, multiline `Ctrl/Cmd+Enter` commits explicitly while
+  plain Enter still inserts a newline, and proof/diag now covers those draft-vs-committed paths
+  directly,
+- the same `TextField` surface now also has the first editor-grade extensibility hooks layered on
+  top of that buffered baseline: password-mode rendering for single-line fields, explicit outcome
+  callbacks for commit/cancel, assistive semantics placeholders for future completion/history
+  popups, and a no-op session rule so focus/blur without an actual edit does not emit misleading
+  outcome events,
 - editor preset replay is no longer proof-demo-local glue only: the editor theme helpers now expose
   a reusable "host theme sync, then editor preset replay" path for `WindowMetricsService`-driven
   resets, and the promoted proof demo uses that shared ordering,
 - the default proof surface can produce reviewable overview / typing / validation screenshots,
+- the full authoring proof surface now also has a focused affordance screenshot gate for populated
+  text-field clear buttons and percent slider readouts so icon alignment and affix composition stay
+  reviewable under proof-demo refactors,
 - `imgui_like_dense` now has a matching screenshot proof so default-vs-dense baseline review does
   not depend on ad-hoc manual launches,
-- and the remaining foundation cleanup is now mostly about finishing the broader text-field policy
-  decisions and follow-up tuning for wide-inspector slack after the new lane grammar landed.
+- `imui_editor_proof_demo` now also exposes committed/outcome readouts plus focused diag coverage
+  for buffered single-line and multiline text sessions, so blur commit, explicit multiline commit,
+  and Escape cancel all have promoted evidence anchors,
+- repeated gradient-stop rows now also have a focused identity gate, so add/remove churn proves
+  edited values stay attached to stable stop ids instead of drifting with row order,
+- the first dedicated headless landing zone for editor completion/history work now exists in
+  `fret-ui-headless::text_assist`, with `fret-ui-kit::headless` re-exporting the query/filter /
+  active-row math while leaving editor visuals and popup composition in `fret-ui-editor`,
+- `imui_editor_proof_demo` now also promotes that seam into a minimal `Name assist`
+  completion/history proof: the input keeps focus, the open popup is exposed as a controlled
+  listbox relationship, the active row is surfaced through `active_descendant`, outer editor glue
+  owns Arrow/Home/Page navigation without growing `TextField`'s public API, and Enter accepts the
+  active suggestion,
+- and the remaining foundation cleanup is now mostly about promoting specialized text policy above
+  that baseline: lifting the proof into reusable `fret-ui-kit` focus/overlay/active-descendant
+  glue, choosing the formal popup/list-surface abstraction for editor completion/history, richer
+  password/history integrations, targeted `BlurBehavior::Cancel` / `PreserveDraft` adoption on
+  real editor surfaces, and follow-up tuning for wide-inspector slack after the new lane grammar
+  landed.
 
 Until those are in better shape, new promoted reusable components should be treated as lower
 priority than baseline correction.

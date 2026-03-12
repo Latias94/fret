@@ -14,6 +14,7 @@ pub mod text_field;
 pub mod transform_edit;
 pub mod vec_edit;
 
+pub use crate::primitives::{EditorTextCancelBehavior, EditorTextSelectionBehavior};
 pub use axis_drag_value::{AxisDragValue, AxisDragValueOptions, AxisDragValueResetAction};
 pub use checkbox::{Checkbox, CheckboxOptions};
 pub use color_edit::{ColorEdit, ColorEditOptions};
@@ -27,6 +28,9 @@ pub use numeric_input::{
     NumericInputSelectionBehavior, NumericParseFn, NumericValidateFn, OnNumericInputOutcome,
 };
 pub use slider::{Slider, SliderOptions};
-pub use text_field::{TextField, TextFieldOptions};
+pub use text_field::{
+    OnTextFieldOutcome, TextField, TextFieldAssistiveSemantics, TextFieldBlurBehavior,
+    TextFieldMode, TextFieldOptions, TextFieldOutcome,
+};
 pub use transform_edit::{TransformEdit, TransformEditLayoutVariant, TransformEditOptions};
 pub use vec_edit::{Vec2Edit, Vec3Edit, Vec4Edit, VecEditLayoutVariant, VecEditOptions};

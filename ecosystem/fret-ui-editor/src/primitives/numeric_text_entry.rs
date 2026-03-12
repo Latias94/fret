@@ -7,11 +7,12 @@
 //!   re-derive the same focus-entry rules independently.
 
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use fret_core::{KeyCode, keycode_to_ascii_lowercase};
-use fret_runtime::Model;
+use fret_runtime::{Model, TimerToken};
 use fret_ui::action::{ActionCx, KeyDownCx, UiFocusActionHost};
-use fret_ui::{ElementContext, Invalidation, UiHost};
+use fret_ui::{ElementContext, GlobalElementId, Invalidation, UiHost};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum NumericInputSelectionBehavior {
@@ -24,6 +25,12 @@ pub enum NumericInputSelectionBehavior {
 pub(crate) struct NumericTextEntryFocusState {
     was_focused: bool,
     replace_on_next_edit: bool,
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct NumericTextEntryFocusHandoffState {
+    pending: bool,
+    timer: Option<TimerToken>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -41,6 +48,65 @@ pub(crate) fn numeric_text_entry_focus_state<H: UiHost>(
         || Arc::new(Mutex::new(NumericTextEntryFocusState::default())),
         |state| state.clone(),
     )
+}
+
+pub(crate) fn arm_numeric_text_entry_focus_handoff(
+    handoff: &mut NumericTextEntryFocusHandoffState,
+) {
+    handoff.pending = true;
+    handoff.timer = None;
+}
+
+pub(crate) fn sync_numeric_text_entry_focus_handoff<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    timer_target: GlobalElementId,
+    handoff: &Arc<Mutex<NumericTextEntryFocusHandoffState>>,
+    typing: bool,
+    input_id: GlobalElementId,
+    is_focused: bool,
+) {
+    let (cancel_token, arm_token) = {
+        let mut state = handoff.lock().unwrap_or_else(|e| e.into_inner());
+        if !typing || is_focused {
+            let cancel = state.timer.take();
+            state.pending = false;
+            (cancel, None)
+        } else if state.pending && state.timer.is_none() {
+            let token = cx.app.next_timer_token();
+            state.timer = Some(token);
+            (None, Some(token))
+        } else {
+            (None, None)
+        }
+    };
+
+    if let Some(token) = cancel_token {
+        cx.cancel_timer(token);
+    }
+    if let Some(token) = arm_token {
+        cx.set_timer_for(timer_target, token, Duration::ZERO);
+    }
+
+    let handoff_for_timer = handoff.clone();
+    cx.timer_on_timer_for(
+        timer_target,
+        Arc::new(move |host, action_cx, token| {
+            let mut state = handoff_for_timer.lock().unwrap_or_else(|e| e.into_inner());
+            if state.timer != Some(token) {
+                return false;
+            }
+
+            state.timer = None;
+            if !state.pending {
+                return false;
+            }
+
+            state.pending = false;
+            host.request_focus(input_id);
+            host.request_redraw(action_cx.window);
+            false
+        }),
+    );
 }
 
 pub(crate) fn sync_numeric_text_entry_focus<H: UiHost>(

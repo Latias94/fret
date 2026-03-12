@@ -102,6 +102,16 @@ pub enum NumericInputOutcome {
 pub type OnNumericInputOutcome =
     Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, NumericInputOutcome) + 'static>;
 
+fn editor_numeric_input_text_style(
+    base: TextStyle,
+    density: crate::primitives::EditorDensity,
+) -> TextStyle {
+    typography::as_control_text(TextStyle {
+        line_height: Some(density.row_height),
+        ..base
+    })
+}
+
 #[derive(Clone)]
 pub struct NumericInput<T> {
     model: Model<T>,
@@ -110,6 +120,7 @@ pub struct NumericInput<T> {
     validate: Option<NumericValidateFn<T>>,
     on_outcome: Option<OnNumericInputOutcome>,
     options: NumericInputOptions,
+    focus_target: Option<Arc<Mutex<Option<fret_ui::GlobalElementId>>>>,
 }
 
 impl<T> NumericInput<T>
@@ -124,6 +135,7 @@ where
             validate: None,
             on_outcome: None,
             options: NumericInputOptions::default(),
+            focus_target: None,
         }
     }
 
@@ -139,6 +151,14 @@ where
 
     pub fn options(mut self, options: NumericInputOptions) -> Self {
         self.options = options;
+        self
+    }
+
+    pub(crate) fn focus_target(
+        mut self,
+        focus_target: Arc<Mutex<Option<fret_ui::GlobalElementId>>>,
+    ) -> Self {
+        self.focus_target = Some(focus_target);
         self
     }
 
@@ -197,11 +217,12 @@ where
         let error_for_field = error.clone();
         let error_for_frame = error.clone();
         let error_for_trailing = error.clone();
-        let text_style_for_field = text_style.clone();
+        let text_style_for_field = editor_numeric_input_text_style(text_style.clone(), density);
         let placeholder = options.placeholder.clone();
         let focusable = options.focusable;
         let error_display = options.error_display;
         let selection_behavior = options.selection_behavior;
+        let focus_target = self.focus_target.clone();
         let prefix = options.prefix.clone();
         let suffix = options.suffix.clone();
         let input_test_id = derived_test_id(options.test_id.as_ref(), "input");
@@ -283,6 +304,10 @@ where
 
                 let input = cx.text_input(props);
                 let input_id = input.id;
+                if let Some(focus_target) = focus_target.as_ref() {
+                    let mut slot = focus_target.lock().unwrap_or_else(|e| e.into_inner());
+                    *slot = Some(input_id);
+                }
                 let is_focused = cx.is_focused_element(input_id);
 
                 sync_numeric_text_entry_focus(
@@ -544,6 +569,31 @@ where
                 out
             },
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::editor_numeric_input_text_style;
+    use crate::primitives::EditorDensity;
+    use fret_core::Px;
+    use fret_core::TextStyle;
+
+    #[test]
+    fn numeric_input_text_style_uses_density_row_height_for_edit_line_box() {
+        let style = editor_numeric_input_text_style(
+            TextStyle {
+                size: Px(12.0),
+                line_height: Some(Px(16.0)),
+                ..Default::default()
+            },
+            EditorDensity {
+                row_height: Px(24.0),
+                ..Default::default()
+            },
+        );
+
+        assert_eq!(style.line_height, Some(Px(24.0)));
     }
 }
 

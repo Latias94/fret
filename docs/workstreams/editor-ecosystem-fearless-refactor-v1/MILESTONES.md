@@ -65,10 +65,25 @@ Deliverables:
   between narrow hit targets and row-height targets,
 - stronger typed-edit, focus, active, and invalid state clarity,
 - screenshot proof coverage for the neutral default baseline,
+- focused authoring-affordance screenshots that pin clear-button alignment and percent readout
+  composition on the full proof surface,
 - a review-only proof composition that hides unrelated parity/docking surfaces during baseline
   screenshot capture,
 - a decision and follow-up plan for `imgui_like_dense` screenshot parity,
 - proof-surface cleanup so overview / typing / error states are visible without manual scene setup,
+- numeric typing diagnostics that cover both double-click focus handoff and the real first-edit
+  input path (`KeyDown` to arm replacement, then `TextInput` / IME commit to insert text),
+- text-like policy defaults that distinguish general text fields from search boxes without
+  reintroducing widget-local key hooks everywhere,
+- a buffered text-field baseline across single-line and multiline surfaces so editor text entry
+  stops mutating external models mid-edit and instead proves draft/commit/cancel semantics
+  directly on the proof surface,
+- a first editor-grade extension seam on top of that baseline: password-mode rendering, explicit
+  commit/cancel outcome hooks, assistive semantics hooks for future completion/history surfaces,
+- one minimal promoted completion/history proof on top of that seam, keeping focus on the owning
+  input while exposing a controlled listbox relationship plus `active_descendant` state,
+- focused diag coverage for buffered blur commit, multiline explicit commit, and Escape cancel on
+  the promoted proof surface,
 - and a boring close-out path for screenshot automation after typed-mode interactions and reruns.
 
 Exit gates:
@@ -76,10 +91,19 @@ Exit gates:
 - the default editor baseline is visually legible enough to review without "squinting through gray",
 - proof/demo startup and host theme sync no longer silently erase the intended editor preset,
 - overview / typing / invalid screenshots are all meaningful and reproducible,
+- authoring-parity screenshots make clear-button alignment and percent slider composition reviewable
+  without manual proof setup,
 - the screenshot proof can switch into a review-only composition without manual window/layout setup,
 - starter-set controls share one layout/state grammar instead of per-control heuristics,
 - repeated screenshot runs reset proof-local filter/search state instead of depending on a fresh
   launch,
+- buffered text-session proof coverage demonstrates blur commit, multiline explicit commit, and
+  cancel/revert without relying on manual inspection,
+- a promoted text-assist/history proof plus diag gate demonstrate input-owned assist semantics
+  (`expanded`, controlled listbox relation, `active_descendant`) and Enter-accept behavior without
+  moving primary focus into the popup,
+- repeated-control identity coverage exists on a promoted loop-built surface rather than only in
+  local reasoning or code comments,
 - and this workstream can point to clear proof/gate evidence for baseline correctness.
 
 ## Phase C - Editor starter kit closure
@@ -95,7 +119,10 @@ Goal:
 Deliverables:
 
 - `DragValue` closure for real editor workflows,
-- richer text-input policy for editor surfaces,
+- richer text-input policy for editor surfaces beyond the shared buffered baseline
+  (lifting the promoted proof into reusable `fret-ui-kit` text-assist glue, deciding the formal
+  popup/list abstraction, specialized blur ownership where needed, and deeper editor integrations
+  above the new password/outcome/assistive extension seam),
 - a promoted starter set definition for controls and composites,
 - explicit conventions for `id_source`, response semantics, and `test_id`,
 - and a "no new promoted components without gates" landing rule.

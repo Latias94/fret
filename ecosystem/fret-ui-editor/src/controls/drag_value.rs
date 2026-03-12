@@ -17,6 +17,10 @@ use crate::primitives::input_group::{
     derived_test_id, editor_input_group_divider, editor_input_group_inset, editor_input_group_row,
     editor_text_segment,
 };
+use crate::primitives::numeric_text_entry::{
+    NumericTextEntryFocusHandoffState, arm_numeric_text_entry_focus_handoff,
+    sync_numeric_text_entry_focus_handoff,
+};
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
 use crate::primitives::{DragValueCore, DragValueCoreOptions};
@@ -41,7 +45,6 @@ enum DragValueMode {
 struct DragValueState {
     mode: DragValueMode,
     scrub_id: Option<fret_ui::GlobalElementId>,
-    input_id: Option<fret_ui::GlobalElementId>,
 }
 
 impl Default for DragValueState {
@@ -49,7 +52,6 @@ impl Default for DragValueState {
         Self {
             mode: DragValueMode::Scrub,
             scrub_id: None,
-            input_id: None,
         }
     }
 }
@@ -150,6 +152,10 @@ where
             || Arc::new(Mutex::new(DragValueState::default())),
             |s| s.clone(),
         );
+        let focus_handoff: Arc<Mutex<NumericTextEntryFocusHandoffState>> = cx.with_state(
+            || Arc::new(Mutex::new(NumericTextEntryFocusHandoffState::default())),
+            |s| s.clone(),
+        );
 
         let value = cx
             .get_model_copied(&self.model, Invalidation::Paint)
@@ -190,6 +196,7 @@ where
         scrub_opts.scrub_on_double_click = false;
 
         let state_for_scrub_record = state.clone();
+        let focus_handoff_for_double_click = focus_handoff.clone();
         let scrub = DragValueCore::new(value, on_change_live)
             .a11y_label(value_text.clone())
             .options(scrub_opts)
@@ -202,6 +209,7 @@ where
                 st.scrub_id = Some(scrub_id);
 
                 let state_for_double_click = state_for_scrub_record.clone();
+                let focus_handoff_for_double_click = focus_handoff_for_double_click.clone();
                 cx.pressable_add_on_pointer_down(Arc::new(
                     move |host, action_cx, down: PointerDownCx| {
                         if down.click_count < 2 {
@@ -212,8 +220,11 @@ where
                             .lock()
                             .unwrap_or_else(|e| e.into_inner());
                         st.mode = DragValueMode::Typing;
-                        if let Some(input_id) = st.input_id {
-                            host.request_focus(input_id);
+                        {
+                            let mut handoff = focus_handoff_for_double_click
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            arm_numeric_text_entry_focus_handoff(&mut handoff);
                         }
                         host.request_redraw(action_cx.window);
                         PressablePointerDownResult::SkipDefaultAndStopPropagation
@@ -333,8 +344,11 @@ where
         }
 
         let state_for_input = state.clone();
+        let input_focus_target: Arc<Mutex<Option<fret_ui::GlobalElementId>>> =
+            Arc::new(Mutex::new(None));
         let input = NumericInput::new(self.model.clone(), self.format.clone(), self.parse.clone())
             .validate(self.validate.clone())
+            .focus_target(input_focus_target.clone())
             .options(NumericInputOptions {
                 layout: input_layout,
                 enabled: typing,
@@ -362,9 +376,21 @@ where
             })))
             .into_element(cx);
 
+        if let Some(input_id) = input_focus_target
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .as_ref()
+            .copied()
         {
-            let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
-            st.input_id = Some(input.id);
+            let is_focused = cx.is_focused_element(input_id);
+            sync_numeric_text_entry_focus_handoff(
+                cx,
+                input.id,
+                &focus_handoff,
+                typing,
+                input_id,
+                is_focused,
+            );
         }
 
         // Render both: scrub stays mounted so focus can restore, input stays mounted so focus

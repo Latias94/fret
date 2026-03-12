@@ -296,16 +296,15 @@ mod tests {
     use fret_core::{Color, Px};
     use fret_ui::Theme;
     use fret_ui_shadcn::shadcn_themes::{
-        apply_shadcn_new_york, ShadcnBaseColor, ShadcnColorScheme,
+        ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york,
     };
     use std::any::TypeId;
 
     use super::{
-        apply_editor_theme_preset_v1, install_editor_theme_preset_v1,
+        EditorThemePresetV1, apply_editor_theme_preset_v1, install_editor_theme_preset_v1,
         reapply_installed_editor_theme_preset_on_window_metrics_change,
         reapply_installed_editor_theme_preset_v1,
         sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metrics_change,
-        EditorThemePresetV1,
     };
     use crate::primitives::EditorTokenKeys;
 

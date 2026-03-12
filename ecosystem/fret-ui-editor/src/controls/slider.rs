@@ -19,6 +19,10 @@ use crate::primitives::input_group::{
     derived_test_id, editor_input_group_divider, editor_input_group_frame,
     editor_input_group_segment,
 };
+use crate::primitives::numeric_text_entry::{
+    NumericTextEntryFocusHandoffState, arm_numeric_text_entry_focus_handoff,
+    sync_numeric_text_entry_focus_handoff,
+};
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
 use fret_core::text::{TextOverflow, TextWrap};
@@ -148,7 +152,6 @@ enum SliderMode {
 struct SliderState {
     mode: SliderMode,
     slider_id: Option<fret_ui::GlobalElementId>,
-    input_id: Option<fret_ui::GlobalElementId>,
     dragging: bool,
     pointer_id: Option<PointerId>,
 }
@@ -158,7 +161,6 @@ impl Default for SliderState {
         Self {
             mode: SliderMode::Slide,
             slider_id: None,
-            input_id: None,
             dragging: false,
             pointer_id: None,
         }
@@ -346,6 +348,12 @@ where
             || Arc::new(Mutex::new(SliderState::default())),
             |s| s.clone(),
         );
+        let focus_handoff_state_id = cx.named("slider.focus_handoff.state", |cx| cx.root_id());
+        let focus_handoff: Arc<Mutex<NumericTextEntryFocusHandoffState>> = cx.with_state_for(
+            focus_handoff_state_id,
+            || Arc::new(Mutex::new(NumericTextEntryFocusHandoffState::default())),
+            |s| s.clone(),
+        );
 
         let mode = state.lock().unwrap_or_else(|e| e.into_inner()).mode;
         let typing = mode == SliderMode::Typing;
@@ -391,6 +399,7 @@ where
             compose_affixed_value_text(&value_text, prefix.as_ref(), suffix.as_ref());
 
         let state_for_slider = state.clone();
+        let focus_handoff_for_slider = focus_handoff.clone();
         let mut slider_el = cx.pressable(
             PressableProps {
                 enabled: interactive_enabled,
@@ -409,6 +418,7 @@ where
                 }
 
                 let state_for_down = state_for_slider.clone();
+                let focus_handoff_for_down = focus_handoff_for_slider.clone();
                 let model_for_down = model_for_change.clone();
                 cx.pressable_add_on_pointer_down(Arc::new(move |host, action_cx, down| {
                     if !interactive_enabled {
@@ -419,8 +429,11 @@ where
                         st.mode = SliderMode::Typing;
                         st.dragging = false;
                         st.pointer_id = None;
-                        if let Some(input_id) = st.input_id {
-                            host.request_focus(input_id);
+                        {
+                            let mut handoff = focus_handoff_for_down
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            arm_numeric_text_entry_focus_handoff(&mut handoff);
                         }
                         host.request_redraw(action_cx.window);
                         return PressablePointerDownResult::SkipDefaultAndStopPropagation;
@@ -828,8 +841,11 @@ where
         };
 
         let state_for_input = state.clone();
+        let input_focus_target: Arc<Mutex<Option<fret_ui::GlobalElementId>>> =
+            Arc::new(Mutex::new(None));
         let input = NumericInput::new(self.model.clone(), format, parse_for_input)
             .validate(validate_for_input)
+            .focus_target(input_focus_target.clone())
             .options(NumericInputOptions {
                 layout: input_layout,
                 enabled: enabled && typing,
@@ -860,9 +876,21 @@ where
             })))
             .into_element(cx);
 
+        if let Some(input_id) = input_focus_target
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .as_ref()
+            .copied()
         {
-            let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
-            st.input_id = Some(input.id);
+            let is_focused = cx.is_focused_element(input_id);
+            sync_numeric_text_entry_focus_handoff(
+                cx,
+                input.id,
+                &focus_handoff,
+                typing,
+                input_id,
+                is_focused,
+            );
         }
 
         cx.container(Default::default(), move |_cx| vec![slider_el, input])

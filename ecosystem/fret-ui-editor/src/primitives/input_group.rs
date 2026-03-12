@@ -252,7 +252,27 @@ pub(crate) fn editor_icon_button_segment<H: UiHost>(
                     corner_radii: Corners::all(Px(0.0)),
                     ..Default::default()
                 },
-                move |cx| vec![editor_icon(cx, density, icon, icon_size)],
+                move |cx| {
+                    vec![cx.flex(
+                        FlexProps {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Fill,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            direction: fret_core::Axis::Horizontal,
+                            gap: SpacingLength::Px(Px(0.0)),
+                            padding: Edges::all(Px(0.0)).into(),
+                            justify: MainAlign::Center,
+                            align: CrossAlign::Center,
+                            wrap: false,
+                        },
+                        move |cx| vec![editor_icon(cx, density, icon, icon_size)],
+                    )]
+                },
             )]
         },
     );

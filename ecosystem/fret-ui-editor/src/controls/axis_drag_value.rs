@@ -34,8 +34,10 @@ use crate::primitives::input_group::{
     editor_input_group_row, editor_text_segment,
 };
 use crate::primitives::numeric_text_entry::{
+    NumericTextEntryFocusHandoffState, arm_numeric_text_entry_focus_handoff,
     clear_numeric_error_when_draft_changes, handle_numeric_text_entry_replace_key,
     numeric_text_entry_focus_state, sync_numeric_text_entry_focus,
+    sync_numeric_text_entry_focus_handoff,
 };
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
@@ -59,7 +61,6 @@ pub struct AxisDragValueResetAction {
 struct AxisDragValueState {
     mode: AxisDragValueMode,
     scrub_id: Option<fret_ui::GlobalElementId>,
-    input_id: Option<fret_ui::GlobalElementId>,
     seen_input_focus: bool,
 }
 
@@ -68,7 +69,6 @@ impl Default for AxisDragValueState {
         Self {
             mode: AxisDragValueMode::Scrub,
             scrub_id: None,
-            input_id: None,
             seen_input_focus: false,
         }
     }
@@ -188,6 +188,10 @@ where
             || Arc::new(Mutex::new(AxisDragValueState::default())),
             |s| s.clone(),
         );
+        let focus_handoff: Arc<Mutex<NumericTextEntryFocusHandoffState>> = cx.with_state(
+            || Arc::new(Mutex::new(NumericTextEntryFocusHandoffState::default())),
+            |s| s.clone(),
+        );
 
         let draft = draft_model(cx);
         let error = error_model(cx);
@@ -261,6 +265,7 @@ where
         let axis_tint = self.axis_tint;
         let enabled_for_paint = self.options.enabled;
         let state_for_scrub_record = state.clone();
+        let focus_handoff_for_double_click = focus_handoff.clone();
         let prefix_for_scrub = prefix.clone();
         let suffix_for_scrub = suffix.clone();
         let scrub = DragValueCore::new(value, on_change_live)
@@ -274,6 +279,7 @@ where
                 st.scrub_id = Some(scrub_id);
 
                 let state_for_double_click = state_for_scrub_record.clone();
+                let focus_handoff_for_double_click = focus_handoff_for_double_click.clone();
                 cx.pressable_add_on_pointer_down(Arc::new(
                     move |host, action_cx, down: PointerDownCx| {
                         if down.click_count < 2 {
@@ -284,8 +290,11 @@ where
                             .unwrap_or_else(|e| e.into_inner());
                         st.mode = AxisDragValueMode::Typing;
                         st.seen_input_focus = false;
-                        if let Some(input_id) = st.input_id {
-                            host.request_focus(input_id);
+                        {
+                            let mut handoff = focus_handoff_for_double_click
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            arm_numeric_text_entry_focus_handoff(&mut handoff);
                         }
                         host.request_redraw(action_cx.window);
                         PressablePointerDownResult::SkipDefaultAndStopPropagation
@@ -477,11 +486,6 @@ where
         let input_id = input.id;
         let is_focused = cx.is_focused_element(input_id);
 
-        {
-            let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
-            st.input_id = Some(input_id);
-        }
-
         // Drive mode transitions from focus: if the user clicks away after the input actually
         // became focused, return to scrub mode.
         if typing {
@@ -501,6 +505,14 @@ where
             &draft,
             &error,
             self.options.selection_behavior,
+        );
+        sync_numeric_text_entry_focus_handoff(
+            cx,
+            input_id,
+            &focus_handoff,
+            typing,
+            input_id,
+            is_focused,
         );
 
         if !is_focused {
