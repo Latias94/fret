@@ -185,6 +185,21 @@ fn navigation_menu_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface()
 }
 
 #[test]
+fn selected_navigation_menu_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/navigation_menu/docs_demo.rs",
+        &[
+            "fn list_item(cx: &mut UiCx<'_>, muted_foreground: Color, model: Model<Option<Arc<str>>>, title: &'static str, description: &'static str, test_id: &'static str, command: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn icon_row(cx: &mut UiCx<'_>, model: Model<Option<Arc<str>>>, icon: &'static str, label: &'static str, test_id: &'static str, command: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+        ],
+        &[
+            "fn list_item(cx: &mut UiCx<'_>, muted_foreground: Color, model: Model<Option<Arc<str>>>, title: &'static str, description: &'static str, test_id: &'static str, command: &'static str,) -> AnyElement",
+            "fn icon_row(cx: &mut UiCx<'_>, model: Model<Option<Arc<str>>>, icon: &'static str, label: &'static str, test_id: &'static str, command: &'static str,) -> AnyElement",
+        ],
+    );
+}
+
+#[test]
 fn chart_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[

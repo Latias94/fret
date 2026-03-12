@@ -2,10 +2,11 @@ pub const SOURCE: &str = include_str!("docs_demo.rs");
 
 // region: example
 use fret::UiCx;
-use fret_core::{FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Color, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::{LayoutStyle, Length, TextProps};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_shadcn::navigation_menu::NavigationMenuMdBreakpointQuery;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -13,6 +14,88 @@ use std::sync::Arc;
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 const CMD_APP_SAVE: &str = "ui_gallery.app.save";
+
+fn list_item(
+    cx: &mut UiCx<'_>,
+    muted_foreground: Color,
+    model: Model<Option<Arc<str>>>,
+    title: &'static str,
+    description: &'static str,
+    test_id: &'static str,
+    command: &'static str,
+) -> impl IntoUiElement<fret_app::App> + use<> {
+    let title_el = cx.text_props(TextProps {
+        layout: Default::default(),
+        text: Arc::from(title),
+        style: Some(TextStyle {
+            font: FontId::default(),
+            size: Px(14.0),
+            weight: FontWeight::MEDIUM,
+            slant: Default::default(),
+            line_height: None,
+            letter_spacing_em: None,
+            ..Default::default()
+        }),
+        color: None,
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+        align: fret_core::TextAlign::Start,
+        ink_overflow: fret_ui::element::TextInkOverflow::None,
+    });
+    let mut description_layout = LayoutStyle::default();
+    // Upstream `line-clamp-2` outcome.
+    description_layout.size.max_height = Some(Length::Px(Px(40.0)));
+    let description_el = cx.text_props(TextProps {
+        layout: description_layout,
+        text: Arc::from(description),
+        style: Some(TextStyle {
+            font: FontId::default(),
+            size: Px(14.0),
+            weight: FontWeight::NORMAL,
+            slant: Default::default(),
+            line_height: Some(Px(20.0)),
+            letter_spacing_em: None,
+            ..Default::default()
+        }),
+        color: Some(muted_foreground),
+        wrap: TextWrap::Word,
+        overflow: TextOverflow::Ellipsis,
+        align: fret_core::TextAlign::Start,
+        ink_overflow: fret_ui::element::TextInkOverflow::None,
+    });
+
+    let body = ui::v_stack(move |_cx| [title_el, description_el])
+        .gap(Space::N1)
+        .items_start()
+        .into_element(cx);
+
+    shadcn::NavigationMenuLink::new(model, [body])
+        .label(title)
+        .test_id(test_id)
+        .action(command)
+        .into_element(cx)
+}
+
+fn icon_row(
+    cx: &mut UiCx<'_>,
+    model: Model<Option<Arc<str>>>,
+    icon: &'static str,
+    label: &'static str,
+    test_id: &'static str,
+    command: &'static str,
+) -> impl IntoUiElement<fret_app::App> + use<> {
+    let icon_el = fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static(icon));
+    let label_el = cx.text(label);
+    let row = ui::h_row(move |_cx| [icon_el, label_el])
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx);
+    shadcn::NavigationMenuLink::new(model, [row])
+        .label(label)
+        .test_id(test_id)
+        .action(command)
+        .into_element(cx)
+}
 
 pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let muted_foreground = cx.with_theme(|theme| theme.color_token("muted-foreground"));
@@ -31,83 +114,6 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
     );
 
-    let list_item = |cx: &mut UiCx<'_>,
-                     model: Model<Option<Arc<str>>>,
-                     title: &'static str,
-                     description: &'static str,
-                     test_id: &'static str,
-                     command: &'static str| {
-        let title_el = cx.text_props(TextProps {
-            layout: Default::default(),
-            text: Arc::from(title),
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: Px(14.0),
-                weight: FontWeight::MEDIUM,
-                slant: Default::default(),
-                line_height: None,
-                letter_spacing_em: None,
-                ..Default::default()
-            }),
-            color: None,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            ink_overflow: fret_ui::element::TextInkOverflow::None,
-        });
-        let mut description_layout = LayoutStyle::default();
-        // Upstream `line-clamp-2` outcome.
-        description_layout.size.max_height = Some(Length::Px(Px(40.0)));
-        let description_el = cx.text_props(TextProps {
-            layout: description_layout,
-            text: Arc::from(description),
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: Px(14.0),
-                weight: FontWeight::NORMAL,
-                slant: Default::default(),
-                line_height: Some(Px(20.0)),
-                letter_spacing_em: None,
-                ..Default::default()
-            }),
-            color: Some(muted_foreground),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Ellipsis,
-            align: fret_core::TextAlign::Start,
-            ink_overflow: fret_ui::element::TextInkOverflow::None,
-        });
-
-        let body = ui::v_stack(move |_cx| [title_el, description_el])
-            .gap(Space::N1)
-            .items_start()
-            .into_element(cx);
-
-        shadcn::NavigationMenuLink::new(model, [body])
-            .label(title)
-            .test_id(test_id)
-            .action(command)
-            .into_element(cx)
-    };
-
-    let icon_row = |cx: &mut UiCx<'_>,
-                    model: Model<Option<Arc<str>>>,
-                    icon: &'static str,
-                    label: &'static str,
-                    test_id: &'static str,
-                    command: &'static str| {
-        let icon_el = fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static(icon));
-        let label_el = cx.text(label);
-        let row = ui::h_row(move |_cx| [icon_el, label_el])
-            .gap(Space::N2)
-            .items_center()
-            .into_element(cx);
-        shadcn::NavigationMenuLink::new(model, [row])
-            .label(label)
-            .test_id(test_id)
-            .action(command)
-            .into_element(cx)
-    };
-
     let getting_started = shadcn::NavigationMenuItem::new(
         "getting_started",
         "Getting started",
@@ -115,6 +121,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
             vec![
                 list_item(
                     cx,
+                    muted_foreground,
                     demo_value.clone(),
                     "Introduction",
                     "Re-usable components built with Tailwind CSS.",
@@ -123,6 +130,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                 ),
                 list_item(
                     cx,
+                    muted_foreground,
                     demo_value.clone(),
                     "Installation",
                     "How to install dependencies and structure your app.",
@@ -131,6 +139,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                 ),
                 list_item(
                     cx,
+                    muted_foreground,
                     demo_value.clone(),
                     "Typography",
                     "Styles for headings, paragraphs, lists...etc",
@@ -197,7 +206,15 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         let mut col_left = Vec::new();
         let mut col_right = Vec::new();
         for (idx, (title, desc, test_id, command)) in components_specs.iter().enumerate() {
-            let el = list_item(cx, demo_value.clone(), title, desc, test_id, command);
+            let el = list_item(
+                cx,
+                muted_foreground,
+                demo_value.clone(),
+                title,
+                desc,
+                test_id,
+                command,
+            );
             if idx % 2 == 0 {
                 col_left.push(el);
             } else {
@@ -228,6 +245,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                 .map(|(title, desc, test_id, command)| {
                     list_item(
                         cx,
+                        muted_foreground,
                         demo_value_for_components.clone(),
                         title,
                         desc,
