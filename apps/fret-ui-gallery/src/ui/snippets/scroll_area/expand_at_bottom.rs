@@ -2,12 +2,42 @@ pub const SOURCE: &str = include_str!("expand_at_bottom.rs");
 
 // region: example
 use fret_core::{Px, SemanticsRole};
+use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::SemanticsDecoration;
 use fret_ui::element::SemanticsProps;
 use fret_ui::scroll::ScrollHandle;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
+
+fn toggle_button<H: UiHost>(
+    expanded: Model<bool>,
+    is_expanded: bool,
+) -> impl IntoUiElement<H> + use<H> {
+    shadcn::Button::new(if is_expanded {
+        "Collapse"
+    } else {
+        "Expand at bottom"
+    })
+    .variant(shadcn::ButtonVariant::Secondary)
+    .on_activate(Arc::new(move |host, action_cx, _reason| {
+        let _ = host.models_mut().update(&expanded, |v| *v = !*v).ok();
+        host.notify(action_cx);
+        host.request_redraw(action_cx.window);
+    }))
+}
+
+fn empty_row<H: UiHost>(row_h: Px) -> impl IntoUiElement<H> + use<H> {
+    let mut row_layout = fret_ui::element::LayoutStyle::default();
+    row_layout.size.width = fret_ui::element::Length::Fill;
+    row_layout.size.height = fret_ui::element::Length::Px(row_h);
+    let row_props = fret_ui::element::ContainerProps {
+        layout: row_layout,
+        ..Default::default()
+    };
+    ui::container_props(row_props, |_cx| Vec::<AnyElement>::new())
+}
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     cx.named("ui-gallery.scroll_area.expand_at_bottom", |cx| {
@@ -25,22 +55,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     .get_model_copied(&expanded, Invalidation::Paint)
                     .unwrap_or(false);
 
-                let toggle = {
-                    let expanded = expanded.clone();
-                    shadcn::Button::new(if is_expanded {
-                        "Collapse"
-                    } else {
-                        "Expand at bottom"
-                    })
-                    .variant(shadcn::ButtonVariant::Secondary)
-                    .on_activate(Arc::new(move |host, action_cx, _reason| {
-                        let _ = host.models_mut().update(&expanded, |v| *v = !*v).ok();
-                        host.notify(action_cx);
-                        host.request_redraw(action_cx.window);
-                    }))
-                    .test_id("ui-gallery-scroll-area-expand-at-bottom-toggle")
+                let toggle = toggle_button::<H>(expanded.clone(), is_expanded)
                     .into_element(cx)
-                };
+                    .test_id("ui-gallery-scroll-area-expand-at-bottom-toggle");
 
                 // Deterministic sizing for diagnostics:
                 // - viewport height: 200px
@@ -50,14 +67,6 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 let baseline_rows = 10usize;
                 let expanded_rows = 100usize;
 
-                let mut row_layout = fret_ui::element::LayoutStyle::default();
-                row_layout.size.width = fret_ui::element::Length::Fill;
-                row_layout.size.height = fret_ui::element::Length::Px(row_h);
-                let row_props = fret_ui::element::ContainerProps {
-                    layout: row_layout,
-                    ..Default::default()
-                };
-
                 let leaf = cx.column(
                     fret_ui::element::ColumnProps {
                         gap: Px(0.0).into(),
@@ -66,11 +75,11 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     move |cx| {
                         let mut rows: Vec<AnyElement> = Vec::new();
                         for _ in 0..baseline_rows {
-                            rows.push(cx.container(row_props, |_cx| Vec::new()));
+                            rows.push(empty_row::<H>(row_h).into_element(cx));
                         }
                         if is_expanded {
                             for _ in 0..expanded_rows {
-                                rows.push(cx.container(row_props, |_cx| Vec::new()));
+                                rows.push(empty_row::<H>(row_h).into_element(cx));
                             }
                         }
                         rows

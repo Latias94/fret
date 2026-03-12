@@ -1050,6 +1050,18 @@ fn selected_scroll_area_snippet_helpers_prefer_into_ui_element_over_anyelement()
         &["fn tag_row<H: UiHost>(tag: Arc<str>) -> impl IntoUiElement<H> + use<H>"],
         &["fn tag_row<H: UiHost>(tag: Arc<str>) -> AnyElement"],
     );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/scroll_area/expand_at_bottom.rs",
+        &[
+            "fn toggle_button<H: UiHost>(expanded: Model<bool>, is_expanded: bool,) -> impl IntoUiElement<H> + use<H>",
+            "fn empty_row<H: UiHost>(row_h: Px) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &[
+            "fn toggle_button<H: UiHost>(expanded: Model<bool>, is_expanded: bool,) -> AnyElement",
+            "fn empty_row<H: UiHost>(row_h: Px) -> AnyElement",
+        ],
+    );
 }
 
 #[test]
