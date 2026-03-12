@@ -298,6 +298,10 @@ Current snapshot (2026-03-12):
   - prepared-glyph image rendering after font-ref resolution now lives behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `render_prepared_glyph_image(...)` no longer owns scaler/render handoff after font-ref lookup directly
+- The sixty-eighth internal `text/mod.rs` split has landed:
+  - prepared-glyph image rendering after scaler construction now lives behind a dedicated helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `render_prepared_glyph_image_with_font_ref(...)` no longer owns scaler/render dispatch directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed

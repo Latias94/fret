@@ -543,7 +543,7 @@ impl TextSystem {
         y_bin: u8,
     ) -> Option<parley::swash::scale::image::Image> {
         let mut scaler = self.build_prepared_glyph_scaler(glyph, font_ref);
-        render_prepared_glyph_image_at_bins(&mut scaler, glyph_id, x_bin, y_bin)
+        render_prepared_glyph_image_from_scaler(&mut scaler, glyph_id, x_bin, y_bin)
     }
 
     fn build_prepared_glyph_scaler<'a>(
@@ -897,6 +897,15 @@ fn render_prepared_glyph_image_at_bins(
 ) -> Option<parley::swash::scale::image::Image> {
     let offset_px = prepared_glyph_offset_px(x_bin, y_bin);
     render_prepared_glyph_image_with_scaler(scaler, glyph_id, offset_px)
+}
+
+fn render_prepared_glyph_image_from_scaler(
+    scaler: &mut parley::swash::scale::Scaler<'_>,
+    glyph_id: u16,
+    x_bin: u8,
+    y_bin: u8,
+) -> Option<parley::swash::scale::image::Image> {
+    render_prepared_glyph_image_at_bins(scaler, glyph_id, x_bin, y_bin)
 }
 
 fn apply_prepared_glyph_normalized_coords<'a>(
