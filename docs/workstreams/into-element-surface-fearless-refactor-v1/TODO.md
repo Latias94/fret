@@ -181,6 +181,10 @@ Implementation note on 2026-03-12:
 - the RenderOnce helper macro is now also renamed onto the public vocabulary:
   component-authoring docs should teach `fret_ui_kit::ui_component_render_once!(Ty)` rather than
   the old `ui_into_element_render_once!` name.
+- declarative semantics decorators now also sit on the public landing trait:
+  `UiElementTestIdExt`, `UiElementA11yExt`, and `UiElementKeyContextExt` wrappers land through
+  `IntoUiElement<H>` directly, so `declarative/semantics.rs` no longer depends on
+  `UiIntoElement` outside tests.
 - typography remains decoupled from the model-heavy constructor lane:
   this sweep does not mix with `checkbox`, `progress`, or `switch` refactors.
 - selected advanced/manual-assembly examples now also keep reusable helpers off raw landed return

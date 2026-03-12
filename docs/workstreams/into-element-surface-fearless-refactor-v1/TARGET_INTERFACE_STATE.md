@@ -186,6 +186,10 @@ Current execution note on 2026-03-12:
 - exported `fret_ui_kit` adapter macros (`ui_component_*`, `ui_component_render_once!`) and the
   built-in primitive glue now implement `IntoUiElement<H>` directly, so the remaining
   `UiIntoElement` scaffold is narrower than the first-party macro/component authoring surface.
+- declarative semantics helpers now also sit on the public landing trait:
+  `UiElementTestIdExt`, `UiElementA11yExt`, and `UiElementKeyContextExt` wrap values that land
+  through `IntoUiElement<H>` directly, so `UiIntoElement` no longer leaks into the production
+  implementation of `declarative/semantics.rs`.
 - `UiChildIntoElement<H>` is now deleted from the codebase; heterogeneous child collection in
   `fret_ui_kit::ui` / `imui` lands directly through `IntoUiElement<H>`.
 - direct-crate shadcn authoring now also gets the same landing ergonomics:

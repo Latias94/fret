@@ -392,6 +392,7 @@ mod source_policy_tests {
     const LIB_RS: &str = include_str!("lib.rs");
     const DECLARATIVE_MOD_RS: &str = include_str!("declarative/mod.rs");
     const DECLARATIVE_PRELUDE_RS: &str = include_str!("declarative/prelude.rs");
+    const DECLARATIVE_SEMANTICS_RS: &str = include_str!("declarative/semantics.rs");
     const IMUI_RS: &str = include_str!("imui.rs");
     const UI_RS: &str = include_str!("ui.rs");
     const UI_BUILDER_RS: &str = include_str!("ui_builder.rs");
@@ -480,5 +481,24 @@ mod source_policy_tests {
                 "{label} reintroduced UiIntoElementTestIdExt"
             );
         }
+    }
+
+    #[test]
+    fn declarative_semantics_wrappers_land_through_public_conversion_trait() {
+        let tests_start = DECLARATIVE_SEMANTICS_RS
+            .find("#[cfg(test)]")
+            .unwrap_or(DECLARATIVE_SEMANTICS_RS.len());
+        let public_surface = &DECLARATIVE_SEMANTICS_RS[..tests_start];
+
+        assert!(
+            !public_surface.contains("UiIntoElement"),
+            "declarative/semantics.rs production surface should not depend on UiIntoElement"
+        );
+        assert!(public_surface.contains("IntoUiElement<H> for UiElementWithTestId<T>"));
+        assert!(public_surface.contains("IntoUiElement<H> for UiElementWithA11y<T>"));
+        assert!(public_surface.contains("IntoUiElement<H> for UiElementWithKeyContext<T>"));
+        assert!(public_surface.contains("pub trait UiElementTestIdExt: Sized"));
+        assert!(public_surface.contains("pub trait UiElementA11yExt: Sized"));
+        assert!(public_surface.contains("pub trait UiElementKeyContextExt: Sized"));
     }
 }

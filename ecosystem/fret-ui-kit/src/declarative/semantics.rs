@@ -3,7 +3,7 @@ use std::sync::Arc;
 use fret_core::SemanticsRole;
 use fret_ui::element::{AnyElement, SemanticsDecoration};
 
-use crate::UiIntoElement;
+use crate::IntoUiElement;
 
 pub trait AnyElementSemanticsExt {
     fn a11y(self, decoration: SemanticsDecoration) -> AnyElement;
@@ -75,23 +75,23 @@ impl<T> UiElementWithTestId<T> {
     }
 }
 
-impl<T: UiIntoElement> UiIntoElement for UiElementWithTestId<T> {
+impl<H: fret_ui::UiHost, T> IntoUiElement<H> for UiElementWithTestId<T>
+where
+    T: IntoUiElement<H>,
+{
     #[track_caller]
-    fn into_element<H: fret_ui::UiHost>(
-        self,
-        cx: &mut fret_ui::ElementContext<'_, H>,
-    ) -> fret_ui::element::AnyElement {
+    fn into_element(self, cx: &mut fret_ui::ElementContext<'_, H>) -> fret_ui::element::AnyElement {
         self.inner.into_element(cx).test_id(self.test_id)
     }
 }
 
-pub trait UiElementTestIdExt: UiIntoElement + Sized {
+pub trait UiElementTestIdExt: Sized {
     fn test_id(self, id: impl Into<Arc<str>>) -> UiElementWithTestId<Self> {
         UiElementWithTestId::new(self, id)
     }
 }
 
-impl<T: UiIntoElement> UiElementTestIdExt for T {}
+impl<T> UiElementTestIdExt for T {}
 
 #[derive(Debug, Clone)]
 pub struct UiElementWithA11y<T> {
@@ -105,17 +105,17 @@ impl<T> UiElementWithA11y<T> {
     }
 }
 
-impl<T: UiIntoElement> UiIntoElement for UiElementWithA11y<T> {
+impl<H: fret_ui::UiHost, T> IntoUiElement<H> for UiElementWithA11y<T>
+where
+    T: IntoUiElement<H>,
+{
     #[track_caller]
-    fn into_element<H: fret_ui::UiHost>(
-        self,
-        cx: &mut fret_ui::ElementContext<'_, H>,
-    ) -> fret_ui::element::AnyElement {
+    fn into_element(self, cx: &mut fret_ui::ElementContext<'_, H>) -> fret_ui::element::AnyElement {
         self.inner.into_element(cx).a11y(self.decoration)
     }
 }
 
-pub trait UiElementA11yExt: UiIntoElement + Sized {
+pub trait UiElementA11yExt: Sized {
     fn a11y(self, decoration: SemanticsDecoration) -> UiElementWithA11y<Self> {
         UiElementWithA11y::new(self, decoration)
     }
@@ -149,7 +149,7 @@ pub trait UiElementA11yExt: UiIntoElement + Sized {
     }
 }
 
-impl<T: UiIntoElement> UiElementA11yExt for T {}
+impl<T> UiElementA11yExt for T {}
 
 #[derive(Debug, Clone)]
 pub struct UiElementWithKeyContext<T> {
@@ -166,23 +166,23 @@ impl<T> UiElementWithKeyContext<T> {
     }
 }
 
-impl<T: UiIntoElement> UiIntoElement for UiElementWithKeyContext<T> {
+impl<H: fret_ui::UiHost, T> IntoUiElement<H> for UiElementWithKeyContext<T>
+where
+    T: IntoUiElement<H>,
+{
     #[track_caller]
-    fn into_element<H: fret_ui::UiHost>(
-        self,
-        cx: &mut fret_ui::ElementContext<'_, H>,
-    ) -> fret_ui::element::AnyElement {
+    fn into_element(self, cx: &mut fret_ui::ElementContext<'_, H>) -> fret_ui::element::AnyElement {
         self.inner.into_element(cx).key_context(self.key_context)
     }
 }
 
-pub trait UiElementKeyContextExt: UiIntoElement + Sized {
+pub trait UiElementKeyContextExt: Sized {
     fn key_context(self, key_context: impl Into<Arc<str>>) -> UiElementWithKeyContext<Self> {
         UiElementWithKeyContext::new(self, key_context)
     }
 }
 
-impl<T: UiIntoElement> UiElementKeyContextExt for T {}
+impl<T> UiElementKeyContextExt for T {}
 
 #[cfg(test)]
 mod tests {
@@ -351,11 +351,11 @@ mod tests {
     }
 
     #[test]
-    fn ui_into_element_exts_allow_semantics_and_key_context_without_early_into_element() {
+    fn semantics_exts_allow_semantics_and_key_context_without_early_into_element() {
         struct Dummy;
-        impl UiIntoElement for Dummy {
+        impl<H: fret_ui::UiHost> IntoUiElement<H> for Dummy {
             #[track_caller]
-            fn into_element<H: fret_ui::UiHost>(
+            fn into_element(
                 self,
                 cx: &mut fret_ui::ElementContext<'_, H>,
             ) -> fret_ui::element::AnyElement {

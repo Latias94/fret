@@ -96,6 +96,11 @@ Execution note on 2026-03-12:
   wrapper outputs, while `ecosystem/fret-ui-shadcn/src/kbd.rs::kbd_icon<H>(...)` remains
   intentionally raw because `Kbd::from_children(...)` still owns a concrete `Vec<AnyElement>`
   child seam.
+- the internal declarative semantics surface now also records
+  `ecosystem/fret-ui-kit/src/declarative/semantics.rs`,
+  where `UiElementTestIdExt`, `UiElementA11yExt`, and `UiElementKeyContextExt` wrappers now land
+  through `IntoUiElement<H>` directly, with a source-policy gate asserting that the production
+  semantics helper surface no longer depends on `UiIntoElement`.
 - the focused `selected_*` source gate now also covers
   `apps/fret-ui-gallery/src/ui/snippets/sidebar/{demo,controlled,mobile,rtl}.rs`,
   where `menu_button(...)` moved from raw `AnyElement` returns to `IntoUiElement`-based helper
