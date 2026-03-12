@@ -163,6 +163,10 @@ As of 2026-03-12:
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `render_prepared_glyph_raster(...)` no longer owns `FontRef/scaler/Render::new(...).render(...)`
     directly
+- The twenty-first internal text split has landed:
+  - prepared-glyph image-to-raster mapping now lives behind a pure helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `render_prepared_glyph_raster(...)` now just composes image render and raster mapping
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
@@ -228,6 +232,10 @@ As of 2026-03-12:
   - `cargo check -p fret-launch -p fret-examples`: passed
   - `python3 tools/check_layering.py`: passed
 - Internal text split verification remains green after the prepared-glyph image-render extraction:
+  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+- Internal text split verification remains green after the prepared-glyph image-to-raster extraction:
   - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
   - `python3 tools/check_layering.py`: passed

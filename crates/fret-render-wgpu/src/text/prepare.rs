@@ -462,26 +462,7 @@ impl TextSystem {
         y_bin: u8,
     ) -> Option<PreparedGlyphRaster> {
         let image = self.render_prepared_glyph_image(glyph, glyph_id, x_bin, y_bin)?;
-        if image.placement.width == 0 || image.placement.height == 0 {
-            return None;
-        }
-
-        let placement = image.placement;
-        let (kind, bytes_per_pixel) = match image.content {
-            parley::swash::scale::image::Content::Mask => (GlyphQuadKind::Mask, 1),
-            parley::swash::scale::image::Content::Color => (GlyphQuadKind::Color, 4),
-            parley::swash::scale::image::Content::SubpixelMask => (GlyphQuadKind::Subpixel, 4),
-        };
-
-        Some(PreparedGlyphRaster {
-            glyph_key: prepared_glyph_key(face_key, glyph.id, size_bits, x_bin, y_bin, kind),
-            width: placement.width,
-            height: placement.height,
-            left: placement.left,
-            top: placement.top,
-            bytes_per_pixel,
-            data: image.data,
-        })
+        prepared_glyph_raster_from_image(image, face_key, glyph.id, size_bits, x_bin, y_bin)
     }
 
     fn render_prepared_glyph_image(
@@ -668,6 +649,36 @@ fn prepared_glyph_paint_span(
 ) -> Option<u16> {
     resolved_spans
         .and_then(|spans| paint_span_for_text_range(spans, &glyph.text_range, glyph.is_rtl))
+}
+
+fn prepared_glyph_raster_from_image(
+    image: parley::swash::scale::image::Image,
+    face_key: FontFaceKey,
+    glyph_id: u32,
+    size_bits: u32,
+    x_bin: u8,
+    y_bin: u8,
+) -> Option<PreparedGlyphRaster> {
+    if image.placement.width == 0 || image.placement.height == 0 {
+        return None;
+    }
+
+    let placement = image.placement;
+    let (kind, bytes_per_pixel) = match image.content {
+        parley::swash::scale::image::Content::Mask => (GlyphQuadKind::Mask, 1),
+        parley::swash::scale::image::Content::Color => (GlyphQuadKind::Color, 4),
+        parley::swash::scale::image::Content::SubpixelMask => (GlyphQuadKind::Subpixel, 4),
+    };
+
+    Some(PreparedGlyphRaster {
+        glyph_key: prepared_glyph_key(face_key, glyph_id, size_bits, x_bin, y_bin, kind),
+        width: placement.width,
+        height: placement.height,
+        left: placement.left,
+        top: placement.top,
+        bytes_per_pixel,
+        data: image.data,
+    })
 }
 
 fn prepared_glyph_key(
