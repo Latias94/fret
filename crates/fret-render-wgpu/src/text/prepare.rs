@@ -742,10 +742,14 @@ fn prepared_glyph_face_key(glyph: &ParleyGlyph, font_data_id: u64, face_index: u
     FontFaceKey {
         font_data_id,
         face_index,
-        variation_key: variation_key_from_normalized_coords(&glyph.normalized_coords),
+        variation_key: prepared_glyph_variation_key(glyph),
         synthesis_embolden: glyph.synthesis.embolden(),
         synthesis_skew_degrees: prepared_glyph_synthesis_skew_degrees(glyph),
     }
+}
+
+fn prepared_glyph_variation_key(glyph: &ParleyGlyph) -> u64 {
+    variation_key_from_normalized_coords(&glyph.normalized_coords)
 }
 
 fn prepared_glyph_synthesis_skew_degrees(glyph: &ParleyGlyph) -> i8 {
