@@ -135,7 +135,8 @@ Implementation note on 2026-03-12:
   `apps/fret-examples/src/async_playground_demo.rs` (`status_badge`),
   `apps/fret-examples/src/postprocess_theme_demo.rs` (`stage_body`, `stage_cards`),
   `apps/fret-examples/src/drop_shadow_demo.rs` (`card<H>(...)`),
-  and `apps/fret-examples/src/markdown_demo.rs` (`render_image_placeholder<H>(...)`)
+  `apps/fret-examples/src/markdown_demo.rs` (`render_image_placeholder<H>(...)`),
+  and `apps/fret-examples/src/liquid_glass_demo.rs` (`lens_panel<H>(...)`)
   now return `impl IntoUiElement<...>`.
 - selected UI Gallery AI doc pages now keep page-local helpers on the default app-facing child
   surface:

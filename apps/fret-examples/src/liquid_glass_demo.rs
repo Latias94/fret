@@ -25,9 +25,9 @@ use fret_ui::element::{
     Overflow, PositionStyle, RowProps, SizeStyle, SpacerProps, SpacingLength, TextProps,
 };
 use fret_ui_assets::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
-use fret_ui_kit::Space;
 use fret_ui_kit::custom_effects::{CustomEffectProgramV2, CustomEffectProgramV3};
 use fret_ui_kit::ui;
+use fret_ui_kit::{IntoUiElement, Space};
 use fret_ui_shadcn::facade as shadcn;
 
 use crate::custom_effect_v3_wgsl::CUSTOM_EFFECT_V3_LENS_WGSL;
@@ -274,7 +274,7 @@ fn lens_panel<H: UiHost>(
     radius: Px,
     mode: EffectMode,
     chain: EffectChain,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let mut outer_layout = LayoutStyle::default();
     outer_layout.size.width = Length::Px(Px(320.0));
     outer_layout.size.height = Length::Px(Px(220.0));
@@ -1358,39 +1358,37 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                 move |cx| {
                                     let mut out: Vec<AnyElement> = Vec::new();
                                     if show_fake {
-                                        out.push(
-                                            lens_panel(
-                                                cx,
-                                                Arc::from("Fake glass (blur + adjust)"),
-                                                lens_radius,
-                                                mode,
-                                                fake_chain,
-                                            )
-                                            .test_id("liquid-glass-lens-fake"),
+                                        let lens = lens_panel(
+                                            cx,
+                                            Arc::from("Fake glass (blur + adjust)"),
+                                            lens_radius,
+                                            mode,
+                                            fake_chain,
                                         );
+                                        out.push(lens.into_element(cx).test_id("liquid-glass-lens-fake"));
                                     }
                                     if show_warp {
+                                        let lens = lens_panel(
+                                            cx,
+                                            Arc::from("Warp v1 (procedural)"),
+                                            lens_radius,
+                                            mode,
+                                            warp_chain,
+                                        );
                                         out.push(
-                                            lens_panel(
-                                                cx,
-                                                Arc::from("Warp v1 (procedural)"),
-                                                lens_radius,
-                                                mode,
-                                                warp_chain,
-                                            )
-                                            .test_id("liquid-glass-lens-warp-v1"),
+                                            lens.into_element(cx).test_id("liquid-glass-lens-warp-v1"),
                                         );
                                     }
                                     if show_warp_v2 {
+                                        let lens = lens_panel(
+                                            cx,
+                                            Arc::from("Warp v2 (image field)"),
+                                            lens_radius,
+                                            mode,
+                                            warp_v2_chain,
+                                        );
                                         out.push(
-                                            lens_panel(
-                                                cx,
-                                                Arc::from("Warp v2 (image field)"),
-                                                lens_radius,
-                                                mode,
-                                                warp_v2_chain,
-                                            )
-                                            .test_id("liquid-glass-lens-warp-v2"),
+                                            lens.into_element(cx).test_id("liquid-glass-lens-warp-v2"),
                                         );
                                     }
                                     if show_custom_v2 {
@@ -1405,8 +1403,10 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                         } else {
                                             Arc::from("CustomV2 (loading input)")
                                         };
+                                        let lens =
+                                            lens_panel(cx, label, lens_radius, mode, custom_v2_chain);
                                         out.push(
-                                            lens_panel(cx, label, lens_radius, mode, custom_v2_chain)
+                                            lens.into_element(cx)
                                                 .test_id("liquid-glass-lens-custom-v2"),
                                         );
                                     }
@@ -1428,16 +1428,20 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                                 lens_radius,
                                                 mode,
                                                 chain.clone(),
-                                            )
-                                                    .test_id("liquid-glass-lens-custom-v3");
+                                            );
+                                            let lens_a = lens_a
+                                                .into_element(cx)
+                                                .test_id("liquid-glass-lens-custom-v3");
                                             let lens_b = lens_panel(
                                                 cx,
                                                 Arc::from("CustomV3 (lens B; ordering drift)"),
                                                 lens_radius,
                                                 mode,
                                                 chain,
-                                            )
-                                            .test_id("liquid-glass-lens-custom-v3-b");
+                                            );
+                                            let lens_b = lens_b
+                                                .into_element(cx)
+                                                .test_id("liquid-glass-lens-custom-v3-b");
 
                                             let pair = cx.row(
                                                 RowProps {
@@ -1466,8 +1470,9 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                                 out.push(pair);
                                             }
                                         } else {
+                                            let lens = lens_panel(cx, label, lens_radius, mode, chain);
                                             out.push(
-                                                lens_panel(cx, label, lens_radius, mode, chain)
+                                                lens.into_element(cx)
                                                     .test_id("liquid-glass-lens-custom-v3"),
                                             );
                                         }

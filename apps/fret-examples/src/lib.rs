@@ -879,6 +879,16 @@ mod authoring_surface_policy_tests {
                 "fn render_image_placeholder<H: fret_ui::UiHost>(cx: &mut fret_ui::ElementContext<'_, H>, theme: fret_ui::ThemeSnapshot, on_link_activate: Option<markdown::OnLinkActivate>, link: markdown::LinkInfo) -> AnyElement",
             ],
         );
+
+        assert_advanced_generic_helpers_prefer_into_ui_element(
+            LIQUID_GLASS_DEMO,
+            &[
+                "fn lens_panel<H: UiHost>(cx: &mut ElementContext<'_, H>, label: Arc<str>, radius: Px, mode: EffectMode, chain: EffectChain) -> impl IntoUiElement<H> + use<H>",
+            ],
+            &[
+                "fn lens_panel<H: UiHost>(cx: &mut ElementContext<'_, H>, label: Arc<str>, radius: Px, mode: EffectMode, chain: EffectChain) -> AnyElement",
+            ],
+        );
     }
 
     #[test]
