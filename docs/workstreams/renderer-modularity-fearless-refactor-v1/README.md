@@ -113,6 +113,10 @@ As of 2026-03-12:
   - caret / hit-test / selection / line-metrics helpers now live under
     `crates/fret-render-wgpu/src/text/queries.rs`
   - `text/mod.rs` no longer owns text query helpers directly
+- The ninth internal text split has landed:
+  - atlas runtime helpers now live under `crates/fret-render-wgpu/src/text/atlas.rs`
+  - `text/mod.rs` no longer owns atlas bind-group access, scene pinning, or glyph ensure/rasterize
+    helpers directly
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
@@ -130,6 +134,10 @@ As of 2026-03-12:
   - `cargo check -p fret-launch -p fret-examples`: passed
   - `python3 tools/check_layering.py`: passed
 - Internal text split verification remains green after the measure/query extraction:
+  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+- Internal text split verification remains green after the atlas runtime extraction:
   - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
   - `python3 tools/check_layering.py`: passed

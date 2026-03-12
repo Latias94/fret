@@ -55,6 +55,10 @@ Current snapshot (2026-03-12):
   - caret / hit-test / selection / line-metrics helpers moved into
     `crates/fret-render-wgpu/src/text/queries.rs`
   - `text/mod.rs` no longer owns text query helpers directly
+- The ninth internal `text/mod.rs` split has landed:
+  - atlas runtime helpers moved into `crates/fret-render-wgpu/src/text/atlas.rs`
+  - `text/mod.rs` no longer owns atlas bind-group access, scene pinning, or glyph
+    ensure/rasterize helpers directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
