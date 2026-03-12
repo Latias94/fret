@@ -286,6 +286,10 @@ Current snapshot (2026-03-12):
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `cache_prepared_glyph_instance_coords(...)` and
     `apply_prepared_glyph_normalized_coords(...)` no longer own emptiness checks directly
+- The sixty-fifth internal `text/mod.rs` split has landed:
+  - prepared-glyph normalized-coords builder injection now lives behind a dedicated helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `apply_prepared_glyph_normalized_coords(...)` no longer owns `normalized_coords.iter()` builder injection directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed

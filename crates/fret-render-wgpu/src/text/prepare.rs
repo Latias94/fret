@@ -882,6 +882,13 @@ fn apply_prepared_glyph_normalized_coords<'a>(
     if !prepared_glyph_has_normalized_coords(glyph) {
         return scaler_builder;
     }
+    apply_prepared_glyph_normalized_coords_values(scaler_builder, glyph)
+}
+
+fn apply_prepared_glyph_normalized_coords_values<'a>(
+    scaler_builder: parley::swash::scale::ScalerBuilder<'a>,
+    glyph: &'a ParleyGlyph,
+) -> parley::swash::scale::ScalerBuilder<'a> {
     scaler_builder.normalized_coords(glyph.normalized_coords.iter())
 }
 
