@@ -39,35 +39,13 @@ struct TextareaResizeDrag {
     start_height: Px,
 }
 
-#[derive(Default)]
-struct TextareaResizeState {
-    height_override: Option<Model<Option<Px>>>,
-    drag: Option<Model<Option<TextareaResizeDrag>>>,
-}
-
 fn textarea_resize_models<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> (Model<Option<Px>>, Model<Option<TextareaResizeDrag>>) {
-    let needs_init = cx.with_state(TextareaResizeState::default, |st| {
-        st.height_override.is_none() || st.drag.is_none()
-    });
-
-    if needs_init {
-        let height_override = cx.app.models_mut().insert(None::<Px>);
-        let drag = cx.app.models_mut().insert(None::<TextareaResizeDrag>);
-        cx.with_state(TextareaResizeState::default, |st| {
-            st.height_override = Some(height_override.clone());
-            st.drag = Some(drag.clone());
-        });
-        return (height_override, drag);
-    }
-
-    cx.with_state(TextareaResizeState::default, |st| {
-        (
-            st.height_override.clone().expect("height_override"),
-            st.drag.clone().expect("drag"),
-        )
-    })
+    (
+        cx.local_model_keyed("height_override", || None::<Px>),
+        cx.local_model_keyed("drag", || None::<TextareaResizeDrag>),
+    )
 }
 
 #[derive(Clone)]

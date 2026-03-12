@@ -718,40 +718,12 @@ impl Calendar {
 
                 let (caption_month_value, caption_year_value) =
                     if caption_layout == CalendarCaptionLayout::Dropdown {
-                        #[derive(Default, Clone)]
-                        struct CaptionDropdownModels {
-                            month_value: Option<Model<Option<Arc<str>>>>,
-                            year_value: Option<Model<Option<Arc<str>>>>,
-                        }
-
-                        let st = cx.with_state(CaptionDropdownModels::default, |st| st.clone());
-
-                        let month_value = match st.month_value {
-                            Some(model) => model,
-                            None => {
-                                let model = cx
-                                    .app
-                                    .models_mut()
-                                    .insert(Some(Arc::from(month_number(month.month).to_string())));
-                                cx.with_state(CaptionDropdownModels::default, |st| {
-                                    st.month_value = Some(model.clone())
-                                });
-                                model
-                            }
-                        };
-                        let year_value = match st.year_value {
-                            Some(model) => model,
-                            None => {
-                                let model = cx
-                                    .app
-                                    .models_mut()
-                                    .insert(Some(Arc::from(month.year.to_string())));
-                                cx.with_state(CaptionDropdownModels::default, |st| {
-                                    st.year_value = Some(model.clone())
-                                });
-                                model
-                            }
-                        };
+                        let month_value = cx.local_model_keyed("caption_month_value", || {
+                            Some(Arc::from(month_number(month.month).to_string()))
+                        });
+                        let year_value = cx.local_model_keyed("caption_year_value", || {
+                            Some(Arc::from(month.year.to_string()))
+                        });
 
                         (Some(month_value), Some(year_value))
                     } else {

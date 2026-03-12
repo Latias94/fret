@@ -248,12 +248,6 @@ impl Clone for FacetedFilterItemBinding {
 
 #[derive(Default)]
 struct DataTableToolbarState {
-    filter_model: Option<Model<String>>,
-    column_filter_model: Option<Model<String>>,
-    columns_open: Option<Model<bool>>,
-    pinning_open: Option<Model<bool>>,
-    faceted_open: Option<Model<bool>>,
-    faceted_query: Option<Model<String>>,
     faceted_last_open: Option<bool>,
     faceted_column: Option<ColumnId>,
     faceted_items: Vec<FacetedFilterItemBinding>,
@@ -502,108 +496,41 @@ impl<TData> DataTableToolbar<TData> {
                     .unwrap_or_default();
                 let state_revision = self.state.revision(&*cx.app).unwrap_or(0);
 
-                let filter_model =
-                    cx.with_state(DataTableToolbarState::default, |st| st.filter_model.clone());
-                let filter_model = match (self.show_global_filter, filter_model) {
-                    (false, _) => None,
-                    (true, Some(m)) => Some(m),
-                    (true, None) => {
-                        let initial = state_value
+                let filter_model = self.show_global_filter.then(|| {
+                    cx.local_model_keyed("filter_model", || {
+                        state_value
                             .global_filter
                             .as_ref()
                             .and_then(|v| v.as_str())
                             .unwrap_or_default()
-                            .to_string();
-                        let m = cx.app.models_mut().insert(initial);
-                        let m_for_state = m.clone();
-                        cx.with_state(DataTableToolbarState::default, move |st| {
-                            st.filter_model = Some(m_for_state);
-                        });
-                        Some(m)
-                    }
-                };
-
-                let column_filter_model = cx.with_state(DataTableToolbarState::default, |st| {
-                    st.column_filter_model.clone()
+                            .to_string()
+                    })
                 });
-                let column_filter_model = match (self.column_filter.as_ref(), column_filter_model) {
-                    (Some(_), Some(m)) => Some(m),
-                    (None, _) => None,
-                    (Some(column_id), None) => {
-                        let initial = state_value
+
+                let column_filter_model = self.column_filter.as_ref().map(|column_id| {
+                    cx.local_model_keyed("column_filter_model", || {
+                        state_value
                             .column_filters
                             .iter()
                             .find(|f| f.column.as_ref() == column_id.as_ref())
                             .and_then(|f| f.value.as_str())
                             .unwrap_or_default()
-                            .to_string();
-                        let m = cx.app.models_mut().insert(initial);
-                        let m_for_state = m.clone();
-                        cx.with_state(DataTableToolbarState::default, move |st| {
-                            st.column_filter_model = Some(m_for_state);
-                        });
-                        Some(m)
-                    }
-                };
-
-                let columns_open =
-                    cx.with_state(DataTableToolbarState::default, |st| st.columns_open.clone());
-                let columns_open = match columns_open {
-                    Some(m) => m,
-                    None => {
-                        let m = cx.app.models_mut().insert(false);
-                        let m_for_state = m.clone();
-                        cx.with_state(DataTableToolbarState::default, move |st| {
-                            st.columns_open = Some(m_for_state);
-                        });
-                        m
-                    }
-                };
-
-                let pinning_open =
-                    cx.with_state(DataTableToolbarState::default, |st| st.pinning_open.clone());
-                let pinning_open = match pinning_open {
-                    Some(m) => m,
-                    None => {
-                        let m = cx.app.models_mut().insert(false);
-                        let m_for_state = m.clone();
-                        cx.with_state(DataTableToolbarState::default, move |st| {
-                            st.pinning_open = Some(m_for_state);
-                        });
-                        m
-                    }
-                };
-
-                let faceted_open =
-                    cx.with_state(DataTableToolbarState::default, |st| st.faceted_open.clone());
-                let faceted_open = match (self.faceted_filter.as_ref(), faceted_open) {
-                    (None, _) => None,
-                    (Some(_), Some(m)) => Some(m),
-                    (Some(_), None) => {
-                        let m = cx.app.models_mut().insert(false);
-                        let m_for_state = m.clone();
-                        cx.with_state(DataTableToolbarState::default, move |st| {
-                            st.faceted_open = Some(m_for_state);
-                        });
-                        Some(m)
-                    }
-                };
-
-                let faceted_query = cx.with_state(DataTableToolbarState::default, |st| {
-                    st.faceted_query.clone()
+                            .to_string()
+                    })
                 });
-                let faceted_query = match (self.faceted_filter.as_ref(), faceted_query) {
-                    (None, _) => None,
-                    (Some(_), Some(m)) => Some(m),
-                    (Some(_), None) => {
-                        let m = cx.app.models_mut().insert(String::new());
-                        let m_for_state = m.clone();
-                        cx.with_state(DataTableToolbarState::default, move |st| {
-                            st.faceted_query = Some(m_for_state);
-                        });
-                        Some(m)
-                    }
-                };
+
+                let columns_open = cx.local_model_keyed("columns_open", || false);
+                let pinning_open = cx.local_model_keyed("pinning_open", || false);
+
+                let faceted_open = self
+                    .faceted_filter
+                    .as_ref()
+                    .map(|_| cx.local_model_keyed("faceted_open", || false));
+
+                let faceted_query = self
+                    .faceted_filter
+                    .as_ref()
+                    .map(|_| cx.local_model_keyed("faceted_query", String::new));
 
                 if let (Some(open), Some(query)) = (faceted_open.as_ref(), faceted_query.as_ref()) {
                     let open_now = cx.watch_model(open).layout().copied().unwrap_or(false);
@@ -1507,8 +1434,6 @@ impl<TData> DataTableToolbar<TData> {
 
 #[derive(Default)]
 struct DataTablePaginationState {
-    page_size_open: Option<Model<bool>>,
-    page_size_value: Option<Model<Option<Arc<str>>>>,
     last_synced_page_size: Option<usize>,
 }
 
@@ -1557,35 +1482,8 @@ impl DataTablePagination {
             .cloned()
             .unwrap_or_default();
 
-        let page_size_open = cx.with_state(DataTablePaginationState::default, |st| {
-            st.page_size_open.clone()
-        });
-        let page_size_open = match page_size_open {
-            Some(m) => m,
-            None => {
-                let m = cx.app.models_mut().insert(false);
-                let m_for_state = m.clone();
-                cx.with_state(DataTablePaginationState::default, move |st| {
-                    st.page_size_open = Some(m_for_state);
-                });
-                m
-            }
-        };
-
-        let page_size_value = cx.with_state(DataTablePaginationState::default, |st| {
-            st.page_size_value.clone()
-        });
-        let page_size_value = match page_size_value {
-            Some(m) => m,
-            None => {
-                let m = cx.app.models_mut().insert(None::<Arc<str>>);
-                let m_for_state = m.clone();
-                cx.with_state(DataTablePaginationState::default, move |st| {
-                    st.page_size_value = Some(m_for_state);
-                });
-                m
-            }
-        };
+        let page_size_open = cx.local_model_keyed("page_size_open", || false);
+        let page_size_value = cx.local_model_keyed("page_size_value", || None::<Arc<str>>);
 
         let current_size = state_value.pagination.page_size;
         let current_size_str: Arc<str> = Arc::from(current_size.to_string());

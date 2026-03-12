@@ -163,27 +163,14 @@ struct TooltipTriggerEventModels {
 fn tooltip_trigger_event_models<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> TooltipTriggerEventModels {
-    #[derive(Default)]
-    struct State {
-        models: Option<TooltipTriggerEventModels>,
-    }
-
-    let existing = cx.with_state(State::default, |st| st.models.clone());
-    if let Some(models) = existing {
-        return models;
-    }
-
-    let models = TooltipTriggerEventModels {
-        has_pointer_move_opened: cx.app.models_mut().insert(false),
+    TooltipTriggerEventModels {
+        has_pointer_move_opened: cx.local_model_keyed("has_pointer_move_opened", || false),
         pointer_transit_geometry: tooltip_provider::pointer_transit_geometry_model(cx),
-        suppress_hover_open: cx.app.models_mut().insert(false),
-        suppress_focus_open: cx.app.models_mut().insert(false),
-        close_requested: cx.app.models_mut().insert(false),
-        close_reason: cx.app.models_mut().insert(None),
-    };
-
-    cx.with_state(State::default, |st| st.models = Some(models.clone()));
-    models
+        suppress_hover_open: cx.local_model_keyed("suppress_hover_open", || false),
+        suppress_focus_open: cx.local_model_keyed("suppress_focus_open", || false),
+        close_requested: cx.local_model_keyed("close_requested", || false),
+        close_reason: cx.local_model_keyed("close_reason", || None),
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy)]

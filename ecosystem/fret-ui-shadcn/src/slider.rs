@@ -378,58 +378,10 @@ pub fn slider<H: UiHost>(
             None
         };
 
-        #[derive(Default)]
-        struct DragIndexState {
-            model: Option<Model<usize>>,
-            dragging: Option<Model<bool>>,
-            hovered: Option<Model<bool>>,
-            values_before: Option<Model<Vec<f32>>>,
-        }
-
-        let drag_index_model = cx.with_state(DragIndexState::default, |st| st.model.clone());
-        let drag_index_model = if let Some(drag_index_model) = drag_index_model {
-            drag_index_model
-        } else {
-            let drag_index_model = cx.app.models_mut().insert(0usize);
-            cx.with_state(DragIndexState::default, |st| {
-                st.model = Some(drag_index_model.clone());
-            });
-            drag_index_model
-        };
-
-        let dragging_model = cx.with_state(DragIndexState::default, |st| st.dragging.clone());
-        let dragging_model = if let Some(dragging_model) = dragging_model {
-            dragging_model
-        } else {
-            let dragging_model = cx.app.models_mut().insert(false);
-            cx.with_state(DragIndexState::default, |st| {
-                st.dragging = Some(dragging_model.clone());
-            });
-            dragging_model
-        };
-
-        let hovered_model = cx.with_state(DragIndexState::default, |st| st.hovered.clone());
-        let hovered_model = if let Some(hovered_model) = hovered_model {
-            hovered_model
-        } else {
-            let hovered_model = cx.app.models_mut().insert(false);
-            cx.with_state(DragIndexState::default, |st| {
-                st.hovered = Some(hovered_model.clone());
-            });
-            hovered_model
-        };
-
-        let values_before_model =
-            cx.with_state(DragIndexState::default, |st| st.values_before.clone());
-        let values_before_model = if let Some(values_before_model) = values_before_model {
-            values_before_model
-        } else {
-            let values_before_model = cx.app.models_mut().insert(Vec::<f32>::new());
-            cx.with_state(DragIndexState::default, |st| {
-                st.values_before = Some(values_before_model.clone());
-            });
-            values_before_model
-        };
+        let drag_index_model = cx.local_model_keyed("drag_index", || 0usize);
+        let dragging_model = cx.local_model_keyed("dragging", || false);
+        let hovered_model = cx.local_model_keyed("hovered", || false);
+        let values_before_model = cx.local_model_keyed("values_before", Vec::<f32>::new);
 
         let enabled = !disabled;
 
