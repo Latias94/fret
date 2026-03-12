@@ -177,6 +177,8 @@ This tracker follows the repo-wide authoring reset and the focused conversion-su
   child-pipeline traits such as `UiChildIntoElement<H>`,
 - shadcn opt-in authoring glue in `ecosystem/fret-ui-shadcn/src/ui_ext/` now also lands through
   `IntoUiElement<H>` directly, so adapter macros do not re-teach `UiIntoElement`,
+- shadcn `ui_builder_ext/*` helper closures now also accept values that implement
+  `IntoUiElement<H>`, so trigger/content/cell builders do not have to pre-land into `AnyElement`,
 - `UiHostBoundIntoElement` and `UiBuilderHostBoundIntoElementExt` are already deleted from code;
   `UiChildIntoElement` remains only as the thin heterogeneous-child bridge and should not be
   taught on first-party shadcn surfaces,

@@ -4,6 +4,12 @@ const ADVANCED_RS: &str = include_str!("advanced.rs");
 const README: &str = include_str!("../README.md");
 const UI_EXT_SUPPORT_RS: &str = include_str!("ui_ext/support.rs");
 const UI_EXT_DATA_RS: &str = include_str!("ui_ext/data.rs");
+const UI_BUILDER_EXT_BREADCRUMB_RS: &str = include_str!("ui_builder_ext/breadcrumb.rs");
+const UI_BUILDER_EXT_COLLAPSIBLE_RS: &str = include_str!("ui_builder_ext/collapsible.rs");
+const UI_BUILDER_EXT_COMMAND_DIALOG_RS: &str = include_str!("ui_builder_ext/command_dialog.rs");
+const UI_BUILDER_EXT_DATA_RS: &str = include_str!("ui_builder_ext/data.rs");
+const UI_BUILDER_EXT_MENUS_RS: &str = include_str!("ui_builder_ext/menus.rs");
+const UI_BUILDER_EXT_OVERLAY_ROOTS_RS: &str = include_str!("ui_builder_ext/overlay_roots.rs");
 
 #[test]
 fn app_integration_stays_under_explicit_app_module() {
@@ -52,6 +58,32 @@ fn ui_ext_glue_prefers_unified_component_conversion_trait() {
         assert!(
             source.contains("::fret_ui_kit::IntoUiElement<H>"),
             "{label} should use the unified IntoUiElement<H> glue"
+        );
+    }
+}
+
+#[test]
+fn ui_builder_ext_closures_accept_unified_component_conversion_trait() {
+    for (label, source) in [
+        ("ui_builder_ext/breadcrumb.rs", UI_BUILDER_EXT_BREADCRUMB_RS),
+        (
+            "ui_builder_ext/collapsible.rs",
+            UI_BUILDER_EXT_COLLAPSIBLE_RS,
+        ),
+        (
+            "ui_builder_ext/command_dialog.rs",
+            UI_BUILDER_EXT_COMMAND_DIALOG_RS,
+        ),
+        ("ui_builder_ext/data.rs", UI_BUILDER_EXT_DATA_RS),
+        ("ui_builder_ext/menus.rs", UI_BUILDER_EXT_MENUS_RS),
+        (
+            "ui_builder_ext/overlay_roots.rs",
+            UI_BUILDER_EXT_OVERLAY_ROOTS_RS,
+        ),
+    ] {
+        assert!(
+            source.contains("IntoUiElement<H>"),
+            "{label} should accept the unified component conversion trait"
         );
     }
 }

@@ -123,6 +123,8 @@ Implementation note on 2026-03-12:
 - `fret-ui-shadcn` `ui_ext/support.rs` and `ui_ext/data.rs` now implement
   `IntoUiElement<H>` directly, so shadcn reusable glue no longer spells
   `UiIntoElement` on those adapters.
+- `fret-ui-shadcn` `ui_builder_ext/*` reusable helper closures now accept values that land through
+  `IntoUiElement<H>` instead of requiring `AnyElement`-typed closure returns up front.
 
 ## M4 — Delete the old public surface
 
@@ -153,6 +155,8 @@ Implementation note on 2026-03-12:
 - `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs` now guards that
   `ui_ext/support.rs` and `ui_ext/data.rs` stay on `IntoUiElement<H>` rather than
   reintroducing direct `UiIntoElement` glue.
+- `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs` now also guards that
+  `ui_builder_ext/*` reusable helper closures keep accepting `IntoUiElement<H>`.
 
 ## M6 — Keep advanced/raw seams explicit and justified
 
