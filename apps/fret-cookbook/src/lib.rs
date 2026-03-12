@@ -18,6 +18,8 @@ pub fn install_cookbook_defaults(app: &mut App) {
 
 #[cfg(test)]
 mod authoring_surface_policy_tests {
+    use std::path::{Path, PathBuf};
+
     const ROOT_README: &str = include_str!("../../../README.md");
     const GOLDEN_PATH_DOC: &str = include_str!("../../../docs/examples/todo-app-golden-path.md");
     const COMMANDS_KEYMAP_EXAMPLE: &str = include_str!("../examples/commands_keymap_basics.rs");
@@ -60,6 +62,30 @@ mod authoring_surface_policy_tests {
     const UTILITY_WINDOW_MATERIALS_EXAMPLE: &str =
         include_str!("../examples/utility_window_materials_windows.rs");
     const VIRTUAL_LIST_EXAMPLE: &str = include_str!("../examples/virtual_list_basics.rs");
+
+    fn collect_rust_sources(dir: &Path, out: &mut Vec<PathBuf>) {
+        for entry in std::fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                collect_rust_sources(&path, out);
+                continue;
+            }
+
+            if path.extension().is_some_and(|ext| ext == "rs") {
+                out.push(path);
+            }
+        }
+    }
+
+    fn cookbook_rust_sources() -> Vec<PathBuf> {
+        let mut paths = Vec::new();
+        collect_rust_sources(
+            &Path::new(env!("CARGO_MANIFEST_DIR")).join("examples"),
+            &mut paths,
+        );
+        paths.sort();
+        paths
+    }
 
     fn assert_uses_app_surface(src: &str) {
         assert!(src.contains("use fret::app::prelude::*;"));
@@ -119,6 +145,13 @@ mod authoring_surface_policy_tests {
         assert!(normalized.contains(".view::<"));
         assert!(normalized.contains(".run()"));
         assert!(!normalized.contains(".run_view::<"));
+    }
+
+    fn assert_setup_surface_keeps_inline_closures_off_setup(src: &str) {
+        let normalized = src.split_whitespace().collect::<String>();
+        assert!(!normalized.contains(".setup(|"));
+        assert!(!normalized.contains(".setup(move|"));
+        assert!(!normalized.contains(".setup_with("));
     }
 
     fn assert_advanced_helpers_prefer_uicx(
@@ -527,6 +560,14 @@ mod authoring_surface_policy_tests {
                     trimmed
                 );
             }
+        }
+    }
+
+    #[test]
+    fn cookbook_examples_keep_setup_on_named_installers() {
+        for path in cookbook_rust_sources() {
+            let source = std::fs::read_to_string(&path).unwrap();
+            assert_setup_surface_keeps_inline_closures_off_setup(&source);
         }
     }
 

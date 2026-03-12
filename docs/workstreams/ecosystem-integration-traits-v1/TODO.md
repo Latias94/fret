@@ -64,7 +64,8 @@ surface.
 - [x] Keep `FretApp::setup(...)` as the canonical app authoring story in docs and templates.
   - Extended on 2026-03-12: first-party docs/examples now document `.setup(...)` for named
     installers/tuples/bundles, keep inline closures on `UiAppBuilder::setup_with(...)`, and gate
-    against `.setup(|app| ...)` on the default app-author path.
+    against `.setup(|app| ...)` on the default app-author path across both
+    `apps/fret-examples` and `apps/fret-cookbook`.
 - [ ] Audit first-party crates for root-level exports that bypass curated facades.
   - Landed first-pass migration on 2026-03-11 for
     `fret-ui-assets`, `fret-icons-lucide`, `fret-icons-radix`, and `fret-node`; keep auditing the
@@ -197,6 +198,8 @@ surface.
   - giant plugin abstractions,
   - universal component traits.
   - Landed on 2026-03-11 in `ecosystem/fret/src/lib.rs` authoring-surface policy tests.
+  - Extended on 2026-03-12 with first-party source-policy coverage in
+    `apps/fret-examples/src/lib.rs` and `apps/fret-cookbook/src/lib.rs`.
 - [ ] Add evidence anchors for the first in-tree implementation of each accepted trait.
 
 ## 9. Hard Deletion Work

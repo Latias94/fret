@@ -221,8 +221,8 @@ Companion docs:
 - [x] Add source gates that keep default selector/query teaching on grouped `cx.data()` helpers.
 - [x] Add a gate that keeps `.setup(...)` on named installers/tuples/bundles and reserves inline
   closures for `setup_with(...)`.
-  - Landed on 2026-03-12 in `ecosystem/fret` authoring-surface policy tests and
-    `apps/fret-examples` source-policy tests.
+  - Landed on 2026-03-12 in `ecosystem/fret` authoring-surface policy tests and the first-party
+    source-policy tests for `apps/fret-examples` and `apps/fret-cookbook`.
 - [x] Add a source gate that keeps default extracted helper teaching on `UiCx` instead of raw
   `ElementContext`.
 - [x] Add focused UI Gallery source gates for the first migrated teaching surfaces:

@@ -24,6 +24,37 @@ const TEST_ID_TO_VIBRANCY: &str = "utility-window.materials.to_vibrancy";
 const TEST_ID_STYLE_TEXT: &str = "utility-window.materials.style_effective";
 const TEST_ID_PLATFORM_TEXT: &str = "utility-window.materials.platform";
 
+fn install_defaults_and_commands(app: &mut KernelApp) {
+    // Keep a consistent cookbook look (tokens, typography).
+    fret_cookbook::install_cookbook_defaults(app);
+
+    if cfg!(target_os = "windows") {
+        app.commands_mut().register(
+            CommandId::from(CMD_TO_NONE),
+            CommandMeta::new("Background material: None"),
+        );
+        app.commands_mut().register(
+            CommandId::from(CMD_TO_MICA),
+            CommandMeta::new("Background material: Mica"),
+        );
+        app.commands_mut().register(
+            CommandId::from(CMD_TO_ACRYLIC),
+            CommandMeta::new("Background material: Acrylic"),
+        );
+    } else if cfg!(target_os = "macos") {
+        app.commands_mut().register(
+            CommandId::from(CMD_TO_NONE),
+            CommandMeta::new("Background material: None"),
+        );
+        app.commands_mut().register(
+            CommandId::from(CMD_TO_VIBRANCY),
+            CommandMeta::new("Background material: Vibrancy"),
+        );
+    }
+    app.commands_mut()
+        .register(CommandId::from(CMD_QUIT), CommandMeta::new("Quit"));
+}
+
 #[derive(Debug)]
 struct State {
     window: AppWindowId,
@@ -317,36 +348,7 @@ fn main() -> anyhow::Result<()> {
 
         config.main_window_style = style;
     })
-    .setup_with(|app| {
-        // Keep a consistent cookbook look (tokens, typography).
-        fret_cookbook::install_cookbook_defaults(app);
-
-        if cfg!(target_os = "windows") {
-            app.commands_mut().register(
-                CommandId::from(CMD_TO_NONE),
-                CommandMeta::new("Background material: None"),
-            );
-            app.commands_mut().register(
-                CommandId::from(CMD_TO_MICA),
-                CommandMeta::new("Background material: Mica"),
-            );
-            app.commands_mut().register(
-                CommandId::from(CMD_TO_ACRYLIC),
-                CommandMeta::new("Background material: Acrylic"),
-            );
-        } else if cfg!(target_os = "macos") {
-            app.commands_mut().register(
-                CommandId::from(CMD_TO_NONE),
-                CommandMeta::new("Background material: None"),
-            );
-            app.commands_mut().register(
-                CommandId::from(CMD_TO_VIBRANCY),
-                CommandMeta::new("Background material: Vibrancy"),
-            );
-        }
-        app.commands_mut()
-            .register(CommandId::from(CMD_QUIT), CommandMeta::new("Quit"));
-    });
+    .setup(install_defaults_and_commands);
 
     #[cfg(feature = "cookbook-diag")]
     let builder = builder.with_default_diagnostics();
