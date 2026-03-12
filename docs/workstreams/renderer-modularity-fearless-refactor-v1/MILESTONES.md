@@ -32,6 +32,10 @@ Current snapshot (2026-03-12):
   - diagnostics/debug snapshot helpers moved into
     `crates/fret-render-wgpu/src/text/diagnostics.rs`
   - `text/mod.rs` no longer owns text diagnostics/debug helper implementations directly
+- The third internal `text/mod.rs` split has landed:
+  - text quality state/gamma helpers moved into
+    `crates/fret-render-wgpu/src/text/quality.rs`
+  - `text/mod.rs` no longer owns text quality configuration/state internals directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed

@@ -90,6 +90,10 @@ As of 2026-03-12:
   - text diagnostics/debug snapshot code now lives under
     `crates/fret-render-wgpu/src/text/diagnostics.rs`
   - `text/mod.rs` no longer owns atlas/debug/perf snapshot helpers directly
+- The third internal text split has landed:
+  - text quality state and gamma helpers now live under
+    `crates/fret-render-wgpu/src/text/quality.rs`
+  - `text/mod.rs` no longer owns text quality configuration/state internals directly
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
