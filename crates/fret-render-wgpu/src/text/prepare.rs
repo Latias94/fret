@@ -390,7 +390,7 @@ impl TextSystem {
         Some(PreparedGlyphContext {
             glyph_id,
             face_key,
-            size_bits: glyph.font_size.to_bits(),
+            size_bits: prepared_glyph_size_bits(glyph),
         })
     }
 
@@ -708,6 +708,10 @@ fn prepared_glyph_paint_span(
 
 fn prepared_glyph_font_ref<'a>(glyph: &'a ParleyGlyph) -> Option<parley::swash::FontRef<'a>> {
     parley::swash::FontRef::from_index(glyph.font.data.data(), glyph.font.index as usize)
+}
+
+fn prepared_glyph_size_bits(glyph: &ParleyGlyph) -> u32 {
+    glyph.font_size.to_bits()
 }
 
 fn prepared_glyph_bounds_from_atlas_entry(
