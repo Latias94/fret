@@ -46,6 +46,13 @@ struct PreparedGlyphRasterPayload {
     data: Vec<u8>,
 }
 
+struct PreparedGlyphRasterPlacement {
+    width: u32,
+    height: u32,
+    left: i32,
+    top: i32,
+}
+
 struct PreparedGlyphContext {
     glyph_id: u16,
     face_key: FontFaceKey,
@@ -974,42 +981,45 @@ fn prepared_glyph_raster_from_image(
     x_bin: u8,
     y_bin: u8,
 ) -> Option<PreparedGlyphRaster> {
-    let (width, height, left, top) = prepared_glyph_raster_placement_fields(&image)?;
-    Some(prepared_glyph_raster_from_image_with_placement_fields(
-        face_key, glyph_id, size_bits, x_bin, y_bin, image, width, height, left, top,
+    let placement = prepared_glyph_raster_placement(&image)?;
+    Some(prepared_glyph_raster_from_image_with_placement(
+        face_key, glyph_id, size_bits, x_bin, y_bin, image, placement,
     ))
 }
 
-fn prepared_glyph_raster_from_image_with_placement_fields(
+fn prepared_glyph_raster_from_image_with_placement(
     face_key: FontFaceKey,
     glyph_id: u32,
     size_bits: u32,
     x_bin: u8,
     y_bin: u8,
     image: parley::swash::scale::image::Image,
-    width: u32,
-    height: u32,
-    left: i32,
-    top: i32,
+    placement: PreparedGlyphRasterPlacement,
 ) -> PreparedGlyphRaster {
+    let PreparedGlyphRasterPlacement {
+        width,
+        height,
+        left,
+        top,
+    } = placement;
     prepared_glyph_raster_from_image_parts(
         face_key, glyph_id, size_bits, x_bin, y_bin, image, width, height, left, top,
     )
 }
 
-fn prepared_glyph_raster_placement_fields(
+fn prepared_glyph_raster_placement(
     image: &parley::swash::scale::image::Image,
-) -> Option<(u32, u32, i32, i32)> {
+) -> Option<PreparedGlyphRasterPlacement> {
     let placement = image.placement;
     if placement.width == 0 || placement.height == 0 {
         return None;
     }
-    Some((
-        placement.width,
-        placement.height,
-        placement.left,
-        placement.top,
-    ))
+    Some(PreparedGlyphRasterPlacement {
+        width: placement.width,
+        height: placement.height,
+        left: placement.left,
+        top: placement.top,
+    })
 }
 
 fn prepared_glyph_raster_metadata(

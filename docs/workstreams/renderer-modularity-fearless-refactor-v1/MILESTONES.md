@@ -326,6 +326,10 @@ Current snapshot (2026-03-12):
   - prepared-glyph raster payload field assembly now lives behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `prepared_glyph_raster(...)` no longer constructs raster payload fields inline before final assembly
+- The seventy-fifth internal `text/mod.rs` split has landed:
+  - prepared-glyph raster placement extraction now returns a dedicated placement struct in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `prepared_glyph_raster_from_image(...)` no longer carries raw placement tuples across the next helper boundary
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed

@@ -384,6 +384,10 @@ As of 2026-03-12:
   - prepared-glyph raster payload field assembly now lives behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `prepared_glyph_raster(...)` no longer constructs raster payload fields inline before final assembly
+- The seventy-fifth internal text split has landed:
+  - prepared-glyph raster placement extraction now returns a dedicated placement struct in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `prepared_glyph_raster_from_image(...)` no longer carries raw placement tuples across the next helper boundary
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
