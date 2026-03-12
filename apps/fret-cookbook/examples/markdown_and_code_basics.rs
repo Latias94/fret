@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::app::prelude::*;
 use fret_code_view::CodeBlockWrap;
 use fret_markdown as markdown;
 
@@ -44,22 +44,23 @@ mod act {
 struct MarkdownAndCodeBasicsView;
 
 impl View for MarkdownAndCodeBasicsView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let source_state = cx.use_local_with(|| SAMPLE_MARKDOWN.to_string());
-        let wrap_state = cx.use_local_with(|| Some(Arc::from(WRAP_SCROLL_X)));
-        let cap_height_state = cx.use_local_with(|| true);
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        let source_state = cx.state().local_init(|| SAMPLE_MARKDOWN.to_string());
+        let wrap_state = cx.state().local_init(|| Some(Arc::from(WRAP_SCROLL_X)));
+        let cap_height_state = cx.state().local_init(|| true);
 
-        let source = source_state.watch(cx).layout().value_or_default();
-        let wrap: Arc<str> = wrap_state
-            .watch(cx)
+        let source = cx.state().watch(&source_state).layout().value_or_default();
+        let wrap: Arc<str> = cx
+            .state()
+            .watch(&wrap_state)
             .layout()
             .value_or_else(|| Some(Arc::from(WRAP_SCROLL_X)))
             .unwrap_or_else(|| Arc::from(WRAP_SCROLL_X));
-        let cap_height = cap_height_state.watch(cx).layout().value_or(true);
+        let cap_height = cx.state().watch(&cap_height_state).layout().value_or(true);
 
         let wrap_mode = match wrap.as_ref() {
             WRAP_WORD => CodeBlockWrap::Word,
@@ -182,10 +183,8 @@ impl View for MarkdownAndCodeBasicsView {
         .w_full()
         .max_w(Px(980.0));
 
-        cx.on_action_notify_local_set::<act::Reset, String>(
-            &source_state,
-            SAMPLE_MARKDOWN.to_string(),
-        );
+        cx.actions()
+            .local_set::<act::Reset, String>(&source_state, SAMPLE_MARKDOWN.to_string());
 
         fret_cookbook::scaffold::centered_page_background_ui(cx, TEST_ID_ROOT, card).into()
     }
@@ -195,7 +194,8 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-markdown-and-code-basics")
         .window("cookbook-markdown-and-code-basics", (1080.0, 820.0))
         .config_files(false)
-        .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_view::<MarkdownAndCodeBasicsView>()
+        .setup(fret_cookbook::install_cookbook_defaults)
+        .view::<MarkdownAndCodeBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

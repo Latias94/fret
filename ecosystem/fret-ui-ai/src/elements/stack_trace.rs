@@ -98,14 +98,8 @@ struct StackTraceContext {
     on_file_path_click: Option<OnStackTraceFilePathClick>,
 }
 
-#[derive(Default, Clone)]
-struct StackTraceProviderState {
-    context: Option<StackTraceContext>,
-}
-
 fn use_stack_trace_context<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<StackTraceContext> {
-    cx.inherited_state::<StackTraceProviderState>()
-        .and_then(|st| st.context.clone())
+    cx.provided::<StackTraceContext>().cloned()
 }
 
 fn is_error_type(s: &str) -> bool {
@@ -1524,24 +1518,23 @@ impl StackTrace {
                         || default_open,
                     )
                     .model();
+                    let context = StackTraceContext {
+                        parsed: parsed.clone(),
+                        raw: trace_raw.clone(),
+                        open: open_model,
+                        show_internal_frames,
+                        max_height,
+                        on_file_path_click: on_file_path_click.clone(),
+                    };
 
-                    cx.with_state(StackTraceProviderState::default, |st| {
-                        st.context = Some(StackTraceContext {
-                            parsed: parsed.clone(),
-                            raw: trace_raw.clone(),
-                            open: open_model,
-                            show_internal_frames,
-                            max_height,
-                            on_file_path_click: on_file_path_click.clone(),
-                        });
-                    });
+                    cx.provide(context, |cx| {
+                        let body = ui::v_stack(move |cx| children(cx))
+                            .layout(LayoutRefinement::default().w_full().min_w_0())
+                            .gap(Space::N0)
+                            .into_element(cx);
 
-                    let body = ui::v_stack(move |cx| children(cx))
-                        .layout(LayoutRefinement::default().w_full().min_w_0())
-                        .gap(Space::N0)
-                        .into_element(cx);
-
-                    vec![body]
+                        vec![body]
+                    })
                 },
             );
 
@@ -1560,6 +1553,46 @@ impl StackTrace {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::element::{AnyElement, ElementKind};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(480.0), Px(240.0)),
+        )
+    }
+
+    fn has_test_id(element: &AnyElement, expected: &str) -> bool {
+        element
+            .semantics_decoration
+            .as_ref()
+            .and_then(|decoration| decoration.test_id.as_deref())
+            .is_some_and(|test_id| test_id == expected)
+            || match &element.kind {
+                ElementKind::Pressable(props) => props.a11y.test_id.as_deref() == Some(expected),
+                ElementKind::Semantics(props) => props.test_id.as_deref() == Some(expected),
+                _ => false,
+            }
+            || element
+                .children
+                .iter()
+                .any(|child| has_test_id(child, expected))
+    }
+
+    fn find_text_by_content<'a>(element: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &element.kind
+            && props.text.as_ref() == needle
+        {
+            return Some(element);
+        }
+
+        element
+            .children
+            .iter()
+            .find_map(|child| find_text_by_content(child, needle))
+    }
 
     #[test]
     fn parses_error_type_and_message() {
@@ -1587,5 +1620,27 @@ mod tests {
         assert_eq!(f.file_path.as_deref(), Some("/a/b/c.js"));
         assert_eq!(f.line_number, Some(10));
         assert_eq!(f.column_number, Some(20));
+    }
+
+    #[test]
+    fn stack_trace_root_provides_context_to_default_parts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                StackTrace::new("TypeError: Boom\nat foo (/a/b/c.js:10:20)")
+                    .default_open(true)
+                    .test_id_header_trigger("stack-header")
+                    .test_id_content("stack-content")
+                    .test_id_frames("stack-frames")
+                    .into_element(cx)
+            });
+
+        assert!(has_test_id(&element, "stack-header"));
+        assert!(has_test_id(&element, "stack-content"));
+        assert!(has_test_id(&element, "stack-frames"));
+        assert!(find_text_by_content(&element, "TypeError").is_some());
+        assert!(find_text_by_content(&element, "Boom").is_some());
     }
 }

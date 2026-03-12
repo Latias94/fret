@@ -1,24 +1,26 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret_app::App;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret::UiCx;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let max_w_md = LayoutRefinement::default()
         .w_full()
         .min_w_0()
         .max_w(MetricRef::Px(Px(448.0)));
 
-    let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
+    let icon = |cx: &mut UiCx<'_>, id: &'static str| {
         let icon_id = fret_icons::IconId::new_static(id);
         match id {
             // shadcn/ui v4 demo: `BadgeCheckIcon className="size-5"`.
-            "lucide.badge-check" => shadcn::icon::icon_with(cx, icon_id, Some(Px(20.0)), None),
-            _ => shadcn::icon::icon(cx, icon_id),
+            "lucide.badge-check" => {
+                fret_ui_shadcn::icon::icon_with(cx, icon_id, Some(Px(20.0)), None)
+            }
+            _ => fret_ui_shadcn::icon::icon(cx, icon_id),
         }
     };
 

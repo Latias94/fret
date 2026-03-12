@@ -1,8 +1,9 @@
 use super::super::super::super::super::*;
+use fret::UiCx;
 
 use super::widgets::OverlayWidgets;
 
-fn row(cx: &mut ElementContext<'_, App>, gap: Px, children: Vec<AnyElement>) -> AnyElement {
+fn row(cx: &mut UiCx<'_>, gap: Px, children: Vec<AnyElement>) -> AnyElement {
     let layout = cx.with_theme(|theme| {
         decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0())
     });
@@ -20,7 +21,7 @@ fn row(cx: &mut ElementContext<'_, App>, gap: Px, children: Vec<AnyElement>) -> 
     )
 }
 
-fn row_end(cx: &mut ElementContext<'_, App>, gap: Px, children: Vec<AnyElement>) -> AnyElement {
+fn row_end(cx: &mut UiCx<'_>, gap: Px, children: Vec<AnyElement>) -> AnyElement {
     let layout = cx.with_theme(|theme| {
         decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0())
     });
@@ -38,10 +39,7 @@ fn row_end(cx: &mut ElementContext<'_, App>, gap: Px, children: Vec<AnyElement>)
     )
 }
 
-pub(super) fn compose_body(
-    cx: &mut ElementContext<'_, App>,
-    widgets: OverlayWidgets,
-) -> AnyElement {
+pub(super) fn compose_body(cx: &mut UiCx<'_>, widgets: OverlayWidgets) -> AnyElement {
     ui::v_flex(|cx| {
         let gap = cx.with_theme(|theme| fret_ui_kit::MetricRef::space(Space::N2).resolve(theme));
 

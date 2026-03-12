@@ -15,9 +15,9 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::ColorRef;
 
+use crate::primitives::EditorDensity;
 use crate::primitives::icons::editor_icon_with;
 use crate::primitives::visuals::{editor_icon_button_bg, editor_icon_button_border};
-use crate::primitives::EditorDensity;
 
 pub type OnIconButtonActivate = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx) + 'static>;
 

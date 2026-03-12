@@ -2,89 +2,98 @@ pub const SOURCE: &str = include_str!("checkboxes.rs");
 
 // region: example
 use fret_runtime::CommandId;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::ModelWatchExt as _;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default, Clone)]
-struct Models {
-    show_status_bar: Option<Model<bool>>,
-    show_activity_bar: Option<Model<bool>>,
-    show_line_numbers: Option<Model<bool>>,
+struct AppearanceState {
+    show_status_bar: bool,
+    show_activity_bar: bool,
+    show_line_numbers: bool,
 }
 
-fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str) -> AnyElement {
+fn trigger_surface<H: UiHost>(label: &'static str) -> impl IntoUiElement<H> + use<H> {
     shadcn::Button::new(label)
         .variant(shadcn::ButtonVariant::Outline)
         .size(shadcn::ButtonSize::Sm)
-        .into_element(cx)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state = cx.with_state(Models::default, |st| st.clone());
-
-    let show_status_bar = match state.show_status_bar {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(true);
-            cx.with_state(Models::default, |st| {
-                st.show_status_bar = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let show_activity_bar = match state.show_activity_bar {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(true);
-            cx.with_state(Models::default, |st| {
-                st.show_activity_bar = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let show_line_numbers = match state.show_line_numbers {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.show_line_numbers = Some(model.clone())
-            });
-            model
-        }
-    };
+    let appearance = cx.local_model(|| AppearanceState {
+        show_status_bar: true,
+        show_activity_bar: true,
+        show_line_numbers: false,
+    });
+    let appearance_now = cx
+        .watch_model(&appearance)
+        .layout()
+        .cloned()
+        .unwrap_or_default();
 
     shadcn::ContextMenu::new_controllable(cx, None, false)
         .content_test_id("ui-gallery-context-menu-checkboxes-content")
         .into_element(
             cx,
             |cx| {
-                trigger_surface(cx, "Right click for checkboxes")
+                trigger_surface("Right click for checkboxes")
+                    .into_element(cx)
                     .test_id("ui-gallery-context-menu-checkboxes-trigger")
             },
             |_cx| {
                 vec![
                     shadcn::ContextMenuEntry::CheckboxItem(
-                        shadcn::ContextMenuCheckboxItem::new(show_status_bar.clone(), "Status Bar")
-                            .action(CommandId::new(
-                                "ui_gallery.context_menu.checkboxes.status_bar",
-                            ))
-                            .test_id("ui-gallery-context-menu-checkboxes-status-bar"),
+                        shadcn::ContextMenuCheckboxItem::from_checked(
+                            appearance_now.show_status_bar,
+                            "Status Bar",
+                        )
+                        .on_checked_change({
+                            let appearance = appearance.clone();
+                            move |host, _action_cx, checked| {
+                                let _ = host.models_mut().update(&appearance, |state| {
+                                    state.show_status_bar = checked;
+                                });
+                            }
+                        })
+                        .action(CommandId::new(
+                            "ui_gallery.context_menu.checkboxes.status_bar",
+                        ))
+                        .test_id("ui-gallery-context-menu-checkboxes-status-bar"),
                     ),
-                    shadcn::ContextMenuEntry::CheckboxItem(shadcn::ContextMenuCheckboxItem::new(
-                        show_activity_bar.clone(),
-                        "Activity Bar",
-                    )
-                    .action(CommandId::new(
-                        "ui_gallery.context_menu.checkboxes.activity_bar",
-                    ))),
-                    shadcn::ContextMenuEntry::CheckboxItem(shadcn::ContextMenuCheckboxItem::new(
-                        show_line_numbers.clone(),
-                        "Show Line Numbers",
-                    )
-                    .action(CommandId::new(
-                        "ui_gallery.context_menu.checkboxes.show_line_numbers",
-                    ))),
+                    shadcn::ContextMenuEntry::CheckboxItem(
+                        shadcn::ContextMenuCheckboxItem::from_checked(
+                            appearance_now.show_activity_bar,
+                            "Activity Bar",
+                        )
+                        .on_checked_change({
+                            let appearance = appearance.clone();
+                            move |host, _action_cx, checked| {
+                                let _ = host.models_mut().update(&appearance, |state| {
+                                    state.show_activity_bar = checked;
+                                });
+                            }
+                        })
+                        .action(CommandId::new(
+                            "ui_gallery.context_menu.checkboxes.activity_bar",
+                        )),
+                    ),
+                    shadcn::ContextMenuEntry::CheckboxItem(
+                        shadcn::ContextMenuCheckboxItem::from_checked(
+                            appearance_now.show_line_numbers,
+                            "Show Line Numbers",
+                        )
+                        .on_checked_change({
+                            let appearance = appearance.clone();
+                            move |host, _action_cx, checked| {
+                                let _ = host.models_mut().update(&appearance, |state| {
+                                    state.show_line_numbers = checked;
+                                });
+                            }
+                        })
+                        .action(CommandId::new(
+                            "ui_gallery.context_menu.checkboxes.show_line_numbers",
+                        )),
+                    ),
                 ]
             },
         )

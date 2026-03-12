@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Current Best Practice vs v2 Target
 
 Status: draft, post-v1 guidance
-Last updated: 2026-03-10
+Last updated: 2026-03-12
 
 Related:
 
@@ -48,10 +48,12 @@ Current conclusion:
    - MVU removed in-tree.
 2. The repo has **not fully reached the v2 density target** yet.
 3. The remaining distance is now mostly:
-   - local-state write/invalidation ergonomics,
-   - builder-first medium-surface composition density,
+   - conversion-surface fragmentation on helper/component lanes (tracked separately by
+     `docs/workstreams/into-element-surface-fearless-refactor-v1/`),
+   - keyed/list/build-sink density on the canonical todo/scaffold evidence set,
    - default/comparison/advanced productization clarity,
-   - and a small amount of event-handler placement noise.
+   - local-state write/invalidation ergonomics,
+   - and a smaller amount of broader medium-surface composition noise.
 4. The remaining distance is **not** mainly:
    - menu-family action aliases,
    - command-first residue chasing,
@@ -152,12 +154,13 @@ In short:
 | Area | Current best practice | v2 target | Gap level | Recommended next move |
 | --- | --- | --- | --- | --- |
 | App entry | `view::<V>()` is already the only default path | same | Low | Hold docs/gates; keep the removed `App::ui*` surface from drifting back |
+| Conversion surface / public `into_element` taxonomy | the app lane is cleaner, but helper/component code still leaks split conversion traits and raw `AnyElement` more often than the intended product story | one public conversion concept plus explicit raw seams | High | Prioritize `docs/workstreams/into-element-surface-fearless-refactor-v1/` and migrate canonical first-party helper surfaces with it |
 | Action naming | default-facing widget families already expose `action(...)` and teaching surfaces prefer it | same | Low | Maintenance only; reopen only if a new default-facing leak appears |
 | Local state reads | `use_local*` + `value_*` path is coherent | same | Low | Keep stable |
 | Local state storage model | `use_local*` is the default path, but `LocalState<T>` is still model-backed and some widget/runtime seams still bridge through `clone_model()` | plain-Rust/self-owned local state with the same runtime guarantees | Medium | Treat as an architectural/runtime question, not as another helper-expansion pass |
 | Local state writes / invalidation | coordinated writes still often route through `on_action_notify_models::<A>(...)`; tracked writes are better but not yet boring enough everywhere | tracked writes should usually feel implicit and lighter | Medium | Productize write guidance before adding more helpers |
-| Medium-surface composition density | builder-first exists and the last clearly repeated medium families are closed; remaining density is mostly adoption or advanced/runtime-owned seams | more fluent builder-first composition on common surfaces | Low | Keep existing builders stable; reopen only if a new cross-surface seam repeats |
-| Handler placement for keyed collections / payload rows | a narrow local payload-row helper now covers the current todo-like evidence slice, while root handler tables remain visible by design | slightly narrower, still explicit action identity | Low | Keep the current helper; reopen only if another medium surface shows the same row-local pressure |
+| Keyed/list/build-sink density | the narrow local payload-row helper exists, but the canonical trio still shows visible root handler tables and sink boilerplate | keyed collections should feel closer to one obvious authoring loop without hiding action identity | Medium | Reopen this lane on `simple_todo_v2_target`, `todo_demo`, and the scaffold template; prefer a narrow list-authoring improvement over broad helper expansion |
+| Medium-surface composition density beyond keyed lists | builder-first exists and the last clearly repeated medium families are closed; remaining density is mostly adoption or advanced/runtime-owned seams | more fluent builder-first composition on common surfaces | Low | Keep existing builders stable; reopen only if a new cross-surface seam repeats outside the canonical keyed/list slice |
 | Default/comparison/advanced taxonomy | much better than before, but still spread across docs/templates/gallery/workstreams | obvious and boring for new users | Medium | This is now one of the highest-value productization tasks |
 | `DataTable` | intentionally advanced/reference-only | still likely advanced, but with a clearer curated recipe | Medium | Treat as product recipe work, not generic authoring cleanup |
 | Macros | existing action macros are enough | maybe small optional sugar later | Low | Do not prioritize now |
@@ -182,6 +185,16 @@ areas.
 ## What is still genuinely missing
 
 If the repo wants to feel closer to the original north-star, the most defensible gaps are now:
+
+### 0. Conversion-surface collapse (adjacent track)
+
+If the repo wants writing one piece of UI to feel closer to GPUI, the highest-leverage remaining
+gap is still the public `into_element` vocabulary.
+
+That work is now explicitly owned by:
+
+- `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
 
 ### 1. Tracked-write / invalidation ergonomics
 
@@ -210,7 +223,24 @@ Users can still over-read advanced/reference examples as if they were the defaul
 
 That is a documentation/product problem more than an API problem.
 
-### 4. Medium-surface builder density
+### 4. Canonical keyed/list authoring density
+
+The strongest remaining day-to-day authoring evidence is no longer "can `LocalState<Vec<_>>`
+work?".
+
+It is:
+
+- whether `simple_todo_v2_target`,
+- `todo_demo`,
+- and the scaffold simple-todo template
+
+still look too mechanical because list wiring falls back to root-handler tables, build sinks, and
+visible landing points more often than the intended product story should.
+
+That is a narrower question than "invent more helper APIs everywhere", but it is also no longer
+just maintenance.
+
+### 5. Medium-surface builder density outside keyed lists
 
 The repo has already closed many hard composition cliffs.
 The remaining question is narrower:
@@ -246,15 +276,18 @@ Those moves would create churn without materially improving the default path.
 
 ## Recommended next order
 
-1. **Productize the current default path**
+1. **Collapse the conversion surface first**
+   - use the focused `into-element` workstream to remove the biggest remaining "write UI" taxonomy gap.
+2. **Reopen canonical keyed/list/build-sink density second**
+   - treat `simple_todo_v2_target`, `todo_demo`, and the scaffold template as the primary evidence set,
+   - prefer one narrow list-authoring improvement over broad generic helper expansion.
+3. **Productize the current default path around the same evidence**
    - make the onboarding ladder and default/comparison/advanced labels boring and explicit,
    - keep templates, README-level docs, and workstream guidance aligned.
-2. **Review tracked-write / invalidation ergonomics**
+4. **Review tracked-write / invalidation ergonomics after that**
    - use real medium demos as evidence,
    - prefer guidance and one narrow improvement over another helper family.
-3. **Only then revisit medium-surface builder density**
-   - and only where repeated evidence still shows a real cliff.
-4. **Keep macros last**
+5. **Keep macros last**
    - optional polish only.
 
 ---

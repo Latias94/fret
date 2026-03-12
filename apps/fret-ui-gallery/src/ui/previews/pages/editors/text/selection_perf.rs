@@ -1,8 +1,9 @@
 use super::super::super::super::super::*;
 use crate::ui::doc_layout;
+use fret::UiCx;
 
 pub(in crate::ui) fn preview_text_selection_perf(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     #[derive(Clone, Copy, PartialEq, Eq)]

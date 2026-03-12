@@ -13,10 +13,10 @@ use fret_ui::element::{
     PressableProps, RingPlacement, RingStyle, SizeStyle, SpacingLength,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::primitives::checkbox::{
-    checkbox_a11y, checked_state_from_optional_bool, toggle_optional_bool, CheckedState,
-};
 use fret_ui_kit::ColorRef;
+use fret_ui_kit::primitives::checkbox::{
+    CheckedState, checkbox_a11y, checked_state_from_optional_bool, toggle_optional_bool,
+};
 
 use crate::primitives::visuals::{hover_overlay_bg, hover_overlay_border};
 use crate::primitives::{EditorDensity, EditorTokenKeys};

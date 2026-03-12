@@ -99,11 +99,6 @@ impl NativeSelectOptGroup {
     }
 }
 
-#[derive(Default)]
-struct NativeSelectState {
-    focus_restore_target: Option<Arc<Mutex<Option<GlobalElementId>>>>,
-}
-
 #[derive(Clone)]
 pub struct NativeSelect {
     model: Model<Option<Arc<str>>>,
@@ -324,20 +319,10 @@ pub fn native_select<H: UiHost>(
 
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let focus_restore_target = {
-            let existing = cx.with_state(NativeSelectState::default, |st| {
-                st.focus_restore_target.clone()
-            });
-            if let Some(target) = existing {
-                target
-            } else {
-                let target = Arc::new(Mutex::new(None));
-                cx.with_state(NativeSelectState::default, |st| {
-                    st.focus_restore_target = Some(target.clone());
-                });
-                target
-            }
-        };
+        let focus_restore_target = cx.slot_state(
+            || Arc::new(Mutex::new(None::<GlobalElementId>)),
+            |cell| cell.clone(),
+        );
 
         let is_open: bool = cx.watch_model(&open).layout().copied().unwrap_or(false);
         let selected: Option<Arc<str>> = cx.watch_model(&model).cloned().unwrap_or_default();

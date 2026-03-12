@@ -1,20 +1,10 @@
 pub const SOURCE: &str = include_str!("textarea.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default)]
-struct Models {
-    text_area: Option<Model<String>>,
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let text_area = cx.with_state(Models::default, |st| st.text_area.clone());
-    let text_area = text_area.unwrap_or_else(|| {
-        let model = cx.app.models_mut().insert(String::new());
-        cx.with_state(Models::default, |st| st.text_area = Some(model.clone()));
-        model
-    });
+    let text_area = cx.local_model(String::new);
 
     let max_w_md = LayoutRefinement::default()
         .w_full()

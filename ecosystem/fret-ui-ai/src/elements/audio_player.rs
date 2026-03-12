@@ -63,16 +63,10 @@ impl std::fmt::Debug for AudioPlayerController {
     }
 }
 
-#[derive(Debug, Default, Clone)]
-struct AudioPlayerProviderState {
-    controller: Option<AudioPlayerController>,
-}
-
 pub fn use_audio_player_controller<H: UiHost>(
     cx: &ElementContext<'_, H>,
 ) -> Option<AudioPlayerController> {
-    cx.inherited_state::<AudioPlayerProviderState>()
-        .and_then(|st| st.controller.clone())
+    cx.provided::<AudioPlayerController>().cloned()
 }
 
 fn hidden<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -349,23 +343,21 @@ impl AudioPlayer {
                     on_volume_change: on_volume_change.clone(),
                 };
 
-                cx.with_state(AudioPlayerProviderState::default, |st| {
-                    st.controller = Some(controller.clone());
-                });
-
-                let mut out = children(cx, controller);
-                if disabled {
-                    // Keep the subtree mounted for layout, but non-interactive.
-                    out = vec![cx.interactivity_gate_props(
-                        InteractivityGateProps {
-                            layout: LayoutStyle::default(),
-                            present: true,
-                            interactive: false,
-                        },
-                        move |_cx| out,
-                    )];
-                }
-                out
+                cx.provide(controller.clone(), |cx| {
+                    let mut out = children(cx, controller);
+                    if disabled {
+                        // Keep the subtree mounted for layout, but non-interactive.
+                        out = vec![cx.interactivity_gate_props(
+                            InteractivityGateProps {
+                                layout: LayoutStyle::default(),
+                                present: true,
+                                interactive: false,
+                            },
+                            move |_cx| out,
+                        )];
+                    }
+                    out
+                })
             },
         );
 
@@ -991,13 +983,44 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
-    use fret_ui::element::ElementKind;
+    use fret_ui::element::{AnyElement, ElementKind};
 
     fn bounds() -> Rect {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(320.0), Px(120.0)),
         )
+    }
+
+    fn has_test_id(element: &AnyElement, expected: &str) -> bool {
+        element
+            .semantics_decoration
+            .as_ref()
+            .and_then(|decoration| decoration.test_id.as_deref())
+            .is_some_and(|test_id| test_id == expected)
+            || element
+                .children
+                .iter()
+                .any(|child| has_test_id(child, expected))
+    }
+
+    #[test]
+    fn audio_player_root_provides_controller_to_children() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                AudioPlayer::new().into_element_with_children(cx, |cx, _controller| {
+                    vec![
+                        AudioPlayerElement::new()
+                            .test_id("audio-play")
+                            .into_element(cx),
+                    ]
+                })
+            });
+
+        assert!(has_test_id(&element, "audio-play"));
     }
 
     #[test]

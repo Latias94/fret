@@ -1,6 +1,5 @@
-use fret::prelude::*;
+use fret::{advanced::prelude::*, shadcn};
 use fret_app::{CommandMeta, CommandScope};
-use fret_bootstrap::ui_app_driver::ViewElements;
 use fret_core::{AppWindowId, Px, ViewportFit};
 use fret_launch::{EngineFrameUpdate, imported_viewport_target::ImportedViewportRenderTarget};
 use fret_render::{
@@ -69,7 +68,7 @@ struct ExternalTextureImportBasicsState {
     ingest: Model<f64>,
 }
 
-fn install_commands(app: &mut App) {
+fn install_commands(app: &mut KernelApp) {
     let scope = CommandScope::Widget;
 
     let category = "External texture import";
@@ -119,7 +118,7 @@ fn install_commands(app: &mut App) {
     );
 }
 
-fn init_window(app: &mut App, _window: AppWindowId) -> ExternalTextureImportBasicsState {
+fn init_window(app: &mut KernelApp, _window: AppWindowId) -> ExternalTextureImportBasicsState {
     ExternalTextureImportBasicsState {
         preset: app.models_mut().insert(1usize),
         fit: app.models_mut().insert(ViewportFit::Contain),
@@ -138,10 +137,10 @@ fn init_window(app: &mut App, _window: AppWindowId) -> ExternalTextureImportBasi
 }
 
 fn on_command(
-    app: &mut App,
+    app: &mut KernelApp,
     _services: &mut dyn fret_core::UiServices,
     _window: AppWindowId,
-    _ui: &mut fret_ui::UiTree<App>,
+    _ui: &mut UiTree<KernelApp>,
     st: &mut ExternalTextureImportBasicsState,
     command: &CommandId,
 ) {
@@ -169,7 +168,7 @@ fn on_command(
 }
 
 fn view(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     st: &mut ExternalTextureImportBasicsState,
 ) -> ViewElements {
     let theme = Theme::global(&*cx.app).snapshot();
@@ -343,9 +342,9 @@ fn view(
 }
 
 fn record_engine_frame(
-    app: &mut App,
+    app: &mut KernelApp,
     _window: AppWindowId,
-    _ui: &mut fret_ui::UiTree<App>,
+    _ui: &mut UiTree<KernelApp>,
     st: &mut ExternalTextureImportBasicsState,
     context: &WgpuContext,
     renderer: &mut Renderer,
@@ -457,20 +456,20 @@ fn record_engine_frame(
 }
 
 fn configure_driver(
-    driver: fret_bootstrap::ui_app_driver::UiAppDriver<ExternalTextureImportBasicsState>,
-) -> fret_bootstrap::ui_app_driver::UiAppDriver<ExternalTextureImportBasicsState> {
+    driver: UiAppDriver<ExternalTextureImportBasicsState>,
+) -> UiAppDriver<ExternalTextureImportBasicsState> {
     driver
         .on_command(on_command)
         .record_engine_frame(record_engine_frame)
 }
 
 fn main() -> anyhow::Result<()> {
-    let builder = fret_bootstrap::ui_app_with_hooks(ROOT_NAME, init_window, view, configure_driver)
+    let builder = ui_app_with_hooks(ROOT_NAME, init_window, view, configure_driver)
         .with_main_window("cookbook-external-texture-import-basics", (1120.0, 780.0))
         .with_command_default_keybindings()
-        .install_app(install_commands)
-        .install_app(shadcn::install_app)
-        .install_app(fret_cookbook::install_cookbook_defaults)
+        .setup(install_commands)
+        .setup(shadcn::app::install)
+        .setup(fret_cookbook::install_cookbook_defaults)
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
         .with_lucide_icons();
 

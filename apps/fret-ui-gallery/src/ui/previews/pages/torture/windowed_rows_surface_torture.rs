@@ -1,8 +1,9 @@
 use super::super::super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
+use fret::UiCx;
 
 pub(in crate::ui) fn preview_windowed_rows_surface_torture(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     use fret_core::{

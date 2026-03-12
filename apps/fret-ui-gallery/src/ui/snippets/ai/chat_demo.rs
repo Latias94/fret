@@ -3,12 +3,11 @@ pub const SOURCE: &str = include_str!("chat_demo.rs");
 // region: example
 use fret_core::Px;
 use fret_ui_ai as ui_ai;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     use std::sync::Arc;
 
-    use fret_runtime::Model;
     use fret_ui::Invalidation;
     use fret_ui::action::OnActivate;
     use fret_ui_kit::ui;
@@ -26,178 +25,75 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         citations: Arc<[ui_ai::CitationItem]>,
     }
 
-    #[derive(Default)]
-    struct ChatModels {
-        prompt: Option<Model<String>>,
-        attachments: Option<Model<Vec<ui_ai::AttachmentData>>>,
-        next_attachment_id: Option<Model<u32>>,
-        messages: Option<Model<Arc<[ui_ai::AiMessage]>>>,
-        loading: Option<Model<bool>>,
-        pending: Option<Model<Option<PendingReply>>>,
-        next_id: Option<Model<u64>>,
-        content_revision: Option<Model<u64>>,
-        exported_md_len: Option<Model<Option<usize>>>,
-    }
+    let prompt = cx.local_model_keyed("prompt", String::new);
+    let attachments = cx.local_model_keyed("attachments", Vec::<ui_ai::AttachmentData>::new);
+    let next_attachment_id = cx.local_model_keyed("next_attachment_id", || 0u32);
+    let messages = cx.local_model_keyed("messages", || {
+        let sources: Arc<[ui_ai::SourceItem]> = Arc::from(vec![
+            ui_ai::SourceItem::new("src-0", "Example source A")
+                .url("https://example.com/a")
+                .excerpt("A short excerpt used for truncation and wrapping tests."),
+            ui_ai::SourceItem::new("src-1", "Example source B")
+                .url("https://example.com/b")
+                .excerpt("Another excerpt: this should wrap and remain readable."),
+        ]);
 
-    let prompt = cx.with_state(ChatModels::default, |st| st.prompt.clone());
-    let prompt = match prompt {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(ChatModels::default, |st| st.prompt = Some(model.clone()));
-            model
-        }
-    };
+        let citations: Arc<[ui_ai::CitationItem]> = Arc::from(vec![
+            ui_ai::CitationItem::new("src-0", "[1]"),
+            ui_ai::CitationItem::from_arc(
+                Arc::from(vec![Arc::<str>::from("src-0"), Arc::<str>::from("src-1")]),
+                "[2]",
+            ),
+        ]);
 
-    let attachments = cx.with_state(ChatModels::default, |st| st.attachments.clone());
-    let attachments = match attachments {
-        Some(model) => model,
-        None => {
-            let model = cx
-                .app
-                .models_mut()
-                .insert(Vec::<ui_ai::AttachmentData>::new());
-            cx.with_state(ChatModels::default, |st| {
-                st.attachments = Some(model.clone())
-            });
-            model
-        }
-    };
+        let tool_call = ui_ai::ToolCall::new("toolcall-seed-0", "search")
+            .state(ui_ai::ToolCallState::InputAvailable)
+            .input(ui_ai::ToolCallPayload::Json(serde_json::json!({
+                "query": "seeded tool call",
+                "k": 3
+            })));
 
-    let next_attachment_id = cx.with_state(ChatModels::default, |st| st.next_attachment_id.clone());
-    let next_attachment_id = match next_attachment_id {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(0u32);
-            cx.with_state(ChatModels::default, |st| {
-                st.next_attachment_id = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let messages = cx.with_state(ChatModels::default, |st| st.messages.clone());
-    let messages = match messages {
-        Some(model) => model,
-        None => {
-            let sources: Arc<[ui_ai::SourceItem]> = Arc::from(vec![
-                ui_ai::SourceItem::new("src-0", "Example source A")
-                    .url("https://example.com/a")
-                    .excerpt("A short excerpt used for truncation and wrapping tests."),
-                ui_ai::SourceItem::new("src-1", "Example source B")
-                    .url("https://example.com/b")
-                    .excerpt("Another excerpt: this should wrap and remain readable."),
-            ]);
-
-            let citations: Arc<[ui_ai::CitationItem]> = Arc::from(vec![
-                ui_ai::CitationItem::new("src-0", "[1]"),
-                ui_ai::CitationItem::from_arc(
-                    Arc::from(vec![Arc::<str>::from("src-0"), Arc::<str>::from("src-1")]),
-                    "[2]",
-                ),
-            ]);
-
-            let tool_call = ui_ai::ToolCall::new("toolcall-seed-0", "search")
-                .state(ui_ai::ToolCallState::InputAvailable)
-                .input(ui_ai::ToolCallPayload::Json(serde_json::json!({
-                    "query": "seeded tool call",
-                    "k": 3
-                })));
-
-            let initial: Arc<[ui_ai::AiMessage]> = Arc::from(vec![
-                ui_ai::AiMessage::new(
-                    1,
-                    ui_ai::MessageRole::User,
-                    [ui_ai::MessagePart::Text(Arc::<str>::from("Hello!"))],
-                ),
-                ui_ai::AiMessage::new(
-                    2,
-                    ui_ai::MessageRole::Assistant,
-                    [ui_ai::MessagePart::Markdown(ui_ai::MarkdownPart::new(
-                        Arc::<str>::from(
-                            "This is a small demo for `PromptInput` + transcript append.\n\nIt also exercises tool calls + sources blocks.\n\n```rust\nfn demo() {\n    println!(\"hello from code fence\");\n}\n```",
-                        ),
-                    ))],
-                ),
-                ui_ai::AiMessage::new(
-                    3,
-                    ui_ai::MessageRole::User,
-                    [ui_ai::MessagePart::Text(Arc::<str>::from(
-                        "Show me seeded tools + sources + citations.",
-                    ))],
-                ),
-                ui_ai::AiMessage::new(
-                    4,
-                    ui_ai::MessageRole::Assistant,
-                    [
-                        ui_ai::MessagePart::Markdown(ui_ai::MarkdownPart::streaming(
-                            Arc::<str>::from(""),
-                        )),
-                        ui_ai::MessagePart::ToolCall(tool_call),
-                        ui_ai::MessagePart::Sources(sources),
-                        ui_ai::MessagePart::Citations(citations),
-                    ],
-                ),
-            ]);
-            let model = cx.app.models_mut().insert(initial);
-            cx.with_state(ChatModels::default, |st| st.messages = Some(model.clone()));
-            model
-        }
-    };
-
-    let loading = cx.with_state(ChatModels::default, |st| st.loading.clone());
-    let loading = match loading {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(ChatModels::default, |st| st.loading = Some(model.clone()));
-            model
-        }
-    };
-
-    let pending = cx.with_state(ChatModels::default, |st| st.pending.clone());
-    let pending = match pending {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(None::<PendingReply>);
-            cx.with_state(ChatModels::default, |st| st.pending = Some(model.clone()));
-            model
-        }
-    };
-
-    let next_id = cx.with_state(ChatModels::default, |st| st.next_id.clone());
-    let next_id = match next_id {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(5u64);
-            cx.with_state(ChatModels::default, |st| st.next_id = Some(model.clone()));
-            model
-        }
-    };
-
-    let content_revision = cx.with_state(ChatModels::default, |st| st.content_revision.clone());
-    let content_revision = match content_revision {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(0u64);
-            cx.with_state(ChatModels::default, |st| {
-                st.content_revision = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let exported_md_len = cx.with_state(ChatModels::default, |st| st.exported_md_len.clone());
-    let exported_md_len = match exported_md_len {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(None::<usize>);
-            cx.with_state(ChatModels::default, |st| {
-                st.exported_md_len = Some(model.clone())
-            });
-            model
-        }
-    };
+        Arc::<[ui_ai::AiMessage]>::from(vec![
+            ui_ai::AiMessage::new(
+                1,
+                ui_ai::MessageRole::User,
+                [ui_ai::MessagePart::Text(Arc::<str>::from("Hello!"))],
+            ),
+            ui_ai::AiMessage::new(
+                2,
+                ui_ai::MessageRole::Assistant,
+                [ui_ai::MessagePart::Markdown(ui_ai::MarkdownPart::new(
+                    Arc::<str>::from(
+                        "This is a small demo for `PromptInput` + transcript append.\n\nIt also exercises tool calls + sources blocks.\n\n```rust\nfn demo() {\n    println!(\"hello from code fence\");\n}\n```",
+                    ),
+                ))],
+            ),
+            ui_ai::AiMessage::new(
+                3,
+                ui_ai::MessageRole::User,
+                [ui_ai::MessagePart::Text(Arc::<str>::from(
+                    "Show me seeded tools + sources + citations.",
+                ))],
+            ),
+            ui_ai::AiMessage::new(
+                4,
+                ui_ai::MessageRole::Assistant,
+                [
+                    ui_ai::MessagePart::Markdown(ui_ai::MarkdownPart::streaming(
+                        Arc::<str>::from(""),
+                    )),
+                    ui_ai::MessagePart::ToolCall(tool_call),
+                    ui_ai::MessagePart::Sources(sources),
+                    ui_ai::MessagePart::Citations(citations),
+                ],
+            ),
+        ])
+    });
+    let loading = cx.local_model_keyed("loading", || false);
+    let pending = cx.local_model_keyed("pending", || None::<PendingReply>);
+    let next_id = cx.local_model_keyed("next_id", || 5u64);
+    let content_revision = cx.local_model_keyed("content_revision", || 0u64);
+    let exported_md_len = cx.local_model_keyed("exported_md_len", || None::<usize>);
 
     let prompt_non_empty = cx
         .get_model_cloned(&prompt, Invalidation::Paint)

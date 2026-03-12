@@ -9,13 +9,13 @@
 
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*};
 use fret_core::scene::{Color, DropShadowV1, EffectChain, EffectMode, EffectQuality, EffectStep};
 use fret_core::{Corners, Edges, Point, Px};
 use fret_runtime::Model;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length, Overflow, SizeStyle, SpacerProps};
-use fret_ui_kit::{LayoutRefinement, Space, ui};
-use fret_ui_shadcn as shadcn;
+use fret_ui_kit::{IntoUiElement, LayoutRefinement, Space, ui};
+use fret_ui_shadcn::facade as shadcn;
 
 fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
     let mut c = fret_ui_kit::colors::linear_from_hex_rgb(
@@ -35,12 +35,20 @@ fn shadow_chain() -> EffectChain {
     .sanitize()
 }
 
+fn install_demo_theme(app: &mut KernelApp) {
+    shadcn::themes::apply_shadcn_new_york(
+        app,
+        shadcn::themes::ShadcnBaseColor::Slate,
+        shadcn::themes::ShadcnColorScheme::Dark,
+    );
+}
+
 fn card<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     title: Arc<str>,
     subtitle: Arc<str>,
     enabled: bool,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let radius = Px(16.0);
 
     let mut outer_layout = LayoutStyle::default();
@@ -65,8 +73,8 @@ fn card<H: UiHost>(
             },
             move |cx| {
                 vec![
-                    shadcn::typography::large(cx, title.clone()),
-                    shadcn::typography::muted(cx, subtitle.clone()),
+                    shadcn::raw::typography::large(cx, title.clone()),
+                    shadcn::raw::typography::muted(cx, subtitle.clone()),
                     cx.spacer(SpacerProps::default()),
                     shadcn::Badge::new("DropShadowV1")
                         .variant(shadcn::BadgeVariant::Secondary)
@@ -127,7 +135,7 @@ struct DropShadowDemoView {
 }
 
 impl View for DropShadowDemoView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self {
             st: DropShadowDemoState {
                 enabled: app.models_mut().insert(false),
@@ -136,7 +144,7 @@ impl View for DropShadowDemoView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let enabled = cx.watch_model(&self.st.enabled).layout().value_or_default();
         let stress = cx.watch_model(&self.st.stress).layout().value_or_default();
 
@@ -178,12 +186,13 @@ impl View for DropShadowDemoView {
                                 let mut row_items = Vec::with_capacity(cols);
                                 for c in 0..cols {
                                     let i = r * cols + c;
-                                    row_items.push(card(
+                                    let card = card(
                                         cx,
                                         Arc::from(format!("Card {i}")),
                                         Arc::from("Shadow behind content (scissored)"),
                                         enabled,
-                                    ));
+                                    );
+                                    row_items.push(card.into_element(cx));
                                 }
                                 out.push(
                                     ui::h_row(move |_cx| row_items)
@@ -234,8 +243,8 @@ impl View for DropShadowDemoView {
                 vec![
                     ui::v_flex(|cx| {
                         vec![
-                            shadcn::typography::h4(cx, "Drop shadow demo"),
-                            shadcn::typography::muted(
+                            shadcn::raw::typography::h4(cx, "Drop shadow demo"),
+                            shadcn::raw::typography::muted(
                                 cx,
                                 "Toggle DropShadowV1 and a small stress grid.",
                             ),
@@ -265,7 +274,7 @@ impl View for DropShadowDemoView {
                             .items_center()
                             .into_element(cx),
                             shadcn::Separator::new().into_element(cx),
-                            shadcn::typography::muted(
+                            shadcn::raw::typography::muted(
                                 cx,
                                 "Perf baseline suite: drop-shadow-v1-steady",
                             ),
@@ -292,13 +301,8 @@ impl View for DropShadowDemoView {
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("drop-shadow-demo")
         .window("drop-shadow-demo", (1280.0, 720.0))
-        .install_app(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york(
-                app,
-                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-                shadcn::shadcn_themes::ShadcnColorScheme::Dark,
-            );
-        })
-        .run_view::<DropShadowDemoView>()
+        .setup(install_demo_theme)
+        .view::<DropShadowDemoView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

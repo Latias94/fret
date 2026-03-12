@@ -8,7 +8,7 @@
 //!
 //! Initial consumer: `fret-ui-ai` (`WebPreview`).
 //!
-//! Workstream: `docs/workstreams/webview-wry-v1.md`.
+//! Workstream: `docs/workstreams/webview-wry-v1/webview-wry-v1.md`.
 
 use std::{
     collections::{HashMap, VecDeque},

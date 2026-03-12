@@ -404,7 +404,7 @@ impl NodeGraphStyle {
 
     /// Light defaults tuned for node editor canvases.
     ///
-    /// Note: This is intentionally neutral naming. See `docs/workstreams/xyflow-gap-analysis.md`
+    /// Note: This is intentionally neutral naming. See `docs/workstreams/standalone/xyflow-gap-analysis.md`
     /// for upstream comparisons.
     pub fn light_defaults() -> Self {
         let mut s = Self::default();

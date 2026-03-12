@@ -17,12 +17,7 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::headless::table::{
     ColumnPinningState, GroupedColumnMode, RowKey, TableState, create_column_helper,
 };
-use fret_ui_shadcn::button::{Button, ButtonSize, ButtonVariant};
-use fret_ui_shadcn::context_menu::{ContextMenu, ContextMenuEntry, ContextMenuItem};
-use fret_ui_shadcn::dropdown_menu::{
-    DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuEntry, DropdownMenuItem, DropdownMenuLabel,
-    DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
-};
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -451,69 +446,69 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                                                 let grouped_column_mode =
                                                     grouped_column_mode_model.clone();
 
-                                                vec![DropdownMenu::new(open).into_element(
+                                                vec![shadcn::DropdownMenu::new(open).into_element(
                                                     cx,
                                                     |cx| {
-                                                        Button::new("Table options")
-                                                            .variant(ButtonVariant::Outline)
-                                                            .size(ButtonSize::Sm)
+                                                        shadcn::Button::new("Table options")
+                                                            .variant(shadcn::ButtonVariant::Outline)
+                                                            .size(shadcn::ButtonSize::Sm)
                                                             .toggle_model(open_for_trigger)
                                                             .into_element(cx)
                                                     },
                                                     |_cx| {
                                                         vec![
-                                                            DropdownMenuEntry::Label(
-                                                                DropdownMenuLabel::new("Grouping"),
+                                                            shadcn::DropdownMenuEntry::Label(
+                                                                shadcn::DropdownMenuLabel::new("Grouping"),
                                                             ),
-                                                            DropdownMenuEntry::CheckboxItem(
-                                                                DropdownMenuCheckboxItem::new(
+                                                            shadcn::DropdownMenuEntry::CheckboxItem(
+                                                                shadcn::DropdownMenuCheckboxItem::new(
                                                                     enable_grouping,
                                                                     "Enable grouping",
                                                                 ),
                                                             ),
-                                                            DropdownMenuEntry::Item(
-                                                                DropdownMenuItem::new(
+                                                            shadcn::DropdownMenuEntry::Item(
+                                                                shadcn::DropdownMenuItem::new(
                                                                     "Clear grouping",
                                                                 )
                                                                 .on_select(CommandId::from(CMD_GROUP_CLEAR)),
                                                             ),
-                                                            DropdownMenuEntry::Separator,
-                                                            DropdownMenuEntry::Item(
-                                                                DropdownMenuItem::new(
+                                                            shadcn::DropdownMenuEntry::Separator,
+                                                            shadcn::DropdownMenuEntry::Item(
+                                                                shadcn::DropdownMenuItem::new(
                                                                     "Group by Role",
                                                                 )
                                                                 .on_select(CommandId::from(CMD_GROUP_SET_ROLE)),
                                                             ),
-                                                            DropdownMenuEntry::Item(
-                                                                DropdownMenuItem::new(
+                                                            shadcn::DropdownMenuEntry::Item(
+                                                                shadcn::DropdownMenuItem::new(
                                                                     "Group by Name",
                                                                 )
                                                                 .on_select(CommandId::from(CMD_GROUP_SET_NAME)),
                                                             ),
-                                                            DropdownMenuEntry::Separator,
-                                                            DropdownMenuEntry::Label(
-                                                                DropdownMenuLabel::new(
+                                                            shadcn::DropdownMenuEntry::Separator,
+                                                            shadcn::DropdownMenuEntry::Label(
+                                                                shadcn::DropdownMenuLabel::new(
                                                                     "Grouped column mode",
                                                                 ),
                                                             ),
-                                                            DropdownMenuEntry::RadioGroup(
-                                                                DropdownMenuRadioGroup::new(
+                                                            shadcn::DropdownMenuEntry::RadioGroup(
+                                                                shadcn::DropdownMenuRadioGroup::new(
                                                                     grouped_column_mode,
                                                                 )
                                                                 .item(
-                                                                    DropdownMenuRadioItemSpec::new(
+                                                                    shadcn::DropdownMenuRadioItemSpec::new(
                                                                         "reorder",
                                                                         "Reorder",
                                                                     ),
                                                                 )
                                                                 .item(
-                                                                    DropdownMenuRadioItemSpec::new(
+                                                                    shadcn::DropdownMenuRadioItemSpec::new(
                                                                         "remove",
                                                                         "Remove",
                                                                     ),
                                                                 )
                                                                 .item(
-                                                                    DropdownMenuRadioItemSpec::new(
+                                                                    shadcn::DropdownMenuRadioItemSpec::new(
                                                                         "none",
                                                                         "None",
                                                                     ),
@@ -597,7 +592,7 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                                                             })
                                                             .unwrap_or(false);
 
-                                                        vec![ContextMenu::new(open).into_element(
+                                                        vec![shadcn::ContextMenu::new(open).into_element(
                                                             cx,
                                                             |cx| cx.text(label.clone()),
                                                             |_cx| {
@@ -612,8 +607,8 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                                                                         group_toggle_command_for_column(id.as_ref())
                                                                     {
                                                                         entries.push(
-                                                                            ContextMenuEntry::Item(
-                                                                                ContextMenuItem::new(
+                                                                            shadcn::ContextMenuEntry::Item(
+                                                                                shadcn::ContextMenuItem::new(
                                                                                     action,
                                                                                 )
                                                                                 .on_select(cmd),
@@ -621,8 +616,8 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                                                                         );
                                                                     } else {
                                                                         entries.push(
-                                                                            ContextMenuEntry::Item(
-                                                                                ContextMenuItem::new(
+                                                                            shadcn::ContextMenuEntry::Item(
+                                                                                shadcn::ContextMenuItem::new(
                                                                                     "Grouping not available",
                                                                                 )
                                                                                 .disabled(true),
@@ -631,8 +626,8 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                                                                     }
                                                                 } else {
                                                                     entries.push(
-                                                                        ContextMenuEntry::Item(
-                                                                            ContextMenuItem::new(
+                                                                        shadcn::ContextMenuEntry::Item(
+                                                                            shadcn::ContextMenuItem::new(
                                                                                 "Grouping not available",
                                                                             )
                                                                             .disabled(true),
@@ -641,11 +636,11 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                                                                 }
                                                                 if has_grouping {
                                                                     entries.push(
-                                                                        ContextMenuEntry::Separator,
+                                                                        shadcn::ContextMenuEntry::Separator,
                                                                     );
                                                                     entries.push(
-                                                                        ContextMenuEntry::Item(
-                                                                            ContextMenuItem::new(
+                                                                        shadcn::ContextMenuEntry::Item(
+                                                                            shadcn::ContextMenuItem::new(
                                                                                 "Clear grouping",
                                                                             )
                                                                             .on_select(

@@ -170,7 +170,7 @@ Invariants:
 
 ## F) Derived Geometry and Internals (ReactFlow internals parity)
 
-See `docs/workstreams/fret-node-internals-m0.md` for the detailed contract checklist and the
+See `docs/workstreams/standalone/fret-node-internals-m0.md` for the detailed contract checklist and the
 refactor-safe conformance suite pointers.
 
 ### Invariants

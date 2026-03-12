@@ -936,8 +936,8 @@ pub mod composable {
                         .filter(|value| root.is_item_open(cx, value.as_ref()))
                         .cloned()
                         .collect::<Vec<_>>();
-                    let changed = cx
-                        .with_state(AccordionValueChangeCallbackState::default, |state| {
+                    let changed =
+                        cx.slot_state(AccordionValueChangeCallbackState::default, |state| {
                             accordion_value_change_event(state, &next)
                         });
                     if let Some(next) = changed {
@@ -1903,7 +1903,7 @@ impl Accordion {
                     .filter(|value| root.is_item_open(cx, value.as_ref()))
                     .cloned()
                     .collect::<Vec<_>>();
-                let changed = cx.with_state(AccordionValueChangeCallbackState::default, |state| {
+                let changed = cx.slot_state(AccordionValueChangeCallbackState::default, |state| {
                     accordion_value_change_event(state, &next)
                 });
                 if let Some(next) = changed {

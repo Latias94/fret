@@ -1,55 +1,61 @@
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
-use fret_ui_kit::UiBuilder;
+use fret_ui_kit::{IntoUiElement, UiBuilder};
 
 use crate::{ContextMenu, ContextMenuEntry, DropdownMenu, DropdownMenuEntry};
 
 pub trait DropdownMenuUiBuilderExt {
-    fn into_element<H: UiHost, I>(
+    fn into_element<H: UiHost, I, TTrigger>(
         self,
         cx: &mut ElementContext<'_, H>,
-        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
-        entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-    ) -> AnyElement
-    where
-        I: IntoIterator<Item = DropdownMenuEntry>;
-}
-
-impl DropdownMenuUiBuilderExt for UiBuilder<DropdownMenu> {
-    fn into_element<H: UiHost, I>(
-        self,
-        cx: &mut ElementContext<'_, H>,
-        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger,
         entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
     ) -> AnyElement
     where
         I: IntoIterator<Item = DropdownMenuEntry>,
+        TTrigger: IntoUiElement<H>;
+}
+
+impl DropdownMenuUiBuilderExt for UiBuilder<DropdownMenu> {
+    fn into_element<H: UiHost, I, TTrigger>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger,
+        entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = DropdownMenuEntry>,
+        TTrigger: IntoUiElement<H>,
     {
-        self.build().into_element(cx, trigger, entries)
+        self.build()
+            .into_element(cx, |cx| trigger(cx).into_element(cx), entries)
     }
 }
 
 pub trait ContextMenuUiBuilderExt {
-    fn into_element<H: UiHost, I>(
+    fn into_element<H: UiHost, I, TTrigger>(
         self,
         cx: &mut ElementContext<'_, H>,
-        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
-        entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-    ) -> AnyElement
-    where
-        I: IntoIterator<Item = ContextMenuEntry>;
-}
-
-impl ContextMenuUiBuilderExt for UiBuilder<ContextMenu> {
-    fn into_element<H: UiHost, I>(
-        self,
-        cx: &mut ElementContext<'_, H>,
-        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger,
         entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
     ) -> AnyElement
     where
         I: IntoIterator<Item = ContextMenuEntry>,
+        TTrigger: IntoUiElement<H>;
+}
+
+impl ContextMenuUiBuilderExt for UiBuilder<ContextMenu> {
+    fn into_element<H: UiHost, I, TTrigger>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger,
+        entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = ContextMenuEntry>,
+        TTrigger: IntoUiElement<H>,
     {
-        self.build().into_element(cx, trigger, entries)
+        self.build()
+            .into_element(cx, |cx| trigger(cx).into_element(cx), entries)
     }
 }

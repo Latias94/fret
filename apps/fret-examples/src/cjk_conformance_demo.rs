@@ -8,7 +8,7 @@ use fret_runtime::{FontCatalogCache, PlatformCapabilities};
 use fret_ui::UiTree;
 use fret_ui::declarative;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy)]
@@ -339,10 +339,10 @@ fn configure_fn_driver_hooks(
 pub fn build_app() -> App {
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
-    shadcn::shadcn_themes::apply_shadcn_new_york(
+    shadcn::themes::apply_shadcn_new_york(
         &mut app,
-        shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
-        shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        shadcn::themes::ShadcnBaseColor::Zinc,
+        shadcn::themes::ShadcnColorScheme::Dark,
     );
     app
 }

@@ -3,88 +3,21 @@ pub const SOURCE: &str = include_str!("prompt_input_docs_demo.rs");
 // region: example
 use fret_core::Px;
 use fret_icons::IconId;
-use fret_runtime::Model;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
-use fret_ui_shadcn::prelude::*;
-use fret_ui_shadcn::{
-    ButtonVariant, Radius, Select, SelectContent, SelectItem, SelectTrigger, SelectTriggerSize,
-    SelectValue,
-};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default)]
-struct DemoModels {
-    text: Option<Model<String>>,
-    attachments: Option<Model<Vec<ui_ai::AttachmentData>>>,
-    use_web_search: Option<Model<bool>>,
-    model: Option<Model<Option<Arc<str>>>>,
-    model_open: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let text = cx.with_state(DemoModels::default, |st| st.text.clone());
-    let text = match text {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(DemoModels::default, |st| st.text = Some(model.clone()));
-            model
-        }
-    };
-
-    let attachments = cx.with_state(DemoModels::default, |st| st.attachments.clone());
-    let attachments = match attachments {
-        Some(model) => model,
-        None => {
-            let model = cx
-                .app
-                .models_mut()
-                .insert(Vec::<ui_ai::AttachmentData>::new());
-            cx.with_state(DemoModels::default, |st| {
-                st.attachments = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let use_web_search = cx.with_state(DemoModels::default, |st| st.use_web_search.clone());
-    let use_web_search = match use_web_search {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(DemoModels::default, |st| {
-                st.use_web_search = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let model_value = cx.with_state(DemoModels::default, |st| st.model.clone());
-    let model_value = match model_value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Some(Arc::<str>::from("gpt-4o")));
-            cx.with_state(DemoModels::default, |st| st.model = Some(model.clone()));
-            model
-        }
-    };
-
-    let model_open = cx.with_state(DemoModels::default, |st| st.model_open.clone());
-    let model_open = match model_open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(DemoModels::default, |st| {
-                st.model_open = Some(model.clone())
-            });
-            model
-        }
-    };
+    let text = cx.local_model_keyed("text", String::new);
+    let attachments = cx.local_model_keyed("attachments", Vec::<ui_ai::AttachmentData>::new);
+    let use_web_search = cx.local_model_keyed("use_web_search", || false);
+    let model_value = cx.local_model_keyed("model_value", || Some(Arc::<str>::from("gpt-4o")));
+    let model_open = cx.local_model_keyed("model_open", || false);
 
     let on_send: fret_ui::action::OnActivate = Arc::new(|host, action_cx, _reason| {
         host.notify(action_cx);
@@ -146,15 +79,15 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                         .panel_test_id("ui-gallery-ai-prompt-input-docs-search-tooltip-panel"),
                 )
                 .variant(if searching {
-                    ButtonVariant::Default
+                    shadcn::ButtonVariant::Default
                 } else {
-                    ButtonVariant::Ghost
+                    shadcn::ButtonVariant::Ghost
                 })
                 .test_id("ui-gallery-ai-prompt-input-docs-search")
                 .on_activate(toggle_search)
                 .into_element(cx);
 
-            let select = Select::new(model_value.clone(), model_open.clone())
+            let select = shadcn::Select::new(model_value.clone(), model_open.clone())
                 .trigger_test_id("ui-gallery-ai-prompt-input-docs-model-trigger")
                 .on_value_change({
                     let model_value = model_value.clone();
@@ -164,12 +97,13 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 })
                 .into_element_parts(
                     cx,
-                    |_cx| SelectTrigger::new().size(SelectTriggerSize::Sm),
-                    |_cx| SelectValue::new().placeholder("Model"),
+                    |_cx| shadcn::SelectTrigger::new().size(shadcn::SelectTriggerSize::Sm),
+                    |_cx| shadcn::SelectValue::new().placeholder("Model"),
                     |_cx| {
-                        SelectContent::new().with_entries([
-                            SelectItem::new("gpt-4o", "GPT-4o").into(),
-                            SelectItem::new("claude-opus-4-20250514", "Claude 4 Opus").into(),
+                        shadcn::SelectContent::new().with_entries([
+                            shadcn::SelectItem::new("gpt-4o", "GPT-4o").into(),
+                            shadcn::SelectItem::new("claude-opus-4-20250514", "Claude 4 Opus")
+                                .into(),
                         ])
                     },
                 );

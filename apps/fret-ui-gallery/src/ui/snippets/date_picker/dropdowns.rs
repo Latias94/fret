@@ -1,18 +1,11 @@
 pub const SOURCE: &str = include_str!("dropdowns.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui::Invalidation;
 use fret_ui_headless::calendar::CalendarMonth;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
-
-#[derive(Default, Clone)]
-struct Models {
-    open: Option<Model<bool>>,
-    month: Option<Model<CalendarMonth>>,
-    selected: Option<Model<Option<Date>>>,
-}
 
 fn parse_iso_date_ymd(raw: &str) -> Option<Date> {
     let raw = raw.trim();
@@ -27,32 +20,15 @@ fn parse_iso_date_ymd(raw: &str) -> Option<Date> {
     Date::from_calendar_date(year, month, day).ok()
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let today = std::env::var("FRET_UI_GALLERY_FIXED_TODAY")
         .ok()
         .and_then(|raw| parse_iso_date_ymd(&raw))
         .unwrap_or_else(|| time::OffsetDateTime::now_utc().date());
 
-    let (open, month, selected) = cx.with_state(Models::default, |st| {
-        (st.open.clone(), st.month.clone(), st.selected.clone())
-    });
-
-    let (open, month, selected) = match (open, month, selected) {
-        (Some(open), Some(month), Some(selected)) => (open, month, selected),
-        _ => {
-            let open = cx.app.models_mut().insert(false);
-            let month = cx.app.models_mut().insert(CalendarMonth::from_date(today));
-            let selected = cx.app.models_mut().insert(None::<Date>);
-
-            cx.with_state(Models::default, |st| {
-                st.open = Some(open.clone());
-                st.month = Some(month.clone());
-                st.selected = Some(selected.clone());
-            });
-
-            (open, month, selected)
-        }
-    };
+    let open = cx.local_model_keyed("open", || false);
+    let month = cx.local_model_keyed("month", || CalendarMonth::from_date(today));
+    let selected = cx.local_model_keyed("selected", || None::<Date>);
 
     let is_desktop = fret_ui_kit::declarative::viewport_queries::viewport_width_at_least(
         cx,
@@ -63,7 +39,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
     let content_month = month.clone();
     let content_selected = selected.clone();
-    let content = move |cx: &mut ElementContext<'_, App>| {
+    let content = move |cx: &mut UiCx<'_>| {
         shadcn::Calendar::new(content_month.clone(), content_selected.clone())
             .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
             .test_id_prefix("ui-gallery-date-picker-dropdowns-calendar")
@@ -71,7 +47,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     };
 
     let trigger_open = open.clone();
-    let trigger = move |cx: &mut ElementContext<'_, App>| {
+    let trigger = move |cx: &mut UiCx<'_>| {
         shadcn::Button::new("Pick a date")
             .variant(shadcn::ButtonVariant::Outline)
             .toggle_model(trigger_open.clone())

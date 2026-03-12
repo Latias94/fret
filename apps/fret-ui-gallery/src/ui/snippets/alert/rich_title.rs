@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("rich_title.rs");
 use std::sync::Arc;
 
 use fret_core::{AttributedText, DecorationLineStyle, TextPaintStyle, TextSpan, UnderlineStyle};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn rich_title_text() -> AttributedText {
     let text: Arc<str> = Arc::from("Let's try one with icon, title and a link.");
@@ -27,7 +27,7 @@ fn rich_title_text() -> AttributedText {
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     shadcn::Alert::new([
-        shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
+        fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
         shadcn::AlertTitle::new_children([cx.styled_text(rich_title_text())]).into_element(cx),
         shadcn::AlertDescription::new(
             "Use `AlertTitle::new_children(...)` when the title needs an attributed or precomposed subtree.",

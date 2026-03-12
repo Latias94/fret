@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn controlled<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -19,7 +19,7 @@ fn controlled<H: UiHost>(
     let header = ui::h_flex(|cx| {
         vec![
             shadcn::Label::new("Temperature").into_element(cx),
-            shadcn::typography::muted(cx, values_text),
+            shadcn::raw::typography::muted(cx, values_text),
         ]
     })
     .layout(LayoutRefinement::default().w_full())

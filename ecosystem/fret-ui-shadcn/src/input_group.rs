@@ -27,7 +27,9 @@ use fret_ui_kit::primitives::control_registry::{
 };
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::typography;
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size as ComponentSize, Space};
+use fret_ui_kit::{
+    ChromeRefinement, IntoUiElement, LayoutRefinement, Size as ComponentSize, Space,
+};
 
 #[derive(Debug, Clone, Copy, Default)]
 struct BorderWidthOverride {
@@ -1311,8 +1313,8 @@ impl InputGroup {
     }
 }
 
-pub fn input_group<H: UiHost>(cx: &mut ElementContext<'_, H>, group: InputGroup) -> AnyElement {
-    group.into_element(cx)
+pub fn input_group<H: UiHost>(group: InputGroup) -> impl IntoUiElement<H> + use<H> {
+    group
 }
 
 /// Upstream `InputGroupAddon` alignment variants (shadcn/ui v4).

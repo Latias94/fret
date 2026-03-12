@@ -7,7 +7,9 @@ use fret_core::{
 };
 use fret_icons::{IconId, ids};
 use fret_runtime::{CommandId, Model, WindowCommandGatingSnapshot};
-use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
+use fret_ui::action::{
+    ActionCx, OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus, UiActionHost,
+};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, Elements, FlexProps, InsetStyle, LayoutStyle, Length,
     MainAlign, Overflow, PositionStyle, PressableA11y, PressableProps, RovingFlexProps,
@@ -31,13 +33,15 @@ use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Radius, Space, WidgetState, WidgetStateProperty, WidgetStates, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayController,
+    OverlayPresence, Radius, Space, WidgetState, WidgetStateProperty, WidgetStates, ui,
 };
 
+use crate::menu_authoring;
 use crate::overlay_motion;
 use crate::rtl;
-use crate::shortcut_display::command_shortcut_label;
+use crate::shortcut_display::{command_shortcut_label, shortcut_text_element};
+use crate::test_id::test_id_slug;
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -57,6 +61,23 @@ fn estimate_text_width(text: &str, font_size: Px) -> Px {
     let avg = font_size.0 * 0.537;
     Px(text.chars().count() as f32 * avg)
 }
+
+fn derive_item_test_id(
+    explicit: Option<Arc<str>>,
+    test_id_prefix: Option<&Arc<str>>,
+    value: &Arc<str>,
+) -> Option<Arc<str>> {
+    explicit.or_else(|| {
+        test_id_prefix.map(|prefix| {
+            Arc::<str>::from(format!("{prefix}-item-{}", test_id_slug(value.as_ref())))
+        })
+    })
+}
+
+type OnCheckedChange = menu_authoring::OnCheckedChange;
+type OnValueChange = menu_authoring::OnValueChange;
+pub type MenubarCheckboxChecked = menu_authoring::MenuCheckboxChecked;
+pub type MenubarRadioValue = menu_authoring::MenuRadioValue;
 
 fn menu_panel_desired_size(
     entries: &[MenubarEntry],
@@ -675,34 +696,53 @@ impl MenubarShortcut {
         let font_size = theme.metric_token("font.size");
         let font_line_height = theme.metric_token("font.line_height");
         let dir = crate::use_direction(cx, None);
+        let mut style = typography::fixed_line_box_style(FontId::ui(), font_size, font_line_height);
+        style.weight = FontWeight::NORMAL;
+        style.letter_spacing_em = Some(0.12);
 
-        ui::text(self.text)
+        shortcut_text_element(
+            cx,
+            &theme,
+            self.text,
+            style,
+            fg,
             // new-york-v4: `ml-auto` to push shortcut to the trailing edge.
-            .layout(rtl::layout_refinement_margin_inline_start_auto(dir).flex_shrink_0())
-            .text_size_px(font_size)
-            .fixed_line_box_px(font_line_height)
-            .line_box_in_bounds()
-            .font_normal()
-            .letter_spacing_em(0.12)
-            .text_color(ColorRef::Color(fg))
-            .nowrap()
-            .into_element(cx)
+            rtl::layout_refinement_margin_inline_start_auto(dir).flex_shrink_0(),
+        )
     }
 }
 
 /// shadcn/ui `MenubarCheckboxItem` (v4).
-#[derive(Debug)]
 pub struct MenubarCheckboxItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
-    pub checked: Model<bool>,
+    pub checked: MenubarCheckboxChecked,
     pub leading: Option<AnyElement>,
     pub leading_icon: Option<IconId>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
+    pub on_checked_change: Option<OnCheckedChange>,
     pub a11y_label: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
+}
+
+impl std::fmt::Debug for MenubarCheckboxItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MenubarCheckboxItem")
+            .field("label", &self.label)
+            .field("value", &self.value)
+            .field("checked", &self.checked)
+            .field("leading", &self.leading.is_some())
+            .field("leading_icon", &self.leading_icon)
+            .field("disabled", &self.disabled)
+            .field("close_on_select", &self.close_on_select)
+            .field("command", &self.command)
+            .field("on_checked_change", &self.on_checked_change.is_some())
+            .field("a11y_label", &self.a11y_label)
+            .field("trailing", &self.trailing.is_some())
+            .finish()
+    }
 }
 
 impl MenubarCheckboxItem {
@@ -711,12 +751,32 @@ impl MenubarCheckboxItem {
         Self {
             label: label.clone(),
             value: label,
-            checked,
+            checked: MenubarCheckboxChecked::Model(checked),
             leading: None,
             leading_icon: None,
             disabled: false,
             close_on_select: false,
             command: None,
+            on_checked_change: None,
+            a11y_label: None,
+            trailing: None,
+        }
+    }
+
+    /// Creates a checkbox item from a plain snapshot, mirroring the upstream
+    /// `checked` + `onCheckedChange` authoring path without forcing a dedicated `Model<bool>`.
+    pub fn from_checked(checked: bool, label: impl Into<Arc<str>>) -> Self {
+        let label = label.into();
+        Self {
+            label: label.clone(),
+            value: label,
+            checked: MenubarCheckboxChecked::Value(checked),
+            leading: None,
+            leading_icon: None,
+            disabled: false,
+            close_on_select: false,
+            command: None,
+            on_checked_change: None,
             a11y_label: None,
             trailing: None,
         }
@@ -753,6 +813,18 @@ impl MenubarCheckboxItem {
         self
     }
 
+    /// Called when the user toggles this item (Radix `onCheckedChange`-style).
+    ///
+    /// The callback receives the next checked snapshot. When this item is model-backed via
+    /// [`MenubarCheckboxItem::new`], the model update happens before the callback.
+    pub fn on_checked_change(
+        mut self,
+        f: impl Fn(&mut dyn UiActionHost, ActionCx, bool) + 'static,
+    ) -> Self {
+        self.on_checked_change = Some(Arc::new(f));
+        self
+    }
+
     /// Bind a stable action ID to this menubar checkbox item (action-first authoring).
     ///
     /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
@@ -774,22 +846,58 @@ impl MenubarCheckboxItem {
 }
 
 /// shadcn/ui `MenubarRadioGroup` (v4).
-#[derive(Debug)]
 pub struct MenubarRadioGroup {
-    pub value: Model<Option<Arc<str>>>,
+    pub value: MenubarRadioValue,
+    pub on_value_change: Option<OnValueChange>,
     pub items: Vec<MenubarRadioItemSpec>,
+}
+
+impl std::fmt::Debug for MenubarRadioGroup {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MenubarRadioGroup")
+            .field("value", &self.value)
+            .field("on_value_change", &self.on_value_change.is_some())
+            .field("items_len", &self.items.len())
+            .finish()
+    }
 }
 
 impl MenubarRadioGroup {
     pub fn new(value: Model<Option<Arc<str>>>) -> Self {
         Self {
-            value,
+            value: MenubarRadioValue::Model(value),
+            on_value_change: None,
+            items: Vec::new(),
+        }
+    }
+
+    /// Creates a radio group from a plain snapshot, mirroring the upstream
+    /// `value` + `onValueChange` authoring path without forcing a dedicated model.
+    pub fn from_value<T>(value: Option<T>) -> Self
+    where
+        T: Into<Arc<str>>,
+    {
+        Self {
+            value: MenubarRadioValue::Value(value.map(Into::into)),
+            on_value_change: None,
             items: Vec::new(),
         }
     }
 
     pub fn item(mut self, item: MenubarRadioItemSpec) -> Self {
         self.items.push(item);
+        self
+    }
+
+    /// Called when the user picks a different radio value (Radix `onValueChange`-style).
+    ///
+    /// The callback receives the chosen value. When this group is model-backed via
+    /// [`MenubarRadioGroup::new`], the model update happens before the callback.
+    pub fn on_value_change(
+        mut self,
+        f: impl Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static,
+    ) -> Self {
+        self.on_value_change = Some(Arc::new(f));
         self
     }
 }
@@ -869,7 +977,11 @@ impl MenubarRadioItemSpec {
         self
     }
 
-    fn into_item(self, group_value: Model<Option<Arc<str>>>) -> MenubarRadioItem {
+    fn into_item(
+        self,
+        group_value: MenubarRadioValue,
+        on_value_change: Option<OnValueChange>,
+    ) -> MenubarRadioItem {
         MenubarRadioItem {
             label: self.label,
             value: self.value,
@@ -879,6 +991,7 @@ impl MenubarRadioItemSpec {
             disabled: self.disabled,
             close_on_select: self.close_on_select,
             command: self.command,
+            on_value_change,
             a11y_label: self.a11y_label,
             trailing: self.trailing,
         }
@@ -886,18 +999,36 @@ impl MenubarRadioItemSpec {
 }
 
 /// shadcn/ui `MenubarRadioItem` (v4).
-#[derive(Debug)]
 pub struct MenubarRadioItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
-    pub group_value: Model<Option<Arc<str>>>,
+    pub group_value: MenubarRadioValue,
     pub leading: Option<AnyElement>,
     pub leading_icon: Option<IconId>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
+    pub on_value_change: Option<OnValueChange>,
     pub a11y_label: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
+}
+
+impl std::fmt::Debug for MenubarRadioItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MenubarRadioItem")
+            .field("label", &self.label)
+            .field("value", &self.value)
+            .field("group_value", &self.group_value)
+            .field("leading", &self.leading.is_some())
+            .field("leading_icon", &self.leading_icon)
+            .field("disabled", &self.disabled)
+            .field("close_on_select", &self.close_on_select)
+            .field("command", &self.command)
+            .field("on_value_change", &self.on_value_change.is_some())
+            .field("a11y_label", &self.a11y_label)
+            .field("trailing", &self.trailing.is_some())
+            .finish()
+    }
 }
 
 impl MenubarRadioItem {
@@ -911,12 +1042,39 @@ impl MenubarRadioItem {
         Self {
             label,
             value,
-            group_value,
+            group_value: MenubarRadioValue::Model(group_value),
             leading: None,
             leading_icon: None,
             disabled: false,
             close_on_select: true,
             command: None,
+            on_value_change: None,
+            a11y_label: None,
+            trailing: None,
+        }
+    }
+
+    /// Creates a radio item from a plain selected-value snapshot.
+    pub fn from_value<T>(
+        group_value: Option<T>,
+        value: impl Into<Arc<str>>,
+        label: impl Into<Arc<str>>,
+    ) -> Self
+    where
+        T: Into<Arc<str>>,
+    {
+        let value = value.into();
+        let label = label.into();
+        Self {
+            label,
+            value,
+            group_value: MenubarRadioValue::Value(group_value.map(Into::into)),
+            leading: None,
+            leading_icon: None,
+            disabled: false,
+            close_on_select: true,
+            command: None,
+            on_value_change: None,
             a11y_label: None,
             trailing: None,
         }
@@ -934,6 +1092,18 @@ impl MenubarRadioItem {
 
     pub fn on_select(mut self, command: impl Into<CommandId>) -> Self {
         self.command = Some(command.into());
+        self
+    }
+
+    /// Called when the user picks this radio item (Radix `onValueChange`-style).
+    ///
+    /// The callback receives the chosen value. When this item is model-backed via
+    /// [`MenubarRadioItem::new`], the model update happens before the callback.
+    pub fn on_value_change(
+        mut self,
+        f: impl Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static,
+    ) -> Self {
+        self.on_value_change = Some(Arc::new(f));
         self
     }
 
@@ -974,7 +1144,9 @@ fn flatten_entries(into: &mut Vec<MenubarEntry>, entries: Vec<MenubarEntry>) {
             MenubarEntry::Group(group) => flatten_entries(into, group.entries),
             MenubarEntry::RadioGroup(group) => {
                 for item in group.items {
-                    into.push(MenubarEntry::RadioItem(item.into_item(group.value.clone())));
+                    into.push(MenubarEntry::RadioItem(
+                        item.into_item(group.value.clone(), group.on_value_change.clone()),
+                    ));
                 }
             }
             other => into.push(other),
@@ -1127,7 +1299,10 @@ fn menu_row_children<H: UiHost>(
     vec![chrome].into()
 }
 
-fn menu_icon_slot<H: UiHost>(cx: &mut ElementContext<'_, H>, element: AnyElement) -> AnyElement {
+fn menu_icon_slot<H: UiHost, B>(cx: &mut ElementContext<'_, H>, element: B) -> AnyElement
+where
+    B: IntoUiElement<H>,
+{
     cx.flex(
         FlexProps {
             layout: {
@@ -1144,7 +1319,7 @@ fn menu_icon_slot<H: UiHost>(cx: &mut ElementContext<'_, H>, element: AnyElement
             align: CrossAlign::Center,
             wrap: false,
         },
-        move |_cx| vec![element],
+        move |cx| vec![element.into_element(cx)],
     )
 }
 
@@ -1447,19 +1622,13 @@ impl Menubar {
     }
 }
 
-#[derive(Default)]
-struct MenubarMenuState {
-    open: Option<Model<bool>>,
-    keyboard_focus_last_on_open: Option<Model<bool>>,
-}
-
 #[derive(Debug, Default, Clone)]
 struct MenubarProviderState {
     disabled: bool,
 }
 
 fn menubar_disabled_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> bool {
-    cx.inherited_state_where::<MenubarProviderState>(|st| st.disabled)
+    cx.provided::<MenubarProviderState>()
         .is_some_and(|st| st.disabled)
 }
 
@@ -1469,22 +1638,14 @@ fn with_menubar_provider_state<H: UiHost, R>(
     disabled: bool,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(MenubarProviderState::default, |st| {
-        let prev = st.disabled;
-        st.disabled = disabled;
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(MenubarProviderState::default, |st| {
-        st.disabled = prev;
-    });
-    out
+    cx.provide(MenubarProviderState { disabled }, f)
 }
 
 pub struct MenubarMenu {
     label: Arc<str>,
     disabled: bool,
     test_id: Option<Arc<str>>,
+    test_id_prefix: Option<Arc<str>>,
     window_margin: Px,
     side_offset: Px,
     min_width: Px,
@@ -1512,6 +1673,7 @@ impl MenubarMenu {
             label: label.into(),
             disabled: false,
             test_id: None,
+            test_id_prefix: None,
             window_margin: Px(8.0),
             side_offset: Px(8.0),
             min_width: Px(192.0),
@@ -1522,12 +1684,14 @@ impl MenubarMenu {
 
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(id.into());
+        self.test_id_prefix = None;
         self
     }
 
     pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
         let prefix = prefix.into();
         self.test_id = Some(Arc::<str>::from(format!("{prefix}-trigger")));
+        self.test_id_prefix = Some(prefix);
         self
     }
 
@@ -1653,27 +1817,9 @@ impl MenubarMenuEntries {
             let group_active = menubar_trigger_row::ensure_group_active_model(cx, group);
             let trigger_registry = menubar_trigger_row::ensure_group_registry_model(cx, group);
 
-            let open = cx.with_state(MenubarMenuState::default, |st| st.open.clone());
-            let open = if let Some(open) = open {
-                open
-            } else {
-                let open = cx.app.models_mut().insert(false);
-                cx.with_state(MenubarMenuState::default, |st| st.open = Some(open.clone()));
-                open
-            };
-
-            let keyboard_focus_last_on_open = cx.with_state(MenubarMenuState::default, |st| {
-                st.keyboard_focus_last_on_open.clone()
-            });
-            let keyboard_focus_last_on_open = if let Some(model) = keyboard_focus_last_on_open {
-                model
-            } else {
-                let model = cx.app.models_mut().insert(false);
-                cx.with_state(MenubarMenuState::default, |st| {
-                    st.keyboard_focus_last_on_open = Some(model.clone())
-                });
-                model
-            };
+            let open = cx.local_model_keyed("open", || false);
+            let keyboard_focus_last_on_open =
+                cx.local_model_keyed("keyboard_focus_last_on_open", || false);
 
             let theme = Theme::global(&*cx.app).snapshot();
             let enabled = !(menu.disabled || menubar_disabled_in_scope(cx));
@@ -1692,6 +1838,7 @@ impl MenubarMenuEntries {
 
             let label = menu.label.clone();
             let test_id = menu.test_id.clone();
+            let test_id_prefix = menu.test_id_prefix.clone();
 
             control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
                 let (patient_click_sticky, patient_click_timer) =
@@ -2094,6 +2241,8 @@ impl MenubarMenuEntries {
                         let submenu_for_panel_for_content = submenu_for_panel.clone();
                         let group_active_for_content = group_active.clone();
                         let group_active_for_submenu = group_active.clone();
+                        let test_id_prefix_for_content = test_id_prefix.clone();
+                        let test_id_prefix_for_submenu = test_id_prefix.clone();
                         let text_style_for_content = text_style.clone();
                         let text_style_for_submenu = text_style.clone();
                         let trigger_registry_for_overlay_for_content =
@@ -2250,6 +2399,7 @@ impl MenubarMenuEntries {
                                                                 disabled,
                                                                 close_on_select,
                                                                 command,
+                                                                on_checked_change,
                                                                 a11y_label,
                                                                 trailing,
                                                             } = item;
@@ -2277,10 +2427,7 @@ impl MenubarMenuEntries {
                                                             let _theme = theme.clone();
                                                             out.push(cx.keyed(value.clone(), move |cx| {
                                                                 cx.pressable_with_id_props(move |cx, st, item_id| {
-                                                                    let checked_now = cx
-                                                                        .watch_model(&checked)
-                                                                        .copied()
-                                                                        .unwrap_or(false);
+                                                                    let checked_now = checked.snapshot(cx);
                                                                     if item_enabled {
                                                                         if first_item_focus_id_for_items.get().is_none() {
                                                                             first_item_focus_id_for_items
@@ -2309,10 +2456,27 @@ impl MenubarMenuEntries {
                                                                     );
 
                                                                     if item_enabled {
-                                                                        menu::checkbox_item::wire_toggle_on_activate(
-                                                                            cx,
-                                                                            checked.clone(),
-                                                                        );
+                                                                        let checked_for_activate =
+                                                                            checked.clone();
+                                                                        let on_checked_change_for_activate =
+                                                                            on_checked_change.clone();
+                                                                        cx.pressable_add_on_activate(Arc::new(
+                                                                            move |host, action_cx, _reason| {
+                                                                                let next =
+                                                                                    checked_for_activate
+                                                                                        .toggle(host);
+                                                                                if let Some(handler) =
+                                                                                    on_checked_change_for_activate
+                                                                                        .as_ref()
+                                                                                {
+                                                                                    handler(
+                                                                                        host,
+                                                                                        action_cx,
+                                                                                        next,
+                                                                                    );
+                                                                                }
+                                                                            },
+                                                                        ));
                                                                         cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                         if close_on_select {
                                                                             cx.pressable_set_bool(&open, false);
@@ -2433,6 +2597,7 @@ impl MenubarMenuEntries {
                                                                 disabled,
                                                                 close_on_select,
                                                                 command,
+                                                                on_value_change,
                                                                 a11y_label,
                                                                 trailing,
                                                             } = item;
@@ -2460,10 +2625,7 @@ impl MenubarMenuEntries {
                                                             let _theme = theme.clone();
                                                             out.push(cx.keyed(value.clone(), move |cx| {
                                                                 cx.pressable_with_id_props(move |cx, st, item_id| {
-                                                                    let selected = cx
-                                                                        .watch_model(&group_value)
-                                                                        .cloned()
-                                                                        .flatten();
+                                                                    let selected = group_value.snapshot(cx);
                                                                     let is_selected = menu::radio_group::is_selected(
                                                                         selected.as_ref(),
                                                                         &value,
@@ -2496,11 +2658,35 @@ impl MenubarMenuEntries {
                                                                     );
 
                                                                     if item_enabled {
-                                                                        menu::radio_group::wire_select_on_activate(
-                                                                            cx,
-                                                                            group_value.clone(),
-                                                                            value.clone(),
-                                                                        );
+                                                                        let group_value_for_activate =
+                                                                            group_value.clone();
+                                                                        let value_for_activate =
+                                                                            value.clone();
+                                                                        let on_value_change_for_activate =
+                                                                            on_value_change.clone();
+                                                                        cx.pressable_add_on_activate(Arc::new(
+                                                                            move |host, action_cx, _reason| {
+                                                                                let Some(next) =
+                                                                                    group_value_for_activate
+                                                                                        .select(
+                                                                                            host,
+                                                                                            &value_for_activate,
+                                                                                        )
+                                                                                else {
+                                                                                    return;
+                                                                                };
+                                                                                if let Some(handler) =
+                                                                                    on_value_change_for_activate
+                                                                                        .as_ref()
+                                                                                {
+                                                                                    handler(
+                                                                                        host,
+                                                                                        action_cx,
+                                                                                        next,
+                                                                                    );
+                                                                                }
+                                                                            },
+                                                                        ));
                                                                         cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                         if close_on_select {
                                                                             cx.pressable_set_bool(&open, false);
@@ -2634,6 +2820,11 @@ impl MenubarMenuEntries {
                                                                 trailing,
                                                                 variant,
                                                             } = item;
+                                                            let test_id = derive_item_test_id(
+                                                                test_id,
+                                                                test_id_prefix_for_content.as_ref(),
+                                                                &value,
+                                                            );
                                                             let item_enabled = !disabled
                                                                 && enabled
                                                                 && !crate::command_gating::command_is_disabled_by_gating(
@@ -3119,14 +3310,14 @@ impl MenubarMenuEntries {
                             geometry: Option<menu::sub::MenuSubmenuGeometry>,
                         }
 
-                        let (last_value, last_geometry) = cx.with_state(SubmenuLast::default, |st| {
-                            if let Some((open_value, geometry)) = open_submenu.as_ref() {
-                                st.open_value = Some(open_value.clone());
-                                st.geometry = Some(*geometry);
-                            }
-                            (st.open_value.clone(), st.geometry)
-                        },
-                        );
+                        let (last_value, last_geometry) =
+                            cx.keyed_slot_state("submenu_last", SubmenuLast::default, |st| {
+                                if let Some((open_value, geometry)) = open_submenu.as_ref() {
+                                    st.open_value = Some(open_value.clone());
+                                    st.geometry = Some(*geometry);
+                                }
+                                (st.open_value.clone(), st.geometry)
+                            });
 
                         if submenu_motion.present {
                             let open_value = open_submenu
@@ -3395,6 +3586,7 @@ impl MenubarMenuEntries {
                                                                             disabled,
                                                                             close_on_select,
                                                                             command,
+                                                                            on_checked_change,
                                                                             a11y_label,
                                                                             trailing,
                                                                         } = item;
@@ -3427,14 +3619,31 @@ impl MenubarMenuEntries {
                                                                                     trigger_registry.clone(),
                                                                                 );
 
-                                                                                let checked_now = cx
-                                                                                    .watch_model(&checked)
-                                                                                    .copied()
-                                                                                    .unwrap_or(false);
+                                                                                let checked_now =
+                                                                                    checked.snapshot(cx);
                                                                                 if item_enabled {
-                                                                                    menu::checkbox_item::wire_toggle_on_activate(
-                                                                                        cx,
-                                                                                        checked.clone(),
+                                                                                    let checked_for_activate =
+                                                                                        checked.clone();
+                                                                                    let on_checked_change_for_activate =
+                                                                                        on_checked_change.clone();
+                                                                                    cx.pressable_add_on_activate(
+                                                                                        Arc::new(
+                                                                                            move |host, action_cx, _reason| {
+                                                                                                let next =
+                                                                                                    checked_for_activate
+                                                                                                        .toggle(host);
+                                                                                                if let Some(handler) =
+                                                                                                    on_checked_change_for_activate
+                                                                                                        .as_ref()
+                                                                                                {
+                                                                                                    handler(
+                                                                                                        host,
+                                                                                                        action_cx,
+                                                                                                        next,
+                                                                                                    );
+                                                                                                }
+                                                                                            },
+                                                                                        ),
                                                                                     );
                                                                                 }
                                                                                 cx.pressable_dispatch_command_if_enabled_opt(command.clone());
@@ -3550,6 +3759,7 @@ impl MenubarMenuEntries {
                                                                             disabled,
                                                                             close_on_select,
                                                                             command,
+                                                                            on_value_change,
                                                                             a11y_label,
                                                                             trailing,
                                                                         } = item;
@@ -3582,19 +3792,43 @@ impl MenubarMenuEntries {
                                                                                     trigger_registry.clone(),
                                                                                 );
 
-                                                                                let selected = cx
-                                                                                    .watch_model(&group_value)
-                                                                                    .cloned()
-                                                                                    .flatten();
+                                                                                let selected =
+                                                                                    group_value.snapshot(cx);
                                                                                 let is_selected = menu::radio_group::is_selected(
                                                                                     selected.as_ref(),
                                                                                     &value,
                                                                                 );
                                                                                 if item_enabled {
-                                                                                    menu::radio_group::wire_select_on_activate(
-                                                                                        cx,
-                                                                                        group_value.clone(),
-                                                                                        value.clone(),
+                                                                                    let group_value_for_activate =
+                                                                                        group_value.clone();
+                                                                                    let value_for_activate =
+                                                                                        value.clone();
+                                                                                    let on_value_change_for_activate =
+                                                                                        on_value_change.clone();
+                                                                                    cx.pressable_add_on_activate(
+                                                                                        Arc::new(
+                                                                                            move |host, action_cx, _reason| {
+                                                                                                let Some(next) =
+                                                                                                    group_value_for_activate
+                                                                                                        .select(
+                                                                                                            host,
+                                                                                                            &value_for_activate,
+                                                                                                        )
+                                                                                                else {
+                                                                                                    return;
+                                                                                                };
+                                                                                                if let Some(handler) =
+                                                                                                    on_value_change_for_activate
+                                                                                                        .as_ref()
+                                                                                                {
+                                                                                                    handler(
+                                                                                                        host,
+                                                                                                        action_cx,
+                                                                                                        next,
+                                                                                                    );
+                                                                                                }
+                                                                                            },
+                                                                                        ),
                                                                                     );
                                                                                 }
                                                                                 cx.pressable_dispatch_command_if_enabled_opt(command.clone());
@@ -3715,6 +3949,11 @@ impl MenubarMenuEntries {
                                                                             trailing,
                                                                             variant,
                                                                         } = item;
+                                                                        let test_id = derive_item_test_id(
+                                                                            test_id,
+                                                                            test_id_prefix_for_submenu.as_ref(),
+                                                                            &value,
+                                                                        );
                                                                         let chrome_test_id = test_id
                                                                             .clone()
                                                                             .map(|id| Arc::<str>::from(format!("{id}.chrome")));
@@ -4111,35 +4350,14 @@ mod tests {
             fret_core::Size::new(Px(480.0), Px(240.0)),
         );
 
-        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
-        OverlayController::begin_frame(&mut app, window);
-        let root = fret_ui::declarative::render_root(
+        render_frame_with_test_id_prefix(
             &mut ui,
             &mut app,
             &mut services,
             window,
             bounds,
-            "menubar-prefix-items",
-            |cx| {
-                vec![
-                    Menubar::new(vec![
-                        MenubarMenu::new("File")
-                            .test_id_prefix("menu-file")
-                            .entries(vec![
-                                MenubarEntry::Item(MenubarItem::new("New")),
-                                MenubarEntry::Separator,
-                                MenubarEntry::Item(MenubarItem::new("Open")),
-                            ]),
-                    ])
-                    .into_element(cx),
-                ]
-            },
+            "menu-file",
         );
-        ui.set_root(root);
-        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
-        ui.request_semantics_snapshot();
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
-
         let snap0 = ui.semantics_snapshot().expect("semantics snapshot");
         let file = menu_trigger_node_id(snap0, "File");
         ui.set_focus(Some(file));
@@ -4153,52 +4371,22 @@ mod tests {
             },
         );
 
-        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
-        let changed_models = app.take_changed_models();
-        let changed_globals = app.take_changed_globals();
-        let _ = fret_ui::frame_pipeline::propagate_changes(
-            &mut ui,
-            &mut app,
-            &changed_models,
-            &changed_globals,
-        );
-        OverlayController::begin_frame(&mut app, window);
-        let root = fret_ui::declarative::render_root(
+        render_frame_with_test_id_prefix(
             &mut ui,
             &mut app,
             &mut services,
             window,
             bounds,
-            "menubar-prefix-items",
-            |cx| {
-                vec![
-                    Menubar::new(vec![
-                        MenubarMenu::new("File")
-                            .test_id_prefix("menu-file")
-                            .entries(vec![
-                                MenubarEntry::Item(MenubarItem::new("New")),
-                                MenubarEntry::Separator,
-                                MenubarEntry::Item(MenubarItem::new("Open")),
-                            ]),
-                    ])
-                    .into_element(cx),
-                ]
-            },
+            "menu-file",
         );
-        ui.set_root(root);
-        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
-        ui.request_semantics_snapshot();
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
-
         let snap1 = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(menu_trigger_expanded(snap1, "File"));
         assert!(
             snap1
                 .nodes
                 .iter()
                 .any(|n| n.test_id.as_deref() == Some("menu-file-item-new"))
         );
-
-        let _ = root;
     }
 
     #[test]
@@ -4360,6 +4548,71 @@ mod tests {
         bounds: Rect,
     ) {
         render_frame_with_disabled(ui, app, services, window, bounds, false);
+    }
+
+    fn render_frame_with_entries(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        entries: Vec<MenubarEntry>,
+    ) {
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "menubar-custom-entries",
+            move |cx| {
+                vec![Menubar::new(vec![MenubarMenu::new("View").entries(entries)]).into_element(cx)]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+    }
+
+    fn render_frame_with_test_id_prefix(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        prefix: &'static str,
+    ) {
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "menubar-prefix-items",
+            move |cx| {
+                vec![
+                    Menubar::new(vec![
+                        MenubarMenu::new("File")
+                            .test_id_prefix(prefix)
+                            .entries(vec![
+                                MenubarEntry::Item(MenubarItem::new("New")),
+                                MenubarEntry::Separator,
+                                MenubarEntry::Item(MenubarItem::new("Open")),
+                            ]),
+                    ])
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
     }
 
     fn render_frame_with_disabled(
@@ -4711,6 +4964,260 @@ mod tests {
         OverlayController::render(ui, app, services, window, bounds);
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
+    }
+
+    #[test]
+    fn menubar_checkbox_item_from_checked_emits_on_checked_change() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let checked = app.models_mut().insert(false);
+        let change_count = app.models_mut().insert(0_u32);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(360.0), Px(240.0)),
+        );
+
+        let build_entries = |app: &App| {
+            let checked_now = app.models().get_copied(&checked).unwrap_or(false);
+            let checked_for_cb = checked.clone();
+            let change_count_for_cb = change_count.clone();
+            vec![MenubarEntry::CheckboxItem(
+                MenubarCheckboxItem::from_checked(checked_now, "Status Bar").on_checked_change(
+                    move |host, _action_cx, next| {
+                        let _ = host
+                            .models_mut()
+                            .update(&checked_for_cb, |value| *value = next);
+                        let _ = host.models_mut().update(&change_count_for_cb, |value| {
+                            *value = value.saturating_add(1)
+                        });
+                    },
+                ),
+            )]
+        };
+
+        let entries = build_entries(&app);
+        render_frame_with_entries(&mut ui, &mut app, &mut services, window, bounds, entries);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let view = center(menu_trigger_bounds(&snap, "View"));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: view,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: view,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let entries = build_entries(&app);
+        render_frame_with_entries(&mut ui, &mut app, &mut services, window, bounds, entries);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let status_bar = snap
+            .nodes
+            .iter()
+            .find(|node| {
+                node.role == SemanticsRole::MenuItemCheckbox
+                    && node.label.as_deref() == Some("Status Bar")
+            })
+            .expect("Status Bar menu item");
+        let position = Point::new(
+            Px(status_bar.bounds.origin.x.0 + 2.0),
+            Px(status_bar.bounds.origin.y.0 + 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&checked), Some(true));
+        assert_eq!(app.models().get_copied(&change_count), Some(1));
+
+        let entries = build_entries(&app);
+        render_frame_with_entries(&mut ui, &mut app, &mut services, window, bounds, entries);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let status_bar = snap
+            .nodes
+            .iter()
+            .find(|node| {
+                node.role == SemanticsRole::MenuItemCheckbox
+                    && node.label.as_deref() == Some("Status Bar")
+            })
+            .expect("Status Bar menu item after callback");
+        assert_eq!(status_bar.flags.checked, Some(true));
+    }
+
+    #[test]
+    fn menubar_radio_group_from_value_emits_on_value_change() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let selected = app.models_mut().insert(Some(Arc::<str>::from("bottom")));
+        let change_count = app.models_mut().insert(0_u32);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(360.0), Px(240.0)),
+        );
+
+        let build_entries = |app: &App| {
+            let selected_now = app
+                .models()
+                .read(&selected, |value| value.clone())
+                .ok()
+                .flatten();
+            let selected_for_cb = selected.clone();
+            let change_count_for_cb = change_count.clone();
+            vec![MenubarEntry::RadioGroup(
+                MenubarRadioGroup::from_value(selected_now)
+                    .on_value_change(move |host, _action_cx, next| {
+                        let _ = host
+                            .models_mut()
+                            .update(&selected_for_cb, |value| *value = Some(next));
+                        let _ = host.models_mut().update(&change_count_for_cb, |value| {
+                            *value = value.saturating_add(1)
+                        });
+                    })
+                    .item(MenubarRadioItemSpec::new("top", "Top").close_on_select(false))
+                    .item(MenubarRadioItemSpec::new("bottom", "Bottom").close_on_select(false)),
+            )]
+        };
+
+        let entries = build_entries(&app);
+        render_frame_with_entries(&mut ui, &mut app, &mut services, window, bounds, entries);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let view = center(menu_trigger_bounds(&snap, "View"));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: view,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: view,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let entries = build_entries(&app);
+        render_frame_with_entries(&mut ui, &mut app, &mut services, window, bounds, entries);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let top = snap
+            .nodes
+            .iter()
+            .find(|node| {
+                node.role == SemanticsRole::MenuItemRadio && node.label.as_deref() == Some("Top")
+            })
+            .expect("Top radio item");
+        let position = Point::new(
+            Px(top.bounds.origin.x.0 + 2.0),
+            Px(top.bounds.origin.y.0 + 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let selected_now = app
+            .models()
+            .read(&selected, |value| value.clone())
+            .ok()
+            .flatten();
+        assert_eq!(selected_now.as_deref(), Some("top"));
+        assert_eq!(app.models().get_copied(&change_count), Some(1));
+
+        let entries = build_entries(&app);
+        render_frame_with_entries(&mut ui, &mut app, &mut services, window, bounds, entries);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let top = snap
+            .nodes
+            .iter()
+            .find(|node| {
+                node.role == SemanticsRole::MenuItemRadio && node.label.as_deref() == Some("Top")
+            })
+            .expect("Top radio item after callback");
+        assert_eq!(top.flags.checked, Some(true));
     }
 
     #[test]

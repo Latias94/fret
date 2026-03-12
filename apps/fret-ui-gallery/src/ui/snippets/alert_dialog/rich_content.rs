@@ -4,24 +4,7 @@ pub const SOURCE: &str = include_str!("rich_content.rs");
 use std::sync::Arc;
 
 use fret_core::{AttributedText, DecorationLineStyle, TextPaintStyle, TextSpan, UnderlineStyle};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default, Clone)]
-struct Models {
-    open: Option<Model<bool>>,
-}
-
-fn open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    match state.open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.open = Some(model.clone()));
-            model
-        }
-    }
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn rich_title_text() -> AttributedText {
     let text: Arc<str> = Arc::from("Delete project and revoke shared access?");
@@ -43,7 +26,7 @@ fn rich_title_text() -> AttributedText {
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let open = open_model(cx);
+    let open = cx.local_model_keyed("open", || false);
 
     let trigger = shadcn::AlertDialogTrigger::new(
         shadcn::Button::new("Preview Rich Content")
@@ -84,7 +67,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
             let cancel_visual = ui::h_row(|cx| {
                 vec![
-                    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.arrow-left")),
+                    fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.arrow-left")),
                     ui::text("Back to safety").into_element(cx),
                 ]
             })
@@ -94,7 +77,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
             let action_visual = ui::h_row(|cx| {
                 vec![
-                    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.trash-2")),
+                    fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.trash-2")),
                     ui::text("Delete project").into_element(cx),
                 ]
             })

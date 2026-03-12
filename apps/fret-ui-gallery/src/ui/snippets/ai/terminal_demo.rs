@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("terminal_demo.rs");
 
 // region: example
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length, SemanticsProps, SizeStyle};
 use fret_ui_ai as ui_ai;
@@ -10,22 +9,10 @@ use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-#[derive(Default)]
-struct DemoModels {
-    output: Option<Model<String>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let output = cx.with_state(DemoModels::default, |st| st.output.clone());
-    let output = match output {
-        Some(model) => model,
-        None => {
-            let seed = "Building...\n✓ compiled crates\n✓ ran tests\n\n$ echo \"hello\"";
-            let model = cx.app.models_mut().insert(seed.to_string());
-            cx.with_state(DemoModels::default, |st| st.output = Some(model.clone()));
-            model
-        }
-    };
+    let output = cx.local_model_keyed("output", || {
+        "Building...\n✓ compiled crates\n✓ ran tests\n\n$ echo \"hello\"".to_string()
+    });
 
     let empty_now = cx
         .get_model_cloned(&output, Invalidation::Paint)

@@ -92,6 +92,10 @@ Adoption note (as of 2026-03-07):
   records the quarantine-first execution steps for `run_native_with_compat_driver(...)`, so future
   facade reduction no longer has to reconstruct how to move that advanced seam out of the default
   top-level surface.
+- Compat-runner quarantine update (as of 2026-03-12): that quarantine step has now landed; the
+  root `fret::run_native_with_compat_driver(...)` entry is gone, the retained seam now lives at
+  `fret::advanced::interop::run_native_with_compat_driver(...)`, and the compat-runner
+  policy/checklist/gate notes now treat the move as executed rather than hypothetical.
 - Source-alignment audit update (as of 2026-03-09):
   `SOURCE_ALIGNMENT_AUDIT_2026-03-09.md` now records that `App::ui*`, compat runner, `use_state`,
   and command-first retained seams are source-aligned, and the missing compat-runner default-path
@@ -188,7 +192,7 @@ Evidence anchors (verified in-tree as of 2026-03-08):
 - `ecosystem/fret/src/view.rs` (`TrackedStateExt::{layout, paint, hit_test}` now covers `LocalState<T>`, `Model<T>`, and `QueryHandle<T>` behind `state-query`; `WatchedState::value*`, `LocalState::{watch, read_in, revision_in}`, documented `LocalState::{update_in, set_in, update_action, set_action}` write semantics, `ViewCx::on_action_notify_*`, and `ViewCx::on_action_notify_local_*` helpers)
 - `ecosystem/fret/src/view.rs` test `local_state_update_action_requests_redraw_and_notify` (locks the post-v1 rule that tracked local writes inside action dispatch request redraw and notify, while `notify()` remains an escape hatch rather than a teaching-surface default)
 - `ecosystem/fret-ui-kit/src/declarative/model_watch.rs` (`ModelWatchExt` still backs legacy `cx.watch_model(...)`, while `QueryHandleWatchExt` now gives `ElementContext` query surfaces the query-specific handle-side `handle.layout_query(cx).value_*` read shape that mirrors the View runtime)
-- `docs/examples/todo-app-golden-path.md`, `docs/integrating-tokio-and-reqwest.md`, `docs/workstreams/imui-state-integration-v1.md` (narrative docs now mirror the same query handle-side read story across `ViewCx` and `ElementContext`, including the `QueryHandleWatchExt` path for `handle.paint_query(cx).value_*` / `handle.layout_query(cx).value_*`)
+- `docs/examples/todo-app-golden-path.md`, `docs/integrating-tokio-and-reqwest.md`, `docs/workstreams/standalone/imui-state-integration-v1.md` (narrative docs now mirror the same query handle-side read story across `ViewCx` and `ElementContext`, including the `QueryHandleWatchExt` path for `handle.paint_query(cx).value_*` / `handle.layout_query(cx).value_*`)
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/TEACHING_SURFACE_LOCAL_STATE_INVENTORY.md`, `docs/workstreams/action-first-authoring-fearless-refactor-v1/MODEL_CENTERED_WIDGET_CONTRACT_AUDIT.md`, `apps/fret-examples/src/async_playground_demo.rs`, `apps/fret-examples/src/embedded_viewport_demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/card/demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/button_group/popover.rs` (post-v1 audit now distinguishes cookbook/template closure from advanced/runtime-bound surfaces, true model-centered widget contracts, and snippet-level controlled/uncontrolled authoring choices)
 - `apps/fret-cookbook/examples/hello.rs` (simple baseline remains the smallest action-first view reference case)
 - `apps/fret-cookbook/examples/hello_counter.rs` (first medium cookbook example on the `use_local` + `state.layout(cx).value_*` / `state.paint(cx).value_*` + local-state-specific notify helpers path)
@@ -234,7 +238,9 @@ Evidence anchors (verified in-tree as of 2026-03-08):
 - `apps/fret-cookbook/examples/date_picker_basics.rs` (now uses `use_local*` / `local.clone_model()` for the controlled open/selected state while keeping the existing date-picker widget boundary)
 - `apps/fret-cookbook/examples/form_basics.rs` (prefers `on_action_notify_models`, now uses `use_local*` plus the direct text bridge for field inputs, and keeps the late-landing card builder path)
 - `apps/fret-cookbook/examples/toast_basics.rs` (intentional advanced reference case for imperative Sonner host integration)
-- `apps/fret-cookbook/examples/router_basics.rs` (`ClearIntents` uses the default path; back/forward remain advanced for router availability sync)
+- `apps/fret-cookbook/examples/router_basics.rs` (`ClearIntents`, back, and forward now use the
+  shared cookbook/default typed-action path, with router availability sync hidden behind
+  `RouterUiStore` helpers)
 - `apps/fret-cookbook/examples/undo_basics.rs` (`Inc`/`Dec`/`Reset` use the default path; `Undo`/`Redo` keep the host-side RAF effect)
 - `apps/fret-cookbook/examples/simple_todo.rs` (now matches the default cookbook keyed-list path: `LocalState<Vec<_>>`, payload row toggle, and keyed row identity without explicit row models)
 - `apps/fret-cookbook/examples/simple_todo_v2_target.rs` (comparison target now keeps the keyed list in `LocalState<Vec<TodoRow>>`, uses `Checkbox::from_checked(...).action_payload(...)` for row toggles, and makes the remaining visible gap more precise: row-level event ergonomics still prefer root handler registration)

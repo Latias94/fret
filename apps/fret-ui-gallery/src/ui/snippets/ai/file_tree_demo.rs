@@ -1,26 +1,19 @@
 pub const SOURCE: &str = include_str!("file_tree_demo.rs");
 
 // region: example
-use fret_runtime::Model;
 use fret_ui::action::ActionCx;
 use fret_ui::element::{AnyElement, Length, SemanticsDecoration, SizeStyle, TextProps};
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::ui;
-use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_kit::{IntoUiElement, LayoutRefinement, Space};
 use std::sync::Arc;
-
-#[derive(Default)]
-struct FileTreeModels {
-    selected: Option<Model<Option<Arc<str>>>>,
-    copied: Option<Model<bool>>,
-}
 
 fn invisible_marker<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     test_id: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     cx.text_props(TextProps {
         layout: fret_ui::element::LayoutStyle {
             size: SizeStyle {
@@ -38,6 +31,7 @@ fn invisible_marker<H: UiHost>(
         align: fret_core::TextAlign::Start,
         ink_overflow: Default::default(),
     })
+    .into_element(cx)
     .attach_semantics(
         SemanticsDecoration::default()
             .role(fret_core::SemanticsRole::Group)
@@ -46,31 +40,10 @@ fn invisible_marker<H: UiHost>(
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let selected = cx.with_state(FileTreeModels::default, |st| st.selected.clone());
-    let selected = match selected {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(None::<Arc<str>>);
-            cx.with_state(FileTreeModels::default, |st| {
-                st.selected = Some(model.clone())
-            });
-            model
-        }
-    };
-
+    let selected = cx.local_model_keyed("selected", || None::<Arc<str>>);
     let selected_value = cx.watch_model(&selected).layout().cloned().flatten();
 
-    let copied = cx.with_state(FileTreeModels::default, |st| st.copied.clone());
-    let copied = match copied {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(FileTreeModels::default, |st| {
-                st.copied = Some(model.clone())
-            });
-            model
-        }
-    };
+    let copied = cx.local_model_keyed("copied", || false);
     let copied_value = cx.watch_model(&copied).layout().copied().unwrap_or(false);
 
     let tree = ui_ai::FileTree::new([
@@ -132,10 +105,10 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
     let mut out = vec![tree];
     if selected_value.as_deref() == Some("src/lib.rs") {
-        out.push(invisible_marker(cx, "ui-ai-file-tree-selected-marker"));
+        out.push(invisible_marker(cx, "ui-ai-file-tree-selected-marker").into_element(cx));
     }
     if copied_value {
-        out.push(invisible_marker(cx, "ui-ai-file-tree-action-marker"));
+        out.push(invisible_marker(cx, "ui-ai-file-tree-action-marker").into_element(cx));
     }
 
     ui::v_flex(move |_cx| out)

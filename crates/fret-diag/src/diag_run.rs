@@ -1513,25 +1513,26 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
                 run_push_env_if_missing(&mut run_launch_env, &key, &value);
             }
 
-            let result = run_external_no_diagnostics_post_run(ExternalNoDiagnosticsPostRunContext {
-                src: &src,
-                launch: &launch,
-                launch_env: &run_launch_env,
-                workspace_root: &workspace_root,
-                resolved_out_dir: &resolved_out_dir,
-                resolved_exit_path: &resolved_exit_path,
-                resolved_script_path: &resolved_script_path,
-                resolved_script_result_path: &resolved_script_result_path,
-                timeout_ms,
-                poll_ms,
-                launch_high_priority,
-                warmup_frames,
-                checks_for_post_run: &checks_for_post_run,
-                tooling_event_kind: "tooling_external_no_diagnostics",
-                tooling_event_note: Some(
-                    "diag-run external no-diagnostics post-run path".to_string(),
-                ),
-            })?;
+            let result =
+                run_external_no_diagnostics_post_run(ExternalNoDiagnosticsPostRunContext {
+                    src: &src,
+                    launch: &launch,
+                    launch_env: &run_launch_env,
+                    workspace_root: &workspace_root,
+                    resolved_out_dir: &resolved_out_dir,
+                    resolved_exit_path: &resolved_exit_path,
+                    resolved_script_path: &resolved_script_path,
+                    resolved_script_result_path: &resolved_script_result_path,
+                    timeout_ms,
+                    poll_ms,
+                    launch_high_priority,
+                    warmup_frames,
+                    checks_for_post_run: &checks_for_post_run,
+                    tooling_event_kind: "tooling_external_no_diagnostics",
+                    tooling_event_note: Some(
+                        "diag-run external no-diagnostics post-run path".to_string(),
+                    ),
+                })?;
 
             report_result_and_exit(&result);
         }

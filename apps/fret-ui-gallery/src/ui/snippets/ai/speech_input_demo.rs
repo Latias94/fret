@@ -15,8 +15,8 @@ use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::ui;
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
-use fret_ui_shadcn::{ButtonSize, ButtonVariant, Card, CardContent, CardSize, prelude::*};
+use fret_ui_kit::{ChromeRefinement, IntoUiElement, LayoutRefinement, Space};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -26,16 +26,7 @@ const TRANSCRIPT_SAMPLES: &[&str] = &[
     "Draft a short status update for the release channel.",
 ];
 
-#[derive(Default, Clone)]
-struct DemoModels {
-    listening: Option<Model<bool>>,
-    processing: Option<Model<bool>>,
-    transcript: Option<Model<String>>,
-    next_sample: Option<Model<usize>>,
-    timer_token: Option<Model<Option<TimerToken>>>,
-}
-
-fn ensure_models<H: UiHost + 'static>(
+fn speech_models<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
 ) -> (
     Model<bool>,
@@ -44,38 +35,13 @@ fn ensure_models<H: UiHost + 'static>(
     Model<usize>,
     Model<Option<TimerToken>>,
 ) {
-    let state = cx.with_state(DemoModels::default, |st| st.clone());
-    match (
-        state.listening,
-        state.processing,
-        state.transcript,
-        state.next_sample,
-        state.timer_token,
-    ) {
-        (
-            Some(listening),
-            Some(processing),
-            Some(transcript),
-            Some(next_sample),
-            Some(timer_token),
-        ) => (listening, processing, transcript, next_sample, timer_token),
-        _ => {
-            let models = cx.app.models_mut();
-            let listening = models.insert(false);
-            let processing = models.insert(false);
-            let transcript = models.insert(String::new());
-            let next_sample = models.insert(0usize);
-            let timer_token = models.insert(None::<TimerToken>);
-            cx.with_state(DemoModels::default, |st| {
-                st.listening = Some(listening.clone());
-                st.processing = Some(processing.clone());
-                st.transcript = Some(transcript.clone());
-                st.next_sample = Some(next_sample.clone());
-                st.timer_token = Some(timer_token.clone());
-            });
-            (listening, processing, transcript, next_sample, timer_token)
-        }
-    }
+    (
+        cx.local_model_keyed("listening", || false),
+        cx.local_model_keyed("processing", || false),
+        cx.local_model_keyed("transcript", String::new),
+        cx.local_model_keyed("next_sample", || 0usize),
+        cx.local_model_keyed("timer_token", || None::<TimerToken>),
+    )
 }
 
 fn push_transcript_line(current: &mut String, sample_ix: usize) {
@@ -112,7 +78,7 @@ fn body_text<H: UiHost>(
     style: TextStyle,
     color: Color,
     align: TextAlign,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     cx.text_props(TextProps {
         layout: fill_text_layout(),
         text: text.into(),
@@ -143,7 +109,7 @@ fn underlined_text(text: Arc<str>) -> AttributedText {
 fn clear_action<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     transcript: Model<String>,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let theme = Theme::global(&*cx.app);
     let muted = muted_fg(theme);
     let foreground = theme.color_token("foreground");
@@ -194,7 +160,7 @@ fn clear_action<H: UiHost + 'static>(
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (listening, processing, transcript, next_sample, timer_token) = ensure_models(cx);
+    let (listening, processing, transcript, next_sample, timer_token) = speech_models(cx);
 
     cx.keyed("ui-gallery.ai.speech-input.demo", move |cx| {
         let listening_for_timer = listening.clone();
@@ -267,8 +233,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 let speech_input = ui_ai::SpeechInput::new()
                     .listening_model(listening.clone())
                     .processing_model(processing.clone())
-                    .variant(ButtonVariant::Outline)
-                    .size(ButtonSize::Icon)
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Icon)
                     .test_id("ui-ai-speech-input-demo-btn")
                     .on_listening_change(Arc::new({
                         let listening = listening.clone();
@@ -314,8 +280,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     }))
                     .into_element(cx);
 
-                let clear_button =
-                    (!transcript_now.is_empty()).then(|| clear_action(cx, transcript.clone()));
+                let clear_button = (!transcript_now.is_empty())
+                    .then(|| clear_action(cx, transcript.clone()).into_element(cx));
 
                 let mut control_row = vec![speech_input];
                 if let Some(clear_button) = clear_button {
@@ -331,6 +297,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                         "Click the microphone to start speaking"
                     };
                     body_text(cx, message, muted_text_style, muted, TextAlign::Center)
+                        .into_element(cx)
                         .attach_semantics(SemanticsDecoration::default().test_id(
                             if processing_now {
                                 "ui-ai-speech-input-demo-processing"
@@ -347,7 +314,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                                 transcript_label_style,
                                 muted,
                                 TextAlign::Start,
-                            ),
+                            )
+                            .into_element(cx),
                             body_text(
                                 cx,
                                 transcript_now.clone(),
@@ -355,6 +323,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                                 foreground,
                                 TextAlign::Start,
                             )
+                            .into_element(cx)
                             .attach_semantics(
                                 SemanticsDecoration::default()
                                     .test_id("ui-ai-speech-input-demo-transcript"),
@@ -366,10 +335,10 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     .layout(LayoutRefinement::default().w_full().min_w_0())
                     .into_element(cx);
 
-                    let content = CardContent::new([content]).into_element(cx);
+                    let content = shadcn::CardContent::new([content]).into_element(cx);
 
-                    Card::new([content])
-                        .size(CardSize::Sm)
+                    shadcn::Card::new([content])
+                        .size(shadcn::CardSize::Sm)
                         .refine_style(ChromeRefinement::default().shadow_none())
                         .refine_layout(
                             LayoutRefinement::default()

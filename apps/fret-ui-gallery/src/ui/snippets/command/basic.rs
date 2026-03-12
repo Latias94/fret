@@ -1,38 +1,15 @@
 pub const SOURCE: &str = include_str!("basic.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
-
-#[derive(Default)]
-struct Models {
-    open: Option<Model<bool>>,
-    query: Option<Model<String>>,
-}
 
 pub fn render<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     last_action: Model<Arc<str>>,
 ) -> AnyElement {
-    let (open, query) = cx.with_state(Models::default, |st| (st.open.clone(), st.query.clone()));
-
-    let open = match open {
-        Some(open) => open,
-        None => {
-            let open = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.open = Some(open.clone()));
-            open
-        }
-    };
-
-    let query = match query {
-        Some(query) => query,
-        None => {
-            let query = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| st.query = Some(query.clone()));
-            query
-        }
-    };
+    let open = cx.local_model_keyed("open", || false);
+    let query = cx.local_model_keyed("query", String::new);
 
     let last_action_model = last_action.clone();
     let on_select = {

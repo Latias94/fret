@@ -1,13 +1,13 @@
 pub const SOURCE: &str = include_str!("preset_selector.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui_kit::declarative::ModelWatchExt;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 pub fn render(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     motion_preset: Model<Option<Arc<str>>>,
     motion_preset_open: Model<bool>,
 ) -> AnyElement {

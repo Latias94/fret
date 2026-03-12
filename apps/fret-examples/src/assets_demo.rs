@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use fret::kernel::core::{ImageColorSpace, SvgId};
-use fret::kernel::ui::element::{ImageProps, SvgIconProps};
-use fret::prelude::*;
+use fret::advanced::kernel::core::{ImageColorSpace, SvgId};
+use fret::advanced::kernel::ui::element::{ImageProps, SvgIconProps};
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_ui_assets::{UiAssets, image_asset_state, svg_asset_state};
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_kit::{ColorRef, IntoUiElement, LayoutRefinement, Radius, Space};
 
 static DEMO_SVG: &[u8] = br##"
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
@@ -26,18 +26,20 @@ struct AssetsDemoImageEvents {
     failed: u64,
 }
 
+fn install_demo_theme(app: &mut KernelApp) {
+    shadcn::themes::apply_shadcn_new_york(
+        app,
+        shadcn::themes::ShadcnBaseColor::Slate,
+        shadcn::themes::ShadcnColorScheme::Light,
+    );
+}
+
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("assets-demo")
         .window("assets_demo", (720.0, 520.0))
         .view_with_hooks::<AssetsDemoView>(|d| d.on_event(on_event))?
         .with_ui_assets_budgets(64 * 1024 * 1024, 2048, 16 * 1024 * 1024, 4096)
-        .init_app(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york(
-                app,
-                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-                shadcn::shadcn_themes::ShadcnColorScheme::Light,
-            );
-        })
+        .setup(install_demo_theme)
         .on_gpu_ready(|app, _context, renderer| {
             let services = renderer as &mut dyn UiServices;
             let (_key, svg, _stats) =
@@ -51,20 +53,20 @@ pub fn run() -> anyhow::Result<()> {
 struct AssetsDemoView;
 
 impl View for AssetsDemoView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         render_view(cx.elements())
     }
 }
 
 fn on_event(
-    app: &mut App,
+    app: &mut KernelApp,
     _services: &mut dyn UiServices,
     window: AppWindowId,
-    _ui: &mut UiTree<App>,
+    _ui: &mut UiTree<KernelApp>,
     _state: &mut fret::view::ViewWindowState<AssetsDemoView>,
     event: &Event,
 ) {
@@ -131,7 +133,7 @@ fn on_event(
     }
 }
 
-fn render_view(cx: &mut ElementContext<'_, App>) -> fret::ViewElements {
+fn render_view(cx: &mut UiCx<'_>) -> Ui {
     let theme = cx.theme().clone();
 
     let checker_rgba = checkerboard_rgba8(96, 96, 12);
@@ -183,7 +185,9 @@ fn render_view(cx: &mut ElementContext<'_, App>) -> fret::ViewElements {
         image_error,
         image_stats,
     );
+    let left = left.into_element(cx);
     let right = render_svg_panel(cx, &theme, svg);
+    let right = right.into_element(cx);
 
     let stats = ui::v_flex_build(|cx, out| {
         let lines = [
@@ -259,14 +263,14 @@ fn render_view(cx: &mut ElementContext<'_, App>) -> fret::ViewElements {
 }
 
 fn render_image_panel(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     frame: u64,
     image: Option<fret_core::ImageId>,
     status: image_asset_state::ImageLoadingStatus,
     error: Option<Arc<str>>,
     stats: fret_ui_assets::image_asset_cache::ImageAssetStats,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let title = match status {
         image_asset_state::ImageLoadingStatus::Idle => "Image (idle)",
         image_asset_state::ImageLoadingStatus::Loading => "Image (loading...)",
@@ -328,10 +332,10 @@ fn render_image_panel(
 }
 
 fn render_svg_panel(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     svg: Option<fret_core::SvgId>,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let icon = if let Some(svg) = svg {
         let mut props = SvgIconProps::new(fret_ui::SvgSource::Id(svg));
         props.layout = decl_style::layout_style(

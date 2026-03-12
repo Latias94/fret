@@ -114,6 +114,9 @@ fn reason_code_for_script_failure(reason: &str) -> Option<&'static str> {
             Some("scroll_into_view.impossible_oversized_target_for_container")
         }
         "scroll_into_view_stuck_no_progress" => Some("scroll_into_view.stuck_no_progress"),
+        "scroll_into_view_container_not_found"
+        | "scroll_into_view_target_not_found"
+        | "scroll_into_view_container_and_target_not_found" => Some("selector.not_found"),
         "wait_bounds_stable_impossible_stable_frames_gt_timeout_frames" => {
             Some("wait_bounds_stable.impossible_stable_frames_gt_timeout_frames")
         }

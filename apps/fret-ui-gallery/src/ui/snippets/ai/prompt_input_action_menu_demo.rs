@@ -1,33 +1,14 @@
 pub const SOURCE: &str = include_str!("prompt_input_action_menu_demo.rs");
 
 // region: example
-use fret_runtime::Model;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-#[derive(Default)]
-struct DemoModels {
-    attachments: Option<Model<Vec<ui_ai::AttachmentData>>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let attachments = cx.with_state(DemoModels::default, |st| st.attachments.clone());
-    let attachments = match attachments {
-        Some(model) => model,
-        None => {
-            let model = cx
-                .app
-                .models_mut()
-                .insert(Vec::<ui_ai::AttachmentData>::new());
-            cx.with_state(DemoModels::default, |st| {
-                st.attachments = Some(model.clone())
-            });
-            model
-        }
-    };
+    let attachments = cx.local_model_keyed("attachments", Vec::<ui_ai::AttachmentData>::new);
 
     let on_add_attachments: fret_ui::action::OnActivate = Arc::new({
         let attachments = attachments.clone();

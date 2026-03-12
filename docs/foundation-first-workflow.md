@@ -86,6 +86,6 @@ Each validation surface should have:
 
 For a cross-workstream “done enough to scale” checklist (milestones + exit criteria), see:
 
-- `docs/workstreams/foundation-closure-p0.md`
-- `docs/workstreams/foundation-closure-p0-todo.md`
+- `docs/workstreams/foundation-closure-p0/foundation-closure-p0.md`
+- `docs/workstreams/foundation-closure-p0/foundation-closure-p0-todo.md`
 

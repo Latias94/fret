@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_query::{
     QueryError, QueryKey, QueryPolicy, QueryRetryPolicy, QueryState, QueryStatus, with_query_client,
 };
@@ -39,33 +39,40 @@ fn query_policy() -> QueryPolicy {
 struct QueryDemoView;
 
 impl View for QueryDemoView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
-        let fail_mode_state = cx.use_local_with(|| false);
+        let fail_mode_state = cx.state().local_init(|| false);
 
-        if cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_KEY) {
+        if cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY) {
             let _ = with_query_client(cx.app, |client, app| {
                 client.invalidate(app, demo_key());
             });
         }
-        if cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_NAMESPACE) {
+        if cx.effects().take_transient(TRANSIENT_INVALIDATE_NAMESPACE) {
             let key = demo_key();
             let _ = with_query_client(cx.app, |client, _app| {
                 client.invalidate_namespace(key.namespace());
             });
         }
 
-        cx.on_action_notify_toggle_local_bool::<act::ToggleFailMode>(&fail_mode_state);
-        cx.on_action_notify_transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);
-        cx.on_action_notify_transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
+        cx.actions()
+            .toggle_local_bool::<act::ToggleFailMode>(&fail_mode_state);
+        cx.actions()
+            .transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);
+        cx.actions()
+            .transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
 
-        let fail_mode = fail_mode_state.watch(cx).layout().value_or_default();
+        let fail_mode = cx
+            .state()
+            .watch(&fail_mode_state)
+            .layout()
+            .value_or_default();
 
-        let query_handle = cx.use_query(demo_key(), query_policy(), move |_token| {
+        let query_handle = cx.data().query(demo_key(), query_policy(), move |_token| {
             if fail_mode {
                 return Err(QueryError::transient("simulated fetch error"));
             }
@@ -233,6 +240,7 @@ pub fn run() -> anyhow::Result<()> {
     FretApp::new("query-demo")
         .window("query-demo", (560.0, 360.0))
         .config_files(false)
-        .run_view::<QueryDemoView>()
+        .view::<QueryDemoView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

@@ -1,7 +1,8 @@
 use super::*;
+use fret::UiCx;
 
 pub(crate) fn content_view(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     selected: &str,
     models: &UiGalleryModels,
@@ -177,7 +178,21 @@ pub(crate) fn content_view(
                     fret_core::Px(0.0),
                 ));
             }
+            #[cfg(feature = "gallery-dev")]
             let mut scroll = shadcn::ScrollArea::new([preview_panel])
+                .scroll_handle(scroll_handle.clone())
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .w_full()
+                        .flex_grow(1.0)
+                        .min_h_0()
+                        .min_w_0(),
+                )
+                .viewport_intrinsic_measure_mode(
+                    fret_ui::element::ScrollIntrinsicMeasureMode::Viewport,
+                );
+            #[cfg(not(feature = "gallery-dev"))]
+            let scroll = shadcn::ScrollArea::new([preview_panel])
                 .scroll_handle(scroll_handle)
                 .refine_layout(
                     LayoutRefinement::default()
@@ -191,6 +206,7 @@ pub(crate) fn content_view(
                 .viewport_intrinsic_measure_mode(
                     fret_ui::element::ScrollIntrinsicMeasureMode::Viewport,
                 );
+            #[cfg(feature = "gallery-dev")]
             if selected == PAGE_VIRTUAL_LIST_TORTURE {
                 scroll =
                     scroll.viewport_test_id("ui-gallery-content-viewport-virtual_list_torture");
@@ -256,7 +272,7 @@ pub(crate) fn content_view(
 }
 
 fn page_preview(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     selected: &str,
     models: &UiGalleryModels,
@@ -270,11 +286,16 @@ fn page_preview(
     let view_cache_popover_open = models.view_cache_popover_open.clone();
     let view_cache_continuous = models.view_cache_continuous.clone();
     let view_cache_counter = models.view_cache_counter.clone();
+    #[cfg(feature = "gallery-dev")]
     let popover_open = models.popover_open.clone();
     let dialog_open = models.dialog_open.clone();
+    #[cfg(feature = "gallery-dev")]
     let dialog_glass_open = models.dialog_glass_open.clone();
+    #[cfg(feature = "gallery-dev")]
     let alert_dialog_open = models.alert_dialog_open.clone();
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-material3"))]
     let sheet_open = models.sheet_open.clone();
+    #[cfg(feature = "gallery-dev")]
     let portal_geometry_popover_open = models.portal_geometry_popover_open.clone();
     let combobox_value = models.combobox_value.clone();
     let combobox_open = models.combobox_open.clone();
@@ -282,11 +303,14 @@ fn page_preview(
     let date_picker_open = models.date_picker_open.clone();
     let date_picker_month = models.date_picker_month.clone();
     let date_picker_selected = models.date_picker_selected.clone();
+    #[cfg(feature = "gallery-material3")]
     let time_picker_open = models.time_picker_open.clone();
+    #[cfg(feature = "gallery-material3")]
     let time_picker_selected = models.time_picker_selected.clone();
     let resizable_h_fractions = models.resizable_h_fractions.clone();
     let resizable_v_fractions = models.resizable_v_fractions.clone();
     let data_table_state = models.data_table_state.clone();
+    #[cfg(feature = "gallery-dev")]
     let data_grid_selected_row = models.data_grid_selected_row.clone();
     let _tabs_value = models.tabs_value.clone();
     let accordion_value = models.accordion_value.clone();
@@ -295,7 +319,9 @@ fn page_preview(
     let image_fit_demo_tall_image = models.image_fit_demo_tall_image.clone();
     let image_fit_demo_streaming_image = models.image_fit_demo_streaming_image.clone();
     let _progress = models.progress.clone();
+    #[cfg(feature = "gallery-dev")]
     let checkbox = models.checkbox.clone();
+    #[cfg(feature = "gallery-dev")]
     let switch = models.switch.clone();
     #[cfg(feature = "gallery-material3")]
     let material3_checkbox = models.material3_checkbox.clone();
@@ -341,22 +367,35 @@ fn page_preview(
     let text_input = models.text_input.clone();
     let text_area = models.text_area.clone();
     let _input_file_value = models.input_file_value.clone();
+    #[cfg(feature = "gallery-dev")]
     let dropdown_open = models.dropdown_open.clone();
+    #[cfg(feature = "gallery-dev")]
     let context_menu_open = models.context_menu_open.clone();
+    #[cfg(feature = "gallery-dev")]
     let context_menu_edge_open = models.context_menu_edge_open.clone();
     let _cmdk_open = models.cmdk_open.clone();
     let _cmdk_query = models.cmdk_query.clone();
     let last_action = models.last_action.clone();
     let sonner_position = models.sonner_position.clone();
+    #[cfg(feature = "gallery-dev")]
     let virtual_list_torture_jump = models.virtual_list_torture_jump.clone();
+    #[cfg(feature = "gallery-dev")]
     let virtual_list_torture_edit_row = models.virtual_list_torture_edit_row.clone();
+    #[cfg(feature = "gallery-dev")]
     let virtual_list_torture_edit_text = models.virtual_list_torture_edit_text.clone();
+    #[cfg(feature = "gallery-dev")]
     let virtual_list_torture_scroll = models.virtual_list_torture_scroll.clone();
+    #[cfg(feature = "gallery-dev")]
     let code_editor_syntax_rust = models.code_editor_syntax_rust.clone();
+    #[cfg(feature = "gallery-dev")]
     let code_editor_boundary_identifier = models.code_editor_boundary_identifier.clone();
+    #[cfg(feature = "gallery-dev")]
     let code_editor_soft_wrap = models.code_editor_soft_wrap.clone();
+    #[cfg(feature = "gallery-dev")]
     let code_editor_folds = models.code_editor_folds.clone();
+    #[cfg(feature = "gallery-dev")]
     let code_editor_inlays = models.code_editor_inlays.clone();
+    #[cfg(feature = "gallery-dev")]
     let markdown_link_gate_last_activation = models.markdown_link_gate_last_activation.clone();
 
     let body: Vec<AnyElement> = match selected {
@@ -872,16 +911,12 @@ fn page_preview(
     .test_id("ui-gallery-preview-card")
 }
 
-fn preview_ai_unwired(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-    id: &str,
-) -> Vec<AnyElement> {
+fn preview_ai_unwired(cx: &mut UiCx<'_>, _theme: &Theme, id: &str) -> Vec<AnyElement> {
     vec![
         shadcn::Alert::new(vec![
             shadcn::AlertTitle::new("AI demo not wired").into_element(cx),
             shadcn::AlertDescription::new(format!(
-                "Page `{id}` exists in the nav spec, but does not have a preview implementation yet. See `docs/workstreams/ai-elements-port-todo.md`."
+                "Page `{id}` exists in the nav spec, but does not have a preview implementation yet. See `docs/workstreams/ai-elements-port/ai-elements-port-todo.md`."
             ))
             .into_element(cx),
         ])

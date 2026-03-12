@@ -15,8 +15,8 @@
 **What closed**
 
 - Ownership settled on `ecosystem/fret`.
-- Primary naming settled on `fret::App`.
-- Ergonomic aliases settled on `FretApp` and `AppBuilder`.
+- Primary naming settled on `fret::FretApp`.
+- Root-level `App` / `AppBuilder` aliases removed before release.
 - The recommended mental model is now builder-first, and the old top-level shorthand helpers are gone from `fret`.
 
 **Evidence**
@@ -31,7 +31,8 @@
 **What shipped**
 
 - Builder-chain entry type implemented in `fret`.
-- UI entry and view entry both supported.
+- View entry is supported through `view::<V>()` / `view_with_hooks::<V>(...)`.
+- Older `ui*` builder helpers were removed before the first release.
 - Default main-window fallback preserved.
 - Builder remains backed by existing `UiAppDriver` / bootstrap wiring.
 
@@ -65,12 +66,11 @@
 
 **What shipped already**
 
-- `ui_with_hooks(...)` keeps driver configuration on the builder path.
-- `view_with_hooks::<V>(...)` does the same for the view runtime path.
+- `view_with_hooks::<V>(...)` keeps driver configuration on the builder path.
 - Advanced users can keep using `UiAppBuilder` and `UiAppDriver` seams without dropping down early.
 - A focused guardrail now keeps the crate-root story builder-only and locks README onboarding to the
   same entry model.
-- Targeted smoke tests now cover all four recommended builder entry paths and the default
+- Targeted smoke tests now cover the two recommended builder entry paths and the default
   main-window fallback behavior.
 
 **What remains**

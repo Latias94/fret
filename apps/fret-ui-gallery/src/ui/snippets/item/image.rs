@@ -1,15 +1,15 @@
 pub const SOURCE: &str = include_str!("image.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui::Theme;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let max_w_md = LayoutRefinement::default()
         .w_full()
         .min_w_0()
@@ -43,7 +43,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             LayoutRefinement::default().size_full(),
         );
         let image = cx
-            .container(props, move |cx| vec![shadcn::typography::muted(cx, "IMG")])
+            .container(props, move |cx| {
+                vec![shadcn::raw::typography::muted(cx, "IMG")]
+            })
             .test_id(format!("ui-gallery-item-image-image-{idx}"));
         let media = shadcn::ItemMedia::new([image])
             .variant(shadcn::ItemMediaVariant::Image)

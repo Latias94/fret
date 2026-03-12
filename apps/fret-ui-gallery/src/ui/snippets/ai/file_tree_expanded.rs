@@ -5,7 +5,7 @@ use fret_core::Px;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::{LayoutRefinement, Space, ui};
+use fret_ui_kit::{IntoUiElement, LayoutRefinement, Space, ui};
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ui_ai::FileTree::new([ui_ai::FileTreeFolder::new("src", "src")
@@ -30,10 +30,13 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     .into_element(cx)
 }
 
-pub fn preview<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    ui::v_flex(move |cx| vec![render(cx)])
+pub fn preview<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+) -> impl IntoUiElement<H> + use<H> {
+    let tree = render(cx);
+
+    ui::v_flex(move |_cx| vec![tree])
         .gap(Space::N0)
         .layout(LayoutRefinement::default().w_full().min_w_0())
-        .into_element(cx)
 }
 // endregion: example

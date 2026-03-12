@@ -52,12 +52,15 @@ pub fn use_controllable_model<T: Clone + 'static, H: UiHost>(
         }
     }
 
-    let model = cx.with_state(UncontrolledModelState::<T>::default, |st| st.model.clone());
+    let slot = cx.slot_id();
+    let model = cx.state_for(slot, UncontrolledModelState::<T>::default, |st| {
+        st.model.clone()
+    });
     let model = if let Some(model) = model {
         model
     } else {
         let model = cx.app.models_mut().insert(default_value());
-        cx.with_state(UncontrolledModelState::<T>::default, |st| {
+        cx.state_for(slot, UncontrolledModelState::<T>::default, |st| {
             st.model = Some(model.clone());
         });
         model

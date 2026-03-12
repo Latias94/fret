@@ -1,10 +1,11 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::command as snippets;
 
 pub(super) fn preview_command_palette(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     let usage_palette = snippets::usage::render(cx, last_action.clone());
@@ -94,8 +95,8 @@ pub(super) fn preview_command_palette(
 
                 .test_id_prefix("ui-gallery-command-action-first-view-runtime")
                 .descriptions([
-                    "This section demonstrates action-first authoring using the ecosystem view runtime (`View` + `ViewCx`).",
-                    "The button binds a stable `ActionId` via `.action(...)`, while the view root uses the default `cx.on_action_notify_models::<...>(...)` entrypoint for model updates.",
+                    "This section demonstrates action-first authoring using the ecosystem view runtime (`View` + `AppUi`).",
+                    "The button binds a stable `ActionId` via `.action(...)`, while the view root stays on the grouped default surface (`cx.state()` + `cx.actions().models::<...>(...)`).",
                     "Advanced host-side action-handler cases stay in cookbook/reference docs; the gallery keeps the default teaching path small on purpose.",
                 ])
                 .code_rust_from_file_region(

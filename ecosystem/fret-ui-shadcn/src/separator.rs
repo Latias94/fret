@@ -5,7 +5,7 @@
 use fret_core::Px;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
-use fret_ui_kit::LayoutRefinement;
+use fret_ui_kit::{IntoUiElement, LayoutRefinement};
 
 use fret_ui_kit::primitives::separator as prim;
 
@@ -71,9 +71,8 @@ impl Separator {
     }
 }
 
-#[track_caller]
-pub fn separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    Separator::new().into_element(cx)
+pub fn separator<H: UiHost>() -> impl IntoUiElement<H> + use<H> {
+    Separator::new()
 }
 
 #[cfg(test)]

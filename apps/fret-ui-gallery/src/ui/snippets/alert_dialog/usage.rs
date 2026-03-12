@@ -1,29 +1,10 @@
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default, Clone)]
-struct Models {
-    open: Option<Model<bool>>,
-}
-
-fn open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    match state.open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.open = Some(model.clone()));
-            model
-        }
-    }
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let open = open_model(cx);
-
-    shadcn::AlertDialog::new(open)
+    shadcn::AlertDialog::new_controllable(cx, None, false)
         .compose()
         .trigger(shadcn::AlertDialogTrigger::build(
             shadcn::Button::new("Show Dialog").variant(shadcn::ButtonVariant::Outline),
@@ -33,7 +14,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 shadcn::AlertDialogHeader::new([
                     shadcn::AlertDialogTitle::new("Are you absolutely sure?").into_element(cx),
                     shadcn::AlertDialogDescription::new(
-                        "This action cannot be undone. This will permanently delete your account and remove your data from our servers.",
+                        "This action cannot be undone. This will permanently delete your account from our servers.",
                     )
                     .into_element(cx),
                 ])

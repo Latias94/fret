@@ -3,7 +3,7 @@
   "meta": {
     "name": "UI Gallery: Popover doc page opens on click (shadcn parity)",
     "tags": ["ui-gallery", "shadcn", "popover", "overlay", "interaction"],
-    "required_capabilities": ["diag.script_v2"]
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
   },
   "steps": [
     { "type": "reset_diagnostics" },
@@ -47,6 +47,13 @@
         "target": { "kind": "test_id", "id": "ui-gallery-page-popover" }
       },
       "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-section-usage-title" }
+      }
     },
     {
       "type": "scroll_into_view",
@@ -93,6 +100,34 @@
       "timeout_frames": 240
     },
     { "type": "wait_frames", "n": 10 },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-popover-demo-panel" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-popover-api-reference-content" },
+      "delta_y": 220.0,
+      "padding_px": 24.0,
+      "require_fully_within_container": false,
+      "require_fully_within_window": false,
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-popover-api-reference-content" }
+      }
+    },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "capture_screenshot", "label": "ui-gallery-popover-docs-api-reference" },
     { "type": "capture_bundle", "label": "ui-gallery-popover-doc-page-opens" }
   ]
 }

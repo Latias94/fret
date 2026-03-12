@@ -1,9 +1,10 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::sidebar as snippets;
 
-pub(super) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(super) fn preview_sidebar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let usage = snippets::usage::render(cx);
     let controlled = snippets::controlled::render(cx);
     let demo = snippets::demo::render(cx);

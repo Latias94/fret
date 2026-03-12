@@ -2,13 +2,13 @@ pub const SOURCE: &str = include_str!("destructive.rs");
 
 // region: example
 use fret_runtime::CommandId;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_kit::IntoUiElement;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str) -> AnyElement {
+fn trigger_surface<H: UiHost>(label: &'static str) -> impl IntoUiElement<H> + use<H> {
     shadcn::Button::new(label)
         .variant(shadcn::ButtonVariant::Outline)
         .size(shadcn::ButtonSize::Sm)
-        .into_element(cx)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -17,7 +17,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(
             cx,
             |cx| {
-                trigger_surface(cx, "Right click for destructive items")
+                trigger_surface("Right click for destructive items")
+                    .into_element(cx)
                     .test_id("ui-gallery-context-menu-destructive-trigger")
             },
             |_cx| {
@@ -32,7 +33,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             .action(CommandId::new(
                                 "ui_gallery.context_menu.destructive.delete_project",
                             ))
-                            .variant(shadcn::context_menu::ContextMenuItemVariant::Destructive)
+                            .variant(
+                                fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive,
+                            )
                             .test_id("ui-gallery-context-menu-destructive-delete"),
                     ),
                 ]

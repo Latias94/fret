@@ -26,8 +26,7 @@ use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, OverlayPresence, Space, UiChildIntoElement,
-    UiHostBoundIntoElement, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, OverlayPresence, Space, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -163,33 +162,11 @@ fn popover_open_change_events(
     (changed, completed)
 }
 
-#[derive(Default)]
-struct PopoverHoverLastPointerModelState {
-    model: Option<Model<Option<Point>>>,
-}
-
 fn popover_hover_last_pointer_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     popover_id: fret_ui::elements::GlobalElementId,
 ) -> Model<Option<Point>> {
-    let existing = cx.with_state_for(
-        popover_id,
-        PopoverHoverLastPointerModelState::default,
-        |st| st.model.clone(),
-    );
-    if let Some(model) = existing {
-        model
-    } else {
-        let model = cx.app.models_mut().insert(None::<Point>);
-        cx.with_state_for(
-            popover_id,
-            PopoverHoverLastPointerModelState::default,
-            |st| {
-                st.model = Some(model.clone());
-            },
-        );
-        model
-    }
+    cx.model_for(popover_id, || None::<Point>)
 }
 
 /// shadcn/ui `Popover` (v4).
@@ -342,13 +319,13 @@ impl Popover {
     pub fn build<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
-        trigger: impl UiChildIntoElement<H>,
-        content: impl UiChildIntoElement<H>,
+        trigger: impl IntoUiElement<H>,
+        content: impl IntoUiElement<H>,
     ) -> AnyElement {
         self.into_element(
             cx,
-            move |cx| trigger.into_child_element(cx),
-            move |cx| content.into_child_element(cx),
+            move |cx| trigger.into_element(cx),
+            move |cx| content.into_element(cx),
         )
     }
 
@@ -755,7 +732,7 @@ impl Popover {
                     overlay_motion::shadcn_motion_ease_bezier(cx),
                 );
             let (open_change, open_change_complete) =
-                cx.with_state(PopoverOpenChangeCallbackState::default, |state| {
+                cx.slot_state(PopoverOpenChangeCallbackState::default, |state| {
                     popover_open_change_events(state, is_open, motion.present, motion.animating)
                 });
             if let (Some(open), Some(on_open_change)) = (open_change, self.on_open_change.as_ref())
@@ -1262,7 +1239,7 @@ impl PopoverTrigger {
     /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
     pub fn build<H: UiHost, T>(child: T) -> PopoverTriggerBuild<H, T>
     where
-        T: UiChildIntoElement<H>,
+        T: IntoUiElement<H>,
     {
         PopoverTriggerBuild {
             child: Some(child),
@@ -1293,7 +1270,7 @@ impl PopoverTrigger {
 
 impl<H: UiHost, T> PopoverTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     /// Mirrors [`PopoverTrigger::auto_toggle`] on the late-landing builder path.
     pub fn auto_toggle(mut self, auto_toggle: bool) -> Self {
@@ -1306,7 +1283,7 @@ where
         PopoverTrigger::new(
             self.child
                 .expect("expected popover trigger child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
         .auto_toggle(self.auto_toggle)
     }
@@ -1317,22 +1294,12 @@ where
     }
 }
 
-impl<H: UiHost, T> UiHostBoundIntoElement<H> for PopoverTriggerBuild<H, T>
+impl<H: UiHost, T> IntoUiElement<H> for PopoverTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        PopoverTriggerBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, T> UiChildIntoElement<H> for PopoverTriggerBuild<H, T>
-where
-    T: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         PopoverTriggerBuild::into_element(self, cx)
     }
 }
@@ -1362,7 +1329,7 @@ impl PopoverAnchor {
     /// keep using [`PopoverAnchor::new`] with an already-landed child.
     pub fn build<H: UiHost, T>(child: T) -> PopoverAnchorBuild<H, T>
     where
-        T: UiChildIntoElement<H>,
+        T: IntoUiElement<H>,
     {
         PopoverAnchorBuild {
             child: Some(child),
@@ -1382,14 +1349,14 @@ impl PopoverAnchor {
 
 impl<H: UiHost, T> PopoverAnchorBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     pub fn into_anchor(self, cx: &mut ElementContext<'_, H>) -> PopoverAnchor {
         PopoverAnchor::new(
             self.child
                 .expect("expected popover anchor child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
     }
 
@@ -1399,22 +1366,12 @@ where
     }
 }
 
-impl<H: UiHost, T> UiHostBoundIntoElement<H> for PopoverAnchorBuild<H, T>
+impl<H: UiHost, T> IntoUiElement<H> for PopoverAnchorBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        PopoverAnchorBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, T> UiChildIntoElement<H> for PopoverAnchorBuild<H, T>
-where
-    T: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         PopoverAnchorBuild::into_element(self, cx)
     }
 }
@@ -1724,23 +1681,24 @@ mod tests {
                 ])
                 .test_id("popover-build-panel");
 
-                let trigger = PopoverTrigger::build(cx.pressable_with_id(
-                    PressableProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Px(Px(120.0));
-                            layout.size.height = Length::Px(Px(40.0));
-                            layout
+                let trigger: PopoverTriggerBuild<App, _> =
+                    PopoverTrigger::build(cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
                         },
-                        enabled: true,
-                        focusable: true,
-                        ..Default::default()
-                    },
-                    move |cx, _st, id| {
-                        trigger_id.set(Some(id));
-                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
-                    },
-                ));
+                        move |cx, _st, id| {
+                            trigger_id.set(Some(id));
+                            vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                        },
+                    ));
                 let popover = Popover::new(open.clone()).build(cx, trigger, content);
                 vec![popover]
             },

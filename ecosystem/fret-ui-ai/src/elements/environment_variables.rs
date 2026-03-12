@@ -46,16 +46,10 @@ impl std::fmt::Debug for EnvironmentVariablesController {
     }
 }
 
-#[derive(Debug, Default, Clone)]
-struct EnvironmentVariablesProviderState {
-    controller: Option<EnvironmentVariablesController>,
-}
-
 pub fn use_environment_variables_controller<H: UiHost>(
     cx: &ElementContext<'_, H>,
 ) -> Option<EnvironmentVariablesController> {
-    cx.inherited_state::<EnvironmentVariablesProviderState>()
-        .and_then(|st| st.controller.clone())
+    cx.provided::<EnvironmentVariablesController>().cloned()
 }
 
 fn alpha(color: Color, a: f32) -> Color {
@@ -208,15 +202,13 @@ impl EnvironmentVariables {
                     show_values: show_values_model,
                     on_show_values_change: on_show_values_change.clone(),
                 };
-                cx.with_state(EnvironmentVariablesProviderState::default, |st| {
-                    st.controller = Some(controller.clone());
-                });
-
-                let body = ui::v_stack(move |cx| children(cx, controller))
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .gap(Space::N0)
-                    .into_element(cx);
-                vec![body]
+                cx.provide(controller.clone(), |cx| {
+                    let body = ui::v_stack(move |cx| children(cx, controller.clone()))
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .gap(Space::N0)
+                        .into_element(cx);
+                    vec![body]
+                })
             },
         );
 
@@ -1115,13 +1107,30 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Rect, Size};
-    use fret_ui::element::ElementKind;
+    use fret_ui::element::{AnyElement, ElementKind};
 
     fn bounds() -> Rect {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(480.0), Px(240.0)),
         )
+    }
+
+    fn has_test_id(element: &AnyElement, expected: &str) -> bool {
+        element
+            .semantics_decoration
+            .as_ref()
+            .and_then(|decoration| decoration.test_id.as_deref())
+            .is_some_and(|test_id| test_id == expected)
+            || match &element.kind {
+                ElementKind::Pressable(props) => props.a11y.test_id.as_deref() == Some(expected),
+                ElementKind::Semantics(props) => props.test_id.as_deref() == Some(expected),
+                _ => false,
+            }
+            || element
+                .children
+                .iter()
+                .any(|child| has_test_id(child, expected))
     }
 
     fn any_descendant_matches(el: &AnyElement, f: &impl Fn(&ElementKind) -> bool) -> bool {
@@ -1158,6 +1167,29 @@ mod tests {
                 .iter()
                 .find_map(|child| find_text_element(child, text)),
         }
+    }
+
+    #[test]
+    fn environment_variables_root_provides_controller_to_toggle() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                EnvironmentVariables::new().into_element_with_children(cx, |cx, _controller| {
+                    vec![
+                        EnvironmentVariablesToggle::new()
+                            .test_id("env-toggle")
+                            .test_id_switch("env-switch")
+                            .test_id_icon("env-icon")
+                            .into_element(cx),
+                    ]
+                })
+            });
+
+        assert!(has_test_id(&element, "env-toggle"));
+        assert!(has_test_id(&element, "env-switch"));
+        assert!(has_test_id(&element, "env-icon"));
     }
 
     #[test]

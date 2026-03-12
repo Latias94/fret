@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_canvas::ui::{
     PanZoomCanvasSurfacePanelProps, PanZoomInputPreset, pan_zoom_canvas_surface_panel,
 };
@@ -54,7 +54,7 @@ struct CanvasPanZoomBasicsView {
 }
 
 impl View for CanvasPanZoomBasicsView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self {
             view: app.models_mut().insert(PanZoom2D::default()),
             node_origin: app.models_mut().insert(Point::new(Px(120.0), Px(120.0))),
@@ -63,7 +63,7 @@ impl View for CanvasPanZoomBasicsView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
 
         let view_value = cx.watch_model(&self.view).paint().value_or_default();
@@ -73,11 +73,16 @@ impl View for CanvasPanZoomBasicsView {
             .paint()
             .value_or_default();
 
-        cx.on_action_notify_model_update::<act::ResetView, PanZoom2D>(self.view.clone(), |v| {
-            *v = PanZoom2D::default();
+        cx.actions().models::<act::ResetView>({
+            let view = self.view.clone();
+            move |models| {
+                models
+                    .update(&view, |value| *value = PanZoom2D::default())
+                    .is_ok()
+            }
         });
 
-        cx.on_action_notify_models::<act::ResetNode>({
+        cx.actions().models::<act::ResetNode>({
             let node_origin = self.node_origin.clone();
             let node_drag_count = self.node_drag_count.clone();
             move |models| {
@@ -440,7 +445,8 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-canvas-pan-zoom-basics")
         .window("cookbook-canvas-pan-zoom-basics", (1120.0, 780.0))
         .config_files(false)
-        .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_view::<CanvasPanZoomBasicsView>()
+        .setup(fret_cookbook::install_cookbook_defaults)
+        .view::<CanvasPanZoomBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

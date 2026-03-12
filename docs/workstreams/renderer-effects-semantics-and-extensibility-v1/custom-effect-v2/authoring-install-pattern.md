@@ -39,7 +39,7 @@ wrapping the builder:
 ```rust
 pub fn install_into<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::UiAppBuilder<S> {
     builder
-        .install_app(install_app_globals)
+        .setup(install_app_globals)
         .install_custom_effects(register_custom_effects)
         .on_gpu_ready(upload_images)
 }
@@ -48,7 +48,7 @@ pub fn install_into<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::UiAppBu
 Consumers then do:
 
 ```rust
-let app = fret::App::new("my-app")
+let app = fret::FretApp::new("my-app")
     .window("My App", (1100.0, 720.0))
     .view::<MyView>()?;
 my_effect_pack::install_into(app).run()?;

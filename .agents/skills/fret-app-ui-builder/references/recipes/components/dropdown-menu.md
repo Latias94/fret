@@ -14,7 +14,9 @@ Goal: a Radix-like dropdown menu (button-triggered) with predictable dismiss/foc
 - Component surface: `fret-ui-shadcn::DropdownMenu` + `DropdownMenuEntry` variants.
 - Model:
   - `Model<bool>` for open/closed
-- Example usage: `apps/fret-ui-gallery/src/docs.rs` (Menus docs/usage snippet)
+- Example usage:
+  - `apps/fret-ui-gallery/src/ui/pages/dropdown_menu.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/usage.rs`
 
 ## Checklist (what to verify)
 
@@ -42,8 +44,8 @@ Goal: a Radix-like dropdown menu (button-triggered) with predictable dismiss/foc
 ## Regression gates (recommended)
 
 - Scripted repro:
-  - `tools/diag-scripts/ui-gallery-dropdown-open-select.json`
-  - `tools/diag-scripts/ui-gallery-dropdown-submenu-bounds.json` (edge placement + screenshot)
+  - `tools/diag-scripts/ui-gallery/dropdown/ui-gallery-dropdown-open-select.json`
+  - `tools/diag-scripts/ui-gallery/dropdown/ui-gallery-dropdown-submenu-bounds.json` (edge placement + screenshot)
 - Add a small test for focus-restore or submenu clamp if that’s the fragile area.
 
 ## See also

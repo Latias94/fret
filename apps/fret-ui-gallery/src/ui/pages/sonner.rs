@@ -1,9 +1,10 @@
 use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::sonner as snippets;
+use fret::UiCx;
 
 pub(super) fn preview_sonner(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     last_action: Model<Arc<str>>,
     sonner_position: Model<shadcn::ToastPosition>,
 ) -> Vec<AnyElement> {

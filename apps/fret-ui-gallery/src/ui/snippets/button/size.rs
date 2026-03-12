@@ -1,27 +1,27 @@
 pub const SOURCE: &str = include_str!("size.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_kit::IntoUiElement;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn wrap_row<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+fn wrap_row<H: UiHost, F>(children: F) -> impl IntoUiElement<H> + use<H, F>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+{
     fret_ui_kit::ui::h_flex(children)
         .gap(Space::N2)
         .wrap()
         .w_full()
         .items_center()
-        .into_element(cx)
 }
 
 fn row<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+    _cx: &mut ElementContext<'_, H>,
     label: &'static str,
     text_size: shadcn::ButtonSize,
     icon_size: shadcn::ButtonSize,
-) -> AnyElement {
-    wrap_row(cx, |cx| {
+) -> impl IntoUiElement<H> + use<H> {
+    wrap_row(move |cx| {
         vec![
             shadcn::Button::new(label)
                 .variant(shadcn::ButtonVariant::Outline)
@@ -45,25 +45,29 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 "Extra Small",
                 shadcn::ButtonSize::Xs,
                 shadcn::ButtonSize::IconXs,
-            ),
+            )
+            .into_element(cx),
             row(
                 cx,
                 "Small",
                 shadcn::ButtonSize::Sm,
                 shadcn::ButtonSize::IconSm,
-            ),
+            )
+            .into_element(cx),
             row(
                 cx,
                 "Default",
                 shadcn::ButtonSize::Default,
                 shadcn::ButtonSize::Icon,
-            ),
+            )
+            .into_element(cx),
             row(
                 cx,
                 "Large",
                 shadcn::ButtonSize::Lg,
                 shadcn::ButtonSize::IconLg,
-            ),
+            )
+            .into_element(cx),
         ]
     })
     .gap(Space::N3)

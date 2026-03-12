@@ -1,45 +1,7 @@
 pub const SOURCE: &str = include_str!("settings_panel.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default, Clone)]
-struct Models {
-    open: Option<Model<bool>>,
-    radius_x: Option<Model<String>>,
-    radius_y: Option<Model<String>>,
-    radius_bl: Option<Model<String>>,
-    radius_br: Option<Model<String>>,
-}
-
-fn get_or_init_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Models {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    if state.open.is_some()
-        && state.radius_x.is_some()
-        && state.radius_y.is_some()
-        && state.radius_bl.is_some()
-        && state.radius_br.is_some()
-    {
-        return state;
-    }
-
-    let open = cx.app.models_mut().insert(false);
-    let radius_x = cx.app.models_mut().insert(String::from("0"));
-    let radius_y = cx.app.models_mut().insert(String::from("0"));
-    let radius_bl = cx.app.models_mut().insert(String::from("8"));
-    let radius_br = cx.app.models_mut().insert(String::from("8"));
-
-    let out = Models {
-        open: Some(open.clone()),
-        radius_x: Some(radius_x.clone()),
-        radius_y: Some(radius_y.clone()),
-        radius_bl: Some(radius_bl.clone()),
-        radius_br: Some(radius_br.clone()),
-    };
-
-    cx.with_state(Models::default, |st| *st = out.clone());
-    out
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn radius_input<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -56,18 +18,11 @@ fn radius_input<H: UiHost>(
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let models = get_or_init_models(cx);
-    let open = models.open.clone().expect("models.init sets open");
-    let radius_x = models.radius_x.clone().expect("models.init sets radius_x");
-    let radius_y = models.radius_y.clone().expect("models.init sets radius_y");
-    let radius_bl = models
-        .radius_bl
-        .clone()
-        .expect("models.init sets radius_bl");
-    let radius_br = models
-        .radius_br
-        .clone()
-        .expect("models.init sets radius_br");
+    let open = cx.local_model_keyed("open", || false);
+    let radius_x = cx.local_model_keyed("radius_x", || String::from("0"));
+    let radius_y = cx.local_model_keyed("radius_y", || String::from("0"));
+    let radius_bl = cx.local_model_keyed("radius_bl", || String::from("8"));
+    let radius_br = cx.local_model_keyed("radius_br", || String::from("8"));
 
     let settings_collapsible = shadcn::Collapsible::new(open.clone())
         .refine_layout(LayoutRefinement::default().w_full())

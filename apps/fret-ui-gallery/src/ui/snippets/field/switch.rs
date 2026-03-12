@@ -2,27 +2,10 @@ pub const SOURCE: &str = include_str!("switch.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default, Clone)]
-struct Models {
-    enabled: Option<Model<bool>>,
-}
-
-fn enabled_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    match state.enabled {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.enabled = Some(model.clone()));
-            model
-        }
-    }
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let enabled = enabled_model(cx);
+    let enabled = cx.local_model(|| false);
     let max_w_md = LayoutRefinement::default().w_full().max_w(Px(520.0));
 
     let control_id = "ui-gallery-field-switch-mfa";

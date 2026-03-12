@@ -3,7 +3,7 @@ use std::sync::Arc;
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
-use fret_ui_kit::UiBuilder;
+use fret_ui_kit::{IntoUiElement, UiBuilder};
 
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
 
@@ -29,7 +29,7 @@ impl DataGridCanvasUiBuilderExt for UiBuilder<DataGridCanvas> {
 }
 
 pub trait DataGridElementUiBuilderExt {
-    fn into_element<H: UiHost, FRowKey, FRowState, FCell>(
+    fn into_element<H: UiHost, FRowKey, FRowState, FCell, TCell>(
         self,
         cx: &mut ElementContext<'_, H>,
         rows_revision: u64,
@@ -41,11 +41,12 @@ pub trait DataGridElementUiBuilderExt {
     where
         FRowKey: FnMut(usize) -> u64,
         FRowState: FnMut(usize) -> DataGridRowState,
-        FCell: FnMut(&mut ElementContext<'_, H>, usize, usize) -> AnyElement;
+        FCell: FnMut(&mut ElementContext<'_, H>, usize, usize) -> TCell,
+        TCell: IntoUiElement<H>;
 }
 
 impl DataGridElementUiBuilderExt for UiBuilder<DataGridElement> {
-    fn into_element<H: UiHost, FRowKey, FRowState, FCell>(
+    fn into_element<H: UiHost, FRowKey, FRowState, FCell, TCell>(
         self,
         cx: &mut ElementContext<'_, H>,
         rows_revision: u64,
@@ -57,22 +58,24 @@ impl DataGridElementUiBuilderExt for UiBuilder<DataGridElement> {
     where
         FRowKey: FnMut(usize) -> u64,
         FRowState: FnMut(usize) -> DataGridRowState,
-        FCell: FnMut(&mut ElementContext<'_, H>, usize, usize) -> AnyElement,
+        FCell: FnMut(&mut ElementContext<'_, H>, usize, usize) -> TCell,
+        TCell: IntoUiElement<H>,
     {
+        let mut cell_at = cell_at;
         self.build().into_element(
             cx,
             rows_revision,
             cols_revision,
             row_key_at,
             row_state_at,
-            cell_at,
+            move |cx, row, col| cell_at(cx, row, col).into_element(cx),
         )
     }
 }
 
 pub trait DataTableUiBuilderExt {
     #[allow(clippy::too_many_arguments)]
-    fn into_element<H: UiHost, TData>(
+    fn into_element<H: UiHost, TData, TCell>(
         self,
         cx: &mut ElementContext<'_, H>,
         data: Arc<[TData]>,
@@ -81,15 +84,16 @@ pub trait DataTableUiBuilderExt {
         columns: impl Into<Arc<[ColumnDef<TData>]>>,
         get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static,
         header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static,
-        cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static,
+        cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> TCell + 'static,
     ) -> AnyElement
     where
-        TData: 'static;
+        TData: 'static,
+        TCell: IntoUiElement<H>;
 }
 
 impl DataTableUiBuilderExt for UiBuilder<DataTable> {
     #[allow(clippy::too_many_arguments)]
-    fn into_element<H: UiHost, TData>(
+    fn into_element<H: UiHost, TData, TCell>(
         self,
         cx: &mut ElementContext<'_, H>,
         data: Arc<[TData]>,
@@ -98,10 +102,11 @@ impl DataTableUiBuilderExt for UiBuilder<DataTable> {
         columns: impl Into<Arc<[ColumnDef<TData>]>>,
         get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static,
         header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static,
-        cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static,
+        cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> TCell + 'static,
     ) -> AnyElement
     where
         TData: 'static,
+        TCell: IntoUiElement<H>,
     {
         self.build().into_element(
             cx,
@@ -111,7 +116,7 @@ impl DataTableUiBuilderExt for UiBuilder<DataTable> {
             columns,
             get_row_key,
             header_label,
-            cell_at,
+            move |cx, column, row| cell_at(cx, column, row).into_element(cx),
         )
     }
 }

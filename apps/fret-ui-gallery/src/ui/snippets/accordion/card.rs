@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("card.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let accordion = shadcn::Accordion::multiple_uncontrolled(["plans"])
@@ -11,7 +11,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             shadcn::AccordionItem::new(
                 "plans",
                 shadcn::AccordionTrigger::new(vec![cx.text("What subscription plans do you offer?")]),
-                shadcn::AccordionContent::new(vec![shadcn::typography::p(
+                shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
                     cx,
                     "We offer multiple tiers with increasing storage limits, API access, and priority support.",
                 )]),
@@ -19,7 +19,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             shadcn::AccordionItem::new(
                 "billing",
                 shadcn::AccordionTrigger::new(vec![cx.text("How does billing work?")]),
-                shadcn::AccordionContent::new(vec![shadcn::typography::p(
+                shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
                     cx,
                     "Billing occurs automatically at the start of each billing cycle. You can update your payment method anytime.",
                 )]),

@@ -15,7 +15,7 @@ use fret_ui::declarative;
 use fret_ui::element::{CrossAlign, FlexProps, LayoutStyle, MainAlign};
 use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::OverlayController;
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::facade as shadcn;
 
 pub struct SonnerDemoWindowState {
     ui: UiTree<App>,
@@ -525,7 +525,7 @@ pub fn run() -> anyhow::Result<()> {
 
     let app = build_app();
     let config = build_runner_config();
-    fret::run_native_with_fn_driver_with_hooks(
+    fret::advanced::run_native_with_fn_driver_with_hooks(
         config,
         app,
         SonnerDemoDriver::default(),

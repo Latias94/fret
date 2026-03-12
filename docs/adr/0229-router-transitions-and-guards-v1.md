@@ -132,5 +132,5 @@ determinism and avoids unnecessary history mutations when available.
 ## Evidence anchors (current implementation)
 
 - Router transitions/events/guards: `ecosystem/fret-router/src/router_state.rs`
-- Workstream tracking: `docs/workstreams/router-tanstack-parity-v1.md`
-- Workstream TODOs: `docs/workstreams/router-tanstack-parity-v1-todo.md`
+- Workstream tracking: `docs/workstreams/router-tanstack-parity-v1/router-tanstack-parity-v1.md`
+- Workstream TODOs: `docs/workstreams/router-tanstack-parity-v1/router-tanstack-parity-v1-todo.md`

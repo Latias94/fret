@@ -9,21 +9,20 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context as _;
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*};
 use fret_core::{ImageColorSpace, Point, Px, SvgFit};
 use fret_markdown as markdown;
-use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{QueryError, QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ImageProps, LayoutQueryRegionProps, LayoutStyle, Length, PressableProps,
-    SvgIconProps, TextProps,
+    ImageProps, LayoutQueryRegionProps, LayoutStyle, Length, PressableProps, SvgIconProps,
+    TextProps,
 };
 use fret_ui::{Invalidation, Theme, ThemeConfig};
 use fret_ui_assets::image_asset_state;
 use fret_ui_kit::declarative::QueryHandleWatchExt as _;
-use fret_ui_kit::{ColorRef, Space, ui};
-use fret_ui_shadcn as shadcn;
+use fret_ui_kit::{ColorRef, IntoUiElement, Space, ui};
+use fret_ui_shadcn::facade as shadcn;
 
 mod act {
     fret::actions!([RefreshRemoteImages = "markdown_demo.refresh_remote_images.v1"]);
@@ -178,7 +177,7 @@ impl MarkdownDemoView {
 
     fn maybe_scroll_pending_anchor(
         &mut self,
-        cx: &mut ViewCx<'_, '_, App>,
+        cx: &mut AppUi<'_, '_>,
         viewport_region: Option<fret_ui::GlobalElementId>,
         padding_top: Px,
     ) {
@@ -230,7 +229,7 @@ impl MarkdownDemoView {
 }
 
 impl View for MarkdownDemoView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         let wrap_code = app.models_mut().insert(false);
         let cap_code_height = app.models_mut().insert(true);
         let expanded_code_blocks = app.models_mut().insert(HashSet::new());
@@ -352,28 +351,31 @@ $$
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        if cx.take_transient_on_action_root(TRANSIENT_REFRESH_REMOTE_IMAGES) {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        if cx.effects().take_transient(TRANSIENT_REFRESH_REMOTE_IMAGES) {
             let _ = with_query_client(cx.app, |client, _app| {
                 client.invalidate_namespace(REMOTE_IMAGE_NAMESPACE);
             });
         }
 
-        cx.on_action_notify_transient::<act::RefreshRemoteImages>(TRANSIENT_REFRESH_REMOTE_IMAGES);
+        cx.actions()
+            .transient::<act::RefreshRemoteImages>(TRANSIENT_REFRESH_REMOTE_IMAGES);
 
-        cx.on_payload_action_notify::<act::ToggleCodeBlockExpand>({
-            let expanded = self.st.expanded_code_blocks.clone();
-            move |host, _acx, id| {
-                let _ = host.models_mut().update(&expanded, |set| {
-                    if set.contains(&id) {
-                        set.remove(&id);
-                    } else {
-                        set.insert(id);
-                    }
-                });
-                true
-            }
-        });
+        cx.actions()
+            .payload::<act::ToggleCodeBlockExpand>()
+            .models({
+                let expanded = self.st.expanded_code_blocks.clone();
+                move |models, id| {
+                    let _ = models.update(&expanded, |set| {
+                        if set.contains(&id) {
+                            set.remove(&id);
+                        } else {
+                            set.insert(id);
+                        }
+                    });
+                    true
+                }
+            });
 
         self.st.anchor_regions.borrow_mut().clear();
 
@@ -389,7 +391,7 @@ $$
             .layout()
             .value_or_default();
 
-        let mut components = markdown::MarkdownComponents::<App>::default();
+        let mut components = markdown::MarkdownComponents::<KernelApp>::default();
         components.on_link_activate = Some(Self::on_link_activate(self.st.pending_anchor.clone()));
         components.code_block_ui.wrap = if wrap_enabled {
             fret_code_view::CodeBlockWrap::Word
@@ -460,7 +462,7 @@ $$
             size.size.width = Length::Fill;
             size.size.height = Length::Px(Px(240.0));
 
-            let spinner_box = |cx: &mut fret_ui::ElementContext<'_, App>| {
+            let spinner_box = |cx: &mut UiCx<'_>| {
                 cx.container(
                     fret_ui::element::ContainerProps {
                         layout: size,
@@ -490,7 +492,7 @@ $$
                 let key = remote_image_key(&info.src);
                 let policy = remote_image_policy();
 
-                let handle = cx.use_query(key, policy, move |_token| {
+                let handle = cx.data().query(key, policy, move |_token| {
                     download_remote_image(src_for_fetch.as_ref())
                 });
 
@@ -506,7 +508,7 @@ $$
                             .as_ref()
                             .map(|e| e.to_string())
                             .unwrap_or_else(|| "unknown error".to_string());
-                        return render_image_placeholder(
+                        let placeholder = render_image_placeholder(
                             cx,
                             theme,
                             on_link_activate.clone(),
@@ -515,6 +517,7 @@ $$
                                 text: Arc::<str>::from(format!("[image error: {msg}]")),
                             },
                         );
+                        return placeholder.into_element(cx);
                     }
                     QueryStatus::Success => {
                         let Some(data) = state.data.as_ref() else {
@@ -584,19 +587,22 @@ $$
                     props.color = theme.color_token("foreground");
                     cx.svg_icon_props(props)
                 }
-                _ => render_image_placeholder(
-                    cx,
-                    theme,
-                    on_link_activate.clone(),
-                    markdown::LinkInfo {
-                        href: info.src.clone(),
-                        text: if info.alt.trim().is_empty() {
-                            Arc::<str>::from("[image]".to_string())
-                        } else {
-                            Arc::<str>::from(format!("[image: {}]", info.alt.trim()))
+                _ => {
+                    let placeholder = render_image_placeholder(
+                        cx,
+                        theme,
+                        on_link_activate.clone(),
+                        markdown::LinkInfo {
+                            href: info.src.clone(),
+                            text: if info.alt.trim().is_empty() {
+                                Arc::<str>::from("[image]".to_string())
+                            } else {
+                                Arc::<str>::from(format!("[image: {}]", info.alt.trim()))
+                            },
                         },
-                    },
-                ),
+                    );
+                    placeholder.into_element(cx)
+                }
             };
 
             ui::container(|_cx| [inner])
@@ -605,7 +611,7 @@ $$
                 .into_element(cx)
         }));
 
-        let expanded_count = cx.use_selector(
+        let expanded_count = cx.data().selector(
             |cx| {
                 cx.observe_model(&self.st.expanded_code_blocks, Invalidation::Layout);
                 cx.app
@@ -719,7 +725,7 @@ fn render_image_placeholder<H: fret_ui::UiHost>(
     theme: fret_ui::ThemeSnapshot,
     on_link_activate: Option<markdown::OnLinkActivate>,
     link: markdown::LinkInfo,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let label = link.text.clone();
 
     let text = Arc::<str>::from(format!("{} ({})", label, link.href));
@@ -760,7 +766,7 @@ fn render_image_placeholder<H: fret_ui::UiHost>(
     })
 }
 
-fn apply_markdown_demo_theme_tokens(app: &mut App) {
+fn apply_markdown_demo_theme_tokens(app: &mut KernelApp) {
     Theme::with_global_mut(app, |theme| {
         // Demo-only: inject explicit markdown math tokens so theme tuning is discoverable.
         let font_size = theme.metric_token("metric.font.size").0;
@@ -802,8 +808,9 @@ pub fn run() -> anyhow::Result<()> {
 
     FretApp::new("markdown-demo")
         .window("markdown-demo", (920.0, 720.0))
-        .install_app(apply_markdown_demo_theme_tokens)
+        .setup(apply_markdown_demo_theme_tokens)
         .config_files(false)
-        .run_view::<MarkdownDemoView>()
+        .view::<MarkdownDemoView>()?
+        .run()
         .with_context(|| "failed to run markdown demo")
 }

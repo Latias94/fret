@@ -1,8 +1,9 @@
 use super::super::super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
+use fret::UiCx;
 
 pub(in crate::ui) fn preview_node_graph_cull_torture(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     _theme: &Theme,
 ) -> Vec<AnyElement> {
     use fret_core::{Px, SemanticsRole};

@@ -3,11 +3,12 @@
 ## Decision closure
 
 - [x] Keep the builder in `ecosystem/fret`.
-- [x] Use `fret::App` as the primary public type.
-- [x] Provide `FretApp` in the prelude for ergonomic authoring.
-- [x] Provide `AppBuilder` as a discoverability/doc alias.
+- [x] Use `fret::FretApp` as the primary public type.
+- [x] Teach `FretApp` from `fret::app::prelude::*` as the canonical app-author path.
+- [x] Delete root-level `App` / `AppBuilder` aliases before first release.
 - [x] Keep the underlying runtime function-pointer based by default.
 - [x] Remove the older top-level shorthand helpers from `fret` crate root so the app-author story stays builder-only.
+- [x] Keep the shipped `FretApp` surface view-first; `ui*` builder entry methods are not part of the release target.
 
 ## Builder surface
 
@@ -15,13 +16,11 @@
 - [x] `window(title, size)`
 - [x] `defaults(...)` / `minimal_defaults()` / `config_files(...)`
 - [x] `ui_assets_budgets(...)`
-- [x] `install_app(...)` / `install(...)`
-- [x] `register_icon_pack(...)`
-- [x] `ui(init_window, view)`
-- [x] `ui_with_hooks(init_window, view, configure)`
+- [x] `setup(...)`
+- [x] `setup_with(...)`
+- [x] icon-pack app installers via `setup(...::app::install)`
 - [x] `view::<V>()`
 - [x] `view_with_hooks::<V>(configure)`
-- [x] `run_ui(...)` / `run_ui_with_hooks(...)`
 - [x] `run_view::<V>()` / `run_view_with_hooks::<V>(...)`
 
 ## Onboarding convergence
@@ -37,14 +36,14 @@
 ## Remaining work
 
 - [ ] Sweep remaining historical docs that still teach removed helper paths or older MVU-era entry snippets.
-- [x] Add compile-oriented regression coverage for the four recommended builder entry paths
-      (`ui`, `ui_with_hooks`, `view`, `view_with_hooks`) and the default main-window fallback.
+- [x] Add compile-oriented regression coverage for the two recommended builder entry paths
+      (`view`, `view_with_hooks`) and the default main-window fallback.
 - [x] Add a focused surface gate that keeps `fret` crate root builder-only and keeps README
       onboarding text aligned with the builder story.
 - [ ] Audit more cookbook/examples for wording consistency when describing manual assembly vs builder
       entry.
 - [ ] Decide whether a closure-based entry should exist at all.
-- [ ] Decide whether more convenience methods belong on `fret::App` or should stay as install-hook
+- [ ] Decide whether more convenience methods belong on `fret::FretApp` or should stay as install-hook
       recipes.
 
 ## Validation

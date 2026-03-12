@@ -9,7 +9,7 @@
 
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*};
 use fret_core::scene::{
     BackdropWarpFieldV2, BackdropWarpKindV1, BackdropWarpV1, BackdropWarpV2,
     CustomEffectImageInputV1, CustomEffectPyramidRequestV1, CustomEffectSourcesV3, DitherMode,
@@ -25,10 +25,10 @@ use fret_ui::element::{
     Overflow, PositionStyle, RowProps, SizeStyle, SpacerProps, SpacingLength, TextProps,
 };
 use fret_ui_assets::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
-use fret_ui_kit::Space;
 use fret_ui_kit::custom_effects::{CustomEffectProgramV2, CustomEffectProgramV3};
 use fret_ui_kit::ui;
-use fret_ui_shadcn as shadcn;
+use fret_ui_kit::{IntoUiElement, Space};
+use fret_ui_shadcn::facade as shadcn;
 
 use crate::custom_effect_v3_wgsl::CUSTOM_EFFECT_V3_LENS_WGSL;
 
@@ -186,7 +186,7 @@ fn rainbow_stripe(t: f32, a: f32) -> Color {
     Color { r, g, b, a }
 }
 
-fn watch_first_f32(cx: &mut ElementContext<'_, App>, model: &Model<Vec<f32>>, default: f32) -> f32 {
+fn watch_first_f32(cx: &mut UiCx<'_>, model: &Model<Vec<f32>>, default: f32) -> f32 {
     cx.watch_model(model)
         .layout()
         .read_ref(|v| v.first().copied().unwrap_or(default))
@@ -274,7 +274,7 @@ fn lens_panel<H: UiHost>(
     radius: Px,
     mode: EffectMode,
     chain: EffectChain,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let mut outer_layout = LayoutStyle::default();
     outer_layout.size.width = Length::Px(Px(320.0));
     outer_layout.size.height = Length::Px(Px(220.0));
@@ -402,23 +402,25 @@ struct LiquidGlassView {
     st: LiquidGlassState,
 }
 
+fn install_demo_theme(app: &mut KernelApp) {
+    shadcn::themes::apply_shadcn_new_york(
+        app,
+        shadcn::themes::ShadcnBaseColor::Slate,
+        shadcn::themes::ShadcnColorScheme::Dark,
+    );
+}
+
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("liquid-glass-demo")
         .window("liquid-glass-demo", (1280.0, 720.0))
-        .install_app(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york(
-                app,
-                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-                shadcn::shadcn_themes::ShadcnColorScheme::Dark,
-            );
-        })
+        .setup(install_demo_theme)
         .view::<LiquidGlassView>()?
         .install_custom_effects(install_custom_effects)
         .run()
         .map_err(anyhow::Error::from)
 }
 
-fn install_custom_effects(app: &mut App, effects: &mut dyn fret_core::CustomEffectService) {
+fn install_custom_effects(app: &mut KernelApp, effects: &mut dyn fret_core::CustomEffectService) {
     let mut program_v2 = CustomEffectProgramV2::wgsl_utf8(CUSTOM_WARP_V2_WGSL);
     let v2 = match program_v2.ensure_registered(effects) {
         Ok(id) => Some(id),
@@ -491,7 +493,7 @@ impl LiquidGlassState {
 }
 
 impl View for LiquidGlassView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         let warp_map_size = (128u32, 128u32);
         let warp_map_rgba = generate_warp_map_rg_signed(warp_map_size.0, warp_map_size.1);
         let warp_map_key = ImageAssetKey::from_rgba8(
@@ -553,29 +555,29 @@ impl View for LiquidGlassView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        cx.on_action_notify_models::<act::Reset>({
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        cx.actions().models::<act::Reset>({
             let st = self.st.clone();
             move |models| {
                 LiquidGlassState::reset(models, &st);
                 true
             }
         });
-        cx.on_action_notify_models::<act::ApplyCustomV3BevelPreset>({
+        cx.actions().models::<act::ApplyCustomV3BevelPreset>({
             let st = self.st.clone();
             move |models| {
                 LiquidGlassState::apply_custom_v3_bevel_preset(models, &st);
                 true
             }
         });
-        cx.on_action_notify_models::<act::DisableCustomV3Bevel>({
+        cx.actions().models::<act::DisableCustomV3Bevel>({
             let st = self.st.clone();
             move |models| {
                 LiquidGlassState::disable_custom_v3_bevel(models, &st);
                 true
             }
         });
-        cx.on_action_notify_models::<act::ToggleInspector>({
+        cx.actions().models::<act::ToggleInspector>({
             let st = self.st.clone();
             move |models| {
                 LiquidGlassState::toggle_inspector(models, &st);
@@ -587,7 +589,7 @@ impl View for LiquidGlassView {
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Elements {
+fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> ViewElements {
     let theme = Theme::global(&*cx.app).snapshot();
     let theme_stage = theme.clone();
     let viewport = cx.environment_viewport_bounds(Invalidation::Layout);
@@ -1080,7 +1082,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Elements
                                     ..Default::default()
                                 },
                                 move |cx| {
-                                    let mk_card = |cx: &mut ElementContext<'_, App>,
+                                    let mk_card = |cx: &mut UiCx<'_>,
                                                    title: &'static str,
                                                    bg: Color,
                                                    border: Color| {
@@ -1159,8 +1161,8 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Elements
                                 move |cx| {
                                     vec![ui::v_flex(|cx| {
                                             vec![
-                                                shadcn::typography::h4(cx, "Liquid glass"),
-                                                shadcn::typography::muted(
+                                                shadcn::raw::typography::h4(cx, "Liquid glass"),
+                                                shadcn::raw::typography::muted(
                                                     cx,
                                                     "BackdropWarpV2 (bounded), WebGPU-safe.",
                                                 ),
@@ -1356,39 +1358,37 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Elements
                                 move |cx| {
                                     let mut out: Vec<AnyElement> = Vec::new();
                                     if show_fake {
-                                        out.push(
-                                            lens_panel(
-                                                cx,
-                                                Arc::from("Fake glass (blur + adjust)"),
-                                                lens_radius,
-                                                mode,
-                                                fake_chain,
-                                            )
-                                            .test_id("liquid-glass-lens-fake"),
+                                        let lens = lens_panel(
+                                            cx,
+                                            Arc::from("Fake glass (blur + adjust)"),
+                                            lens_radius,
+                                            mode,
+                                            fake_chain,
                                         );
+                                        out.push(lens.into_element(cx).test_id("liquid-glass-lens-fake"));
                                     }
                                     if show_warp {
+                                        let lens = lens_panel(
+                                            cx,
+                                            Arc::from("Warp v1 (procedural)"),
+                                            lens_radius,
+                                            mode,
+                                            warp_chain,
+                                        );
                                         out.push(
-                                            lens_panel(
-                                                cx,
-                                                Arc::from("Warp v1 (procedural)"),
-                                                lens_radius,
-                                                mode,
-                                                warp_chain,
-                                            )
-                                            .test_id("liquid-glass-lens-warp-v1"),
+                                            lens.into_element(cx).test_id("liquid-glass-lens-warp-v1"),
                                         );
                                     }
                                     if show_warp_v2 {
+                                        let lens = lens_panel(
+                                            cx,
+                                            Arc::from("Warp v2 (image field)"),
+                                            lens_radius,
+                                            mode,
+                                            warp_v2_chain,
+                                        );
                                         out.push(
-                                            lens_panel(
-                                                cx,
-                                                Arc::from("Warp v2 (image field)"),
-                                                lens_radius,
-                                                mode,
-                                                warp_v2_chain,
-                                            )
-                                            .test_id("liquid-glass-lens-warp-v2"),
+                                            lens.into_element(cx).test_id("liquid-glass-lens-warp-v2"),
                                         );
                                     }
                                     if show_custom_v2 {
@@ -1403,8 +1403,10 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Elements
                                         } else {
                                             Arc::from("CustomV2 (loading input)")
                                         };
+                                        let lens =
+                                            lens_panel(cx, label, lens_radius, mode, custom_v2_chain);
                                         out.push(
-                                            lens_panel(cx, label, lens_radius, mode, custom_v2_chain)
+                                            lens.into_element(cx)
                                                 .test_id("liquid-glass-lens-custom-v2"),
                                         );
                                     }
@@ -1426,16 +1428,20 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Elements
                                                 lens_radius,
                                                 mode,
                                                 chain.clone(),
-                                            )
-                                                    .test_id("liquid-glass-lens-custom-v3");
+                                            );
+                                            let lens_a = lens_a
+                                                .into_element(cx)
+                                                .test_id("liquid-glass-lens-custom-v3");
                                             let lens_b = lens_panel(
                                                 cx,
                                                 Arc::from("CustomV3 (lens B; ordering drift)"),
                                                 lens_radius,
                                                 mode,
                                                 chain,
-                                            )
-                                            .test_id("liquid-glass-lens-custom-v3-b");
+                                            );
+                                            let lens_b = lens_b
+                                                .into_element(cx)
+                                                .test_id("liquid-glass-lens-custom-v3-b");
 
                                             let pair = cx.row(
                                                 RowProps {
@@ -1464,8 +1470,9 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Elements
                                                 out.push(pair);
                                             }
                                         } else {
+                                            let lens = lens_panel(cx, label, lens_radius, mode, chain);
                                             out.push(
-                                                lens_panel(cx, label, lens_radius, mode, chain)
+                                                lens.into_element(cx)
                                                     .test_id("liquid-glass-lens-custom-v3"),
                                             );
                                         }
@@ -1515,7 +1522,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Elements
                                 ]);
 
                                 let label_row =
-                                    |cx: &mut ElementContext<'_, App>,
+                                    |cx: &mut UiCx<'_>,
                                      label: &str,
                                      value: String| {
                                         ui::h_row(move |cx| {

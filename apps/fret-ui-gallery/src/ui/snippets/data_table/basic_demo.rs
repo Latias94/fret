@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("basic_demo.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::Px;
 use fret_runtime::{CommandId, Model};
 use fret_ui::Theme;
@@ -9,7 +9,8 @@ use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui_headless::table::{ColumnDef, RowKey, Table, TableState};
 use fret_ui_kit::declarative::ModelWatchExt as _;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_kit::declarative::table::TableViewOutput;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -79,7 +80,7 @@ fn wire_selection_commands<H: UiHost + 'static>(
     );
 }
 
-fn align_end(cx: &mut ElementContext<'_, App>, child: AnyElement) -> AnyElement {
+fn align_end(cx: &mut UiCx<'_>, child: AnyElement) -> AnyElement {
     ui::h_flex(move |_cx| [child])
         .layout(LayoutRefinement::default().w_full())
         .justify_end()
@@ -87,9 +88,9 @@ fn align_end(cx: &mut ElementContext<'_, App>, child: AnyElement) -> AnyElement 
 }
 
 fn bottom_controls(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     state: Model<TableState>,
-    output: Model<fret_ui_kit::declarative::table::TableViewOutput>,
+    output: Model<TableViewOutput>,
 ) -> AnyElement {
     let state_value = cx.watch_model(&state).layout().cloned().unwrap_or_default();
     let output_value = cx
@@ -157,8 +158,8 @@ fn bottom_controls(
     .into_element(cx)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let assets = cx.with_state(
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+    let assets = cx.slot_state(
         || {
             let data: Arc<[PaymentRow]> = Arc::from(vec![
                 PaymentRow {
@@ -241,40 +242,8 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         |st| st.clone(),
     );
 
-    #[derive(Default)]
-    struct BasicDemoState {
-        state: Option<Model<TableState>>,
-        output: Option<Model<fret_ui_kit::declarative::table::TableViewOutput>>,
-    }
-
-    let state = cx.with_state(BasicDemoState::default, |st| st.state.clone());
-    let state = match state {
-        Some(m) => m,
-        None => {
-            let m = cx.app.models_mut().insert(TableState::default());
-            let m_for_state = m.clone();
-            cx.with_state(BasicDemoState::default, move |st| {
-                st.state = Some(m_for_state)
-            });
-            m
-        }
-    };
-
-    let output = cx.with_state(BasicDemoState::default, |st| st.output.clone());
-    let output = match output {
-        Some(m) => m,
-        None => {
-            let m = cx
-                .app
-                .models_mut()
-                .insert(fret_ui_kit::declarative::table::TableViewOutput::default());
-            let m_for_state = m.clone();
-            cx.with_state(BasicDemoState::default, move |st| {
-                st.output = Some(m_for_state)
-            });
-            m
-        }
-    };
+    let state = cx.local_model_keyed("state", TableState::default);
+    let output = cx.local_model_keyed("output", TableViewOutput::default);
 
     wire_selection_commands(cx, state.clone(), assets.0.clone(), assets.1.clone());
 
@@ -377,23 +346,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     Some(false)
                 };
 
-                let model = cx.with_state(|| None::<Model<Option<bool>>>, |st| st.clone());
-                let model = match model {
-                    Some(m) => m,
-                    None => {
-                        let m = cx.app.models_mut().insert(checked);
-                        let m_for_state = m.clone();
-                        cx.with_state(
-                            || None::<Model<Option<bool>>>,
-                            move |st| {
-                                if st.is_none() {
-                                    *st = Some(m_for_state);
-                                }
-                            },
-                        );
-                        m
-                    }
-                };
+                let model = cx.local_model_keyed("select_all_checked", || checked);
                 let _ = cx.app.models_mut().update(&model, |v| *v = checked);
 
                 Some(vec![
@@ -411,23 +364,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     cx.keyed(
                         ("ui-gallery-data-table-basic-select-row", row_key.0),
                         |cx| {
-                            let model = cx.with_state(|| None::<Model<bool>>, |st| st.clone());
-                            let model = match model {
-                                Some(m) => m,
-                                None => {
-                                    let m = cx.app.models_mut().insert(checked);
-                                    let m_for_state = m.clone();
-                                    cx.with_state(
-                                        || None::<Model<bool>>,
-                                        move |st| {
-                                            if st.is_none() {
-                                                *st = Some(m_for_state);
-                                            }
-                                        },
-                                    );
-                                    m
-                                }
-                            };
+                            let model = cx.local_model(|| checked);
                             let _ = cx.app.models_mut().update(&model, |v| *v = checked);
 
                             shadcn::Checkbox::new(model)
@@ -453,23 +390,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     align_end(cx, amount_text)
                 }
                 "actions" => cx.keyed(("ui-gallery-data-table-basic-row-actions", row.key), |cx| {
-                    let open = cx.with_state(|| None::<Model<bool>>, |st| st.clone());
-                    let open = match open {
-                        Some(m) => m,
-                        None => {
-                            let m = cx.app.models_mut().insert(false);
-                            let m_for_state = m.clone();
-                            cx.with_state(
-                                || None::<Model<bool>>,
-                                move |st| {
-                                    if st.is_none() {
-                                        *st = Some(m_for_state);
-                                    }
-                                },
-                            );
-                            m
-                        }
-                    };
+                    let open = cx.local_model(|| false);
 
                     let trigger = shadcn::Button::new("")
                         .a11y_label("Open menu")

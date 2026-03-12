@@ -42,11 +42,6 @@ fn hidden<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     )
 }
 
-#[derive(Debug, Default, Clone)]
-struct ChainOfThoughtProviderState {
-    controller: Option<ChainOfThoughtController>,
-}
-
 #[derive(Clone)]
 pub struct ChainOfThoughtController {
     pub open: Model<bool>,
@@ -67,8 +62,7 @@ impl std::fmt::Debug for ChainOfThoughtController {
 pub fn use_chain_of_thought_controller<H: UiHost>(
     cx: &ElementContext<'_, H>,
 ) -> Option<ChainOfThoughtController> {
-    cx.inherited_state::<ChainOfThoughtProviderState>()
-        .and_then(|st| st.controller.clone())
+    cx.provided::<ChainOfThoughtController>().cloned()
 }
 
 /// Collapsible container aligned with AI Elements `ChainOfThought`.
@@ -187,32 +181,30 @@ impl ChainOfThought {
                 on_open_change,
             };
 
-            cx.with_state(ChainOfThoughtProviderState::default, |st| {
-                st.controller = Some(controller.clone());
-            });
+            cx.provide(controller.clone(), |cx| {
+                let theme = Theme::global(&*cx.app).clone();
+                let body = ui::v_stack(move |cx| children(cx))
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .gap(gap)
+                    .into_element(cx);
 
-            let theme = Theme::global(&*cx.app).clone();
-            let body = ui::v_stack(move |cx| children(cx))
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(gap)
-                .into_element(cx);
-
-            let mut root = cx.container(
-                ContainerProps {
-                    layout: decl_style::layout_style(&theme, layout),
-                    ..Default::default()
-                },
-                move |_cx| vec![body],
-            );
-
-            if let Some(test_id) = test_id_root {
-                root = root.attach_semantics(
-                    SemanticsDecoration::default()
-                        .role(SemanticsRole::Group)
-                        .test_id(test_id),
+                let mut root = cx.container(
+                    ContainerProps {
+                        layout: decl_style::layout_style(&theme, layout),
+                        ..Default::default()
+                    },
+                    move |_cx| vec![body],
                 );
-            }
-            root
+
+                if let Some(test_id) = test_id_root {
+                    root = root.attach_semantics(
+                        SemanticsDecoration::default()
+                            .role(SemanticsRole::Group)
+                            .test_id(test_id),
+                    );
+                }
+                root
+            })
         })
     }
 }

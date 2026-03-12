@@ -1,5 +1,7 @@
-use fret::prelude::*;
 use std::sync::Arc;
+
+use fret::app::prelude::*;
+use fret_app::Effect;
 
 const TEST_ID_ROOT: &str = "cookbook.theme_switching_basics.root";
 const TEST_ID_TOGGLE: &str = "cookbook.theme_switching_basics.toggle";
@@ -12,23 +14,23 @@ const SCHEME_LIGHT: &str = "light";
 const SCHEME_DARK: &str = "dark";
 
 fn apply_scheme(app: &mut App, scheme: &str) {
-    shadcn::shadcn_themes::apply_shadcn_new_york(
+    shadcn::themes::apply_shadcn_new_york(
         app,
-        shadcn::shadcn_themes::ShadcnBaseColor::Slate,
+        shadcn::themes::ShadcnBaseColor::Slate,
         match scheme {
-            SCHEME_DARK => shadcn::shadcn_themes::ShadcnColorScheme::Dark,
-            _ => shadcn::shadcn_themes::ShadcnColorScheme::Light,
+            SCHEME_DARK => shadcn::themes::ShadcnColorScheme::Dark,
+            _ => shadcn::themes::ShadcnColorScheme::Light,
         },
     );
 }
 
 struct ThemeSwitchingBasicsView {
-    window: AppWindowId,
+    window: WindowId,
     applied_scheme: Option<Arc<str>>,
 }
 
 impl View for ThemeSwitchingBasicsView {
-    fn init(app: &mut App, window: AppWindowId) -> Self {
+    fn init(app: &mut App, window: WindowId) -> Self {
         apply_scheme(app, SCHEME_LIGHT);
 
         Self {
@@ -37,10 +39,13 @@ impl View for ThemeSwitchingBasicsView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let scheme_state = cx.use_local_with(|| Some::<Arc<str>>(Arc::from(SCHEME_LIGHT)));
-        let scheme: Arc<str> = scheme_state
-            .watch(cx)
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        let scheme_state = cx
+            .state()
+            .local_init(|| Some::<Arc<str>>(Arc::from(SCHEME_LIGHT)));
+        let scheme: Arc<str> = cx
+            .state()
+            .watch(&scheme_state)
             .layout()
             .value_or_default()
             .unwrap_or_else(|| Arc::from(SCHEME_LIGHT));
@@ -160,7 +165,8 @@ impl View for ThemeSwitchingBasicsView {
 fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-theme-switching-basics")
         .window("cookbook-theme-switching-basics", (720.0, 520.0))
-        .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_view::<ThemeSwitchingBasicsView>()
+        .setup(fret_cookbook::install_cookbook_defaults)
+        .view::<ThemeSwitchingBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

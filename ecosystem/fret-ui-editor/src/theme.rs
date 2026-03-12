@@ -161,7 +161,7 @@ mod tests {
     use fret_core::{Color, Px};
     use fret_ui::Theme;
 
-    use super::{apply_editor_theme_preset_v1, EditorThemePresetV1};
+    use super::{EditorThemePresetV1, apply_editor_theme_preset_v1};
     use crate::primitives::EditorTokenKeys;
 
     #[test]

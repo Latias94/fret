@@ -2819,7 +2819,7 @@ pub fn run() -> anyhow::Result<()> {
             "node_graph_demo: declarative root enabled (FRET_NODE_GRAPH_DECLARATIVE)"
         );
     }
-    fret::run_native_with_configured_fn_driver(
+    fret::advanced::run_native_with_configured_fn_driver(
         config,
         app,
         build_fn_driver_with_state(driver_state),

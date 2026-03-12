@@ -1,13 +1,16 @@
 pub const SOURCE: &str = include_str!("basic.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_kit::IntoUiElement;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn centered<H: UiHost>(cx: &mut ElementContext<'_, H>, body: AnyElement) -> AnyElement {
-    ui::h_flex(move |_cx| [body])
+fn centered<H: UiHost, B>(body: B) -> impl IntoUiElement<H> + use<H, B>
+where
+    B: IntoUiElement<H>,
+{
+    ui::h_flex(move |cx| [body.into_element(cx)])
         .layout(LayoutRefinement::default().w_full())
         .justify_center()
-        .into_element(cx)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -31,6 +34,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         )
         .test_id("ui-gallery-popover-basic-popover");
 
-    centered(cx, popover).test_id("ui-gallery-popover-basic")
+    centered(popover)
+        .into_element(cx)
+        .test_id("ui-gallery-popover-basic")
 }
 // endregion: example

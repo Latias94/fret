@@ -15,8 +15,7 @@ use fret_render::{
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::element::{
-    ContainerProps, CrossAlign, Elements, FlexProps, LayoutStyle, Length, MainAlign,
-    ViewportSurfaceProps,
+    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, ViewportSurfaceProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme};
 
@@ -523,7 +522,7 @@ impl fret::view::View for ExternalTextureImportsView {
         }
     }
 
-    fn render(&mut self, cx: &mut fret::view::ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut fret::AppUi<'_, '_, App>) -> fret::Ui {
         render_view(cx.elements(), self)
     }
 }
@@ -584,7 +583,7 @@ fn on_event(
     }
 }
 
-fn render_view(cx: &mut ElementContext<'_, App>, st: &mut ExternalTextureImportsView) -> Elements {
+fn render_view(cx: &mut ElementContext<'_, App>, st: &mut ExternalTextureImportsView) -> fret::Ui {
     cx.observe_model(&st.show, Invalidation::Layout);
 
     let scale_factor = cx.environment_scale_factor(Invalidation::Layout);
@@ -963,7 +962,7 @@ pub fn run() -> anyhow::Result<()> {
         )
         .try_init();
 
-    let builder = fret::App::new("external-texture-imports")
+    let builder = fret::FretApp::new("external-texture-imports")
         .window(
             "fret-demo external_texture_imports_demo (V toggles visibility, I toggles source, N toggles native adapter)",
             (960.0, 640.0),
@@ -973,9 +972,11 @@ pub fn run() -> anyhow::Result<()> {
                 .on_event(on_event)
                 .record_engine_frame(record_engine_frame)
         })?
-        .init_app(|app| {
-            app.set_global(PlatformCapabilities::default());
-        });
+        .setup(install_platform_capabilities);
 
     builder.run().context("run external_texture_imports_demo")
+}
+
+fn install_platform_capabilities(app: &mut App) {
+    app.set_global(PlatformCapabilities::default());
 }

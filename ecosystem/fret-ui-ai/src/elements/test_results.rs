@@ -149,16 +149,10 @@ impl TestResultsSummaryData {
     }
 }
 
-#[derive(Debug, Default, Clone)]
-struct TestResultsProviderState {
-    summary: Option<TestResultsSummaryData>,
-}
-
 fn use_test_results_summary<H: UiHost>(
     cx: &ElementContext<'_, H>,
 ) -> Option<TestResultsSummaryData> {
-    cx.inherited_state::<TestResultsProviderState>()
-        .and_then(|st| st.summary.clone())
+    cx.provided::<TestResultsSummaryData>().cloned()
 }
 
 #[derive(Debug, Clone)]
@@ -167,14 +161,8 @@ struct TestSuiteContextData {
     status: TestStatusKind,
 }
 
-#[derive(Debug, Default, Clone)]
-struct TestSuiteProviderState {
-    context: Option<TestSuiteContextData>,
-}
-
 fn use_test_suite_context<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<TestSuiteContextData> {
-    cx.inherited_state::<TestSuiteProviderState>()
-        .and_then(|st| st.context.clone())
+    cx.provided::<TestSuiteContextData>().cloned()
 }
 
 #[derive(Debug, Clone)]
@@ -184,14 +172,8 @@ struct TestContextData {
     duration_ms: Option<u32>,
 }
 
-#[derive(Debug, Default, Clone)]
-struct TestProviderState {
-    context: Option<TestContextData>,
-}
-
 fn use_test_context<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<TestContextData> {
-    cx.inherited_state::<TestProviderState>()
-        .and_then(|st| st.context.clone())
+    cx.provided::<TestContextData>().cloned()
 }
 
 fn status_badge<H: UiHost>(
@@ -339,25 +321,29 @@ impl TestResults {
         let root = cx.container(
             decl_style::container_props(&theme, chrome, layout),
             move |cx| {
-                cx.with_state(TestResultsProviderState::default, |st| {
-                    st.summary = summary.clone();
-                });
+                let render_children = |cx: &mut ElementContext<'_, H>| {
+                    if let Some(children) = explicit_children {
+                        return children;
+                    }
 
-                if let Some(children) = explicit_children {
-                    return children;
-                }
+                    if summary.is_none() {
+                        return Vec::new();
+                    }
 
-                let Some(summary) = summary.clone() else {
-                    return Vec::new();
+                    vec![
+                        TestResultsHeader::new([
+                            TestResultsSummary::from_context().into_element(cx),
+                            TestResultsDuration::from_context().into_element(cx),
+                        ])
+                        .into_element(cx),
+                    ]
                 };
 
-                vec![
-                    TestResultsHeader::new([
-                        TestResultsSummary::new(summary.clone()).into_element(cx),
-                        TestResultsDuration::new(summary).into_element(cx),
-                    ])
-                    .into_element(cx),
-                ]
+                if let Some(summary) = summary.clone() {
+                    cx.provide(summary, render_children)
+                } else {
+                    render_children(cx)
+                }
             },
         );
 
@@ -886,16 +872,14 @@ impl TestSuite {
             .into_element_with_open_model(
                 cx,
                 move |cx, open_model, is_open| {
-                    cx.with_state(TestSuiteProviderState::default, |st| {
-                        st.context = Some(suite_context.clone());
-                    });
-                    trigger.into_trigger(cx, open_model, is_open)
+                    cx.provide(suite_context.clone(), |cx| {
+                        trigger.into_trigger(cx, open_model, is_open)
+                    })
                 },
                 move |cx| {
-                    cx.with_state(TestSuiteProviderState::default, |st| {
-                        st.context = Some(suite_context_for_content.clone());
-                    });
-                    content.into_element(cx)
+                    cx.provide(suite_context_for_content.clone(), |cx| {
+                        content.into_element(cx)
+                    })
                 },
             )
     }
@@ -1477,41 +1461,39 @@ impl Test {
         let children = self.children;
         let details = self.details;
         let content_factory = move |cx: &mut ElementContext<'_, H>| {
-            cx.with_state(TestProviderState::default, |st| {
-                st.context = Some(test_context.clone());
-            });
-
-            let content = if let Some(children) = children {
-                ui::h_row(move |_cx| children)
+            cx.provide(test_context.clone(), |cx| {
+                let content = if let Some(children) = children {
+                    ui::h_row(move |_cx| children)
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .gap(Space::N2)
+                        .items(Items::Center)
+                        .into_element(cx)
+                } else {
+                    ui::h_row(move |cx| {
+                        vec![
+                            TestStatus::from_context().into_element(cx),
+                            TestName::from_context().into_element(cx),
+                            TestDuration::from_context().into_element(cx),
+                        ]
+                    })
                     .layout(LayoutRefinement::default().w_full().min_w_0())
                     .gap(Space::N2)
                     .items(Items::Center)
                     .into_element(cx)
-            } else {
-                ui::h_row(move |cx| {
-                    vec![
-                        TestStatus::from_context().into_element(cx),
-                        TestName::from_context().into_element(cx),
-                        TestDuration::from_context().into_element(cx),
-                    ]
-                })
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(Space::N2)
-                .items(Items::Center)
-                .into_element(cx)
-            };
+                };
 
-            let Some(details) = details else {
-                return content;
-            };
+                let Some(details) = details else {
+                    return content;
+                };
 
-            let mut stacked = vec![content];
-            stacked.extend(details);
-            ui::v_stack(move |_cx| stacked)
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(Space::N2)
-                .items(Items::Stretch)
-                .into_element(cx)
+                let mut stacked = vec![content];
+                stacked.extend(details);
+                ui::v_stack(move |_cx| stacked)
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .gap(Space::N2)
+                    .items(Items::Stretch)
+                    .into_element(cx)
+            })
         };
 
         let Some(on_activate) = self.on_activate else {
@@ -1876,6 +1858,29 @@ impl TestResultsContent {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::element::{AnyElement, ElementKind};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(640.0), Px(360.0)),
+        )
+    }
+
+    fn find_text_by_content<'a>(element: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &element.kind
+            && props.text.as_ref() == needle
+        {
+            return Some(element);
+        }
+
+        element
+            .children
+            .iter()
+            .find_map(|child| find_text_by_content(child, needle))
+    }
 
     #[test]
     fn summary_parts_can_defer_to_root_context() {
@@ -1918,5 +1923,55 @@ mod tests {
         assert!(trigger.name.is_none());
         assert!(trigger.status.is_none());
         assert!(trigger.children.is_none());
+    }
+
+    #[test]
+    fn test_results_root_provides_summary_to_context_parts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let summary = TestResultsSummaryData::new(3, 1, 2, 6).duration_ms(1234);
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                TestResults::new().summary(summary.clone()).into_element(cx)
+            });
+
+        assert!(find_text_by_content(&element, "3 passed").is_some());
+        assert!(find_text_by_content(&element, "1 failed").is_some());
+        assert!(find_text_by_content(&element, "2 skipped").is_some());
+        assert!(find_text_by_content(&element, "1.23s").is_some());
+    }
+
+    #[test]
+    fn test_suite_root_provides_context_to_trigger_parts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                TestSuite::named("Auth", TestStatusKind::Failed)
+                    .default_open(true)
+                    .trigger(TestSuiteName::from_context())
+                    .content(TestSuiteContent::new(Vec::<AnyElement>::new()))
+                    .into_element(cx)
+            });
+
+        assert!(find_text_by_content(&element, "Auth").is_some());
+    }
+
+    #[test]
+    fn test_row_provides_context_to_default_parts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                Test::new("unit::auth::login", TestStatusKind::Passed)
+                    .duration_ms(42)
+                    .into_element(cx)
+            });
+
+        assert!(find_text_by_content(&element, "unit::auth::login").is_some());
+        assert!(find_text_by_content(&element, "42ms").is_some());
     }
 }

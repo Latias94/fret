@@ -40,8 +40,31 @@ pub use rules::{ConnectPlan, Diagnostic, DiagnosticSeverity};
 pub use types::{TypeDesc, TypeVarId};
 
 #[cfg(feature = "app-integration")]
-mod app_integration;
+pub mod advanced;
 #[cfg(feature = "app-integration")]
-pub use app_integration::install;
-#[cfg(feature = "app-integration")]
-pub use app_integration::install_app;
+pub mod app;
+
+#[cfg(test)]
+mod surface_policy_tests {
+    const LIB_RS: &str = include_str!("lib.rs");
+    const APP_RS: &str = include_str!("app.rs");
+    const ADVANCED_RS: &str = include_str!("advanced.rs");
+
+    fn public_surface() -> &'static str {
+        LIB_RS.split("#[cfg(test)]").next().unwrap_or(LIB_RS)
+    }
+
+    #[test]
+    fn app_integration_stays_under_explicit_app_module() {
+        let public_surface = public_surface();
+        assert!(public_surface.contains("pub mod app;"));
+        assert!(public_surface.contains("pub mod advanced;"));
+        assert!(!public_surface.contains("pub use app::"));
+        assert!(!public_surface.contains("pub use advanced::"));
+        assert!(!public_surface.contains("pub fn install("));
+        assert!(!public_surface.contains("pub fn install_with_ui_services("));
+        assert!(APP_RS.contains("pub fn install(app: &mut fret_app::App)"));
+        assert!(!APP_RS.contains("install_with_ui_services"));
+        assert!(ADVANCED_RS.contains("pub fn install_with_ui_services("));
+    }
+}

@@ -2,28 +2,14 @@ pub const SOURCE: &str = include_str!("plan_demo.rs");
 
 // region: example
 use fret_icons::ids;
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
-use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, Kbd, prelude::*};
-
-#[derive(Default)]
-struct DemoModels {
-    streaming: Option<Model<bool>>,
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let streaming = cx.with_state(DemoModels::default, |st| st.streaming.clone());
-    let streaming = match streaming {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(DemoModels::default, |st| st.streaming = Some(model.clone()));
-            model
-        }
-    };
+    let streaming = cx.local_model_keyed("streaming", || false);
 
     let is_streaming = cx
         .get_model_copied(&streaming, Invalidation::Layout)
@@ -137,12 +123,12 @@ library from React to SolidJS, ensuring compatibility and maintaining existing f
                 ui_ai::PlanFooter::new([
                     ui::h_flex(move |cx| {
                         vec![ui_ai::PlanAction::new([
-                            Button::new("Build")
-                                .variant(ButtonVariant::Secondary)
-                                .size(ButtonSize::Sm)
+                            shadcn::Button::new("Build")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .size(shadcn::ButtonSize::Sm)
                                 .children([
                                     ui::text("Build").into_element(cx),
-                                    Kbd::new("⌘↩").into_element(cx),
+                                    shadcn::Kbd::new("⌘↩").into_element(cx),
                                 ])
                                 .a11y_label("Build")
                                 .into_element(cx),
@@ -161,9 +147,9 @@ library from React to SolidJS, ensuring compatibility and maintaining existing f
         vec![
             cx.text("Plan (AI Elements)"),
             cx.text("Toggle the chevron button to expand/collapse."),
-            Button::new("Toggle streaming")
-                .variant(ButtonVariant::Secondary)
-                .size(ButtonSize::Sm)
+            shadcn::Button::new("Toggle streaming")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .size(shadcn::ButtonSize::Sm)
                 .toggle_model(streaming.clone())
                 .into_element(cx),
             body,

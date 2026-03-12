@@ -11,7 +11,7 @@ use fret_ui::element::{
     SpacerProps,
 };
 use fret_ui_kit::OverlayController;
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::facade as shadcn;
 use fret_workspace::{WorkspaceCommandScope, WorkspaceFrame, WorkspacePaneContentFocusTarget};
 use std::sync::Arc;
 
@@ -505,6 +505,26 @@ mod tests {
             .unwrap_or_else(|| panic!("missing semantics test_id={test_id}"))
     }
 
+    fn parse_iso_date_ymd(raw: &str) -> Option<time::Date> {
+        let raw = raw.trim();
+        let (year, rest) = raw.split_once('-')?;
+        let (month, day) = rest.split_once('-')?;
+
+        let year: i32 = year.parse().ok()?;
+        let month: u8 = month.parse().ok()?;
+        let day: u8 = day.parse().ok()?;
+
+        let month = time::Month::try_from(month).ok()?;
+        time::Date::from_calendar_date(year, month, day).ok()
+    }
+
+    fn gallery_fixed_today_or_now() -> time::Date {
+        std::env::var("FRET_UI_GALLERY_FIXED_TODAY")
+            .ok()
+            .and_then(|raw| parse_iso_date_ymd(&raw))
+            .unwrap_or_else(|| time::OffsetDateTime::now_utc().date())
+    }
+
     struct RenderedGalleryPage {
         window: AppWindowId,
         frame_index: u64,
@@ -644,10 +664,14 @@ mod tests {
 
     fn render_gallery_page_with_app(page: &str, bounds: Rect, mut app: App) -> RenderedGalleryPage {
         let window = AppWindowId::default();
-        let state = UiGalleryDriver::build_ui(&mut app, window);
-        let _ = app.models_mut().update(&state.selected_page, |selected| {
-            *selected = Arc::<str>::from(page)
-        });
+        let mut state = UiGalleryDriver::build_ui(&mut app, window);
+        UiGalleryDriver::navigate_to_gallery_page(
+            &mut app,
+            &mut state,
+            window,
+            Arc::<str>::from(page),
+            fret::router::NavigationAction::Replace,
+        );
 
         let services = FakeServices;
 
@@ -687,6 +711,41 @@ mod tests {
                 Size::new(Px(1080.0), Px(720.0)),
             ),
         )
+    }
+
+    #[test]
+    fn render_gallery_page_helper_keeps_requested_page_in_models_layout_and_router() {
+        let rendered = render_gallery_page_with_bootstrapped_app(PAGE_BUTTON_GROUP);
+
+        let selected_page = rendered
+            .app
+            .models()
+            .get_cloned(&rendered.state.selected_page)
+            .expect("selected page model should exist after helper render");
+        let workspace_layout = rendered
+            .app
+            .models()
+            .get_cloned(&rendered.state.workspace_window_layout)
+            .expect("workspace layout model should exist after helper render");
+        let layout_snapshot = UiGalleryDriver::workspace_window_layout_snapshot(&workspace_layout)
+            .expect("workspace layout snapshot should remain supported after helper render");
+        let routed_page =
+            super::super::page_from_gallery_location(&rendered.state.page_router.state().location)
+                .expect("page router should carry the helper-selected page");
+        let semantics_snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after helper render");
+
+        assert_eq!(selected_page.as_ref(), PAGE_BUTTON_GROUP);
+        assert_eq!(layout_snapshot.1.as_deref(), Some(PAGE_BUTTON_GROUP));
+        assert_eq!(routed_page.as_ref(), PAGE_BUTTON_GROUP);
+        assert!(
+            find_node_by_test_id(semantics_snapshot, "ui-gallery-button-group-demo-content")
+                .is_some(),
+            "expected helper render to expose the requested page semantics"
+        );
     }
 
     #[test]
@@ -1115,7 +1174,11 @@ mod tests {
             last_gallery_scroll_y = Some(current_gallery_scroll_y);
 
             if stable_frames >= 3 {
-                let matching_test_ids: Vec<String> = gallery_snapshot
+                let related_prefix = target_test_id
+                    .rsplit_once('-')
+                    .map(|(prefix, _)| prefix)
+                    .unwrap_or(target_test_id);
+                let mut matching_test_ids: Vec<String> = gallery_snapshot
                     .nodes
                     .iter()
                     .filter_map(|node| node.test_id.as_ref())
@@ -1123,10 +1186,21 @@ mod tests {
                         (target_test_id.contains("markdown") && test_id.contains("markdown"))
                             || (target_test_id.contains("code-editor")
                                 && test_id.contains("code-editor"))
+                            || test_id.contains(related_prefix)
                     })
                     .take(24)
                     .cloned()
                     .collect();
+                if matching_test_ids.is_empty() {
+                    matching_test_ids = gallery_snapshot
+                        .nodes
+                        .iter()
+                        .filter_map(|node| node.test_id.as_ref())
+                        .filter(|test_id| test_id.starts_with("ui-gallery"))
+                        .take(24)
+                        .cloned()
+                        .collect();
+                }
                 panic!(
                     "expected target to appear in semantics after scrolling gallery viewport: target_test_id={target_test_id} gallery_viewport={gallery_viewport:?} gallery_scroll={gallery_scroll:?} matching_test_ids={matching_test_ids:?}"
                 );
@@ -1859,23 +1933,27 @@ mod tests {
     #[test]
     fn gallery_calendar_core_examples_keep_upstream_aligned_targets_present() {
         let mut rendered = render_gallery_page(PAGE_CALENDAR);
+        let today = gallery_fixed_today_or_now();
+        let range_target = format!("ui-gallery.calendar.range:{}-01-12", today.year());
 
+        // Gate the page through snippet-owned interactive semantics rather than doc-scaffold
+        // `*-content` wrappers, which are not a stable semantics surface.
         for target in [
-            "ui-gallery-calendar-demo-content",
-            "ui-gallery-calendar-usage-content",
-            "ui-gallery-calendar-hijri-content",
-            "ui-gallery-calendar-basic-content",
-            "ui-gallery-calendar-range-content",
-            "ui-gallery-calendar-caption-content",
-            "ui-gallery-calendar-presets-content",
-            "ui-gallery-calendar-time-content",
-            "ui-gallery-calendar-booked-content",
-            "ui-gallery-calendar-custom-cell-content",
-            "ui-gallery-calendar-week-numbers-content",
-            "ui-gallery-calendar-rtl-content",
+            String::from("ui-gallery.calendar.demo.nav-prev"),
+            String::from("ui-gallery.calendar.usage.nav-prev"),
+            String::from("ui-gallery.calendar.hijri.nav-prev"),
+            String::from("ui-gallery.calendar.basic.nav-prev"),
+            range_target,
+            String::from("ui-gallery.calendar.caption.nav-prev"),
+            String::from("ui-gallery-calendar-presets-button-today"),
+            String::from("ui-gallery.calendar.time.date-trigger"),
+            String::from("ui-gallery.calendar.booked.nav-prev"),
+            String::from("ui-gallery.calendar.custom-cell.nav-prev"),
+            String::from("ui-gallery.calendar.week-numbers.nav-prev"),
+            String::from("ui-gallery.calendar.rtl.nav-prev"),
         ] {
-            scroll_test_id_into_gallery_viewport(&mut rendered, target);
-            let bounds = visual_bounds_by_test_id(&rendered, target);
+            scroll_test_id_into_gallery_viewport(&mut rendered, &target);
+            let bounds = visual_bounds_by_test_id(&rendered, &target);
             assert!(
                 bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
                 "expected Calendar page target to render with non-zero bounds: target={target} bounds={bounds:?}"
@@ -1905,7 +1983,7 @@ mod tests {
 
     #[test]
     fn gallery_input_group_core_examples_keep_upstream_aligned_targets_present() {
-        let mut rendered = render_gallery_page(PAGE_INPUT_GROUP);
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_INPUT_GROUP);
 
         for target in [
             "ui-gallery-input-group-demo",
@@ -1928,6 +2006,40 @@ mod tests {
             assert!(
                 bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
                 "expected Input Group page target to render with non-zero bounds: target={target} bounds={bounds:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn gallery_button_group_core_examples_keep_upstream_aligned_targets_present() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_BUTTON_GROUP);
+
+        for target in [
+            "ui-gallery-button-group-demo-content",
+            "ui-gallery-button-group-orientation-content",
+            "ui-gallery-button-group-size-content",
+            "ui-gallery-button-group-nested-content",
+            "ui-gallery-button-group-nested-step-1",
+            "ui-gallery-button-group-nested-previous",
+            "ui-gallery-button-group-nested-next",
+            "ui-gallery-button-group-input-content",
+            "ui-gallery-button-group-input-group-content",
+            "ui-gallery-button-group-input-group-add-button",
+            "ui-gallery-button-group-input-group-control",
+            "ui-gallery-button-group-input-group-voice-button",
+            "ui-gallery-button-group-dropdown-content",
+            "ui-gallery-button-group-select-content",
+            "ui-gallery-button-group-select-currency-trigger",
+            "ui-gallery-button-group-select-amount",
+            "ui-gallery-button-group-rtl-content",
+            "ui-gallery-button-group-api-reference-content",
+            "ui-gallery-button-group-text-content",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+            let bounds = visual_bounds_by_test_id(&rendered, target);
+            assert!(
+                bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
+                "expected Button Group page target to render with non-zero bounds: target={target} bounds={bounds:?}"
             );
         }
     }

@@ -2,7 +2,6 @@ pub const SOURCE: &str = include_str!("suggestions_demo.rs");
 
 // region: example
 use fret_core::{Corners, Edges, Px, SemanticsRole};
-use fret_runtime::Model;
 use fret_ui::element::SemanticsProps;
 use fret_ui::{Invalidation, Theme};
 use fret_ui_ai as ui_ai;
@@ -12,32 +11,9 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-#[derive(Default)]
-struct DemoModels {
-    clicked: Option<Model<bool>>,
-    prompt: Option<Model<String>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let clicked = cx.with_state(DemoModels::default, |st| st.clicked.clone());
-    let clicked = match clicked {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(DemoModels::default, |st| st.clicked = Some(model.clone()));
-            model
-        }
-    };
-
-    let prompt = cx.with_state(DemoModels::default, |st| st.prompt.clone());
-    let prompt = match prompt {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(DemoModels::default, |st| st.prompt = Some(model.clone()));
-            model
-        }
-    };
+    let clicked = cx.local_model_keyed("clicked", || false);
+    let prompt = cx.local_model_keyed("prompt", String::new);
 
     let clicked_now = cx
         .get_model_copied(&clicked, Invalidation::Paint)

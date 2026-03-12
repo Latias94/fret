@@ -13,8 +13,7 @@ use fret_render::{
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::element::{
-    ContainerProps, CrossAlign, Elements, FlexProps, LayoutStyle, Length, MainAlign,
-    ViewportSurfaceProps,
+    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, ViewportSurfaceProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme};
 use std::time::{Duration, Instant};
@@ -92,7 +91,7 @@ impl fret::view::View for ExternalVideoImportsAvfView {
         }
     }
 
-    fn render(&mut self, cx: &mut fret::view::ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut fret::AppUi<'_, '_, App>) -> fret::Ui {
         render_view(cx.elements(), self)
     }
 }
@@ -140,7 +139,7 @@ fn on_event(
     }
 }
 
-fn render_view(cx: &mut ElementContext<'_, App>, st: &mut ExternalVideoImportsAvfView) -> Elements {
+fn render_view(cx: &mut ElementContext<'_, App>, st: &mut ExternalVideoImportsAvfView) -> fret::Ui {
     cx.observe_model(&st.show, Invalidation::Layout);
 
     let scale_factor = cx.environment_scale_factor(Invalidation::Layout);
@@ -362,6 +361,7 @@ fn record_engine_frame(
             let should_decode = !st.view.target.is_registered()
                 || !st.view.avf_pacing_enabled
                 || st
+                    .view
                     .avf_last_decode_at
                     .is_none_or(|t| now.saturating_duration_since(t) >= st.view.avf_frame_interval);
 
@@ -431,7 +431,7 @@ pub fn run() -> anyhow::Result<()> {
         )
         .try_init();
 
-    let builder = fret::App::new("external-video-imports-avf")
+    let builder = fret::FretApp::new("external-video-imports-avf")
         .window(
             "fret-demo external_video_imports_avf_demo (V toggles visibility, I toggles source)",
             (980.0, 720.0),
@@ -441,9 +441,11 @@ pub fn run() -> anyhow::Result<()> {
                 .on_event(on_event)
                 .record_engine_frame(record_engine_frame)
         })?
-        .init_app(|app| {
-            app.set_global(PlatformCapabilities::default());
-        });
+        .setup(install_platform_capabilities);
 
     builder.run().context("run external_video_imports_avf_demo")
+}
+
+fn install_platform_capabilities(app: &mut App) {
+    app.set_global(PlatformCapabilities::default());
 }

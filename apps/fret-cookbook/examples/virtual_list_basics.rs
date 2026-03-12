@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::app::prelude::*;
+use fret_runtime::Model;
 use fret_ui::{
     ScrollStrategy,
     element::{ContainerProps, LayoutStyle, Length, VirtualListKeyCacheMode, VirtualListOptions},
@@ -69,38 +70,46 @@ struct VirtualListBasicsView {
 }
 
 impl View for VirtualListBasicsView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut App, _window: WindowId) -> Self {
         Self {
             items: app.models_mut().insert(make_items(LIST_LEN)),
             scroll: VirtualListScrollHandle::new(),
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let mode_state = cx.use_local_with(|| Some::<Arc<str>>(Arc::from(MODE_MEASURED)));
-        let tall_rows_state = cx.use_local_with(|| false);
-        let reversed_state = cx.use_local_with(|| false);
-        let index_keys_state = cx.use_local_with(|| false);
-        let visible_only_keys_state = cx.use_local_with(|| false);
-        let jump_state = cx.use_local::<String>();
+        let mode_state = cx
+            .state()
+            .local_init(|| Some::<Arc<str>>(Arc::from(MODE_MEASURED)));
+        let tall_rows_state = cx.state().local_init(|| false);
+        let reversed_state = cx.state().local_init(|| false);
+        let index_keys_state = cx.state().local_init(|| false);
+        let visible_only_keys_state = cx.state().local_init(|| false);
+        let jump_state = cx.state().local::<String>();
 
-        let items = cx
-            .watch_model(&self.items)
+        let items = self
+            .items
+            .watch(cx)
             .layout()
             .value_or_else(|| Arc::new(Vec::new()));
         let len = items.len();
 
-        let mode: Arc<str> = mode_state
-            .watch(cx)
+        let mode: Arc<str> = cx
+            .state()
+            .watch(&mode_state)
             .layout()
             .value_or_else(|| Some(Arc::from(MODE_MEASURED)))
             .unwrap_or_else(|| Arc::from(MODE_MEASURED));
-        let tall_rows = tall_rows_state.watch(cx).layout().value_or(false);
-        let reversed = reversed_state.watch(cx).layout().value_or(false);
-        let index_keys = index_keys_state.watch(cx).layout().value_or(false);
-        let visible_only_keys = visible_only_keys_state.watch(cx).layout().value_or(false);
+        let tall_rows = cx.state().watch(&tall_rows_state).layout().value_or(false);
+        let reversed = cx.state().watch(&reversed_state).layout().value_or(false);
+        let index_keys = cx.state().watch(&index_keys_state).layout().value_or(false);
+        let visible_only_keys = cx
+            .state()
+            .watch(&visible_only_keys_state)
+            .layout()
+            .value_or(false);
 
         // Virtual lists cache `index -> key` mappings and anchor bookkeeping. If the key mapping is
         // driven by more than just the items collection (e.g. `reversed`, `index_keys`), bump the
@@ -227,7 +236,7 @@ impl View for VirtualListBasicsView {
             )
             .test_id(TEST_ID_LIST);
 
-        cx.on_action_notify_models::<act::RotateItems>({
+        cx.actions().models::<act::RotateItems>({
             let items = self.items.clone();
             move |models| {
                 models
@@ -243,7 +252,7 @@ impl View for VirtualListBasicsView {
             }
         });
 
-        cx.on_action_notify_models::<act::ScrollToTarget>({
+        cx.actions().models::<act::ScrollToTarget>({
             let items = self.items.clone();
             let reversed = reversed_state.clone_model();
             let scroll = self.scroll.clone();
@@ -266,7 +275,7 @@ impl View for VirtualListBasicsView {
             }
         });
 
-        cx.on_action_notify_models::<act::ScrollJump>({
+        cx.actions().models::<act::ScrollJump>({
             let jump = jump_state.clone_model();
             let scroll = self.scroll.clone();
             move |models| {
@@ -435,7 +444,8 @@ impl View for VirtualListBasicsView {
 fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-virtual-list-basics")
         .window("cookbook-virtual-list-basics", (1020.0, 720.0))
-        .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_view::<VirtualListBasicsView>()
+        .setup(fret_cookbook::install_cookbook_defaults)
+        .view::<VirtualListBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

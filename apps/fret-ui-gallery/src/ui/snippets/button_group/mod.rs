@@ -1,4 +1,5 @@
 pub mod accessibility;
+pub mod api_reference;
 pub mod button_group_select;
 pub mod demo;
 pub mod dropdown_menu;

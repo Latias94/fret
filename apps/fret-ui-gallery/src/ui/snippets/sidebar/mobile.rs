@@ -2,31 +2,8 @@ pub const SOURCE: &str = include_str!("mobile.rs");
 
 // region: example
 use fret_ui::element::SemanticsDecoration;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
-
-#[derive(Default, Clone)]
-struct SidebarModels {
-    open_mobile: Option<Model<bool>>,
-    selected: Option<Model<Arc<str>>>,
-}
-
-fn ensure_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> (Model<bool>, Model<Arc<str>>) {
-    let state = cx.with_state(SidebarModels::default, |st| st.clone());
-    match (state.open_mobile, state.selected) {
-        (Some(open_mobile), Some(selected)) => (open_mobile, selected),
-        _ => {
-            let models = cx.app.models_mut();
-            let open_mobile = models.insert(false);
-            let selected = models.insert(Arc::<str>::from("playground"));
-            cx.with_state(SidebarModels::default, |st| {
-                st.open_mobile = Some(open_mobile.clone());
-                st.selected = Some(selected.clone());
-            });
-            (open_mobile, selected)
-        }
-    }
-}
 
 fn resolve_selected<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -67,7 +44,8 @@ fn menu_button<H: UiHost>(
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (open_mobile, selected) = ensure_models(cx);
+    let open_mobile = cx.local_model_keyed("open_mobile", || false);
+    let selected = cx.local_model_keyed("selected", || Arc::<str>::from("playground"));
 
     let content = shadcn::SidebarProvider::new()
         .default_open(false)
@@ -97,12 +75,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             .on_activate(on_toggle_open_mobile)
                             .test_id("ui-gallery-sidebar-mobile-external-toggle")
                             .into_element(cx),
-                        shadcn::typography::muted(
+                        shadcn::raw::typography::muted(
                             cx,
                             "Forced mobile mode via SidebarProvider.is_mobile(true).",
                         ),
-                        shadcn::typography::muted(cx, format!("open_mobile={open_mobile_now}")),
-                        shadcn::typography::muted(cx, format!("selected={}", selected_value.as_ref())),
+                        shadcn::raw::typography::muted(cx, format!("open_mobile={open_mobile_now}")),
+                        shadcn::raw::typography::muted(cx, format!("selected={}", selected_value.as_ref())),
                     ]
                 })
                     .gap(Space::N2)

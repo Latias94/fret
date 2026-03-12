@@ -31,15 +31,19 @@ pub struct RendererCapabilities {
 
 impl RendererCapabilities {
     pub fn from_wgpu_context(ctx: &WgpuContext) -> Self {
-        let info = ctx.adapter.get_info();
+        Self::from_adapter_device(&ctx.adapter, &ctx.device)
+    }
+
+    pub fn from_adapter_device(adapter: &wgpu::Adapter, device: &wgpu::Device) -> Self {
+        let info = adapter.get_info();
 
         let streaming_images = StreamingImageCapabilities {
-            nv12_gpu_convert: supports_nv12_gpu_convert(&ctx.adapter),
+            nv12_gpu_convert: supports_nv12_gpu_convert(adapter),
             i420_gpu_convert: false,
-            external_texture_import: supports_external_texture_import(ctx),
+            external_texture_import: supports_external_texture_import(device),
         };
 
-        let sampled_materials_catalog_textures = supports_material_catalog_textures(&ctx.adapter);
+        let sampled_materials_catalog_textures = supports_material_catalog_textures(adapter);
 
         // Custom effects are currently implemented for wgpu backends. V2 requires a filterable
         // sampled texture for the user image input (we reuse the same conservative check as the
@@ -58,7 +62,7 @@ impl RendererCapabilities {
                 vendor: info.vendor,
                 device: info.device,
             },
-            max_texture_dimension_2d: ctx.device.limits().max_texture_dimension_2d,
+            max_texture_dimension_2d: device.limits().max_texture_dimension_2d,
             streaming_images,
             sampled_materials_catalog_textures,
             custom_effect_v1,
@@ -68,7 +72,7 @@ impl RendererCapabilities {
     }
 }
 
-fn supports_external_texture_import(ctx: &WgpuContext) -> bool {
+fn supports_external_texture_import(device: &wgpu::Device) -> bool {
     // WebGPU `ExternalTexture` is not implemented in wgpu's web backend as of wgpu 28
     // (`wgpu/src/backend/webgpu.rs` uses `unimplemented!("ExternalTexture not implemented for web")`),
     // so we conservatively report false on wasm32 for now.
@@ -76,9 +80,7 @@ fn supports_external_texture_import(ctx: &WgpuContext) -> bool {
         return false;
     }
 
-    ctx.device
-        .features()
-        .contains(wgpu::Features::EXTERNAL_TEXTURE)
+    device.features().contains(wgpu::Features::EXTERNAL_TEXTURE)
 }
 
 fn supports_nv12_gpu_convert(adapter: &wgpu::Adapter) -> bool {

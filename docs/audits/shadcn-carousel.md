@@ -21,6 +21,8 @@ Embla-inspired authoring outcomes.
 - Component code: `ecosystem/fret-ui-shadcn/src/carousel.rs`
 - Gallery page: `apps/fret-ui-gallery/src/ui/pages/carousel.rs`
 - Copyable usage snippet: `apps/fret-ui-gallery/src/ui/snippets/carousel/usage.rs`
+- Diagnostics suites: `tools/diag-scripts/suites/ui-gallery-carousel-docs-parity/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-carousel-embla-engine/suite.json`
 
 ## Audit checklist
 
@@ -36,6 +38,10 @@ Embla-inspired authoring outcomes.
 - Pass: responsive item sizing is representable via `CarouselItem::viewport_layout_breakpoint(...)`, covering shadcn `md:basis-*` / `lg:basis-*` outcomes.
 - Pass: spacing parity is modeled through `track_start_neg_margin` + `item_padding_start`, matching the upstream `-ml-*` + `pl-*` recipe.
 - Pass: orientation, loop, options, events, API snapshot/handle, and autoplay/wheel plugins are already covered by the existing gallery surface.
+
+### Gallery / docs parity
+
+- Pass: the gallery now mirrors the upstream docs structure first (`Demo` / `About` / `Usage` / `Examples` / `Options` / `API` / `Events` / `Plugins` / `RTL` / `API Reference`), while keeping engine/diagnostics follow-ups explicit (loop downgrade, focus watch, duration, expandable).
 
 ### Defer rationale
 

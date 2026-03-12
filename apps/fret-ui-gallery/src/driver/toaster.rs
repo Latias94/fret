@@ -1,7 +1,7 @@
 use fret_app::App;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Invalidation};
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::facade as shadcn;
 
 use crate::ui;
 

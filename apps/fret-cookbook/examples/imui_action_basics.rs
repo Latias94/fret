@@ -1,15 +1,16 @@
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::app::prelude::*;
 use fret_genui_core::catalog::CatalogActionV1;
 use fret_genui_core::render::{GenUiRuntime, RenderLimits, render_spec};
 use fret_genui_core::spec::SpecV1;
 use fret_genui_core::validate::ValidationMode;
 use fret_genui_shadcn::catalog::shadcn_catalog_v1;
 use fret_genui_shadcn::resolver::ShadcnResolver;
-use fret_runtime::{CommandId, CommandMeta, CommandScope};
+use fret_runtime::{CommandId, CommandMeta, CommandScope, Model};
 use fret_ui::CommandAvailability;
 use fret_ui_kit::imui::ButtonOptions;
+use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
 use serde_json::{Value, json};
 
 mod act {
@@ -28,7 +29,7 @@ struct ImUiActionBasicsView {
 }
 
 impl View for ImUiActionBasicsView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut App, _window: WindowId) -> Self {
         let genui_state = app.models_mut().insert(json!({}));
 
         let genui_spec: SpecV1 = serde_json::from_value(json!({
@@ -94,15 +95,17 @@ impl View for ImUiActionBasicsView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let count_state = cx.use_local::<u32>();
-        let count_value = count_state.watch(cx).layout().value_or(0);
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        let count_state = cx.state().local::<u32>();
+        let count_value = cx.state().watch(&count_state).layout().value_or(0);
 
-        cx.on_action_notify_local_update::<act::Inc, u32>(&count_state, |v| {
-            *v = v.saturating_add(1);
-        });
+        cx.actions()
+            .local_update::<act::Inc, u32>(&count_state, |v| {
+                *v = v.saturating_add(1);
+            });
 
-        cx.on_action_availability::<act::Inc>(|_host, _acx| CommandAvailability::Available);
+        cx.actions()
+            .availability::<act::Inc>(|_host, _acx| CommandAvailability::Available);
 
         ui::v_flex(|cx| {
             let genui_panel = cx.column(fret_ui::element::ColumnProps::default(), |cx| {
@@ -165,8 +168,9 @@ impl View for ImUiActionBasicsView {
 fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-imui-action-basics")
         .window("cookbook-imui-action-basics", (720.0, 420.0))
-        .install_app(fret_cookbook::install_cookbook_defaults)
+        .setup(fret_cookbook::install_cookbook_defaults)
         .command_palette(true)
-        .run_view::<ImUiActionBasicsView>()
+        .view::<ImUiActionBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

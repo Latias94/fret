@@ -168,34 +168,27 @@ pub fn container_breakpoints<H, T: Copy>(
 where
     H: UiHost,
 {
-    // Ensure each callsite gets its own stable element identity for hysteresis state.
-    cx.scope(|cx| {
-        let rect: Option<Rect> = cx.layout_query_bounds(region, invalidation);
-        let Some(width) = rect.map(|r| r.size.width) else {
+    let rect: Option<Rect> = cx.layout_query_bounds(region, invalidation);
+    let Some(width) = rect.map(|r| r.size.width) else {
+        return base;
+    };
+
+    cx.slot_state(ContainerBreakpointsState::default, |st| {
+        if !st.initialized {
+            st.active_index = container_breakpoints_init_active_index(width, breakpoints);
+            st.initialized = true;
+        }
+
+        st.active_index =
+            container_breakpoints_apply_hysteresis(width, breakpoints, hysteresis, st.active_index);
+
+        if st.active_index == 0 {
             return base;
-        };
-
-        cx.with_state(ContainerBreakpointsState::default, |st| {
-            if !st.initialized {
-                st.active_index = container_breakpoints_init_active_index(width, breakpoints);
-                st.initialized = true;
-            }
-
-            st.active_index = container_breakpoints_apply_hysteresis(
-                width,
-                breakpoints,
-                hysteresis,
-                st.active_index,
-            );
-
-            if st.active_index == 0 {
-                return base;
-            }
-            breakpoints
-                .get(st.active_index - 1)
-                .map(|(_, v)| *v)
-                .unwrap_or(base)
-        })
+        }
+        breakpoints
+            .get(st.active_index - 1)
+            .map(|(_, v)| *v)
+            .unwrap_or(base)
     })
 }
 
@@ -215,22 +208,20 @@ pub fn container_width_at_least<H: UiHost>(
     threshold: Px,
     hysteresis: ContainerQueryHysteresis,
 ) -> bool {
-    cx.scope(|cx| {
-        let rect: Option<Rect> = cx.layout_query_bounds(region, invalidation);
-        let Some(width) = rect.map(|r| r.size.width) else {
-            return default_when_unknown;
-        };
+    let rect: Option<Rect> = cx.layout_query_bounds(region, invalidation);
+    let Some(width) = rect.map(|r| r.size.width) else {
+        return default_when_unknown;
+    };
 
-        cx.with_state(ContainerWidthAtLeastState::default, |st| {
-            if !st.initialized {
-                st.active = container_width_at_least_init(width, threshold);
-                st.initialized = true;
-            }
+    cx.slot_state(ContainerWidthAtLeastState::default, |st| {
+        if !st.initialized {
+            st.active = container_width_at_least_init(width, threshold);
+            st.initialized = true;
+        }
 
-            st.active =
-                container_width_at_least_apply_hysteresis(width, threshold, hysteresis, st.active);
-            st.active
-        })
+        st.active =
+            container_width_at_least_apply_hysteresis(width, threshold, hysteresis, st.active);
+        st.active
     })
 }
 

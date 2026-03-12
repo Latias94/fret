@@ -1,4 +1,6 @@
 use super::*;
+use fret::UiCx;
+use fret_ui_kit::IntoUiElement;
 
 pub(in crate::ui) struct DocSection {
     pub title: &'static str,
@@ -16,12 +18,15 @@ pub(in crate::ui) struct DocSection {
 /// Layout contract for the docs scaffold's Preview/Code tab panels.
 ///
 /// - `Intrinsic` keeps tab panels content-sized by default (shrink-wrap).
-/// - `FillRemaining` allows `TabsContent` to fill remaining main-axis space when the tabs root is
-///   laid out under a definite-size budget.
+#[cfg_attr(
+    feature = "gallery-ai",
+    doc = "- `FillRemaining` allows `TabsContent` to fill remaining main-axis space when the tabs root is\n  laid out under a definite-size budget."
+)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub(in crate::ui) enum DocTabsSizing {
     #[default]
     Intrinsic,
+    #[cfg(feature = "gallery-ai")]
     FillRemaining,
 }
 
@@ -81,14 +86,6 @@ impl DocSection {
         self.code("rust", code)
     }
 
-    pub(in crate::ui) fn code_from_file(self, language: &'static str, file: &'static str) -> Self {
-        self.code(language, Arc::<str>::from(file))
-    }
-
-    pub(in crate::ui) fn code_rust_from_file(self, file: &'static str) -> Self {
-        self.code_from_file("rust", file)
-    }
-
     pub(in crate::ui) fn code_from_file_region(
         self,
         language: &'static str,
@@ -110,6 +107,7 @@ impl DocSection {
 
     /// Controls whether Preview/Code tabs should shrink-wrap their content (default) or fill any
     /// available main-axis space under definite-size ancestors (Tailwind-like `flex-1`).
+    #[cfg(feature = "gallery-ai")]
     pub(in crate::ui) fn tabs_sizing(mut self, sizing: DocTabsSizing) -> Self {
         self.tabs_sizing = sizing;
         self
@@ -132,7 +130,7 @@ impl DocSection {
 }
 
 pub(in crate::ui) fn render_doc_page(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     intro: Option<&'static str>,
     sections: Vec<DocSection>,
 ) -> AnyElement {
@@ -170,8 +168,9 @@ pub(in crate::ui) fn render_doc_page(
         .into_element(cx)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(in crate::ui) fn wrap_preview_page(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     intro: Option<&'static str>,
     section_title: &'static str,
     elements: Vec<AnyElement>,
@@ -197,12 +196,13 @@ pub(in crate::ui) fn wrap_preview_page(
 ///
 /// Prefer this over the legacy stack-based hstack helper for "control bars" that can contain many
 /// toggles/buttons.
+#[cfg(feature = "gallery-dev")]
 pub(in crate::ui) fn wrap_row(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     gap: Space,
     align: fret_ui::element::CrossAlign,
-    children: impl FnOnce(&mut ElementContext<'_, App>) -> Vec<AnyElement>,
+    children: impl FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,
 ) -> AnyElement {
     let gap = fret_ui_kit::MetricRef::space(gap).resolve(theme);
     let layout = decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0());
@@ -220,51 +220,14 @@ pub(in crate::ui) fn wrap_row(
     )
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(in crate::ui) fn wrap_controls_row(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     gap: Space,
-    children: impl FnOnce(&mut ElementContext<'_, App>) -> Vec<AnyElement>,
+    children: impl FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,
 ) -> AnyElement {
     wrap_row(
-        cx,
-        theme,
-        gap,
-        fret_ui::element::CrossAlign::Center,
-        children,
-    )
-}
-
-pub(in crate::ui) fn wrap_row_snapshot(
-    cx: &mut ElementContext<'_, App>,
-    theme: &fret_ui::ThemeSnapshot,
-    gap: Space,
-    align: fret_ui::element::CrossAlign,
-    children: impl FnOnce(&mut ElementContext<'_, App>) -> Vec<AnyElement>,
-) -> AnyElement {
-    let gap = fret_ui_kit::MetricRef::space(gap).resolve(theme);
-    let layout = decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0());
-    cx.flex(
-        fret_ui::element::FlexProps {
-            layout,
-            direction: fret_core::Axis::Horizontal,
-            gap: gap.into(),
-            padding: Edges::all(Px(0.0)).into(),
-            justify: fret_ui::element::MainAlign::Start,
-            align,
-            wrap: true,
-        },
-        children,
-    )
-}
-
-pub(in crate::ui) fn wrap_controls_row_snapshot(
-    cx: &mut ElementContext<'_, App>,
-    theme: &fret_ui::ThemeSnapshot,
-    gap: Space,
-    children: impl FnOnce(&mut ElementContext<'_, App>) -> Vec<AnyElement>,
-) -> AnyElement {
-    wrap_row_snapshot(
         cx,
         theme,
         gap,
@@ -335,7 +298,7 @@ fn muted_inline<H: UiHost>(
     })
 }
 
-pub(in crate::ui) fn notes<I, T>(cx: &mut ElementContext<'_, App>, lines: I) -> AnyElement
+pub(in crate::ui) fn notes<I, T>(cx: &mut UiCx<'_>, lines: I) -> AnyElement
 where
     I: IntoIterator<Item = T>,
     T: Into<Arc<str>>,
@@ -396,24 +359,13 @@ where
     .into_element(cx)
 }
 
-pub(in crate::ui) fn rtl(
-    cx: &mut ElementContext<'_, App>,
-    f: impl FnOnce(&mut ElementContext<'_, App>) -> AnyElement,
-) -> AnyElement {
-    fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        f,
-    )
-}
-
-pub(in crate::ui) fn icon(cx: &mut ElementContext<'_, App>, id: &'static str) -> AnyElement {
-    shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
+pub(in crate::ui) fn icon(cx: &mut UiCx<'_>, id: &'static str) -> AnyElement {
+    fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
 }
 
 #[allow(dead_code)]
 pub(in crate::ui) fn gap_card(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     title: &'static str,
     details: &'static str,
     test_id: &'static str,
@@ -430,7 +382,7 @@ pub(in crate::ui) fn gap_card(
     (title, alert_content)
 }
 
-fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyElement {
+fn render_section(cx: &mut UiCx<'_>, section: DocSection) -> AnyElement {
     let DocSection {
         title,
         title_test_id,
@@ -453,7 +405,7 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
 
     let shell = shell && title != "Notes";
     let preview = if shell {
-        demo_shell(cx, max_w, preview)
+        demo_shell(cx, max_w, preview).into_element(cx)
     } else {
         preview
     };
@@ -535,7 +487,14 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
     }
 }
 
-fn demo_shell(cx: &mut ElementContext<'_, App>, max_w: Px, body: AnyElement) -> AnyElement {
+fn demo_shell<B>(
+    cx: &mut UiCx<'_>,
+    max_w: Px,
+    body: B,
+) -> impl IntoUiElement<fret_app::App> + use<B>
+where
+    B: IntoUiElement<fret_app::App>,
+{
     let props = cx.with_theme(|theme| {
         decl_style::container_props(
             theme,
@@ -550,7 +509,7 @@ fn demo_shell(cx: &mut ElementContext<'_, App>, max_w: Px, body: AnyElement) -> 
                 .overflow_visible(),
         )
     });
-    cx.container(props, move |_cx| [body])
+    cx.container(props, move |cx| [body.into_element(cx)])
 }
 
 fn auto_tabs_test_id_prefix(title: &'static str, title_test_id: Option<&'static str>) -> Arc<str> {
@@ -595,19 +554,24 @@ fn slugify_for_test_id(input: &str) -> String {
 }
 
 fn preview_code_tabs(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     test_id_prefix: Option<&str>,
     preview: AnyElement,
     max_w: Px,
     code: DocCodeBlock,
-    tabs_sizing: DocTabsSizing,
+    #[cfg(feature = "gallery-ai")] tabs_sizing: DocTabsSizing,
+    #[cfg(not(feature = "gallery-ai"))] _tabs_sizing: DocTabsSizing,
     shell: bool,
 ) -> AnyElement {
     let code_shell = code_block_shell(cx, test_id_prefix, max_w, code, shell);
     let code_el = code_shell;
+    #[cfg(feature = "gallery-ai")]
+    let fill_remaining = matches!(tabs_sizing, DocTabsSizing::FillRemaining);
+    #[cfg(not(feature = "gallery-ai"))]
+    let fill_remaining = false;
 
     let base = shadcn::Tabs::uncontrolled(Some("preview"))
-        .content_fill_remaining(matches!(tabs_sizing, DocTabsSizing::FillRemaining))
+        .content_fill_remaining(fill_remaining)
         .refine_layout(LayoutRefinement::default().w_full().min_w_0());
 
     let tabs = if let Some(prefix) = test_id_prefix {
@@ -628,17 +592,8 @@ fn preview_code_tabs(
     tabs.into_element(cx)
 }
 
-pub(in crate::ui) fn preview_code_block(
-    cx: &mut ElementContext<'_, App>,
-    test_id_prefix: Option<&str>,
-    max_w: Px,
-    code: DocCodeBlock,
-) -> AnyElement {
-    code_block_shell(cx, test_id_prefix, max_w, code, true)
-}
-
 fn code_block_shell(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     test_id_prefix: Option<&str>,
     max_w: Px,
     block: DocCodeBlock,
@@ -766,7 +721,7 @@ fn slice_code_region(code: &str, region: &str) -> Option<String> {
     Some(joined)
 }
 
-fn section_title(cx: &mut ElementContext<'_, App>, title: &'static str) -> AnyElement {
+fn section_title(cx: &mut UiCx<'_>, title: &'static str) -> AnyElement {
     let theme = Theme::global(&*cx.app);
     let style = fret_core::TextStyle {
         font: fret_core::FontId::default(),

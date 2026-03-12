@@ -1,7 +1,8 @@
 use super::super::super::super::*;
+use fret::UiCx;
 
 pub(in crate::ui) fn preview_combobox(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     value: Model<Option<Arc<str>>>,
     open: Model<bool>,
     query: Model<String>,

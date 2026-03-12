@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     shadcn::Accordion::single_uncontrolled(Some("item-1"))
@@ -18,11 +18,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 "item-1",
                 shadcn::AccordionTrigger::new(vec![cx.text("Product Information")]),
                 shadcn::AccordionContent::new(vec![
-                    shadcn::typography::p(
+                    shadcn::raw::typography::p(
                         cx,
                         "Our flagship product combines cutting-edge technology with sleek design. Built with premium materials, it offers unparalleled performance and reliability.",
                     ),
-                    shadcn::typography::p(
+                    shadcn::raw::typography::p(
                         cx,
                         "Key features include advanced processing capabilities, and an intuitive user interface designed for both beginners and experts.",
                     ),
@@ -34,11 +34,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 shadcn::AccordionTrigger::new(vec![cx.text("Shipping Details")])
                     .test_id("ui-gallery-accordion-demo-shipping-trigger"),
                 shadcn::AccordionContent::new(vec![
-                    shadcn::typography::p(
+                    shadcn::raw::typography::p(
                         cx,
                         "We offer worldwide shipping through trusted courier partners. Standard delivery takes 3-5 business days, while express shipping ensures delivery within 1-2 business days.",
                     ),
-                    shadcn::typography::p(
+                    shadcn::raw::typography::p(
                         cx,
                         "All orders are carefully packaged and fully insured. Track your shipment in real-time through our dedicated tracking portal.",
                     ),
@@ -52,11 +52,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 shadcn::AccordionTrigger::new(vec![cx.text("Return Policy")])
                     .test_id("ui-gallery-accordion-demo-returns-trigger"),
                 shadcn::AccordionContent::new(vec![
-                    shadcn::typography::p(
+                    shadcn::raw::typography::p(
                         cx,
                         "We stand behind our products with a comprehensive 30-day return policy. If you're not completely satisfied, simply return the item in its original condition.",
                     ),
-                    shadcn::typography::p(
+                    shadcn::raw::typography::p(
                         cx,
                         "Our hassle-free return process includes free return shipping and full refunds processed within 48 hours of receiving the returned item.",
                     ),

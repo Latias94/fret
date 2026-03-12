@@ -1,4 +1,4 @@
-use fret::prelude::*;
+use fret::app::prelude::*;
 
 mod act {
     fret::actions!([ToggleBookmark = "cookbook.toggle_basics.toggle_bookmark.v1"]);
@@ -11,16 +11,17 @@ const TEST_ID_STATE: &str = "cookbook.toggle_basics.state";
 struct ToggleBasicsView;
 
 impl View for ToggleBasicsView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let pressed_state = cx.use_local_with(|| false);
-        let pressed = pressed_state.watch(cx).layout().value_or(false);
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        let pressed_state = cx.state().local_init(|| false);
+        let pressed = cx.state().watch(&pressed_state).layout().value_or(false);
         let status = if pressed { "Pressed" } else { "Not pressed" };
 
-        cx.on_action_notify_toggle_local_bool::<act::ToggleBookmark>(&pressed_state);
+        cx.actions()
+            .toggle_local_bool::<act::ToggleBookmark>(&pressed_state);
 
         let toggle = shadcn::Toggle::from_pressed(pressed)
             .action(act::ToggleBookmark)
@@ -66,9 +67,7 @@ impl View for ToggleBasicsView {
         .w_full()
         .max_w(Px(520.0));
 
-        fret_cookbook::scaffold::centered_page_background_ui(cx, TEST_ID_ROOT, card)
-            .into_element(cx)
-            .into()
+        fret_cookbook::scaffold::centered_page_background_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 
@@ -76,7 +75,8 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-toggle-basics")
         .window("cookbook-toggle-basics", (720.0, 420.0))
         .config_files(false)
-        .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_view::<ToggleBasicsView>()
+        .setup(fret_cookbook::install_cookbook_defaults)
+        .view::<ToggleBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

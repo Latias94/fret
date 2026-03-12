@@ -2,26 +2,10 @@ pub const SOURCE: &str = include_str!("align_item_with_trigger.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default)]
-struct Models {
-    align_item_with_trigger: Option<Model<bool>>,
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let align_item_with_trigger =
-        cx.with_state(Models::default, |st| st.align_item_with_trigger.clone());
-    let align_item_with_trigger = match align_item_with_trigger {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(true);
-            cx.with_state(Models::default, |st| {
-                st.align_item_with_trigger = Some(model.clone())
-            });
-            model
-        }
-    };
+    let align_item_with_trigger = cx.local_model(|| true);
 
     let align = cx
         .get_model_cloned(&align_item_with_trigger, Invalidation::Paint)
@@ -34,9 +18,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             |_cx| {
                 shadcn::SelectContent::new()
                     .position(if align {
-                        shadcn::select::SelectPosition::ItemAligned
+                        fret_ui_shadcn::select::SelectPosition::ItemAligned
                     } else {
-                        shadcn::select::SelectPosition::Popper
+                        fret_ui_shadcn::select::SelectPosition::Popper
                     })
                     .with_entries([shadcn::SelectGroup::new([
                         shadcn::SelectItem::new("apple", "Apple").into(),

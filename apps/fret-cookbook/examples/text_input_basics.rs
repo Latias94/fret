@@ -1,4 +1,4 @@
-use fret::prelude::*;
+use fret::app::prelude::*;
 use fret_app::{CommandMeta, CommandScope};
 use fret_ui::{CommandAvailability, element::SemanticsDecoration};
 
@@ -46,16 +46,24 @@ impl TextInputBasicsView {
 }
 
 impl View for TextInputBasicsView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let text_state = cx.use_local::<String>();
-        let submitted_count_state = cx.use_local::<u32>();
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        let text_state = cx.state().local::<String>();
+        let submitted_count_state = cx.state().local::<u32>();
 
-        let text = text_state.watch(cx).layout().value_or_else(String::new);
-        let submitted_count = submitted_count_state.watch(cx).layout().value_or(0);
+        let text = cx
+            .state()
+            .watch(&text_state)
+            .layout()
+            .value_or_else(String::new);
+        let submitted_count = cx
+            .state()
+            .watch(&submitted_count_state)
+            .layout()
+            .value_or(0);
 
         let text_len_chars = text.chars().count() as u32;
         let text_len = text_len_chars as f64;
@@ -89,7 +97,7 @@ impl View for TextInputBasicsView {
             .cancel_command(act::Clear.into())
             .test_id(TEST_ID_INPUT);
 
-        cx.on_action_notify_locals::<act::Submit>({
+        cx.actions().locals::<act::Submit>({
             let text_state = text_state.clone();
             let submitted_count_state = submitted_count_state.clone();
             move |tx| {
@@ -105,7 +113,7 @@ impl View for TextInputBasicsView {
             }
         });
 
-        cx.on_action_notify_locals::<act::Clear>({
+        cx.actions().locals::<act::Clear>({
             let text_state = text_state.clone();
             move |tx| {
                 let text = tx.value_or_else(&text_state, String::new);
@@ -117,7 +125,7 @@ impl View for TextInputBasicsView {
             }
         });
 
-        cx.on_action_availability::<act::Submit>({
+        cx.actions().availability::<act::Submit>({
             let text_state = text_state.clone();
             move |host, _acx| {
                 if TextInputBasicsView::has_text(host, &text_state) {
@@ -128,7 +136,7 @@ impl View for TextInputBasicsView {
             }
         });
 
-        cx.on_action_availability::<act::Clear>({
+        cx.actions().availability::<act::Clear>({
             let text_state = text_state.clone();
             move |host, _acx| {
                 if TextInputBasicsView::has_text(host, &text_state) {
@@ -191,8 +199,9 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-text-input-basics")
         .window("cookbook-text-input-basics", (640.0, 420.0))
         .config_files(false)
-        .install_app(install_commands)
-        .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_view::<TextInputBasicsView>()
+        .setup(install_commands)
+        .setup(fret_cookbook::install_cookbook_defaults)
+        .view::<TextInputBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

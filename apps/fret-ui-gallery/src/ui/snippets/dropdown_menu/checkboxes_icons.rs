@@ -2,79 +2,95 @@ pub const SOURCE: &str = include_str!("checkboxes_icons.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::ModelWatchExt as _;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default, Clone)]
-struct Models {
-    show_status_bar: Option<Model<bool>>,
-    show_activity_bar: Option<Model<bool>>,
-    show_panel: Option<Model<bool>>,
+struct AppearanceState {
+    show_status_bar: bool,
+    show_activity_bar: bool,
+    show_panel: bool,
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state = cx.with_state(Models::default, |st| st.clone());
+    let appearance = cx.local_model(|| AppearanceState {
+        show_status_bar: true,
+        show_activity_bar: false,
+        show_panel: false,
+    });
+    let appearance_now = cx
+        .watch_model(&appearance)
+        .layout()
+        .cloned()
+        .unwrap_or_default();
 
-    let show_status_bar = match state.show_status_bar {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(true);
-            cx.with_state(Models::default, |st| {
-                st.show_status_bar = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let show_activity_bar = match state.show_activity_bar {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.show_activity_bar = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let show_panel = match state.show_panel {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.show_panel = Some(model.clone()));
-            model
-        }
-    };
-
-    shadcn::DropdownMenu::new_controllable(cx, None, false).build_parts(
-        cx,
-        shadcn::DropdownMenuTrigger::build(
-            shadcn::Button::new("Open")
-                .variant(shadcn::ButtonVariant::Outline)
-                .test_id("ui-gallery-dropdown-menu-checkboxes-icons-trigger"),
-        ),
-        shadcn::DropdownMenuContent::new()
-            .align(shadcn::DropdownMenuAlign::Start)
-            .side_offset(Px(4.0))
-            // shadcn/ui docs: `DropdownMenuContent className="w-40"`.
-            .min_width(Px(160.0)),
-        |_cx| {
-            [shadcn::DropdownMenuGroup::new([
-                shadcn::DropdownMenuLabel::new("Appearance").into(),
-                shadcn::DropdownMenuCheckboxItem::new(show_status_bar.clone(), "Status Bar")
+    super::preview_frame_with(cx, |cx| {
+        shadcn::DropdownMenu::new_controllable(cx, None, false).build_parts(
+            cx,
+            shadcn::DropdownMenuTrigger::build(
+                shadcn::Button::new("Open")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-dropdown-menu-checkboxes-icons-trigger"),
+            ),
+            shadcn::DropdownMenuContent::new()
+                .align(shadcn::DropdownMenuAlign::Start)
+                .side_offset(Px(4.0))
+                // Keep the icon-augmented variant aligned with the upstream checkbox example width.
+                .min_width(Px(224.0)),
+            |_cx| {
+                [shadcn::DropdownMenuGroup::new([
+                    shadcn::DropdownMenuLabel::new("Appearance").into(),
+                    shadcn::DropdownMenuCheckboxItem::from_checked(
+                        appearance_now.show_status_bar,
+                        "Status Bar",
+                    )
+                    .on_checked_change({
+                        let appearance = appearance.clone();
+                        move |host, _action_cx, checked| {
+                            let _ = host
+                                .models_mut()
+                                .update(&appearance, |state| state.show_status_bar = checked);
+                        }
+                    })
                     .leading_icon(IconId::new_static("lucide.panel-top"))
                     .test_id("ui-gallery-dropdown-menu-checkboxes-icons-status-bar")
                     .into(),
-                shadcn::DropdownMenuCheckboxItem::new(show_activity_bar.clone(), "Activity Bar")
+                    shadcn::DropdownMenuCheckboxItem::from_checked(
+                        appearance_now.show_activity_bar,
+                        "Activity Bar",
+                    )
+                    .on_checked_change({
+                        let appearance = appearance.clone();
+                        move |host, _action_cx, checked| {
+                            let _ = host
+                                .models_mut()
+                                .update(&appearance, |state| state.show_activity_bar = checked);
+                        }
+                    })
                     .leading_icon(IconId::new_static("lucide.layout-dashboard"))
                     .disabled(true)
                     .test_id("ui-gallery-dropdown-menu-checkboxes-icons-activity-bar")
                     .into(),
-                shadcn::DropdownMenuCheckboxItem::new(show_panel.clone(), "Panel")
+                    shadcn::DropdownMenuCheckboxItem::from_checked(
+                        appearance_now.show_panel,
+                        "Panel",
+                    )
+                    .on_checked_change({
+                        let appearance = appearance.clone();
+                        move |host, _action_cx, checked| {
+                            let _ = host
+                                .models_mut()
+                                .update(&appearance, |state| state.show_panel = checked);
+                        }
+                    })
                     .leading_icon(IconId::new_static("lucide.panel-right"))
                     .into(),
-            ])
-            .into()]
-        },
-    )
+                ])
+                .into()]
+            },
+        )
+    })
+    .into_element(cx)
 }
 // endregion: example

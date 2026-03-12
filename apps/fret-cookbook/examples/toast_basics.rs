@@ -1,4 +1,4 @@
-use fret::prelude::*;
+use fret::app::prelude::*;
 use fret_ui::CommandAvailability;
 
 mod act {
@@ -17,11 +17,11 @@ const TEST_ID_DISMISS_ALL: &str = "cookbook.toast_basics.dismiss_all";
 struct ToastBasicsView;
 
 impl View for ToastBasicsView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         // Toast actions stay on the advanced helper because Sonner dispatch is a host-owned
         // imperative integration: the handler needs `UiActionHost` + window, and the default
         // model/transient teaching paths do not expose that host surface directly.
@@ -128,7 +128,8 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-toast-basics")
         .window("cookbook-toast-basics", (720.0, 360.0))
         .config_files(false)
-        .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_view::<ToastBasicsView>()
+        .setup(fret_cookbook::install_cookbook_defaults)
+        .view::<ToastBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

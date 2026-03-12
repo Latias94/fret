@@ -1,10 +1,11 @@
 pub const SOURCE: &str = include_str!("avatar_group.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let invite_icon = shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.user-plus"));
+    let invite_icon =
+        fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.user-plus"));
     let invite_text = cx.text("Invite Members");
     let invite_button = shadcn::Button::new("Invite Members")
         .size(shadcn::ButtonSize::Sm)
@@ -29,16 +30,16 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .into_element(cx);
 
     shadcn::Empty::new([
-        shadcn::empty::EmptyHeader::new([
-            shadcn::empty::EmptyMedia::new([avatars]).into_element(cx),
-            shadcn::empty::EmptyTitle::new("No Team Members").into_element(cx),
-            shadcn::empty::EmptyDescription::new(
+        fret_ui_shadcn::empty::EmptyHeader::new([
+            fret_ui_shadcn::empty::EmptyMedia::new([avatars]).into_element(cx),
+            fret_ui_shadcn::empty::EmptyTitle::new("No Team Members").into_element(cx),
+            fret_ui_shadcn::empty::EmptyDescription::new(
                 "Invite collaborators to start working on this project together.",
             )
             .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::empty::EmptyContent::new([invite_button]).into_element(cx),
+        fret_ui_shadcn::empty::EmptyContent::new([invite_button]).into_element(cx),
     ])
     .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
     .into_element(cx)

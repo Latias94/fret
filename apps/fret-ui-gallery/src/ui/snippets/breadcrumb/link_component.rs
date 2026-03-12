@@ -1,26 +1,50 @@
 pub const SOURCE: &str = include_str!("link_component.rs");
 
 // region: example
-use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-use std::sync::Arc;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use shadcn::raw::breadcrumb::primitives as bc;
+
+const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let trunc_layout = LayoutRefinement::default().max_w(Px(112.0));
-
-    shadcn::Breadcrumb::new()
-        .items([
-            shadcn::BreadcrumbItem::new("Home")
-                .href("https://example.com")
-                // Keep this example deterministic under automation by default.
-                // Remove to allow `Effect::OpenUrl` fallback.
-                .on_activate(Arc::new(|_host, _acx, _reason| {}))
-                .truncate(true)
-                .refine_layout(trunc_layout),
-            shadcn::BreadcrumbItem::new("Components"),
-            shadcn::BreadcrumbItem::new("Breadcrumb"),
-        ])
-        .into_element(cx)
+    bc::Breadcrumb::new()
+        .into_element(cx, |cx| {
+            vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
+                vec![
+                    bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                        vec![
+                            bc::BreadcrumbLink::new("Home")
+                                .href("https://example.com")
+                                // Keep the gallery deterministic while preserving link semantics.
+                                .on_click(CMD_APP_OPEN)
+                                // This is the explicit Fret alternative to upstream `render` /
+                                // `asChild`: keep the link surface typed, but allow custom inline
+                                // children for the visual content.
+                                .children([ui::text("Home").into_element(cx)])
+                                .into_element(cx),
+                        ]
+                    }),
+                    bc::BreadcrumbSeparator::new().into_element(cx),
+                    bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                        vec![
+                            bc::BreadcrumbLink::new("Components")
+                                .href("https://example.com/components")
+                                .on_click(CMD_APP_OPEN)
+                                .children([ui::text("Components").into_element(cx)])
+                                .into_element(cx),
+                        ]
+                    }),
+                    bc::BreadcrumbSeparator::new().into_element(cx),
+                    bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                        vec![
+                            bc::BreadcrumbPage::new("Breadcrumb")
+                                .children([ui::text("Breadcrumb").into_element(cx)])
+                                .into_element(cx),
+                        ]
+                    }),
+                ]
+            })]
+        })
         .test_id("ui-gallery-breadcrumb-link")
 }
 // endregion: example

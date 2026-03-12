@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("usage.rs");
 // region: example
 use fret_core::Px;
 use fret_ui_shadcn::accordion::composable as acc;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -11,10 +11,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .trigger(acc::AccordionTrigger::new(vec![
             cx.text("Is it accessible?"),
         ]))
-        .content(acc::AccordionContent::new(vec![shadcn::typography::p(
-            cx,
-            "Yes. It adheres to the WAI-ARIA design pattern.",
-        )]));
+        .content(acc::AccordionContent::new(vec![
+            shadcn::raw::typography::p(cx, "Yes. It adheres to the WAI-ARIA design pattern."),
+        ]));
 
     acc::AccordionRoot::single_uncontrolled(Some("item-1"))
         .collapsible(true)

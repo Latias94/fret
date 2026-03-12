@@ -28,7 +28,7 @@ Plan:
 
 - Keep new responsive additions on the container query path defined in ADR 0231:
   - ADR: `docs/adr/0231-container-queries-and-frame-lagged-layout-queries-v1.md`
-  - Workstream: `docs/workstreams/container-queries-v1.md`
+  - Workstream: `docs/workstreams/container-queries-v1/container-queries-v1.md`
 
 ## Common Diagnostics
 

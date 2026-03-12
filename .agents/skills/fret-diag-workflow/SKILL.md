@@ -33,11 +33,13 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
 - Is the task about correctness repro, triage, or perf attribution?
 - Do we need a new script, or are we running an existing promoted script/suite?
 - What stable `test_id` selectors or semantics selectors already exist?
-- What artifact form is needed: packed bundle, AI packet, screenshots, or bounded sidecars only?
+- What artifact form is needed: packed bundle, AI packet, screenshots, layout sidecars, or bounded sidecars only?
+- Is this a layout-ownership/clipping issue where `capture_layout_sidecar` should be part of the first repro?
 
 Defaults if unclear:
 
 - Start with a smallest deterministic script, run it with `--launch`, and leave a bounded share artifact plus a gate.
+- If the issue is on a first-party shadcn page, start from the existing UI Gallery script corpus and snippet/page `test_id` surfaces before inventing a new target.
 
 ## Workflow
 
@@ -65,12 +67,18 @@ Recommended first command:
 - Prefer schema v2 for new scripts.
 - Use stable `test_id` selectors rather than pixel coordinates.
 - Keep scripts minimal: one scenario, one or two assertions, at least one `capture_bundle`.
+- For first-party component pages, prefer the existing UI Gallery corpus under `tools/diag-scripts/ui-gallery/<family>/`.
+- If the failure is about width/flex/min-size ownership, clipping, or viewport negotiation, add `capture_layout_sidecar` near the interesting step.
 - Capability-specific authoring guidance stays in `references/launch-and-artifact-hygiene.md`.
 
 ### 3) Run and share bounded artifacts
 
 - Prefer packed, bounded outputs over raw `bundle.json`.
 - Use AI packets / sidecars when sharing in chat or review loops.
+- Pick the smallest artifact that explains the failure:
+  - `capture_layout_sidecar` for layout-tree ownership
+  - `capture_screenshot` for chrome/clipping/focus-visible evidence
+  - `capture_bundle` for interaction state machines and shareable context
 - Use `references/launch-and-artifact-hygiene.md` for session hygiene, artifact-size hygiene, and the recommended run/share flow.
 
 ### 4) Triage with bounded queries
@@ -114,6 +122,9 @@ Ship a result that is reviewable and reusable:
 - Evidence-first triage: `references/evidence-triage.md`
 - Web/WASM workflow: `references/web-runner.md`
 - Perf handoff: `references/perf-handoff.md`
+- UI Gallery script corpus: `tools/diag-scripts/ui-gallery/`
+- UI Gallery geometry/test-id helpers: `apps/fret-ui-gallery/src/driver/render_flow.rs`
+- Layout sidecar writer: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps.rs`
 - Conformance playbooks:
   - `references/select-conformance.md`
   - `references/combobox-conformance.md`
@@ -137,6 +148,7 @@ Ship a result that is reviewable and reusable:
 - Grepping or opening raw `bundle.json` by default.
 - Reusing the same output directory across concurrent runs.
 - Leaving no stable selectors behind, so scripts rot immediately.
+- Jumping straight to screenshots when a layout sidecar would explain width/flex/clipping ownership faster.
 - Treating CI or large artifacts as the first place to discover what happened.
 
 ## Troubleshooting

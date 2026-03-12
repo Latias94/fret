@@ -1,16 +1,16 @@
 pub const SOURCE: &str = include_str!("variants.rs");
 
 // region: example
-use fret_app::App;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret::UiCx;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let max_w_md = LayoutRefinement::default()
         .w_full()
         .min_w_0()
         .max_w(MetricRef::Px(Px(448.0)));
 
-    let button = |cx: &mut ElementContext<'_, App>| {
+    let button = |cx: &mut UiCx<'_>| {
         shadcn::Button::new("Open")
             .variant(shadcn::ButtonVariant::Outline)
             .size(shadcn::ButtonSize::Sm)

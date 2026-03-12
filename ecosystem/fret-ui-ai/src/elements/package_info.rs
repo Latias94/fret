@@ -70,16 +70,10 @@ impl std::fmt::Debug for PackageInfoController {
     }
 }
 
-#[derive(Debug, Default, Clone)]
-struct PackageInfoProviderState {
-    controller: Option<PackageInfoController>,
-}
-
 pub fn use_package_info_controller<H: UiHost>(
     cx: &ElementContext<'_, H>,
 ) -> Option<PackageInfoController> {
-    cx.inherited_state::<PackageInfoProviderState>()
-        .and_then(|st| st.controller.clone())
+    cx.provided::<PackageInfoController>().cloned()
 }
 
 fn muted_fg(theme: &Theme) -> Color {
@@ -350,12 +344,7 @@ impl PackageInfo {
 
         let root = cx.container(
             decl_style::container_props(&theme, chrome, layout),
-            move |cx| {
-                cx.with_state(PackageInfoProviderState::default, |st| {
-                    st.controller = Some(controller.clone());
-                });
-                children(cx, controller)
-            },
+            move |cx| cx.provide(controller.clone(), |cx| children(cx, controller.clone())),
         );
 
         let Some(test_id) = test_id_root else {
@@ -961,7 +950,7 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
-    use fret_ui::element::ElementKind;
+    use fret_ui::element::{AnyElement, ElementKind};
     use fret_ui::{Theme, ThemeConfig};
 
     fn bounds() -> Rect {
@@ -969,6 +958,39 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(720.0), Px(480.0)),
         )
+    }
+
+    fn find_text_by_content<'a>(element: &'a AnyElement, content: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &element.kind
+            && props.text.as_ref() == content
+        {
+            return Some(element);
+        }
+
+        element
+            .children
+            .iter()
+            .find_map(|child| find_text_by_content(child, content))
+    }
+
+    #[test]
+    fn package_info_root_provides_controller_to_default_parts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                PackageInfo::new("serde")
+                    .current_version("1.0.0")
+                    .new_version("2.0.0")
+                    .change_type(PackageInfoChangeKind::Major)
+                    .into_element(cx)
+            });
+
+        assert!(find_text_by_content(&element, "serde").is_some());
+        assert!(find_text_by_content(&element, "1.0.0").is_some());
+        assert!(find_text_by_content(&element, "2.0.0").is_some());
+        assert!(find_text_by_content(&element, "Major").is_some());
     }
 
     #[test]

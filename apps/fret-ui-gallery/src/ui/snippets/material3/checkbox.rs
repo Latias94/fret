@@ -5,21 +5,8 @@ use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-#[derive(Default)]
-struct Models {
-    tristate: Option<Model<Option<bool>>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, checked: Model<bool>) -> AnyElement {
-    let tristate = cx.with_state(Models::default, |st| st.tristate.clone());
-    let tristate = match tristate {
-        Some(m) => m,
-        None => {
-            let m = cx.app.models_mut().insert(None::<bool>);
-            cx.with_state(Models::default, |st| st.tristate = Some(m.clone()));
-            m
-        }
-    };
+    let tristate = cx.local_model_keyed("tristate", || None::<bool>);
 
     let value = cx
         .get_model_copied(&checked, Invalidation::Layout)

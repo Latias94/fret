@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("nested_scroll_routing.rs");
 use fret_core::{Point, Px};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui::scroll::ScrollHandle;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -24,7 +24,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             }
         }
 
-        let handles = cx.with_state(NestedScrollRoutingHandles::default, |h| h.clone());
+        let handles = cx.slot_state(NestedScrollRoutingHandles::default, |h| h.clone());
         let outer_handle = handles.outer.clone();
         let inner_handle = handles.inner.clone();
 
@@ -49,7 +49,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         .refine_style(ChromeRefinement::default().rounded(Radius::Md))
                         .refine_layout(LayoutRefinement::default().w_px(Px(160.0)).h_px(Px(96.0)))
                         .into_element(cx);
-                    let caption = shadcn::typography::muted(cx, format!("Item {i}"));
+                    let caption = shadcn::raw::typography::muted(cx, format!("Item {i}"));
                     ui::v_stack(|_cx| vec![card, caption])
                         .gap(Space::N2)
                         .items_start()

@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("spacing.rs");
 use fret_core::Color;
 use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_shadcn::toggle_group::ToggleGroupStyle;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn accent_item<H: UiHost>(
     cx: &mut ElementContext<'_, H>,

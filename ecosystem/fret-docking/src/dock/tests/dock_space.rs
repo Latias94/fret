@@ -711,3 +711,145 @@ fn render_and_bind_panels_falls_back_to_placeholder_for_missing_ui() {
         "expected a placeholder node for a non-viewport panel with missing UI"
     );
 }
+
+#[test]
+fn dock_panel_registry_builder_dispatches_factory_by_panel_kind() {
+    let window = AppWindowId::default();
+    let panel = PanelKey::new("demo.factory.controls");
+
+    struct CachedRetainedPanelFactory {
+        kind: fret_core::PanelKind,
+        nodes: Mutex<std::collections::HashMap<PanelKey, NodeId>>,
+    }
+
+    impl CachedRetainedPanelFactory {
+        fn new(kind: &str) -> Self {
+            Self {
+                kind: fret_core::PanelKind::new(kind),
+                nodes: Mutex::new(std::collections::HashMap::new()),
+            }
+        }
+    }
+
+    impl DockPanelFactory<TestHost> for CachedRetainedPanelFactory {
+        fn panel_kind(&self) -> fret_core::PanelKind {
+            self.kind.clone()
+        }
+
+        fn build_panel(
+            &self,
+            panel: &PanelKey,
+            cx: &mut crate::DockPanelFactoryCx<'_, TestHost>,
+        ) -> Option<NodeId> {
+            let mut nodes = self.nodes.lock().expect("factory mutex");
+            if let Some(node) = nodes.get(panel).copied() {
+                return Some(node);
+            }
+            let node = cx.ui.create_node_retained(FocusOnDown);
+            nodes.insert(panel.clone(), node);
+            Some(node)
+        }
+    }
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+    let dock_space = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(dock_space);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+
+    let mut registry = DockPanelRegistryBuilder::<TestHost>::new();
+    registry.register(CachedRetainedPanelFactory::new("demo.factory.controls"));
+    app.with_global_mut(
+        DockPanelRegistryService::<TestHost>::default,
+        |svc, _app| {
+            svc.set(registry.build_arc());
+        },
+    );
+
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        dock.ensure_panel(&panel, || crate::DockPanel {
+            title: "Controls".to_string(),
+            color: fret_core::Color::TRANSPARENT,
+            viewport: None,
+        });
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel.clone()],
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs);
+    });
+
+    let mut services = FakeTextService;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(220.0), Px(140.0)),
+    );
+
+    render_and_bind_dock_panels(&mut ui, &mut app, &mut services, window, bounds, dock_space);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let node = app
+        .global::<DockPanelContentService>()
+        .and_then(|svc| svc.get(window, &panel))
+        .expect("expected factory-backed panel node to be bound");
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(60.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        ui.focus(),
+        Some(node),
+        "expected factory-backed panel node to be focusable and receive pointer events"
+    );
+}
+
+#[test]
+fn dock_panel_registry_builder_rejects_duplicate_panel_kind() {
+    struct NullFactory {
+        kind: fret_core::PanelKind,
+    }
+
+    impl NullFactory {
+        fn new(kind: &str) -> Self {
+            Self {
+                kind: fret_core::PanelKind::new(kind),
+            }
+        }
+    }
+
+    impl DockPanelFactory<TestHost> for NullFactory {
+        fn panel_kind(&self) -> fret_core::PanelKind {
+            self.kind.clone()
+        }
+
+        fn build_panel(
+            &self,
+            _panel: &PanelKey,
+            _cx: &mut crate::DockPanelFactoryCx<'_, TestHost>,
+        ) -> Option<NodeId> {
+            None
+        }
+    }
+
+    let mut builder = DockPanelRegistryBuilder::<TestHost>::new();
+    builder.register(NullFactory::new("demo.duplicate"));
+    let err = match builder.try_register(NullFactory::new("demo.duplicate")) {
+        Ok(_) => panic!("expected duplicate panel kinds to be rejected"),
+        Err(err) => err,
+    };
+
+    assert_eq!(err.kind, fret_core::PanelKind::new("demo.duplicate"));
+}

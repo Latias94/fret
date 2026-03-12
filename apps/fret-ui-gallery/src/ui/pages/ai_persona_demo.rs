@@ -2,8 +2,10 @@ use super::super::*;
 
 use crate::ui::doc_layout::DocSection;
 use crate::ui::snippets::ai as snippets;
+use fret::{UiChild, UiCx};
+use fret_ui_kit::ui::UiElementSinkExt as _;
 
-fn states_notes(cx: &mut ElementContext<'_, App>) -> AnyElement {
+fn states_notes(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     crate::ui::doc_layout::notes(
         cx,
         [
@@ -16,7 +18,7 @@ fn states_notes(cx: &mut ElementContext<'_, App>) -> AnyElement {
     )
 }
 
-fn props_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
+fn props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let row = |api: &'static str, inputs: &'static str, notes: &'static str| {
         shadcn::TableRow::build(3, move |cx, out| {
             out.push_ui(cx, shadcn::TableCell::build(ui::text(api)));
@@ -54,7 +56,7 @@ fn props_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .into_element(cx)
 }
 
-fn lifecycle_notes(cx: &mut ElementContext<'_, App>) -> AnyElement {
+fn lifecycle_notes(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     crate::ui::doc_layout::notes(
         cx,
         [
@@ -65,10 +67,7 @@ fn lifecycle_notes(cx: &mut ElementContext<'_, App>) -> AnyElement {
     )
 }
 
-pub(super) fn preview_ai_persona_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
+pub(super) fn preview_ai_persona_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let interactive = snippets::persona_demo::render(cx);
     let variants = snippets::persona_variants::render(cx);
     let basic = snippets::persona_basic::render(cx);
@@ -76,8 +75,11 @@ pub(super) fn preview_ai_persona_demo(
     let custom_styling = snippets::persona_custom_styling::render(cx);
     let custom_visual = snippets::persona_custom_visual::render(cx);
     let states = states_notes(cx);
+    let states = states.into_element(cx);
     let props = props_table(cx);
+    let props = props.into_element(cx);
     let lifecycle = lifecycle_notes(cx);
+    let lifecycle = lifecycle.into_element(cx);
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,

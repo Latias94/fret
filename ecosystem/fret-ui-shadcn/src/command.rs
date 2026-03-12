@@ -2,31 +2,32 @@ use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use std::marker::PhantomData;
 use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
-    AttributedText, Color, Corners, Edges, FontId, FontWeight, KeyCode, NodeId, Px, SemanticsRole,
-    TextAlign, TextOverflow, TextSpan, TextStyle, TextWrap,
+    Color, Corners, Edges, FontId, FontWeight, KeyCode, NodeId, Px, SemanticsRole, TextStyle,
 };
 use fret_icons::{IconId, ids};
+use fret_runtime::CommandId;
+use fret_runtime::Model;
 use fret_runtime::WindowCommandGatingSnapshot;
-use fret_runtime::{
-    CommandId, InputContext, InputDispatchPhase, KeymapService, Platform, PlatformCapabilities,
-    format_sequence,
-};
-use fret_runtime::{CommandMeta, Model};
 use fret_ui::action::ActivateReason;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
     PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, RowProps,
-    SemanticsDecoration, SizeStyle, StyledTextProps, TextInputProps,
+    SemanticsDecoration, SizeStyle, TextInputProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, TextInputStyle, Theme, ThemeSnapshot, UiHost};
 use fret_ui_headless::cmdk_score;
 use fret_ui_headless::cmdk_selection;
+use fret_ui_kit::command::{
+    CommandCatalogEntry as UiKitCommandCatalogEntry,
+    CommandCatalogGroup as UiKitCommandCatalogGroup, CommandCatalogItem as UiKitCommandCatalogItem,
+};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_ui_kit::declarative::current_color;
@@ -39,10 +40,13 @@ use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::typography;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, Radius, Space, ui,
+};
 
 use crate::layout as shadcn_layout;
 use crate::rtl;
+use crate::shortcut_display::shortcut_text_element;
 use crate::{Dialog, DialogContent, ScrollArea};
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
@@ -85,90 +89,13 @@ fn command_dialog_open_change_reason_from_dismiss_reason(
     }
 }
 
-#[derive(Default)]
-struct CommandDialogState {
-    open_change_reason: Option<Arc<std::sync::Mutex<Option<CommandDialogOpenChangeReason>>>>,
-    pending_dispatch: Option<Arc<std::sync::Mutex<Option<PendingCommandDispatch>>>>,
-    close_complete: Option<Arc<std::sync::Mutex<bool>>>,
-}
-
 #[derive(Debug, Clone)]
 struct PendingCommandDispatch {
     command: CommandId,
     reason: ActivateReason,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
-pub struct CommandCatalogOptions {
-    /// When `true`, commands that fail their `when` gating are excluded from the palette instead of
-    /// being rendered as disabled rows.
-    pub hide_disabled: bool,
-}
-
-pub fn command_palette_input_context<H: UiHost>(app: &H) -> InputContext {
-    let caps = app
-        .global::<PlatformCapabilities>()
-        .cloned()
-        .unwrap_or_default();
-    InputContext {
-        platform: Platform::current(),
-        caps,
-        // Best-effort: the command palette itself is typically presented in a modal dialog.
-        ui_has_modal: true,
-        window_arbitration: None,
-        // Best-effort: treat the palette as a global discovery surface, not a text-editing scope.
-        focus_is_text_input: false,
-        text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
-        edit_can_undo: true,
-        edit_can_redo: true,
-        router_can_back: false,
-        router_can_forward: false,
-        dispatch_phase: InputDispatchPhase::Bubble,
-    }
-}
-
-fn command_item_from_meta_with_gating<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    gating: &WindowCommandGatingSnapshot,
-    id: &CommandId,
-    meta: &CommandMeta,
-) -> CommandItem {
-    let input_ctx = gating.input_ctx();
-
-    let mut keywords: Vec<Arc<str>> = meta.keywords.clone();
-    keywords.push(Arc::from(id.as_str()));
-    if let Some(category) = meta.category.as_ref() {
-        keywords.push(category.clone());
-    }
-    if let Some(description) = meta.description.as_ref() {
-        keywords.push(description.clone());
-    }
-
-    let shortcut: Option<Arc<str>> = cx
-        .app
-        .global::<KeymapService>()
-        .and_then(|svc| {
-            svc.keymap
-                .display_shortcut_for_command_sequence_with_key_contexts(
-                    input_ctx,
-                    gating.key_contexts(),
-                    id,
-                )
-        })
-        .map(|seq| Arc::from(format_sequence(input_ctx.platform, &seq)));
-
-    let disabled = !gating.is_enabled_for_command(id, meta);
-
-    let mut item = CommandItem::new(meta.title.clone())
-        .value(Arc::from(id.as_str()))
-        .keywords(keywords)
-        .disabled(disabled)
-        .on_select(id.clone());
-    if let Some(shortcut) = shortcut {
-        item = item.shortcut(shortcut);
-    }
-    item
-}
+pub use fret_ui_kit::command::CommandCatalogOptions;
 
 pub fn command_entries_from_host_commands<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -180,22 +107,10 @@ pub fn command_entries_from_host_commands_with_options<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     options: CommandCatalogOptions,
 ) -> Vec<CommandEntry> {
-    let fallback_input_ctx = command_palette_input_context(&*cx.app);
-    let snapshot = fret_runtime::best_effort_snapshot_for_window_with_input_ctx_fallback(
-        &*cx.app,
-        cx.window,
-        fallback_input_ctx,
-    );
-
-    // Best-effort: treat the command palette as a global discovery surface, even when the window
-    // input context reflects focus in the palette input itself.
-    let mut input_ctx = snapshot.input_ctx().clone();
-    input_ctx.ui_has_modal = true;
-    input_ctx.focus_is_text_input = false;
-    input_ctx.dispatch_phase = InputDispatchPhase::Bubble;
-
-    let gating = snapshot.with_input_ctx(input_ctx);
-    command_entries_from_host_commands_with_gating_snapshot(cx, options, &gating)
+    fret_ui_kit::command::command_catalog_entries_from_host_commands_with_options(cx, options)
+        .into_iter()
+        .map(Into::into)
+        .collect()
 }
 
 pub fn command_entries_from_host_commands_with_gating_snapshot<H: UiHost>(
@@ -203,51 +118,12 @@ pub fn command_entries_from_host_commands_with_gating_snapshot<H: UiHost>(
     options: CommandCatalogOptions,
     gating: &WindowCommandGatingSnapshot,
 ) -> Vec<CommandEntry> {
-    let mut commands: Vec<(CommandId, CommandMeta)> = cx
-        .app
-        .commands()
-        .iter()
-        .filter_map(|(id, meta)| (!meta.hidden).then_some((id.clone(), meta.clone())))
-        .collect();
-
-    commands.sort_by(|(a_id, a_meta), (b_id, b_meta)| {
-        match (&a_meta.category, &b_meta.category) {
-            (None, Some(_)) => std::cmp::Ordering::Less,
-            (Some(_), None) => std::cmp::Ordering::Greater,
-            (Some(a), Some(b)) => a.as_ref().cmp(b.as_ref()),
-            (None, None) => std::cmp::Ordering::Equal,
-        }
-        .then_with(|| a_meta.title.as_ref().cmp(b_meta.title.as_ref()))
-        .then_with(|| a_id.as_str().cmp(b_id.as_str()))
-    });
-
-    let mut root_items: Vec<CommandItem> = Vec::new();
-    let mut groups: std::collections::BTreeMap<Arc<str>, Vec<CommandItem>> =
-        std::collections::BTreeMap::new();
-
-    for (id, meta) in &commands {
-        let disabled = !gating.is_enabled_for_command(id, meta);
-        if disabled && options.hide_disabled {
-            continue;
-        }
-
-        let item = command_item_from_meta_with_gating(cx, gating, id, meta);
-
-        if let Some(category) = meta.category.clone() {
-            groups.entry(category).or_default().push(item);
-        } else {
-            root_items.push(item);
-        }
-    }
-
-    let mut entries: Vec<CommandEntry> = Vec::new();
-    entries.extend(root_items.into_iter().map(CommandEntry::Item));
-    entries.extend(
-        groups.into_iter().map(|(category, items)| {
-            CommandEntry::Group(CommandGroup::new(items).heading(category))
-        }),
-    );
-    entries
+    fret_ui_kit::command::command_catalog_entries_from_host_commands_with_gating_snapshot(
+        cx, options, gating,
+    )
+    .into_iter()
+    .map(Into::into)
+    .collect()
 }
 
 fn border(theme: &ThemeSnapshot) -> Color {
@@ -533,70 +409,6 @@ pub(crate) fn shortcut_text_style(theme: &ThemeSnapshot) -> TextStyle {
     style
 }
 
-fn shortcut_is_symbol_char(ch: char) -> bool {
-    matches!(ch, '⌘' | '⌥' | '⌃' | '⇧')
-}
-
-fn shortcut_needs_symbol_font(text: &str) -> bool {
-    // shadcn command demo uses symbols like "⌘" directly. Our default UI font may not include
-    // these glyphs on Windows, leading to tofu squares. Prefer a symbol-capable UI font there.
-    text.chars().any(shortcut_is_symbol_char)
-}
-
-fn shortcut_symbol_font_for_platform(platform: Platform) -> Option<FontId> {
-    if platform == Platform::Windows {
-        // "Segoe UI Symbol" is available on standard Windows installs and covers common shortcut
-        // glyphs (e.g. ⌘ ⌥ ⌃ ⇧).
-        return Some(FontId::family("Segoe UI Symbol"));
-    }
-
-    None
-}
-
-fn shortcut_attributed_text_with_symbol_fallback(
-    text: Arc<str>,
-    symbol_font: FontId,
-) -> AttributedText {
-    if text.is_empty() {
-        return AttributedText::new(text, Arc::<[TextSpan]>::from([]));
-    }
-
-    let mut spans: Vec<TextSpan> = Vec::new();
-    let mut run_start = 0usize;
-    let mut run_is_symbol: Option<bool> = None;
-
-    for (idx, ch) in text.char_indices() {
-        let is_symbol = shortcut_is_symbol_char(ch);
-        match run_is_symbol {
-            None => {
-                run_start = idx;
-                run_is_symbol = Some(is_symbol);
-            }
-            Some(prev) if prev != is_symbol => {
-                let mut span = TextSpan::new(idx.saturating_sub(run_start));
-                if prev {
-                    span.shaping.font = Some(symbol_font.clone());
-                }
-                spans.push(span);
-
-                run_start = idx;
-                run_is_symbol = Some(is_symbol);
-            }
-            _ => {}
-        }
-    }
-
-    let end = text.len();
-    let prev = run_is_symbol.unwrap_or(false);
-    let mut span = TextSpan::new(end.saturating_sub(run_start));
-    if prev {
-        span.shaping.font = Some(symbol_font);
-    }
-    spans.push(span);
-
-    AttributedText::new(text, Arc::<[TextSpan]>::from(spans))
-}
-
 /// shadcn/ui `CommandShortcut` (v4).
 #[derive(Clone)]
 pub struct CommandShortcut {
@@ -633,7 +445,6 @@ impl CommandShortcut {
         let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme.color_token("muted-foreground");
         let style = shortcut_text_style(&theme);
-        let platform = Platform::current();
         let dir = crate::use_direction(cx, None);
         let shortcut_layout = if self.auto_margin_inline_start {
             rtl::layout_refinement_margin_inline_start_auto(dir)
@@ -642,44 +453,14 @@ impl CommandShortcut {
         }
         .flex_shrink_0();
 
-        if shortcut_needs_symbol_font(self.text.as_ref())
-            && let Some(symbol_font) = shortcut_symbol_font_for_platform(platform)
-        {
-            let layout = decl_style::layout_style(&theme, shortcut_layout);
-            let rich = shortcut_attributed_text_with_symbol_fallback(self.text, symbol_font);
-            return cx.styled_text_props(StyledTextProps {
-                layout,
-                rich,
-                style: Some(style),
-                color: Some(fg),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-                align: TextAlign::Start,
-                ink_overflow: Default::default(),
-            });
-        }
-        let mut text = ui::text(self.text)
-            .layout(shortcut_layout)
-            .text_size_px(style.size)
-            .font_weight(style.weight)
-            .nowrap()
-            .text_color(ColorRef::Color(fg));
-
-        if let Some(line_height) = style.line_height {
-            text = text.line_height_px(line_height);
-        }
-
-        if let Some(letter_spacing_em) = style.letter_spacing_em {
-            text = text.letter_spacing_em(letter_spacing_em);
-        }
-
-        text.into_element(cx)
+        shortcut_text_element(cx, &theme, self.text, style, fg, shortcut_layout)
     }
 }
 
 #[cfg(test)]
 mod command_shortcut_tests {
     use super::*;
+    use crate::shortcut_display::shortcut_needs_symbol_font;
 
     #[test]
     fn shortcut_symbol_detection() {
@@ -1474,6 +1255,35 @@ impl From<CommandGroup> for CommandEntry {
 impl From<CommandSeparator> for CommandEntry {
     fn from(value: CommandSeparator) -> Self {
         Self::Separator(value)
+    }
+}
+
+impl From<UiKitCommandCatalogItem> for CommandItem {
+    fn from(value: UiKitCommandCatalogItem) -> Self {
+        let mut item = CommandItem::new(value.label)
+            .value(value.value)
+            .keywords(value.keywords)
+            .disabled(value.disabled)
+            .on_select(value.command);
+        if let Some(shortcut) = value.shortcut {
+            item = item.shortcut(shortcut);
+        }
+        item
+    }
+}
+
+impl From<UiKitCommandCatalogGroup> for CommandGroup {
+    fn from(value: UiKitCommandCatalogGroup) -> Self {
+        CommandGroup::new(value.items.into_iter().map(Into::into)).heading(value.heading)
+    }
+}
+
+impl From<UiKitCommandCatalogEntry> for CommandEntry {
+    fn from(value: UiKitCommandCatalogEntry) -> Self {
+        match value {
+            UiKitCommandCatalogEntry::Item(item) => CommandEntry::Item(item.into()),
+            UiKitCommandCatalogEntry::Group(group) => CommandEntry::Group(group.into()),
+        }
     }
 }
 
@@ -2871,10 +2681,10 @@ impl CommandPalette {
             }
 
             if let Some(handler) = on_value_change.as_ref() {
-                let change = cx
-                    .with_state(CommandPaletteValueChangeCallbackState::default, |state| {
-                        command_palette_value_change_event(state, next_active.clone())
-                    });
+                let change = cx.slot_state(
+                    CommandPaletteValueChangeCallbackState::default,
+                    |state| command_palette_value_change_event(state, next_active.clone()),
+                );
                 if let Some(value) = change {
                     handler(value);
                 }
@@ -4026,47 +3836,18 @@ impl CommandDialog {
         let open_model = open.clone();
         let query = self.query;
         let query_model = query.clone();
-        let open_change_reason_cell = {
-            let existing = cx.with_state(CommandDialogState::default, |st| {
-                st.open_change_reason.clone()
-            });
-            if let Some(cell) = existing {
-                cell
-            } else {
-                let cell = Arc::new(std::sync::Mutex::new(None));
-                cx.with_state(CommandDialogState::default, |st| {
-                    st.open_change_reason = Some(cell.clone())
-                });
-                cell
-            }
-        };
-        let pending_dispatch_cell = {
-            let existing = cx.with_state(CommandDialogState::default, |st| {
-                st.pending_dispatch.clone()
-            });
-            if let Some(cell) = existing {
-                cell
-            } else {
-                let cell = Arc::new(std::sync::Mutex::new(None));
-                cx.with_state(CommandDialogState::default, |st| {
-                    st.pending_dispatch = Some(cell.clone())
-                });
-                cell
-            }
-        };
-        let close_complete_cell = {
-            let existing =
-                cx.with_state(CommandDialogState::default, |st| st.close_complete.clone());
-            if let Some(cell) = existing {
-                cell
-            } else {
-                let cell = Arc::new(std::sync::Mutex::new(false));
-                cx.with_state(CommandDialogState::default, |st| {
-                    st.close_complete = Some(cell.clone())
-                });
-                cell
-            }
-        };
+        let open_change_reason_cell = cx.slot_state(
+            || Arc::new(std::sync::Mutex::new(None::<CommandDialogOpenChangeReason>)),
+            |cell| cell.clone(),
+        );
+        let pending_dispatch_cell = cx.slot_state(
+            || Arc::new(std::sync::Mutex::new(None::<PendingCommandDispatch>)),
+            |cell| cell.clone(),
+        );
+        let close_complete_cell = cx.slot_state(
+            || Arc::new(std::sync::Mutex::new(false)),
+            |cell| cell.clone(),
+        );
         let entries = self.entries;
         let a11y_label = self
             .a11y_label
@@ -4280,6 +4061,7 @@ impl CommandDialog {
                 let palette = palette.into_element(cx);
 
                 DialogContent::new(vec![palette])
+                    .show_close_button(false)
                     .refine_style(ChromeRefinement::default().p(Space::N0))
                     .a11y_label(a11y_label)
                     .into_element(cx)
@@ -4316,12 +4098,49 @@ fn command_palette_value_change_event(
     None
 }
 
-pub fn command<H: UiHost, I, F>(cx: &mut ElementContext<'_, H>, f: F) -> AnyElement
+pub struct CommandBuild<H, B> {
+    build: Option<B>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B, I, T> CommandBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = (self.build.expect("command build closure already taken"))(cx)
+            .into_iter()
+            .map(|child| child.into_element(cx))
+            .collect::<Vec<_>>();
+        Command::new(children).into_element(cx)
+    }
+}
+
+impl<H: UiHost, B, I, T> IntoUiElement<H> for CommandBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CommandBuild::into_element(self, cx)
+    }
+}
+
+pub fn command<H: UiHost, I, F, T>(f: F) -> impl IntoUiElement<H> + use<H, I, F, T>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
-    Command::new(f(cx)).into_element(cx)
+    CommandBuild {
+        build: Some(f),
+        _phantom: PhantomData,
+    }
 }
 
 #[cfg(test)]
@@ -4338,9 +4157,6 @@ mod tests {
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
-    use fret_runtime::{
-        CommandScope, WindowCommandActionAvailabilityService, WindowCommandEnabledService,
-    };
     use fret_ui::tree::UiTree;
 
     fn snapshot_contains_text(snap: &fret_core::SemanticsSnapshot, text: &str) -> bool {
@@ -4438,6 +4254,52 @@ mod tests {
             assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
             assert!(matches!(props.layout.overflow, Overflow::Clip));
         });
+    }
+
+    #[test]
+    fn command_catalog_item_mapping_preserves_catalog_fields() {
+        let command = CommandId::from("app.open");
+        let item = CommandItem::from(UiKitCommandCatalogItem {
+            label: Arc::from("Open"),
+            value: Arc::from("app.open"),
+            disabled: true,
+            keywords: vec![Arc::from("file"), Arc::from("open")],
+            shortcut: Some(Arc::from("Cmd+O")),
+            command: command.clone(),
+        });
+
+        assert_eq!(item.label.as_ref(), "Open");
+        assert_eq!(item.value.as_ref(), "app.open");
+        assert!(item.disabled);
+        assert_eq!(item.keywords.len(), 2);
+        assert_eq!(item.shortcut.as_deref(), Some("Cmd+O"));
+        assert_eq!(item.command.as_ref(), Some(&command));
+    }
+
+    #[test]
+    fn command_catalog_group_mapping_preserves_heading_and_items() {
+        let entry = CommandEntry::from(UiKitCommandCatalogEntry::Group(
+            UiKitCommandCatalogGroup::new(
+                "File",
+                vec![UiKitCommandCatalogItem {
+                    label: Arc::from("Open"),
+                    value: Arc::from("app.open"),
+                    disabled: false,
+                    keywords: vec![Arc::from("open")],
+                    shortcut: None,
+                    command: CommandId::from("app.open"),
+                }],
+            ),
+        ));
+
+        match entry {
+            CommandEntry::Group(group) => {
+                assert_eq!(group.heading.as_deref(), Some("File"));
+                assert_eq!(group.items.len(), 1);
+                assert_eq!(group.items[0].label.as_ref(), "Open");
+            }
+            _ => panic!("expected group entry"),
+        }
     }
 
     #[test]
@@ -4610,137 +4472,6 @@ mod tests {
         assert!(
             captured.iter().any(|(is_open, reason)| !*is_open
                 && *reason == CommandDialogOpenChangeReason::ItemPress)
-        );
-    }
-
-    #[test]
-    fn host_command_entries_respect_window_command_enabled_overrides() {
-        let window = AppWindowId::default();
-        let mut app = App::new();
-
-        let cmd = CommandId::from("test.disabled-command");
-        app.commands_mut()
-            .register(cmd.clone(), CommandMeta::new("Disabled Command"));
-        app.set_global(WindowCommandEnabledService::default());
-        app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
-            svc.set_enabled(window, cmd.clone(), false);
-        });
-
-        let disabled: RefCell<Option<bool>> = RefCell::new(None);
-        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "cmdk", |cx| {
-            let entries = command_entries_from_host_commands(cx);
-            for entry in entries {
-                if let CommandEntry::Item(item) = entry
-                    && item.command.as_ref() == Some(&cmd)
-                {
-                    *disabled.borrow_mut() = Some(item.disabled);
-                    break;
-                }
-            }
-        });
-
-        assert_eq!(
-            *disabled.borrow(),
-            Some(true),
-            "expected the command entry to be disabled via WindowCommandEnabledService"
-        );
-    }
-
-    #[test]
-    fn host_command_entries_respect_widget_action_availability_snapshot() {
-        let window = AppWindowId::default();
-        let mut app = App::new();
-
-        let cmd = CommandId::from("test.widget-action");
-        app.commands_mut().register(
-            cmd.clone(),
-            CommandMeta::new("Widget Action").with_scope(CommandScope::Widget),
-        );
-
-        app.set_global(WindowCommandActionAvailabilityService::default());
-        app.with_global_mut(
-            WindowCommandActionAvailabilityService::default,
-            |svc, _app| {
-                let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
-                snapshot.insert(cmd.clone(), false);
-                svc.set_snapshot(window, snapshot);
-            },
-        );
-
-        let disabled: RefCell<Option<bool>> = RefCell::new(None);
-        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "cmdk", |cx| {
-            let entries = command_entries_from_host_commands(cx);
-            for entry in entries {
-                if let CommandEntry::Item(item) = entry
-                    && item.command.as_ref() == Some(&cmd)
-                {
-                    *disabled.borrow_mut() = Some(item.disabled);
-                    break;
-                }
-            }
-        });
-
-        assert_eq!(
-            *disabled.borrow(),
-            Some(true),
-            "expected the command entry to be disabled via WindowCommandActionAvailabilityService"
-        );
-    }
-
-    #[test]
-    fn host_command_entries_prefer_window_command_gating_snapshot_when_present() {
-        let window = AppWindowId::default();
-        let mut app = App::new();
-
-        let cmd = CommandId::from("test.widget-action");
-        app.commands_mut().register(
-            cmd.clone(),
-            CommandMeta::new("Widget Action").with_scope(CommandScope::Widget),
-        );
-
-        app.set_global(WindowCommandActionAvailabilityService::default());
-        app.with_global_mut(
-            WindowCommandActionAvailabilityService::default,
-            |svc, _app| {
-                let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
-                snapshot.insert(cmd.clone(), true);
-                svc.set_snapshot(window, snapshot);
-            },
-        );
-
-        app.set_global(fret_runtime::WindowCommandGatingService::default());
-        app.with_global_mut(
-            fret_runtime::WindowCommandGatingService::default,
-            |svc, app| {
-                let input_ctx = command_palette_input_context(app);
-                let enabled_overrides: HashMap<CommandId, bool> = HashMap::new();
-                let mut availability: HashMap<CommandId, bool> = HashMap::new();
-                availability.insert(cmd.clone(), false);
-                svc.set_snapshot(
-                    window,
-                    WindowCommandGatingSnapshot::new(input_ctx, enabled_overrides)
-                        .with_action_availability(Some(Arc::new(availability))),
-                );
-            },
-        );
-
-        let disabled: RefCell<Option<bool>> = RefCell::new(None);
-        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "cmdk", |cx| {
-            let entries = command_entries_from_host_commands(cx);
-            for entry in entries {
-                if let CommandEntry::Item(item) = entry
-                    && item.command.as_ref() == Some(&cmd)
-                {
-                    *disabled.borrow_mut() = Some(item.disabled);
-                    break;
-                }
-            }
-        });
-
-        assert_eq!(
-            *disabled.borrow(),
-            Some(true),
-            "expected the command entry to be disabled via WindowCommandGatingService snapshot"
         );
     }
 
@@ -5103,6 +4834,104 @@ mod tests {
         assert!(
             list_bounds.origin.y.0 < 0.0 || list_bottom > bounds.size.height.0 + 0.01,
             "expected listbox to overflow tight viewports; list={list_bounds:?} viewport={bounds:?}"
+        );
+    }
+
+    #[test]
+    fn command_dialog_content_stays_within_panel_bounds_on_sm_viewport() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let query = app.models_mut().insert(String::new());
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let build_items = || {
+            vec![
+                CommandItem::new(
+                    "Long command label that should still measure inside the command dialog panel",
+                ),
+                CommandItem::new("Secondary action"),
+            ]
+        };
+
+        for _ in 1..=3 {
+            let _ = render_dialog_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                query.clone(),
+                build_items(),
+                true,
+            );
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let dialog = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Dialog)
+            .expect("dialog node");
+        let input = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("combobox input node");
+        let list = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBox)
+            .expect("listbox node");
+        let option = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == SemanticsRole::ListBoxOption
+                    && n.label.as_deref()
+                        == Some(
+                            "Long command label that should still measure inside the command dialog panel",
+                        )
+            })
+            .expect("long option node");
+
+        let dialog_left = dialog.bounds.origin.x.0 - 0.5;
+        let dialog_right = dialog.bounds.origin.x.0 + dialog.bounds.size.width.0 + 0.5;
+
+        assert!(
+            dialog.bounds.size.width.0 <= 512.5,
+            "expected command dialog width to stay near shadcn's sm:max-w-lg, got {:?}",
+            dialog.bounds
+        );
+        assert!(
+            input.bounds.origin.x.0 >= dialog_left
+                && input.bounds.origin.x.0 + input.bounds.size.width.0 <= dialog_right,
+            "expected command dialog input to stay inside dialog panel; dialog={:?} input={:?}",
+            dialog.bounds,
+            input.bounds
+        );
+        assert!(
+            list.bounds.origin.x.0 >= dialog_left
+                && list.bounds.origin.x.0 + list.bounds.size.width.0 <= dialog_right,
+            "expected command dialog list to stay inside dialog panel; dialog={:?} list={:?}",
+            dialog.bounds,
+            list.bounds
+        );
+        assert!(
+            option.bounds.origin.x.0 >= dialog_left
+                && option.bounds.origin.x.0 + option.bounds.size.width.0 <= dialog_right,
+            "expected command dialog option to stay inside dialog panel; dialog={:?} option={:?}",
+            dialog.bounds,
+            option.bounds
         );
     }
 

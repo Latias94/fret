@@ -1,16 +1,17 @@
 pub const SOURCE: &str = include_str!("fluid_tabs_demo.rs");
 
 // region: example
-use fret_app::App;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret::UiCx;
+use fret_ui_kit::IntoUiElement;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn panel(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     title: &'static str,
     description: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<fret_app::App> + use<> {
     shadcn::Alert::new([
-        shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.sparkles")),
+        fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.sparkles")),
         shadcn::AlertTitle::new(title).into_element(cx),
         shadcn::AlertDescription::new(description).into_element(cx),
     ])
@@ -18,7 +19,7 @@ fn panel(
     .into_element(cx)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let tabs = shadcn::Tabs::uncontrolled(Some("accounts"))
         .refine_layout(LayoutRefinement::default().w_full().min_w_0())
         .shared_indicator_motion(true)
@@ -32,7 +33,8 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     cx,
                     "Accounts",
                     "Crossfade content on selection change (semantic presence tokens).",
-                )],
+                )
+                .into_element(cx)],
             )
             .trigger_test_id("ui-gallery-motion-presets-fluid-tabs-trigger-accounts"),
             shadcn::TabsItem::new(
@@ -42,7 +44,8 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     cx,
                     "Deposits",
                     "Uses a Duration-based driver so it stays stable across refresh rates.",
-                )],
+                )
+                .into_element(cx)],
             )
             .trigger_test_id("ui-gallery-motion-presets-fluid-tabs-trigger-deposits"),
             shadcn::TabsItem::new(
@@ -52,7 +55,8 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     cx,
                     "Funds",
                     "This is intentionally not DOM/Framer Motion: same semantics, different runtime.",
-                )],
+                )
+                .into_element(cx)],
             )
             .trigger_test_id("ui-gallery-motion-presets-fluid-tabs-trigger-funds"),
         ])

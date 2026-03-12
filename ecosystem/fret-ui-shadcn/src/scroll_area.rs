@@ -25,10 +25,7 @@ use fret_ui_kit::declarative::motion;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::scroll_area::DEFAULT_SCROLL_HIDE_DELAY_TICKS;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
-use fret_ui_kit::{
-    LayoutRefinement, UiChildIntoElement, UiHostBoundIntoElement, UiPatch, UiPatchTarget,
-    UiSupportsLayout,
-};
+use fret_ui_kit::{IntoUiElement, LayoutRefinement, UiPatch, UiPatchTarget, UiSupportsLayout};
 
 fn tailwind_transition_ease_in_out(t: f32) -> f32 {
     // Tailwind default transition timing function: cubic-bezier(0.4, 0, 0.2, 1).
@@ -939,22 +936,12 @@ impl<H: UiHost, B> UiSupportsLayout for ScrollAreaBuild<H, B> where
 {
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for ScrollAreaBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for ScrollAreaBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        ScrollAreaBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for ScrollAreaBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         ScrollAreaBuild::into_element(self, cx)
     }
 }

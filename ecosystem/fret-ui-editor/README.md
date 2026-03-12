@@ -35,6 +35,6 @@ Forbidden (by design intent):
 
 See:
 
-- `docs/workstreams/ui-editor-v1.md`
-- `docs/workstreams/ui-editor-v1-todo.md`
+- `docs/workstreams/ui-editor-v1/ui-editor-v1.md`
+- `docs/workstreams/ui-editor-v1/ui-editor-v1-todo.md`
 

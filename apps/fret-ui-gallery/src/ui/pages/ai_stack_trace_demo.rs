@@ -2,11 +2,9 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
+use fret::UiCx;
 
-pub(super) fn preview_ai_stack_trace_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
+pub(super) fn preview_ai_stack_trace_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let demo = snippets::stack_trace_demo::render(cx);
     let collapsed = snippets::stack_trace_collapsed::render(cx);
     let no_internal = snippets::stack_trace_no_internal::render(cx);

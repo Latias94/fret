@@ -6,7 +6,7 @@ use fret_ui_ai as ui_ai;
 use fret_ui_kit::ColorRef;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::{Items, LayoutRefinement, Space, ui};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
@@ -18,7 +18,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     let request = ui::h_row(|cx| {
         vec![
             cx.text("This tool wants to delete the file"),
-            shadcn::typography::inline_code(cx, "/tmp/example.txt"),
+            shadcn::raw::typography::inline_code(cx, "/tmp/example.txt"),
             cx.text(". Do you approve this action?"),
         ]
     })

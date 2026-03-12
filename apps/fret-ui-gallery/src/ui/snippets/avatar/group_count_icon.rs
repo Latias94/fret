@@ -3,16 +3,16 @@ pub const SOURCE: &str = include_str!("group_count_icon.rs");
 // region: example
 use fret_core::{ImageId, Px};
 use fret_ui::Theme;
-use fret_ui_kit::ColorRef;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_kit::{ColorRef, IntoUiElement};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn icon<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     name: &'static str,
     size: Px,
     fg: ColorRef,
-) -> AnyElement {
-    shadcn::icon::icon_with(
+) -> impl IntoUiElement<H> + use<H> {
+    fret_ui_shadcn::icon::icon_with(
         cx,
         fret_icons::IconId::new_static(name),
         Some(size),
@@ -25,7 +25,7 @@ fn avatar_with_image<H: UiHost>(
     avatar_image: Model<Option<ImageId>>,
     size: shadcn::AvatarSize,
     fallback_text: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let image = shadcn::AvatarImage::model(avatar_image.clone()).into_element(cx);
     let fallback = shadcn::AvatarFallback::new(fallback_text)
         .when_image_missing_model(avatar_image)
@@ -48,13 +48,15 @@ pub fn render<H: UiHost>(
                 shadcn::AvatarSize::Default,
                 ["CN", "ML"][idx],
             )
+            .into_element(cx)
         })
         .collect::<Vec<_>>();
 
     let muted_fg = Theme::global(&*cx.app).color_token("muted-foreground");
     let fg = ColorRef::Color(muted_fg);
     let count =
-        shadcn::AvatarGroupCount::new([icon(cx, "lucide.plus", Px(18.0), fg)]).into_element(cx);
+        shadcn::AvatarGroupCount::new([icon(cx, "lucide.plus", Px(18.0), fg).into_element(cx)])
+            .into_element(cx);
 
     shadcn::AvatarGroup::new(avatars.into_iter().chain([count]).collect::<Vec<_>>())
         .size(shadcn::AvatarSize::Default)

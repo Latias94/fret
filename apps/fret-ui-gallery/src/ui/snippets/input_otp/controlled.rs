@@ -3,28 +3,11 @@ pub const SOURCE: &str = include_str!("controlled.rs");
 // region: example
 use fret_core::Px;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default, Clone)]
-struct Models {
-    value: Option<Model<String>>,
-}
-
-fn value_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    match state.value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| st.value = Some(model.clone()));
-            model
-        }
-    }
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let value = value_model(cx);
+    let value = cx.local_model(String::new);
     let current = cx.watch_model(&value).cloned().unwrap_or_default();
     let theme = Theme::global(&*cx.app).snapshot();
     let max_w_xs = LayoutRefinement::default().w_full().max_w(Px(320.0));
@@ -55,7 +38,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             otp.test_id("ui-gallery-input-otp-controlled"),
             ui::label(message)
                 .text_size_px(Px(14.0))
-                .text_color(shadcn::ColorRef::Color(
+                .text_color(fret_ui_shadcn::ColorRef::Color(
                     theme.color_token("muted-foreground"),
                 ))
                 .into_element(cx),

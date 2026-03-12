@@ -128,22 +128,8 @@ struct KanbanDndState {
     last_drag: Option<KanbanLastDrag>,
 }
 
-#[derive(Debug, Default)]
-struct KanbanDndStateModel {
-    model: Option<Model<KanbanDndState>>,
-}
-
 fn get_state_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<KanbanDndState> {
-    let existing = cx.with_state(KanbanDndStateModel::default, |st| st.model.clone());
-    if let Some(m) = existing {
-        return m;
-    }
-
-    let model = cx.app.models_mut().insert(KanbanDndState::default());
-    cx.with_state(KanbanDndStateModel::default, |st| {
-        st.model = Some(model.clone());
-    });
-    model
+    cx.local_model_keyed("dnd_state", KanbanDndState::default)
 }
 
 fn is_column_id(id: DndItemId, columns: &[KanbanColumn]) -> Option<Arc<str>> {

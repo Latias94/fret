@@ -2,45 +2,13 @@ pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use fret_ui_kit::ui::UiElementSinkExt as _;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default)]
-struct Models {
-    text_input: Option<Model<String>>,
-    text_area: Option<Model<String>>,
-    checkbox: Option<Model<bool>>,
-    switch: Option<Model<bool>>,
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (text_input, text_area, checkbox, switch) = cx.with_state(Models::default, |st| {
-        (
-            st.text_input.clone(),
-            st.text_area.clone(),
-            st.checkbox.clone(),
-            st.switch.clone(),
-        )
-    });
-
-    let (text_input, text_area, checkbox, switch) = match (text_input, text_area, checkbox, switch)
-    {
-        (Some(text_input), Some(text_area), Some(checkbox), Some(switch)) => {
-            (text_input, text_area, checkbox, switch)
-        }
-        _ => {
-            let text_input = cx.app.models_mut().insert(String::new());
-            let text_area = cx.app.models_mut().insert(String::new());
-            let checkbox = cx.app.models_mut().insert(false);
-            let switch = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.text_input = Some(text_input.clone());
-                st.text_area = Some(text_area.clone());
-                st.checkbox = Some(checkbox.clone());
-                st.switch = Some(switch.clone());
-            });
-            (text_input, text_area, checkbox, switch)
-        }
-    };
+    let text_input = cx.local_model_keyed("text_input", String::new);
+    let text_area = cx.local_model_keyed("text_area", String::new);
+    let checkbox = cx.local_model_keyed("checkbox", || false);
+    let switch = cx.local_model_keyed("switch", || false);
 
     let max_w_md = LayoutRefinement::default()
         .w_full()
@@ -111,10 +79,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             )
                             .into_element(cx),
                         ]);
-                        out.push_ui(
-                            cx,
-                            field_content,
-                        );
+                        out.push_ui(cx, field_content);
                         out.push_ui(
                             cx,
                             shadcn::Switch::new(switch.clone())

@@ -8,7 +8,7 @@ use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, GridProps};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn trigger_surface<H: UiHost>(
     cx: &mut ElementContext<'_, H>,

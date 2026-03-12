@@ -1,11 +1,12 @@
 use anyhow::Context as _;
+use fret::docking::{
+    DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx, DockPanelRegistryBuilder,
+    DockPanelRegistryService, DockingRuntime, create_dock_space_node_with_test_id,
+    render_and_bind_dock_panels,
+};
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
-use fret_core::{AppWindowId, Event, Rect, UiServices, geometry::Px};
-use fret_docking::{
-    DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockingRuntime,
-    create_dock_space_node_with_test_id, render_and_bind_dock_panels, render_cached_panel_root,
-};
+use fret_core::{AppWindowId, Event, PanelKind, Rect, UiServices, geometry::Px};
 use fret_launch::{
     FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
     WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
@@ -16,7 +17,7 @@ use fret_ui::element::{
 };
 use fret_ui::retained_bridge::{LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt as _, Widget};
 use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
-use fret_ui_shadcn::{Field, FieldContent, FieldLabel, FieldOrientation};
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 const INITIAL_SPLIT_FRACTION_LEFT: f32 = 0.75;
@@ -76,9 +77,17 @@ impl<H: fret_ui::UiHost> Widget<H> for ContainerQueriesDockingHarnessRoot {
     }
 }
 
-struct DemoDockPanelRegistry;
+struct DemoDockPanelFactory {
+    kind: PanelKind,
+}
 
-impl DemoDockPanelRegistry {
+impl DemoDockPanelFactory {
+    fn new(kind: &'static str) -> Self {
+        Self {
+            kind: PanelKind::new(kind),
+        }
+    }
+
     fn render_left_panel<H: fret_ui::UiHost>(
         cx: &mut ElementContext<'_, H>,
         theme: &Theme,
@@ -160,11 +169,11 @@ impl DemoDockPanelRegistry {
                             |cx| vec![cx.text("Input stub")],
                         );
 
-                        let field = Field::new([
-                            FieldLabel::new("Name").into_element(cx),
-                            FieldContent::new([field_input_stub]).into_element(cx),
+                        let field = shadcn::Field::new([
+                            shadcn::FieldLabel::new("Name").into_element(cx),
+                            shadcn::FieldContent::new([field_input_stub]).into_element(cx),
                         ])
-                        .orientation(FieldOrientation::Responsive)
+                        .orientation(shadcn::FieldOrientation::Responsive)
                         .into_element(cx)
                         .attach_semantics(
                             SemanticsDecoration::default().test_id("cq-dock-demo-field"),
@@ -178,27 +187,21 @@ impl DemoDockPanelRegistry {
     }
 }
 
-impl DockPanelRegistry<App> for DemoDockPanelRegistry {
-    fn render_panel(
-        &self,
-        ui: &mut UiTree<App>,
-        app: &mut App,
-        services: &mut dyn UiServices,
-        window: AppWindowId,
-        bounds: Rect,
-        panel: &fret_core::PanelKey,
-    ) -> Option<fret_core::NodeId> {
-        let theme = Theme::global(&*app).clone();
+impl DockPanelFactory<App> for DemoDockPanelFactory {
+    fn panel_kind(&self) -> PanelKind {
+        self.kind.clone()
+    }
 
-        let root_name = format!("container_queries_docking_demo.panel.{}", panel.kind.0);
-        Some(render_cached_panel_root(
-            ui,
-            app,
-            services,
-            window,
-            bounds,
-            &root_name,
-            |cx| match panel.kind.0.as_str() {
+    fn build_panel(
+        &self,
+        panel: &fret_core::PanelKey,
+        cx: &mut DockPanelFactoryCx<'_, App>,
+    ) -> Option<fret_core::NodeId> {
+        let kind = panel.kind.0.clone();
+        let root_name = format!("container_queries_docking_demo.panel.{kind}");
+        Some(cx.render_cached_panel_root(&root_name, |cx| {
+            let theme = Theme::global(&*cx.app).clone();
+            match kind.as_str() {
                 "examples.cq.left" => Self::render_left_panel(cx, &theme),
                 "examples.cq.right" => {
                     vec![
@@ -222,8 +225,8 @@ impl DockPanelRegistry<App> for DemoDockPanelRegistry {
                     ]
                 }
                 _ => vec![cx.text("Unregistered panel kind")],
-            },
-        ))
+            }
+        }))
     }
 }
 
@@ -745,9 +748,12 @@ pub fn run() -> anyhow::Result<()> {
 
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
-
+    let mut registry = DockPanelRegistryBuilder::new();
+    registry
+        .register(DemoDockPanelFactory::new("examples.cq.left"))
+        .register(DemoDockPanelFactory::new("examples.cq.right"));
     app.with_global_mut(DockPanelRegistryService::<App>::default, |svc, _app| {
-        svc.set(Arc::new(DemoDockPanelRegistry));
+        svc.set(registry.build_arc());
     });
 
     let config = WinitRunnerConfig {
@@ -757,6 +763,6 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    fret::run_native_with_configured_fn_driver(config, app, build_fn_driver())
+    fret::advanced::run_native_with_configured_fn_driver(config, app, build_fn_driver())
         .context("run container_queries_docking_demo app")
 }

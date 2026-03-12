@@ -109,4 +109,4 @@ Anchors:
 ## Related
 
 - ADR 0271: `docs/adr/0271-stroke-rrect-and-dashed-borders-v1.md` (dash model)
-- Workstream: `docs/workstreams/path-stroke-style-v2.md`
+- Workstream: `docs/workstreams/path-stroke-style-v2/path-stroke-style-v2.md`

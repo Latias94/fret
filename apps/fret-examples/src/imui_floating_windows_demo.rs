@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*};
 use fret_core::{Point, Px, Rect, SemanticsRole, Size};
 use fret_imui::prelude::UiWriter;
 use fret_ui_kit::on_activate_notify;
@@ -14,12 +14,13 @@ struct ImUiFloatingWindowsView {
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("imui-floating-windows-demo")
         .window("imui_floating_windows_demo", (720.0, 480.0))
-        .run_view::<ImUiFloatingWindowsView>()?;
+        .view::<ImUiFloatingWindowsView>()?
+        .run()?;
     Ok(())
 }
 
 impl View for ImUiFloatingWindowsView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self {
             open_a: app.models_mut().insert(true),
             select_mode: app.models_mut().insert(None::<Arc<str>>),
@@ -27,7 +28,7 @@ impl View for ImUiFloatingWindowsView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         fret_imui::imui_vstack(cx.elements(), |ui| {
             use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
             use fret_ui_kit::imui::UiWriterUiKitExt as _;

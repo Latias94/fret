@@ -98,6 +98,47 @@ pub(super) fn parse_semantics_role(s: &str) -> Option<SemanticsRole> {
     })
 }
 
+pub(super) fn extend_test_id_chrome_fallback<'a, FScope, FRoot>(
+    snapshot: &'a fret_core::SemanticsSnapshot,
+    index: &SemanticsIndex<'a>,
+    id: &str,
+    in_scope: &FScope,
+    matches_root_z: &FRoot,
+    matches: &mut Vec<&'a fret_core::SemanticsNode>,
+) -> bool
+where
+    FScope: Fn(u64) -> bool,
+    FRoot: Fn(u64) -> bool,
+{
+    if !matches.is_empty() {
+        return false;
+    }
+
+    // Many interactive surfaces expose the actionable paint/hit-test node as `*.chrome`.
+    // When the logical base test_id is absent from the selectable semantics tree, allow a unique
+    // chrome node to satisfy the selector so diag scripts can keep targeting the caller-owned id.
+    let chrome_id = format!("{id}.chrome");
+    let chrome_id = chrome_id.as_str();
+    let mut chrome_matches: Vec<&'a fret_core::SemanticsNode> = snapshot
+        .nodes
+        .iter()
+        .filter(|n| {
+            let node_id = n.id.data().as_ffi();
+            index.is_selectable(node_id)
+                && in_scope(node_id)
+                && matches_root_z(node_id)
+                && n.test_id.as_deref() == Some(chrome_id)
+        })
+        .collect();
+
+    if chrome_matches.len() != 1 {
+        return false;
+    }
+
+    matches.append(&mut chrome_matches);
+    true
+}
+
 #[cfg(test)]
 #[allow(dead_code)]
 pub(super) fn select_semantics_node<'a>(
@@ -620,6 +661,18 @@ mod legacy_inline_validate {
                         && n.test_id.as_deref() == Some(id)
                 }));
                 if matches.is_empty() {
+                    if extend_test_id_chrome_fallback(
+                        snapshot,
+                        &index,
+                        id,
+                        &in_scope,
+                        &matches_root_z,
+                        &mut matches,
+                    ) {
+                        note = Some("fallback_chrome_suffix");
+                    }
+                }
+                if matches.is_empty() {
                     // Fallback for debugging: allow selecting hidden nodes if no visible match exists.
                     note = Some("fallback_hidden_nodes");
                     matches.extend(snapshot.nodes.iter().filter(|n| {
@@ -1030,6 +1083,68 @@ mod legacy_inline_validate {
             let picked =
                 select_semantics_node_scoped(&snapshot, window, None, &selector, None).unwrap();
             assert_eq!(picked.id, node_id(3));
+        }
+
+        #[test]
+        fn selector_test_id_falls_back_to_unique_chrome_suffix() {
+            let window = window_id(1);
+
+            let mut chrome_actions = SemanticsActions::default();
+            chrome_actions.invoke = true;
+
+            let snapshot = SemanticsSnapshot {
+                window,
+                roots: vec![SemanticsRoot {
+                    root: node_id(1),
+                    visible: true,
+                    blocks_underlay_input: false,
+                    hit_testable: true,
+                    z_index: 0,
+                }],
+                barrier_root: None,
+                focus_barrier_root: None,
+                focus: None,
+                captured: None,
+                nodes: vec![
+                    semantics_node(
+                        1,
+                        None,
+                        SemanticsRole::Window,
+                        rect(0.0, 0.0, 100.0, 100.0),
+                        "root",
+                        None,
+                    ),
+                    semantics_node(
+                        2,
+                        Some(1),
+                        SemanticsRole::Group,
+                        rect(0.0, 0.0, 40.0, 20.0),
+                        "trigger-wrapper",
+                        None,
+                    ),
+                    SemanticsNode {
+                        actions: chrome_actions,
+                        ..semantics_node(
+                            3,
+                            Some(2),
+                            SemanticsRole::Button,
+                            rect(0.0, 0.0, 40.0, 20.0),
+                            "Open",
+                            Some("sheet-trigger.chrome"),
+                        )
+                    },
+                ],
+            };
+
+            let selector = UiSelectorV1::TestId {
+                id: "sheet-trigger".to_string(),
+                root_z_index: None,
+            };
+            let resolved = select_semantics_node_scoped(&snapshot, window, None, &selector, None)
+                .expect("expected chrome fallback to resolve");
+
+            assert_eq!(resolved.id.data().as_ffi(), 3);
+            assert_eq!(resolved.test_id.as_deref(), Some("sheet-trigger.chrome"));
         }
     }
 }

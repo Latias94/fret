@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("multiple.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     shadcn::Accordion::multiple_uncontrolled(["notifications"])
@@ -17,7 +17,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 "notifications",
                 shadcn::AccordionTrigger::new(vec![cx.text("Notifications")])
                     .test_id("ui-gallery-accordion-multiple-trigger-notifications"),
-                shadcn::AccordionContent::new(vec![shadcn::typography::p(
+                shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
                     cx,
                     "Configure email, push, and in-app notifications.",
                 )])
@@ -27,7 +27,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 "security",
                 shadcn::AccordionTrigger::new(vec![cx.text("Security")])
                     .test_id("ui-gallery-accordion-multiple-trigger-security"),
-                shadcn::AccordionContent::new(vec![shadcn::typography::p(
+                shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
                     cx,
                     "Manage passwords, 2FA, and active sessions.",
                 )]),

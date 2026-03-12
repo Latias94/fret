@@ -2,10 +2,12 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
-use fret_ui_shadcn as shadcn;
+use fret::{UiChild, UiCx};
+use fret_ui_kit::ui::UiElementSinkExt as _;
+use fret_ui_shadcn::facade as shadcn;
 
 pub(super) fn preview_ai_chain_of_thought_demo(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     _theme: &Theme,
 ) -> Vec<AnyElement> {
     let usage = snippets::chain_of_thought_demo::render(cx);
@@ -23,7 +25,10 @@ pub(super) fn preview_ai_chain_of_thought_demo(
     )
     .test_id("ui-gallery-ai-chain-of-thought-features");
 
-    let props = chain_of_thought_props_table(cx).test_id("ui-gallery-ai-chain-of-thought-props");
+    let props = chain_of_thought_props_table(cx);
+    let props = props
+        .into_element(cx)
+        .test_id("ui-gallery-ai-chain-of-thought-props");
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
@@ -52,9 +57,8 @@ pub(super) fn preview_ai_chain_of_thought_demo(
     vec![body.test_id("ui-gallery-page-ai-chain-of-thought-demo")]
 }
 
-fn chain_of_thought_props_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let row = |cx: &mut ElementContext<'_, App>,
-               part: &'static str,
+fn chain_of_thought_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let row = |part: &'static str,
                method: &'static str,
                ty: &'static str,
                default: &'static str,
@@ -89,20 +93,20 @@ fn chain_of_thought_props_table(cx: &mut ElementContext<'_, App>) -> AnyElement 
         out.push_ui(
             cx,
             shadcn::TableBody::build(|cx, out| {
-                out.push_ui(cx, row(cx, "ChainOfThought", "open_model", "Model<bool>", "None", "Controlled open state."));
-                out.push_ui(cx, row(cx, "ChainOfThought", "default_open", "bool", "false", "Initial open state for uncontrolled usage."));
-                out.push_ui(cx, row(cx, "ChainOfThought", "header / content", "builder methods", "-", "Docs-style chained composition for the two compound parts used by the official examples."));
-                out.push_ui(cx, row(cx, "ChainOfThought", "children", "IntoIterator<Item = Header | Content>", "-", "Lower-level typed child list when you prefer building the compound parts as a batch."));
-                out.push_ui(cx, row(cx, "ChainOfThought", "into_element_with_children", "FnOnce(&mut ElementContext) -> Vec<AnyElement>", "-", "Lower-level escape hatch when child construction must happen inside a live scope."));
-                out.push_ui(cx, row(cx, "ChainOfThought", "test_id_root / gap / refine_layout", "builder methods", "w_full + gap 4", "Root diagnostics id, vertical spacing, and layout refinement."));
-                out.push_ui(cx, row(cx, "ChainOfThoughtHeader", "children", "IntoIterator<Item = AnyElement>", "\"Chain of Thought\"", "Overrides the default header label with composed children."));
-                out.push_ui(cx, row(cx, "ChainOfThoughtContent", "new(children)", "IntoIterator<Item = AnyElement>", "-", "Wraps step content in the collapsible body."));
-                out.push_ui(cx, row(cx, "ChainOfThoughtStep", "new(label)", "impl Into<Arc<str>>", "status = complete, icon = dot", "Creates a step with upstream-aligned defaults."));
-                out.push_ui(cx, row(cx, "ChainOfThoughtStep", "label_children / description_children", "IntoIterator<Item = AnyElement>", "None", "Rich slot APIs for custom label and description content."));
-                out.push_ui(cx, row(cx, "ChainOfThoughtStep", "status / icon / children", "builder methods", "complete / dot / empty", "Visual status, leading icon, and trailing custom body content."));
-                out.push_ui(cx, row(cx, "ChainOfThoughtSearchResults", "new(children)", "IntoIterator<Item = AnyElement>", "gap 2 + wrap", "Wraps badges like the official search result row."));
-                out.push_ui(cx, row(cx, "ChainOfThoughtSearchResult", "new(label)", "impl Into<Arc<str>>", "secondary badge", "Badge-shaped search result pill with normal label weight."));
-                out.push_ui(cx, row(cx, "ChainOfThoughtImage", "new(children) / caption", "builder methods", "caption = None", "Muted rounded image frame with optional caption text."));
+                out.push_ui(cx, row("ChainOfThought", "open_model", "Model<bool>", "None", "Controlled open state."));
+                out.push_ui(cx, row("ChainOfThought", "default_open", "bool", "false", "Initial open state for uncontrolled usage."));
+                out.push_ui(cx, row("ChainOfThought", "header / content", "builder methods", "-", "Docs-style chained composition for the two compound parts used by the official examples."));
+                out.push_ui(cx, row("ChainOfThought", "children", "IntoIterator<Item = Header | Content>", "-", "Lower-level typed child list when you prefer building the compound parts as a batch."));
+                out.push_ui(cx, row("ChainOfThought", "into_element_with_children", "FnOnce(&mut ElementContext) -> Vec<AnyElement>", "-", "Lower-level escape hatch when child construction must happen inside a live scope."));
+                out.push_ui(cx, row("ChainOfThought", "test_id_root / gap / refine_layout", "builder methods", "w_full + gap 4", "Root diagnostics id, vertical spacing, and layout refinement."));
+                out.push_ui(cx, row("ChainOfThoughtHeader", "children", "IntoIterator<Item = AnyElement>", "\"Chain of Thought\"", "Overrides the default header label with composed children."));
+                out.push_ui(cx, row("ChainOfThoughtContent", "new(children)", "IntoIterator<Item = AnyElement>", "-", "Wraps step content in the collapsible body."));
+                out.push_ui(cx, row("ChainOfThoughtStep", "new(label)", "impl Into<Arc<str>>", "status = complete, icon = dot", "Creates a step with upstream-aligned defaults."));
+                out.push_ui(cx, row("ChainOfThoughtStep", "label_children / description_children", "IntoIterator<Item = AnyElement>", "None", "Rich slot APIs for custom label and description content."));
+                out.push_ui(cx, row("ChainOfThoughtStep", "status / icon / children", "builder methods", "complete / dot / empty", "Visual status, leading icon, and trailing custom body content."));
+                out.push_ui(cx, row("ChainOfThoughtSearchResults", "new(children)", "IntoIterator<Item = AnyElement>", "gap 2 + wrap", "Wraps badges like the official search result row."));
+                out.push_ui(cx, row("ChainOfThoughtSearchResult", "new(label)", "impl Into<Arc<str>>", "secondary badge", "Badge-shaped search result pill with normal label weight."));
+                out.push_ui(cx, row("ChainOfThoughtImage", "new(children) / caption", "builder methods", "caption = None", "Muted rounded image frame with optional caption text."));
             }),
         );
     })

@@ -11,12 +11,11 @@ use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
 };
 use fret_ui::{Invalidation, UiTree};
-use fret_ui_kit::OverlayController;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::headless::calendar::CalendarMonth;
 use fret_ui_kit::ui;
-use fret_ui_shadcn::button::{Button, ButtonSize, ButtonVariant};
-use fret_ui_shadcn::{Calendar, DatePicker, Space, Switch};
+use fret_ui_kit::{OverlayController, Space};
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 use time::{OffsetDateTime, Weekday};
 
@@ -258,19 +257,19 @@ fn render(_driver: &mut DatePickerDemoDriver, context: WinitRenderContext<'_, De
 
                     let header = ui::h_row(|cx| {
                         [
-                            Button::new("Close")
-                                .variant(ButtonVariant::Outline)
-                                .size(ButtonSize::Sm)
+                            shadcn::Button::new("Close")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
                                 .on_click(CommandId::from("date_picker_demo.close"))
                                 .into_element(cx),
-                            Button::new("Today")
-                                .variant(ButtonVariant::Outline)
-                                .size(ButtonSize::Sm)
+                            shadcn::Button::new("Today")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
                                 .on_click(CommandId::from("date_picker_demo.reset_today"))
                                 .into_element(cx),
-                            Button::new("Clear")
-                                .variant(ButtonVariant::Outline)
-                                .size(ButtonSize::Sm)
+                            shadcn::Button::new("Clear")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
                                 .on_click(CommandId::from("date_picker_demo.clear"))
                                 .into_element(cx),
                             cx.text(Arc::from(format!(
@@ -298,23 +297,23 @@ fn render(_driver: &mut DatePickerDemoDriver, context: WinitRenderContext<'_, De
                         |cx| {
                             vec![
                                 cx.text("week start monday"),
-                                Switch::new(week_start_monday.clone())
+                                shadcn::Switch::new(week_start_monday.clone())
                                     .a11y_label("Week starts on Monday")
                                     .into_element(cx),
                                 cx.text("show outside days"),
-                                Switch::new(show_outside_days.clone())
+                                shadcn::Switch::new(show_outside_days.clone())
                                     .a11y_label("Show outside days")
                                     .into_element(cx),
                                 cx.text("disable outside days"),
-                                Switch::new(disable_outside_days.clone())
+                                shadcn::Switch::new(disable_outside_days.clone())
                                     .a11y_label("Disable outside days")
                                     .into_element(cx),
                                 cx.text("disable weekends"),
-                                Switch::new(disable_weekends.clone())
+                                shadcn::Switch::new(disable_weekends.clone())
                                     .a11y_label("Disable weekends")
                                     .into_element(cx),
                                 cx.text("disabled"),
-                                Switch::new(disabled.clone())
+                                shadcn::Switch::new(disabled.clone())
                                     .a11y_label("Disable date picker")
                                     .into_element(cx),
                             ]
@@ -328,11 +327,12 @@ fn render(_driver: &mut DatePickerDemoDriver, context: WinitRenderContext<'_, De
                             Weekday::Sunday
                         };
 
-                        let mut picker = DatePicker::new(open.clone(), month.clone(), selected.clone())
-                            .week_start(week_start)
-                            .show_outside_days(show_outside_days_value)
-                            .disable_outside_days(disable_outside_days_value)
-                            .disabled(disabled_value);
+                        let mut picker =
+                            shadcn::DatePicker::new(open.clone(), month.clone(), selected.clone())
+                                .week_start(week_start)
+                                .show_outside_days(show_outside_days_value)
+                                .disable_outside_days(disable_outside_days_value)
+                                .disabled(disabled_value);
 
                         if disable_weekends_value {
                             picker = picker.disabled_by(|d| {
@@ -350,7 +350,7 @@ fn render(_driver: &mut DatePickerDemoDriver, context: WinitRenderContext<'_, De
                             Weekday::Sunday
                         };
 
-                        let mut cal = Calendar::new(month.clone(), selected.clone())
+                        let mut cal = shadcn::Calendar::new(month.clone(), selected.clone())
                             .week_start(week_start)
                             .show_outside_days(show_outside_days_value)
                             .disable_outside_days(disable_outside_days_value);

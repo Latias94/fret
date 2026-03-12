@@ -5,34 +5,9 @@ use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-#[derive(Default)]
-struct Models {
-    icons_both: Option<Model<bool>>,
-    icons_selected_only: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, selected: Model<bool>) -> AnyElement {
-    let icons_both = cx.with_state(Models::default, |st| st.icons_both.clone());
-    let icons_both = match icons_both {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.icons_both = Some(model.clone()));
-            model
-        }
-    };
-
-    let icons_selected_only = cx.with_state(Models::default, |st| st.icons_selected_only.clone());
-    let icons_selected_only = match icons_selected_only {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.icons_selected_only = Some(model.clone())
-            });
-            model
-        }
-    };
+    let icons_both = cx.local_model_keyed("icons_both", || false);
+    let icons_selected_only = cx.local_model_keyed("icons_selected_only", || false);
 
     let value = cx
         .get_model_copied(&selected, Invalidation::Layout)

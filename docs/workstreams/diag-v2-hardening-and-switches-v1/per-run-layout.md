@@ -19,7 +19,7 @@ consumes), and is compatible with both:
 
 Related trackers:
 
-- Simplification workstream: `docs/workstreams/diag-simplification-v1.md`
+- Simplification workstream: `docs/workstreams/diag-simplification-v1/diag-simplification-v1.md`
 - This workstream (v2 hardening + switches): `docs/workstreams/diag-v2-hardening-and-switches-v1/README.md`
 
 ## Terms

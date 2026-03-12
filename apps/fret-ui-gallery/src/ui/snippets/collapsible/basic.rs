@@ -5,7 +5,7 @@ use fret_core::{Point, Transform2D};
 use fret_ui::Theme;
 use fret_ui::element::VisualTransformProps;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn rotated_lucide<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -31,7 +31,7 @@ fn rotated_lucide<H: UiHost>(
             transform,
         },
         move |cx| {
-            vec![shadcn::icon::icon_with(
+            vec![fret_ui_shadcn::icon::icon_with(
                 cx,
                 fret_icons::IconId::new_static(id),
                 Some(size),
@@ -66,7 +66,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             |cx| {
                 let body = ui::v_flex(|cx| {
                     vec![
-                        shadcn::typography::p(
+                        shadcn::raw::typography::p(
                             cx,
                             "This panel can be expanded or collapsed to reveal additional content.",
                         ),

@@ -18,9 +18,8 @@ use fret_ui_kit::declarative::{
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, OverlayController, OverlayPresence, Space,
-    UiChildIntoElement, UiHostBoundIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome,
-    UiSupportsLayout, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, OverlayController,
+    OverlayPresence, Space, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -108,7 +107,7 @@ impl SheetTrigger {
     /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
     pub fn build<H: UiHost, T>(child: T) -> SheetTriggerBuild<H, T>
     where
-        T: UiChildIntoElement<H>,
+        T: IntoUiElement<H>,
     {
         SheetTriggerBuild {
             child: Some(child),
@@ -124,35 +123,25 @@ impl SheetTrigger {
 
 impl<H: UiHost, T> SheetTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         SheetTrigger::new(
             self.child
                 .expect("expected sheet trigger child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
         .into_element(cx)
     }
 }
 
-impl<H: UiHost, T> UiHostBoundIntoElement<H> for SheetTriggerBuild<H, T>
+impl<H: UiHost, T> IntoUiElement<H> for SheetTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        SheetTriggerBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, T> UiChildIntoElement<H> for SheetTriggerBuild<H, T>
-where
-    T: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         SheetTriggerBuild::into_element(self, cx)
     }
 }
@@ -170,13 +159,13 @@ impl<H: UiHost> SheetCompositionTriggerArg<H> for SheetTrigger {
 
 impl<H: UiHost, T> SheetCompositionTriggerArg<H> for SheetTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     fn into_sheet_trigger(self, cx: &mut ElementContext<'_, H>) -> SheetTrigger {
         SheetTrigger::new(
             self.child
                 .expect("expected sheet trigger child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
     }
 }
@@ -216,14 +205,13 @@ fn sheet_open_change_events(
     (changed, completed)
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Copy, Default)]
 struct SheetSideProviderState {
-    current: Option<SheetSide>,
+    current: SheetSide,
 }
 
 fn inherited_sheet_side<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<SheetSide> {
-    cx.inherited_state_where::<SheetSideProviderState>(|st| st.current.is_some())
-        .and_then(|st| st.current)
+    cx.provided::<SheetSideProviderState>().map(|st| st.current)
 }
 
 #[track_caller]
@@ -232,25 +220,16 @@ fn with_sheet_side_provider<H: UiHost, R>(
     side: SheetSide,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(SheetSideProviderState::default, |st| {
-        let prev = st.current;
-        st.current = Some(side);
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(SheetSideProviderState::default, |st| {
-        st.current = prev;
-    });
-    out
+    cx.provide(SheetSideProviderState { current: side }, f)
 }
 
 fn sheet_side_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> SheetSide {
     inherited_sheet_side(cx).unwrap_or_default()
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone)]
 struct SheetOpenProviderState {
-    current: Option<Model<bool>>,
+    current: Model<bool>,
 }
 
 #[track_caller]
@@ -259,21 +238,12 @@ fn with_sheet_open_provider<H: UiHost, R>(
     open: Model<bool>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(SheetOpenProviderState::default, |st| {
-        let prev = st.current.clone();
-        st.current = Some(open);
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(SheetOpenProviderState::default, |st| {
-        st.current = prev;
-    });
-    out
+    cx.provide(SheetOpenProviderState { current: open }, f)
 }
 
 fn inherited_sheet_open<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<Model<bool>> {
-    cx.inherited_state_where::<SheetOpenProviderState>(|st| st.current.is_some())
-        .and_then(|st| st.current.clone())
+    cx.provided::<SheetOpenProviderState>()
+        .map(|st| st.current.clone())
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -528,7 +498,7 @@ impl Sheet {
                 overlay_motion::shadcn_motion_ease_bezier(cx),
             );
             let (open_change, open_change_complete) = cx
-                .with_state(SheetOpenChangeCallbackState::default, |state| {
+                .slot_state(SheetOpenChangeCallbackState::default, |state| {
                     sheet_open_change_events(state, is_open, motion.present, motion.animating)
                 });
             if let (Some(open), Some(on_open_change)) = (open_change, self.on_open_change.as_ref())
@@ -1094,7 +1064,7 @@ impl SheetClose {
     pub fn build<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
-        child: impl UiChildIntoElement<H>,
+        child: impl IntoUiElement<H>,
     ) -> AnyElement {
         let open = self.open.unwrap_or_else(|| {
             inherited_sheet_open(cx).unwrap_or_else(|| {
@@ -1391,22 +1361,12 @@ impl<H: UiHost, B> UiSupportsLayout for SheetContentBuild<H, B> where
 {
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for SheetContentBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for SheetContentBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        SheetContentBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for SheetContentBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         SheetContentBuild::into_element(self, cx)
     }
 }
@@ -1473,22 +1433,12 @@ where
     }
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for SheetHeaderBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for SheetHeaderBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        SheetHeaderBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for SheetHeaderBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         SheetHeaderBuild::into_element(self, cx)
     }
 }
@@ -1563,22 +1513,12 @@ where
     }
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for SheetFooterBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for SheetFooterBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        SheetFooterBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for SheetFooterBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         SheetFooterBuild::into_element(self, cx)
     }
 }
@@ -1664,7 +1604,6 @@ mod tests {
     use fret_ui::UiTree;
     use fret_ui::action::DismissReason;
     use fret_ui::element::{ContainerProps, ElementKind, PressableProps};
-    use fret_ui_kit::UiBuilderHostBoundIntoElementExt as _;
     use fret_ui_kit::UiExt as _;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
     use fret_ui_kit::ui::UiElementSinkExt as _;
@@ -2280,6 +2219,173 @@ mod tests {
             content_bounds.size.width.0 <= 384.0 + 0.5,
             "expected right sheet width <= max-size, got {}",
             content_bounds.size.width.0
+        );
+    }
+
+    fn render_sheet_frame_with_real_content(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        side: SheetSide,
+        content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        description_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        cancel_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        action_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+    ) {
+        OverlayController::begin_frame(app, window);
+
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "test",
+            |cx| {
+                let trigger = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st| Vec::new(),
+                );
+
+                let open_for_sheet = open.clone();
+                let description_id_out = description_id_out.clone();
+                let cancel_id_out = cancel_id_out.clone();
+                let action_id_out = action_id_out.clone();
+                let content_id_out = content_id_out.clone();
+
+                let sheet = Sheet::new(open_for_sheet).side(side).into_element(
+                    cx,
+                    |_cx| trigger,
+                    move |cx| {
+                        let title = SheetTitle::new("Edit profile").into_element(cx);
+                        let description = SheetDescription::new(
+                            "Make changes to your profile here. This content should wrap inside the sheet panel instead of measuring against unconstrained width on narrow viewports.",
+                        )
+                        .into_element(cx);
+                        description_id_out.set(Some(description.id));
+
+                        let header = SheetHeader::new(vec![title, description]).into_element(cx);
+
+                        let cancel = crate::Button::new("Cancel")
+                            .variant(crate::ButtonVariant::Outline)
+                            .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                            .into_element(cx);
+                        cancel_id_out.set(Some(cancel.id));
+
+                        let action = crate::Button::new("Save changes")
+                            .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                            .into_element(cx);
+                        action_id_out.set(Some(action.id));
+
+                        let footer = SheetFooter::new(vec![cancel, action]).into_element(cx);
+                        let content = SheetContent::new(vec![header, footer])
+                            .show_close_button(false)
+                            .into_element(cx);
+                        content_id_out.set(Some(content.id));
+                        content
+                    },
+                );
+
+                vec![sheet]
+            },
+        );
+
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+    }
+
+    #[test]
+    fn sheet_real_content_stays_within_panel_bounds_on_narrow_right_viewport() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let content_id = Rc::new(Cell::new(None));
+        let description_id = Rc::new(Cell::new(None));
+        let cancel_id = Rc::new(Cell::new(None));
+        let action_id = Rc::new(Cell::new(None));
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(600.0)),
+        );
+
+        for frame in 1..=2 {
+            app.set_frame_id(fret_runtime::FrameId(frame));
+            render_sheet_frame_with_real_content(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                SheetSide::Right,
+                content_id.clone(),
+                description_id.clone(),
+                cancel_id.clone(),
+                action_id.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let content_bounds = fret_ui::elements::current_bounds_for_element(
+            &mut app,
+            window,
+            content_id.get().expect("content element id"),
+        )
+        .expect("content bounds");
+        let description_bounds = fret_ui::elements::current_bounds_for_element(
+            &mut app,
+            window,
+            description_id.get().expect("description element id"),
+        )
+        .expect("description bounds");
+        let cancel_bounds = fret_ui::elements::current_bounds_for_element(
+            &mut app,
+            window,
+            cancel_id.get().expect("cancel element id"),
+        )
+        .expect("cancel bounds");
+        let action_bounds = fret_ui::elements::current_bounds_for_element(
+            &mut app,
+            window,
+            action_id.get().expect("action element id"),
+        )
+        .expect("action bounds");
+
+        let content_left = content_bounds.origin.x.0 - 0.5;
+        let content_right = content_bounds.origin.x.0 + content_bounds.size.width.0 + 0.5;
+
+        assert!(
+            description_bounds.origin.x.0 >= content_left
+                && description_bounds.origin.x.0 + description_bounds.size.width.0 <= content_right,
+            "expected description to stay inside sheet content; content={content_bounds:?} description={description_bounds:?}"
+        );
+        assert!(
+            cancel_bounds.origin.x.0 >= content_left
+                && cancel_bounds.origin.x.0 + cancel_bounds.size.width.0 <= content_right,
+            "expected cancel button to stay inside sheet content; content={content_bounds:?} cancel={cancel_bounds:?}"
+        );
+        assert!(
+            action_bounds.origin.x.0 >= content_left
+                && action_bounds.origin.x.0 + action_bounds.size.width.0 <= content_right,
+            "expected action button to stay inside sheet content; content={content_bounds:?} action={action_bounds:?}"
         );
     }
 

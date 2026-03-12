@@ -1,35 +1,20 @@
 pub const SOURCE: &str = include_str!("expandable.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default, Clone)]
-struct Models {
-    expandable_selected: Option<Model<Option<usize>>>,
-}
-
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let max_w_xs = Px(320.0);
 
-    let state = cx.with_state(Models::default, |st| st.clone());
-    let expandable_selected = match state.expandable_selected {
-        Some(model) => model,
-        None => {
-            let model: Model<Option<usize>> = cx.app.models_mut().insert(None);
-            cx.with_state(Models::default, |st| {
-                st.expandable_selected = Some(model.clone())
-            });
-            model
-        }
-    };
+    let expandable_selected = cx.local_model_keyed("expandable_selected", || None::<usize>);
     let expandable_selected_now = cx
         .watch_model(&expandable_selected)
         .copied()

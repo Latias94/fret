@@ -25,7 +25,7 @@ Action identity + typed unit actions:
 View runtime (v1):
 
 - `ecosystem/fret/src/view.rs` (`View`, `ViewCx`, `use_state`/`use_state_keyed`/`use_selector`/`use_query`, view-cache reuse + handler keepalive)
-- `ecosystem/fret/src/app_entry.rs` (`App::run_view`)
+- `ecosystem/fret/src/app_entry.rs` (`FretApp::view`, `FretApp::view_with_hooks`)
 - `ecosystem/fret-ui-kit/src/activate.rs` (`on_activate_*` helpers for low-noise pointer activation handlers)
 - `ecosystem/fret-ui-kit/src/primitives/menu/checkbox_item.rs` / `ecosystem/fret-ui-kit/src/primitives/menu/radio_group.rs` / `ecosystem/fret-ui-kit/src/primitives/menu/sub_trigger.rs` (internal primitives reuse `on_activate` helpers)
 - `ecosystem/fret-ui-kit/src/imui.rs` (imui pressable activation paths reuse `on_activate` / `on_activate_notify` helpers)
@@ -106,7 +106,9 @@ Examples adoption (authoring-noise reduction):
 - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs` (reload bump action now uses the default `on_action_notify_models` transaction path)
 - `apps/fret-cookbook/examples/commands_keymap_basics.rs` (command toggle handler now uses the default `on_action_notify_models` transaction path while availability stays explicit)
 - `apps/fret-cookbook/examples/toast_basics.rs` (intentional advanced reference case: imperative Sonner host integration still needs `UiActionHost` + window)
-- `apps/fret-cookbook/examples/router_basics.rs` (`ClearIntents` now uses the default `on_action_notify_models` transaction path; back/forward remain advanced because they also sync router command availability)
+- `apps/fret-cookbook/examples/router_basics.rs` (`ClearIntents` uses the default
+  `on_action_notify_models` transaction path, and back/forward now also stay on the shared typed
+  action path through `RouterUiStore::{back_on_action, forward_on_action}`)
 - `apps/fret-cookbook/examples/async_inbox_basics.rs` (`Cancel` now uses the default `on_action_notify_models` transaction path; `Start` remains advanced because it spawns dispatcher/inbox work)
 - `apps/fret-cookbook/examples/undo_basics.rs` (`Inc`/`Dec`/`Reset` now use the default `on_action_notify_models` transaction path; `Undo`/`Redo` remain advanced because they combine history traversal with RAF scheduling)
 

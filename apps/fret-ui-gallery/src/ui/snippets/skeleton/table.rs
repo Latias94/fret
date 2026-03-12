@@ -2,9 +2,10 @@ pub const SOURCE: &str = include_str!("table.rs");
 
 // region: example
 use fret_ui::element::SemanticsDecoration;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_kit::IntoUiElement;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn row<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+fn row<H: UiHost>() -> impl IntoUiElement<H> + use<H> {
     ui::h_flex(|cx| {
         vec![
             shadcn::Skeleton::new()
@@ -26,11 +27,10 @@ fn row<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .gap(Space::N4)
     .items_center()
     .layout(LayoutRefinement::default().w_full())
-    .into_element(cx)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    ui::v_flex(|cx| (0..3).map(|_| row(cx)).collect::<Vec<_>>())
+    ui::v_flex(|cx| (0..3).map(|_| row().into_element(cx)).collect::<Vec<_>>())
         .gap(Space::N2)
         .layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))
         .into_element(cx)

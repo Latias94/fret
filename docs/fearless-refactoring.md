@@ -47,25 +47,29 @@ probably an ecosystem-level hook/helper that should be used instead (or added).
 
 Golden path:
 
-- `fn view(cx: &mut ElementContext<'_, App>, state: &mut State) -> Elements`
-- Return `Elements` (an owned list wrapper). For a single root element, return `root.into()`.
+- `impl View for MyView { fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui { ... } }`
+- Return `Ui` (the app-facing alias over `Elements`). For a single root element, return `root.into()`.
 
 Why:
 
-- It keeps the driver signature concrete and hotpatch-friendly (function pointers, not captured
-  closures).
+- It keeps the default app-author contract concrete and nameable (`AppUi` / `Ui`).
+- The explicit advanced/manual path still maps cleanly to a concrete
+  `fn(&mut ElementContext<'_, App>, &mut State) -> ViewElements` seam when you need
+  hotpatch-friendly function-pointer hooks.
 - It leaves room for internal storage optimizations while keeping call sites stable.
 
-#### Why not `-> impl Trait` for `view`?
+#### Why not `-> impl Trait` for `render()`?
 
-Returning `impl Into<Elements>` (or `impl View`) can look nicer in small examples, but it pushes app
+Returning `impl Into<Ui>` (or `impl View`) can look nicer in small examples, but it pushes app
 code toward generic-heavy patterns that are harder to version over time:
 
-- It blocks simple `fn` pointer driver APIs (often used for hotpatching and predictable dispatch).
+- It makes the default `View::render(...)` contract less nameable in app code and docs.
+- It still does not help the explicit advanced/manual path, which needs a concrete `fn` seam for
+  hotpatching and predictable dispatch.
 - It tends to increase type churn and compile times (monomorphization + larger error surfaces).
 - It makes it harder to standardize tooling/diagnostics around a single authoring return type.
 
-Instead, we keep `Elements` concrete and provide small ergonomics (e.g. `root.into()` and array /
+Instead, we keep `Ui` concrete and provide small ergonomics (e.g. `root.into()` and array /
 iterator conversions) so call sites stay compact without paying the generic tax.
 
 ### 2) Prefer typed actions (golden path)
@@ -75,7 +79,8 @@ actions:
 
 - Define typed unit actions with stable IDs via `fret::actions!([..])`.
 - Bind UI triggers via `.action(act::Something)` (or `cx.dispatch(...)` for programmatic dispatch).
-- Handle actions via `ViewCx::on_action_notify_locals`, `ViewCx::on_action_notify_models` (shared graphs), `ViewCx::on_action_notify_transient`, and local `on_activate*` by default; keep raw `on_action_notify` for cookbook/reference host-side cases.
+- Handle actions via `cx.actions().locals::<A>(...)`, `cx.actions().models::<A>(...)` (shared graphs), `cx.actions().transient::<A>(...)`, and local `on_activate*` by default; keep raw `AppUi::on_action_notify*` for cookbook/reference host-side cases.
+- If advanced code intentionally wants the raw model-backed hook, import `use fret::advanced::AppUiRawStateExt;` and call `cx.use_state::<T>()` explicitly instead of treating it as part of the default `AppUi` surface.
 
 Authoring and historical note:
 
@@ -143,7 +148,7 @@ Use `rg` to find patterns:
 - `.into_element(cx)` call sites
 - `Theme::global(...)` usage
 - `watch_model(...).layout()` chains
-- typed action handlers (`on_action_notify_locals`, `on_action_notify_models`, `on_action_notify_transient`, `on_activate*`, and rare cookbook/reference `on_action_notify`) plus action IDs
+- typed action handlers (`cx.actions().locals::<A>(...)`, `cx.actions().models::<A>(...)`, `cx.actions().transient::<A>(...)`, `on_activate*`, and rare cookbook/reference `AppUi::on_action_notify*`) plus action IDs
 
 ### Prefer templates and golden demos as migration references
 

@@ -1,10 +1,10 @@
 pub const SOURCE: &str = include_str!("overlay_demo.rs");
 
 // region: example
-use fret_app::App;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret::UiCx;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut ElementContext<'_, App>, dialog_open: Model<bool>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>, dialog_open: Model<bool>) -> AnyElement {
     let shell_layout = LayoutRefinement::default()
         .w_full()
         .max_w(Px(760.0))
@@ -40,6 +40,7 @@ pub fn render(cx: &mut ElementContext<'_, App>, dialog_open: Model<bool>) -> Any
                         .into_element(cx)])
                     .into_element(cx),
                 ])
+                .show_close_button(false)
                 .into_element(cx)
                 .test_id("ui-gallery-motion-presets-dialog-content")
             },

@@ -2,34 +2,7 @@ pub const SOURCE: &str = include_str!("sides.rs");
 
 // region: example
 use fret_ui_kit::ui;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default, Clone)]
-struct Models {
-    top_open: Option<Model<bool>>,
-    right_open: Option<Model<bool>>,
-    bottom_open: Option<Model<bool>>,
-    left_open: Option<Model<bool>>,
-}
-
-fn models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Models {
-    cx.with_state(Models::default, |st| st.clone())
-}
-
-fn ensure_open<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    model: Option<Model<bool>>,
-    set: impl FnOnce(&mut Models, Model<bool>),
-) -> Model<bool> {
-    match model {
-        Some(model) => model,
-        None => {
-            let inserted = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| set(st, inserted.clone()));
-            inserted
-        }
-    }
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn side_button<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -72,11 +45,10 @@ fn side_button<H: UiHost>(
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let st = models(cx);
-    let top_open = ensure_open(cx, st.top_open, |st, model| st.top_open = Some(model));
-    let right_open = ensure_open(cx, st.right_open, |st, model| st.right_open = Some(model));
-    let bottom_open = ensure_open(cx, st.bottom_open, |st, model| st.bottom_open = Some(model));
-    let left_open = ensure_open(cx, st.left_open, |st, model| st.left_open = Some(model));
+    let top_open = cx.local_model_keyed("top_open", || false);
+    let right_open = cx.local_model_keyed("right_open", || false);
+    let bottom_open = cx.local_model_keyed("bottom_open", || false);
+    let left_open = cx.local_model_keyed("left_open", || false);
 
     ui::h_flex(|cx| {
         vec![

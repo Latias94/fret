@@ -49,8 +49,8 @@ Evidence:
 
 Why this is enough:
 
-- `fret::App::new(...).window(...).view::<V>()` is the recommended short path.
-- `fret::App::new(...).window(...).view_with_hooks::<V>(...)` keeps advanced driver hooks on that
+- `fret::FretApp::new(...).window(...).view::<V>()` is the recommended short path.
+- `fret::FretApp::new(...).window(...).view_with_hooks::<V>(...)` keeps advanced driver hooks on that
   same builder path.
 - The builder chain is now the only `fret` app-author entry story, which removes first-contact
   ambiguity at the crate root.
@@ -61,7 +61,7 @@ Why this is enough:
 
 The `fret` facade already exposes the advanced hooks that matter for non-trivial products:
 
-- `App::view_with_hooks::<V>`
+- `FretApp::view_with_hooks::<V>`
 - `configure(...)`
 - `on_gpu_ready(...)`
 - `install_custom_effects(...)`
@@ -267,7 +267,7 @@ Interpretation update:
 - the current single-window UI batch (`datatable_demo`, `date_picker_demo`, `form_demo`, `ime_smoke_demo`, `sonner_demo`) reduces that inventory again to 13, reinforcing that the remaining blockers are composition complexity and migration effort, not launch-hook insufficiency.
 - the latest medium-complexity desktop batch (`plot_stress_demo`, `table_demo`, `table_stress_demo`, `virtual_list_stress_demo`, `workspace_shell_demo`) reduces that inventory again to 8, leaving only the heaviest docking/gallery/gizmo/node-graph examples on direct `WinitAppDriver` posture.
 - `canvas_datagrid_stress_demo` also migrates cleanly to pure free hooks, reducing that inventory again to 7 and further supporting the conclusion that `FnDriver` is not blocked on additional stress/perf hook surface.
-- `docking_demo` shows the remaining gap was not in `FnDriverHooks` at all, but in the facade posture: once `fret::run_native_with_configured_fn_driver(...)` exists for preconfigured `.with_init(...)` drivers, docking orchestration also migrates cleanly and the inventory drops again to 6.
+- `docking_demo` shows the remaining gap was not in `FnDriverHooks` at all, but in the facade posture: once `fret::advanced::run_native_with_configured_fn_driver(...)` exists for preconfigured `.with_init(...)` drivers, docking orchestration also migrates cleanly and the inventory drops again to 6.
 - `container_queries_docking_demo` confirms that the same helper is reusable rather than one-off: container-query-aware docking also migrates cleanly and the inventory drops again to 5, still without any new `FnDriverHooks`.
 - `docking_arbitration_demo` closes the next multi-window docking case too: viewport input, dock-op arbitration, floating-window lifecycle, and dev-state export/import all move to the existing free-hook surface, reducing the remaining direct `WinitAppDriver` inventory again to 4 without adding any new `FnDriverHooks`.
 - `node_graph_legacy_demo` closes the retained node-graph reference path as well: model/global propagation, command routing, persistence debounce, diagnostics interception, and retained/declarative render selection all fit the existing free-hook surface, reducing the remaining direct `WinitAppDriver` inventory again to 3 without adding any new `FnDriverHooks`.

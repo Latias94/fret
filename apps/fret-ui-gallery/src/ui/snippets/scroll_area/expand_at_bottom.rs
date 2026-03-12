@@ -2,32 +2,17 @@ pub const SOURCE: &str = include_str!("expand_at_bottom.rs");
 
 // region: example
 use fret_core::{Px, SemanticsRole};
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::SemanticsDecoration;
 use fret_ui::element::SemanticsProps;
 use fret_ui::scroll::ScrollHandle;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
-
-#[derive(Default)]
-struct DemoModels {
-    expanded: Option<Model<bool>>,
-}
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     cx.named("ui-gallery.scroll_area.expand_at_bottom", |cx| {
-        let scroll_handle = cx.with_state(ScrollHandle::default, |h| h.clone());
-
-        let expanded = cx.with_state(DemoModels::default, |st| st.expanded.clone());
-        let expanded = match expanded {
-            Some(model) => model,
-            None => {
-                let model = cx.app.models_mut().insert(false);
-                cx.with_state(DemoModels::default, |st| st.expanded = Some(model.clone()));
-                model
-            }
-        };
+        let scroll_handle = cx.slot_state(ScrollHandle::default, |h| h.clone());
+        let expanded = cx.local_model_keyed("expanded", || false);
 
         cx.semantics_with_id(
             SemanticsProps {

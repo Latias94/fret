@@ -1,9 +1,10 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::shadcn_extras as snippets;
 
-pub(super) fn preview_shadcn_extras(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(super) fn preview_shadcn_extras(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let announcement = snippets::announcement::render(cx);
     let banner = snippets::banner::render(cx);
     let tags = snippets::tags::render(cx);

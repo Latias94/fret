@@ -1,9 +1,10 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::field as snippets;
 
-pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let input = snippets::input::render(cx);
     let textarea = snippets::textarea::render(cx);
     let select = snippets::select::render(cx);
@@ -73,10 +74,10 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             DocSection::new("Usage", usage)
                 .description("Copyable minimal imports plus a representative fieldset composition.")
                 .code_rust(
-                    r#"use fret_ui_shadcn::{self as shadcn, prelude::*};
+                    r#"use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-let full_name = cx.app.models_mut().insert(String::new());
-let newsletter = cx.app.models_mut().insert(false);
+let full_name = cx.local_model_keyed("full_name", String::new);
+let newsletter = cx.local_model_keyed("newsletter", || false);
 
 shadcn::FieldSet::new([
     shadcn::FieldLegend::new("Profile").into_element(cx),

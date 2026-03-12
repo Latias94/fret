@@ -2,27 +2,10 @@ pub const SOURCE: &str = include_str!("slider.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default, Clone)]
-struct Models {
-    slider_values: Option<Model<Vec<f32>>>,
-}
-
-fn values_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Vec<f32>> {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    match state.slider_values {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(vec![200.0, 800.0]);
-            cx.with_state(Models::default, |st| st.slider_values = Some(model.clone()));
-            model
-        }
-    }
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let slider_values = values_model(cx);
+    let slider_values = cx.local_model(|| vec![200.0, 800.0]);
     let max_w_md = LayoutRefinement::default().w_full().max_w(Px(520.0));
 
     shadcn::Field::new([

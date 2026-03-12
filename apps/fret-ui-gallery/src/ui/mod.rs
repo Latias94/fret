@@ -18,35 +18,44 @@
     clippy::useless_format
 )]
 
-use fret_app::{App, CommandId, Model};
+// Shared prelude for the `crate::ui` tree. Many preview/snippet modules intentionally import
+// these names from `super::*`, so local unused-import warnings here are expected.
+#[allow(unused_imports)]
+pub(in crate::ui) use fret_app::{App, CommandId, Model};
 #[cfg(feature = "gallery-dev")]
 use fret_code_editor as code_editor;
 #[cfg(feature = "gallery-dev")]
 use fret_code_editor_view as code_editor_view;
 #[cfg(feature = "gallery-dev")]
 use fret_code_view as code_view;
-use fret_core::{
+#[allow(unused_imports)]
+pub(in crate::ui) use fret_core::{
     AttributedText, CaretAffinity, Color as CoreColor, Corners, DrawOrder, Edges, FontId, ImageId,
     Point, Px, Rect, SceneOp, Size, TextConstraints, TextOverflow, TextSpan, TextStyle, TextWrap,
 };
 #[cfg(feature = "gallery-dev")]
 use fret_markdown as markdown;
-use fret_ui::Theme;
-use fret_ui::element::{CanvasProps, SemanticsDecoration};
+#[allow(unused_imports)]
+pub(in crate::ui) use fret_ui::Theme;
+#[allow(unused_imports)]
+pub(in crate::ui) use fret_ui::element::{CanvasProps, SemanticsDecoration};
 use fret_ui::elements::ContinuousFrames;
+#[cfg(feature = "gallery-dev")]
 use fret_ui::scroll::VirtualListScrollHandle;
-#[cfg(feature = "gallery-ai")]
-use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::CachedSubtreeExt as _;
 pub(super) use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::ui;
 #[cfg(feature = "gallery-material3")]
 use fret_ui_material3 as material3;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-use std::cell::{Cell, RefCell};
-use std::rc::Rc;
-use std::sync::{Arc, OnceLock};
-use time::Date;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
+#[allow(unused_imports)]
+pub(in crate::ui) use std::cell::{Cell, RefCell};
+#[allow(unused_imports)]
+pub(in crate::ui) use std::rc::Rc;
+#[allow(unused_imports)]
+pub(in crate::ui) use std::sync::{Arc, OnceLock};
+#[allow(unused_imports)]
+pub(in crate::ui) use time::Date;
 
 use crate::spec::*;
 

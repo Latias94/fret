@@ -1,5 +1,6 @@
 use super::super::super::super::*;
 use crate::ui::doc_layout;
+use fret::UiCx;
 
 pub(in crate::ui) fn markdown_editor_source_text() -> Arc<str> {
     static SOURCE: OnceLock<Arc<str>> = OnceLock::new();
@@ -46,7 +47,7 @@ wrap (break-words) instead of forcing horizontal overflow:
 }
 
 pub(in crate::ui) fn preview_markdown_editor_source(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     soft_wrap: Model<bool>,
     folds: Model<bool>,
@@ -483,7 +484,7 @@ pub(in crate::ui) fn preview_markdown_editor_source(
 
         ui::v_flex(move |cx| {
                 let mut out = vec![
-                    shadcn::typography::muted(
+                    shadcn::raw::typography::muted(
                         cx,
                         "Interactive span gate: click the link to exercise SelectableText span activation.",
                     ),
@@ -491,7 +492,7 @@ pub(in crate::ui) fn preview_markdown_editor_source(
                 ];
                 if let Some(href) = link_gate_last.as_ref() {
                     out.push(
-                        shadcn::typography::muted(cx, format!("Activated: {href}"))
+                        shadcn::raw::typography::muted(cx, format!("Activated: {href}"))
                             .test_id("ui-gallery-markdown-span-link-activated"),
                     );
                 }

@@ -7,26 +7,11 @@ use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
-use fret_ui_shadcn::prelude::*;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     use fret_canvas::view::PanZoom2D;
-    use fret_runtime::Model;
-
-    #[derive(Default)]
-    struct DemoModels {
-        view: Option<Model<PanZoom2D>>,
-    }
-
-    let needs_init = cx.with_state(DemoModels::default, |st| st.view.is_none());
-    if needs_init {
-        let view = cx.app.models_mut().insert(PanZoom2D::default());
-        cx.with_state(DemoModels::default, |st| st.view = Some(view.clone()));
-    }
-
-    let view = cx
-        .with_state(DemoModels::default, |st| st.view.clone())
-        .expect("view");
+    let view = cx.local_model_keyed("view", PanZoom2D::default);
 
     let canvas = ui_ai::WorkflowCanvas::new([
         ui_ai::WorkflowControls::new([
@@ -44,10 +29,10 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         )
         .into_element(cx),
         ui_ai::WorkflowToolbar::new([
-            fret_ui_shadcn::Button::new("Action A")
+            shadcn::Button::new("Action A")
                 .test_id("ui-ai-workflow-canvas-demo-toolbar-a")
                 .into_element(cx),
-            fret_ui_shadcn::Button::new("Action B")
+            shadcn::Button::new("Action B")
                 .test_id("ui-ai-workflow-canvas-demo-toolbar-b")
                 .into_element(cx),
         ])

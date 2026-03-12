@@ -2,35 +2,13 @@ pub const SOURCE: &str = include_str!("custom_close_button.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default, Clone)]
-struct Models {
-    open: Option<Model<bool>>,
-    share_link: Option<Model<String>>,
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    let open = match state.open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.open = Some(model.clone()));
-            model
-        }
-    };
-    let share_link = match state.share_link {
-        Some(model) => model,
-        None => {
-            let model = cx
-                .app
-                .models_mut()
-                .insert(String::from("https://ui.shadcn.com/docs/components/dialog"));
-            cx.with_state(Models::default, |st| st.share_link = Some(model.clone()));
-            model
-        }
-    };
+    let open = cx.local_model_keyed("open", || false);
+    let share_link = cx.local_model_keyed("share_link", || {
+        String::from("https://ui.shadcn.com/docs/components/dialog")
+    });
 
     let open_for_trigger = open.clone();
     let open_for_footer = open.clone();
@@ -65,6 +43,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .into_element(cx)])
                 .into_element(cx),
             ])
+            .show_close_button(false)
             .refine_layout(LayoutRefinement::default().w_full().max_w(Px(560.0)))
             .into_element(cx)
             .test_id("ui-gallery-dialog-custom-close-content")

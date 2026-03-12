@@ -1,40 +1,13 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::slider as snippets;
 
-pub(super) fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(super) fn preview_slider(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     cx.keyed("ui_gallery.slider_page", |cx| {
-        #[derive(Default)]
-        struct SliderPageState {
-            last_commit: Option<Model<Vec<f32>>>,
-            controlled_values: Option<Model<Vec<f32>>>,
-        }
-
-        let last_commit = cx.with_state(SliderPageState::default, |st| st.last_commit.clone());
-        let last_commit = match last_commit {
-            Some(model) => model,
-            None => {
-                let model = cx.app.models_mut().insert(Vec::<f32>::new());
-                cx.with_state(SliderPageState::default, |st| {
-                    st.last_commit = Some(model.clone());
-                });
-                model
-            }
-        };
-
-        let controlled_values =
-            cx.with_state(SliderPageState::default, |st| st.controlled_values.clone());
-        let controlled_values = match controlled_values {
-            Some(model) => model,
-            None => {
-                let model = cx.app.models_mut().insert(vec![0.3, 0.7]);
-                cx.with_state(SliderPageState::default, |st| {
-                    st.controlled_values = Some(model.clone());
-                });
-                model
-            }
-        };
+        let last_commit = cx.local_model_keyed("last_commit", Vec::<f32>::new);
+        let controlled_values = cx.local_model_keyed("controlled_values", || vec![0.3, 0.7]);
 
         let demo = cx.keyed("ui_gallery.slider.demo", |cx| {
             snippets::demo::render(cx, controlled_values.clone())

@@ -3,27 +3,10 @@ pub const SOURCE: &str = include_str!("demo.rs");
 // region: example
 use fret_core::Px;
 use fret_ui_kit::primitives::control_registry::ControlId;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default, Clone)]
-struct Models {
-    email: Option<Model<String>>,
-}
-
-fn email_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    match state.email {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| st.email = Some(model.clone()));
-            model
-        }
-    }
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let email = email_model(cx);
+    let email = cx.local_model(String::new);
     let max_w = LayoutRefinement::default().w_full().max_w(Px(420.0));
     let id = ControlId::from("ui-gallery-label-email");
 

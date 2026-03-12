@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("confirmation_demo.rs");
 
 // region: example
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::Theme;
 use fret_ui_ai as ui_ai;
@@ -9,41 +8,12 @@ use fret_ui_kit::ColorRef;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::ui;
 use fret_ui_kit::{Items, LayoutRefinement, Space};
-use fret_ui_shadcn::{self as shadcn, Button, ButtonSize, ButtonVariant, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default)]
-struct DemoModels {
-    state: Option<Model<ui_ai::ToolUiPartState>>,
-    approval: Option<Model<Option<ui_ai::ToolUiPartApproval>>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state = cx.with_state(DemoModels::default, |st| st.state.clone());
-    let state = match state {
-        Some(model) => model,
-        None => {
-            let model = cx
-                .app
-                .models_mut()
-                .insert(ui_ai::ToolUiPartState::InputAvailable);
-            cx.with_state(DemoModels::default, |st| st.state = Some(model.clone()));
-            model
-        }
-    };
-
-    let approval = cx.with_state(DemoModels::default, |st| st.approval.clone());
-    let approval = match approval {
-        Some(model) => model,
-        None => {
-            let model = cx
-                .app
-                .models_mut()
-                .insert(None::<ui_ai::ToolUiPartApproval>);
-            cx.with_state(DemoModels::default, |st| st.approval = Some(model.clone()));
-            model
-        }
-    };
+    let state = cx.local_model_keyed("state", || ui_ai::ToolUiPartState::InputAvailable);
+    let approval = cx.local_model_keyed("approval", || None::<ui_ai::ToolUiPartApproval>);
 
     let state_now = cx
         .get_model_copied(&state, Invalidation::Layout)
@@ -52,9 +22,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .get_model_cloned(&approval, Invalidation::Layout)
         .unwrap_or(None);
 
-    let request_btn = Button::new("Request approval")
-        .variant(ButtonVariant::Secondary)
-        .size(ButtonSize::Sm)
+    let request_btn = shadcn::Button::new("Request approval")
+        .variant(shadcn::ButtonVariant::Secondary)
+        .size(shadcn::ButtonSize::Sm)
         .test_id("ui-ai-confirmation-requested-btn")
         .on_activate(Arc::new({
             let state = state.clone();
@@ -72,7 +42,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .into_element(cx);
 
     let reject_btn = ui_ai::ConfirmationAction::new("Reject")
-        .variant(ButtonVariant::Outline)
+        .variant(shadcn::ButtonVariant::Outline)
         .test_id("ui-ai-confirmation-reject")
         .on_activate(Arc::new({
             let state = state.clone();
@@ -92,7 +62,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .into_element(cx);
 
     let approve_btn = ui_ai::ConfirmationAction::new("Approve")
-        .variant(ButtonVariant::Default)
+        .variant(shadcn::ButtonVariant::Default)
         .test_id("ui-ai-confirmation-approve")
         .on_activate(Arc::new({
             let state = state.clone();
@@ -122,7 +92,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             let request = ui::h_row(|cx| {
                 vec![
                     cx.text("This tool wants to delete the file"),
-                    shadcn::typography::inline_code(cx, "/tmp/example.txt"),
+                    shadcn::raw::typography::inline_code(cx, "/tmp/example.txt"),
                     cx.text(". Do you approve this action?"),
                 ]
             })

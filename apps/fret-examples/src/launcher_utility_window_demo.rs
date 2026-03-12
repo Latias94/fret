@@ -1,9 +1,9 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret_app::{App, CommandId, Effect, WindowRequest};
-use fret_bootstrap::ui_app_with_hooks;
-use fret_core::{AppWindowId, MouseButton, Px, SemanticsRole};
+use fret::advanced::prelude::*;
+use fret_app::{CommandId, Effect, WindowRequest};
+use fret_core::{MouseButton, Px, SemanticsRole};
 use fret_runtime::DefaultAction;
 use fret_runtime::{
     RunnerWindowStyleDiagnosticsStore, TimerToken, WindowDecorationsRequest, WindowResizeDirection,
@@ -11,10 +11,8 @@ use fret_runtime::{
 };
 use fret_ui::ElementContext;
 use fret_ui::element::{LayoutStyle, Length, PointerRegionProps, SemanticsDecoration, SizeStyle};
-use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
-use fret_ui_shadcn::button::{Button, ButtonSize, ButtonVariant};
-use fret_ui_shadcn::{Card, CardContent, CardDescription, CardHeader, CardTitle};
+use fret_ui_shadcn::facade as shadcn;
 
 const CMD_BLINK: &str = "launcher_utility_window_demo.blink";
 const CMD_TOGGLE_ALWAYS_ON_TOP: &str = "launcher_utility_window_demo.toggle_always_on_top";
@@ -27,6 +25,21 @@ const TEST_ID_BLINK: &str = "utility-window.blink";
 const TEST_ID_TOGGLE_ALWAYS_ON_TOP: &str = "utility-window.always_on_top";
 const TEST_ID_QUIT: &str = "utility-window.quit";
 const TEST_ID_STYLE_TEXT: &str = "utility-window.style_effective";
+
+fn install_commands(app: &mut KernelApp) {
+    app.commands_mut().register(
+        CommandId::from(CMD_BLINK),
+        fret_app::CommandMeta::new("Blink (hide + show)"),
+    );
+    app.commands_mut().register(
+        CommandId::from(CMD_TOGGLE_ALWAYS_ON_TOP),
+        fret_app::CommandMeta::new("Toggle always on top"),
+    );
+    app.commands_mut().register(
+        CommandId::from(CMD_QUIT),
+        fret_app::CommandMeta::new("Quit"),
+    );
+}
 
 pub fn run() -> anyhow::Result<()> {
     ui_app_with_hooks(
@@ -45,20 +58,7 @@ pub fn run() -> anyhow::Result<()> {
             ..Default::default()
         };
     })
-    .init_app(|app| {
-        app.commands_mut().register(
-            CommandId::from(CMD_BLINK),
-            fret_app::CommandMeta::new("Blink (hide + show)"),
-        );
-        app.commands_mut().register(
-            CommandId::from(CMD_TOGGLE_ALWAYS_ON_TOP),
-            fret_app::CommandMeta::new("Toggle always on top"),
-        );
-        app.commands_mut().register(
-            CommandId::from(CMD_QUIT),
-            fret_app::CommandMeta::new("Quit"),
-        );
-    })
+    .setup(install_commands)
     .run()
     .map_err(anyhow::Error::from)
 }
@@ -70,7 +70,7 @@ struct LauncherUtilityWindowState {
     status: fret_runtime::Model<Arc<str>>,
 }
 
-fn init_window(app: &mut App, window: AppWindowId) -> LauncherUtilityWindowState {
+fn init_window(app: &mut KernelApp, window: AppWindowId) -> LauncherUtilityWindowState {
     LauncherUtilityWindowState {
         window,
         always_on_top: app.models_mut().insert(false),
@@ -80,16 +80,16 @@ fn init_window(app: &mut App, window: AppWindowId) -> LauncherUtilityWindowState
 }
 
 fn configure_driver(
-    driver: fret_bootstrap::ui_app_driver::UiAppDriver<LauncherUtilityWindowState>,
-) -> fret_bootstrap::ui_app_driver::UiAppDriver<LauncherUtilityWindowState> {
+    driver: UiAppDriver<LauncherUtilityWindowState>,
+) -> UiAppDriver<LauncherUtilityWindowState> {
     driver.on_command(on_command).on_event(on_event)
 }
 
 fn on_command(
-    app: &mut App,
+    app: &mut KernelApp,
     _services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
-    _ui: &mut fret_ui::UiTree<App>,
+    _ui: &mut fret_ui::UiTree<KernelApp>,
     st: &mut LauncherUtilityWindowState,
     command: &CommandId,
 ) {
@@ -154,10 +154,10 @@ fn on_command(
 }
 
 fn on_event(
-    app: &mut App,
+    app: &mut KernelApp,
     _services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
-    _ui: &mut fret_ui::UiTree<App>,
+    _ui: &mut fret_ui::UiTree<KernelApp>,
     st: &mut LauncherUtilityWindowState,
     event: &fret_core::Event,
 ) {
@@ -180,9 +180,9 @@ fn on_event(
 }
 
 fn view(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     st: &mut LauncherUtilityWindowState,
-) -> fret_bootstrap::ui_app_driver::ViewElements {
+) -> ViewElements {
     let theme = cx.theme().snapshot();
     let color_background = theme.color_token("background");
     let color_muted_foreground = theme.color_token("muted-foreground");
@@ -261,25 +261,25 @@ fn view(
 
                     let header_controls = ui::h_row(move |cx| {
                         vec![
-                            Button::new("Blink")
-                                .variant(ButtonVariant::Secondary)
-                                .size(ButtonSize::Sm)
+                            shadcn::Button::new("Blink")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .size(shadcn::ButtonSize::Sm)
                                 .on_click(CommandId::from(CMD_BLINK))
                                 .test_id(TEST_ID_BLINK)
                                 .into_element(cx),
-                            Button::new(if always_on_top {
+                            shadcn::Button::new(if always_on_top {
                                 "Always on top: on"
                             } else {
                                 "Always on top: off"
                             })
-                            .variant(ButtonVariant::Outline)
-                            .size(ButtonSize::Sm)
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .size(shadcn::ButtonSize::Sm)
                             .on_click(CommandId::from(CMD_TOGGLE_ALWAYS_ON_TOP))
                             .test_id(TEST_ID_TOGGLE_ALWAYS_ON_TOP)
                             .into_element(cx),
-                            Button::new("Quit")
-                                .variant(ButtonVariant::Destructive)
-                                .size(ButtonSize::Sm)
+                            shadcn::Button::new("Quit")
+                                .variant(shadcn::ButtonVariant::Destructive)
+                                .size(shadcn::ButtonSize::Sm)
                                 .on_click(CommandId::from(CMD_QUIT))
                                 .test_id(TEST_ID_QUIT)
                                 .into_element(cx),
@@ -300,16 +300,16 @@ fn view(
         },
     );
 
-    let content = Card::new([
-        CardHeader::new([
-            CardTitle::new("MVP gates").into_element(cx),
-            CardDescription::new(
+    let content = shadcn::Card::new([
+        shadcn::CardHeader::new([
+            shadcn::CardTitle::new("MVP gates").into_element(cx),
+            shadcn::CardDescription::new(
                 "Frameless main window + BeginDrag/BeginResize hooks + SetVisible (blink).",
             )
             .into_element(cx),
         ])
         .into_element(cx),
-        CardContent::new([ui::v_flex(move |cx| {
+        shadcn::CardContent::new([ui::v_flex(move |cx| {
             [
                 ui::text(style_text)
                     .font_monospace()

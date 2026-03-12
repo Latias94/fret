@@ -32,15 +32,10 @@ fn select_semantics_node_with_trace<'a>(
 
     match selector {
         UiSelectorV1::NodeId { node, .. } => {
-            if let Some(n) = index
-                .by_id
-                .get(node)
-                .copied()
-                .filter(|n| {
-                    let id = n.id.data().as_ffi();
-                    index.is_selectable(id) && in_scope(id) && matches_root_z(id)
-                })
-            {
+            if let Some(n) = index.by_id.get(node).copied().filter(|n| {
+                let id = n.id.data().as_ffi();
+                index.is_selectable(id) && in_scope(id) && matches_root_z(id)
+            }) {
                 matches.push(n);
             }
         }
@@ -132,19 +127,24 @@ fn select_semantics_node_with_trace<'a>(
                     && n.test_id.as_deref() == Some(id)
             }));
             if matches.is_empty() {
+                if selector::extend_test_id_chrome_fallback(
+                    snapshot,
+                    &index,
+                    id,
+                    &in_scope,
+                    &matches_root_z,
+                    &mut matches,
+                ) {
+                    note = Some("fallback_chrome_suffix".to_string());
+                }
+            }
+            if matches.is_empty() {
                 // Fallback for debugging: allow selecting hidden nodes if no visible match exists.
                 note = Some("fallback_hidden_nodes".to_string());
-                matches.extend(
-                    snapshot
-                        .nodes
-                        .iter()
-                        .filter(|n| {
-                            let node_id = n.id.data().as_ffi();
-                            in_scope(node_id)
-                                && matches_root_z(node_id)
-                                && n.test_id.as_deref() == Some(id)
-                        }),
-                );
+                matches.extend(snapshot.nodes.iter().filter(|n| {
+                    let node_id = n.id.data().as_ffi();
+                    in_scope(node_id) && matches_root_z(node_id) && n.test_id.as_deref() == Some(id)
+                }));
             }
         }
         UiSelectorV1::GlobalElementId { element, .. } => {
@@ -166,15 +166,10 @@ fn select_semantics_node_with_trace<'a>(
                 return None;
             };
             let node_id = node.data().as_ffi();
-            if let Some(n) = index
-                .by_id
-                .get(&node_id)
-                .copied()
-                .filter(|n| {
-                    let id = n.id.data().as_ffi();
-                    index.is_selectable(id) && in_scope(id) && matches_root_z(id)
-                })
-            {
+            if let Some(n) = index.by_id.get(&node_id).copied().filter(|n| {
+                let id = n.id.data().as_ffi();
+                index.is_selectable(id) && in_scope(id) && matches_root_z(id)
+            }) {
                 matches.push(n);
             }
         }

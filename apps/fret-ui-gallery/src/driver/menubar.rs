@@ -1,4 +1,4 @@
-use fret::prelude::{
+use fret::workspace_menu::{
     InWindowMenubarFocusHandle, MenubarFromRuntimeOptions, menubar_from_runtime_with_focus_handle,
 };
 use fret_app::{App, Model};

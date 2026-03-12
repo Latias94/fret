@@ -1,25 +1,16 @@
 pub const SOURCE: &str = include_str!("plugin_autoplay_stop_on_last_snap.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign, TextProps};
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 use std::time::Duration;
-
-#[derive(Default, Clone)]
-struct Models {
-    autoplay_api: Option<Model<Option<shadcn::CarouselAutoplayApi>>>,
-    api_handle: Option<Model<Option<shadcn::CarouselApi>>>,
-    api_cursor: Option<Model<shadcn::CarouselEventCursor>>,
-    current: Option<Model<usize>>,
-    count: Option<Model<usize>>,
-}
 
 #[derive(Debug, Clone, Copy)]
 struct SlideVisual {
@@ -27,7 +18,7 @@ struct SlideVisual {
     line_height_px: Px,
 }
 
-fn slide_card(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual) -> AnyElement {
+fn slide_card(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
 
     let number = ui::text(format!("{idx}"))
@@ -55,57 +46,14 @@ fn slide_card(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual)
     shadcn::Card::new([content]).into_element(cx)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let max_w_xs = Px(320.0);
 
-    let state = cx.with_state(Models::default, |st| st.clone());
-    let autoplay_api = match state.autoplay_api {
-        Some(model) => model,
-        None => {
-            let model: Model<Option<shadcn::CarouselAutoplayApi>> =
-                cx.app.models_mut().insert(None);
-            cx.with_state(Models::default, |st| st.autoplay_api = Some(model.clone()));
-            model
-        }
-    };
-
-    let api_handle = match state.api_handle {
-        Some(model) => model,
-        None => {
-            let model: Model<Option<shadcn::CarouselApi>> = cx.app.models_mut().insert(None);
-            cx.with_state(Models::default, |st| st.api_handle = Some(model.clone()));
-            model
-        }
-    };
-
-    let api_cursor = match state.api_cursor {
-        Some(model) => model,
-        None => {
-            let model: Model<shadcn::CarouselEventCursor> = cx
-                .app
-                .models_mut()
-                .insert(shadcn::CarouselEventCursor::default());
-            cx.with_state(Models::default, |st| st.api_cursor = Some(model.clone()));
-            model
-        }
-    };
-
-    let current = match state.current {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(0usize);
-            cx.with_state(Models::default, |st| st.current = Some(model.clone()));
-            model
-        }
-    };
-    let count = match state.count {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(0usize);
-            cx.with_state(Models::default, |st| st.count = Some(model.clone()));
-            model
-        }
-    };
+    let autoplay_api = cx.local_model_keyed("autoplay_api", || None::<shadcn::CarouselAutoplayApi>);
+    let api_handle = cx.local_model_keyed("api_handle", || None::<shadcn::CarouselApi>);
+    let api_cursor = cx.local_model_keyed("api_cursor", shadcn::CarouselEventCursor::default);
+    let current = cx.local_model_keyed("current", || 0usize);
+    let count = cx.local_model_keyed("count", || 0usize);
 
     if let Some(api_now) = cx.watch_model(&api_handle).cloned().flatten() {
         let mut cursor_now = cx.watch_model(&api_cursor).copied().unwrap_or_default();

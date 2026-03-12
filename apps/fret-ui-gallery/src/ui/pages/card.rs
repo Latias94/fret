@@ -1,4 +1,5 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::spec::{
     BISECT_DISABLE_CARD_CODE_TABS, BISECT_DISABLE_CARD_PAGE_INTRO,
@@ -174,7 +175,7 @@ pub(crate) fn card_doc_scaffold_metrics_json(bisect: u32) -> serde_json::Value {
 }
 
 pub(super) fn preview_card(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     event_cover_image: Model<Option<ImageId>>,
 ) -> Vec<AnyElement> {
     let bisect = ui_gallery_bisect_flags();

@@ -1,14 +1,14 @@
 pub const SOURCE: &str = include_str!("button.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let accept = shadcn::Button::new("Accept")
         .variant(shadcn::ButtonVariant::Outline)
         .size(shadcn::ButtonSize::Sm)
         .refine_style(ChromeRefinement::default().pr(Space::N2))
-        .children([shadcn::Kbd::from_children([shadcn::kbd::kbd_icon(
+        .children([shadcn::Kbd::from_children([fret_ui_shadcn::kbd::kbd_icon(
             cx,
             fret_icons::IconId::new_static("lucide.corner-down-left"),
         )])

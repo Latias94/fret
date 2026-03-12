@@ -17,7 +17,9 @@ pub(crate) fn begin_modal_a11y_scope<H: UiHost>(app: &mut H, modal: ModelId) {
         reg.stack.push(modal);
         reg.title_by_modal.remove(&modal);
         reg.description_by_modal.remove(&modal);
-        reg.content_max_width_by_modal.remove(&modal);
+        // Keep the last committed content width across frames so header/footer recipe nodes that
+        // are built before `*Content::into_element()` can still infer size on the next frame.
+        // Unlike title/description ids, this value is not tied to per-frame element identity.
     });
 }
 

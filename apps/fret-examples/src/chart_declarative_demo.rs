@@ -1,4 +1,4 @@
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*};
 
 use delinea::data::{Column, DataTable};
 use delinea::ids::{AxisId, FieldId, StackId};
@@ -17,12 +17,13 @@ struct ChartDeclarativeView {
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("chart-declarative-demo")
         .window("chart_declarative_demo", (960.0, 720.0))
-        .run_view::<ChartDeclarativeView>()?;
+        .view::<ChartDeclarativeView>()?
+        .run()?;
     Ok(())
 }
 
 impl View for ChartDeclarativeView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         let dataset_id = delinea::ids::DatasetId::new(1);
         let grid_id = delinea::ids::GridId::new(1);
         let x_axis = AxisId::new(1);
@@ -198,7 +199,7 @@ impl View for ChartDeclarativeView {
         Self { engine, spec }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         cx.elements()
             .observe_model(&self.engine, Invalidation::Paint);
 

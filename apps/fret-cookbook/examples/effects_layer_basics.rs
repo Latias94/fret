@@ -1,4 +1,4 @@
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_core::scene::{EffectChain, EffectMode, EffectStep};
 
 mod act {
@@ -27,13 +27,13 @@ struct EffectsLayerBasicsView {
 }
 
 impl View for EffectsLayerBasicsView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self {
             effect: app.models_mut().insert(EffectKind::None),
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
 
         let effect_kind = cx
@@ -41,20 +41,32 @@ impl View for EffectsLayerBasicsView {
             .layout()
             .value_or(EffectKind::None);
 
-        cx.on_action_notify_model_set::<act::None, EffectKind>(
-            self.effect.clone(),
-            EffectKind::None,
-        );
-        cx.on_action_notify_model_set::<act::Pixelate, EffectKind>(
-            self.effect.clone(),
-            EffectKind::Pixelate,
-        );
-        cx.on_action_notify_model_set::<act::Blur, EffectKind>(
-            self.effect.clone(),
-            EffectKind::Blur,
-        );
+        cx.actions().models::<act::None>({
+            let effect = self.effect.clone();
+            move |models| {
+                models
+                    .update(&effect, |value| *value = EffectKind::None)
+                    .is_ok()
+            }
+        });
+        cx.actions().models::<act::Pixelate>({
+            let effect = self.effect.clone();
+            move |models| {
+                models
+                    .update(&effect, |value| *value = EffectKind::Pixelate)
+                    .is_ok()
+            }
+        });
+        cx.actions().models::<act::Blur>({
+            let effect = self.effect.clone();
+            move |models| {
+                models
+                    .update(&effect, |value| *value = EffectKind::Blur)
+                    .is_ok()
+            }
+        });
 
-        let button = |_cx: &mut ElementContext<'_, App>,
+        let button = |_cx: &mut UiCx<'_>,
                       label: &'static str,
                       effect: EffectKind,
                       action: fret_runtime::ActionId,
@@ -85,7 +97,7 @@ impl View for EffectsLayerBasicsView {
                 cx;
                 shadcn::Label::new("EffectLayer preview"),
                 ui::h_flex(|cx| {
-                    let tile = |_cx: &mut ElementContext<'_, App>, color: ColorRef| {
+                    let tile = |_cx: &mut UiCx<'_>, color: ColorRef| {
                         ui::container(|_cx| Vec::<AnyElement>::new())
                             .w_px(Px(28.0))
                             .h_px(Px(28.0))
@@ -184,7 +196,8 @@ impl View for EffectsLayerBasicsView {
 fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-effects-layer-basics")
         .window("cookbook-effects-layer-basics", (680.0, 460.0))
-        .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_view::<EffectsLayerBasicsView>()
+        .setup(fret_cookbook::install_cookbook_defaults)
+        .view::<EffectsLayerBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

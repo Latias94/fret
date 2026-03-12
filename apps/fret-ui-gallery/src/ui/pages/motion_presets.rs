@@ -1,10 +1,11 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::motion_presets as snippets;
 
 pub(super) fn preview_motion_presets(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     motion_preset: Model<Option<Arc<str>>>,
     motion_preset_open: Model<bool>,

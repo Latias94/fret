@@ -4,8 +4,9 @@ Goal: an editor-grade tree surface (file tree, scene outliner) that stays fast f
 
 ## References
 
-- UI Gallery torture page docs: `apps/fret-ui-gallery/src/docs.rs` (File tree torture)
-- UI Gallery implementation: `apps/fret-ui-gallery/src/ui.rs` (`preview_file_tree_torture`)
+- UI Gallery route registry: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_FILE_TREE_TORTURE`)
+- UI Gallery preview entry: `apps/fret-ui-gallery/src/ui/content.rs` (`PAGE_FILE_TREE_TORTURE => preview_file_tree_torture`)
+- UI Gallery implementation: `apps/fret-ui-gallery/src/ui/previews/gallery/torture/file_tree_torture.rs`
 - File tree view helper: `ecosystem/fret-ui-kit/src/declarative/file_tree.rs` (`file_tree_view_retained_v0`)
 
 ## Building blocks

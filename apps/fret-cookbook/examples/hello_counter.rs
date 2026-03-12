@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
-use fret::prelude::*;
-use fret_core::Corners;
+use fret::app::prelude::*;
+use fret_core::{Corners, FontWeight, TextAlign};
+use fret_ui::element::TextProps;
 
 mod act {
     fret::actions!([
@@ -27,8 +28,9 @@ const TEST_ID_STEP_10: &str = "hello-counter.step.10";
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("hello-counter-demo")
         .window("hello_counter_demo", (520.0, 420.0))
-        .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_view::<HelloCounterView>()
+        .setup(fret_cookbook::install_cookbook_defaults)
+        .view::<HelloCounterView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }
 
@@ -46,18 +48,22 @@ fn parse_step(step_text: &str) -> (i64, bool) {
 }
 
 impl View for HelloCounterView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let count_state = cx.use_local_with(|| 0i64);
-        let step_state = cx.use_local_with(|| "1".to_string());
+        let count_state = cx.state().local_init(|| 0i64);
+        let step_state = cx.state().local_init(|| "1".to_string());
 
-        let count = count_state.layout(cx).value_or(0);
-        let step_text = step_state.layout(cx).value_or_else(String::new);
+        let count = cx.state().watch(&count_state).layout().value_or(0);
+        let step_text = cx
+            .state()
+            .watch(&step_state)
+            .layout()
+            .value_or_else(String::new);
         let (effective_step, step_valid) = parse_step(&step_text);
 
         let count_color = if count > 0 {
@@ -68,7 +74,7 @@ impl View for HelloCounterView {
             theme.color_token("foreground")
         };
 
-        cx.on_action_notify_locals::<act::Inc>({
+        cx.actions().locals::<act::Inc>({
             let count_state = count_state.clone();
             let step_state = step_state.clone();
             move |tx| {
@@ -78,7 +84,7 @@ impl View for HelloCounterView {
             }
         });
 
-        cx.on_action_notify_locals::<act::Dec>({
+        cx.actions().locals::<act::Dec>({
             let count_state = count_state.clone();
             let step_state = step_state.clone();
             move |tx| {
@@ -88,10 +94,13 @@ impl View for HelloCounterView {
             }
         });
 
-        cx.on_action_notify_local_set::<act::Reset, i64>(&count_state, 0);
-        cx.on_action_notify_local_set::<act::StepPreset1, String>(&step_state, "1".to_string());
-        cx.on_action_notify_local_set::<act::StepPreset5, String>(&step_state, "5".to_string());
-        cx.on_action_notify_local_set::<act::StepPreset10, String>(&step_state, "10".to_string());
+        cx.actions().local_set::<act::Reset, i64>(&count_state, 0);
+        cx.actions()
+            .local_set::<act::StepPreset1, String>(&step_state, "1".to_string());
+        cx.actions()
+            .local_set::<act::StepPreset5, String>(&step_state, "5".to_string());
+        cx.actions()
+            .local_set::<act::StepPreset10, String>(&step_state, "10".to_string());
 
         let hero_icon = ui::h_flex(|cx| {
             [icon::icon_with(
@@ -132,13 +141,13 @@ impl View for HelloCounterView {
                 text: Arc::from(count.to_string()),
                 style: Some(fret_core::TextStyle {
                     size: Px(72.0),
-                    weight: fret_core::FontWeight::BOLD,
+                    weight: FontWeight::BOLD,
                     ..Default::default()
                 }),
                 color: Some(count_color),
-                align: fret_core::TextAlign::Center,
-                wrap: fret_core::TextWrap::None,
-                overflow: fret_core::TextOverflow::Clip,
+                align: TextAlign::Center,
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
                 ink_overflow: Default::default(),
             })
             .test_id(TEST_ID_COUNT);
@@ -155,9 +164,9 @@ impl View for HelloCounterView {
             text: status_text,
             style: None,
             color: Some(theme.color_token("muted-foreground")),
-            align: fret_core::TextAlign::Center,
-            wrap: fret_core::TextWrap::None,
-            overflow: fret_core::TextOverflow::Clip,
+            align: TextAlign::Center,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             ink_overflow: Default::default(),
         });
 
@@ -177,9 +186,9 @@ impl View for HelloCounterView {
             }),
             style: None,
             color: Some(theme.color_token("muted-foreground")),
-            align: fret_core::TextAlign::Center,
-            wrap: fret_core::TextWrap::Word,
-            overflow: fret_core::TextOverflow::Clip,
+            align: TextAlign::Center,
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
             ink_overflow: Default::default(),
         });
 

@@ -1,27 +1,14 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::avatar as snippets;
 
 pub(super) fn preview_avatar(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     avatar_image: Model<Option<ImageId>>,
 ) -> Vec<AnyElement> {
-    #[derive(Default)]
-    struct AvatarDropdownOpenState {
-        model: Option<Model<bool>>,
-    }
-
-    let dropdown_open = cx.with_state(AvatarDropdownOpenState::default, |st| st.model.clone());
-    let dropdown_open = if let Some(model) = dropdown_open {
-        model
-    } else {
-        let model = cx.app.models_mut().insert(false);
-        cx.with_state(AvatarDropdownOpenState::default, |st| {
-            st.model = Some(model.clone());
-        });
-        model
-    };
+    let dropdown_open = cx.local_model_keyed("dropdown_open", || false);
 
     let demo = snippets::demo::render(cx, avatar_image.clone());
     let usage = snippets::usage::render(cx);

@@ -3,27 +3,8 @@ pub const SOURCE: &str = include_str!("demo.rs");
 // region: example
 use fret_core::Px;
 use fret_ui::element::SemanticsDecoration;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
-
-#[derive(Default, Clone)]
-struct SidebarModels {
-    selected: Option<Model<Arc<str>>>,
-}
-
-fn ensure_selected<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Arc<str>> {
-    let state = cx.with_state(SidebarModels::default, |st| st.clone());
-    match state.selected {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Arc::<str>::from("playground"));
-            cx.with_state(SidebarModels::default, |st| {
-                st.selected = Some(model.clone())
-            });
-            model
-        }
-    }
-}
 
 fn resolve_selected<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -64,7 +45,7 @@ fn menu_button<H: UiHost>(
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let selected_model = ensure_selected(cx);
+    let selected_model = cx.local_model_keyed("selected", || Arc::<str>::from("playground"));
 
     let content = shadcn::SidebarProvider::new().with(cx, |cx| {
         let selected_value = resolve_selected(cx, &selected_model, "playground");
@@ -81,7 +62,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .size(shadcn::ButtonSize::Sm)
                     .test_id("ui-gallery-sidebar-demo-focus")
                     .into_element(cx),
-                shadcn::typography::muted(
+                shadcn::raw::typography::muted(
                     cx,
                     if collapsed {
                         "Collapsed to icon rail"
@@ -89,7 +70,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         "Expanded"
                     },
                 ),
-                shadcn::typography::muted(cx, format!("active={}", selected_value.as_ref())),
+                shadcn::raw::typography::muted(cx, format!("active={}", selected_value.as_ref())),
             ]
         })
         .gap(Space::N2)
@@ -183,10 +164,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(cx);
 
         let sidebar = shadcn::Sidebar::new([
-            shadcn::SidebarHeader::new([shadcn::typography::small(cx, "Acme Inc.")])
+            shadcn::SidebarHeader::new([shadcn::raw::typography::small(cx, "Acme Inc.")])
                 .into_element(cx),
             shadcn::SidebarContent::new([platform, projects]).into_element(cx),
-            shadcn::SidebarFooter::new([shadcn::typography::small(cx, "shadcn")]).into_element(cx),
+            shadcn::SidebarFooter::new([shadcn::raw::typography::small(cx, "shadcn")])
+                .into_element(cx),
         ])
         .collapsible(shadcn::SidebarCollapsible::Icon)
         .refine_layout(LayoutRefinement::default().h_full())

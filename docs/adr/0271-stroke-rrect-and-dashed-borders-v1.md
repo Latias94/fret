@@ -95,4 +95,4 @@ We define a stable perimeter coordinate `s` (in physical pixels):
 ## Related
 
 - ADR 0030: `docs/adr/0030-shape-rendering-and-sdf-semantics.md`
-- Workstream: `docs/workstreams/quad-border-styles-v1.md`
+- Workstream: `docs/workstreams/quad-border-styles-v1/quad-border-styles-v1.md`

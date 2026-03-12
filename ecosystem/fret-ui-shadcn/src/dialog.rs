@@ -23,23 +23,22 @@ use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::recipes::glass::GlassEffectRefinement;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Space, UiChildIntoElement, UiHostBoundIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome,
-    UiSupportsLayout, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayController,
+    OverlayPresence, Space, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
 };
 
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
 use fret_ui_kit::typography::scope_description_text;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone)]
 struct DialogOpenProviderState {
-    current: Option<Model<bool>>,
+    current: Model<bool>,
 }
 
 fn inherited_dialog_open<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<Model<bool>> {
-    cx.inherited_state_where::<DialogOpenProviderState>(|st| st.current.is_some())
-        .and_then(|st| st.current.clone())
+    cx.provided::<DialogOpenProviderState>()
+        .map(|st| st.current.clone())
 }
 
 #[track_caller]
@@ -48,16 +47,7 @@ fn with_dialog_open_provider<H: UiHost, R>(
     open: Model<bool>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(DialogOpenProviderState::default, |st| {
-        let prev = st.current.clone();
-        st.current = Some(open);
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(DialogOpenProviderState::default, |st| {
-        st.current = prev;
-    });
-    out
+    cx.provide(DialogOpenProviderState { current: open }, f)
 }
 
 fn default_overlay_color(theme: &ThemeSnapshot) -> Color {
@@ -162,7 +152,7 @@ impl DialogTrigger {
     /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
     pub fn build<H: UiHost, T>(child: T) -> DialogTriggerBuild<H, T>
     where
-        T: UiChildIntoElement<H>,
+        T: IntoUiElement<H>,
     {
         DialogTriggerBuild {
             child: Some(child),
@@ -178,35 +168,25 @@ impl DialogTrigger {
 
 impl<H: UiHost, T> DialogTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         DialogTrigger::new(
             self.child
                 .expect("expected dialog trigger child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
         .into_element(cx)
     }
 }
 
-impl<H: UiHost, T> UiHostBoundIntoElement<H> for DialogTriggerBuild<H, T>
+impl<H: UiHost, T> IntoUiElement<H> for DialogTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        DialogTriggerBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, T> UiChildIntoElement<H> for DialogTriggerBuild<H, T>
-where
-    T: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         DialogTriggerBuild::into_element(self, cx)
     }
 }
@@ -224,13 +204,13 @@ impl<H: UiHost> DialogCompositionTriggerArg<H> for DialogTrigger {
 
 impl<H: UiHost, T> DialogCompositionTriggerArg<H> for DialogTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     fn into_dialog_trigger(self, cx: &mut ElementContext<'_, H>) -> DialogTrigger {
         DialogTrigger::new(
             self.child
                 .expect("expected dialog trigger child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
     }
 }
@@ -481,7 +461,7 @@ impl Dialog {
             let id = trigger.id;
             let overlay_root_name = radix_dialog::dialog_root_name(id);
             let prev_content_element =
-                cx.with_state(DialogA11yState::default, |st| st.content_element);
+                cx.keyed_slot_state("a11y", DialogA11yState::default, |st| st.content_element);
 
             let motion = OverlayController::transition_with_durations_and_cubic_bezier_duration(
                 cx,
@@ -491,7 +471,7 @@ impl Dialog {
                 overlay_motion::shadcn_overlay_ease_bezier(cx),
             );
             let (open_change, open_change_complete) = cx
-                .with_state(DialogOpenChangeCallbackState::default, |state| {
+                .slot_state(DialogOpenChangeCallbackState::default, |state| {
                     dialog_open_change_events(state, is_open, motion.present, motion.animating)
                 });
             if let (Some(open), Some(on_open_change)) = (open_change, self.on_open_change.as_ref())
@@ -515,7 +495,7 @@ impl Dialog {
             }
 
             let focused_element = cx.focused_element();
-            let restore_element = cx.with_state(DialogFocusRestoreState::default, |st| {
+            let restore_element = cx.slot_state(DialogFocusRestoreState::default, |st| {
                 if is_open && !st.was_open {
                     st.restore_element = focused_element;
                     st.was_open = true;
@@ -684,7 +664,7 @@ impl Dialog {
                 );
 
                 if let Some(content_element) = content_element_for_trigger.get() {
-                    cx.with_state(DialogA11yState::default, |st| {
+                    cx.keyed_slot_state("a11y", DialogA11yState::default, |st| {
                         st.content_element = Some(content_element)
                     });
                 }
@@ -883,6 +863,7 @@ pub struct DialogContent {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    show_close_button: bool,
     a11y_label: Option<Arc<str>>,
 }
 
@@ -893,6 +874,7 @@ impl DialogContent {
             children,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            show_close_button: true,
             a11y_label: None,
         }
     }
@@ -905,6 +887,7 @@ impl DialogContent {
             build: Some(build),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            show_close_button: true,
             a11y_label: None,
             test_id: None,
             _phantom: PhantomData,
@@ -923,6 +906,12 @@ impl DialogContent {
 
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
+        self
+    }
+
+    /// Controls whether the default top-right close affordance is rendered.
+    pub fn show_close_button(mut self, show: bool) -> Self {
+        self.show_close_button = show;
         self
     }
 
@@ -952,7 +941,12 @@ impl DialogContent {
         }
 
         let props = decl_style::container_props(&theme, chrome, layout);
-        let children = self.children;
+        let mut children = self.children;
+        if self.show_close_button {
+            let open = inherited_dialog_open(cx)
+                .expect("DialogContent close button must be rendered inside Dialog content");
+            children.push(DialogClose::new(open).into_element(cx));
+        }
         let a11y_label = self.a11y_label;
         let container = shadcn_layout::container_vstack(
             cx,
@@ -980,6 +974,7 @@ pub struct DialogContentBuild<H, B> {
     build: Option<B>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    show_close_button: bool,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
     _phantom: PhantomData<fn() -> H>,
@@ -1009,6 +1004,15 @@ where
         self
     }
 
+    pub fn show_close_button(mut self, show_close_button: bool) -> Self {
+        self.show_close_button = show_close_button;
+        self
+    }
+
+    pub fn hide_close_button(self) -> Self {
+        self.show_close_button(false)
+    }
+
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let children = collect_built_dialog_children(
@@ -1017,7 +1021,8 @@ where
         );
         let mut content = DialogContent::new(children)
             .refine_style(self.chrome)
-            .refine_layout(self.layout);
+            .refine_layout(self.layout)
+            .show_close_button(self.show_close_button);
         if let Some(label) = self.a11y_label {
             content = content.a11y_label(label);
         }
@@ -1049,22 +1054,12 @@ impl<H: UiHost, B> UiSupportsLayout for DialogContentBuild<H, B> where
 {
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for DialogContentBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for DialogContentBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        DialogContentBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for DialogContentBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         DialogContentBuild::into_element(self, cx)
     }
 }
@@ -1137,14 +1132,14 @@ impl DialogClose {
     pub fn build<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
-        child: impl UiChildIntoElement<H>,
+        child: impl IntoUiElement<H>,
     ) -> AnyElement {
         let open = self.open.clone().unwrap_or_else(|| {
             inherited_dialog_open(cx).unwrap_or_else(|| {
                 panic!("DialogClose::from_scope() must be used while rendering Dialog content")
             })
         });
-        let child = child.into_child_element(cx);
+        let child = child.into_element(cx);
         cx.pressable_add_on_activate_for(
             child.id,
             Arc::new(
@@ -1380,22 +1375,12 @@ where
     }
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for DialogHeaderBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for DialogHeaderBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        DialogHeaderBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for DialogHeaderBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         DialogHeaderBuild::into_element(self, cx)
     }
 }
@@ -1495,22 +1480,12 @@ where
     }
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for DialogFooterBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for DialogFooterBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        DialogFooterBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for DialogFooterBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         DialogFooterBuild::into_element(self, cx)
     }
 }
@@ -1633,7 +1608,6 @@ mod tests {
     use fret_runtime::FrameId;
     use fret_ui::UiTree;
     use fret_ui::element::PositionStyle;
-    use fret_ui_kit::UiBuilderHostBoundIntoElementExt as _;
     use fret_ui_kit::UiExt as _;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
     use fret_ui_kit::ui::UiElementSinkExt as _;
@@ -2013,6 +1987,83 @@ mod tests {
         OverlayController::render(ui, app, services, window, bounds);
     }
 
+    fn render_dialog_frame_with_real_content(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        description_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        cancel_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        action_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+    ) {
+        OverlayController::begin_frame(app, window);
+
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "test",
+            |cx| {
+                let trigger = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(10.0));
+                            layout.size.height = Length::Px(Px(10.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st| Vec::new(),
+                );
+
+                let dialog = Dialog::new(open.clone()).into_element(
+                    cx,
+                    |_cx| trigger,
+                    move |cx| {
+                        let title = DialogTitle::new("Edit profile").into_element(cx);
+                        let description = DialogDescription::new(
+                            "Make changes to your profile here. Click save when you're done, and keep the content wrapped inside the dialog panel instead of measuring against the window width.",
+                        )
+                        .into_element(cx);
+                        description_id_out.set(Some(description.id));
+
+                        let header = DialogHeader::new(vec![title, description]).into_element(cx);
+
+                        let cancel = crate::Button::new("Cancel")
+                            .variant(crate::ButtonVariant::Outline)
+                            .into_element(cx);
+                        cancel_id_out.set(Some(cancel.id));
+
+                        let action = crate::Button::new("Save changes").into_element(cx);
+                        action_id_out.set(Some(action.id));
+
+                        let footer = DialogFooter::new(vec![cancel, action]).into_element(cx);
+                        let close = DialogClose::from_scope().into_element(cx);
+
+                        let content = DialogContent::new(vec![header, footer, close])
+                            .show_close_button(false)
+                            .into_element(cx);
+                        content_id_out.set(Some(content.id));
+                        content
+                    },
+                );
+
+                vec![dialog]
+            },
+        );
+
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+    }
+
     #[test]
     fn dialog_footer_stacks_on_base_viewport_and_rows_on_sm() {
         fn assert_footer_layout(bounds: Rect, expect_row: bool) {
@@ -2085,6 +2136,91 @@ mod tests {
                 Size::new(Px(800.0), Px(600.0)),
             ),
             true,
+        );
+    }
+
+    #[test]
+    fn dialog_real_content_stays_within_panel_bounds_on_sm_viewport() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let content_id = Rc::new(Cell::new(None));
+        let description_id = Rc::new(Cell::new(None));
+        let cancel_id = Rc::new(Cell::new(None));
+        let action_id = Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        for frame in 1..=2 {
+            app.set_frame_id(FrameId(frame));
+            render_dialog_frame_with_real_content(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                content_id.clone(),
+                description_id.clone(),
+                cancel_id.clone(),
+                action_id.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let content_bounds = fret_ui::elements::bounds_for_element(
+            &mut app,
+            window,
+            content_id.get().expect("content element id"),
+        )
+        .expect("content bounds");
+        let description_bounds = fret_ui::elements::bounds_for_element(
+            &mut app,
+            window,
+            description_id.get().expect("description element id"),
+        )
+        .expect("description bounds");
+        let cancel_bounds = fret_ui::elements::bounds_for_element(
+            &mut app,
+            window,
+            cancel_id.get().expect("cancel element id"),
+        )
+        .expect("cancel bounds");
+        let action_bounds = fret_ui::elements::bounds_for_element(
+            &mut app,
+            window,
+            action_id.get().expect("action element id"),
+        )
+        .expect("action bounds");
+
+        let content_left = content_bounds.origin.x.0 - 0.5;
+        let content_right = content_bounds.origin.x.0 + content_bounds.size.width.0 + 0.5;
+
+        assert!(
+            content_bounds.size.width.0 <= 512.5,
+            "expected dialog content width to stay near shadcn's sm:max-w-lg, got {content_bounds:?}"
+        );
+        assert!(
+            description_bounds.origin.x.0 >= content_left
+                && description_bounds.origin.x.0 + description_bounds.size.width.0 <= content_right,
+            "expected description to stay inside dialog content; content={content_bounds:?} description={description_bounds:?}"
+        );
+        assert!(
+            cancel_bounds.origin.x.0 >= content_left
+                && cancel_bounds.origin.x.0 + cancel_bounds.size.width.0 <= content_right,
+            "expected cancel button to stay inside dialog content; content={content_bounds:?} cancel={cancel_bounds:?}"
+        );
+        assert!(
+            action_bounds.origin.x.0 >= content_left
+                && action_bounds.origin.x.0 + action_bounds.size.width.0 <= content_right,
+            "expected action button to stay inside dialog content; content={content_bounds:?} action={action_bounds:?}"
         );
     }
 
@@ -2248,7 +2384,11 @@ mod tests {
                         ))
                         .portal(DialogPortal::new())
                         .overlay(DialogOverlay::new())
-                        .content(DialogContent::new([cx.text("Content")]).into_element(cx))
+                        .content(
+                            DialogContent::new([cx.text("Content")])
+                                .show_close_button(false)
+                                .into_element(cx),
+                        )
                         .into_element(cx),
                 ]
             },
@@ -2327,7 +2467,9 @@ mod tests {
                         .overlay(DialogOverlay::new())
                         .content_with(|cx| {
                             let close = DialogClose::from_scope().into_element(cx);
-                            DialogContent::new(vec![close]).into_element(cx)
+                            DialogContent::new(vec![close])
+                                .show_close_button(false)
+                                .into_element(cx)
                         })
                         .into_element(cx),
                 ]
@@ -2429,8 +2571,9 @@ mod tests {
                             );
 
                             let close = DialogClose::new(open_for_close.clone()).into_element(cx);
-                            let content =
-                                DialogContent::new(vec![tall_body, close]).into_element(cx);
+                            let content = DialogContent::new(vec![tall_body, close])
+                                .show_close_button(false)
+                                .into_element(cx);
                             content_id.set(Some(content.id));
                             content
                         },
@@ -2567,8 +2710,9 @@ mod tests {
                             let close = DialogClose::from_scope().into_element(cx);
                             close_id_out.set(Some(close.id));
 
-                            let content =
-                                DialogContent::new(vec![focusable, close]).into_element(cx);
+                            let content = DialogContent::new(vec![focusable, close])
+                                .show_close_button(false)
+                                .into_element(cx);
                             content_id_out.set(Some(content.id));
                             content
                         },
@@ -2650,8 +2794,9 @@ mod tests {
                             let close = DialogClose::new(open.clone()).into_element(cx);
                             close_id_out.set(Some(close.id));
 
-                            let content =
-                                DialogContent::new(vec![focusable, close]).into_element(cx);
+                            let content = DialogContent::new(vec![focusable, close])
+                                .show_close_button(false)
+                                .into_element(cx);
                             content_id_out.set(Some(content.id));
                             content
                         },
@@ -4615,8 +4760,9 @@ mod tests {
                             let close = DialogClose::new(open_for_close.clone()).into_element(cx);
                             close_id.set(Some(close.id));
 
-                            let content =
-                                DialogContent::new(vec![focusable, close]).into_element(cx);
+                            let content = DialogContent::new(vec![focusable, close])
+                                .show_close_button(false)
+                                .into_element(cx);
                             content_id.set(Some(content.id));
                             content
                         },
@@ -4868,6 +5014,213 @@ mod tests {
     }
 
     #[test]
+    fn dialog_content_default_close_button_closes() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut dyn fret_core::UiServices,
+                      show_close_button: bool| {
+            OverlayController::begin_frame(app, window);
+            let mut trigger_id: Option<fret_ui::elements::GlobalElementId> = None;
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "dialog-content-default-close-button-closes",
+                |cx| {
+                    let trigger = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |cx, _st, id| {
+                            cx.pressable_toggle_bool(&open);
+                            trigger_id = Some(id);
+                            vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                        },
+                    );
+
+                    let dialog = Dialog::new(open.clone()).into_element(
+                        cx,
+                        |_cx| trigger,
+                        move |cx| {
+                            DialogContent::new([cx.text("Content")])
+                                .show_close_button(show_close_button)
+                                .into_element(cx)
+                        },
+                    );
+
+                    vec![dialog]
+                },
+            );
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+            trigger_id.expect("trigger id")
+        };
+
+        let trigger = render(&mut ui, &mut app, &mut services, true);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+        let trigger_center = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_200,
+        ) as usize
+            + 2;
+        for _ in 0..settle_frames {
+            let _ = render(&mut ui, &mut app, &mut services, true);
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        ui.request_semantics_snapshot();
+        let _ = render(&mut ui, &mut app, &mut services, true);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let close = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Button && n.label.as_deref() == Some("Close")
+            })
+            .expect("default close button semantics node");
+        let close_center = Point::new(
+            Px(close.bounds.origin.x.0 + close.bounds.size.width.0 / 2.0),
+            Px(close.bounds.origin.y.0 + close.bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: close_center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: close_center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+    }
+
+    #[test]
+    fn dialog_content_show_close_button_false_hides_default_close() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "dialog-content-show-close-button-false-hides-default-close",
+            |cx| {
+                let trigger = crate::Button::new("Open").into_element(cx);
+                let dialog = Dialog::new(open.clone()).into_element(
+                    cx,
+                    |_cx| trigger,
+                    |cx| {
+                        DialogContent::new([cx.text("Content")])
+                            .show_close_button(false)
+                            .into_element(cx)
+                    },
+                );
+                vec![dialog]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            !snap.nodes.iter().any(|n| {
+                n.role == fret_core::SemanticsRole::Button && n.label.as_deref() == Some("Close")
+            }),
+            "expected DialogContent::show_close_button(false) to hide the default close button"
+        );
+    }
+
+    #[test]
     fn dialog_tab_traversal_wraps_within_modal_layer() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -4961,7 +5314,9 @@ mod tests {
                             },
                         );
 
-                        DialogContent::new(vec![first, second]).into_element(cx)
+                        DialogContent::new(vec![first, second])
+                            .show_close_button(false)
+                            .into_element(cx)
                     },
                 );
 
@@ -5075,7 +5430,9 @@ mod tests {
                             },
                         );
 
-                        DialogContent::new(vec![first, second]).into_element(cx)
+                        DialogContent::new(vec![first, second])
+                            .show_close_button(false)
+                            .into_element(cx)
                     },
                 );
                 vec![dialog]

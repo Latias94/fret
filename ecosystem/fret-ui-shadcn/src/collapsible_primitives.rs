@@ -66,14 +66,8 @@ struct CollapsibleScope {
     content_id: fret_ui::elements::GlobalElementId,
 }
 
-#[derive(Default)]
-struct CollapsibleScopeState {
-    scope: Option<CollapsibleScope>,
-}
-
 fn collapsible_scope_inherited<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<CollapsibleScope> {
-    cx.inherited_state_where::<CollapsibleScopeState>(|st| st.scope.is_some())
-        .and_then(|st| st.scope.clone())
+    cx.provided::<CollapsibleScope>().cloned()
 }
 
 #[track_caller]
@@ -82,15 +76,7 @@ fn with_collapsible_scope_provider<H: UiHost, R>(
     scope: CollapsibleScope,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(CollapsibleScopeState::default, |st| st.scope.take());
-    cx.with_state(CollapsibleScopeState::default, |st| {
-        st.scope = Some(scope);
-    });
-    let out = f(cx);
-    cx.with_state(CollapsibleScopeState::default, |st| {
-        st.scope = prev;
-    });
-    out
+    cx.provide(scope, f)
 }
 
 /// A composable collapsible root inspired by shadcn/ui v4 and Radix `Collapsible.Root`.

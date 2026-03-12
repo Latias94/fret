@@ -13,7 +13,7 @@ use fret_ui::element::{
     AnyElement, ElementKind, HoverRegionProps, LayoutStyle, Length, SemanticsDecoration, TextProps,
     VisualTransformProps,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
@@ -106,14 +106,8 @@ impl std::fmt::Debug for TaskController {
     }
 }
 
-#[derive(Debug, Default, Clone)]
-struct TaskProviderState {
-    controller: Option<TaskController>,
-}
-
 pub fn use_task_controller<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<TaskController> {
-    cx.inherited_state::<TaskProviderState>()
-        .and_then(|st| st.controller.clone())
+    cx.provided::<TaskController>().cloned()
 }
 
 /// Collapsible task root aligned with AI Elements `Task`.
@@ -183,29 +177,30 @@ impl Task {
         let trigger = self.trigger;
         let content = self.content;
         let test_id_root = self.test_id_root;
+        let open = fret_ui_kit::primitives::collapsible::CollapsibleRoot::new()
+            .open(self.open.clone())
+            .default_open(self.default_open)
+            .use_open_model(cx)
+            .model();
+        let is_open = cx
+            .get_model_copied(&open, Invalidation::Layout)
+            .unwrap_or(false);
+        let controller = TaskController {
+            open: open.clone(),
+            is_open,
+        };
 
-        let collapsible = if let Some(open) = self.open {
-            Collapsible::new(open)
-        } else {
-            Collapsible::uncontrolled(self.default_open)
-        }
-        .refine_style(chrome)
-        .refine_layout(layout);
+        let collapsible = Collapsible::new(open)
+            .refine_style(chrome)
+            .refine_layout(layout);
 
-        let root = collapsible.into_element_with_open_model(
-            cx,
-            move |cx, open, is_open| {
-                let controller = TaskController {
-                    open: open.clone(),
-                    is_open,
-                };
-                cx.with_state(TaskProviderState::default, |st| {
-                    st.controller = Some(controller)
-                });
-                trigger.into_element_with_open(cx, open, is_open)
-            },
-            move |cx| content.into_element(cx),
-        );
+        let root = cx.provide(controller, |cx| {
+            collapsible.into_element_with_open_model(
+                cx,
+                move |cx, open, is_open| trigger.into_element_with_open(cx, open, is_open),
+                move |cx| content.into_element(cx),
+            )
+        });
 
         let Some(test_id) = test_id_root else {
             return root;

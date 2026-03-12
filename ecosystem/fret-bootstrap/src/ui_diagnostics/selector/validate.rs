@@ -172,6 +172,18 @@ fn eval_selector_scoped(
                     && n.test_id.as_deref() == Some(id)
             }));
             if matches.is_empty() {
+                if super::extend_test_id_chrome_fallback(
+                    snapshot,
+                    &index,
+                    id,
+                    &in_scope,
+                    &matches_root_z,
+                    &mut matches,
+                ) {
+                    note = Some("fallback_chrome_suffix");
+                }
+            }
+            if matches.is_empty() {
                 // Fallback for debugging: allow selecting hidden nodes if no visible match exists.
                 note = Some("fallback_hidden_nodes");
                 matches.extend(snapshot.nodes.iter().filter(|n| {

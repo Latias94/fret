@@ -31,11 +31,13 @@ semantic-link and cursor caveats.
 
 - Pass: `Button::new(label)` plus `variant(...)` covers the documented `default`, `outline`, `secondary`, `ghost`, `destructive`, and `link` recipe surface.
 - Pass: `size(...)` covers the documented `default`, `xs`, `sm`, `lg`, `icon`, `icon-xs`, `icon-sm`, and `icon-lg` options.
+- Pass: `leading_children(...)` / `trailing_children(...)` now cover the upstream `data-icon="inline-start|inline-end"` child-composition path for dynamic affordances such as `Spinner`, without forcing authors into a full content override.
 - Pass: `ButtonRender::Link` is the Fret equivalent of the second upstream `Link` section; semantic link rendering stays button-owned instead of widening the public surface with a generic `asChild`/`compose()` API.
 
 ### Layout & default-style ownership
 
 - Pass: recipe-owned defaults cover the intrinsic button chrome: height, horizontal/vertical padding, typography, `rounded-md`, variant colors, focus ring, and disabled styling.
+- Pass: logical inline child slots now compact only the occupied inline side and reverse correctly under RTL, matching the intent of upstream `data-icon="inline-start|inline-end"` examples more closely than the old symmetric-compact fallback.
 - Pass: caller-owned refinements stay explicit for page/container negotiation (`w-full`, `min-w-0`, `flex-1`, wrapping, max width) and for one-off call-site polish such as the `rounded-full` examples.
 - Note: the upstream `Cursor` section is Tailwind CSS-specific; in Fret, hover cursor policy belongs to runtime / pressable behavior, not the `Button` recipe defaults.
 
@@ -48,5 +50,6 @@ semantic-link and cursor caveats.
 ## Validation
 
 - `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
+- `cargo test -p fret-ui-shadcn button_inline_slot`
 - Existing shadcn-web gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`button-demo`)
 - Existing diag scripts: `tools/diag-scripts/ui-gallery/button/ui-gallery-button-link-render.json`, `tools/diag-scripts/ui-gallery/button/ui-gallery-button-with-icon-non-overlap.json`, `tools/diag-scripts/ui-gallery/button/ui-gallery-button-variants-width-zinc-dark.json`, `tools/diag-scripts/ui-gallery/button/ui-gallery-button-loading-screenshots-zinc-dark.json`, `tools/diag-scripts/ui-gallery/button/ui-gallery-button-loading-screenshots-zinc-light.json`, `tools/diag-scripts/ui-gallery/button/ui-gallery-button-rtl-row-screenshots.json`

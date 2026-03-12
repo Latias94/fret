@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
 
 fn parse_iso_date_ymd(raw: &str) -> Option<Date> {
@@ -26,7 +26,9 @@ fn today_from_env_or_now() -> Date {
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let today = today_from_env_or_now();
-    shadcn::Calendar::new_controllable(cx, None, Some(today))
+    let selected = cx.local_model_keyed("selected", || Some(today));
+
+    shadcn::Calendar::new_controllable(cx, Some(selected), Some(today))
         .test_id_prefix("ui-gallery.calendar.usage")
         .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
         .into_element(cx)

@@ -1,24 +1,22 @@
-pub const SOURCE: &str = include_str!("notes.rs");
-
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ui::v_flex(|cx| {
             vec![
-                shadcn::typography::muted(
+                shadcn::raw::typography::muted(
                     cx,
                     "Preview follows `resizable-demo.tsx` (new-york-v4): nested panels, with-handle, and vertical orientation.",
                 ),
-                shadcn::typography::muted(
+                shadcn::raw::typography::muted(
                     cx,
                     "Resizable groups expose their own semantics; keep an eye on focus order and hit-testing near handles.",
                 ),
-                shadcn::typography::muted(
+                shadcn::raw::typography::muted(
                     cx,
                     "API reference: `ecosystem/fret-ui-shadcn/src/resizable.rs`.",
                 ),
-                shadcn::typography::muted(
+                shadcn::raw::typography::muted(
                     cx,
                     "Default-style ownership follows upstream: `ResizablePanelGroup` owns `w-full h-full` and handle chrome, while border/rounded demo shells remain caller-owned.",
                 ),

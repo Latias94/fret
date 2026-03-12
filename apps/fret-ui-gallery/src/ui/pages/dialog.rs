@@ -1,9 +1,10 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::dialog as snippets;
 
-pub(super) fn preview_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(super) fn preview_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
     let parts = snippets::parts::render(cx);
@@ -19,8 +20,8 @@ pub(super) fn preview_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             "Preview follows upstream shadcn Dialog docs order first: Demo, Usage, Custom Close Button, No Close Button, Sticky Footer, Scrollable Content, RTL; the `Parts` adapter section follows afterwards.",
             "`Dialog::compose()` is a recipe-level bridge for shadcn-style part composition without pushing children API concerns into the mechanism layer.",
             "Part surface adapters exist for shadcn-style call sites (DialogTrigger/DialogPortal/DialogOverlay).",
-            "Current Fret API models close controls explicitly with `DialogClose`; upstream `DialogContent` still has a more opinionated default close button surface (`showCloseButton`).",
-            "Content-local examples now prefer `DialogClose::from_scope()` so the close affordance stays close to shadcn composition without threading the same open model into every close icon.",
+            "Default close affordance now lives in `DialogContent`, matching upstream; disable it with `show_close_button(false)`.",
+            "`DialogClose::from_scope()` remains available when a page wants an additional or fully custom close affordance inside dialog content.",
             "Scrollable examples isolate long content in ScrollArea so footer/header placement remains predictable under constrained viewport sizes.",
             "Each scenario has stable test IDs to support fretboard diag scripts and regression screenshots.",
         ],
@@ -43,7 +44,7 @@ pub(super) fn preview_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 .description("Replace the close affordance with a custom footer action.")
                 .code_rust_from_file_region(snippets::custom_close_button::SOURCE, "example"),
             DocSection::new("No Close Button", no_close)
-                .description("Omit explicit close controls and rely on Escape or overlay dismissal.")
+                .description("Hide the default close button and rely on Escape or overlay dismissal.")
                 .code_rust_from_file_region(snippets::no_close_button::SOURCE, "example"),
             DocSection::new("Sticky Footer", sticky_footer)
                 .description("Footer stays visible while the content scrolls.")

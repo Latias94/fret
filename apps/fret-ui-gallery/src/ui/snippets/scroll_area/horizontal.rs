@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("horizontal.rs");
 
 // region: example
 use fret_ui::element::SemanticsDecoration;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let rail = ui::container(|cx| {
@@ -20,7 +20,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             )
                             .into_element(cx);
 
-                        let caption = shadcn::typography::muted(cx, format!("Photo by {artist}"));
+                        let caption =
+                            shadcn::raw::typography::muted(cx, format!("Photo by {artist}"));
 
                         let mut figure = ui::v_stack(|_cx| vec![art, caption])
                             .gap(Space::N2)

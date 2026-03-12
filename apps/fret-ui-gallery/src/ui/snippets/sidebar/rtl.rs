@@ -1,33 +1,14 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::Px;
 use fret_ui::element::SemanticsDecoration;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default, Clone)]
-struct SidebarModels {
-    selected: Option<Model<Arc<str>>>,
-}
-
-fn ensure_selected(cx: &mut ElementContext<'_, App>) -> Model<Arc<str>> {
-    let state = cx.with_state(SidebarModels::default, |st| st.clone());
-    match state.selected {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Arc::<str>::from("playground"));
-            cx.with_state(SidebarModels::default, |st| {
-                st.selected = Some(model.clone())
-            });
-            model
-        }
-    }
-}
-
 fn resolve_selected(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     model: &Model<Arc<str>>,
     fallback: &'static str,
 ) -> Arc<str> {
@@ -36,7 +17,7 @@ fn resolve_selected(
 }
 
 fn menu_button(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     selected_model: Model<Arc<str>>,
     active_value: &Arc<str>,
     value: &'static str,
@@ -64,8 +45,8 @@ fn menu_button(
         .into_element(cx)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let selected_model = ensure_selected(cx);
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+    let selected_model = cx.local_model_keyed("selected", || Arc::<str>::from("playground"));
     let selected_value = resolve_selected(cx, &selected_model, "playground");
 
     shadcn::DirectionProvider::new(shadcn::LayoutDirection::Rtl).into_element(cx, |cx| {
@@ -110,12 +91,13 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .into_element(cx);
 
         let sidebar = shadcn::Sidebar::new([
-            shadcn::SidebarHeader::new([shadcn::typography::small(cx, "مؤسسة مثال")])
+            shadcn::SidebarHeader::new([shadcn::raw::typography::small(cx, "مؤسسة مثال")])
                 .into_element(cx),
             shadcn::SidebarContent::new([platform])
                 .collapsed(false)
                 .into_element(cx),
-            shadcn::SidebarFooter::new([shadcn::typography::small(cx, "الدعم")]).into_element(cx),
+            shadcn::SidebarFooter::new([shadcn::raw::typography::small(cx, "الدعم")])
+                .into_element(cx),
         ])
         .collapsed(false)
         .refine_layout(LayoutRefinement::default().h_full())

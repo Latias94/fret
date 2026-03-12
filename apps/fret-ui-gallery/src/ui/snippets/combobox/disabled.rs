@@ -1,41 +1,11 @@
 pub const SOURCE: &str = include_str!("disabled.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::{ElementContextThemeExt, style as decl_style};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
-
-#[derive(Default, Clone)]
-struct Models {
-    value: Option<Model<Option<Arc<str>>>>,
-    open: Option<Model<bool>>,
-    query: Option<Model<String>>,
-}
-
-fn ensure_models(
-    cx: &mut ElementContext<'_, App>,
-) -> (Model<Option<Arc<str>>>, Model<bool>, Model<String>) {
-    let state = cx.with_state(Models::default, |st| st.clone());
-
-    let value = state.value.unwrap_or_else(|| {
-        let model = cx.app.models_mut().insert(None);
-        cx.with_state(Models::default, |st| st.value = Some(model.clone()));
-        model
-    });
-    let open = state.open.unwrap_or_else(|| {
-        let model = cx.app.models_mut().insert(false);
-        cx.with_state(Models::default, |st| st.open = Some(model.clone()));
-        model
-    });
-    let query = state.query.unwrap_or_else(|| {
-        let model = cx.app.models_mut().insert(String::new());
-        cx.with_state(Models::default, |st| st.query = Some(model.clone()));
-        model
-    });
-
-    (value, open, query)
-}
 
 fn base_items() -> Vec<shadcn::ComboboxItem> {
     vec![
@@ -46,7 +16,11 @@ fn base_items() -> Vec<shadcn::ComboboxItem> {
     ]
 }
 
-fn state_row(cx: &mut ElementContext<'_, App>, text: Arc<str>, test_id: Arc<str>) -> AnyElement {
+fn state_row(
+    cx: &mut UiCx<'_>,
+    text: Arc<str>,
+    test_id: Arc<str>,
+) -> impl IntoUiElement<fret_app::App> + use<> {
     let props = cx.with_theme(|theme| {
         decl_style::container_props(
             theme,
@@ -54,12 +28,12 @@ fn state_row(cx: &mut ElementContext<'_, App>, text: Arc<str>, test_id: Arc<str>
             LayoutRefinement::default().w_full().min_w_0(),
         )
     });
-    cx.container(props, move |cx| [shadcn::typography::muted(cx, text)])
+    cx.container(props, move |cx| [shadcn::raw::typography::muted(cx, text)])
         .test_id(test_id)
 }
 
 fn state_rows(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     value: &Model<Option<Arc<str>>>,
     query: &Model<String>,
     test_id_prefix: &'static str,
@@ -89,8 +63,10 @@ fn state_rows(
     .into_element(cx)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let (value, open, query) = ensure_models(cx);
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+    let value = cx.local_model_keyed("value", || None::<Arc<str>>);
+    let open = cx.local_model_keyed("open", || false);
+    let query = cx.local_model_keyed("query", String::new);
 
     let disabled_combo = shadcn::Combobox::new(value.clone(), open.clone())
         .a11y_label("Combobox disabled")

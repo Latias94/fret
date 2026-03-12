@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_core::scene::{EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep};
 use fret_core::{Color, Corners, Edges, EffectId, Px};
 use fret_runtime::Model;
@@ -15,8 +15,8 @@ use fret_ui::element::{
     ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle, SpacerProps,
     TextProps,
 };
+use fret_ui_kit::Space;
 use fret_ui_kit::custom_effects::CustomEffectProgramV1;
-use fret_ui_kit::{Space, UiIntoElement};
 
 mod act {
     fret::actions!([Reset = "custom_effect_v1_demo.reset.v1"]);
@@ -199,23 +199,25 @@ struct CustomEffectV1View {
     st: CustomEffectV1State,
 }
 
+fn install_demo_theme(app: &mut KernelApp) {
+    shadcn::themes::apply_shadcn_new_york(
+        app,
+        shadcn::themes::ShadcnBaseColor::Slate,
+        shadcn::themes::ShadcnColorScheme::Dark,
+    );
+}
+
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("custom-effect-v1-demo")
         .window("custom-effect-v1-demo", (1100.0, 720.0))
-        .install_app(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york(
-                app,
-                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-                shadcn::shadcn_themes::ShadcnColorScheme::Dark,
-            );
-        })
+        .setup(install_demo_theme)
         .view::<CustomEffectV1View>()?
         .install_custom_effects(install_custom_effect)
         .run()
         .map_err(anyhow::Error::from)
 }
 
-fn install_custom_effect(app: &mut App, effects: &mut dyn fret_core::CustomEffectService) {
+fn install_custom_effect(app: &mut KernelApp, effects: &mut dyn fret_core::CustomEffectService) {
     let mut program = CustomEffectProgramV1::wgsl_utf8(WGSL);
     let id = program
         .ensure_registered(effects)
@@ -239,7 +241,7 @@ impl CustomEffectV1State {
 }
 
 impl View for CustomEffectV1View {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self {
             st: CustomEffectV1State {
                 enabled: app.models_mut().insert(true),
@@ -256,8 +258,8 @@ impl View for CustomEffectV1View {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        cx.on_action_notify_models::<act::Reset>({
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        cx.actions().models::<act::Reset>({
             let st = self.clone_for_reset();
             move |models| {
                 CustomEffectV1State::reset(models, &st);
@@ -294,7 +296,7 @@ fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
     c
 }
 
-fn watch_first_f32(cx: &mut ElementContext<'_, App>, model: &Model<Vec<f32>>, default: f32) -> f32 {
+fn watch_first_f32(cx: &mut UiCx<'_>, model: &Model<Vec<f32>>, default: f32) -> f32 {
     cx.watch_model(model)
         .layout()
         .read_ref(|v| v.first().copied().unwrap_or(default))
@@ -302,9 +304,13 @@ fn watch_first_f32(cx: &mut ElementContext<'_, App>, model: &Model<Vec<f32>>, de
         .unwrap_or(default)
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomEffectV1State) -> Elements {
+fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut CustomEffectV1State) -> ViewElements {
     let Some(effect) = cx.app.global::<DemoEffect>().map(|v| v.0) else {
-        return vec![shadcn::typography::h3(cx, "Custom effects unavailable")].into();
+        return vec![shadcn::raw::typography::h3(
+            cx,
+            "Custom effects unavailable",
+        )]
+        .into();
     };
 
     let enabled = cx.watch_model(&st.enabled).layout().value_or(true);
@@ -356,7 +362,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomEffectV1State) -> Eleme
 }
 
 fn stage(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     enabled: bool,
     effect: EffectId,
     blur_radius_px: f32,
@@ -384,8 +390,8 @@ fn stage(
         grain_scale,
     );
 
-    let title = shadcn::typography::h3(cx, "Custom Effect V1 (CustomV1)");
-    let subtitle = shadcn::typography::muted(
+    let title = shadcn::raw::typography::h3(cx, "Custom Effect V1 (CustomV1)");
+    let subtitle = shadcn::raw::typography::muted(
         cx,
         "The lens on the right runs a custom WGSL function and is clipped/scissored.",
     );
@@ -499,7 +505,7 @@ fn stage(
 }
 
 fn lens_row(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     enabled: bool,
     effect: EffectId,
     blur_radius_px: f32,
@@ -514,39 +520,34 @@ fn lens_row(
 ) -> AnyElement {
     let radius = Px(corner_radius_px.clamp(0.0, 64.0));
     ui::h_flex(move |cx| {
-        [
-            plain_lens(cx, "Plain (no effect)", radius),
-            if enabled {
-                custom_effect_lens(
-                    cx,
-                    "CustomV1 lens",
-                    effect,
-                    blur_radius_px,
-                    blur_downsample,
-                    refraction_height_px,
-                    refraction_amount_px,
-                    depth_effect,
-                    chromatic_aberration,
-                    corner_radius_px,
-                    grain_strength,
-                    grain_scale,
-                )
-            } else {
-                plain_lens(cx, "CustomV1 lens (disabled)", radius)
-            },
-        ]
+        let effect_lens = if enabled {
+            custom_effect_lens(
+                cx,
+                "CustomV1 lens",
+                effect,
+                blur_radius_px,
+                blur_downsample,
+                refraction_height_px,
+                refraction_amount_px,
+                depth_effect,
+                chromatic_aberration,
+                corner_radius_px,
+                grain_strength,
+                grain_scale,
+            )
+            .into_element(cx)
+        } else {
+            plain_lens(cx, "CustomV1 lens (disabled)", radius).into_element(cx)
+        };
+
+        ui::children![cx; plain_lens(cx, "Plain (no effect)", radius), effect_lens]
     })
     .gap(Space::N3)
     .items_start()
     .into_element(cx)
 }
 
-fn lens_shell(
-    cx: &mut ElementContext<'_, App>,
-    label: Arc<str>,
-    radius: Px,
-    body: AnyElement,
-) -> AnyElement {
+fn lens_shell(cx: &mut UiCx<'_>, label: Arc<str>, radius: Px, body: AnyElement) -> AnyElement {
     let mut outer_layout = LayoutStyle::default();
     outer_layout.size.width = Length::Px(Px(380.0));
     outer_layout.size.height = Length::Px(Px(240.0));
@@ -593,7 +594,7 @@ fn lens_shell(
                     corner_radii: Corners::all(Px(999.0)),
                     ..Default::default()
                 },
-                move |cx| vec![title.into_element(cx)],
+                move |_cx| vec![title],
             );
 
             vec![body, pill]
@@ -601,11 +602,10 @@ fn lens_shell(
     )
 }
 
-fn plain_lens(
-    cx: &mut ElementContext<'_, App>,
-    label: impl Into<Arc<str>>,
-    radius: Px,
-) -> AnyElement {
+fn plain_lens<L>(cx: &mut UiCx<'_>, label: L, radius: Px) -> impl IntoUiElement<KernelApp> + use<L>
+where
+    L: Into<Arc<str>>,
+{
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;
@@ -622,9 +622,9 @@ fn plain_lens(
     lens_shell(cx, label.into(), radius, body)
 }
 
-fn custom_effect_lens(
-    cx: &mut ElementContext<'_, App>,
-    label: impl Into<Arc<str>>,
+fn custom_effect_lens<L>(
+    cx: &mut UiCx<'_>,
+    label: L,
     effect: EffectId,
     blur_radius_px: f32,
     blur_downsample: f32,
@@ -635,7 +635,10 @@ fn custom_effect_lens(
     corner_radius_px: f32,
     grain_strength: f32,
     grain_scale: f32,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<L>
+where
+    L: Into<Arc<str>>,
+{
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;
@@ -694,7 +697,7 @@ fn custom_effect_lens(
 }
 
 fn inspector(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     st: &mut CustomEffectV1State,
     blur_radius_px: f32,
     blur_downsample: f32,
@@ -739,7 +742,7 @@ fn inspector(
             ..Default::default()
         },
         move |cx| {
-            let label_row = |cx: &mut ElementContext<'_, App>, label: &str, value: String| {
+            let label_row = |cx: &mut UiCx<'_>, label: &str, value: String| {
                 ui::h_flex(move |cx| {
                     [
                         shadcn::Label::new(label).into_element(cx),

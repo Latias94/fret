@@ -121,11 +121,11 @@ This ordering intentionally avoids mixing “new features” with “correctness
 
 ## Related workstreams (existing)
 
-- Renderer vNext refactor: `docs/workstreams/renderer-vnext-fearless-refactor-v1.md`
-- Render-plan semantics audit: `docs/workstreams/renderer-render-plan-semantics-audit-v1.md`
-- Scene-encoding semantics audit: `docs/workstreams/renderer-scene-encoding-semantics-audit-v1.md`
-- Drop shadow effect: `docs/workstreams/renderer-drop-shadow-effect-v1.md`
-- Backdrop warp effects: `docs/workstreams/renderer-effect-backdrop-warp-v2.md`
+- Renderer vNext refactor: `docs/workstreams/renderer-vnext-fearless-refactor-v1/renderer-vnext-fearless-refactor-v1.md`
+- Render-plan semantics audit: `docs/workstreams/renderer-render-plan-semantics-audit-v1/renderer-render-plan-semantics-audit-v1.md`
+- Scene-encoding semantics audit: `docs/workstreams/renderer-scene-encoding-semantics-audit-v1/renderer-scene-encoding-semantics-audit-v1.md`
+- Drop shadow effect: `docs/workstreams/renderer-drop-shadow-effect-v1/renderer-drop-shadow-effect-v1.md`
+- Backdrop warp effects: `docs/workstreams/renderer-effect-backdrop-warp-v2/renderer-effect-backdrop-warp-v2.md`
 
 ## Intermediate color + output transfer rule (implemented in this workstream)
 

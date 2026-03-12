@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("web_preview_demo.rs");
 
 // region: example
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
@@ -9,56 +8,11 @@ use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-#[derive(Default)]
-struct DemoModels {
-    history: Option<Model<Vec<String>>>,
-    history_ix: Option<Model<usize>>,
-    committed: Option<Model<bool>>,
-    loading: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let history = cx.with_state(DemoModels::default, |st| st.history.clone());
-    let history = match history {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Vec::<String>::new());
-            cx.with_state(DemoModels::default, |st| st.history = Some(model.clone()));
-            model
-        }
-    };
-
-    let history_ix = cx.with_state(DemoModels::default, |st| st.history_ix.clone());
-    let history_ix = match history_ix {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(0usize);
-            cx.with_state(DemoModels::default, |st| {
-                st.history_ix = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let committed = cx.with_state(DemoModels::default, |st| st.committed.clone());
-    let committed = match committed {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(DemoModels::default, |st| st.committed = Some(model.clone()));
-            model
-        }
-    };
-
-    let loading = cx.with_state(DemoModels::default, |st| st.loading.clone());
-    let loading = match loading {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(DemoModels::default, |st| st.loading = Some(model.clone()));
-            model
-        }
-    };
+    let history = cx.local_model_keyed("history", Vec::<String>::new);
+    let history_ix = cx.local_model_keyed("history_ix", || 0usize);
+    let committed = cx.local_model_keyed("committed", || false);
+    let loading = cx.local_model_keyed("loading", || false);
 
     let history_now = cx
         .get_model_cloned(&history, Invalidation::Layout)

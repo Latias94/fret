@@ -1,14 +1,14 @@
 pub const SOURCE: &str = include_str!("vertical_line.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     shadcn::Tabs::uncontrolled(Some(Arc::<str>::from("preview")))
-        .orientation(shadcn::tabs::TabsOrientation::Vertical)
+        .orientation(fret_ui_shadcn::tabs::TabsOrientation::Vertical)
         .list_variant(shadcn::TabsListVariant::Line)
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
         .test_id("ui-gallery-tabs-vertical-line")

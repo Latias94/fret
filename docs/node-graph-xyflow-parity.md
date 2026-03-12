@@ -19,7 +19,7 @@ files in `repo-ref/xyflow` and the current (or planned) module in `fret-node`.
 
 If you are looking for overall sequencing and milestones, see `docs/node-graph-roadmap.md`.
 If you are looking for an execution plan (milestones + deliverables), see
-`docs/workstreams/fret-node-xyflow-parity.md`.
+`docs/workstreams/standalone/fret-node-xyflow-parity.md`.
 If you are looking for contracts, see `docs/adr/0126-node-graph-editor-and-typed-connections.md`.
 If you are looking for an API-level guide, see `docs/node-graph-how-to-build-like-xyflow.md`.
 
@@ -37,7 +37,7 @@ Last audited: 2026-02-06
 
 This document is intentionally exhaustive. During large refactors, keep a small “focus window” so
 work remains coherent and measurable. For the execution plan + gates, see:
-`docs/workstreams/fret-node-xyflow-parity.md`.
+`docs/workstreams/standalone/fret-node-xyflow-parity.md`.
 
 Current top gaps (aligned to workstream M0/M6):
 
@@ -52,7 +52,7 @@ Current top gaps (aligned to workstream M0/M6):
 This repository prefers “docs + conformance tests” as the refactor safety net. When you touch
 internals/geometry/caches, treat the following behaviors as locked outcomes:
 
-For the detailed internals contract checklist, see `docs/workstreams/fret-node-internals-m0.md`.
+For the detailed internals contract checklist, see `docs/workstreams/standalone/fret-node-internals-m0.md`.
 
 - **Pan-only must not rebuild geometry** (derived geometry caches are reused; internals update only).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`

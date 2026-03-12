@@ -1,28 +1,14 @@
 pub const SOURCE: &str = include_str!("artifact_demo.rs");
 
 // region: example
-use fret_runtime::Model;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default)]
-struct DemoModels {
-    present: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let present = cx.with_state(DemoModels::default, |st| st.present.clone());
-    let present = match present {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(true);
-            cx.with_state(DemoModels::default, |st| st.present = Some(model.clone()));
-            model
-        }
-    };
+    let present = cx.local_model_keyed("present", || true);
 
     let is_present = cx.app.models().read(&present, |v| *v).unwrap_or(true);
 

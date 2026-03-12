@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("menu.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn section<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -11,8 +11,8 @@ fn section<H: UiHost>(
 ) -> AnyElement {
     ui::v_stack(|cx| {
         vec![
-            shadcn::typography::small(cx, title),
-            shadcn::typography::muted(cx, description),
+            shadcn::raw::typography::small(cx, title),
+            shadcn::raw::typography::muted(cx, description),
         ]
     })
     .gap(Space::N1)

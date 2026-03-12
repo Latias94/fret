@@ -1,0 +1,275 @@
+mod support;
+
+use support::{gallery_rust_sources, manifest_path, read, read_path};
+
+fn assert_curated_facade_only(relative_paths: &[&str]) {
+    for relative_path in relative_paths {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        assert!(
+            source.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"),
+            "{} should import the curated shadcn facade",
+            path.display()
+        );
+
+        for line in source.lines() {
+            if !line.contains("fret_ui_shadcn::") {
+                continue;
+            }
+
+            assert_eq!(
+                line.trim(),
+                "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
+                "{} reintroduced a direct fret_ui_shadcn root path: {}",
+                path.display(),
+                line.trim()
+            );
+        }
+    }
+}
+
+fn assert_only_documented_raw_shadcn_modules(path: &std::path::Path, source: &str) {
+    for (line_idx, line) in source.lines().enumerate() {
+        let trimmed = line.trim();
+        if !trimmed.contains("shadcn::raw::") {
+            continue;
+        }
+
+        let allowed = trimmed.contains("shadcn::raw::typography::")
+            || trimmed.contains("shadcn::raw::extras::")
+            || trimmed.contains("shadcn::raw::breadcrumb::")
+            || trimmed.contains("shadcn::raw::icon::");
+        assert!(
+            allowed,
+            "{}:{} used an undocumented shadcn raw escape hatch: {}",
+            path.display(),
+            line_idx + 1,
+            trimmed
+        );
+    }
+}
+
+#[test]
+fn gallery_curated_shadcn_surfaces_stay_explicit() {
+    let chrome = read("src/driver/chrome.rs");
+    let runtime_driver = read("src/driver/runtime_driver.rs");
+    let ui_mod = read("src/ui/mod.rs");
+    let settings_sheet = read("src/driver/settings_sheet.rs");
+    let theme_runtime = read("src/driver/theme_runtime.rs");
+
+    for source in [&chrome, &runtime_driver, &ui_mod] {
+        assert!(!source.contains("use fret_ui_shadcn as shadcn;"));
+        assert!(!source.contains("use fret_ui_shadcn::{self as shadcn"));
+    }
+
+    assert!(chrome.contains("use fret_ui_shadcn::facade as shadcn;"));
+    assert!(runtime_driver.contains("use fret_ui_shadcn::facade as shadcn;"));
+    assert!(ui_mod.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"));
+    assert!(settings_sheet.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"));
+
+    assert!(!theme_runtime.contains("fret_ui_shadcn::shadcn_themes::"));
+    assert!(theme_runtime.contains("shadcn::themes::ShadcnBaseColor::"));
+    assert!(theme_runtime.contains("shadcn::themes::apply_shadcn_new_york"));
+
+    for relative_path in [
+        "src/ui/pages/field.rs",
+        "src/ui/pages/input.rs",
+        "src/ui/pages/kbd.rs",
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        assert!(source.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"));
+        assert!(!source.contains("use fret_ui_shadcn::{self as shadcn, prelude::*};"));
+    }
+}
+
+#[test]
+fn gallery_source_tree_rejects_legacy_shadcn_alias_patterns() {
+    for path in gallery_rust_sources() {
+        if path.ends_with("src/lib.rs") {
+            continue;
+        }
+
+        let source = read_path(&path);
+        assert!(
+            !source.contains("fret_ui_fret_ui_shadcn::"),
+            "{} duplicated an explicit fret_ui_shadcn path prefix",
+            path.display()
+        );
+        assert!(
+            !source.contains("use fret_ui_shadcn as shadcn;"),
+            "{} reintroduced the legacy root alias import",
+            path.display()
+        );
+        assert!(
+            !source.contains("use fret_ui_shadcn::{self as shadcn"),
+            "{} reintroduced the legacy self-as-shadcn import",
+            path.display()
+        );
+
+        for (line_idx, line) in source.lines().enumerate() {
+            for (offset, _) in line.match_indices("shadcn::") {
+                let previous = line[..offset].chars().next_back();
+                if previous.is_some_and(|ch| ch.is_ascii_alphanumeric() || ch == '_') {
+                    continue;
+                }
+
+                let after = &line[offset + "shadcn::".len()..];
+                let segment_len = after
+                    .chars()
+                    .take_while(|ch| ch.is_ascii_alphanumeric() || *ch == '_')
+                    .count();
+                if segment_len == 0 {
+                    continue;
+                }
+
+                let segment = &after[..segment_len];
+                let is_module_path = after[segment_len..].starts_with("::");
+                let starts_with_lowercase = segment
+                    .chars()
+                    .next()
+                    .is_some_and(|ch| ch.is_ascii_lowercase());
+                if is_module_path
+                    && starts_with_lowercase
+                    && !matches!(segment, "raw" | "themes" | "app")
+                {
+                    panic!(
+                        "{}:{} reintroduced non-curated shadcn module path `shadcn::{}::`",
+                        path.display(),
+                        line_idx + 1,
+                        segment
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn gallery_source_tree_avoids_legacy_conversion_trait_names() {
+    for path in gallery_rust_sources() {
+        let source = read_path(&path);
+        for legacy_name in [
+            "UiIntoElement",
+            "UiChildIntoElement",
+            "UiHostBoundIntoElement",
+            "UiBuilderHostBoundIntoElementExt",
+        ] {
+            assert!(
+                !source.contains(legacy_name),
+                "{} reintroduced legacy conversion name `{}` into the first-party gallery surface",
+                path.display(),
+                legacy_name
+            );
+        }
+    }
+}
+
+#[test]
+fn gallery_ai_snippet_batch_prefers_curated_shadcn_facade_imports() {
+    assert_curated_facade_only(&[
+        "src/ui/snippets/ai/audio_player_demo.rs",
+        "src/ui/snippets/ai/canvas_world_layer_spike.rs",
+        "src/ui/snippets/ai/checkpoint_demo.rs",
+        "src/ui/snippets/ai/code_block_demo.rs",
+        "src/ui/snippets/ai/commit_custom_children.rs",
+        "src/ui/snippets/ai/confirmation_demo.rs",
+        "src/ui/snippets/ai/confirmation_request.rs",
+        "src/ui/snippets/ai/model_selector_demo.rs",
+        "src/ui/snippets/ai/persona_demo.rs",
+        "src/ui/snippets/ai/persona_state_management.rs",
+        "src/ui/snippets/ai/plan_demo.rs",
+        "src/ui/snippets/ai/prompt_input_docs_demo.rs",
+        "src/ui/snippets/ai/prompt_input_referenced_sources_demo.rs",
+        "src/ui/snippets/ai/reasoning_demo.rs",
+        "src/ui/snippets/ai/speech_input_demo.rs",
+        "src/ui/snippets/ai/task_demo.rs",
+        "src/ui/snippets/ai/transcript_torture.rs",
+        "src/ui/snippets/ai/workflow_canvas_demo.rs",
+        "src/ui/snippets/ai/workflow_toolbar_demo.rs",
+    ]);
+}
+
+#[test]
+fn gallery_ai_snippet_tree_avoids_direct_shadcn_root_paths() {
+    for path in support::rust_sources("src/ui/snippets/ai") {
+        let source = read_path(&path);
+        for (line_idx, line) in source.lines().enumerate() {
+            if !line.contains("fret_ui_shadcn::") {
+                continue;
+            }
+
+            let trimmed = line.trim();
+            let allowed_import = trimmed == "use fret_ui_shadcn::prelude::*;"
+                || trimmed == "use fret_ui_shadcn::{facade as shadcn, prelude::*};"
+                || (trimmed.starts_with("use fret_ui_shadcn::prelude::{")
+                    && trimmed.ends_with("};"));
+            assert!(
+                allowed_import,
+                "{}:{} reintroduced a direct fret_ui_shadcn root path outside allowed imports: {}",
+                path.display(),
+                line_idx + 1,
+                trimmed
+            );
+        }
+    }
+}
+
+#[test]
+fn gallery_shadcn_extras_batch_uses_explicit_raw_escape_hatch() {
+    let relative_paths = [
+        "src/ui/snippets/shadcn_extras/announcement.rs",
+        "src/ui/snippets/shadcn_extras/avatar_stack.rs",
+        "src/ui/snippets/shadcn_extras/banner.rs",
+        "src/ui/snippets/shadcn_extras/kanban.rs",
+        "src/ui/snippets/shadcn_extras/marquee.rs",
+        "src/ui/snippets/shadcn_extras/rating.rs",
+        "src/ui/snippets/shadcn_extras/relative_time.rs",
+        "src/ui/snippets/shadcn_extras/tags.rs",
+        "src/ui/snippets/shadcn_extras/ticker.rs",
+    ];
+
+    assert_curated_facade_only(&relative_paths);
+
+    for relative_path in relative_paths {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        assert!(
+            source.contains("shadcn::raw::extras::"),
+            "{} should use the explicit raw extras escape hatch",
+            path.display()
+        );
+    }
+}
+
+#[test]
+fn gallery_breadcrumb_primitive_batch_uses_explicit_raw_escape_hatch() {
+    let relative_paths = [
+        "src/ui/snippets/breadcrumb/demo.rs",
+        "src/ui/snippets/breadcrumb/dropdown.rs",
+        "src/ui/snippets/breadcrumb/link_component.rs",
+        "src/ui/snippets/breadcrumb/responsive.rs",
+        "src/ui/snippets/breadcrumb/rtl.rs",
+        "src/ui/snippets/breadcrumb/usage.rs",
+    ];
+
+    assert_curated_facade_only(&relative_paths);
+
+    for relative_path in relative_paths {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        assert!(
+            source.contains("use shadcn::raw::breadcrumb::primitives as bc;"),
+            "{} should use the explicit raw breadcrumb primitive escape hatch",
+            path.display()
+        );
+    }
+}
+
+#[test]
+fn gallery_source_tree_limits_raw_shadcn_escape_hatches() {
+    for path in gallery_rust_sources() {
+        let source = read_path(&path);
+        assert_only_documented_raw_shadcn_modules(&path, &source);
+    }
+}

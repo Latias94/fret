@@ -27,7 +27,7 @@ reliable to answer:
 ## Non-goals
 
 - Redesigning scroll extent computation end-to-end (tracked in
-  `docs/workstreams/scroll-extents-dom-parity.md`).
+  `docs/workstreams/scroll-extents-dom-parity/scroll-extents-dom-parity.md`).
 - Changing view-cache semantics or contained-layout contracts:
   - Cache roots + cached subtree semantics:
     `docs/adr/0213-cache-roots-and-cached-subtree-semantics-v1.md`

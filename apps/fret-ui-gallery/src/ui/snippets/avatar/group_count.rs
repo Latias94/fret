@@ -2,14 +2,15 @@ pub const SOURCE: &str = include_str!("group_count.rs");
 
 // region: example
 use fret_core::ImageId;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_kit::IntoUiElement;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn avatar_with_image<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     avatar_image: Model<Option<ImageId>>,
     size: shadcn::AvatarSize,
     fallback_text: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let image = shadcn::AvatarImage::model(avatar_image.clone()).into_element(cx);
     let fallback = shadcn::AvatarFallback::new(fallback_text)
         .when_image_missing_model(avatar_image)
@@ -25,9 +26,12 @@ fn group_with_count<H: UiHost>(
     avatar_image: Model<Option<ImageId>>,
     size: shadcn::AvatarSize,
     test_id: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let avatars = (0..3)
-        .map(|idx| avatar_with_image(cx, avatar_image.clone(), size, ["CN", "ML", "ER"][idx]))
+        .map(|idx| {
+            avatar_with_image(cx, avatar_image.clone(), size, ["CN", "ML", "ER"][idx])
+                .into_element(cx)
+        })
         .collect::<Vec<_>>();
 
     let count =
@@ -51,19 +55,22 @@ pub fn render<H: UiHost>(
                 avatar_image.clone(),
                 shadcn::AvatarSize::Sm,
                 "ui-gallery-avatar-group-count-sm",
-            ),
+            )
+            .into_element(cx),
             group_with_count(
                 cx,
                 avatar_image.clone(),
                 shadcn::AvatarSize::Default,
                 "ui-gallery-avatar-group-count-default",
-            ),
+            )
+            .into_element(cx),
             group_with_count(
                 cx,
                 avatar_image.clone(),
                 shadcn::AvatarSize::Lg,
                 "ui-gallery-avatar-group-count-lg",
-            ),
+            )
+            .into_element(cx),
         ]
     })
     .gap(Space::N4)

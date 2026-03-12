@@ -1,6 +1,15 @@
 use super::prelude::*;
+use fret::UiCx;
+use fret_ui_kit::IntoUiElement;
 
-fn gate_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, child: AnyElement) -> AnyElement {
+fn gate_panel<B>(
+    cx: &mut UiCx<'_>,
+    theme: &Theme,
+    child: B,
+) -> impl IntoUiElement<fret_app::App> + use<B>
+where
+    B: IntoUiElement<fret_app::App>,
+{
     cx.container(
         decl_style::container_props(
             theme,
@@ -12,12 +21,12 @@ fn gate_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, child: AnyElement
                 .w_full()
                 .h_px(MetricRef::Px(Px(92.0))),
         ),
-        |_cx| vec![child],
+        move |cx| vec![child.into_element(cx)],
     )
 }
 
 pub(super) fn word_boundary_gate(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
 ) -> AnyElement {
@@ -28,11 +37,11 @@ pub(super) fn word_boundary_gate(
         .a11y_label("Code editor word gate")
         .viewport_test_id("ui-gallery-code-editor-word-gate-viewport")
         .into_element(cx);
-    gate_panel(cx, theme, gate_editor)
+    gate_panel(cx, theme, gate_editor).into_element(cx)
 }
 
 pub(super) fn word_boundary_soft_wrap_gate(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
 ) -> AnyElement {
@@ -43,11 +52,11 @@ pub(super) fn word_boundary_soft_wrap_gate(
         .a11y_label("Code editor word gate soft wrap")
         .viewport_test_id("ui-gallery-code-editor-word-gate-soft-wrap-viewport")
         .into_element(cx);
-    gate_panel(cx, theme, gate_editor)
+    gate_panel(cx, theme, gate_editor).into_element(cx)
 }
 
 pub(super) fn a11y_selection_gate(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
 ) -> AnyElement {
@@ -58,11 +67,11 @@ pub(super) fn a11y_selection_gate(
         .a11y_label("Code editor a11y selection gate")
         .viewport_test_id("ui-gallery-code-editor-a11y-selection-gate-viewport")
         .into_element(cx);
-    gate_panel(cx, theme, gate_editor)
+    gate_panel(cx, theme, gate_editor).into_element(cx)
 }
 
 pub(super) fn a11y_composition_gate(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
 ) -> AnyElement {
@@ -221,7 +230,7 @@ pub(super) fn a11y_composition_gate(
             .into_element(cx)
     };
 
-    let panel = gate_panel(cx, theme, gate_editor);
+    let panel = gate_panel(cx, theme, gate_editor).into_element(cx);
 
     ui::v_flex(|_cx| vec![controls, platform_controls, panel])
         .layout(LayoutRefinement::default().w_full())
@@ -230,7 +239,7 @@ pub(super) fn a11y_composition_gate(
 }
 
 pub(super) fn a11y_selection_wrap_gate(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
 ) -> AnyElement {
@@ -241,11 +250,11 @@ pub(super) fn a11y_selection_wrap_gate(
         .a11y_label("Code editor a11y selection wrap gate")
         .viewport_test_id("ui-gallery-code-editor-a11y-selection-wrap-gate-viewport")
         .into_element(cx);
-    gate_panel(cx, theme, gate_editor)
+    gate_panel(cx, theme, gate_editor).into_element(cx)
 }
 
 pub(super) fn a11y_composition_wrap_gate(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
 ) -> AnyElement {
@@ -328,7 +337,7 @@ pub(super) fn a11y_composition_wrap_gate(
         .items_center()
         .into_element(cx);
 
-    let panel = gate_panel(cx, theme, gate_editor);
+    let panel = gate_panel(cx, theme, gate_editor).into_element(cx);
 
     ui::v_flex(|_cx| vec![controls, panel])
         .layout(LayoutRefinement::default().w_full())
@@ -337,7 +346,7 @@ pub(super) fn a11y_composition_wrap_gate(
 }
 
 pub(super) fn a11y_composition_drag_gate(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
 ) -> AnyElement {
@@ -420,7 +429,7 @@ pub(super) fn a11y_composition_drag_gate(
         .items_center()
         .into_element(cx);
 
-    let panel = gate_panel(cx, theme, gate_editor);
+    let panel = gate_panel(cx, theme, gate_editor).into_element(cx);
 
     ui::v_flex(|_cx| vec![controls, panel])
         .layout(LayoutRefinement::default().w_full())

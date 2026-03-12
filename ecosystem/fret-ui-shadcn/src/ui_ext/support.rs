@@ -9,9 +9,9 @@ macro_rules! impl_ui_patch_chrome_layout {
         impl ::fret_ui_kit::UiSupportsChrome for $ty {}
         impl ::fret_ui_kit::UiSupportsLayout for $ty {}
 
-        impl ::fret_ui_kit::UiIntoElement for $ty {
+        impl<H: ::fret_ui::UiHost> ::fret_ui_kit::IntoUiElement<H> for $ty {
             #[track_caller]
-            fn into_element<H: ::fret_ui::UiHost>(
+            fn into_element(
                 self,
                 cx: &mut ::fret_ui::ElementContext<'_, H>,
             ) -> ::fret_ui::element::AnyElement {
@@ -31,9 +31,9 @@ macro_rules! impl_ui_patch_layout_only {
 
         impl ::fret_ui_kit::UiSupportsLayout for $ty {}
 
-        impl ::fret_ui_kit::UiIntoElement for $ty {
+        impl<H: ::fret_ui::UiHost> ::fret_ui_kit::IntoUiElement<H> for $ty {
             #[track_caller]
-            fn into_element<H: ::fret_ui::UiHost>(
+            fn into_element(
                 self,
                 cx: &mut ::fret_ui::ElementContext<'_, H>,
             ) -> ::fret_ui::element::AnyElement {
@@ -76,9 +76,9 @@ macro_rules! impl_ui_patch_passthrough {
             }
         }
 
-        impl ::fret_ui_kit::UiIntoElement for $ty {
+        impl<H: ::fret_ui::UiHost> ::fret_ui_kit::IntoUiElement<H> for $ty {
             #[track_caller]
-            fn into_element<H: ::fret_ui::UiHost>(
+            fn into_element(
                 self,
                 cx: &mut ::fret_ui::ElementContext<'_, H>,
             ) -> ::fret_ui::element::AnyElement {

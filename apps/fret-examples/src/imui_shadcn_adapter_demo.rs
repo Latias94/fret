@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use fret::prelude::*;
-use fret_ui_shadcn as shadcn;
+use fret::{FretApp, advanced::prelude::*};
+use fret_ui_shadcn::facade as shadcn;
 
 struct ImUiShadcnAdapterView {
     count: Model<u32>,
@@ -14,16 +14,17 @@ struct ImUiShadcnAdapterView {
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("imui-shadcn-adapter-demo")
         .window("imui_shadcn_adapter_demo", (840.0, 560.0))
-        .run_view::<ImUiShadcnAdapterView>()?;
+        .view::<ImUiShadcnAdapterView>()?
+        .run()?;
     Ok(())
 }
 
 impl View for ImUiShadcnAdapterView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
-        shadcn::shadcn_themes::apply_shadcn_new_york(
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
+        shadcn::themes::apply_shadcn_new_york(
             app,
-            shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-            shadcn::shadcn_themes::ShadcnColorScheme::Light,
+            shadcn::themes::ShadcnBaseColor::Slate,
+            shadcn::themes::ShadcnColorScheme::Light,
         );
 
         Self {
@@ -35,7 +36,7 @@ impl View for ImUiShadcnAdapterView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let count = cx.watch_model(&self.count).layout().value_or_default();
         let enabled = cx.watch_model(&self.enabled).paint().value_or_default();
         let value = cx.watch_model(&self.value).paint().value_or_default();

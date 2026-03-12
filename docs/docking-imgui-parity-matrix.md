@@ -21,10 +21,10 @@ implementation points and the current (or planned) modules in Fret.
 
 If you are looking for overall sequencing and milestones, see:
 
-- Multi-window (OS windows) plan: `docs/workstreams/docking-multiwindow-imgui-parity.md`
-- macOS multi-window plan: `docs/workstreams/macos-docking-multiwindow-imgui-parity.md`
-- Multi-viewport (engine render targets) plan: `docs/workstreams/docking-multiviewport-arbitration-v1.md`
-- Behavior-first gate status (tear-off + overlap + peek-behind): `docs/workstreams/docking-multi-window-imgui-alignment-v1.md`
+- Multi-window (OS windows) plan: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
+- macOS multi-window plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
+- Multi-viewport (engine render targets) plan: `docs/workstreams/docking-multiviewport-arbitration-v1/docking-multiviewport-arbitration-v1.md`
+- Behavior-first gate status (tear-off + overlap + peek-behind): `docs/workstreams/standalone/docking-multi-window-imgui-alignment-v1.md`
 
 If you are looking for hard contracts, start here:
 
@@ -266,7 +266,7 @@ backend guidance. It is not an API map: the goal is to preserve the *outcome* ac
 - **Mouse-up outside any window still completes the drop, and cancel paths stop follow**
   - ImGui: multi-viewport backends must handle pointer up and hovered-viewport selection reliably; fallbacks are heuristic and “flawed”.
   - Fret: runner owns cross-window internal drag routing and is responsible for robust “drop outside windows” delivery and cancel hygiene.
-    See `docs/workstreams/docking-multiwindow-imgui-parity.md` and the tracker `docs/workstreams/docking-multiwindow-imgui-parity-todo.md`.
+    See `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md` and the tracker `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`.
 
 ---
 
@@ -286,7 +286,7 @@ inability to hit a specific docking direction are often coordinate-space bugs.
     - Fret unit tests (client origin + scale): `crates/fret-launch/src/runner/desktop/runner/window.rs` (`client_origin_screen_adds_decoration_offset`, `local_pos_for_screen_pos_respects_scale_factor`).
   - Notes:
     - Keep this item `[~]` until we have a dedicated conformance test covering mixed-DPI multi-monitor + overlap.
-      Tracker: `docs/workstreams/docking-multiwindow-imgui-parity-todo.md` (`DW-P0-dpi-006`, `DW-P1-win-002`).
+      Tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md` (`DW-P0-dpi-006`, `DW-P1-win-002`).
   - Diagnostics (bounded):
     - `fretboard diag dock-routing <bundle_dir|bundle.schema2.json>` surfaces:
       - `pos/start/grab/follow` (window-local cursor position + grab anchor),
@@ -603,7 +603,7 @@ Open parity question:
     - Uses capability gating for z-level changes.
   - Evidence anchors:
     - `crates/fret-launch/src/runner/desktop/runner/window.rs` (platform-specific raise; pending-front retries)
-    - `docs/workstreams/macos-docking-multiwindow-imgui-parity.md` (macOS plan)
+    - `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md` (macOS plan)
 
 ---
 
@@ -632,7 +632,7 @@ Open parity question:
 
 - [x] **Closing a floating OS window merges its content back**
   - This matches editor-grade UX and is tracked as a P0 in:
-    - `docs/workstreams/docking-multiwindow-imgui-parity-todo.md`
+    - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
   - Evidence anchors:
     - `ecosystem/fret-docking/src/runtime.rs` (`handle_dock_before_close_window`)
 

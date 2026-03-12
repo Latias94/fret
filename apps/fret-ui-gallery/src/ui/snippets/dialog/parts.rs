@@ -1,23 +1,10 @@
 pub const SOURCE: &str = include_str!("parts.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default, Clone)]
-struct Models {
-    open: Option<Model<bool>>,
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    let open = match state.open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.open = Some(model.clone()));
-            model
-        }
-    };
+    let open = cx.local_model_keyed("open", || false);
 
     let trigger = shadcn::DialogTrigger::new(
         shadcn::Button::new("Open Dialog (Parts)")
@@ -33,9 +20,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .overlay(shadcn::DialogOverlay::new())
         .content_with(move |cx| {
             shadcn::DialogContent::new([
-                shadcn::DialogClose::from_scope()
-                    .into_element(cx)
-                    .test_id("ui-gallery-dialog-parts-close"),
                 shadcn::DialogHeader::new([
                     shadcn::DialogTitle::new("Parts dialog").into_element(cx),
                     shadcn::DialogDescription::new(
@@ -44,7 +28,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .into_element(cx),
                 ])
                 .into_element(cx),
+                shadcn::DialogClose::from_scope()
+                    .into_element(cx)
+                    .test_id("ui-gallery-dialog-parts-close"),
             ])
+            .show_close_button(false)
             .into_element(cx)
             .test_id("ui-gallery-dialog-parts-content")
         })

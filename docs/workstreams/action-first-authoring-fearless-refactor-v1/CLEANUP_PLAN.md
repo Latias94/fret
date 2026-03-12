@@ -99,7 +99,7 @@ Avoid two overlapping entry points that teach different patterns:
 
 - Update `fretboard` templates to generate action-first + view-runtime examples.
 - Update `docs/README.md` “State management” section to list the new golden path primitives.
-- Keep `docs/workstreams/authoring-paradigm-gpui-style-v1.md` aligned:
+- Keep `docs/workstreams/authoring-paradigm-gpui-style-v1/authoring-paradigm-gpui-style-v1.md` aligned:
   - it may reference MVU only as historical/external migration context; it must not contradict the golden path.
 
 ---

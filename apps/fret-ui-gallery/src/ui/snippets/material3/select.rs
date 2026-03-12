@@ -11,110 +11,18 @@ use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-#[derive(Default)]
-struct SelectModels {
-    selected: Option<Model<Option<Arc<str>>>>,
-    selected_unclamped: Option<Model<Option<Arc<str>>>>,
-    selected_typeahead: Option<Model<Option<Arc<str>>>>,
-    selected_rich: Option<Model<Option<Arc<str>>>>,
-    selected_transformed: Option<Model<Option<Arc<str>>>>,
-    menu_width_floor_enabled: Option<Model<bool>>,
-    typeahead_delay_ms: Option<Model<u32>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let selected = cx.with_state(SelectModels::default, |st| st.selected.clone());
-    let selected = match selected {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(None::<Arc<str>>);
-            cx.with_state(SelectModels::default, |st| {
-                st.selected = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let selected_unclamped =
-        cx.with_state(SelectModels::default, |st| st.selected_unclamped.clone());
-    let selected_unclamped = match selected_unclamped {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(None::<Arc<str>>);
-            cx.with_state(SelectModels::default, |st| {
-                st.selected_unclamped = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let selected_typeahead =
-        cx.with_state(SelectModels::default, |st| st.selected_typeahead.clone());
-    let selected_typeahead = match selected_typeahead {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(None::<Arc<str>>);
-            cx.with_state(SelectModels::default, |st| {
-                st.selected_typeahead = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let selected_rich = cx.with_state(SelectModels::default, |st| st.selected_rich.clone());
-    let selected_rich = match selected_rich {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(None::<Arc<str>>);
-            cx.with_state(SelectModels::default, |st| {
-                st.selected_rich = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let selected_transformed =
-        cx.with_state(SelectModels::default, |st| st.selected_transformed.clone());
-    let selected_transformed = match selected_transformed {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(None::<Arc<str>>);
-            cx.with_state(SelectModels::default, |st| {
-                st.selected_transformed = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let menu_width_floor_enabled = cx.with_state(SelectModels::default, |st| {
-        st.menu_width_floor_enabled.clone()
-    });
-    let menu_width_floor_enabled = match menu_width_floor_enabled {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(true);
-            cx.with_state(SelectModels::default, |st| {
-                st.menu_width_floor_enabled = Some(model.clone())
-            });
-            model
-        }
-    };
+    let selected = cx.local_model_keyed("selected", || None::<Arc<str>>);
+    let selected_unclamped = cx.local_model_keyed("selected_unclamped", || None::<Arc<str>>);
+    let selected_typeahead = cx.local_model_keyed("selected_typeahead", || None::<Arc<str>>);
+    let selected_rich = cx.local_model_keyed("selected_rich", || None::<Arc<str>>);
+    let selected_transformed = cx.local_model_keyed("selected_transformed", || None::<Arc<str>>);
+    let menu_width_floor_enabled = cx.local_model_keyed("menu_width_floor_enabled", || true);
     let menu_width_floor_enabled_now = cx
         .get_model_copied(&menu_width_floor_enabled, Invalidation::Layout)
         .unwrap_or(true);
 
-    let typeahead_delay_ms =
-        cx.with_state(SelectModels::default, |st| st.typeahead_delay_ms.clone());
-    let typeahead_delay_ms = match typeahead_delay_ms {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(200u32);
-            cx.with_state(SelectModels::default, |st| {
-                st.typeahead_delay_ms = Some(model.clone())
-            });
-            model
-        }
-    };
+    let typeahead_delay_ms = cx.local_model_keyed("typeahead_delay_ms", || 200u32);
     let typeahead_delay_ms_now = cx
         .get_model_copied(&typeahead_delay_ms, Invalidation::Layout)
         .unwrap_or(200);

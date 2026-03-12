@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("extras.rs");
 // region: example
 use fret_core::Px;
 use fret_ui_kit::declarative::ElementContextThemeExt;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let w_fit = LayoutRefinement::default().w(fret_ui_kit::LengthRefinement::Auto);
@@ -172,7 +172,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     ui::v_flex(|cx| {
             vec![
-                shadcn::typography::muted(
+                shadcn::raw::typography::muted(
                     cx,
                     "Extras are Fret-specific demos and regression gates (not part of upstream shadcn RadioGroupDemo).",
                 ),

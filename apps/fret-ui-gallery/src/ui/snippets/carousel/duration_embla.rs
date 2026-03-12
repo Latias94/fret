@@ -1,38 +1,14 @@
 pub const SOURCE: &str = include_str!("duration_embla.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default)]
-struct Models {
-    duration_fast_api_snapshot: Option<Model<shadcn::CarouselApiSnapshot>>,
-    duration_slow_api_snapshot: Option<Model<shadcn::CarouselApiSnapshot>>,
-    duration_fast_settling: Option<Model<bool>>,
-    duration_slow_settling: Option<Model<bool>>,
-    duration_fast_at_snap: Option<Model<bool>>,
-    duration_slow_at_snap: Option<Model<bool>>,
-    duration_fast_can_next: Option<Model<bool>>,
-    duration_slow_can_next: Option<Model<bool>>,
-    duration_fast_selected_1: Option<Model<bool>>,
-    duration_slow_selected_1: Option<Model<bool>>,
-    duration_fast_engine_present: Option<Model<bool>>,
-    duration_slow_engine_present: Option<Model<bool>>,
-    duration_fast_scroll_duration_fast: Option<Model<bool>>,
-    duration_slow_scroll_duration_slow: Option<Model<bool>>,
-    duration_fast_selected_snap_large: Option<Model<bool>>,
-    duration_slow_selected_snap_large: Option<Model<bool>>,
-    duration_fast_embla_settling: Option<Model<bool>>,
-    duration_slow_embla_settling: Option<Model<bool>>,
-    duration_fast_embla_enabled: Option<Model<bool>>,
-    duration_slow_embla_enabled: Option<Model<bool>>,
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Debug, Clone, Copy)]
 struct SlideVisual {
@@ -40,7 +16,7 @@ struct SlideVisual {
     line_height_px: Px,
 }
 
-fn slide_card(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual) -> AnyElement {
+fn slide_card(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
 
     let number = ui::text(format!("{idx}"))
@@ -68,7 +44,7 @@ fn slide_card(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual)
     shadcn::Card::new([content]).into_element(cx)
 }
 
-fn slide(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual) -> AnyElement {
+fn slide(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement {
     let card = slide_card(cx, idx, visual);
     ui::container(move |_cx| vec![card])
         .w_full()
@@ -76,218 +52,46 @@ fn slide(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual) -> A
         .into_element(cx)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let max_w_xs = Px(320.0);
 
     // Embla duration: demonstrate that smaller durations settle faster for button navigation.
     // Note: drag release shaping uses Embla's hard-coded `baseDuration` (see workstream docs), so
     // this demo focuses on prev/next.
-    let duration_fast_api_snapshot = cx
-        .with_state(Models::default, |st| st.duration_fast_api_snapshot.clone())
-        .unwrap_or_else(|| {
-            let model: Model<shadcn::CarouselApiSnapshot> = cx
-                .app
-                .models_mut()
-                .insert(shadcn::CarouselApiSnapshot::default());
-            cx.with_state(Models::default, |st| {
-                st.duration_fast_api_snapshot = Some(model.clone());
-            });
-            model
-        });
-    let duration_slow_api_snapshot = cx
-        .with_state(Models::default, |st| st.duration_slow_api_snapshot.clone())
-        .unwrap_or_else(|| {
-            let model: Model<shadcn::CarouselApiSnapshot> = cx
-                .app
-                .models_mut()
-                .insert(shadcn::CarouselApiSnapshot::default());
-            cx.with_state(Models::default, |st| {
-                st.duration_slow_api_snapshot = Some(model.clone());
-            });
-            model
-        });
-    let duration_fast_settling = cx
-        .with_state(Models::default, |st| st.duration_fast_settling.clone())
-        .unwrap_or_else(|| {
-            let model: Model<bool> = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.duration_fast_settling = Some(model.clone());
-            });
-            model
-        });
-    let duration_slow_settling = cx
-        .with_state(Models::default, |st| st.duration_slow_settling.clone())
-        .unwrap_or_else(|| {
-            let model: Model<bool> = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.duration_slow_settling = Some(model.clone());
-            });
-            model
-        });
-    let duration_fast_at_snap = cx
-        .with_state(Models::default, |st| st.duration_fast_at_snap.clone())
-        .unwrap_or_else(|| {
-            let model: Model<bool> = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.duration_fast_at_snap = Some(model.clone());
-            });
-            model
-        });
-    let duration_slow_at_snap = cx
-        .with_state(Models::default, |st| st.duration_slow_at_snap.clone())
-        .unwrap_or_else(|| {
-            let model: Model<bool> = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.duration_slow_at_snap = Some(model.clone());
-            });
-            model
-        });
-    let duration_fast_can_next = cx
-        .with_state(Models::default, |st| st.duration_fast_can_next.clone())
-        .unwrap_or_else(|| {
-            let model: Model<bool> = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.duration_fast_can_next = Some(model.clone());
-            });
-            model
-        });
-    let duration_slow_can_next = cx
-        .with_state(Models::default, |st| st.duration_slow_can_next.clone())
-        .unwrap_or_else(|| {
-            let model: Model<bool> = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.duration_slow_can_next = Some(model.clone());
-            });
-            model
-        });
-    let duration_fast_selected_1 = cx
-        .with_state(Models::default, |st| st.duration_fast_selected_1.clone())
-        .unwrap_or_else(|| {
-            let model: Model<bool> = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.duration_fast_selected_1 = Some(model.clone());
-            });
-            model
-        });
-    let duration_slow_selected_1 = cx
-        .with_state(Models::default, |st| st.duration_slow_selected_1.clone())
-        .unwrap_or_else(|| {
-            let model: Model<bool> = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.duration_slow_selected_1 = Some(model.clone());
-            });
-            model
-        });
-
-    let duration_fast_engine_present = cx
-        .with_state(Models::default, |st| {
-            st.duration_fast_engine_present.clone()
-        })
-        .unwrap_or_else(|| {
-            let model: Model<bool> = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.duration_fast_engine_present = Some(model.clone());
-            });
-            model
-        });
-    let duration_slow_engine_present = cx
-        .with_state(Models::default, |st| {
-            st.duration_slow_engine_present.clone()
-        })
-        .unwrap_or_else(|| {
-            let model: Model<bool> = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.duration_slow_engine_present = Some(model.clone());
-            });
-            model
-        });
-    let duration_fast_scroll_duration_fast = cx
-        .with_state(Models::default, |st| {
-            st.duration_fast_scroll_duration_fast.clone()
-        })
-        .unwrap_or_else(|| {
-            let model: Model<bool> = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.duration_fast_scroll_duration_fast = Some(model.clone());
-            });
-            model
-        });
-    let duration_slow_scroll_duration_slow = cx
-        .with_state(Models::default, |st| {
-            st.duration_slow_scroll_duration_slow.clone()
-        })
-        .unwrap_or_else(|| {
-            let model: Model<bool> = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.duration_slow_scroll_duration_slow = Some(model.clone());
-            });
-            model
-        });
-
-    let duration_fast_selected_snap_large = cx
-        .with_state(Models::default, |st| {
-            st.duration_fast_selected_snap_large.clone()
-        })
-        .unwrap_or_else(|| {
-            let model: Model<bool> = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.duration_fast_selected_snap_large = Some(model.clone());
-            });
-            model
-        });
-    let duration_slow_selected_snap_large = cx
-        .with_state(Models::default, |st| {
-            st.duration_slow_selected_snap_large.clone()
-        })
-        .unwrap_or_else(|| {
-            let model: Model<bool> = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.duration_slow_selected_snap_large = Some(model.clone());
-            });
-            model
-        });
-
-    let duration_fast_embla_settling = cx
-        .with_state(Models::default, |st| {
-            st.duration_fast_embla_settling.clone()
-        })
-        .unwrap_or_else(|| {
-            let model: Model<bool> = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.duration_fast_embla_settling = Some(model.clone());
-            });
-            model
-        });
-    let duration_slow_embla_settling = cx
-        .with_state(Models::default, |st| {
-            st.duration_slow_embla_settling.clone()
-        })
-        .unwrap_or_else(|| {
-            let model: Model<bool> = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.duration_slow_embla_settling = Some(model.clone());
-            });
-            model
-        });
-
-    let duration_fast_embla_enabled = cx
-        .with_state(Models::default, |st| st.duration_fast_embla_enabled.clone())
-        .unwrap_or_else(|| {
-            let model: Model<bool> = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.duration_fast_embla_enabled = Some(model.clone());
-            });
-            model
-        });
-    let duration_slow_embla_enabled = cx
-        .with_state(Models::default, |st| st.duration_slow_embla_enabled.clone())
-        .unwrap_or_else(|| {
-            let model: Model<bool> = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.duration_slow_embla_enabled = Some(model.clone());
-            });
-            model
-        });
+    let duration_fast_api_snapshot = cx.local_model_keyed(
+        "duration_fast_api_snapshot",
+        shadcn::CarouselApiSnapshot::default,
+    );
+    let duration_slow_api_snapshot = cx.local_model_keyed(
+        "duration_slow_api_snapshot",
+        shadcn::CarouselApiSnapshot::default,
+    );
+    let duration_fast_settling = cx.local_model_keyed("duration_fast_settling", || false);
+    let duration_slow_settling = cx.local_model_keyed("duration_slow_settling", || false);
+    let duration_fast_at_snap = cx.local_model_keyed("duration_fast_at_snap", || false);
+    let duration_slow_at_snap = cx.local_model_keyed("duration_slow_at_snap", || false);
+    let duration_fast_can_next = cx.local_model_keyed("duration_fast_can_next", || false);
+    let duration_slow_can_next = cx.local_model_keyed("duration_slow_can_next", || false);
+    let duration_fast_selected_1 = cx.local_model_keyed("duration_fast_selected_1", || false);
+    let duration_slow_selected_1 = cx.local_model_keyed("duration_slow_selected_1", || false);
+    let duration_fast_engine_present =
+        cx.local_model_keyed("duration_fast_engine_present", || false);
+    let duration_slow_engine_present =
+        cx.local_model_keyed("duration_slow_engine_present", || false);
+    let duration_fast_scroll_duration_fast =
+        cx.local_model_keyed("duration_fast_scroll_duration_fast", || false);
+    let duration_slow_scroll_duration_slow =
+        cx.local_model_keyed("duration_slow_scroll_duration_slow", || false);
+    let duration_fast_selected_snap_large =
+        cx.local_model_keyed("duration_fast_selected_snap_large", || false);
+    let duration_slow_selected_snap_large =
+        cx.local_model_keyed("duration_slow_selected_snap_large", || false);
+    let duration_fast_embla_settling =
+        cx.local_model_keyed("duration_fast_embla_settling", || false);
+    let duration_slow_embla_settling =
+        cx.local_model_keyed("duration_slow_embla_settling", || false);
+    let duration_fast_embla_enabled = cx.local_model_keyed("duration_fast_embla_enabled", || false);
+    let duration_slow_embla_enabled = cx.local_model_keyed("duration_slow_embla_enabled", || false);
 
     let duration_fast_snapshot_now = cx
         .watch_model(&duration_fast_api_snapshot)

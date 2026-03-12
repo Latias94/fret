@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret::prelude::*;
+use fret::app::prelude::*;
 use fret_query::{QueryError, QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
 use fret_ui::CommandAvailability;
 
@@ -36,32 +36,39 @@ fn demo_key() -> QueryKey<DemoData> {
 struct QueryBasicsView;
 
 impl View for QueryBasicsView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let fail_mode = cx.use_local::<bool>();
-        let invalidate_requested = cx.use_local::<bool>();
-        let invalidate_namespace_requested = cx.use_local::<bool>();
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        let fail_mode = cx.state().local::<bool>();
+        let invalidate_requested = cx.state().local::<bool>();
+        let invalidate_namespace_requested = cx.state().local::<bool>();
 
-        cx.on_action_notify_toggle_local_bool::<act::ToggleErrorMode>(&fail_mode);
-        cx.on_action_notify_local_set::<act::Invalidate, bool>(&invalidate_requested, true);
-        cx.on_action_notify_local_set::<act::InvalidateNamespace, bool>(
-            &invalidate_namespace_requested,
-            true,
-        );
-        cx.on_action_availability::<act::ToggleErrorMode>(|_host, _acx| {
-            CommandAvailability::Available
-        });
-        cx.on_action_availability::<act::Invalidate>(|_host, _acx| CommandAvailability::Available);
-        cx.on_action_availability::<act::InvalidateNamespace>(|_host, _acx| {
-            CommandAvailability::Available
-        });
+        cx.actions()
+            .toggle_local_bool::<act::ToggleErrorMode>(&fail_mode);
+        cx.actions()
+            .local_set::<act::Invalidate, bool>(&invalidate_requested, true);
+        cx.actions()
+            .local_set::<act::InvalidateNamespace, bool>(&invalidate_namespace_requested, true);
+        cx.actions()
+            .availability::<act::ToggleErrorMode>(|_host, _acx| CommandAvailability::Available);
+        cx.actions()
+            .availability::<act::Invalidate>(|_host, _acx| CommandAvailability::Available);
+        cx.actions()
+            .availability::<act::InvalidateNamespace>(|_host, _acx| CommandAvailability::Available);
 
-        let fail_mode_enabled = fail_mode.layout(cx).value_or(false);
-        let do_invalidate = invalidate_requested.layout(cx).value_or(false);
-        let do_invalidate_namespace = invalidate_namespace_requested.layout(cx).value_or(false);
+        let fail_mode_enabled = cx.state().watch(&fail_mode).layout().value_or(false);
+        let do_invalidate = cx
+            .state()
+            .watch(&invalidate_requested)
+            .layout()
+            .value_or(false);
+        let do_invalidate_namespace = cx
+            .state()
+            .watch(&invalidate_namespace_requested)
+            .layout()
+            .value_or(false);
         let window = cx.window;
 
         if do_invalidate {
@@ -88,7 +95,7 @@ impl View for QueryBasicsView {
             ..Default::default()
         };
 
-        let handle = cx.use_query(key, policy, move |_token| {
+        let handle = cx.data().query(key, policy, move |_token| {
             if fail_mode_enabled {
                 return Err(QueryError::transient("simulated fetch error"));
             }
@@ -98,7 +105,8 @@ impl View for QueryBasicsView {
         });
 
         let state = handle
-            .layout(cx)
+            .watch(cx)
+            .layout()
             .value_or_else(QueryState::<DemoData>::default);
 
         let status_label = match state.status {
@@ -148,13 +156,11 @@ impl View for QueryBasicsView {
                 .gap(Space::N2)
                 .items_center();
 
-        let lines = ui::v_flex(|cx| {
-            let data = cx.text(data_line).test_id(TEST_ID_DATA_LINE);
-            let mut out: Vec<AnyElement> = vec![data];
+        let lines = ui::v_flex_build(|cx, out| {
+            out.push(cx.text(data_line).test_id(TEST_ID_DATA_LINE));
             if let Some(err) = state.error {
                 out.push(cx.text(format!("error={err}")).test_id(TEST_ID_ERROR_LINE));
             }
-            out
         })
         .gap(Space::N2);
 
@@ -201,7 +207,8 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-query-basics")
         .window("cookbook-query-basics", (640.0, 420.0))
         .config_files(false)
-        .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_view::<QueryBasicsView>()
+        .setup(fret_cookbook::install_cookbook_defaults)
+        .view::<QueryBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

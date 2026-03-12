@@ -1,20 +1,10 @@
 pub const SOURCE: &str = include_str!("description.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default)]
-struct Models {
-    description: Option<Model<bool>>,
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let description = cx.with_state(Models::default, |st| st.description.clone());
-    let description = description.unwrap_or_else(|| {
-        let model = cx.app.models_mut().insert(false);
-        cx.with_state(Models::default, |st| st.description = Some(model.clone()));
-        model
-    });
+    let description = cx.local_model(|| false);
 
     shadcn::Field::new([
         shadcn::FieldContent::new([

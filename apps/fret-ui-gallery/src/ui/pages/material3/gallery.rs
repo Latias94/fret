@@ -1,11 +1,12 @@
 use super::*;
+use fret::UiCx;
 
 use crate::ui::snippets;
 
 use super::shared::{MATERIAL3_INTRO, render_material3_demo_page};
 
 pub(in crate::ui) fn preview_material3_gallery(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     material3_checkbox: Model<bool>,
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
@@ -41,7 +42,7 @@ pub(in crate::ui) fn preview_material3_gallery(
 }
 
 pub(in crate::ui) fn preview_material3_state_matrix(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     material3_checkbox: Model<bool>,
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,

@@ -23,10 +23,15 @@ Ask these before you start searching (saves hours of wrong-layer edits):
 - What environment: native vs web; which runner; any platform constraints?
 - Do we need a runnable repro target (which demo/gallery page) or is this purely contract/doc work?
 - What regression artifact is expected (test, diag script, perf gate, ADR alignment)?
+- Which authoring surface is the target:
+  - app-facing `fret`
+  - direct ecosystem crate usage (for example `fret_ui_shadcn`)
+  - internal mechanism/policy code only?
 
 Defaults if unclear:
 
 - Pick the smallest runnable demo target and start from architecture/ADR contracts first.
+- If the question is “how should users author this?”, start from `docs/crate-usage-guide.md`, `docs/shadcn-declarative-progress.md`, and UI Gallery snippets before jumping into crate internals.
 
 ## Smallest starting point (one command)
 
@@ -39,11 +44,15 @@ Defaults if unclear:
    - `docs/README.md`
    - `docs/architecture.md`
    - `docs/runtime-contract-matrix.md`
-2. Decide the layer:
+2. Decide the public authoring surface first:
+   - app-facing guidance ⇒ `docs/crate-usage-guide.md`
+   - shadcn direct-crate guidance ⇒ `docs/shadcn-declarative-progress.md`
+   - first-party examples ⇒ `apps/fret-ui-gallery/src/ui/snippets/`
+3. Decide the layer:
    - mechanisms/contracts ⇒ `crates/`
    - interaction policy primitives (roving/typeahead/overlays) ⇒ `ecosystem/fret-ui-kit/`
    - shadcn-aligned composition + styling recipes ⇒ `ecosystem/fret-ui-shadcn/`
-3. Pick the smallest runnable target:
+4. Pick the smallest runnable target:
    - `cargo run -p fretboard -- dev native --bin todo_demo`
 
 ## Workflow
@@ -55,17 +64,25 @@ Use this mental model:
 - `crates/fret-ui`: **mechanism/contract surface**, not a component library.
 - `ecosystem/fret-ui-kit`: **headless policy + reusable infra** (roving, typeahead, overlay policy).
 - `ecosystem/fret-ui-shadcn`: **shadcn v4 taxonomy + recipes** (composition + tokens + test_id conventions).
+- `ecosystem/fret`: **batteries-included app-facing facade**.
+- `apps/fret-ui-gallery`: **first-party exemplar/teaching surface** for snippet-backed examples, docs composition, and diagnostics-friendly `test_id` seams.
 
 If the change is about:
 
 - dismiss rules / focus restore / hover intent / keyboard navigation ⇒ almost always `ecosystem/`
 - layout engine / hit testing / semantics contracts ⇒ likely `crates/`
+- “what should app authors import/copy?” ⇒ first check docs + UI Gallery exemplar surface, then trace inward to the owning crate
 
 ### 2) Find entry points (fast paths)
 
 In the mono-repo:
 
-- UI authoring surface: `crates/fret-ui/src/elements/cx.rs` (`ElementContext`)
+- App-facing usage map: `docs/crate-usage-guide.md`
+- Shadcn authoring golden path: `docs/shadcn-declarative-progress.md`
+- First-party exemplars: `apps/fret-ui-gallery/src/ui/snippets/`
+- UI Gallery source-policy gates: `apps/fret-ui-gallery/src/lib.rs`
+- UI Gallery geometry/test-id helpers: `apps/fret-ui-gallery/src/driver/render_flow.rs`
+- UI authoring substrate: `crates/fret-ui/src/elements/cx.rs` (`ElementContext`)
 - shadcn recipes: `ecosystem/fret-ui-shadcn/src/`
 - kit primitives: `ecosystem/fret-ui-kit/src/primitives/`
 - dev/diag CLI entry: `apps/fretboard/src/cli.rs`
@@ -74,6 +91,7 @@ In the mono-repo:
 Quick search patterns:
 
 ```bash
+rg -n "facade as shadcn|shadcn::raw|use fret::" docs apps/fret-ui-gallery/src
 rg -n "ElementContext" crates ecosystem
 rg -n "OverlayController|OverlayRequest" crates ecosystem
 rg -n "test_id\\(" ecosystem/fret-ui-shadcn
@@ -103,6 +121,11 @@ If you are changing layout/style parity:
 
 - Add a small invariant test and/or parity harness case (`fret-shadcn-source-alignment`).
 
+If you are changing a public authoring surface:
+
+- update the relevant docs (`docs/crate-usage-guide.md`, `docs/shadcn-declarative-progress.md`) and
+- update the first-party exemplar/gates in UI Gallery before declaring the migration done.
+
 ## Definition of done (what to leave behind)
 
 - Minimum deliverables (3-pack): Repro (smallest target), Gate (test/script), Evidence (anchors). See `fret-skills-playbook`.
@@ -118,6 +141,11 @@ If you are changing layout/style parity:
 - Architecture layering: `docs/architecture.md`
 - Runtime contract surface: `docs/runtime-contract-matrix.md`
 - Repo structure: `docs/repo-structure.md`
+- Crate/layer usage map: `docs/crate-usage-guide.md`
+- Shadcn authoring golden path: `docs/shadcn-declarative-progress.md`
+- UI Gallery exemplar surface: `apps/fret-ui-gallery/src/ui/snippets/`
+- UI Gallery authoring gates: `apps/fret-ui-gallery/src/lib.rs`
+- UI Gallery geometry/test-id helpers: `apps/fret-ui-gallery/src/driver/render_flow.rs`
 
 ## Examples
 
@@ -132,6 +160,7 @@ If you are changing layout/style parity:
 
 - Fixing a policy mismatch by adding runtime knobs in `crates/fret-ui` (wrong layer).
 - Starting from a huge app target instead of a minimal demo/gallery page (slow iteration).
+- Looking only at the owning crate and forgetting the docs/UI Gallery surface that actually teaches the API.
 - Changing behavior without a gate (regressions return as “human timing” bugs).
 
 ## Troubleshooting

@@ -2,13 +2,13 @@ pub const SOURCE: &str = include_str!("groups.rs");
 
 // region: example
 use fret_runtime::CommandId;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_kit::IntoUiElement;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str) -> AnyElement {
+fn trigger_surface<H: UiHost>(label: &'static str) -> impl IntoUiElement<H> + use<H> {
     shadcn::Button::new(label)
         .variant(shadcn::ButtonVariant::Outline)
         .size(shadcn::ButtonSize::Sm)
-        .into_element(cx)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -17,7 +17,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(
             cx,
             |cx| {
-                trigger_surface(cx, "Right click for groups")
+                trigger_surface("Right click for groups")
+                    .into_element(cx)
                     .test_id("ui-gallery-context-menu-groups-trigger")
             },
             |_cx| {
@@ -41,10 +42,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             shadcn::ContextMenuItem::new("Team")
                                 .action(CommandId::new("ui_gallery.context_menu.groups.team")),
                         ),
-                        shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new(
-                            "Subscription",
-                        )
-                        .action(CommandId::new("ui_gallery.context_menu.groups.subscription"))),
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("Subscription").action(CommandId::new(
+                                "ui_gallery.context_menu.groups.subscription",
+                            )),
+                        ),
                     ])),
                 ]
             },

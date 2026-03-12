@@ -2,7 +2,6 @@ pub const SOURCE: &str = include_str!("checkpoint_demo.rs");
 
 // region: example
 use fret_core::Px;
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::action::OnActivate;
 use fret_ui_ai as ui_ai;
@@ -10,8 +9,7 @@ use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
-use fret_ui_shadcn::prelude::*;
-use fret_ui_shadcn::{ButtonSize, ButtonVariant};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Clone, Copy)]
@@ -48,27 +46,9 @@ const INITIAL_CHECKPOINTS: &[DemoCheckpoint] = &[DemoCheckpoint {
     tooltip: "Restores workspace and chat to this point",
 }];
 
-#[derive(Default)]
-struct CheckpointDemoModels {
-    visible_message_count: Option<Model<usize>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let needs_init = cx.with_state(CheckpointDemoModels::default, |st| {
-        st.visible_message_count.is_none()
-    });
-    if needs_init {
-        let model = cx.app.models_mut().insert(INITIAL_MESSAGES.len());
-        cx.with_state(CheckpointDemoModels::default, |st| {
-            st.visible_message_count = Some(model.clone())
-        });
-    }
-
-    let visible_message_count_model = cx
-        .with_state(CheckpointDemoModels::default, |st| {
-            st.visible_message_count.clone()
-        })
-        .expect("visible_message_count");
+    let visible_message_count_model =
+        cx.local_model_keyed("visible_message_count", || INITIAL_MESSAGES.len());
     let visible_message_count = cx
         .get_model_copied(&visible_message_count_model, Invalidation::Layout)
         .unwrap_or(INITIAL_MESSAGES.len())
@@ -176,9 +156,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
     let controls = ui::h_flex(move |cx| {
         vec![
-            fret_ui_shadcn::Button::new("Reset preview")
-                .variant(ButtonVariant::Outline)
-                .size(ButtonSize::Sm)
+            shadcn::Button::new("Reset preview")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
                 .test_id("ui-ai-checkpoint-reset")
                 .on_activate(reset_demo.clone())
                 .into_element(cx),
@@ -210,6 +190,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 // endregion: example
 
 // region: custom_icon
+#[allow(dead_code)]
 fn custom_checkpoint_icon<H: fret_ui::UiHost>(
     cx: &mut fret_ui::ElementContext<'_, H>,
 ) -> fret_ui::element::AnyElement {
@@ -219,17 +200,20 @@ fn custom_checkpoint_icon<H: fret_ui::UiHost>(
 // endregion: custom_icon
 
 // region: manual_checkpoints
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 struct ManualCheckpoint {
     message_count: usize,
 }
 
+#[allow(dead_code)]
 fn create_checkpoint(checkpoints: &mut Vec<ManualCheckpoint>, message_count: usize) {
     checkpoints.push(ManualCheckpoint { message_count });
 }
 // endregion: manual_checkpoints
 
 // region: automatic_checkpoints
+#[allow(dead_code)]
 fn maybe_create_automatic_checkpoint(
     checkpoints: &mut Vec<ManualCheckpoint>,
     message_count: usize,
@@ -241,6 +225,7 @@ fn maybe_create_automatic_checkpoint(
 // endregion: automatic_checkpoints
 
 // region: branching_conversations
+#[allow(dead_code)]
 fn restore_and_branch<T: Clone>(messages: &[T], message_count: usize) -> (Vec<T>, Vec<T>) {
     let restored = messages[..message_count].to_vec();
     let branch = messages[message_count..].to_vec();

@@ -1,8 +1,9 @@
 use super::super::super::super::super::*;
 use crate::ui::doc_layout;
+use fret::UiCx;
 
 pub(in crate::ui) fn preview_text_mixed_script_fallback(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     #[derive(Default)]
@@ -41,7 +42,7 @@ pub(in crate::ui) fn preview_text_mixed_script_fallback(
             .gap(Space::N2).into_element(cx);
 
     fn sample_row(
-        cx: &mut ElementContext<'_, App>,
+        cx: &mut UiCx<'_>,
         theme: &Theme,
         label: &'static str,
         sample: &'static str,

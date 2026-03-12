@@ -1,11 +1,12 @@
+use fret::router::{
+    NamespaceInvalidationRule, NavigationAction, RouteChangePolicy, RouteHooks, RouteLocation,
+    RouteNode, RoutePrefetchIntent, RouteSearchTable, RouteSearchValidationFailure, RouteTree,
+    Router, RouterUpdate, RouterUpdateWithPrefetchIntents, SearchValidationMode,
+    collect_invalidated_namespaces, prefetch_intent_query_key,
+};
 use fret_app::{App, CommandId};
 use fret_core::AppWindowId;
 use fret_query::{QueryPolicy, with_query_client};
-use fret_router::{
-    NamespaceInvalidationRule, NavigationAction, RouteChangePolicy, RouteHooks, RouteLocation,
-    RouteNode, RouteSearchTable, RouteTree, Router, RouterUpdate, RouterUpdateWithPrefetchIntents,
-    SearchValidationMode, collect_invalidated_namespaces, prefetch_intent_query_key,
-};
 use fret_runtime::WindowCommandEnabledService;
 use std::sync::Arc;
 
@@ -15,10 +16,10 @@ const UI_GALLERY_PAGE_CONTENT_NS: &str = "fret.ui_gallery.page_content.v1";
 const UI_GALLERY_NAV_INDEX_NS: &str = "fret.ui_gallery.nav_index.v1";
 
 #[cfg(target_arch = "wasm32")]
-pub(super) type UiGalleryHistory = fret_router::WebHistoryAdapter;
+pub(super) type UiGalleryHistory = fret::router::WebHistoryAdapter;
 
 #[cfg(not(target_arch = "wasm32"))]
-pub(super) type UiGalleryHistory = fret_router::MemoryHistory;
+pub(super) type UiGalleryHistory = fret::router::MemoryHistory;
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub(super) enum UiGalleryRouteId {
@@ -32,17 +33,13 @@ struct UiGalleryPagePrefetchSeed {
 }
 
 fn route_location_for_page(from: &RouteLocation, page: &Arc<str>) -> RouteLocation {
-    // Preserve any non-gallery query params (e.g. devtools WS flags) when canonicalizing navigation.
-    let mut location = from.clone();
-    location.path = "/gallery".to_string();
-    location.set_query_value("page", Some(page.to_string()));
-    location.set_query_value("source", Some("nav".to_string()));
-    location
+    // Preserve any non-gallery query params (e.g. devtools WS flags) when canonicalizing
+    // navigation, but drop gallery-owned legacy keys as soon as we emit the canonical route.
+    ui_gallery_route_location_for_page(from, page)
 }
 
 pub(super) fn page_from_gallery_location(location: &RouteLocation) -> Option<Arc<str>> {
-    let page = location.query_value("page")?;
-    page_spec(page).is_some().then_some(Arc::<str>::from(page))
+    ui_gallery_page_from_route_location(location)
 }
 
 pub(super) fn build_ui_gallery_page_router() -> Router<UiGalleryRouteId, UiGalleryHistory> {
@@ -71,7 +68,7 @@ pub(super) fn build_ui_gallery_page_router() -> Router<UiGalleryRouteId, UiGalle
         RouteHooks {
             before_load: None,
             loader: Some(Arc::new(|ctx| {
-                vec![fret_router::RoutePrefetchIntent {
+                vec![RoutePrefetchIntent {
                     route: ctx.matched.route,
                     namespace: UI_GALLERY_PAGE_CONTENT_NS,
                     location: ctx.to.clone(),
@@ -143,10 +140,7 @@ pub(super) fn apply_page_router_update_side_effects(
     window: AppWindowId,
     current_page: Arc<str>,
     router: &mut Router<UiGalleryRouteId, UiGalleryHistory>,
-    update: Result<
-        RouterUpdateWithPrefetchIntents<UiGalleryRouteId>,
-        fret_router::RouteSearchValidationFailure,
-    >,
+    update: Result<RouterUpdateWithPrefetchIntents<UiGalleryRouteId>, RouteSearchValidationFailure>,
 ) {
     sync_gallery_page_history_command_enabled(app, window, router.history());
 

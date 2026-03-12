@@ -15,7 +15,10 @@ Goal: a shadcn/Radix-like Select (listbox in an overlay) that is keyboard-friend
 - Models:
   - `Model<Option<Arc<str>>>` for the selected value
   - `Model<bool>` for the open/closed state
-- Example usage: `apps/fret-ui-gallery/src/docs.rs` (Select docs/usage snippet)
+- Example usage:
+  - `apps/fret-ui-gallery/src/ui/pages/select.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/select/demo.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/select/diag_surface.rs`
 
 ## Checklist (what to verify)
 
@@ -46,8 +49,8 @@ Add stable IDs so scripts don’t depend on coordinates:
 ## Regression gates (recommended)
 
 - Scripted repro (start from existing examples):
-  - `tools/diag-scripts/ui-gallery-select-wheel-scroll.json`
-  - `tools/diag-scripts/ui-gallery-select-open-jitter-screenshots.json` (visual gate when needed)
+  - `tools/diag-scripts/ui-gallery/select/ui-gallery-select-wheel-scroll.json`
+  - `tools/diag-scripts/ui-gallery/select/ui-gallery-select-open-jitter-screenshots.json` (visual gate when needed)
 - Add one invariant test for the most fragile rule (e.g., “content is clamped within viewport”).
 
 ## See also

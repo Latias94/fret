@@ -8,7 +8,7 @@ baseline.
 
 Progress log (keep updated during implementation):
 
-- `docs/workstreams/overlay-input-arbitration-v2.md`
+- `docs/workstreams/overlay-input-arbitration-v2/overlay-input-arbitration-v2.md`
 
 It is aligned with the existing contract split:
 

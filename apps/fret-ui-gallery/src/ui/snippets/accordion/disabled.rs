@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("disabled.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     shadcn::Accordion::single_uncontrolled(Some("item-1"))
@@ -16,7 +16,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .items([shadcn::AccordionItem::new(
             "item-1",
             shadcn::AccordionTrigger::new(vec![cx.text("Disabled")]),
-            shadcn::AccordionContent::new(vec![shadcn::typography::p(
+            shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
                 cx,
                 "This item is disabled and should not be interactive.",
             )]),

@@ -246,4 +246,4 @@ Related contracts and workstreams:
 - `docs/adr/0154-ecosystem-crate-taxonomy-glue-and-ui-kit-split-v1.md`
 - `docs/adr/0270-theme-token-contract-tiers-and-missing-token-policy-v1.md`
 - `docs/workstreams/theme-token-alignment-v1/design.md`
-- `docs/workstreams/ui-editor-v1.md`
+- `docs/workstreams/ui-editor-v1/ui-editor-v1.md`

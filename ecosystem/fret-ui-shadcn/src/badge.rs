@@ -20,7 +20,7 @@ use fret_ui_kit::declarative::motion::{
     drive_tween_color_for_element, drive_tween_f32_for_element,
 };
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
+use fret_ui_kit::{ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, Radius, Space, ui};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BadgeVariant {
@@ -384,31 +384,11 @@ fn apply_badge_inherited_fg(
     element
 }
 
-pub fn badge<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    label: impl Into<Arc<str>>,
-    variant: BadgeVariant,
-) -> AnyElement {
-    badge_with_patch(
-        cx,
-        label,
-        variant,
-        false,
-        None,
-        false,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        Vec::new(),
-        Vec::new(),
-        Vec::new(),
-        Vec::new(),
-        ChromeRefinement::default(),
-        LayoutRefinement::default(),
-    )
+pub fn badge<H: UiHost, T>(label: T, variant: BadgeVariant) -> impl IntoUiElement<H> + use<H, T>
+where
+    T: Into<Arc<str>>,
+{
+    Badge::new(label).variant(variant)
 }
 
 fn badge_with_patch<H: UiHost>(

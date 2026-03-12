@@ -1,3 +1,4 @@
+use fret_router::{RouteCodec, RouteLocation};
 use wasm_bindgen::prelude::*;
 
 thread_local! {
@@ -41,6 +42,82 @@ enum Demo {
     InfLinesDemo,
     TagsDemo,
     DragDemo,
+}
+
+const DEMO_QUERY_KEY: &str = "demo";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DemoRoute {
+    Selected(Demo),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DemoRouteDecodeError {
+    MissingDemo,
+    UnknownDemo,
+}
+
+struct DemoRouteCodec;
+
+const DEMO_ROUTE_CODEC: DemoRouteCodec = DemoRouteCodec;
+
+impl RouteCodec for DemoRouteCodec {
+    type Route = DemoRoute;
+    type Error = DemoRouteDecodeError;
+
+    fn encode(&self, route: &Self::Route) -> RouteLocation {
+        match route {
+            DemoRoute::Selected(demo) => RouteLocation::from_path("/")
+                .with_query_value(DEMO_QUERY_KEY, Some(demo_canonical_id(*demo).to_string())),
+        }
+    }
+
+    fn decode(&self, location: &RouteLocation) -> Result<Self::Route, Self::Error> {
+        let Some(id) = location.query_value(DEMO_QUERY_KEY) else {
+            return Err(DemoRouteDecodeError::MissingDemo);
+        };
+        let Some(demo) = demo_from_id(id) else {
+            return Err(DemoRouteDecodeError::UnknownDemo);
+        };
+        Ok(DemoRoute::Selected(demo))
+    }
+}
+
+fn demo_canonical_id(demo: Demo) -> &'static str {
+    match demo {
+        Demo::UiGallery => "ui_gallery",
+        Demo::ComponentsGallery => "components_gallery",
+        Demo::SimpleTodo => "simple_todo",
+        Demo::CustomEffectV2WebDemo => "custom_effect_v2_web_demo",
+        Demo::CustomEffectV2LutWebDemo => "custom_effect_v2_lut_web_demo",
+        Demo::CustomEffectV2IdentityWebDemo => "custom_effect_v2_identity_web_demo",
+        Demo::CustomEffectV2GlassChromeWebDemo => "custom_effect_v2_glass_chrome_web_demo",
+        Demo::CustomEffectV3WebDemo => "custom_effect_v3_web_demo",
+        Demo::ExternalTextureImportsWebDemo => "external_texture_imports_web_demo",
+        Demo::EmojiConformanceDemo => "emoji_conformance_demo",
+        Demo::CjkConformanceDemo => "cjk_conformance_demo",
+        Demo::ChartDemo => "chart_demo",
+        Demo::ChartMultiAxisDemo => "chart_multi_axis_demo",
+        Demo::HorizontalBarsDemo => "horizontal_bars_demo",
+        Demo::PlotDemo => "plot_demo",
+        Demo::PlotImageDemo => "plot_image_demo",
+        Demo::BarsDemo => "bars_demo",
+        Demo::GroupedBarsDemo => "grouped_bars_demo",
+        Demo::StackedBarsDemo => "stacked_bars_demo",
+        Demo::AreaDemo => "area_demo",
+        Demo::CandlestickDemo => "candlestick_demo",
+        Demo::ErrorBarsDemo => "error_bars_demo",
+        Demo::HeatmapDemo => "heatmap_demo",
+        Demo::HistogramDemo => "histogram_demo",
+        Demo::Histogram2DDemo => "histogram2d_demo",
+        Demo::ShadedDemo => "shaded_demo",
+        Demo::StairsDemo => "stairs_demo",
+        Demo::StemsDemo => "stems_demo",
+        Demo::LinkedCursorDemo => "linked_cursor_demo",
+        Demo::InfLinesDemo => "inf_lines_demo",
+        Demo::TagsDemo => "tags_demo",
+        Demo::DragDemo => "drag_demo",
+    }
 }
 
 fn demo_from_id(id: &str) -> Option<Demo> {
@@ -91,22 +168,20 @@ fn demo_from_id(id: &str) -> Option<Demo> {
     }
 }
 
-fn select_demo() -> Demo {
-    let Some(location) = fret_router::web::current_location() else {
-        return Demo::ComponentsGallery;
-    };
-
-    let hash = location.hash;
-    let search = location.search;
-
-    if let Some(demo) = fret_router::first_query_value_from_search_or_hash(&search, &hash, "demo")
-        .and_then(|id| demo_from_id(id.as_str()))
-    {
-        return demo;
+fn demo_from_route_location(location: &RouteLocation) -> Option<Demo> {
+    match DEMO_ROUTE_CODEC.decode_canonical(location).ok()? {
+        DemoRoute::Selected(demo) => Some(demo),
     }
+}
 
-    if let Some(demo) = fret_router::hash_token(&hash).and_then(|id| demo_from_id(id.as_str())) {
-        return demo;
+fn demo_from_search_or_hash(search: &str, hash: &str) -> Option<Demo> {
+    fret_router::first_query_value_from_search_or_hash(search, hash, DEMO_QUERY_KEY)
+        .and_then(|id| demo_from_id(id.as_str()))
+}
+
+fn demo_from_legacy_hash(hash: &str) -> Option<Demo> {
+    if let Some(demo) = fret_router::hash_token(hash).and_then(|id| demo_from_id(id.as_str())) {
+        return Some(demo);
     }
 
     // Keep compatibility with older hash forms that matched by substring.
@@ -145,11 +220,36 @@ fn select_demo() -> Demo {
         "components_gallery",
         "external_texture_imports_web_demo",
     ] {
-        if fret_router::hash_contains_token(&hash, id) {
+        if fret_router::hash_contains_token(hash, id) {
             if let Some(demo) = demo_from_id(id) {
-                return demo;
+                return Some(demo);
             }
         }
+    }
+
+    None
+}
+
+fn select_demo() -> Demo {
+    if let Some(location) = fret_router::web::current_route_location() {
+        if let Some(demo) = demo_from_route_location(&location) {
+            return demo;
+        }
+    }
+
+    let Some(location) = fret_router::web::current_location() else {
+        return Demo::ComponentsGallery;
+    };
+
+    let hash = location.hash;
+    let search = location.search;
+
+    if let Some(demo) = demo_from_search_or_hash(&search, &hash) {
+        return demo;
+    }
+
+    if let Some(demo) = demo_from_legacy_hash(&hash) {
+        return demo;
     }
 
     Demo::ComponentsGallery

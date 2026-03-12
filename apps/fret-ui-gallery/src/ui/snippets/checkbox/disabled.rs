@@ -1,20 +1,10 @@
 pub const SOURCE: &str = include_str!("disabled.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default)]
-struct Models {
-    disabled: Option<Model<bool>>,
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let disabled = cx.with_state(Models::default, |st| st.disabled.clone());
-    let disabled = disabled.unwrap_or_else(|| {
-        let model = cx.app.models_mut().insert(true);
-        cx.with_state(Models::default, |st| st.disabled = Some(model.clone()));
-        model
-    });
+    let disabled = cx.local_model(|| true);
 
     shadcn::Field::new([
         shadcn::Checkbox::new(disabled)

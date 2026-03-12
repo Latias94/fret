@@ -9,7 +9,8 @@ use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
 use std::sync::Arc;
 
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::experimental::{DataGridElement, DataGridRowState};
+use fret_ui_shadcn::facade as shadcn;
 
 struct FakeServices;
 
@@ -86,30 +87,29 @@ fn render_frame(
         bounds,
         "data-grid-layout",
         |cx| {
-            let grid =
-                shadcn::experimental::DataGridElement::new(["PID", "Name", "State", "CPU%"], 50)
-                    .refine_layout(
-                        fret_ui_kit::LayoutRefinement::default()
-                            .w_full()
-                            .h_px(Px(320.0)),
-                    )
-                    .into_element(
-                        cx,
-                        1,
-                        1,
-                        |row| row as u64,
-                        |_row| shadcn::experimental::DataGridRowState {
-                            selected: false,
-                            enabled: true,
-                            on_click: None,
-                        },
-                        |cx, row, col| match col {
-                            0 => cx.text((1000 + row as u64).to_string()),
-                            1 => cx.text(format!("Process {row}")),
-                            2 => cx.text(if row % 3 == 0 { "Running" } else { "Idle" }),
-                            _ => cx.text(((row * 7) % 100).to_string()),
-                        },
-                    );
+            let grid = DataGridElement::new(["PID", "Name", "State", "CPU%"], 50)
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_full()
+                        .h_px(Px(320.0)),
+                )
+                .into_element(
+                    cx,
+                    1,
+                    1,
+                    |row| row as u64,
+                    |_row| DataGridRowState {
+                        selected: false,
+                        enabled: true,
+                        on_click: None,
+                    },
+                    |cx, row, col| match col {
+                        0 => cx.text((1000 + row as u64).to_string()),
+                        1 => cx.text(format!("Process {row}")),
+                        2 => cx.text(if row % 3 == 0 { "Running" } else { "Idle" }),
+                        _ => cx.text(((row * 7) % 100).to_string()),
+                    },
+                );
 
             let grid = cx.semantics(
                 SemanticsProps {
@@ -146,10 +146,10 @@ fn data_grid_header_does_not_overlap_body() {
     ui.set_window(window);
     let mut services = FakeServices;
 
-    shadcn::shadcn_themes::apply_shadcn_new_york(
+    shadcn::themes::apply_shadcn_new_york(
         &mut app,
-        shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        shadcn::themes::ShadcnBaseColor::Neutral,
+        shadcn::themes::ShadcnColorScheme::Light,
     );
 
     let bounds = Rect::new(

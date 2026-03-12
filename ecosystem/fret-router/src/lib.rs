@@ -5,6 +5,7 @@
 
 mod alias;
 mod base_path;
+mod codec;
 mod hash;
 mod history;
 mod location;
@@ -24,6 +25,7 @@ mod web_adapters;
 
 pub use alias::{AliasResolveError, QueryKeyAlias, RouteAliasRule, RouteAliasTable};
 pub use base_path::{apply_base_path, normalize_base_path, strip_base_path};
+pub use codec::RouteCodec;
 pub use hash::{hash_contains_token, hash_token};
 pub use history::MemoryHistory;
 pub use location::{RouteLocation, canonicalize_query_pairs};

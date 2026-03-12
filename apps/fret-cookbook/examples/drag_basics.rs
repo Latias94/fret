@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_core::{CursorIcon, MouseButton, Point, PointerId, Px};
 use fret_runtime::DefaultAction;
 use fret_ui::Invalidation;
@@ -26,7 +26,7 @@ struct DragBasicsView {
 }
 
 impl View for DragBasicsView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self {
             origin: app.models_mut().insert(Point::new(Px(0.0), Px(0.0))),
             drag: app.models_mut().insert(None::<DragState>),
@@ -34,7 +34,7 @@ impl View for DragBasicsView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
 
         let origin = cx
@@ -211,7 +211,8 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-drag-basics")
         .window("cookbook-drag-basics", (760.0, 520.0))
         .config_files(false)
-        .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_view::<DragBasicsView>()
+        .setup(fret_cookbook::install_cookbook_defaults)
+        .view::<DragBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

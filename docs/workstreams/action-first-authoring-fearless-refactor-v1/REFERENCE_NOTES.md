@@ -46,7 +46,7 @@ Priority rule for this workstream:
    - `ecosystem/fret/src/view.rs`
    - `ecosystem/fret/src/actions.rs`
 - imui authoring facade:
-  - `docs/workstreams/imui-authoring-facade-v2.md`
+  - `docs/workstreams/imui-authoring-facade-v2/imui-authoring-facade-v2.md`
   - `ecosystem/fret-imui`
   - `ecosystem/fret-authoring`
 
@@ -57,7 +57,7 @@ Priority rule for this workstream:
   - `crates/fret-ui/src/elements/cx.rs` (`ElementContext`, keyed identity)
 - Cache roots:
   - ADR: `docs/adr/0213-cache-roots-and-cached-subtree-semantics-v1.md`
-  - Workstream: `docs/workstreams/gpui-parity-refactor.md`
+  - Workstream: `docs/workstreams/gpui-parity-refactor/gpui-parity-refactor.md`
 
 ### Diagnostics + scripts
 
@@ -72,7 +72,7 @@ Priority rule for this workstream:
 
 ### GenUI (data-driven specs)
 
-- Workstream: `docs/workstreams/genui-json-render-v1.md`
+- Workstream: `docs/workstreams/genui-json-render-v1/genui-json-render-v1.md`
 - Core:
   - `ecosystem/fret-genui-core/src/spec.rs`
   - `ecosystem/fret-genui-core/src/render.rs`

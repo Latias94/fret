@@ -3,20 +3,10 @@ pub const SOURCE: &str = include_str!("invalid.rs");
 // region: example
 use fret_core::Px;
 use fret_ui_kit::primitives::control_registry::ControlId;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default)]
-struct Models {
-    checked: Option<Model<bool>>,
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let checked = cx.with_state(Models::default, |st| st.checked.clone());
-    let checked = checked.unwrap_or_else(|| {
-        let model = cx.app.models_mut().insert(false);
-        cx.with_state(Models::default, |st| st.checked = Some(model.clone()));
-        model
-    });
+    let checked = cx.local_model(|| false);
     let control_id = ControlId::from("ui-gallery-switch-invalid");
 
     shadcn::Field::new([

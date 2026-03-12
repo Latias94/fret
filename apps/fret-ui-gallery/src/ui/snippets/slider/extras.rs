@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("extras.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -31,7 +31,7 @@ pub fn render<H: UiHost>(
         } else {
             format!("{last_commit_values:?}")
         };
-        let meta = shadcn::typography::muted(cx, format!("onValueCommit: {last_commit_text}"));
+        let meta = shadcn::raw::typography::muted(cx, format!("onValueCommit: {last_commit_text}"));
 
         ui::v_flex(|_cx| vec![slider, meta])
             .gap(Space::N3)
@@ -68,7 +68,7 @@ pub fn render<H: UiHost>(
 
     ui::v_flex(|cx| {
             vec![
-                shadcn::typography::muted(
+                shadcn::raw::typography::muted(
                     cx,
                     "Extras are Fret-specific demos and regression gates (not part of upstream shadcn SliderDemo).",
                 ),

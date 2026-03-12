@@ -20,9 +20,9 @@ Productization note:
 These are intentionally stable and should be your default onboarding path:
 
 They all teach the same small authoring model first: `LocalState` for view-owned state,
-`on_action_notify_locals` for coordinated LocalState writes, `on_action_notify_transient` for
+`cx.actions().locals(...)` for coordinated LocalState writes, `cx.actions().transient(...)` for
 App-bound effects, and local `on_activate*` only when widget glue truly needs it. Drop down to
-`on_action_notify_models` when coordinating shared `Model<T>` graphs.
+`cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
 
 1. `hello` (template) — smallest runnable UI surface.
    - Generate: `cargo run -p fretboard -- new hello --name hello-world`

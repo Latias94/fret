@@ -91,7 +91,7 @@ Evidence anchors:
 Evidence anchors:
 
 - `ecosystem/fret-bootstrap/Cargo.toml` (features)
-- `docs/workstreams/ui-diagnostics-inspector-v1.md`
+- `docs/workstreams/ui-diagnostics-inspector-v1/ui-diagnostics-inspector-v1.md`
 - `docs/ui-diagnostics-and-scripted-tests.md`
 
 ## 7) Recommended refactor steps (small, gated)

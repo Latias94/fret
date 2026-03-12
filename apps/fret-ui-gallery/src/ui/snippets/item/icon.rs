@@ -1,36 +1,22 @@
 pub const SOURCE: &str = include_str!("icon.rs");
 
 // region: example
-use fret_app::App;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret::UiCx;
+use fret_ui_kit::IntoUiElement;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn icon(cx: &mut ElementContext<'_, App>, id: &'static str) -> AnyElement {
-    shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
-}
-
-fn icon_button(
-    cx: &mut ElementContext<'_, App>,
-    icon_id: &'static str,
-    variant: shadcn::ButtonVariant,
-    test_id: &'static str,
-) -> AnyElement {
-    shadcn::Button::new("")
-        .a11y_label(icon_id)
-        .variant(variant)
-        .size(shadcn::ButtonSize::Icon)
-        .icon(fret_icons::IconId::new_static(icon_id))
-        .into_element(cx)
-        .test_id(test_id)
+fn icon(cx: &mut UiCx<'_>, id: &'static str) -> impl IntoUiElement<fret_app::App> + use<> {
+    fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
 }
 
 fn item_icon(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     icon_id: &'static str,
     title: &'static str,
     description: &'static str,
     test_id: &'static str,
-) -> AnyElement {
-    let media = shadcn::ItemMedia::new([icon(cx, icon_id)])
+) -> impl IntoUiElement<fret_app::App> + use<> {
+    let media = shadcn::ItemMedia::new([icon(cx, icon_id).into_element(cx)])
         .variant(shadcn::ItemMediaVariant::Icon)
         .into_element(cx);
 
@@ -57,7 +43,7 @@ fn item_icon(
     .test_id(test_id)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let max_w_lg = LayoutRefinement::default()
         .w_full()
         .min_w_0()
@@ -69,7 +55,8 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         "Security Alert",
         "New login detected from unknown device.",
         "ui-gallery-item-icon",
-    );
+    )
+    .into_element(cx);
 
     ui::v_stack(|_cx| vec![item])
         .gap(Space::N6)

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use fret::interop::embedded_viewport as embedded;
-use fret::prelude::*;
+use fret::advanced::interop::embedded_viewport as embedded;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_core::ViewportFit;
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{FrameId, TickId};
@@ -25,7 +25,7 @@ struct EmbeddedViewportDemoView {
 }
 
 impl View for EmbeddedViewportDemoView {
-    fn init(app: &mut App, window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, window: AppWindowId) -> Self {
         let models = embedded::ensure_models(app, window);
         let _ = app.models_mut().update(&models.last_input, |v| {
             *v = Arc::<str>::from("Click inside the viewport panel to see input forwarding.");
@@ -40,7 +40,7 @@ impl View for EmbeddedViewportDemoView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let window = cx.window;
         let theme = Theme::global(&*cx.app).snapshot();
 
@@ -54,8 +54,12 @@ impl View for EmbeddedViewportDemoView {
             .cloned()
             .unwrap_or_else(|| Arc::from("<no input yet>"));
 
-        let size_preset_state = cx.use_local_with(|| 1usize);
-        let preset = size_preset_state.layout(cx).value_or_default();
+        let size_preset_state = cx.state().local_init(|| 1usize);
+        let preset = cx
+            .state()
+            .watch(&size_preset_state)
+            .layout()
+            .value_or_default();
         let (target_px_size, preset_label): ((u32, u32), &'static str) = match preset {
             0 => ((640, 360), "640×360"),
             2 => ((1280, 720), "1280×720"),
@@ -144,9 +148,12 @@ impl View for EmbeddedViewportDemoView {
         .max_w(Px(980.0))
         .into_element(cx);
 
-        cx.on_action_notify_local_set::<act::PickSize640, usize>(&size_preset_state, 0);
-        cx.on_action_notify_local_set::<act::PickSize960, usize>(&size_preset_state, 1);
-        cx.on_action_notify_local_set::<act::PickSize1280, usize>(&size_preset_state, 2);
+        cx.actions()
+            .local_set::<act::PickSize640, usize>(&size_preset_state, 0);
+        cx.actions()
+            .local_set::<act::PickSize960, usize>(&size_preset_state, 1);
+        cx.actions()
+            .local_set::<act::PickSize1280, usize>(&size_preset_state, 2);
 
         let page = ui::container(|cx| {
             ui::children![
@@ -184,7 +191,7 @@ impl embedded::EmbeddedViewportView for EmbeddedViewportDemoView {
 
     fn record_embedded_viewport(
         &mut self,
-        app: &mut App,
+        app: &mut KernelApp,
         window: AppWindowId,
         _context: &WgpuContext,
         _renderer: &mut Renderer,
@@ -214,14 +221,15 @@ pub fn run() -> anyhow::Result<()> {
     FretApp::new("embedded-viewport-demo")
         .window("embedded_viewport_demo", (1120.0, 720.0))
         .view_with_hooks::<EmbeddedViewportDemoView>(|d| d.drive_embedded_viewport())?
-        .init_app(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york(
-                app,
-                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-                shadcn::shadcn_themes::ShadcnColorScheme::Light,
-            );
-            fret_icons_lucide::install_app(app);
-        })
+        .setup((install_demo_theme, fret_icons_lucide::app::install))
         .run()?;
     Ok(())
+}
+
+fn install_demo_theme(app: &mut KernelApp) {
+    shadcn::themes::apply_shadcn_new_york(
+        app,
+        shadcn::themes::ShadcnBaseColor::Slate,
+        shadcn::themes::ShadcnColorScheme::Light,
+    );
 }

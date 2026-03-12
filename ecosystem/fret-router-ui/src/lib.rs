@@ -12,7 +12,7 @@ use std::sync::Arc;
 use fret_app::App;
 use fret_core::{AppWindowId, KeyCode, Modifiers, SemanticsRole};
 use fret_router::{
-    HistoryAdapter, NavigationAction, PathParam, RouteLocation, RouteMatchSnapshot,
+    HistoryAdapter, NavigationAction, PathParam, RouteCodec, RouteLocation, RouteMatchSnapshot,
     RoutePrefetchIntent, RouteSearchValidationFailure, Router, RouterBuildLocationError,
     RouterEvent, RouterTransition, RouterUpdate, RouterUpdateWithPrefetchIntents, SearchMap,
 };
@@ -20,10 +20,13 @@ use fret_runtime::{
     CommandId, CommandMeta, CommandRegistry, CommandScope, DefaultKeybinding, Effect, KeyChord,
     Model, PlatformFilter, WeakModel, WhenExpr, WindowCommandAvailabilityService,
 };
-use fret_ui::action::{OnActivate, OnHoverChange};
+use fret_ui::action::{ActionCx, OnActivate, OnHoverChange, UiActionHost, UiFocusActionHost};
 use fret_ui::element::AnyElement;
 use fret_ui::element::{PressableKeyActivation, PressableProps, SemanticsDecoration};
 use fret_ui::{ElementContext, Invalidation};
+use fret_ui_kit::IntoUiElement;
+
+pub mod app;
 
 #[doc(hidden)]
 pub trait RouterOutletIntoElement: Sized {
@@ -32,10 +35,10 @@ pub trait RouterOutletIntoElement: Sized {
 
 impl<T> RouterOutletIntoElement for T
 where
-    T: fret_ui_kit::UiChildIntoElement<App>,
+    T: IntoUiElement<App>,
 {
     fn into_router_outlet_element(self, cx: &mut ElementContext<'_, App>) -> AnyElement {
-        fret_ui_kit::UiChildIntoElement::into_child_element(self, cx)
+        IntoUiElement::into_element(self, cx)
     }
 }
 
@@ -200,12 +203,14 @@ where
         let router = app.models_mut().insert(router);
         let snapshot = app.models_mut().insert(snapshot);
         let intents = app.models_mut().insert(Vec::new());
-        Self {
+        let store = Self {
             window,
             router,
             snapshot,
             intents,
-        }
+        };
+        store.sync_command_availability(app);
+        store
     }
 
     pub fn snapshot_model(&self) -> Model<RouterUiSnapshot<R>> {
@@ -269,6 +274,18 @@ where
         RouterLink { action, href, to }
     }
 
+    pub fn link_to_typed_route<C>(
+        &self,
+        action: NavigationAction,
+        codec: &C,
+        route: &C::Route,
+    ) -> RouterLink
+    where
+        C: RouteCodec,
+    {
+        self.link_to_location(action, codec.encode_canonical(route))
+    }
+
     pub fn take_events(&self, app: &mut App) -> Vec<RouterEvent<R>> {
         app.models_mut()
             .update(&self.router, |router| router.take_events())
@@ -279,6 +296,29 @@ where
         app.models()
             .read(&self.router, |router| router.history().can_navigate(action))
             .expect("router model should be readable")
+    }
+
+    fn current_history_availability(&self, app: &App) -> (bool, bool) {
+        app.models()
+            .read(&self.router, |router| {
+                let history = router.history();
+                (
+                    history.can_navigate(NavigationAction::Back),
+                    history.can_navigate(NavigationAction::Forward),
+                )
+            })
+            .expect("router model should be readable")
+    }
+
+    /// Publish the current router back/forward availability for this window.
+    ///
+    /// This is useful when a store is created from pre-populated history or when an app wants to
+    /// re-publish availability after external window/service lifecycle changes.
+    pub fn sync_command_availability(&self, app: &mut App) {
+        let (can_back, can_forward) = self.current_history_availability(app);
+        app.with_global_mut(WindowCommandAvailabilityService::default, |svc, _app| {
+            svc.set_router_availability(self.window, can_back, can_forward);
+        });
     }
 
     pub fn handle_router_command(
@@ -306,32 +346,120 @@ where
         }
     }
 
+    fn navigate_with_prefetch_intents_via_host(
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        router: &WeakModel<Router<R, H>>,
+        snapshot: &WeakModel<RouterUiSnapshot<R>>,
+        intents: &WeakModel<Vec<RoutePrefetchIntent<R>>>,
+        action: NavigationAction,
+        target: Option<RouteLocation>,
+    ) -> bool {
+        let Some(router) = router.upgrade() else {
+            return false;
+        };
+        let Some(snapshot_model) = snapshot.upgrade() else {
+            return false;
+        };
+        let Some(intents_model) = intents.upgrade() else {
+            return false;
+        };
+
+        let result = host.models_mut().update(&router, |router| {
+            let update = router.navigate_with_prefetch_intents(action, target)?;
+            let next_snapshot = RouterUiSnapshot::from_state(router.state());
+            let history = router.history();
+            let can_back = history.can_navigate(NavigationAction::Back);
+            let can_forward = history.can_navigate(NavigationAction::Forward);
+            Ok::<_, RouteSearchValidationFailure>((update, next_snapshot, can_back, can_forward))
+        });
+
+        let Ok(result) = result else {
+            return false;
+        };
+        let Ok((update, next_snapshot, can_back, can_forward)) = result else {
+            return false;
+        };
+
+        host.set_router_command_availability(window, can_back, can_forward);
+
+        if !update.update.changed() {
+            return false;
+        }
+
+        let _ = host
+            .models_mut()
+            .update(&snapshot_model, |value| *value = next_snapshot);
+        let _ = host
+            .models_mut()
+            .update(&intents_model, |value| *value = update.intents);
+        true
+    }
+
+    /// Build a history-navigation action handler for typed action surfaces.
+    ///
+    /// Intended usage:
+    ///
+    /// ```rust,ignore
+    /// cx.on_action_notify::<act::RouterBack>(store.back_on_action());
+    /// cx.on_action_notify::<act::RouterForward>(store.forward_on_action());
+    /// ```
+    ///
+    /// Only `NavigationAction::Back` and `NavigationAction::Forward` are meaningful here; passing
+    /// `Push` or `Replace` returns a handler that reports `false`.
+    pub fn navigate_history_on_action(
+        &self,
+        action: NavigationAction,
+    ) -> impl Fn(&mut dyn UiFocusActionHost, ActionCx) -> bool + 'static {
+        let window = self.window;
+        let router: WeakModel<Router<R, H>> = self.router.downgrade();
+        let snapshot: WeakModel<RouterUiSnapshot<R>> = self.snapshot.downgrade();
+        let intents: WeakModel<Vec<RoutePrefetchIntent<R>>> = self.intents.downgrade();
+        move |host, _action_cx| match action {
+            NavigationAction::Back | NavigationAction::Forward => {
+                Self::navigate_with_prefetch_intents_via_host(
+                    host, window, &router, &snapshot, &intents, action, None,
+                )
+            }
+            NavigationAction::Push | NavigationAction::Replace => false,
+        }
+    }
+
+    /// Convenience wrapper for `navigate_history_on_action(NavigationAction::Back)`.
+    pub fn back_on_action(
+        &self,
+    ) -> impl Fn(&mut dyn UiFocusActionHost, ActionCx) -> bool + 'static {
+        self.navigate_history_on_action(NavigationAction::Back)
+    }
+
+    /// Convenience wrapper for `navigate_history_on_action(NavigationAction::Forward)`.
+    pub fn forward_on_action(
+        &self,
+    ) -> impl Fn(&mut dyn UiFocusActionHost, ActionCx) -> bool + 'static {
+        self.navigate_history_on_action(NavigationAction::Forward)
+    }
+
     fn apply_update(
         &self,
         app: &mut App,
         update: &RouterUpdate,
         intents: &[RoutePrefetchIntent<R>],
     ) {
+        self.sync_command_availability(app);
+
         if !update.changed() {
             return;
         }
 
-        let (next, can_back, can_forward) = app
+        let next = app
             .models()
             .read(&self.router, |router| {
-                let next = RouterUiSnapshot::from_state(router.state());
-                let history = router.history();
-                let can_back = history.can_navigate(NavigationAction::Back);
-                let can_forward = history.can_navigate(NavigationAction::Forward);
-                (next, can_back, can_forward)
+                RouterUiSnapshot::from_state(router.state())
             })
             .expect("router model should be readable");
         let _ = app.models_mut().update(&self.snapshot, |v| *v = next);
         let intents = intents.to_vec();
         let _ = app.models_mut().update(&self.intents, |v| *v = intents);
-        app.with_global_mut(WindowCommandAvailabilityService::default, |svc, _app| {
-            svc.set_router_availability(self.window, can_back, can_forward);
-        });
         app.request_redraw(self.window);
     }
 
@@ -365,6 +493,32 @@ where
         Ok(update)
     }
 
+    pub fn navigate_typed_route<C>(
+        &self,
+        app: &mut App,
+        action: NavigationAction,
+        codec: &C,
+        route: &C::Route,
+    ) -> Result<RouterUpdate, RouteSearchValidationFailure>
+    where
+        C: RouteCodec,
+    {
+        self.navigate(app, action, Some(codec.encode_canonical(route)))
+    }
+
+    pub fn navigate_typed_route_with_prefetch_intents<C>(
+        &self,
+        app: &mut App,
+        action: NavigationAction,
+        codec: &C,
+        route: &C::Route,
+    ) -> Result<RouterUpdateWithPrefetchIntents<R>, RouteSearchValidationFailure>
+    where
+        C: RouteCodec,
+    {
+        self.navigate_with_prefetch_intents(app, action, Some(codec.encode_canonical(route)))
+    }
+
     pub fn sync_with_prefetch_intents(
         &self,
         app: &mut App,
@@ -395,46 +549,19 @@ where
         let snapshot: WeakModel<RouterUiSnapshot<R>> = self.snapshot.downgrade();
         let intents: WeakModel<Vec<RoutePrefetchIntent<R>>> = self.intents.downgrade();
         Arc::new(move |host, _cx, _reason| {
-            let Some(router) = router.upgrade() else {
-                return;
-            };
-            let Some(snapshot) = snapshot.upgrade() else {
-                return;
-            };
-            let Some(intents_model) = intents.upgrade() else {
-                return;
-            };
-
             let action = link.action;
             let to = link.to.clone();
-
-            let result = host.models_mut().update(&router, |router| {
-                let update = router.navigate_with_prefetch_intents(action, Some(to))?;
-                let snapshot = RouterUiSnapshot::from_state(router.state());
-                let history = router.history();
-                let can_back = history.can_navigate(NavigationAction::Back);
-                let can_forward = history.can_navigate(NavigationAction::Forward);
-                Ok::<_, RouteSearchValidationFailure>((update, snapshot, can_back, can_forward))
-            });
-
-            let Ok(result) = result else {
-                return;
-            };
-            let Ok((update, next_snapshot, can_back, can_forward)) = result else {
+            if Self::navigate_with_prefetch_intents_via_host(
+                host,
+                window,
+                &router,
+                &snapshot,
+                &intents,
+                action,
+                Some(to),
+            ) {
                 host.request_redraw(window);
-                return;
-            };
-
-            if !update.update.changed() {
-                return;
             }
-
-            let _ = host.models_mut().update(&snapshot, |v| *v = next_snapshot);
-            let _ = host
-                .models_mut()
-                .update(&intents_model, |v| *v = update.intents.clone());
-            host.set_router_command_availability(window, can_back, can_forward);
-            host.request_redraw(window);
         })
     }
 
@@ -757,6 +884,41 @@ where
     Ok(router_link(cx, store, link, children))
 }
 
+pub fn router_link_to_typed_route<R, H, C>(
+    cx: &mut ElementContext<'_, App>,
+    store: &RouterUiStore<R, H>,
+    action: NavigationAction,
+    codec: &C,
+    route: &C::Route,
+    children: impl IntoIterator<Item = AnyElement>,
+) -> AnyElement
+where
+    R: Clone + Eq + Hash + 'static,
+    H: HistoryAdapter + 'static,
+    C: RouteCodec,
+{
+    let link = store.link_to_typed_route(action, codec, route);
+    router_link(cx, store, link, children)
+}
+
+pub fn router_link_to_typed_route_with_test_id<R, H, C>(
+    cx: &mut ElementContext<'_, App>,
+    store: &RouterUiStore<R, H>,
+    action: NavigationAction,
+    codec: &C,
+    route: &C::Route,
+    test_id: impl Into<Arc<str>>,
+    children: impl IntoIterator<Item = AnyElement>,
+) -> AnyElement
+where
+    R: Clone + Eq + Hash + 'static,
+    H: HistoryAdapter + 'static,
+    C: RouteCodec,
+{
+    let link = store.link_to_typed_route(action, codec, route);
+    router_link_with_test_id(cx, store, link, test_id, children)
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn router_link_to_with_test_id<R, H>(
     cx: &mut ElementContext<'_, App>,
@@ -862,14 +1024,71 @@ mod tests {
     use super::{RouterOutlet, RouterUiSnapshot, RouterUiStore};
     use fret_app::App;
     use fret_router::{
-        MemoryHistory, RouteHooks, RouteLocation, RouteNode, RoutePrefetchIntent, RouteSearchTable,
-        RouteTree, Router,
+        MemoryHistory, RouteCodec, RouteHooks, RouteLocation, RouteNode, RoutePrefetchIntent,
+        RouteSearchTable, RouteTree, Router,
     };
-    use fret_runtime::Model;
-    use fret_ui::ElementContext;
+    use fret_runtime::{Effect, Model, ModelStore, TimerToken, WindowCommandAvailabilityService};
+    use fret_ui::action::{ActionCx, UiActionHost, UiFocusActionHost};
     use fret_ui::element::AnyElement;
+    use fret_ui::{ElementContext, GlobalElementId};
     use fret_ui_kit::ui;
     use std::sync::Arc;
+
+    const APP_RS: &str = include_str!("app.rs");
+    const LIB_RS: &str = include_str!("lib.rs");
+
+    fn action_cx(window: fret_core::AppWindowId) -> ActionCx {
+        ActionCx {
+            window,
+            target: GlobalElementId(0x1),
+        }
+    }
+
+    struct TestFocusHost<'a> {
+        app: &'a mut App,
+    }
+
+    impl UiActionHost for TestFocusHost<'_> {
+        fn models_mut(&mut self) -> &mut ModelStore {
+            self.app.models_mut()
+        }
+
+        fn push_effect(&mut self, effect: Effect) {
+            self.app.push_effect(effect);
+        }
+
+        fn request_redraw(&mut self, window: fret_core::AppWindowId) {
+            self.app.request_redraw(window);
+        }
+
+        fn next_timer_token(&mut self) -> TimerToken {
+            self.app.next_timer_token()
+        }
+
+        fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
+            self.app.next_clipboard_token()
+        }
+
+        fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+            self.app.next_share_sheet_token()
+        }
+
+        fn set_router_command_availability(
+            &mut self,
+            window: fret_core::AppWindowId,
+            can_back: bool,
+            can_forward: bool,
+        ) {
+            self.app
+                .with_global_mut(WindowCommandAvailabilityService::default, |svc, _app| {
+                    svc.set_router_availability(window, can_back, can_forward);
+                });
+        }
+    }
+
+    impl UiFocusActionHost for TestFocusHost<'_> {
+        fn request_focus(&mut self, _target: GlobalElementId) {}
+    }
 
     #[allow(dead_code)]
     fn router_outlet_by_leaf_ui_accepts_builder_children(
@@ -891,6 +1110,41 @@ mod tests {
     #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
     enum CompileRoute {
         Home,
+    }
+
+    #[test]
+    fn crate_docs_keep_router_ui_positioned_as_thin_adoption_layer() {
+        assert!(LIB_RS.contains("This crate intentionally provides a thin layer:"));
+        assert!(
+            LIB_RS.contains(
+                "Policy-heavy behavior remains in apps and higher-level ecosystem crates."
+            )
+        );
+    }
+
+    #[test]
+    fn router_ui_surface_does_not_grow_a_second_app_runtime() {
+        let public_surface = LIB_RS
+            .split("#[cfg(test)]")
+            .next()
+            .expect("router-ui source should contain a test module split");
+
+        assert!(public_surface.contains("pub mod app;"));
+        assert!(public_surface.contains("pub fn register_router_commands("));
+        assert!(public_surface.contains("pub struct RouterUiStore"));
+        assert!(public_surface.contains("pub struct RouterOutlet"));
+        assert!(public_surface.contains("pub fn router_link<"));
+        assert!(public_surface.contains("pub fn router_outlet<"));
+
+        assert!(!public_surface.contains("pub fn install_app("));
+        assert!(!public_surface.contains("pub fn install(app: &mut App)"));
+        assert!(!public_surface.contains("pub struct RouterApp"));
+        assert!(!public_surface.contains("pub trait RouterApp"));
+        assert!(!public_surface.contains("FretApp::"));
+        assert!(!public_surface.contains("AppUi<"));
+        assert!(!public_surface.contains("ViewCx<"));
+        assert!(!public_surface.contains("Plugin"));
+        assert!(APP_RS.contains("pub fn install(app: &mut App)"));
     }
 
     #[test]
@@ -990,5 +1244,158 @@ mod tests {
             .expect("snapshot should be readable");
         assert_eq!(snapshot.location.to_url(), "/settings");
         assert_eq!(snapshot.matches.len(), 2);
+    }
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    enum TypedRoute {
+        Home,
+        Settings,
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    enum TypedRouteDecodeError {
+        NoMatch,
+    }
+
+    struct TypedRouteCodec;
+
+    impl RouteCodec for TypedRouteCodec {
+        type Route = TypedRoute;
+        type Error = TypedRouteDecodeError;
+
+        fn encode(&self, route: &Self::Route) -> RouteLocation {
+            match route {
+                TypedRoute::Home => RouteLocation::from_path("/"),
+                TypedRoute::Settings => RouteLocation::parse("settings///"),
+            }
+        }
+
+        fn decode(&self, location: &RouteLocation) -> Result<Self::Route, Self::Error> {
+            match location.path.as_str() {
+                "/" => Ok(TypedRoute::Home),
+                "/settings" => Ok(TypedRoute::Settings),
+                _ => Err(TypedRouteDecodeError::NoMatch),
+            }
+        }
+    }
+
+    #[test]
+    fn router_ui_store_builds_typed_route_links_via_codec() {
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+        enum RouteId {
+            Root,
+            Settings,
+        }
+
+        let tree = Arc::new(RouteTree::new(
+            RouteNode::new(RouteId::Root, "/")
+                .unwrap()
+                .with_children(vec![RouteNode::new(RouteId::Settings, "settings").unwrap()]),
+        ));
+        let search_table = Arc::new(RouteSearchTable::new());
+        let history = MemoryHistory::new(RouteLocation::parse("/"));
+        let router = Router::new(
+            tree,
+            search_table,
+            fret_router::SearchValidationMode::Strict,
+            history,
+        )
+        .expect("router should build");
+
+        let mut app = App::new();
+        let window = fret_core::AppWindowId::default();
+        let store = RouterUiStore::new(&mut app, window, router);
+
+        let link = store.link_to_typed_route(
+            fret_router::NavigationAction::Push,
+            &TypedRouteCodec,
+            &TypedRoute::Settings,
+        );
+        assert_eq!(link.href.as_ref(), "/settings");
+        assert_eq!(link.to.to_url(), "/settings");
+    }
+
+    #[test]
+    fn router_ui_store_new_syncs_command_availability_from_history() {
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+        enum RouteId {
+            Root,
+            Settings,
+        }
+
+        let tree = Arc::new(RouteTree::new(
+            RouteNode::new(RouteId::Root, "/")
+                .unwrap()
+                .with_children(vec![RouteNode::new(RouteId::Settings, "settings").unwrap()]),
+        ));
+        let search_table = Arc::new(RouteSearchTable::new());
+        let mut history = MemoryHistory::new(RouteLocation::parse("/"));
+        assert!(history.push(RouteLocation::parse("/settings")));
+        let router = Router::new(
+            tree,
+            search_table,
+            fret_router::SearchValidationMode::Strict,
+            history,
+        )
+        .expect("router should build");
+
+        let mut app = App::new();
+        let window = fret_core::AppWindowId::default();
+        let _store = RouterUiStore::new(&mut app, window, router);
+
+        let availability = app
+            .global::<WindowCommandAvailabilityService>()
+            .and_then(|svc| svc.snapshot(window).copied())
+            .expect("router command availability should be published");
+        assert!(availability.router_can_back);
+        assert!(!availability.router_can_forward);
+    }
+
+    #[test]
+    fn router_ui_store_history_action_updates_snapshot_and_availability() {
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+        enum RouteId {
+            Root,
+            Settings,
+        }
+
+        let tree = Arc::new(RouteTree::new(
+            RouteNode::new(RouteId::Root, "/")
+                .unwrap()
+                .with_children(vec![RouteNode::new(RouteId::Settings, "settings").unwrap()]),
+        ));
+        let search_table = Arc::new(RouteSearchTable::new());
+        let mut history = MemoryHistory::new(RouteLocation::parse("/"));
+        assert!(history.push(RouteLocation::parse("/settings")));
+        let router = Router::new(
+            tree,
+            search_table,
+            fret_router::SearchValidationMode::Strict,
+            history,
+        )
+        .expect("router should build");
+
+        let mut app = App::new();
+        let window = fret_core::AppWindowId::default();
+        let store = RouterUiStore::new(&mut app, window, router);
+        let back = store.back_on_action();
+
+        {
+            let mut host = TestFocusHost { app: &mut app };
+            assert!(back(&mut host, action_cx(window)));
+        }
+
+        let snapshot = app
+            .models()
+            .get_cloned(&store.snapshot_model())
+            .expect("snapshot should be readable");
+        assert_eq!(snapshot.location.to_url(), "/");
+
+        let availability = app
+            .global::<WindowCommandAvailabilityService>()
+            .and_then(|svc| svc.snapshot(window).copied())
+            .expect("router command availability should be published");
+        assert!(!availability.router_can_back);
+        assert!(availability.router_can_forward);
     }
 }

@@ -1,9 +1,10 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::textarea as snippets;
 
-pub(super) fn preview_textarea(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(super) fn preview_textarea(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
     let label = snippets::label::render(cx);

@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("stack_trace_large_demo.rs");
 
 // region: example
-use fret_runtime::Model;
 use fret_ui::element::SemanticsProps;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
@@ -9,21 +8,8 @@ use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-#[derive(Default)]
-struct DemoModels {
-    opened: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let opened = cx.with_state(DemoModels::default, |st| st.opened.clone());
-    let opened = match opened {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(DemoModels::default, |st| st.opened = Some(model.clone()));
-            model
-        }
-    };
+    let opened = cx.local_model_keyed("opened", || false);
 
     let opened_for_marker = opened.clone();
     let marker = cx.semantics(

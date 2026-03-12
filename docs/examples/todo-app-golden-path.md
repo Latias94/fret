@@ -104,7 +104,7 @@ edition = "2024"
 anyhow = "1"
 fret = { path = "../../ecosystem/fret", features = ["state"] }
 
-# Optional: depend on these directly only if you need their APIs outside of `ViewCx`.
+# Optional: depend on these directly only if you need their APIs outside of `AppUi`.
 fret-selector = { path = "../../ecosystem/fret-selector", features = ["ui"], optional = true }
 fret-query = { path = "../../ecosystem/fret-query", features = ["ui"], optional = true }
 ```
@@ -112,12 +112,13 @@ fret-query = { path = "../../ecosystem/fret-query", features = ["ui"], optional 
 ## Minimal startup
 
 ```rust,ignore
-use fret::prelude::*;
+use fret::app::prelude::*;
 
 fn main() -> anyhow::Result<()> {
     FretApp::new("todo")
         .window("todo", (560.0, 520.0))
-        .run_view::<TodoView>()
+        .view::<TodoView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }
 ```
@@ -128,7 +129,7 @@ The builder chain is ecosystem-level and intentionally provides a few stable sea
 apps without dropping down to `fret-bootstrap`:
 
 ```rust,ignore
-use fret::prelude::*;
+use fret::app::prelude::*;
 
 fn install_app(app: &mut App) {
     // Register app-owned globals, commands, services, etc.
@@ -139,12 +140,13 @@ fn install_app(app: &mut App) {
  fn main() -> anyhow::Result<()> {
     FretApp::new("todo")
         .window("todo", (560.0, 520.0))
-        .install_app(install_app)
+        .setup(install_app)
         // Disable filesystem config loading for embedding/minimal builds:
         .config_files(false)
         // If you use images/SVG in UI, tune budgets:
         .ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
-        .run_view::<TodoView>()
+        .view::<TodoView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }
 ```
@@ -152,7 +154,7 @@ fn install_app(app: &mut App) {
 Notes:
 
 - The action-first + view runtime path is the recommended golden path for new apps (ADRs 0307/0308).
-- Start with `on_action_notify_locals` for multi-slot `LocalState<T>` transactions, `on_action_notify_transient` for app-only effects, and local `on_activate*` only when widget glue truly needs it. Drop down to `on_action_notify_models` when coordinating shared `Model<T>` graphs.
+- Start with `cx.actions().locals(...)` for multi-slot `LocalState<T>` transactions, `cx.actions().transient(...)` for app-only effects, and local `on_activate*` only when widget glue truly needs it. Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
 - In-tree MVU is removed; if you are migrating an older external MVU codebase, use the workstream migration guide as a mapping reference rather than treating MVU as a current option.
 - Use typed unit actions for globally addressable intents and typed payload actions for per-item UI intents.
 
@@ -215,7 +217,7 @@ Boundary rule:
 - keep selector/query as read-side helpers,
 - pass plain values/snapshots into components whenever practical.
 - prefer `LocalState<Vec<_>>` + payload actions for view-owned keyed lists; keep explicit `Model<T>` graphs for shared ownership or cross-view coordination.
-  - For multi-slot `LocalState<T>` coordination, prefer `on_action_notify_locals` / `on_payload_action_notify_locals` over `on_action_notify_models`.
+  - For multi-slot `LocalState<T>` coordination, prefer `cx.actions().locals(...)` / `cx.actions().payload::<A>().locals(...)` over `cx.actions().models(...)`.
 
 ## Actions (UI -> app logic)
 
@@ -227,18 +229,16 @@ Use typed unit actions with stable IDs as the default boundary between UI intent
 High-level sketch:
 
 ```rust,ignore
-use fret::prelude::*;
+use fret::app::prelude::*;
 
 mod act {
     fret::actions!([Add = "todo.todo.add.v1"]);
 }
 
 impl View for TodoView {
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        cx.on_action_notify_models::<act::Add>(move |models| {
-            // mutate models
-            true
-        });
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        let draft = cx.state().local::<String>();
+        cx.actions().local_set::<act::Add, String>(&draft, String::new());
 
         shadcn::Button::new("Add")
             .action(act::Add)
@@ -250,11 +250,19 @@ impl View for TodoView {
 
 ## View (render a retained UI tree)
 
-The view runtime renders the same declarative IR (`Elements`) but provides a cohesive authoring loop:
+The view runtime renders the same declarative IR (`Ui`, backed by `Elements`) but provides a cohesive authoring loop:
 
-- view-local hooks (`use_local*`, `use_selector`, `use_query`),
-- typed action handler registration,
+- grouped app helpers (`state()`, `actions()`, `data()`, `effects()`),
+- LocalState/query/selector helpers behind those grouped entrypoints,
 - `notify → dirty → reuse` semantics via view cache roots.
+
+If a product intentionally needs the raw model-backed hook, keep that explicit and advanced:
+
+```rust,ignore
+use fret::advanced::AppUiRawStateExt;
+
+let raw_model = cx.use_state::<MyState>();
+```
 
 For the full runnable baseline, see the `cargo run -p fretboard -- new todo` scaffold template.
 
@@ -269,9 +277,7 @@ memoizing these computations with selectors instead of:
 High-level sketch:
 
 ```rust,ignore
-use fret_selector::ui::DepsBuilder;
-
-let derived = cx.use_selector(
+let derived = cx.data().selector(
     |cx| {
         let mut deps = DepsBuilder::new(cx);
         deps.model_rev(&self.todos);
@@ -293,12 +299,10 @@ For async data (network, disk, indexing), we recommend storing cached resource s
 High-level sketch:
 
 ```rust,ignore
-use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{QueryKey, QueryPolicy, QueryState};
-use fret_ui_kit::declarative::QueryHandleWatchExt as _;
 
-let handle = cx.use_query(key, policy, move |token| fetch(token));
-let state: QueryState<T> = handle.layout_query(cx).value_or_default();
+let handle = cx.data().query(key, policy, move |token| fetch(token));
+let state: QueryState<T> = handle.watch(cx).layout().value_or_default();
 ```
 
 To invalidate/refetch from app logic:
@@ -306,14 +310,14 @@ To invalidate/refetch from app logic:
 ```rust,ignore
 // v1 (view runtime): if refetch is just a pure state projection, keep it as a normal model
 // transaction (for example, bump a `Model<u64>` nonce like `tip_nonce`).
-cx.on_action_notify_models::<act::RefreshTip>({
+cx.actions().models::<act::RefreshTip>({
     let tip_nonce = self.tip_nonce.clone();
     move |models| models.update(&tip_nonce, |v| *v = v.saturating_add(1)).is_ok()
 });
 
 // then include the nonce in the query key:
 let nonce = cx.watch_model(&tip_nonce).paint().value_or(0);
-let handle = cx.use_query(tip_key(nonce), policy, move |token| fetch(token));
+let handle = cx.data().query(tip_key(nonce), policy, move |token| fetch(token));
 ```
 
 ## Event pipeline (platform → UI)
@@ -325,10 +329,10 @@ In a typical window driver:
 
 ## Action handlers (logic)
 
-In the view runtime shape, typed action handlers are the boundary where you mutate models and request UI updates. Start with `on_action_notify_models`, use `on_action_notify_transient` when the real work must happen with `&mut App` in `render()`, and keep raw `on_action_notify` for cookbook/reference host-side cases only:
+In the view runtime shape, typed action handlers are the boundary where you mutate models and request UI updates. Start with `cx.actions().locals(...)` for LocalState-first flows, drop to `cx.actions().models(...)` when you intentionally coordinate explicit shared model graphs, use `cx.actions().transient(...)` when the real work must happen with `&mut App` in `render()`, and keep raw `on_action_notify` for cookbook/reference host-side cases only:
 
 ```rust,ignore
-cx.on_action_notify_models::<act::Add>({
+cx.actions().models::<act::Add>({
     let draft = self.draft.clone();
     let todos = self.todos.clone();
     move |models| {
@@ -390,7 +394,10 @@ Recommended for apps:
 
 - `fret` enables a default icon pack via `fret/icons` (Lucide).
 - To use another pack, add it as an explicit dependency and install it via the entry seams:
-  - `.install_app(fret_icons_radix::install_app)`, or
-  - `.register_icon_pack(fret_icons_radix::register_vendor_icons)`.
+  - `.setup(fret_icons_radix::app::install)`.
 
-If you need a custom pack, call `.register_icon_pack(...)` with your own `fn(&mut IconRegistry)` implementation.
+If you need a custom pack, expose the same app-facing seam from your own crate and call
+`.setup(my_icons::app::install)`.
+
+If you intentionally need raw registry control, drop to
+`fret_bootstrap::BootstrapBuilder::register_icon_pack(...)`.

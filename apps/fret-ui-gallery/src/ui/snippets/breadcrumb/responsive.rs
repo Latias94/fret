@@ -1,30 +1,13 @@
 pub const SOURCE: &str = include_str!("responsive.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui::Invalidation;
-use fret_ui_shadcn::breadcrumb::primitives as bc;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use shadcn::raw::breadcrumb::primitives as bc;
 use std::sync::Arc;
 
 const ITEMS_TO_DISPLAY: usize = 3;
-
-#[derive(Default, Clone)]
-struct Models {
-    open: Option<Model<bool>>,
-}
-
-fn open_model(cx: &mut ElementContext<'_, App>) -> Model<bool> {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    match state.open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.open = Some(model.clone()));
-            model
-        }
-    }
-}
 
 fn toggle_model_on_activate(open: Model<bool>) -> fret_ui::action::OnActivate {
     Arc::new(move |host, acx, _reason| {
@@ -40,8 +23,8 @@ fn close_model_on_activate(open: Model<bool>) -> fret_ui::action::OnActivate {
     })
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let open = open_model(cx);
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+    let open = cx.local_model(|| false);
 
     let is_desktop = fret_ui_kit::declarative::viewport_queries::viewport_width_at_least(
         cx,

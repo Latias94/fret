@@ -363,7 +363,7 @@ egression.index.json as MCP resources when those artifacts exist in the current
 Primary code areas:
 
 - `apps/fret-devtools-mcp/src/native.rs`
-- DevTools GUI implementation surfaces referenced by `docs/workstreams/diag-devtools-gui-v1.md`
+- DevTools GUI implementation surfaces referenced by `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md`
 - offline viewer, if summary browsing becomes useful there
 
 Recommended PR slices:

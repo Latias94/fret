@@ -2,33 +2,11 @@ pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
 use fret_ui_kit::headless::form_state::FormState;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default, Clone)]
-struct Models {
-    form_state: Option<Model<FormState>>,
-    username: Option<Model<String>>,
-}
-
-fn ensure_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> (Model<FormState>, Model<String>) {
-    let state = cx.with_state(Models::default, |st| st.clone());
-
-    let form_state = state.form_state.unwrap_or_else(|| {
-        let model = cx.app.models_mut().insert(FormState::default());
-        cx.with_state(Models::default, |st| st.form_state = Some(model.clone()));
-        model
-    });
-    let username = state.username.unwrap_or_else(|| {
-        let model = cx.app.models_mut().insert(String::new());
-        cx.with_state(Models::default, |st| st.username = Some(model.clone()));
-        model
-    });
-
-    (form_state, username)
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (form_state, username) = ensure_models(cx);
+    let form_state = cx.local_model_keyed("form_state", FormState::default);
+    let username = cx.local_model_keyed("username", String::new);
 
     let username_field = shadcn::FormField::new(
         form_state,

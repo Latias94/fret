@@ -1,5 +1,6 @@
 // Included from `apps/fret-ui-gallery/src/driver.rs` to keep the module entrypoint small.
 
+use fret::router::{NavigationAction, Router};
 use fret_app::{
     ActivationPolicy, App, CommandId, CommandMeta, CreateWindowKind, CreateWindowRequest, Effect,
     LayeredConfigPaths, Menu, MenuBar, MenuBarIntegrationModeV1, MenuItem, MenuRole, Model,
@@ -14,15 +15,15 @@ use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext,
 };
-use fret_router::{NavigationAction, Router};
 use fret_runtime::{
     ImageUpdateToken, MenuItemToggle, MenuItemToggleKind, PlatformCapabilities,
     WindowCommandAvailabilityService, WindowCommandEnabledService,
 };
 use fret_ui::UiTree;
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
+#[cfg(feature = "gallery-dev")]
 use fret_ui::scroll::VirtualListScrollHandle;
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::facade as shadcn;
 use fret_undo::{CoalesceKey, DocumentId, UndoRecord, UndoService, ValueTx};
 use fret_workspace::commands::{
     CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_PREFIX, CMD_WORKSPACE_TAB_NEXT,
@@ -59,8 +60,6 @@ mod theme_runtime;
 mod toaster;
 mod window_bootstrap;
 mod workspace_nav;
-#[allow(unused_imports)]
-pub(crate) use demo_assets::UiGalleryImageSourceDemoAssets;
 use router::{
     UiGalleryHistory, UiGalleryRouteId, apply_page_route_side_effects_via_router,
     apply_page_router_update_side_effects, build_ui_gallery_page_router,
@@ -141,10 +140,15 @@ struct UiGalleryHarnessModelIds {
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
     input_file_value: Model<String>,
+    #[cfg(feature = "gallery-dev")]
     code_editor_syntax_rust: Model<bool>,
+    #[cfg(feature = "gallery-dev")]
     code_editor_boundary_identifier: Model<bool>,
+    #[cfg(feature = "gallery-dev")]
     code_editor_soft_wrap: Model<bool>,
+    #[cfg(feature = "gallery-dev")]
     code_editor_folds: Model<bool>,
+    #[cfg(feature = "gallery-dev")]
     code_editor_inlays: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
@@ -205,11 +209,16 @@ struct UiGalleryWindowState {
     view_cache_counter: Model<u64>,
     inspector_enabled: Model<bool>,
     inspector_last_pointer: Model<Option<fret_core::Point>>,
+    #[cfg(feature = "gallery-dev")]
     popover_open: Model<bool>,
     dialog_open: Model<bool>,
+    #[cfg(feature = "gallery-dev")]
     dialog_glass_open: Model<bool>,
+    #[cfg(feature = "gallery-dev")]
     alert_dialog_open: Model<bool>,
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-material3"))]
     sheet_open: Model<bool>,
+    #[cfg(feature = "gallery-dev")]
     portal_geometry_popover_open: Model<bool>,
 
     settings_open: Model<bool>,
@@ -228,11 +237,14 @@ struct UiGalleryWindowState {
     date_picker_open: Model<bool>,
     date_picker_month: Model<fret_ui_headless::calendar::CalendarMonth>,
     date_picker_selected: Model<Option<Date>>,
+    #[cfg(feature = "gallery-material3")]
     time_picker_open: Model<bool>,
+    #[cfg(feature = "gallery-material3")]
     time_picker_selected: Model<time::Time>,
     resizable_h_fractions: Model<Vec<f32>>,
     resizable_v_fractions: Model<Vec<f32>>,
     data_table_state: Model<fret_ui_headless::table::TableState>,
+    #[cfg(feature = "gallery-dev")]
     data_grid_selected_row: Model<Option<u64>>,
     tabs_value: Model<Option<Arc<str>>>,
     accordion_value: Model<Option<Arc<str>>>,
@@ -248,48 +260,83 @@ struct UiGalleryWindowState {
     image_fit_demo_streaming_frame: u64,
     image_fit_demo_streaming_size: (u32, u32),
     progress: Model<f32>,
+    #[cfg(feature = "gallery-dev")]
     checkbox: Model<bool>,
+    #[cfg(feature = "gallery-dev")]
     switch: Model<bool>,
+    #[cfg(feature = "gallery-dev")]
     code_editor_syntax_rust: Model<bool>,
+    #[cfg(feature = "gallery-dev")]
     code_editor_boundary_identifier: Model<bool>,
+    #[cfg(feature = "gallery-dev")]
     code_editor_soft_wrap: Model<bool>,
+    #[cfg(feature = "gallery-dev")]
     code_editor_folds: Model<bool>,
+    #[cfg(feature = "gallery-dev")]
     code_editor_inlays: Model<bool>,
+    #[cfg(feature = "gallery-dev")]
     markdown_link_gate_last_activation: Model<Option<Arc<str>>>,
+    #[cfg(feature = "gallery-material3")]
     material3_checkbox: Model<bool>,
+    #[cfg(feature = "gallery-material3")]
     material3_switch: Model<bool>,
+    #[cfg(feature = "gallery-material3")]
     material3_slider_value: Model<f32>,
+    #[cfg(feature = "gallery-material3")]
     material3_radio_value: Model<Option<Arc<str>>>,
+    #[cfg(feature = "gallery-material3")]
     material3_tabs_value: Model<Arc<str>>,
+    #[cfg(feature = "gallery-material3")]
     material3_list_value: Model<Arc<str>>,
+    #[cfg(feature = "gallery-material3")]
     material3_expressive: Model<bool>,
+    #[cfg(feature = "gallery-material3")]
     material3_navigation_bar_value: Model<Arc<str>>,
+    #[cfg(feature = "gallery-material3")]
     material3_navigation_rail_value: Model<Arc<str>>,
+    #[cfg(feature = "gallery-material3")]
     material3_navigation_drawer_value: Model<Arc<str>>,
+    #[cfg(feature = "gallery-material3")]
     material3_modal_navigation_drawer_open: Model<bool>,
+    #[cfg(feature = "gallery-material3")]
     material3_dialog_open: Model<bool>,
+    #[cfg(feature = "gallery-material3")]
     material3_text_field_value: Model<String>,
+    #[cfg(feature = "gallery-material3")]
     material3_text_field_disabled: Model<bool>,
+    #[cfg(feature = "gallery-material3")]
     material3_text_field_error: Model<bool>,
+    #[cfg(feature = "gallery-material3")]
     material3_autocomplete_value: Model<String>,
+    #[cfg(feature = "gallery-material3")]
     material3_autocomplete_disabled: Model<bool>,
+    #[cfg(feature = "gallery-material3")]
     material3_autocomplete_error: Model<bool>,
+    #[cfg(feature = "gallery-material3")]
     material3_autocomplete_dialog_open: Model<bool>,
+    #[cfg(feature = "gallery-material3")]
     material3_menu_open: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
     input_file_value: Model<String>,
+    #[cfg(feature = "gallery-dev")]
     dropdown_open: Model<bool>,
+    #[cfg(feature = "gallery-dev")]
     context_menu_open: Model<bool>,
+    #[cfg(feature = "gallery-dev")]
     context_menu_edge_open: Model<bool>,
     cmdk_open: Model<bool>,
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
     sonner_position: Model<shadcn::ToastPosition>,
     menu_bar_seq: Model<u64>,
+    #[cfg(feature = "gallery-dev")]
     virtual_list_torture_jump: Model<String>,
+    #[cfg(feature = "gallery-dev")]
     virtual_list_torture_edit_row: Model<Option<u64>>,
+    #[cfg(feature = "gallery-dev")]
     virtual_list_torture_edit_text: Model<String>,
+    #[cfg(feature = "gallery-dev")]
     virtual_list_torture_scroll: VirtualListScrollHandle,
     last_config_files_status_seq: u64,
 }
@@ -308,11 +355,16 @@ impl UiGalleryWindowState {
             view_cache_popover_open: self.view_cache_popover_open.clone(),
             view_cache_continuous: self.view_cache_continuous.clone(),
             view_cache_counter: self.view_cache_counter.clone(),
+            #[cfg(feature = "gallery-dev")]
             popover_open: self.popover_open.clone(),
             dialog_open: self.dialog_open.clone(),
+            #[cfg(feature = "gallery-dev")]
             dialog_glass_open: self.dialog_glass_open.clone(),
+            #[cfg(feature = "gallery-dev")]
             alert_dialog_open: self.alert_dialog_open.clone(),
+            #[cfg(any(feature = "gallery-dev", feature = "gallery-material3"))]
             sheet_open: self.sheet_open.clone(),
+            #[cfg(feature = "gallery-dev")]
             portal_geometry_popover_open: self.portal_geometry_popover_open.clone(),
             combobox_value: self.combobox_value.clone(),
             combobox_open: self.combobox_open.clone(),
@@ -320,11 +372,14 @@ impl UiGalleryWindowState {
             date_picker_open: self.date_picker_open.clone(),
             date_picker_month: self.date_picker_month.clone(),
             date_picker_selected: self.date_picker_selected.clone(),
+            #[cfg(feature = "gallery-material3")]
             time_picker_open: self.time_picker_open.clone(),
+            #[cfg(feature = "gallery-material3")]
             time_picker_selected: self.time_picker_selected.clone(),
             resizable_h_fractions: self.resizable_h_fractions.clone(),
             resizable_v_fractions: self.resizable_v_fractions.clone(),
             data_table_state: self.data_table_state.clone(),
+            #[cfg(feature = "gallery-dev")]
             data_grid_selected_row: self.data_grid_selected_row.clone(),
             tabs_value: self.tabs_value.clone(),
             accordion_value: self.accordion_value.clone(),
@@ -333,49 +388,84 @@ impl UiGalleryWindowState {
             image_fit_demo_tall_image: self.image_fit_demo_tall_image.clone(),
             image_fit_demo_streaming_image: self.image_fit_demo_streaming_image.clone(),
             progress: self.progress.clone(),
+            #[cfg(feature = "gallery-dev")]
             checkbox: self.checkbox.clone(),
+            #[cfg(feature = "gallery-dev")]
             switch: self.switch.clone(),
+            #[cfg(feature = "gallery-material3")]
             material3_checkbox: self.material3_checkbox.clone(),
+            #[cfg(feature = "gallery-material3")]
             material3_switch: self.material3_switch.clone(),
+            #[cfg(feature = "gallery-material3")]
             material3_slider_value: self.material3_slider_value.clone(),
+            #[cfg(feature = "gallery-material3")]
             material3_radio_value: self.material3_radio_value.clone(),
+            #[cfg(feature = "gallery-material3")]
             material3_tabs_value: self.material3_tabs_value.clone(),
+            #[cfg(feature = "gallery-material3")]
             material3_list_value: self.material3_list_value.clone(),
+            #[cfg(feature = "gallery-material3")]
             material3_expressive: self.material3_expressive.clone(),
+            #[cfg(feature = "gallery-material3")]
             material3_navigation_bar_value: self.material3_navigation_bar_value.clone(),
+            #[cfg(feature = "gallery-material3")]
             material3_navigation_rail_value: self.material3_navigation_rail_value.clone(),
+            #[cfg(feature = "gallery-material3")]
             material3_navigation_drawer_value: self.material3_navigation_drawer_value.clone(),
+            #[cfg(feature = "gallery-material3")]
             material3_modal_navigation_drawer_open: self
                 .material3_modal_navigation_drawer_open
                 .clone(),
+            #[cfg(feature = "gallery-material3")]
             material3_dialog_open: self.material3_dialog_open.clone(),
+            #[cfg(feature = "gallery-material3")]
             material3_text_field_value: self.material3_text_field_value.clone(),
+            #[cfg(feature = "gallery-material3")]
             material3_text_field_disabled: self.material3_text_field_disabled.clone(),
+            #[cfg(feature = "gallery-material3")]
             material3_text_field_error: self.material3_text_field_error.clone(),
+            #[cfg(feature = "gallery-material3")]
             material3_autocomplete_value: self.material3_autocomplete_value.clone(),
+            #[cfg(feature = "gallery-material3")]
             material3_autocomplete_disabled: self.material3_autocomplete_disabled.clone(),
+            #[cfg(feature = "gallery-material3")]
             material3_autocomplete_error: self.material3_autocomplete_error.clone(),
+            #[cfg(feature = "gallery-material3")]
             material3_autocomplete_dialog_open: self.material3_autocomplete_dialog_open.clone(),
+            #[cfg(feature = "gallery-material3")]
             material3_menu_open: self.material3_menu_open.clone(),
             text_input: self.text_input.clone(),
             text_area: self.text_area.clone(),
             input_file_value: self.input_file_value.clone(),
+            #[cfg(feature = "gallery-dev")]
             dropdown_open: self.dropdown_open.clone(),
+            #[cfg(feature = "gallery-dev")]
             context_menu_open: self.context_menu_open.clone(),
+            #[cfg(feature = "gallery-dev")]
             context_menu_edge_open: self.context_menu_edge_open.clone(),
             cmdk_open: self.cmdk_open.clone(),
             cmdk_query: self.cmdk_query.clone(),
             last_action: self.last_action.clone(),
             sonner_position: self.sonner_position.clone(),
+            #[cfg(feature = "gallery-dev")]
             virtual_list_torture_jump: self.virtual_list_torture_jump.clone(),
+            #[cfg(feature = "gallery-dev")]
             virtual_list_torture_edit_row: self.virtual_list_torture_edit_row.clone(),
+            #[cfg(feature = "gallery-dev")]
             virtual_list_torture_edit_text: self.virtual_list_torture_edit_text.clone(),
+            #[cfg(feature = "gallery-dev")]
             virtual_list_torture_scroll: self.virtual_list_torture_scroll.clone(),
+            #[cfg(feature = "gallery-dev")]
             code_editor_syntax_rust: self.code_editor_syntax_rust.clone(),
+            #[cfg(feature = "gallery-dev")]
             code_editor_boundary_identifier: self.code_editor_boundary_identifier.clone(),
+            #[cfg(feature = "gallery-dev")]
             code_editor_soft_wrap: self.code_editor_soft_wrap.clone(),
+            #[cfg(feature = "gallery-dev")]
             code_editor_folds: self.code_editor_folds.clone(),
+            #[cfg(feature = "gallery-dev")]
             code_editor_inlays: self.code_editor_inlays.clone(),
+            #[cfg(feature = "gallery-dev")]
             markdown_link_gate_last_activation: self.markdown_link_gate_last_activation.clone(),
         }
     }
@@ -870,10 +960,10 @@ pub fn build_app() -> App {
     caps.shell.incoming_open = true;
     app.set_global(caps);
     app.set_global(UiGalleryRecentItemsService::default());
-    shadcn::shadcn_themes::apply_shadcn_new_york(
+    shadcn::themes::apply_shadcn_new_york(
         &mut app,
-        shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
-        shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        shadcn::themes::ShadcnBaseColor::Zinc,
+        shadcn::themes::ShadcnColorScheme::Light,
     );
 
     app.with_global_mut(IconRegistry::default, |icons, app| {
@@ -1047,7 +1137,7 @@ impl WinitAppDriver for UiGalleryDriver {
 
         // Ensure magic ecosystem components can use renderer-controlled Tier B materials.
         #[cfg(feature = "gallery-dev")]
-        fret_ui_magic::app_integration::ensure_magic_materials(app, renderer);
+        fret_ui_magic::advanced::ensure_materials(app, renderer);
     }
 
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
@@ -1253,6 +1343,7 @@ impl WinitAppDriver for UiGalleryDriver {
             app.request_redraw(window);
         }
 
+        #[cfg(feature = "gallery-dev")]
         if command.as_str() == CMD_VIRTUAL_LIST_TORTURE_JUMP {
             let raw = app
                 .models()
@@ -1266,12 +1357,14 @@ impl WinitAppDriver for UiGalleryDriver {
             return;
         }
 
+        #[cfg(feature = "gallery-dev")]
         if command.as_str() == CMD_VIRTUAL_LIST_TORTURE_SCROLL_BOTTOM {
             state.virtual_list_torture_scroll.scroll_to_bottom();
             app.request_redraw(window);
             return;
         }
 
+        #[cfg(feature = "gallery-dev")]
         if command.as_str() == CMD_VIRTUAL_LIST_TORTURE_CLEAR_EDIT {
             let _ = app
                 .models_mut()
@@ -1283,6 +1376,7 @@ impl WinitAppDriver for UiGalleryDriver {
             return;
         }
 
+        #[cfg(feature = "gallery-dev")]
         if let Some(row) = data_grid_row_for_command(command.as_str()) {
             let _ = app.models_mut().update(&state.data_grid_selected_row, |v| {
                 if *v == Some(row) {

@@ -2,14 +2,8 @@ pub const SOURCE: &str = include_str!("basic.rs");
 
 // region: example
 use fret_ui_headless::calendar::CalendarMonth;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
-
-#[derive(Default)]
-struct Models {
-    month: Option<Model<CalendarMonth>>,
-    selected: Option<Model<Option<Date>>>,
-}
 
 fn parse_iso_date_ymd(raw: &str) -> Option<Date> {
     let raw = raw.trim();
@@ -32,29 +26,9 @@ fn today_from_env_or_now() -> Date {
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (month, selected) = cx.with_state(Models::default, |st| {
-        (st.month.clone(), st.selected.clone())
-    });
-
     let today = today_from_env_or_now();
-
-    let month = match month {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(CalendarMonth::from_date(today));
-            cx.with_state(Models::default, |st| st.month = Some(model.clone()));
-            model
-        }
-    };
-
-    let selected = match selected {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Some(today));
-            cx.with_state(Models::default, |st| st.selected = Some(model.clone()));
-            model
-        }
-    };
+    let month = cx.local_model_keyed("month", || CalendarMonth::from_date(today));
+    let selected = cx.local_model_keyed("selected", || Some(today));
 
     shadcn::Calendar::new(month, selected)
         .test_id_prefix("ui-gallery.calendar.basic")

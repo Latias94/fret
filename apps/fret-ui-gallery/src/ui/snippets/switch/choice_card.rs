@@ -3,30 +3,11 @@ pub const SOURCE: &str = include_str!("choice_card.rs");
 // region: example
 use fret_core::Px;
 use fret_ui_kit::primitives::control_registry::ControlId;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default)]
-struct Models {
-    share: Option<Model<bool>>,
-    notifications: Option<Model<bool>>,
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (share, notifications) = cx.with_state(Models::default, |st| {
-        (st.share.clone(), st.notifications.clone())
-    });
-    let (share, notifications) = match (share, notifications) {
-        (Some(share), Some(notifications)) => (share, notifications),
-        _ => {
-            let share = cx.app.models_mut().insert(false);
-            let notifications = cx.app.models_mut().insert(true);
-            cx.with_state(Models::default, |st| {
-                st.share = Some(share.clone());
-                st.notifications = Some(notifications.clone());
-            });
-            (share, notifications)
-        }
-    };
+    let share = cx.local_model_keyed("share", || false);
+    let notifications = cx.local_model_keyed("notifications", || true);
 
     let share_id = ControlId::from("ui-gallery-switch-choice-card-share");
     let notifications_id = ControlId::from("ui-gallery-switch-choice-card-notifications");

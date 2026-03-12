@@ -3,23 +3,10 @@ pub const SOURCE: &str = include_str!("with_text.rs");
 // region: example
 use fret_core::Px;
 use fret_ui_kit::primitives::control_registry::ControlId;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default)]
-struct Models {
-    value: Option<Model<String>>,
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let value = cx.with_state(Models::default, |st| st.value.clone());
-    let value = match value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| st.value = Some(model.clone()));
-            model
-        }
-    };
+    let value = cx.local_model(String::new);
 
     let id = ControlId::from("ui-gallery-textarea-message-2");
     ui::v_flex(|cx| {
@@ -35,7 +22,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .into_element(cx),
             ui::text("Your message will be copied to the support team.")
                 .text_sm()
-                .text_color(shadcn::ColorRef::Token {
+                .text_color(fret_ui_shadcn::ColorRef::Token {
                     key: "muted-foreground",
                     fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
                 })

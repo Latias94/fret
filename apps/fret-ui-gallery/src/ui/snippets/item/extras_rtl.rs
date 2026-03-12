@@ -1,12 +1,16 @@
 pub const SOURCE: &str = include_str!("extras_rtl.rs");
 
 // region: example
-use fret_app::App;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret::UiCx;
+use fret_ui_kit::IntoUiElement;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
-fn outline_button_sm(cx: &mut ElementContext<'_, App>, label: &'static str) -> AnyElement {
+fn outline_button_sm(
+    cx: &mut UiCx<'_>,
+    label: &'static str,
+) -> impl IntoUiElement<fret_app::App> + use<> {
     shadcn::Button::new(label)
         .variant(shadcn::ButtonVariant::Outline)
         .size(shadcn::ButtonSize::Sm)
@@ -14,12 +18,12 @@ fn outline_button_sm(cx: &mut ElementContext<'_, App>, label: &'static str) -> A
 }
 
 fn item_basic(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     title: &'static str,
     description: &'static str,
     actions: Vec<AnyElement>,
     test_id: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<fret_app::App> + use<> {
     let content_children = [
         shadcn::ItemTitle::new(title).into_element(cx),
         shadcn::ItemDescription::new(description).into_element(cx),
@@ -38,9 +42,9 @@ fn item_basic(
         .test_id(test_id)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let rtl = with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
-        let action = outline_button_sm(cx, "فتح");
+        let action = outline_button_sm(cx, "فتح").into_element(cx);
         item_basic(
             cx,
             "لوحة التحكم",
@@ -48,6 +52,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             vec![action],
             "ui-gallery-item-rtl",
         )
+        .into_element(cx)
     });
 
     rtl.test_id("ui-gallery-item-rtl-wrapper")

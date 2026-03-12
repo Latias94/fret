@@ -13,7 +13,7 @@ scales.
 
 It complements (not replaces) the device bring-up workstream:
 
-- Bring-up (device packaging + smoke tests): `docs/workstreams/mobile-bringup-v1.md`
+- Bring-up (device packaging + smoke tests): `docs/workstreams/mobile-bringup-v1/mobile-bringup-v1.md`
 
 ## Principles
 

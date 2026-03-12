@@ -7,13 +7,8 @@ use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
-use fret_ui_shadcn::{self as shadcn, ButtonSize, ButtonVariant, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
-
-#[derive(Default)]
-struct DemoModels {
-    state: Option<Model<ui_ai::PersonaState>>,
-}
 
 fn state_button(
     state_model: Model<ui_ai::PersonaState>,
@@ -22,11 +17,11 @@ fn state_button(
     label: &'static str,
 ) -> shadcn::Button {
     shadcn::Button::new(label)
-        .size(ButtonSize::Sm)
+        .size(shadcn::ButtonSize::Sm)
         .variant(if current_state == next_state {
-            ButtonVariant::Default
+            shadcn::ButtonVariant::Default
         } else {
-            ButtonVariant::Outline
+            shadcn::ButtonVariant::Outline
         })
         .on_activate(Arc::new(move |host, action_cx, _reason| {
             let _ = host
@@ -37,15 +32,7 @@ fn state_button(
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state_model = cx.with_state(DemoModels::default, |st| st.state.clone());
-    let state_model = match state_model {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(ui_ai::PersonaState::Idle);
-            cx.with_state(DemoModels::default, |st| st.state = Some(model.clone()));
-            model
-        }
-    };
+    let state_model = cx.local_model_keyed("state", || ui_ai::PersonaState::Idle);
 
     let current_state = cx
         .get_model_copied(&state_model, Invalidation::Layout)

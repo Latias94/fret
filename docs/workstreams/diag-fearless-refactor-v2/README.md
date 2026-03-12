@@ -40,10 +40,10 @@ Tracking files:
 
 Related workstreams and context:
 
-- Existing refactor notes: `docs/workstreams/diag-fearless-refactor-v1.md`
+- Existing refactor notes: `docs/workstreams/diag-fearless-refactor-v1/diag-fearless-refactor-v1.md`
 - Existing architecture folder: `docs/workstreams/diag-architecture-fearless-refactor-v1/README.md`
-- DevTools GUI: `docs/workstreams/diag-devtools-gui-v1.md`
-- DevTools MCP workflow: `docs/workstreams/diag-devtools-gui-v1-ai-mcp.md`
+- DevTools GUI: `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md`
+- DevTools MCP workflow: `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md`
 - Bundle + script workflow: `docs/ui-diagnostics-and-scripted-tests.md`
 
 ## 0) Why this workstream exists

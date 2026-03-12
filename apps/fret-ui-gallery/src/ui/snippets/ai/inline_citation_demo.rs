@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("inline_citation_demo.rs");
 
 // region: example
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
@@ -9,21 +8,8 @@ use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-#[derive(Default)]
-struct DemoModels {
-    selected: Option<Model<Option<Arc<str>>>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let needs_init = cx.with_state(DemoModels::default, |st| st.selected.is_none());
-    if needs_init {
-        let model = cx.app.models_mut().insert(None::<Arc<str>>);
-        cx.with_state(DemoModels::default, |st| st.selected = Some(model.clone()));
-    }
-
-    let selected_model = cx
-        .with_state(DemoModels::default, |st| st.selected.clone())
-        .expect("selected");
+    let selected_model = cx.local_model_keyed("selected", || None::<Arc<str>>);
     let selected_now = cx
         .get_model_cloned(&selected_model, Invalidation::Paint)
         .flatten();

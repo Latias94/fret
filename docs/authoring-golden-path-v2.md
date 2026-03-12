@@ -10,34 +10,43 @@ missing default guideline).
 ## Mental model (keep it small)
 
 - **UI**: a `View` object renders an element tree in `render()`.
-- **State (default)**: view-owned `LocalState<T>` slots (`cx.use_local*`).
+- **State (default)**: view-owned `LocalState<T>` slots (`cx.state().local*`).
 - **Events**: typed actions (unit + payload) bound in the UI tree.
-- **Derived state**: `cx.use_selector(...)` for memoized projections.
-- **Async state**: `cx.use_query(...)` for loading/error/cache lifecycle.
+- **Derived state**: `cx.data().selector(...)` for memoized projections.
+- **Async state**: `cx.data().query(...)` for loading/error/cache lifecycle.
 - **Identity**: keyed lists via `ui::keyed(id, |cx| ...)`.
 
 ## Default entrypoints (recommended)
 
 | Need | Default entrypoint | Notes |
 | --- | --- | --- |
-| View-owned state | `cx.use_local::<T>()` / `cx.use_local_with(|| ...)` | Prefer `LocalState<Vec<_>>` for view-owned keyed lists. |
-| 1-slot action write | `cx.on_action_notify_local_set/update` | Keeps the notify/dirty closure correct. |
-| Multi-slot LocalState transaction | `cx.on_action_notify_locals::<A>(|tx| ...)` | Hides `ModelStore` for LocalState-only coordination. |
-| Multi-slot payload transaction | `cx.on_payload_action_notify_locals::<A>(|tx, payload| ...)` | Use when one payload action updates multiple locals. |
+| View-owned state | `cx.state().local::<T>()` / `cx.state().local_init(|| ...)` | Prefer `LocalState<Vec<_>>` for view-owned keyed lists. |
+| 1-slot action write | `cx.actions().local_set/update` | Keeps the notify/dirty closure correct. |
+| Multi-slot LocalState transaction | `cx.actions().locals::<A>(|tx| ...)` | Hides `ModelStore` for LocalState-only coordination. |
+| Multi-slot payload transaction | `cx.actions().payload::<A>().locals(|tx, payload| ...)` | Use when one payload action updates multiple locals. |
 | Keyed row interactions | `payload_actions!` + `ui::keyed` | Bind payload via `.action_payload(id)`. |
-| Derived values | `cx.use_selector(deps, compute)` | Prefer `DepsBuilder` with tracked locals/models. |
-| Async resources | `cx.use_query(key, policy, fetch)` | Put invalidation inputs into the key. |
-| App-only effects | `cx.on_action_notify_transient` | Consume transients in `render()` when `&mut App` is required. |
+| Derived values | `cx.data().selector(deps, compute)` | Prefer `DepsBuilder` with tracked locals/models. |
+| Async resources | `cx.data().query(key, policy, fetch)` | Put invalidation inputs into the key. |
+| App-only effects | `cx.actions().transient::<A>(...)` + `cx.effects().take_transient(...)` | Consume transients in `render()` when `&mut App` is required. |
+| Explicit raw `Model<T>` hook (advanced) | `use fret::advanced::AppUiRawStateExt;` + `cx.use_state::<T>()` | Only when you intentionally want the raw model handle instead of `LocalState<T>`. |
 
 ## When to drop down to explicit `Model<T>` graphs
 
-Use explicit shared `Model<T>` graphs (and `cx.on_action_notify_models`) when:
+Use explicit shared `Model<T>` graphs (and `cx.actions().models::<A>(...)`) when:
 
 - state must be **shared across views/windows**,
 - state must be **owned outside** the view (services, long-lived stores),
 - you need **cross-view coordination** with explicit ownership and auditability.
 
 Otherwise, keep the default surface LocalState-first.
+
+If you intentionally need the raw model-backed hook, make that choice explicit in imports:
+
+```rust,ignore
+use fret::advanced::AppUiRawStateExt;
+
+let shared = cx.use_state::<MyState>();
+```
 
 ## Example: payload + keyed list (row toggle)
 
@@ -46,10 +55,18 @@ mod act {
     fret::payload_actions!([Toggle(u64) = "app.todo.toggle.v1"]);
 }
 
-cx.on_payload_action_notify_local_update_if::<act::Toggle, Vec<TodoRow>>(
-    &todos_state,
-    |rows, id| rows.iter_mut().find(|r| r.id == id).map(|r| { r.done = !r.done; true }).unwrap_or(false),
-);
+cx.actions()
+    .payload::<act::Toggle>()
+    .local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {
+        rows
+            .iter_mut()
+            .find(|r| r.id == id)
+            .map(|r| {
+                r.done = !r.done;
+                true
+            })
+            .unwrap_or(false)
+    });
 
 out.push_ui(cx, ui::keyed(row.id, |_cx| {
     shadcn::Checkbox::from_checked(row.done)
@@ -67,4 +84,3 @@ keeps first-contact apps:
 - low-noise (no `ModelStore` plumbing by default),
 - scalable (selectors + queries when needed),
 - compatible with future IR/action-first frontends.
-

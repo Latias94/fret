@@ -3,15 +3,7 @@ pub const SOURCE: &str = include_str!("demo.rs");
 // region: example
 use fret_core::Px;
 use fret_ui_kit::ui;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default, Clone)]
-struct Models {
-    width: Option<Model<String>>,
-    max_width: Option<Model<String>>,
-    height: Option<Model<String>>,
-    max_height: Option<Model<String>>,
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn centered<H: UiHost>(cx: &mut ElementContext<'_, H>, body: AnyElement) -> AnyElement {
     ui::h_flex(move |_cx| [body])
@@ -21,39 +13,10 @@ fn centered<H: UiHost>(cx: &mut ElementContext<'_, H>, body: AnyElement) -> AnyE
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    let width = match state.width {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::from("100%"));
-            cx.with_state(Models::default, |st| st.width = Some(model.clone()));
-            model
-        }
-    };
-    let max_width = match state.max_width {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::from("300px"));
-            cx.with_state(Models::default, |st| st.max_width = Some(model.clone()));
-            model
-        }
-    };
-    let height = match state.height {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::from("25px"));
-            cx.with_state(Models::default, |st| st.height = Some(model.clone()));
-            model
-        }
-    };
-    let max_height = match state.max_height {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::from("none"));
-            cx.with_state(Models::default, |st| st.max_height = Some(model.clone()));
-            model
-        }
-    };
+    let width = cx.local_model_keyed("width", || String::from("100%"));
+    let max_width = cx.local_model_keyed("max_width", || String::from("300px"));
+    let height = cx.local_model_keyed("height", || String::from("25px"));
+    let max_height = cx.local_model_keyed("max_height", || String::from("none"));
 
     let row = |cx: &mut ElementContext<'_, H>, label: &'static str, model: Model<String>| {
         ui::h_flex(move |cx| {

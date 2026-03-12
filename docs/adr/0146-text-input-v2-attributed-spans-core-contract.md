@@ -136,7 +136,7 @@ Why `#[non_exhaustive]`?
 4. Renderer:
    - Implement span-aware paint assignment at draw time (shaping cache keys must not include paint-only fields).
 
-Progress tracking for the work is maintained in `docs/workstreams/text-system-v2-parley.md`.
+Progress tracking for the work is maintained in `docs/workstreams/standalone/text-system-v2-parley.md`.
 
 ## Alternatives Considered
 

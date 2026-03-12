@@ -20,10 +20,8 @@ macro_rules! children {
         let mut children = ::std::vec::Vec::new();
         $(
             {
-                use $crate::UiBuilderHostBoundIntoElementExt as _;
-                use $crate::UiIntoElement as _;
                 let child = $child;
-                let element = child.into_element(&mut *$cx);
+                let element = $crate::IntoUiElement::into_element(child, &mut *$cx);
                 children.push(element);
             }
         )+
@@ -50,7 +48,7 @@ macro_rules! ui_component_chrome_layout {
         impl $crate::UiSupportsChrome for $ty {}
         impl $crate::UiSupportsLayout for $ty {}
 
-        impl $crate::UiIntoElement for $ty {
+        impl $crate::ui_builder::UiIntoElement for $ty {
             #[track_caller]
             fn into_element<H: ::fret_ui::UiHost>(
                 self,
@@ -79,7 +77,7 @@ macro_rules! ui_component_layout_only {
 
         impl $crate::UiSupportsLayout for $ty {}
 
-        impl $crate::UiIntoElement for $ty {
+        impl $crate::ui_builder::UiIntoElement for $ty {
             #[track_caller]
             fn into_element<H: ::fret_ui::UiHost>(
                 self,
@@ -133,7 +131,7 @@ macro_rules! ui_component_passthrough {
             }
         }
 
-        impl $crate::UiIntoElement for $ty {
+        impl $crate::ui_builder::UiIntoElement for $ty {
             #[track_caller]
             fn into_element<H: ::fret_ui::UiHost>(
                 self,
@@ -158,13 +156,13 @@ macro_rules! ui_component_passthrough_patch_only {
     };
 }
 
-/// Implement `UiIntoElement` for a stateless component authored as `RenderOnce` (ADR 0039).
+/// Implement internal landing glue for a stateless component authored as `RenderOnce` (ADR 0039).
 ///
 /// Note: we intentionally avoid a blanket impl due to coherence restrictions on upstream types.
 #[macro_export]
 macro_rules! ui_into_element_render_once {
     ($ty:ty) => {
-        impl $crate::UiIntoElement for $ty {
+        impl $crate::ui_builder::UiIntoElement for $ty {
             #[track_caller]
             fn into_element<H: ::fret_ui::UiHost>(
                 self,
@@ -229,10 +227,9 @@ pub use style::{
     resolve_override_slot_with, resolve_slot,
 };
 pub use styled::{RefineStyle, Stylable, Styled, StyledExt};
-pub use ui::UiChildIntoElement;
+pub(crate) use ui_builder::UiIntoElement;
 pub use ui_builder::{
-    UiBuilder, UiBuilderHostBoundIntoElementExt, UiExt, UiHostBoundIntoElement, UiIntoElement,
-    UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
+    IntoUiElement, UiBuilder, UiExt, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
 };
 
 pub use overlay_controller::{
@@ -261,7 +258,7 @@ pub use window_overlays::{
 ///
 /// Recommended: `use fret_ui_kit::prelude::*;`
 pub mod prelude {
-    pub use crate::UiBuilderHostBoundIntoElementExt as _;
+    pub use crate::IntoUiElement as _;
     pub use crate::command::ElementCommandGatingExt as _;
     pub use crate::declarative::prelude::*;
     pub use crate::declarative::style;
@@ -286,12 +283,11 @@ pub mod prelude {
 
     pub use crate::{
         ChromeRefinement, ColorFallback, ColorRef, Corners4, Edges4, ImageMetadata,
-        ImageMetadataStore, ImageSamplingExt, LayoutRefinement, MarginEdge, MetricRef,
-        OverrideSlot, Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt,
-        UiChildIntoElement, UiExt, UiHostBoundIntoElement, UiIntoElement, WidgetState,
-        WidgetStateProperty, WidgetStates, merge_override_slot, merge_slot, resolve_override_slot,
-        resolve_override_slot_opt, resolve_override_slot_opt_with, resolve_override_slot_with,
-        resolve_slot,
+        ImageMetadataStore, ImageSamplingExt, IntoUiElement, LayoutRefinement, MarginEdge,
+        MetricRef, OverrideSlot, Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt,
+        UiExt, WidgetState, WidgetStateProperty, WidgetStates, merge_override_slot, merge_slot,
+        resolve_override_slot, resolve_override_slot_opt, resolve_override_slot_opt_with,
+        resolve_override_slot_with, resolve_slot,
     };
     pub use crate::{OverlayArbitrationSnapshot, OverlayController, OverlayKind, OverlayPresence};
     pub use crate::{OverlayRequest, OverlayStackEntryKind};
@@ -386,5 +382,89 @@ mod default_semantics_tests {
         let label = crate::ui::TextBox::new("label", crate::ui::TextPreset::Label);
         assert_eq!(label.wrap, fret_core::TextWrap::None);
         assert_eq!(label.overflow, fret_core::TextOverflow::Clip);
+    }
+}
+
+#[cfg(test)]
+mod source_policy_tests {
+    const LIB_RS: &str = include_str!("lib.rs");
+    const DECLARATIVE_MOD_RS: &str = include_str!("declarative/mod.rs");
+    const DECLARATIVE_PRELUDE_RS: &str = include_str!("declarative/prelude.rs");
+    const IMUI_RS: &str = include_str!("imui.rs");
+    const UI_RS: &str = include_str!("ui.rs");
+    const UI_BUILDER_RS: &str = include_str!("ui_builder.rs");
+
+    #[test]
+    fn root_surface_omits_host_bound_conversion_alias() {
+        let tests_start = LIB_RS.find("#[cfg(test)]").unwrap_or(LIB_RS.len());
+        let public_surface = &LIB_RS[..tests_start];
+        assert!(!public_surface.contains("UiHostBoundIntoElement"));
+    }
+
+    #[test]
+    fn root_surface_omits_legacy_conversion_exports() {
+        let tests_start = LIB_RS.find("#[cfg(test)]").unwrap_or(LIB_RS.len());
+        let public_surface = &LIB_RS[..tests_start];
+        assert!(!public_surface.contains("pub use ui::UiChildIntoElement;"));
+        assert!(!public_surface.contains("pub use ui_builder::UiIntoElement;"));
+
+        let export_start = public_surface
+            .find("pub use ui_builder::{")
+            .expect("ui_builder export block should exist");
+        let export_tail = &public_surface[export_start..];
+        let export_end = export_tail
+            .find("};")
+            .expect("ui_builder export block should terminate");
+        let export_block = &export_tail[..export_end];
+        assert!(!export_block.contains("UiIntoElement"));
+        assert!(export_block.contains("IntoUiElement"));
+    }
+
+    #[test]
+    fn ui_into_element_scaffolding_stays_internal_to_ui_builder_module() {
+        assert!(UI_BUILDER_RS.contains("#[doc(hidden)]"));
+        assert!(UI_BUILDER_RS.contains("pub trait UiIntoElement: Sized"));
+    }
+
+    #[test]
+    fn child_pipeline_stays_on_unified_component_conversion_trait() {
+        assert!(!UI_RS.contains("trait UiChildIntoElement"));
+        assert!(!IMUI_RS.contains("UiChildIntoElement"));
+        assert!(UI_RS.contains("I::Item: IntoUiElement<H>"));
+        assert!(UI_RS.contains("IntoUiElement::into_element(child, cx)"));
+        assert!(IMUI_RS.contains("B: IntoUiElement<H>"));
+    }
+
+    #[test]
+    fn declarative_semantics_ext_names_drop_legacy_conversion_prefix() {
+        for (label, source) in [
+            ("declarative/mod.rs", DECLARATIVE_MOD_RS),
+            ("declarative/prelude.rs", DECLARATIVE_PRELUDE_RS),
+        ] {
+            assert!(
+                source.contains("UiElementA11yExt"),
+                "{label} should export UiElementA11yExt"
+            );
+            assert!(
+                source.contains("UiElementKeyContextExt"),
+                "{label} should export UiElementKeyContextExt"
+            );
+            assert!(
+                source.contains("UiElementTestIdExt"),
+                "{label} should export UiElementTestIdExt"
+            );
+            assert!(
+                !source.contains("UiIntoElementA11yExt"),
+                "{label} reintroduced UiIntoElementA11yExt"
+            );
+            assert!(
+                !source.contains("UiIntoElementKeyContextExt"),
+                "{label} reintroduced UiIntoElementKeyContextExt"
+            );
+            assert!(
+                !source.contains("UiIntoElementTestIdExt"),
+                "{label} reintroduced UiIntoElementTestIdExt"
+            );
+        }
     }
 }

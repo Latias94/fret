@@ -1,10 +1,12 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::alert_dialog as snippets;
 
-pub(super) fn preview_alert_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(super) fn preview_alert_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
     let basic = snippets::basic::render(cx);
     let small = snippets::small::render(cx);
     let media = snippets::media::render(cx);
@@ -15,33 +17,40 @@ pub(super) fn preview_alert_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
     let rich_content = snippets::rich_content::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let notes = doc_layout::notes(
+    let api_reference = doc_layout::notes(
         cx,
         [
-            "API reference: `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/base/alert-dialog.mdx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/alert-dialog.tsx`, and `repo-ref/ui/apps/v4/registry/new-york-v4/examples/alert-dialog-demo.tsx`.",
-            "Alert Dialog is modal by default and should be reserved for destructive or irreversible decisions.",
-            "Current Fret parity is strongest on semantics and policy defaults: outside press does not dismiss, and initial focus prefers `AlertDialogCancel` when present.",
-            "Gallery sections mirror shadcn docs first; `Parts`, `Detached Trigger`, and `Rich Content` are Fret-specific extras appended afterward.",
-            "Authoring ergonomics improved: `AlertDialogAction` and `AlertDialogCancel` can resolve the current open model from alert-dialog content scope via `from_scope(...)`, and `AlertDialogTitle` / `AlertDialogDescription` accept `new_children(...)` for attributed or precomposed subtrees.",
-            "Detached triggers are supported through `AlertDialogHandle`; the main remaining root-surface gap is that Fret still uses a closure/compose root instead of a fully nested children API.",
-            "Base UI remains a mechanism reference for modal defaults like `role=alertdialog` and disabled pointer dismissal; payload wiring and function-as-children composition are still not implemented for Alert Dialog today.",
+            "`AlertDialogContent::size(...)` accepts `AlertDialogContentSize::Default` and `AlertDialogContentSize::Sm`, matching the upstream `size=\"default\" | \"sm\"` surface.",
+            "`AlertDialog::compose()` is the closest shadcn-style root today; the top-level authoring surface still uses a builder/closure bridge instead of a fully nested children API.",
+            "`AlertDialogAction::from_scope(...)` and `AlertDialogCancel::from_scope(...)` keep footer composition close to shadcn docs without threading the same open model through every button.",
+            "`AlertDialogTitle::new_children(...)` and `AlertDialogDescription::new_children(...)` already support composed or attributed subtree content when string-only labels are not enough.",
         ],
     );
 
-    let usage = doc_layout::notes(
+    let extras = doc_layout::notes(
         cx,
         [
-            "Use `AlertDialog` when you need explicit confirmation for destructive or irreversible actions.",
-            "Start with `AlertDialog::compose()` when you want a call site that stays closest to shadcn docs composition.",
-            "Use `AlertDialogHandle` when triggers and content live in different subtrees. The last activated detached trigger becomes the focus-restore target.",
-            "Prefer `AlertDialogCancel` + `AlertDialogAction` over custom buttons to preserve consistent semantics and focus handling.",
+            "`Parts` documents the explicit part adapters (`Trigger` / `Portal` / `Overlay`) used by `compose()` call sites.",
+            "`Detached Trigger` shows `AlertDialogHandle`, the supported path when the opener and the dialog content live in different subtrees and still need correct focus restore.",
+            "`Rich Content` demonstrates the currently supported children-style extensions for title, description, and footer content.",
+        ],
+    );
+
+    let notes = doc_layout::notes(
+        cx,
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/radix/alert-dialog.mdx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/alert-dialog.tsx`, and `repo-ref/ui/apps/v4/registry/new-york-v4/examples/alert-dialog-demo.tsx`.",
+            "Preview mirrors the shadcn docs path after skipping `Installation`: `Demo`, `Usage`, `Basic`, `Small`, `Media`, `Small with Media`, `Destructive`, `RTL`, and `API Reference`.",
+            "Alert Dialog is modal by default and should be reserved for destructive or irreversible decisions.",
+            "Modal semantics follow Radix/Base UI outcomes: outside press does not dismiss, `role=alertdialog` is preserved, and initial focus prefers `AlertDialogCancel` when present.",
+            "Current remaining differences are mostly authoring-surface follow-ups, not layout or dismissal-policy drift.",
         ],
     );
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Alert Dialog docs order first, then appends Fret-specific `Parts`, `Detached Trigger`, and `Rich Content` examples.",
+            "Preview mirrors the shadcn Alert Dialog docs path after `Installation`, then keeps Fret-only follow-ups explicit under `Fret Extras`.",
         ),
         vec![
             DocSection::new("Demo", demo)
@@ -73,6 +82,14 @@ pub(super) fn preview_alert_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
             DocSection::new("RTL", rtl)
                 .description("All shadcn components should work under an RTL direction provider.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            DocSection::new("API Reference", api_reference)
+                .no_shell()
+                .test_id_prefix("ui-gallery-alert-dialog-api-reference")
+                .description("Public surface summary and current authoring-surface guidance."),
+            DocSection::new("Fret Extras", extras)
+                .no_shell()
+                .test_id_prefix("ui-gallery-alert-dialog-extras")
+                .description("Focused follow-ups that stay outside the upstream docs path."),
             DocSection::new("Parts", parts)
                 .description("Fret-specific part surface adapters for shadcn-style call sites.")
                 .test_id_prefix("ui-gallery-alert-dialog-parts-docsec")
@@ -88,7 +105,7 @@ pub(super) fn preview_alert_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
             DocSection::new("Notes", notes)
                 .title_test_id("ui-gallery-section-notes-title")
                 .test_id_prefix("ui-gallery-alert-dialog-notes")
-                .description("Guidelines and best practices for alert dialogs."),
+                .description("Parity notes and implementation pointers."),
         ],
     );
 

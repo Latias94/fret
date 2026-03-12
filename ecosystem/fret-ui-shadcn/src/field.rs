@@ -15,8 +15,8 @@ use fret_ui_kit::primitives::control_registry::{
 use fret_ui_kit::primitives::field_state as field_state_prim;
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, UiChildIntoElement,
-    UiHostBoundIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, Space, UiPatch,
+    UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
 };
 
 use fret_ui_kit::typography::{
@@ -843,22 +843,12 @@ impl<H: UiHost, B> UiSupportsLayout for FieldSetBuild<H, B> where
 {
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for FieldSetBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for FieldSetBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        FieldSetBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for FieldSetBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         FieldSetBuild::into_element(self, cx)
     }
 }
@@ -926,22 +916,12 @@ impl<H: UiHost, B> UiSupportsLayout for FieldGroupBuild<H, B> where
 {
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for FieldGroupBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for FieldGroupBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        FieldGroupBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for FieldGroupBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         FieldGroupBuild::into_element(self, cx)
     }
 }
@@ -2055,22 +2035,12 @@ impl<H: UiHost, B> UiSupportsLayout for FieldBuild<H, B> where
 {
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for FieldBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for FieldBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        FieldBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for FieldBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         FieldBuild::into_element(self, cx)
     }
 }
@@ -2190,15 +2160,16 @@ mod tests {
         let window = AppWindowId::default();
         let mut app = App::new();
 
-        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
-            Field::build(|cx, out| {
-                use fret_ui_kit::ui::UiElementSinkExt as _;
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                Field::build(|cx, out| {
+                    use fret_ui_kit::ui::UiElementSinkExt as _;
 
-                out.push_ui(cx, FieldLabel::new("Email"));
-                out.push_ui(cx, ui::text("Control"));
-            })
-            .into_element(cx)
-        });
+                    out.push_ui(cx, FieldLabel::new("Email"));
+                    out.push_ui(cx, ui::text("Control"));
+                })
+                .into_element(cx)
+            });
 
         assert!(any_element_has_text(&element, "Email"));
         assert!(any_element_has_text(&element, "Control"));

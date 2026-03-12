@@ -49,4 +49,4 @@ Use Base UI as an additional reference when DOM-centric assumptions need transla
 - `.agents/skills/fret-shadcn-source-alignment/SKILL.md`
 - `.agents/skills/fret-material-source-alignment/SKILL.md`
 - `docs/reference-stack-ui-behavior.md`
-- `docs/workstreams/motion-foundation-v1.md`
+- `docs/workstreams/motion-foundation-v1/motion-foundation-v1.md`

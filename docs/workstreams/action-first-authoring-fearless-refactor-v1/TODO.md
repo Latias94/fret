@@ -170,7 +170,7 @@ ID format:
   - `use_query` (re-export from `fret-query`).
   - Status (as of 2026-03-02):
     - Implemented (v1): `ecosystem/fret/src/view.rs`
-    - Entry points: `ecosystem/fret/src/app_entry.rs` (`App::run_view`)
+    - Entry points: `ecosystem/fret/src/app_entry.rs` (`FretApp::view`, `FretApp::view_with_hooks`)
     - First adoption: `apps/fret-cookbook/examples/hello.rs`
 - [x] AFA-view-022 Define and document hook keying rules:
   - stable callsite key for non-loop hooks,
@@ -220,7 +220,7 @@ ID format:
   - Evidence: `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 - [x] AFA-frontends-032 Align GenUI action bindings with `ActionId` conventions (namespace/versioning).
   - Evidence:
-    - `docs/workstreams/genui-json-render-v1.md` (ActionId/CommandId naming + executor glue note)
+    - `docs/workstreams/genui-json-render-v1/genui-json-render-v1.md` (ActionId/CommandId naming + executor glue note)
     - `ecosystem/fret-genui-core/src/executor.rs` (`GenUiActionExecutorV1::with_dispatch_command_actions`)
 - [x] AFA-frontends-033 Add at least one cross-frontend demo:
   - a Rust view triggers an action,
@@ -612,7 +612,7 @@ Current sequencing note (as of 2026-03-09):
   - Inventory note (as of 2026-03-08): `docs/workstreams/action-first-authoring-fearless-refactor-v1/TRACKED_WRITE_PATTERN_INVENTORY.md` now records the remaining repo-wide transaction shapes. Current conclusion: do not add another default helper yet; the next evidence target should be explicit-model collection surfaces rather than more local-state sugar.
   - Inventory note (as of 2026-03-08, explicit-model collections): `docs/workstreams/action-first-authoring-fearless-refactor-v1/EXPLICIT_MODEL_COLLECTION_SURFACE_INVENTORY.md` now records that both `apps/fret-examples/src/todo_demo.rs` and the `fretboard` simple-todo scaffold path have joined the v2 local-state keyed-list path. Current conclusion: default-surface collection migration is no longer the blocker; do not widen tracked-write helpers just to chase the remaining explicit comparison/advanced surfaces.
   - Next-phase note (as of 2026-03-08): with cookbook / app-grade / scaffold keyed-list defaults aligned, the immediate next work should focus on onboarding docs, default/comparison/advanced taxonomy, visual productization, and deprecation planning rather than more generic authoring helpers.
-  - Update (as of 2026-03-08, query handle follow-up): query handle-side reads now stay handle-first across both `ViewCx` and `ElementContext` authoring surfaces. `TrackedStateExt` covers `QueryHandle<T>` in the `ViewCx` path, while `fret-ui-kit::declarative::QueryHandleWatchExt` covers `ElementContext` surfaces behind `state-query`, so cookbook `query_basics`, `fret-examples` `query_demo` / `query_async_tokio_demo` / `async_playground_demo` / `markdown_demo`, the scaffold query-tip template, `docs/examples/todo-app-golden-path.md`, `docs/integrating-tokio-and-reqwest.md`, `docs/workstreams/imui-state-integration-v1.md`, and `fret-markdown`'s MathJax/Mermaid helpers can all read query state from the handle side via `handle.layout(cx).value_*` / `handle.layout_query(cx).value_*` instead of reopening `handle.model()`.
+  - Update (as of 2026-03-08, query handle follow-up): query handle-side reads now stay handle-first across both `ViewCx` and `ElementContext` authoring surfaces. `TrackedStateExt` covers `QueryHandle<T>` in the `ViewCx` path, while `fret-ui-kit::declarative::QueryHandleWatchExt` covers `ElementContext` surfaces behind `state-query`, so cookbook `query_basics`, `fret-examples` `query_demo` / `query_async_tokio_demo` / `async_playground_demo` / `markdown_demo`, the scaffold query-tip template, `docs/examples/todo-app-golden-path.md`, `docs/integrating-tokio-and-reqwest.md`, `docs/workstreams/standalone/imui-state-integration-v1.md`, and `fret-markdown`'s MathJax/Mermaid helpers can all read query state from the handle side via `handle.layout(cx).value_*` / `handle.layout_query(cx).value_*` instead of reopening `handle.model()`.
   - Update (as of 2026-03-08, todo comparison target): `apps/fret-cookbook/examples/simple_todo_v2_target.rs` now keeps a keyed todo list in `LocalState<Vec<TodoRow>>` and uses payload actions for per-row toggle/remove, proving that the current runtime can already express small view-owned dynamic collections without `Model<Vec<_>>`.
   - Update (as of 2026-03-08, checkbox source alignment): after comparing against `F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/checkbox.tsx` and its checkbox examples, `ecosystem/fret-ui-shadcn/src/checkbox.rs` now supports a shadcn-style checked snapshot path (`Checkbox::from_checked(...)`) plus `action(...)` / `action_payload(...)`. That removes the need for per-row checkbox models in the todo comparison target; the remaining visible noise shifts more clearly to root-level handler registration and keyed-row payload-action placement ergonomics.
   - Review update (as of 2026-03-09): `INVALIDATION_LOCAL_STATE_REVIEW.md` now uses `simple_todo_v2_target`, `query_basics`, `commands_keymap_basics`, and `form_basics` as a focused medium-surface set. Current result: the remaining pressure is no longer local-state storage shape or explicit `notify()` burden; keyed-list pressure has shifted to root handler placement for payload row actions, query/client invalidation remains an intentional render-time escape hatch, and both command/keymap plus cross-field form coordination remain intentional root-level ownership boundaries rather than default sugar targets.
@@ -685,7 +685,7 @@ Current sequencing note (as of 2026-03-09):
   - Goal: turn the app-entry policy into a concrete migration table instead of a generic “later cleanup” note.
   - Evidence target: one inventory that classifies each current `ui(...)` / `ui_with_hooks(...)` caller as `migrate-to-view`, `move-lower-level`, or `keep-temporarily`.
   - Status (as of 2026-03-08): `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md` now classifies the current in-tree callers; the present conclusion is that almost all of them are `migrate-to-view` debt rather than evidence that closure-root app entry should remain a co-equal long-term surface.
-  - Progress update (as of 2026-03-08): `apps/fret-examples/src/imui_hello_demo.rs`, `apps/fret-examples/src/imui_response_signals_demo.rs`, `apps/fret-examples/src/chart_declarative_demo.rs`, and `apps/fret-examples/src/node_graph_demo.rs` have already moved to `run_view::<...>()`; Batch A is therefore complete and no longer depends on closure-root `App::ui(...)`.
+  - Progress update (as of 2026-03-08; builder-then-run updated on 2026-03-11): `apps/fret-examples/src/imui_hello_demo.rs`, `apps/fret-examples/src/imui_response_signals_demo.rs`, `apps/fret-examples/src/chart_declarative_demo.rs`, and `apps/fret-examples/src/node_graph_demo.rs` have already moved to `view::<...>()?.run()`; Batch A is therefore complete and no longer depends on closure-root `App::ui(...)`.
   - Hook-path update (as of 2026-03-08): `apps/fret-examples/src/assets_demo.rs` now uses `view_with_hooks::<AssetsDemoView>(...)` with the same `on_event(...)` hook, establishing the first Batch B proof that driver callbacks can stay while the default entry still converges on the view runtime.
   - Viewport-hook update (as of 2026-03-08): `apps/fret-examples/src/embedded_viewport_demo.rs` now uses `view_with_hooks::<EmbeddedViewportDemoView>(...)`, and `ecosystem/fret/src/interop/embedded_viewport.rs` now provides `EmbeddedViewportView` so retained viewport recording can compose directly with `ViewWindowState<V>` instead of forcing a closure-root wrapper state.
   - Frame-hook update (as of 2026-03-08): `apps/fret-examples/src/image_heavy_memory_demo.rs` now uses `view_with_hooks::<ImageHeavyMemoryView>(...)`, proving a demo that only needs `record_engine_frame(...)` also does not require `ui_with_hooks(...)`.
@@ -693,7 +693,7 @@ Current sequencing note (as of 2026-03-09):
   - Batch C update (as of 2026-03-09): `apps/fret-examples/src/external_texture_imports_demo.rs` now uses `view_with_hooks::<ExternalTextureImportsView>(...)`, reducing the remaining closure-root app-entry risk to the two platform video-import demos.
   - Windows-video update (as of 2026-03-09): `apps/fret-examples/src/external_video_imports_mf_demo.rs` now uses `view_with_hooks::<ExternalVideoImportsMfView>(...)`, so the remaining app-entry migration risk is now isolated to the AVF/macOS demo.
   - AVF-video update (as of 2026-03-09): `apps/fret-examples/src/external_video_imports_avf_demo.rs` now uses `view_with_hooks::<ExternalVideoImportsAvfView>(...)`, so Batch C is complete and closure-root app-entry work is now purely deprecation/cleanup rather than remaining demo migration.
-  - Final example update (as of 2026-03-09): `apps/fret-examples/src/imui_floating_windows_demo.rs`, `apps/fret-examples/src/imui_node_graph_demo.rs`, and `apps/fret-examples/src/imui_shadcn_adapter_demo.rs` now use `run_view::<...>()`, so there are no in-tree example/demo callers left on `App::ui*`.
+  - Final example update (as of 2026-03-09; builder-then-run updated on 2026-03-11): `apps/fret-examples/src/imui_floating_windows_demo.rs`, `apps/fret-examples/src/imui_node_graph_demo.rs`, and `apps/fret-examples/src/imui_shadcn_adapter_demo.rs` now use `view::<...>()?.run()`, so there are no in-tree example/demo callers left on `App::ui*`.
 
 - [x] AFA-postv1-012 Start staged deprecation for closure-root app entry on the `fret` facade.
   - Goal: make the policy decision visible in code and lock the default docs path while leaving a removal window for downstream users.
@@ -723,7 +723,7 @@ Current sequencing note (as of 2026-03-09):
 - [x] AFA-postv1-015 Publish a policy decision draft for `run_native_with_compat_driver(...)`.
   - Goal: decide whether the compat runner is actually a near-term hard-delete candidate or an intentionally retained advanced interop seam.
   - Evidence target: one decision note that states the recommended product stance and the conditions under which future quarantine/removal would become reasonable.
-  - Status (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_POLICY_DECISION_DRAFT.md` now recommends keeping `run_native_with_compat_driver(...)` for now as an advanced low-level interop seam, `HARD_DELETE_EXECUTION_CHECKLIST.md` now reflects Stage 3 as “decision drafted”, and `ecosystem/fret/README.md` plus `ecosystem/fret/src/lib.rs` now describe the surface as non-default advanced interop rather than an ambiguous generic compat path.
+  - Status (as of 2026-03-12): `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_POLICY_DECISION_DRAFT.md` now records the landed quarantine outcome: keep the capability, but only under `fret::advanced::interop::run_native_with_compat_driver(...)`; `HARD_DELETE_EXECUTION_CHECKLIST.md` now treats Stage 3 as executed quarantine instead of a draft.
 
 - [x] AFA-postv1-015b Finish compat-runner wording alignment in the workstream docs.
   - Goal: close the gap between the policy draft and the execution docs so Stage 3 is no longer blocked on basic wording drift.
@@ -735,9 +735,9 @@ Current sequencing note (as of 2026-03-09):
     future facade reduction does not have to improvise its sequencing.
   - Evidence target: one execution note that states preconditions, patch shape, validation, release
     wording, and abort conditions for moving the compat runner behind an explicit advanced boundary.
-  - Status (as of 2026-03-09): `COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md` now records the
-    quarantine-first path, and the policy/checklist/status summary docs all point to it as the next
-    concrete action only if the repo later chooses surface reduction.
+  - Status (as of 2026-03-12): `COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md` is now the historical
+    execution record for the landed move to
+    `fret::advanced::interop::run_native_with_compat_driver(...)`.
 
 - [x] AFA-postv1-015d Close the compat-runner default-surface gate gap.
   - Goal: make the source-facing policy enforceable so first-contact docs cannot drift toward
@@ -1005,7 +1005,7 @@ Current sequencing note (as of 2026-03-09):
   - Default teaching surface: `cx.on_action_notify_models::<A>(|models| ...)`, `cx.on_action_notify_transient::<A>(...)`, and local `on_activate(...)` / `on_activate_notify(...)` only.
   - Advanced/reference surface: raw `cx.on_action(...)` / `cx.on_action_notify(...)`, single-model aliases (`on_action_notify_model_update`, `on_action_notify_model_set`, `on_action_notify_toggle_bool`), payload hooks, and redraw-oriented `on_activate_request_redraw*` helpers.
   - Promotion rule: do not promote additional helpers into README/templates/first-hour docs unless at least two real demos/templates need the same shape and the generic defaults are clearly noisier.
-  - Remaining intentional advanced cookbook cases are now explicitly cookbook-only host-side categories: `toast_basics` (imperative Sonner host integration), `router_basics` back/forward (router availability sync), `async_inbox_basics::Start` (dispatcher/inbox scheduling), and `undo_basics::Undo`/`Redo` (history traversal + RAF effect).
+  - Remaining intentional advanced cookbook cases are now explicitly cookbook-only host-side categories: `toast_basics` (imperative Sonner host integration), `async_inbox_basics::Start` (dispatcher/inbox scheduling), and `undo_basics::Undo`/`Redo` (history traversal + RAF effect).
   - `fret-examples` and ui-gallery teaching pages/snippets are now on the zero-exception path for raw `cx.on_action_notify::<...>` and single-model helper aliases, while scaffold templates keep equivalent unit-test assertions; `async_playground_demo::ToggleTheme` and the query demos stay on `on_action_notify_models` / `on_action_notify_transient` with render-time side effects where needed, `embedded_viewport_demo` now uses `use_local_with(...)` + `on_action_notify_local_set(...)` for its view-local size preset while keeping viewport interop/render-time effects explicit, and `hello_counter_demo` plus both query demos remain the intentional `use_local` prototypes that still keep the default `on_action_notify_models` action surface for coordinated writes.
 - Payload actions (v2+), behind strict determinism + validation rules.
   - See: `docs/adr/0312-payload-actions-v2.md`

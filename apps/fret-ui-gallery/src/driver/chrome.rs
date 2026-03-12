@@ -3,7 +3,7 @@ use fret_core::SemanticsRole;
 use fret_ui::element::AnyElement;
 use fret_ui::element::SemanticsProps;
 use fret_ui::{ElementContext, Invalidation};
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::facade as shadcn;
 use fret_workspace::commands::CMD_WORKSPACE_TAB_CLOSE_PREFIX;
 use fret_workspace::{WorkspaceTab, WorkspaceTabStrip, WorkspaceTopBar};
 use std::sync::Arc;

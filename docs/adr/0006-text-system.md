@@ -88,7 +88,7 @@ perf workstreams (non-normative):
     `FRET_UI_INTERACTIVE_RESIZE_TEXT_WIDTH_CACHE_ENTRIES`, default off).
 
 For the current “Zed smoothness” effort, the workstream log is the canonical evidence trail for these experiments:
-`docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
+`docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md`.
 
 ## Notes / Future Work
 

@@ -3,7 +3,10 @@
   "meta": {
     "name": "ui-gallery-dropdown-menu-rtl-open-screenshot",
     "required_capabilities": ["diag.script_v2"],
-    "tags": ["ui_gallery", "shadcn", "dropdown_menu", "rtl", "screenshots"]
+    "tags": ["ui_gallery", "shadcn", "dropdown_menu", "rtl", "screenshots"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "dropdown_menu"
+    }
   },
   "steps": [
     { "type": "reset_diagnostics" },
@@ -11,30 +14,6 @@
     { "type": "wait_frames", "n": 2 },
     { "type": "set_window_inner_size", "width_px": 1120.0, "height_px": 760.0 },
     { "type": "wait_frames", "n": 10 },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
-      },
-      "timeout_frames": 240
-    },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "dropdown menu" },
-    { "type": "wait_frames", "n": 2 },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "bounds_within_window",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-dropdown-menu" },
-        "padding_px": 8.0,
-        "eps_px": 1.0
-      },
-      "timeout_frames": 300
-    },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-dropdown-menu" } },
     {
       "type": "wait_until",
       "predicate": {

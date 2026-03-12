@@ -4,18 +4,10 @@ pub const SOURCE: &str = include_str!("date_and_time_picker.rs");
 use fret_core::Px;
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_kit::ui;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
 
 const FIELD_W_PX: Px = Px(128.0);
-
-#[derive(Default)]
-struct Models {
-    open: Option<Model<bool>>,
-    month: Option<Model<CalendarMonth>>,
-    selected: Option<Model<Option<Date>>>,
-    time: Option<Model<String>>,
-}
 
 fn parse_iso_date_ymd(raw: &str) -> Option<Date> {
     let raw = raw.trim();
@@ -43,55 +35,13 @@ fn format_date_locale_short_en_us(date: Date) -> String {
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (open, month, selected, time_value) = cx.with_state(Models::default, |st| {
-        (
-            st.open.clone(),
-            st.month.clone(),
-            st.selected.clone(),
-            st.time.clone(),
-        )
-    });
-
     let today = today_from_env_or_now();
     let time_date =
         time::Date::from_calendar_date(today.year(), today.month(), 12).expect("valid time date");
-
-    let open = match open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.open = Some(model.clone()));
-            model
-        }
-    };
-
-    let month = match month {
-        Some(model) => model,
-        None => {
-            let model = cx
-                .app
-                .models_mut()
-                .insert(CalendarMonth::from_date(time_date));
-            cx.with_state(Models::default, |st| st.month = Some(model.clone()));
-            model
-        }
-    };
-    let selected = match selected {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Some(time_date));
-            cx.with_state(Models::default, |st| st.selected = Some(model.clone()));
-            model
-        }
-    };
-    let time_value = match time_value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::from("10:30:00"));
-            cx.with_state(Models::default, |st| st.time = Some(model.clone()));
-            model
-        }
-    };
+    let open = cx.local_model_keyed("open", || false);
+    let month = cx.local_model_keyed("month", || CalendarMonth::from_date(time_date));
+    let selected = cx.local_model_keyed("selected", || Some(time_date));
+    let time_value = cx.local_model_keyed("time", || String::from("10:30:00"));
 
     let open_for_calendar = open.clone();
     let selected_for_calendar = selected.clone();

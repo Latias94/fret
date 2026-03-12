@@ -1,10 +1,8 @@
 use super::super::super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
+use fret::UiCx;
 
-pub(in crate::ui) fn preview_chart_torture(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_chart_torture(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     use delinea::data::{Column, DataTable};
     use delinea::{
         AxisKind, AxisPointerSpec, AxisPointerTrigger, AxisPointerType, AxisRange, AxisScale,

@@ -2,33 +2,11 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default, Clone)]
-struct Models {
-    name: Option<Model<String>>,
-    number: Option<Model<String>>,
-}
-
-fn ensure_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> (Model<String>, Model<String>) {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    match (state.name, state.number) {
-        (Some(name), Some(number)) => (name, number),
-        _ => {
-            let models = cx.app.models_mut();
-            let name = models.insert(String::new());
-            let number = models.insert(String::new());
-            cx.with_state(Models::default, |st| {
-                st.name = Some(name.clone());
-                st.number = Some(number.clone());
-            });
-            (name, number)
-        }
-    }
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (rtl_name, rtl_number) = ensure_models(cx);
+    let rtl_name = cx.local_model_keyed("rtl_name", String::new);
+    let rtl_number = cx.local_model_keyed("rtl_number", String::new);
     let max_w_md = LayoutRefinement::default().w_full().max_w(Px(520.0));
 
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {

@@ -1,4 +1,4 @@
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_core::scene::{EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep};
 use fret_core::{AppWindowId, Color, EffectId, Px, SemanticsRole};
 use fret_render::RendererCapabilities;
@@ -55,19 +55,15 @@ struct CookbookCustomV1Effect(Option<EffectId>);
 
 struct CustomV1BasicsView;
 
-fn install_custom_effect(app: &mut App, effects: &mut dyn fret_core::CustomEffectService) {
+fn install_custom_effect(app: &mut KernelApp, effects: &mut dyn fret_core::CustomEffectService) {
     let mut program = CustomEffectProgramV1::wgsl_utf8(WGSL);
     let id = program.ensure_registered(effects).ok();
     app.set_global(CookbookCustomV1Effect(id));
 }
 
-fn panel_shell<I: UiChildIntoElement<App>>(
-    cx: &mut ElementContext<'_, App>,
-    title: &str,
-    body: I,
-) -> AnyElement {
+fn panel_shell(cx: &mut UiCx<'_>, title: &str, body: impl IntoUiElement<KernelApp>) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
-    let body = body.into_child_element(cx);
+    let body = body.into_element(cx);
 
     shadcn::Card::build(|cx, out| {
         out.push_ui(
@@ -97,10 +93,10 @@ fn panel_shell<I: UiChildIntoElement<App>>(
     .into_element(cx)
 }
 
-fn preview_content(cx: &mut ElementContext<'_, App>, label: &str) -> AnyElement {
+fn preview_content(cx: &mut UiCx<'_>, label: &str) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
 
-    let swatch = |_cx: &mut ElementContext<'_, App>, rgb: u32| {
+    let swatch = |_cx: &mut UiCx<'_>, rgb: u32| {
         ui::container(|_cx| Vec::<AnyElement>::new())
             .bg(ColorRef::Color(Color::from_srgb_hex_rgb(rgb)))
             .rounded(Radius::Sm)
@@ -137,17 +133,20 @@ fn preview_content(cx: &mut ElementContext<'_, App>, label: &str) -> AnyElement 
     .into_element(cx)
 }
 impl View for CustomV1BasicsView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let enabled_state = cx.use_local_with(|| true);
-        let strength_state = cx.use_local_with(|| 0.35f32);
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        let enabled_state = cx.state().local_init(|| true);
+        let strength_state = cx.state().local_init(|| 0.35f32);
 
-        cx.on_action_notify_toggle_local_bool::<act::ToggleEnabled>(&enabled_state);
-        cx.on_action_notify_local_set::<act::SetStrengthLow, f32>(&strength_state, 0.20f32);
-        cx.on_action_notify_local_set::<act::SetStrengthHigh, f32>(&strength_state, 0.75f32);
+        cx.actions()
+            .toggle_local_bool::<act::ToggleEnabled>(&enabled_state);
+        cx.actions()
+            .local_set::<act::SetStrengthLow, f32>(&strength_state, 0.20f32);
+        cx.actions()
+            .local_set::<act::SetStrengthHigh, f32>(&strength_state, 0.75f32);
 
         let caps_supported = cx
             .app
@@ -156,8 +155,8 @@ impl View for CustomV1BasicsView {
             .unwrap_or(false);
         let supported_value = if caps_supported { 1.0 } else { 0.0 };
 
-        let enabled = enabled_state.paint(cx).value_or(true);
-        let strength = strength_state.paint(cx).value_or(0.35f32);
+        let enabled = cx.state().watch(&enabled_state).paint().value_or(true);
+        let strength = cx.state().watch(&strength_state).paint().value_or(0.35f32);
 
         let effect_id = cx
             .app
@@ -348,7 +347,7 @@ fn main() -> anyhow::Result<()> {
     FretApp::new(ROOT_NAME)
         .window("cookbook-customv1-basics", (1180.0, 820.0))
         .config_files(false)
-        .install_app(fret_cookbook::install_cookbook_defaults)
+        .setup(fret_cookbook::install_cookbook_defaults)
         .view::<CustomV1BasicsView>()?
         .install_custom_effects(install_custom_effect)
         .run()

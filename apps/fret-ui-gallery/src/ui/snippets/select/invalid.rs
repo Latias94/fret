@@ -2,29 +2,12 @@ pub const SOURCE: &str = include_str!("invalid.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default)]
-struct Models {
-    value: Option<Model<Option<Arc<str>>>>,
-    open: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (value, open) = cx.with_state(Models::default, |st| (st.value.clone(), st.open.clone()));
-    let (value, open) = match (value, open) {
-        (Some(value), Some(open)) => (value, open),
-        _ => {
-            let value = cx.app.models_mut().insert(None::<Arc<str>>);
-            let open = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.value = Some(value.clone());
-                st.open = Some(open.clone());
-            });
-            (value, open)
-        }
-    };
+    let value = cx.local_model_keyed("value", || None::<Arc<str>>);
+    let open = cx.local_model_keyed("open", || false);
 
     let selected = cx
         .get_model_cloned(&value, Invalidation::Paint)

@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("list.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -11,8 +11,8 @@ fn row<H: UiHost>(
 ) -> AnyElement {
     ui::h_flex(|cx| {
         vec![
-            shadcn::typography::small(cx, label),
-            shadcn::typography::muted(cx, value),
+            shadcn::raw::typography::small(cx, label),
+            shadcn::raw::typography::muted(cx, value),
         ]
     })
     .justify_between()

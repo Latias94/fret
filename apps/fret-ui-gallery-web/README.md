@@ -29,12 +29,20 @@ Then open the URL printed by Trunk (usually `http://127.0.0.1:8080`).
 
 ## Select a page
 
-`fret-ui-gallery` reads the initial page from the URL on web targets:
+`fret-ui-gallery` reads the initial page from the URL on web targets.
+
+Canonical page selection:
 
 - `?page=data_table`
+- `?page=button_group`
+
+Compatibility aliases kept for older shared links:
+
 - `#page=data_table`
 - `?start_page=data_table`
 - `#start_page=data_table`
+
+New docs/examples should prefer `?page=...`.
 
 ## Debug teardown
 

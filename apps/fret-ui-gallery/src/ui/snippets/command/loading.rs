@@ -1,42 +1,15 @@
 pub const SOURCE: &str = include_str!("loading.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
-
-#[derive(Default)]
-struct Models {
-    query: Option<Model<String>>,
-    loading_enabled: Option<Model<bool>>,
-}
 
 pub fn render<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     last_action: Model<Arc<str>>,
 ) -> AnyElement {
-    let (query, loading_enabled) = cx.with_state(Models::default, |st| {
-        (st.query.clone(), st.loading_enabled.clone())
-    });
-
-    let query = match query {
-        Some(query) => query,
-        None => {
-            let query = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| st.query = Some(query.clone()));
-            query
-        }
-    };
-
-    let loading_enabled = match loading_enabled {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.loading_enabled = Some(model.clone())
-            });
-            model
-        }
-    };
+    let query = cx.local_model_keyed("query", String::new);
+    let loading_enabled = cx.local_model_keyed("loading_enabled", || false);
 
     let on_select = {
         let last_action = last_action.clone();

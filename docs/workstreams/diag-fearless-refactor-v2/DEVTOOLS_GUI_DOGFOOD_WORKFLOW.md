@@ -21,7 +21,7 @@ the same diagnostics contracts already used by CLI and MCP:
 
 Related notes:
 
-- `docs/workstreams/diag-devtools-gui-v1.md`
+- `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md`
 - `docs/workstreams/diag-fearless-refactor-v2/IMPLEMENTATION_ROADMAP.md`
 - `docs/ui-diagnostics-and-scripted-tests.md`
 

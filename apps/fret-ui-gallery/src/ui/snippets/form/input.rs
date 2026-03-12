@@ -1,20 +1,10 @@
 pub const SOURCE: &str = include_str!("input.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default)]
-struct Models {
-    text_input: Option<Model<String>>,
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let text_input = cx.with_state(Models::default, |st| st.text_input.clone());
-    let text_input = text_input.unwrap_or_else(|| {
-        let model = cx.app.models_mut().insert(String::new());
-        cx.with_state(Models::default, |st| st.text_input = Some(model.clone()));
-        model
-    });
+    let text_input = cx.local_model(String::new);
 
     let max_w_md = LayoutRefinement::default()
         .w_full()

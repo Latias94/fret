@@ -1,22 +1,22 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_kit::IntoUiElement;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn wrap_row<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+fn wrap_row<H: UiHost, F>(children: F) -> impl IntoUiElement<H> + use<H, F>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+{
     fret_ui_kit::ui::h_flex(children)
         .gap(Space::N2)
         .wrap()
         .w_full()
         .items_center()
-        .into_element(cx)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    wrap_row(cx, |cx| {
+    wrap_row(|cx| {
         vec![
             shadcn::Button::new("Button")
                 .variant(shadcn::ButtonVariant::Outline)
@@ -31,6 +31,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .into_element(cx),
         ]
     })
+    .into_element(cx)
     .test_id("ui-gallery-button-demo")
 }
 // endregion: example

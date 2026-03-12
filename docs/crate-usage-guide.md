@@ -10,6 +10,43 @@ If you are a component author, start with:
 
 - `docs/component-author-guide.md`
 - `docs/component-authoring-contracts.md`
+- If you intentionally consume the `fret` facade for reusable in-repo component/scaffold code,
+  prefer `use fret::component::prelude::*;` over `fret::app::prelude::*;`.
+
+## Ecosystem author checklist
+
+If you are publishing a reusable Fret ecosystem crate or introducing a new first-party ecosystem
+surface, lock these decisions before adding public API:
+
+- pick one tier first: app integration, component/policy surface, or advanced/manual assembly
+- prefer a free function, registry, factory, or codec before adding a trait
+- use `fret::integration::InstallIntoApp` only for reusable app-install bundles; keep ordinary app
+  docs/examples on plain installer functions
+- if you really need an inline closure with captured runtime values, keep it on
+  `UiAppBuilder::setup_with(...)` instead of teaching `.setup(|app| ...)`
+- keep typed routes on `RouteCodec`, dockable panel contributions on `DockPanelFactory`, and host
+  command catalog ownership in `fret-ui-kit::command`
+- keep selector/query integration optional for reusable kits; do not add a universal `Component`
+  trait or widen `fret-app::Plugin` into the default ecosystem model
+- keep reusable docs/examples aligned with the current conversion-surface target:
+  app-facing teaching helpers use `Ui` / `UiChild`, reusable generic helpers should move toward
+  the unified component conversion trait tracked in
+  `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, and raw
+  `AnyElement` stays explicit
+- for the full trait budget, target state, and migration posture, see
+  `docs/workstreams/ecosystem-integration-traits-v1/DESIGN.md`,
+  `docs/workstreams/ecosystem-integration-traits-v1/TARGET_INTERFACE_STATE.md`, and
+  `docs/workstreams/ecosystem-integration-traits-v1/MIGRATION_MATRIX.md`
+- for the follow-on conversion cleanup that collapses legacy split `into_element` vocabulary, see
+  `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md` and
+  `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
+
+Rust note:
+
+- `InstallIntoApp` stays broad in implementation because a trait-bound-only `fn(&mut App)` impl
+  would force explicit casts for plain function items at call sites.
+- That implementation detail should not change the teaching surface: first-party docs/examples
+  should still avoid `.setup(|app| ...)`.
 
 ## Quick rules of thumb
 
@@ -81,7 +118,16 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 
 **Use it when:** you want the recommended “just build an app” experience without hand-assembling runners, effects draining, and default integrations.
 
-**Default authoring mental model:** when you take the `fret` golden path, start with `View` + typed actions and keep the first-contact handler surface to `on_action_notify_locals`, `on_action_notify_transient`, and local `on_activate*`. Drop down to `on_action_notify_models` when coordinating shared `Model<T>` graphs. Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
+**Default authoring mental model:** when you take the `fret` golden path, start with `View` + `AppUi` + typed actions and keep the first-contact handler surface to `cx.actions().locals::<A>(...)`, `cx.actions().transient::<A>(...)`, and local `on_activate*`. Drop down to `cx.actions().models::<A>(...)` when coordinating shared `Model<T>` graphs. Treat raw `AppUi::on_action_notify*` as cookbook/reference-only host-side glue.
+
+**Reusable component surface:** if you intentionally use the `fret` facade for reusable
+component/scaffold code, keep that code on `use fret::component::prelude::*;`. That surface now
+provides `ComponentCx`, `UiBuilder`/`UiPatchTarget`/`IntoUiElement<H>`, layout/style refinements,
+and semantics/overlay helpers without pulling in `FretApp`, `AppUi`, or runner-facing seams. The
+conversion surface is intentionally being collapsed to one public component conversion trait; new
+docs/examples should follow
+`docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md` instead of
+teaching the legacy split conversion trait names.
 
 **Surface taxonomy:** for user-facing docs, keep `fret` aligned with the same repo-wide ladder:
 
@@ -105,7 +151,9 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 | Goal | Suggested `fret` features | Notes |
 | --- | --- | --- |
 | Small desktop app (shadcn UI only) | `["desktop","shadcn"]` | Minimal explicit profile (no config files, no diagnostics, no assets/icons). |
-| Add derived + async state helpers | `["state"]` | Enables `ViewCx::use_selector` and `ViewCx::use_query` helpers. |
+| Add derived + async state helpers | `["state"]` | Enables `AppUi` data helpers (`cx.data().selector(...)`, `cx.data().query(...)`). |
+| Add routing integration | `["router"]` | Exposes the explicit app-level router extension surface (`fret::router::*`). |
+| Add docking integration | `["docking"]` | Exposes the explicit docking surface (`fret::docking::{core::*, ...}`). |
 | Add icons | `["icons"]` | Installs default icon packs (Lucide) via bootstrap wiring. |
 | Add image/SVG caches | `["ui-assets"]` | Wires UI asset caches + budgets (compile/runtime cost). |
 | Enable layered `.fret/*` config | `["config-files"]` | Filesystem side effects; opt-in for embed/minimal builds. |
@@ -118,7 +166,7 @@ Minimal / explicit profile (useful for embed/minimal builds that must avoid file
 fret = { path = "../path/to/fret/ecosystem/fret", default-features = false, features = ["desktop", "shadcn"] }
 ```
 
-Enable selector/query helpers (for `ViewCx::use_selector` / `ViewCx::use_query`):
+Enable selector/query helpers (for `cx.data().selector(...)` / `cx.data().query(...)` on `AppUi`):
 
 ```toml
 [dependencies]
@@ -245,8 +293,19 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 
 **Theme integration:**
 
-- Call `fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(...)` for an explicit preset, or
-- Enable `fret-ui-shadcn/app-integration` and call `fret_ui_shadcn::install_app(...)` for the golden-path default.
+- Direct crate usage: prefer `use fret_ui_shadcn::{facade as shadcn, prelude::*};`, then call
+  `shadcn::themes::apply_shadcn_new_york(...)` for an explicit preset, or enable
+  `fret-ui-shadcn/app-integration` and call `shadcn::app::install(...)` for the golden-path
+  default. For environment / `UiServices`-boundary hooks, stay explicit with
+  `fret_ui_shadcn::advanced::{sync_theme_from_environment(...), install_with_ui_services(...)}`.
+  For first-party prose/demo helpers, `shadcn::raw::typography::*` remains an explicit escape
+  hatch. Only drop to `shadcn::raw::*` beyond these documented cases when you intentionally need
+  the full crate root.
+- Through `fret`: use `fret::shadcn::themes::apply_shadcn_new_york(...)`,
+  `fret::shadcn::app::install(...)`, and only drop to `fret::shadcn::raw::*` when you need the
+  full uncurated `fret_ui_shadcn` surface. That same raw escape hatch also carries advanced
+  service hooks at `fret::shadcn::raw::advanced::*`; first-party prose/demo helpers may also use
+  `fret::shadcn::raw::typography::*`.
 
 **Tables vs grids (naming and intent):**
 
@@ -264,8 +323,16 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 **Recommended integration:**
 
 - **Component crates:** depend on `fret-icons` (and use semantic `IconId`s). Avoid depending on a specific pack.
-- **Apps:** enable `fret-bootstrap/icons-lucide` or `fret-bootstrap/icons-radix` and call the corresponding builder helper
-  (`with_lucide_icons()` / `with_radix_icons()`). For custom packs, call `BootstrapBuilder::register_icon_pack(...)`.
+- **Apps using `fret`:** keep the default Lucide pack on `fret`'s `icons` feature, or install an
+  explicit pack through `FretApp::setup(fret_icons_lucide::app::install)` /
+  `FretApp::setup(fret_icons_radix::app::install)`. For custom packs, publish the same shape on
+  your own crate and call `FretApp::setup(my_icons::app::install)`.
+- **Apps using `fret-bootstrap` directly:** use `BootstrapBuilder::with_lucide_icons()` /
+  `BootstrapBuilder::with_radix_icons()`. For custom packs, call
+  `BootstrapBuilder::register_icon_pack(...)`.
+- **Direct app wiring:** when you depend on a pack directly, use the explicit `crate::app` seam
+  (`fret_icons_lucide::app::install`, `fret_icons_radix::app::install`) instead of root-level
+  install helpers.
 
 ### `fret-ui-assets`
 
@@ -277,6 +344,10 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 
 - **Apps:** enable `fret-bootstrap/ui-assets` so `UiAppDriver` drives the caches from the event pipeline; optionally override
   budgets via `BootstrapBuilder::with_ui_assets_budgets(...)`.
+- **Direct app wiring:** use `fret_ui_assets::app::install(...)` or
+  `fret_ui_assets::app::install_with_budgets(...)`; keep
+  `fret_ui_assets::advanced::{install_with_ui_services(...), install_with_ui_services_and_budgets(...)}`
+  as explicit advanced/bootstrap-only escape hatches.
 - **Component crates:** prefer receiving handles/IDs from the app; only depend on caches directly if you truly need cache APIs,
   and gate it behind an explicit feature (e.g. `app-integration`).
 
@@ -316,9 +387,13 @@ consistent inbox + cancellation vocabulary.
 **What it is:** selector-style derived state helpers:
 
 - memoize expensive derived values behind an explicit dependency signature (`Deps: PartialEq`),
-- optional UI sugar (`ElementContext::use_selector(...)`) to keep view code readable.
+- optional UI sugar (`ElementContext::use_selector(...)`) plus the `fret` app-surface bridge
+  (`cx.data().selector(...)`) to keep view code readable.
 
-**Feature note:** enable `fret-selector/ui` to use `ElementContext` helpers.
+**Feature note:** on the default `fret` app path, enable `fret`'s `state` feature and prefer
+`cx.data().selector(...)`; `fret::app::prelude::*` also re-exports `DepsBuilder` /
+`DepsSignature`. Enable `fret-selector/ui` only when you are working directly with
+`ElementContext` in component/advanced surfaces.
 
 **Use it when:** you need stable derived values (counts, filtered views, projections) without
 introducing “tick models” or storing every derived value in the model store.
@@ -335,10 +410,14 @@ introducing “tick models” or storing every derived value in the model store.
 **Use it when:** you need loading/error/cache/invalidation semantics for remote resources or expensive
 computations.
 
-**Async fetch:** install a `FutureSpawnerHandle` global and use `use_query_async` /
-`use_query_async_local`. See `docs/integrating-tokio-and-reqwest.md`.
+**Async fetch:** install a `FutureSpawnerHandle` global and use `cx.data().query_async(...)` /
+`cx.data().query_async_local(...)` on `AppUi`. See `docs/integrating-tokio-and-reqwest.md`.
 
-**Feature note:** enable `fret-query/ui` to use `ElementContext` helpers like `cx.use_query_async(...)`.
+**Feature note:** on the default `fret` app path, enable `fret`'s `state` feature and prefer the
+grouped app data helpers (`cx.data().query*`). Extracted `UiCx` helpers keep that same grouped
+surface through `fret::app::prelude::*` / `fret::advanced::prelude::*`. Enable `fret-query/ui`
+only when you are working directly with low-level `ElementContext` or generic writer extensions
+outside the app-facing `fret` preludes.
 
 ### `fret-router` + `fret-router-ui`
 
@@ -349,8 +428,40 @@ UI gallery-scale harnesses.
 
 Notes:
 
-- `fret-router-ui` provides `RouterUiStore` (router + snapshot model) and pressable-based link/outlet helpers.
+- On the default app path, enable `fret`'s `router` feature and prefer the explicit
+  `fret::router::*` seam (`fret::router::app::install(...)`, `RouterUiStore`, `RouterOutlet`,
+  link/history helpers).
+- When depending on `fret-router-ui` directly, keep the same shape and use
+  `fret_router_ui::app::install(...)` for command registration instead of inventing a parallel
+  root-level app helper.
+- `fret-router-ui` provides `RouterUiStore` (router + snapshot model), pressable-based link/outlet
+  helpers, and history action helpers (`back_on_action()`, `forward_on_action()`,
+  `navigate_history_on_action(...)`).
+- Prefer wiring router history actions through `cx.on_action_notify::<...>(store.back_on_action())`
+  / `store.forward_on_action()` instead of hand-rolling window/host availability glue in app code.
+- Keep routing adoption explicit at the app boundary (`FretApp::setup(...)`, app-owned models, or
+  explicit view state) rather than treating router crates as a second default app runtime.
 - Prefer keeping policy in apps (what pages exist, what prefetch means, what “not found” looks like).
+
+### `fret-docking`
+
+**What it is:** the policy-heavy docking UI/runtime adoption layer built on top of the stable
+`fret-core` dock graph/contracts.
+
+**Use it when:** you need editor-grade tab/split/tear-off workflows and are willing to opt into the
+advanced retained/manual-assembly seams they require.
+
+Notes:
+
+- On the default `fret` path, enable `fret`'s `docking` feature and prefer the explicit
+  `fret::docking::*` seam.
+- Use `fret::docking::core::*` for dock graph/contracts (`DockNode`, `DockOp`, `PanelKey`, layout
+  shapes) and `fret::docking::{DockManager, DockPanelRegistry, handle_dock_op, ...}` for the UI +
+  runtime adoption helpers.
+- Keep docking explicit at the app boundary: panel registry, docking policy, and `dock_op` driver
+  wiring stay app-owned/advanced instead of becoming part of `fret::app::prelude::*`.
+- Prefer teaching docking as an opt-in editor-grade capability, not as part of the small-app
+  golden path.
 
 ### `fret-canvas`
 
@@ -364,7 +475,9 @@ Notes:
 
 **Use it when:** you need a node graph model (headless or UI-integrated).
 
-**Notes:** supports a `headless` mode; UI integration is behind its `fret-ui` feature.
+**Notes:** supports a `headless` mode; UI integration is behind its `fret-ui` feature. If you opt
+into app-owned command/keybinding wiring, use the explicit `fret_node::app::install(...)` seam
+instead of root-level install helpers.
 
 ### `fret-plot` / `fret-chart` / `fret-plot3d`
 

@@ -3,38 +3,12 @@ pub const SOURCE: &str = include_str!("responsive.rs");
 // region: example
 use fret_core::Px;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default, Clone)]
-struct Models {
-    username: Option<Model<String>>,
-    responsive_message: Option<Model<String>>,
-    wide: Option<Model<bool>>,
-}
-
-fn ensure_models<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> (Model<String>, Model<String>, Model<bool>) {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    match (state.username, state.responsive_message, state.wide) {
-        (Some(username), Some(message), Some(wide)) => (username, message, wide),
-        _ => {
-            let models = cx.app.models_mut();
-            let username = models.insert(String::new());
-            let message = models.insert(String::new());
-            let wide = models.insert(false);
-            cx.with_state(Models::default, |st| {
-                st.username = Some(username.clone());
-                st.responsive_message = Some(message.clone());
-                st.wide = Some(wide.clone());
-            });
-            (username, message, wide)
-        }
-    }
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (username, responsive_message, wide) = ensure_models(cx);
+    let username = cx.local_model_keyed("username", String::new);
+    let responsive_message = cx.local_model_keyed("responsive_message", String::new);
+    let wide = cx.local_model_keyed("wide", || false);
 
     let wide_value = cx.watch_model(&wide).layout().copied().unwrap_or(false);
     let max_w = if wide_value { Px(900.0) } else { Px(520.0) };

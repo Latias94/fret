@@ -1,4 +1,4 @@
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_ui::element::{ImageProps, LayoutStyle, Length, SizeStyle, SvgIconProps};
 use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 use std::path::PathBuf;
@@ -33,7 +33,7 @@ struct AssetsReloadEpochBasicsView {
 }
 
 impl View for AssetsReloadEpochBasicsView {
-    fn init(app: &mut App, window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, window: AppWindowId) -> Self {
         // Optional: configure budgets explicitly so this example is self-contained.
         fret_ui_assets::UiAssets::configure(app, fret_ui_assets::UiAssetsBudgets::default());
 
@@ -50,15 +50,16 @@ impl View for AssetsReloadEpochBasicsView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
-        let bumps_state = cx.use_local::<u64>();
+        let bumps_state = cx.state().local::<u64>();
 
-        cx.on_action_notify_local_update::<act::BumpReload, u64>(&bumps_state, |value| {
-            *value = value.wrapping_add(1);
-        });
+        cx.actions()
+            .local_update::<act::BumpReload, u64>(&bumps_state, |value| {
+                *value = value.wrapping_add(1);
+            });
 
-        let bumps = bumps_state.watch(cx).layout().value_or(0);
+        let bumps = cx.state().watch(&bumps_state).layout().value_or(0);
         if bumps != self.applied_bumps {
             fret_ui_assets::bump_ui_assets_reload_epoch(&mut *cx.app);
             self.applied_bumps = bumps;
@@ -151,7 +152,7 @@ impl View for AssetsReloadEpochBasicsView {
 }
 
 fn render_image_panel(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &ThemeSnapshot,
     st: fret_ui_assets::ImageSourceState,
 ) -> AnyElement {
@@ -239,7 +240,7 @@ fn render_image_panel(
 }
 
 fn render_svg_panel(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &ThemeSnapshot,
     st: fret_ui_assets::SvgFileState,
 ) -> AnyElement {
@@ -327,7 +328,8 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-assets-reload-epoch-basics")
         .window("cookbook-assets-reload-epoch-basics", (960.0, 780.0))
         .config_files(false)
-        .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_view::<AssetsReloadEpochBasicsView>()
+        .setup(fret_cookbook::install_cookbook_defaults)
+        .view::<AssetsReloadEpochBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

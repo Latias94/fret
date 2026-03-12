@@ -1,4 +1,5 @@
 use super::super::super::super::super::*;
+use fret::UiCx;
 
 use super::OverlayModels;
 use fret_core::Color;
@@ -19,7 +20,7 @@ pub(super) struct OverlayWidgets {
     pub(super) portal_geometry: AnyElement,
 }
 
-pub(super) fn build(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> OverlayWidgets {
+pub(super) fn build(cx: &mut UiCx<'_>, models: &OverlayModels) -> OverlayWidgets {
     OverlayWidgets {
         overlay_reset: overlay_reset(cx, models),
         dropdown: dropdown(cx, models),
@@ -37,7 +38,7 @@ pub(super) fn build(cx: &mut ElementContext<'_, App>, models: &OverlayModels) ->
     }
 }
 
-fn overlay_reset(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElement {
+fn overlay_reset(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement {
     use fret_ui::action::OnActivate;
 
     let dropdown_open = models.dropdown_open.clone();
@@ -77,7 +78,7 @@ fn overlay_reset(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> An
         .into_element(cx)
 }
 
-fn dropdown(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElement {
+fn dropdown(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement {
     let dropdown_open = models.dropdown_open.clone();
 
     shadcn::DropdownMenu::new(dropdown_open.clone())
@@ -125,7 +126,7 @@ fn dropdown(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElem
         )
 }
 
-fn context_menu(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElement {
+fn context_menu(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement {
     let context_menu_open = models.context_menu_open.clone();
 
     shadcn::ContextMenu::new(context_menu_open)
@@ -154,7 +155,7 @@ fn context_menu(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> Any
         )
 }
 
-fn context_menu_edge(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElement {
+fn context_menu_edge(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement {
     let context_menu_edge_open = models.context_menu_edge_open.clone();
 
     // Keep this trigger near the window edge so the default `side=Right` placement is forced to flip.
@@ -187,14 +188,14 @@ fn context_menu_edge(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -
         )
 }
 
-fn underlay(cx: &mut ElementContext<'_, App>) -> AnyElement {
+fn underlay(cx: &mut UiCx<'_>) -> AnyElement {
     shadcn::Button::new("Underlay (outside-press target)")
         .variant(shadcn::ButtonVariant::Secondary)
         .test_id("ui-gallery-overlay-underlay")
         .into_element(cx)
 }
 
-fn tooltip(cx: &mut ElementContext<'_, App>) -> AnyElement {
+fn tooltip(cx: &mut UiCx<'_>) -> AnyElement {
     use std::time::Duration;
 
     let tooltip_a = shadcn::Tooltip::new(
@@ -249,7 +250,7 @@ fn tooltip(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .expect("tooltip provider returns one root element")
 }
 
-fn hover_card(cx: &mut ElementContext<'_, App>) -> AnyElement {
+fn hover_card(cx: &mut UiCx<'_>) -> AnyElement {
     use std::time::Duration;
 
     shadcn::HoverCard::new(
@@ -269,7 +270,7 @@ fn hover_card(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .into_element(cx)
 }
 
-fn popover(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElement {
+fn popover(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement {
     use fret_ui::action::OnDismissRequest;
 
     let popover_open = models.popover_open.clone();
@@ -332,7 +333,7 @@ fn popover(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyEleme
         )
 }
 
-fn dialog(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElement {
+fn dialog(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement {
     let dialog_open = models.dialog_open.clone();
 
     shadcn::Dialog::new(dialog_open.clone()).into_element(
@@ -346,9 +347,6 @@ fn dialog(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElemen
         },
         |cx| {
             shadcn::DialogContent::new(vec![
-                shadcn::DialogClose::new(dialog_open.clone())
-                    .into_element(cx)
-                    .test_id("ui-gallery-dialog-x-close"),
                 shadcn::DialogHeader::new(vec![
                     shadcn::DialogTitle::new("Dialog").into_element(cx),
                     shadcn::DialogDescription::new("Escape / overlay click closes")
@@ -388,14 +386,18 @@ fn dialog(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElemen
                         .into_element(cx),
                 ])
                 .into_element(cx),
+                shadcn::DialogClose::new(dialog_open.clone())
+                    .into_element(cx)
+                    .test_id("ui-gallery-dialog-x-close"),
             ])
+            .show_close_button(false)
             .into_element(cx)
             .test_id("ui-gallery-dialog-content")
         },
     )
 }
 
-fn dialog_glass(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElement {
+fn dialog_glass(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement {
     let dialog_open = models.dialog_glass_open.clone();
 
     let overlay_tint = Color {
@@ -419,9 +421,6 @@ fn dialog_glass(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> Any
             },
             |cx| {
                 shadcn::DialogContent::new(vec![
-                    shadcn::DialogClose::new(dialog_open.clone())
-                        .into_element(cx)
-                        .test_id("ui-gallery-dialog-glass-x-close"),
                     shadcn::DialogHeader::new(vec![
                         shadcn::DialogTitle::new("Dialog (Glass)").into_element(cx),
                         shadcn::DialogDescription::new(
@@ -463,14 +462,18 @@ fn dialog_glass(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> Any
                             .into_element(cx),
                     ])
                     .into_element(cx),
+                    shadcn::DialogClose::new(dialog_open.clone())
+                        .into_element(cx)
+                        .test_id("ui-gallery-dialog-glass-x-close"),
                 ])
+                .show_close_button(false)
                 .into_element(cx)
                 .test_id("ui-gallery-dialog-glass-content")
             },
         )
 }
 
-fn alert_dialog(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElement {
+fn alert_dialog(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement {
     let alert_dialog_open = models.alert_dialog_open.clone();
 
     shadcn::AlertDialog::new(alert_dialog_open.clone()).into_element(
@@ -506,7 +509,7 @@ fn alert_dialog(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> Any
     )
 }
 
-fn sheet(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElement {
+fn sheet(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement {
     let sheet_open = models.sheet_open.clone();
 
     shadcn::Sheet::new(sheet_open.clone())
@@ -572,7 +575,7 @@ fn sheet(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElement
         )
 }
 
-fn portal_geometry(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElement {
+fn portal_geometry(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement {
     let portal_geometry_popover_open = models.portal_geometry_popover_open.clone();
 
     let popover = shadcn::Popover::new(portal_geometry_popover_open.clone())

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::advanced::prelude::*;
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
 use fret_bootstrap::ui_app_driver;
 use fret_core::{AppWindowId, Px};
@@ -10,9 +10,9 @@ use fret_runtime::{
     ActivationPolicy, WindowDecorationsRequest, WindowRole, WindowStyleRequest, WindowZLevel,
 };
 use fret_ui::ElementContext;
-use fret_ui::element::{LayoutStyle, Length, SemanticsDecoration, SizeStyle};
+use fret_ui::element::{LayoutStyle, Length, SizeStyle};
 use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
-use fret_ui_shadcn::{Card, CardContent, CardDescription, CardHeader, CardTitle};
+use fret_ui_shadcn::facade as shadcn;
 
 const OVERLAY_LOGICAL_WINDOW_ID: &str = "overlay";
 
@@ -32,7 +32,7 @@ pub fn run() -> anyhow::Result<()> {
     // Keep deterministic overlap: place restored windows relative to the anchor point.
     config.new_window_anchor_offset = (0.0, 0.0);
 
-    fret::run_native_with_compat_driver(config, App::new(), driver)?;
+    fret::advanced::interop::run_native_with_compat_driver(config, KernelApp::new(), driver)?;
     Ok(())
 }
 
@@ -43,7 +43,7 @@ struct WindowBootstrapService {
     logical_by_window: HashMap<AppWindowId, String>,
 }
 
-fn ensure_overlay_window_requested(app: &mut App, window: AppWindowId) {
+fn ensure_overlay_window_requested(app: &mut KernelApp, window: AppWindowId) {
     app.with_global_mut(WindowBootstrapService::default, |svc, app| {
         if svc.main_window.is_none() {
             svc.main_window = Some(window);
@@ -82,7 +82,7 @@ struct WindowState {
     status: Model<Arc<str>>,
 }
 
-fn init_window(app: &mut App, window: AppWindowId) -> WindowState {
+fn init_window(app: &mut KernelApp, window: AppWindowId) -> WindowState {
     ensure_overlay_window_requested(app, window);
     WindowState {
         window,
@@ -90,7 +90,10 @@ fn init_window(app: &mut App, window: AppWindowId) -> WindowState {
     }
 }
 
-fn window_create_spec(_app: &mut App, request: &CreateWindowRequest) -> Option<WindowCreateSpec> {
+fn window_create_spec(
+    _app: &mut KernelApp,
+    request: &CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
     match &request.kind {
         CreateWindowKind::DockRestore { logical_window_id } => Some(WindowCreateSpec::new(
             format!("fret-demo window_hit_test_probe_demo — {logical_window_id}"),
@@ -100,7 +103,7 @@ fn window_create_spec(_app: &mut App, request: &CreateWindowRequest) -> Option<W
     }
 }
 
-fn window_created(app: &mut App, request: &CreateWindowRequest, new_window: AppWindowId) {
+fn window_created(app: &mut KernelApp, request: &CreateWindowRequest, new_window: AppWindowId) {
     if let CreateWindowKind::DockRestore { logical_window_id } = &request.kind {
         app.with_global_mut(WindowBootstrapService::default, |svc, _app| {
             svc.logical_by_window
@@ -119,7 +122,7 @@ fn window_created(app: &mut App, request: &CreateWindowRequest, new_window: AppW
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut WindowState) -> ViewElements {
+fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut WindowState) -> ViewElements {
     let theme = cx.theme().snapshot();
     let color_muted_foreground = theme.color_token("muted-foreground");
     let color_secondary = theme.color_token("secondary");
@@ -137,12 +140,6 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut WindowState) -> ViewElements 
         .watch_model(&st.status)
         .layout()
         .value_or_else(|| Arc::from("Idle"));
-
-    let title = if is_overlay {
-        "Overlay window (always-on-top)"
-    } else {
-        "Base window"
-    };
 
     let root_test_id = if is_overlay {
         TEST_ID_OVERLAY_ROOT
@@ -190,16 +187,16 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut WindowState) -> ViewElements 
                 },
             );
 
-            let content = Card::new([
-                CardHeader::new([
-                    CardTitle::new("Hit-test passthrough probe").into_element(cx),
-                    CardDescription::new(
+            let content = shadcn::Card::new([
+                shadcn::CardHeader::new([
+                    shadcn::CardTitle::new("Hit-test passthrough probe").into_element(cx),
+                    shadcn::CardDescription::new(
                         "Use diag scripts to patch hit_test regions and assert OS-level receiver selection.",
                     )
                     .into_element(cx),
                 ])
                 .into_element(cx),
-                CardContent::new([
+                shadcn::CardContent::new([
                     ui::v_flex(move |cx| {
                         let logical_line =
                             ui::text(format!("logical_window_id={logical}"))
@@ -218,8 +215,8 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut WindowState) -> ViewElements 
                 ])
                 .into_element(cx),
             ])
-            .test_id(root_test_id)
-            .into_element(cx);
+            .into_element(cx)
+            .test_id(root_test_id);
 
             vec![header, content]
         },

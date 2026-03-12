@@ -7,8 +7,8 @@ surface for the `fret` facade.
 
 Current recommended entry paths:
 
-- `fret::App::new(...).window(...).view::<V>()?`
-- `fret::App::new(...).window(...).view_with_hooks::<V>(...)?`
+- `fret::FretApp::new(...).window(...).view::<V>()?`
+- `fret::FretApp::new(...).window(...).view_with_hooks::<V>(...)?`
 
 Update (2026-03-10):
 
@@ -17,9 +17,8 @@ Update (2026-03-10):
 
 Companion naming decisions:
 
-- Primary public type: `fret::App`
-- Prelude ergonomic alias: `FretApp`
-- Doc/discoverability alias: `AppBuilder`
+- Primary public type: `fret::FretApp`
+- Canonical app import: `use fret::app::prelude::*;`
 - Older top-level shorthand helpers were removed from `fret` during this fearless refactor.
 
 Implementation anchor:
@@ -67,12 +66,12 @@ Why:
 - it bundles policy defaults,
 - it should be free to evolve faster than the harder kernel contracts.
 
-### 2) `fret::App` is the primary name
+### 2) `FretApp` is the primary name
 
 The builder is intentionally short and first-contact friendly:
 
 ```rust
-use fret::prelude::*;
+use fret::app::prelude::*;
 
 fn main() -> fret::Result<()> {
     FretApp::new("hello")
@@ -84,9 +83,9 @@ fn main() -> fret::Result<()> {
 
 To reduce confusion in code search and docs:
 
-- the prelude exposes `FretApp`,
-- the crate root also exposes `AppBuilder` as an alias,
-- but new docs/examples should still teach `fret::App` / `FretApp` as the primary names.
+- the app surface teaches `FretApp`,
+- the crate root now exports `FretApp` directly,
+- and docs/examples should use `FretApp` plus `fret::app::prelude::*`.
 
 ### 3) The minimal builder surface is builder-first, not runner-first
 
@@ -96,13 +95,24 @@ The current builder surface is intentionally small but complete enough for gener
 - `window(title, size)`
 - `defaults(...)` / `minimal_defaults()` / `config_files(...)`
 - `ui_assets_budgets(...)`
-- `install_app(...)` / `install(...)`
-- `register_icon_pack(...)`
+- `setup(...)`
+- `setup_with(...)`
+- icon-pack app installers via `setup(...::app::install)`
 - `view::<V>()`
 - `view_with_hooks::<V>(configure)`
 - `run_view::<V>()` / `run_view_with_hooks::<V>(...)`
 
 This is enough to keep the first-app story compact while leaving real seams available.
+
+Hooks that need `UiServices`, GPU-ready customization, or custom effect installation remain
+available only through explicit advanced builder extensions.
+
+Pack-specific or raw registry helpers such as `register_icon_pack(...)` stay below the `fret`
+facade on `fret-bootstrap`, where manual assembly is already explicit.
+
+This naming convergence applies to the `fret` facade builder surface. The lower-level
+`fret_bootstrap` raw/manual-assembly builders intentionally remain explicit and may keep older
+mechanism-oriented method names such as `init_app(...)`.
 
 ### 4) Advanced seams stay available on the builder path
 
@@ -166,8 +176,8 @@ It does not move policy into the wrong crate and does not create a second runtim
 
 The recommended documentation order is now:
 
-1. `fret::App::new(...).window(...).view::<V>()?` for the default app-author entry.
-2. `fret::App::new(...).window(...).view_with_hooks::<V>(...)?` when driver customization is needed.
+1. `fret::FretApp::new(...).window(...).view::<V>()?` for the default app-author entry.
+2. `fret::FretApp::new(...).window(...).view_with_hooks::<V>(...)?` when driver customization is needed.
 3. Drop to `fret-bootstrap` or `fret-framework` only when runner/manual assembly ownership is the
    actual need.
 

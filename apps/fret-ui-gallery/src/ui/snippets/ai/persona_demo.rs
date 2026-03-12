@@ -11,14 +11,8 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
-use fret_ui_shadcn::{self as shadcn, ButtonSize, ButtonVariant, Radius, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
-
-#[derive(Default)]
-struct DemoModels {
-    state: Option<Model<ui_ai::PersonaState>>,
-    variant: Option<Model<ui_ai::PersonaVariant>>,
-}
 
 fn state_button<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
@@ -30,11 +24,11 @@ fn state_button<H: UiHost + 'static>(
 ) -> shadcn::Button {
     shadcn::Button::new("")
         .children([decl_icon::icon(cx, IconId::new_static(icon))])
-        .size(ButtonSize::IconSm)
+        .size(shadcn::ButtonSize::IconSm)
         .variant(if current_state == state {
-            ButtonVariant::Default
+            shadcn::ButtonVariant::Default
         } else {
-            ButtonVariant::Outline
+            shadcn::ButtonVariant::Outline
         })
         .a11y_label(label)
         .test_id(format!("ui-ai-persona-demo-state-{}", state.as_str()))
@@ -52,11 +46,11 @@ fn variant_button(
     variant: ui_ai::PersonaVariant,
 ) -> shadcn::Button {
     shadcn::Button::new(variant.label())
-        .size(ButtonSize::Sm)
+        .size(shadcn::ButtonSize::Sm)
         .variant(if current_variant == variant {
-            ButtonVariant::Default
+            shadcn::ButtonVariant::Default
         } else {
-            ButtonVariant::Outline
+            shadcn::ButtonVariant::Outline
         })
         .test_id(format!("ui-ai-persona-demo-variant-{}", variant.as_str()))
         .on_activate(Arc::new(move |host, action_cx, _reason| {
@@ -68,25 +62,8 @@ fn variant_button(
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state_model = cx.with_state(DemoModels::default, |st| st.state.clone());
-    let state_model = match state_model {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(ui_ai::PersonaState::Idle);
-            cx.with_state(DemoModels::default, |st| st.state = Some(model.clone()));
-            model
-        }
-    };
-
-    let variant_model = cx.with_state(DemoModels::default, |st| st.variant.clone());
-    let variant_model = match variant_model {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(ui_ai::PersonaVariant::Obsidian);
-            cx.with_state(DemoModels::default, |st| st.variant = Some(model.clone()));
-            model
-        }
-    };
+    let state_model = cx.local_model_keyed("state", || ui_ai::PersonaState::Idle);
+    let variant_model = cx.local_model_keyed("variant", || ui_ai::PersonaVariant::Obsidian);
 
     let current_state = cx
         .get_model_copied(&state_model, Invalidation::Layout)

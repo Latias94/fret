@@ -139,7 +139,7 @@ def main() -> int:
 
     # 2) Known markdown log file(s) with developer-machine absolute paths.
     md_paths = [
-        repo_root / "docs/workstreams/ui-perf-zed-smoothness-v1-log.md",
+        repo_root / "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md",
     ]
     for path in md_paths:
         if not path.is_file():

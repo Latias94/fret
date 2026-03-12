@@ -18,7 +18,8 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, Radius, Size, Space, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, Items, Justify, LayoutRefinement, Radius, Size,
+    Space, ui,
 };
 use fret_ui_shadcn::{
     Button, ButtonSize, ButtonVariant, Collapsible, CollapsibleContent, Input, OnInputSubmit,
@@ -31,11 +32,6 @@ use fret_webview::{
     webview_console_entries, webview_push_request, webview_register_surface_tracked,
     webview_runtime_state,
 };
-
-#[derive(Debug, Default, Clone)]
-struct WebPreviewProviderState {
-    controller: Option<WebPreviewController>,
-}
 
 #[derive(Clone)]
 pub struct WebPreviewController {
@@ -125,8 +121,7 @@ impl std::fmt::Debug for WebPreviewBackendController {
 pub fn use_web_preview_controller<H: UiHost>(
     cx: &ElementContext<'_, H>,
 ) -> Option<WebPreviewController> {
-    cx.inherited_state::<WebPreviewProviderState>()
-        .and_then(|st| st.controller.clone())
+    cx.provided::<WebPreviewController>().cloned()
 }
 
 fn hidden<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -460,38 +455,36 @@ impl WebPreview {
                     }
                 }
 
-                cx.with_state(WebPreviewProviderState::default, |st| {
-                    st.controller = Some(controller.clone());
-                });
+                cx.provide(controller.clone(), |cx| {
+                    let body = children(cx, controller);
 
-                let body = children(cx, controller);
+                    let body = ui::v_stack(move |_cx| body)
+                        .layout(
+                            LayoutRefinement::default()
+                                .w_full()
+                                .h_full()
+                                .min_w_0()
+                                .min_h_0(),
+                        )
+                        .gap(Space::N0)
+                        .items(Items::Stretch)
+                        .into_element(cx);
 
-                let body = ui::v_stack(move |_cx| body)
-                    .layout(
-                        LayoutRefinement::default()
-                            .w_full()
-                            .h_full()
-                            .min_w_0()
-                            .min_h_0(),
-                    )
-                    .gap(Space::N0)
-                    .items(Items::Stretch)
-                    .into_element(cx);
+                    let body = if let Some(test_id) = test_id_root.clone() {
+                        cx.semantics(
+                            SemanticsProps {
+                                role: SemanticsRole::Group,
+                                test_id: Some(test_id),
+                                ..Default::default()
+                            },
+                            move |_cx| vec![body],
+                        )
+                    } else {
+                        body
+                    };
 
-                let body = if let Some(test_id) = test_id_root.clone() {
-                    cx.semantics(
-                        SemanticsProps {
-                            role: SemanticsRole::Group,
-                            test_id: Some(test_id),
-                            ..Default::default()
-                        },
-                        move |_cx| vec![body],
-                    )
-                } else {
-                    body
-                };
-
-                vec![body]
+                    vec![body]
+                })
             },
         );
 
@@ -560,7 +553,7 @@ impl WebPreviewNavigation {
             move |_cx| vec![row],
         );
 
-        let separator = fret_ui_shadcn::separator(cx);
+        let separator = fret_ui_shadcn::separator().into_element(cx);
         let el = ui::v_stack(move |_cx| vec![bar, separator])
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N0)
@@ -1363,7 +1356,7 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Rect, Size};
-    use fret_ui::element::{ElementKind, Length};
+    use fret_ui::element::{AnyElement, ElementKind, Length};
 
     fn bounds() -> Rect {
         Rect::new(
@@ -1380,6 +1373,45 @@ mod tests {
                 .iter()
                 .find_map(|child| find_text_by_content(child, text)),
         }
+    }
+
+    fn has_test_id(element: &AnyElement, expected: &str) -> bool {
+        element
+            .semantics_decoration
+            .as_ref()
+            .and_then(|decoration| decoration.test_id.as_deref())
+            .is_some_and(|test_id| test_id == expected)
+            || match &element.kind {
+                ElementKind::Pressable(props) => props.a11y.test_id.as_deref() == Some(expected),
+                ElementKind::Semantics(props) => props.test_id.as_deref() == Some(expected),
+                _ => false,
+            }
+            || element
+                .children
+                .iter()
+                .any(|child| has_test_id(child, expected))
+    }
+
+    #[test]
+    fn web_preview_root_provides_controller_to_children() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "web-preview", |cx| {
+                WebPreview::new()
+                    .default_url("https://example.com")
+                    .into_element_with_children(cx, |cx, _controller| {
+                        vec![
+                            WebPreviewUrl::new().test_id("web-url").into_element(cx),
+                            WebPreviewBody::new().test_id("web-body").into_element(cx),
+                        ]
+                    })
+            });
+
+        assert!(has_test_id(&el, "web-url"));
+        assert!(has_test_id(&el, "web-body"));
+        assert!(find_text_by_content(&el, "Preview: https://example.com").is_some());
     }
 
     #[test]

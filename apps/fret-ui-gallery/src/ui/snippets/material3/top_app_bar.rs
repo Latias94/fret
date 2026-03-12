@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("top_app_bar.rs");
 use fret_core::Px;
 use fret_icons::ids;
 use fret_ui_material3::{TopAppBar, TopAppBarAction, TopAppBarScrollBehavior, TopAppBarVariant};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let bar = |cx: &mut ElementContext<'_, H>,
@@ -40,8 +40,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                        test_prefix: &'static str| {
         cx.keyed(key, |cx| {
             let scroll_handle =
-                cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
-            let behavior = cx.with_state(
+                cx.slot_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
+            let behavior = cx.slot_state(
                 || behavior(scroll_handle.clone()),
                 |behavior| behavior.clone(),
             );

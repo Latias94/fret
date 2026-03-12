@@ -13,16 +13,10 @@ pub(crate) enum ShadcnSurfaceSlot {
     TooltipContent,
 }
 
-#[derive(Debug, Default)]
-struct ShadcnSurfaceSlotProviderState {
-    current: Option<ShadcnSurfaceSlot>,
-}
-
 pub(crate) fn surface_slot_in_scope<H: UiHost>(
     cx: &ElementContext<'_, H>,
 ) -> Option<ShadcnSurfaceSlot> {
-    cx.inherited_state_where::<ShadcnSurfaceSlotProviderState>(|st| st.current.is_some())
-        .and_then(|st| st.current)
+    cx.provided::<ShadcnSurfaceSlot>().copied()
 }
 
 #[track_caller]
@@ -31,14 +25,5 @@ pub(crate) fn with_surface_slot_provider<H: UiHost, R>(
     slot: ShadcnSurfaceSlot,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(ShadcnSurfaceSlotProviderState::default, |st| {
-        let prev = st.current;
-        st.current = Some(slot);
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(ShadcnSurfaceSlotProviderState::default, |st| {
-        st.current = prev;
-    });
-    out
+    cx.provide(slot, f)
 }

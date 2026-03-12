@@ -2,71 +2,16 @@ pub const SOURCE: &str = include_str!("form.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default, Clone)]
-struct Models {
-    name: Option<Model<String>>,
-    email: Option<Model<String>>,
-    phone: Option<Model<String>>,
-    address: Option<Model<String>>,
-    country: Option<Model<Option<Arc<str>>>>,
-    country_open: Option<Model<bool>>,
-}
-
-fn ensure_models<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> (
-    Model<String>,
-    Model<String>,
-    Model<String>,
-    Model<String>,
-    Model<Option<Arc<str>>>,
-    Model<bool>,
-) {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    match (
-        state.name,
-        state.email,
-        state.phone,
-        state.address,
-        state.country,
-        state.country_open,
-    ) {
-        (
-            Some(name),
-            Some(email),
-            Some(phone),
-            Some(address),
-            Some(country),
-            Some(country_open),
-        ) => (name, email, phone, address, country, country_open),
-        _ => {
-            let models = cx.app.models_mut();
-            let name = models.insert(String::new());
-            let email = models.insert(String::new());
-            let phone = models.insert(String::new());
-            let address = models.insert(String::new());
-            let country = models.insert(None::<Arc<str>>);
-            let country_open = models.insert(false);
-
-            cx.with_state(Models::default, |st| {
-                st.name = Some(name.clone());
-                st.email = Some(email.clone());
-                st.phone = Some(phone.clone());
-                st.address = Some(address.clone());
-                st.country = Some(country.clone());
-                st.country_open = Some(country_open.clone());
-            });
-
-            (name, email, phone, address, country, country_open)
-        }
-    }
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (name, email, phone, address, country, country_open) = ensure_models(cx);
+    let name = cx.local_model_keyed("name", String::new);
+    let email = cx.local_model_keyed("email", String::new);
+    let phone = cx.local_model_keyed("phone", String::new);
+    let address = cx.local_model_keyed("address", String::new);
+    let country = cx.local_model_keyed("country", || None::<Arc<str>>);
+    let country_open = cx.local_model_keyed("country_open", || false);
     let max_w_sm = LayoutRefinement::default().w_full().max_w(Px(420.0));
 
     let country = shadcn::Select::new(country, country_open)

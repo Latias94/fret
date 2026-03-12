@@ -40,12 +40,10 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
-use crate::UiBuilder;
 use crate::command::ElementCommandGatingExt as _;
 use crate::primitives::menu::root as menu_root;
 use crate::primitives::popper;
-use crate::{OverlayController, OverlayPresence, OverlayRequest};
-use crate::{UiIntoElement, UiPatchTarget};
+use crate::{IntoUiElement, OverlayController, OverlayPresence, OverlayRequest};
 
 pub mod adapters;
 mod floating_window_on_area;
@@ -53,99 +51,15 @@ mod floating_window_on_area;
 const DEFAULT_IMGUI_ITEM_SPACING_X_PX: f32 = 8.0;
 const DEFAULT_IMGUI_ITEM_SPACING_Y_PX: f32 = 4.0;
 
-/// A value that can be rendered into a declarative element within an `ElementContext`.
-///
-/// This is used to bridge the `UiBuilder<T>` ecosystem authoring surface (ADR 0160) into
-/// immediate-mode frontends (`UiWriter`).
-pub trait UiKitIntoElement<H: UiHost> {
-    fn into_any_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement;
-}
-
-impl<H: UiHost, T> UiKitIntoElement<H> for UiBuilder<T>
-where
-    T: UiPatchTarget + UiIntoElement,
-{
-    fn into_any_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        self.into_element(cx)
-    }
-}
-
-impl<H: UiHost, F, I> UiKitIntoElement<H> for UiBuilder<crate::ui::FlexBox<H, F>>
-where
-    F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
-{
-    fn into_any_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        self.into_element(cx)
-    }
-}
-
-impl<H: UiHost, B> UiKitIntoElement<H> for UiBuilder<crate::ui::FlexBoxBuild<H, B>>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    fn into_any_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        self.into_element(cx)
-    }
-}
-
-impl<H: UiHost, B> UiKitIntoElement<H> for UiBuilder<crate::ui::ContainerBoxBuild<H, B>>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    fn into_any_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        self.into_element(cx)
-    }
-}
-
-impl<H: UiHost, F, I> UiKitIntoElement<H> for UiBuilder<crate::ui::ContainerBox<H, F>>
-where
-    F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
-{
-    fn into_any_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        self.into_element(cx)
-    }
-}
-
-impl<H: UiHost, F, I> UiKitIntoElement<H> for UiBuilder<crate::ui::StackBox<H, F>>
-where
-    F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
-{
-    fn into_any_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        self.into_element(cx)
-    }
-}
-
-impl<H: UiHost, F, I> UiKitIntoElement<H> for UiBuilder<crate::ui::ScrollAreaBox<H, F>>
-where
-    F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
-{
-    fn into_any_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        self.into_element(cx)
-    }
-}
-
-impl<H: UiHost, B> UiKitIntoElement<H> for UiBuilder<crate::ui::ScrollAreaBoxBuild<H, B>>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    fn into_any_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        self.into_element(cx)
-    }
-}
-
 /// Extension trait bridging `fret-ui-kit` authoring (`UiBuilder<T>`) into an immediate-mode output.
 pub trait UiWriterUiKitExt<H: UiHost>: UiWriter<H> {
     /// Render a `UiBuilder<T>` (or other supported authoring value) into the current output list.
     #[track_caller]
     fn add_ui<B>(&mut self, value: B)
     where
-        B: UiKitIntoElement<H>,
+        B: IntoUiElement<H>,
     {
-        let element = self.with_cx_mut(|cx| value.into_any_element(cx));
+        let element = self.with_cx_mut(|cx| IntoUiElement::into_element(value, cx));
         self.add(element);
     }
 }

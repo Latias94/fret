@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("avatar.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let avatar_media = shadcn::Avatar::new([shadcn::AvatarFallback::new("JD").into_element(cx)])
@@ -9,16 +9,16 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(cx);
 
     shadcn::Empty::new([
-        shadcn::empty::EmptyHeader::new([
-            shadcn::empty::EmptyMedia::new([avatar_media]).into_element(cx),
-            shadcn::empty::EmptyTitle::new("User Offline").into_element(cx),
-            shadcn::empty::EmptyDescription::new(
+        fret_ui_shadcn::empty::EmptyHeader::new([
+            fret_ui_shadcn::empty::EmptyMedia::new([avatar_media]).into_element(cx),
+            fret_ui_shadcn::empty::EmptyTitle::new("User Offline").into_element(cx),
+            fret_ui_shadcn::empty::EmptyDescription::new(
                 "This user is currently offline. Leave a message and notify later.",
             )
             .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::empty::EmptyContent::new([shadcn::Button::new("Leave Message")
+        fret_ui_shadcn::empty::EmptyContent::new([shadcn::Button::new("Leave Message")
             .size(shadcn::ButtonSize::Sm)
             .into_element(cx)])
         .into_element(cx),

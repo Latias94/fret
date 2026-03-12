@@ -9,7 +9,9 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, Radius, Space, ui,
+};
 
 use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 
@@ -68,15 +70,17 @@ impl Kbd {
     }
 }
 
-pub fn kbd<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
-    kbd_with_patch(
-        cx,
-        KbdContent::Text(text.into()),
-        ChromeRefinement::default(),
-        LayoutRefinement::default(),
-    )
+pub fn kbd<H: UiHost, T>(text: T) -> impl IntoUiElement<H> + use<H, T>
+where
+    T: Into<Arc<str>>,
+{
+    Kbd::new(text)
 }
 
+/// Returns a pre-landed icon element for `Kbd::from_children(...)`.
+///
+/// This intentionally stays raw because `Kbd::from_children(...)` stores an explicit
+/// `Vec<AnyElement>` child list for icon-first keycap composition.
 #[track_caller]
 pub fn kbd_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: IconId) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();

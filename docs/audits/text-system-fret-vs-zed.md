@@ -80,7 +80,7 @@ Goal: avoid a permanent split-brain text pipeline.
 - Keep wrapping/truncation in a renderer-owned wrapper layer (so the UI boundary stays stable).
 - Avoid feature-gated backends for the mainline (“no backend gate”).
 
-Tracking: ADR 0142 + `docs/workstreams/text-system-v2-parley.md`.
+Tracking: ADR 0142 + `docs/workstreams/standalone/text-system-v2-parley.md`.
 
 ### 2) Fallback stack and missing glyph semantics must be explicit
 

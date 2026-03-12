@@ -5,13 +5,13 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use fret::prelude::*;
-use fret_query::ui::QueryElementContextExt as _;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_query::{
     CancellationToken, FutureSpawner, FutureSpawnerHandle, QueryCancelMode, QueryError, QueryKey,
     QueryPolicy, QuerySnapshotEntry, QueryState, QueryStatus, with_query_client,
 };
 use fret_ui::element::{PressableA11y, PressableProps};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::QueryHandleWatchExt as _;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
 use fret_ui_kit::primitives::separator::SeparatorOrientation;
@@ -88,7 +88,7 @@ impl FutureSpawner for TokioHandleSpawner {
     }
 }
 
-fn install_tokio_spawner(app: &mut App) {
+fn install_tokio_spawner(app: &mut KernelApp) {
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_time()
         .build()
@@ -100,16 +100,20 @@ fn install_tokio_spawner(app: &mut App) {
     app.set_global::<TokioRuntimeGlobal>(TokioRuntimeGlobal { _rt: rt });
 }
 
-fn apply_theme(app: &mut App, dark: bool) {
-    shadcn::shadcn_themes::apply_shadcn_new_york(
+fn apply_theme(app: &mut KernelApp, dark: bool) {
+    shadcn::themes::apply_shadcn_new_york(
         app,
-        shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
+        shadcn::themes::ShadcnBaseColor::Zinc,
         if dark {
-            shadcn::shadcn_themes::ShadcnColorScheme::Dark
+            shadcn::themes::ShadcnColorScheme::Dark
         } else {
-            shadcn::shadcn_themes::ShadcnColorScheme::Light
+            shadcn::themes::ShadcnColorScheme::Light
         },
     );
+}
+
+fn install_light_theme(app: &mut KernelApp) {
+    apply_theme(app, false);
 }
 
 #[derive(Clone)]
@@ -119,7 +123,7 @@ struct SelectModel {
 }
 
 impl SelectModel {
-    fn new(app: &mut App, initial: Option<&'static str>) -> Self {
+    fn new(app: &mut KernelApp, initial: Option<&'static str>) -> Self {
         Self {
             value: app.models_mut().insert(initial.map(Arc::from)),
             open: app.models_mut().insert(false),
@@ -136,7 +140,7 @@ struct QueryConfigModels {
 }
 
 impl QueryConfigModels {
-    fn new(app: &mut App) -> Self {
+    fn new(app: &mut KernelApp) -> Self {
         Self {
             stale_time_s: app.models_mut().insert("2".to_string()),
             cache_time_s: app.models_mut().insert("30".to_string()),
@@ -206,16 +210,14 @@ pub fn run() -> anyhow::Result<()> {
     FretApp::new("async-playground")
         .window("async-playground", (1180.0, 720.0))
         .config_files(false)
-        .install_app(|app| {
-            install_tokio_spawner(app);
-            apply_theme(app, false);
-        })
-        .run_view::<AsyncPlaygroundView>()
+        .setup((install_tokio_spawner, install_light_theme))
+        .view::<AsyncPlaygroundView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }
 
 impl View for AsyncPlaygroundView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         let mut configs = HashMap::new();
         for id in QueryId::ALL {
             configs.insert(id, QueryConfigModels::new(app));
@@ -239,7 +241,7 @@ impl View for AsyncPlaygroundView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let dark_for_theme = cx
             .app
             .models()
@@ -250,7 +252,7 @@ impl View for AsyncPlaygroundView {
             apply_theme(cx.app, dark_for_theme);
         }
 
-        if cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_SELECTED) {
+        if cx.effects().take_transient(TRANSIENT_INVALIDATE_SELECTED) {
             let selected = cx
                 .app
                 .models()
@@ -260,7 +262,7 @@ impl View for AsyncPlaygroundView {
             let _ = with_query_client(cx.app, |client, app| client.invalidate(app, key));
         }
 
-        if cx.take_transient_on_action_root(TRANSIENT_CANCEL_SELECTED) {
+        if cx.effects().take_transient(TRANSIENT_CANCEL_SELECTED) {
             let selected = cx
                 .app
                 .models()
@@ -270,7 +272,7 @@ impl View for AsyncPlaygroundView {
             let _ = with_query_client(cx.app, |client, app| client.cancel_inflight(app, key));
         }
 
-        if cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_NAMESPACE) {
+        if cx.effects().take_transient(TRANSIENT_INVALIDATE_NAMESPACE) {
             let ns = cx
                 .app
                 .models()
@@ -296,7 +298,7 @@ impl View for AsyncPlaygroundView {
         let header = header_bar(cx, &mut self.st, theme.clone(), global_slow, dark);
         let body = body(cx, &mut self.st, theme, global_slow, selected);
 
-        cx.on_action_notify_models::<act::SelectTip>({
+        cx.actions().models::<act::SelectTip>({
             let selected = self.st.selected.clone();
             let namespace_input = self.st.namespace_input.clone();
             move |models| {
@@ -308,7 +310,7 @@ impl View for AsyncPlaygroundView {
                 true
             }
         });
-        cx.on_action_notify_models::<act::SelectSearch>({
+        cx.actions().models::<act::SelectSearch>({
             let selected = self.st.selected.clone();
             let namespace_input = self.st.namespace_input.clone();
             move |models| {
@@ -320,7 +322,7 @@ impl View for AsyncPlaygroundView {
                 true
             }
         });
-        cx.on_action_notify_models::<act::SelectStock>({
+        cx.actions().models::<act::SelectStock>({
             let selected = self.st.selected.clone();
             let namespace_input = self.st.namespace_input.clone();
             move |models| {
@@ -332,7 +334,7 @@ impl View for AsyncPlaygroundView {
                 true
             }
         });
-        cx.on_action_notify_models::<act::SelectStatus>({
+        cx.actions().models::<act::SelectStatus>({
             let selected = self.st.selected.clone();
             let namespace_input = self.st.namespace_input.clone();
             move |models| {
@@ -345,14 +347,17 @@ impl View for AsyncPlaygroundView {
             }
         });
 
-        cx.on_action_notify_models::<act::ToggleTheme>({
+        cx.actions().models::<act::ToggleTheme>({
             let dark = self.st.dark.clone();
             move |models| models.update(&dark, |v| *v = !*v).is_ok()
         });
 
-        cx.on_action_notify_transient::<act::InvalidateSelected>(TRANSIENT_INVALIDATE_SELECTED);
-        cx.on_action_notify_transient::<act::CancelSelected>(TRANSIENT_CANCEL_SELECTED);
-        cx.on_action_notify_transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
+        cx.actions()
+            .transient::<act::InvalidateSelected>(TRANSIENT_INVALIDATE_SELECTED);
+        cx.actions()
+            .transient::<act::CancelSelected>(TRANSIENT_CANCEL_SELECTED);
+        cx.actions()
+            .transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
 
         ui::v_flex(|_cx| [header, body])
             .w_full()
@@ -363,7 +368,7 @@ impl View for AsyncPlaygroundView {
 }
 
 fn header_bar(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     global_slow: bool,
@@ -413,7 +418,7 @@ fn header_bar(
 }
 
 fn body(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     global_slow: bool,
@@ -440,7 +445,7 @@ fn body(
 }
 
 fn catalog_panel(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     selected: QueryId,
@@ -483,7 +488,7 @@ fn catalog_panel(
 }
 
 fn catalog_item(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     selected: QueryId,
@@ -524,6 +529,7 @@ fn catalog_item(
                 .truncate()
                 .into_element(cx);
             let badge = status_badge(cx, diag.as_ref());
+            let badge = badge.into_element(cx);
 
             let row = ui::h_flex(|cx| {
                 let spacer = ui::container(|_cx| Vec::<AnyElement>::new())
@@ -558,7 +564,7 @@ fn select_command_for_id(id: QueryId) -> CommandId {
 }
 
 fn main_panel(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     global_slow: bool,
@@ -670,7 +676,7 @@ fn main_panel(
 }
 
 fn inspector_panel(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     selected: QueryId,
@@ -763,7 +769,7 @@ fn inspector_panel(
 }
 
 fn policy_editor(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     id: QueryId,
@@ -827,7 +833,7 @@ fn policy_editor(
 }
 
 fn query_panel_for_mode(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     global_slow: bool,
@@ -855,16 +861,17 @@ fn query_panel_for_mode(
         FetchMode::Sync => {
             let search = cx.watch_model(&st.search_input).layout().value_or_default();
             let symbol = cx.watch_model(&st.stock_symbol).layout().value_or_default();
-            cx.use_query(key, policy.clone(), move |token| {
+            cx.data().query(key, policy.clone(), move |token| {
                 mock_fetch_sync(token, id, delay, fail_mode, search, symbol)
             })
         }
         FetchMode::Async => {
             let search = cx.watch_model(&st.search_input).layout().value_or_default();
             let symbol = cx.watch_model(&st.stock_symbol).layout().value_or_default();
-            cx.use_query_async(key, policy.clone(), move |token| async move {
-                mock_fetch_async(token, id, delay, fail_mode, search, symbol).await
-            })
+            cx.data()
+                .query_async(key, policy.clone(), move |token| async move {
+                    mock_fetch_async(token, id, delay, fail_mode, search, symbol).await
+                })
         }
     };
 
@@ -885,7 +892,7 @@ fn query_panel_for_mode(
 }
 
 fn query_inputs_row(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     id: QueryId,
@@ -930,7 +937,7 @@ fn query_inputs_row(
 }
 
 fn query_result_view(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: ThemeSnapshot,
     id: QueryId,
     key: QueryKey<Arc<str>>,
@@ -946,6 +953,7 @@ fn query_result_view(
             ..QueryDiag::from_state(state)
         }),
     );
+    let badge = badge.into_element(cx);
 
     let meta = ui::h_flex(|cx| {
         let left = ui::text(id.namespace())
@@ -1021,7 +1029,7 @@ fn query_result_view(
     .into_element(cx)
 }
 
-fn active_mode(cx: &mut ElementContext<'_, App>, st: &AsyncPlaygroundState) -> FetchMode {
+fn active_mode(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState) -> FetchMode {
     let tab = cx.watch_model(&st.tabs).layout().value_or_default();
     match tab.as_deref() {
         Some("sync") => FetchMode::Sync,
@@ -1029,11 +1037,7 @@ fn active_mode(cx: &mut ElementContext<'_, App>, st: &AsyncPlaygroundState) -> F
     }
 }
 
-fn query_policy(
-    cx: &mut ElementContext<'_, App>,
-    st: &AsyncPlaygroundState,
-    id: QueryId,
-) -> QueryPolicy {
+fn query_policy(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState, id: QueryId) -> QueryPolicy {
     let config = st.configs.get(&id).expect("missing config");
     let stale_s = cx
         .watch_model(&config.stale_time_s)
@@ -1067,11 +1071,7 @@ fn query_policy(
     }
 }
 
-fn query_fail_mode(
-    cx: &mut ElementContext<'_, App>,
-    st: &AsyncPlaygroundState,
-    id: QueryId,
-) -> bool {
+fn query_fail_mode(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState, id: QueryId) -> bool {
     let config = st.configs.get(&id).expect("missing config");
     cx.watch_model(&config.fail_mode)
         .layout()
@@ -1083,7 +1083,7 @@ fn parse_u64_or(s: &str, fallback: u64) -> u64 {
 }
 
 fn query_key_for_selected(
-    app: &App,
+    app: &KernelApp,
     st: &AsyncPlaygroundState,
     selected: QueryId,
 ) -> QueryKey<Arc<str>> {
@@ -1099,7 +1099,7 @@ fn query_key_for_selected(
 }
 
 fn query_key_for_id(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     st: &AsyncPlaygroundState,
     id: QueryId,
 ) -> QueryKey<Arc<str>> {
@@ -1138,7 +1138,10 @@ fn observe_query_diag(
     st.last_diag.insert(id, diag);
 }
 
-fn status_badge(cx: &mut ElementContext<'_, App>, diag: Option<&QueryDiag>) -> AnyElement {
+fn status_badge(
+    cx: &mut UiCx<'_>,
+    diag: Option<&QueryDiag>,
+) -> impl IntoUiElement<KernelApp> + use<> {
     let Some(diag) = diag else {
         return shadcn::Badge::new("Not mounted")
             .variant(shadcn::BadgeVariant::Secondary)
@@ -1160,7 +1163,7 @@ fn status_badge(cx: &mut ElementContext<'_, App>, diag: Option<&QueryDiag>) -> A
 }
 
 fn snapshot_entry_for_key(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     key: QueryKey<Arc<str>>,
 ) -> Option<QuerySnapshotEntry> {
     let type_name = std::any::type_name::<Arc<str>>();

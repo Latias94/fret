@@ -30,7 +30,7 @@ We must solve this without turning `crates/fret-ui` into a policy-heavy UI kit (
 
 ## Non-goals (v1)
 
-- Replacing the entire text system (tracked separately in `docs/workstreams/text-system-v2-parley.md`).
+- Replacing the entire text system (tracked separately in `docs/workstreams/standalone/text-system-v2-parley.md`).
 - Defining full typographic features (hyphenation, justification, per-script fallback chains).
 - Standardizing a single global “design system” for all ecosystems.
 

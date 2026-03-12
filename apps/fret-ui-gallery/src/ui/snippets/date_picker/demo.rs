@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("demo.rs");
 // region: example
 use fret_core::FontWeight;
 use fret_ui_headless::calendar::CalendarMonth;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
 
 fn format_date_lll_dd_y_en(date: Date) -> String {
@@ -62,12 +62,13 @@ pub fn render<H: UiHost>(
                     .test_id("ui-gallery-date-picker-demo-trigger");
 
                 if selected_now.is_none() {
-                    button = button.style(shadcn::button::ButtonStyle::default().foreground(
-                        fret_ui_kit::WidgetStateProperty::new(Some(ColorRef::Token {
-                            key: "muted-foreground",
-                            fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
-                        })),
-                    ));
+                    button =
+                        button.style(fret_ui_shadcn::button::ButtonStyle::default().foreground(
+                            fret_ui_kit::WidgetStateProperty::new(Some(ColorRef::Token {
+                                key: "muted-foreground",
+                                fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
+                            })),
+                        ));
                 }
 
                 button.into_element(cx)

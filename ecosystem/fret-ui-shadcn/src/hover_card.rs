@@ -25,8 +25,8 @@ use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::tooltip_provider;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space,
-    UiChildIntoElement, UiHostBoundIntoElement,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayPresence,
+    Radius, Space,
 };
 
 use crate::layout as shadcn_layout;
@@ -121,33 +121,11 @@ fn hover_card_open_change_events(
     (changed, completed)
 }
 
-#[derive(Default)]
-struct HoverCardLastPointerModelState {
-    model: Option<Model<Option<Point>>>,
-}
-
 fn hover_card_last_pointer_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     hover_card_id: fret_ui::elements::GlobalElementId,
 ) -> Model<Option<Point>> {
-    let existing = cx.with_state_for(
-        hover_card_id,
-        HoverCardLastPointerModelState::default,
-        |st| st.model.clone(),
-    );
-    if let Some(model) = existing {
-        model
-    } else {
-        let model = cx.app.models_mut().insert(None::<Point>);
-        cx.with_state_for(
-            hover_card_id,
-            HoverCardLastPointerModelState::default,
-            |st| {
-                st.model = Some(model.clone());
-            },
-        );
-        model
-    }
+    cx.model_for(hover_card_id, || None::<Point>)
 }
 
 fn fixed_size_hint_px(element: &AnyElement) -> Option<Size> {
@@ -316,10 +294,10 @@ impl HoverCard {
     /// Host-bound builder-first constructor that late-lands the trigger/content at the call site.
     pub fn build<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
-        trigger: impl UiChildIntoElement<H>,
+        trigger: impl IntoUiElement<H>,
         content: impl Into<HoverCardContentArg>,
     ) -> Self {
-        Self::new(trigger.into_child_element(cx), content)
+        Self::new(trigger.into_element(cx), content)
     }
 
     /// Host-bound builder-first constructor for the controlled/uncontrolled root variant.
@@ -327,10 +305,10 @@ impl HoverCard {
         cx: &mut ElementContext<'_, H>,
         open: Option<Model<bool>>,
         default_open: bool,
-        trigger: impl UiChildIntoElement<H>,
+        trigger: impl IntoUiElement<H>,
         content: impl Into<HoverCardContentArg>,
     ) -> Self {
-        let trigger = trigger.into_child_element(cx);
+        let trigger = trigger.into_element(cx);
         Self::new_controllable(cx, open, default_open, trigger, content)
     }
 
@@ -556,54 +534,14 @@ impl HoverCard {
                 }
             }
 
-            #[derive(Default)]
-            struct HoverCardPointerDownModelState {
-                model: Option<Model<bool>>,
-                lease: Option<Model<u32>>,
-            }
-
-            let pointer_down_on_content = cx.with_state_for(
-                hover_card_id,
-                HoverCardPointerDownModelState::default,
-                |st| st.model.clone(),
-            );
-            let pointer_down_on_content = if let Some(model) = pointer_down_on_content {
-                model
-            } else {
-                let model = cx.app.models_mut().insert(false);
-                cx.with_state_for(
-                    hover_card_id,
-                    HoverCardPointerDownModelState::default,
-                    |st| {
-                        st.model = Some(model.clone());
-                    },
-                );
-                model
-            };
+            let pointer_down_on_content = cx.model_for(hover_card_id, || false);
             let mut pointer_down_on_content_now = cx
                 .watch_model(&pointer_down_on_content)
                 .layout()
                 .copied()
                 .unwrap_or(false);
 
-            let interaction_lease = cx.with_state_for(
-                hover_card_id,
-                HoverCardPointerDownModelState::default,
-                |st| st.lease.clone(),
-            );
-            let interaction_lease = if let Some(model) = interaction_lease {
-                model
-            } else {
-                let model = cx.app.models_mut().insert(0u32);
-                cx.with_state_for(
-                    hover_card_id,
-                    HoverCardPointerDownModelState::default,
-                    |st| {
-                        st.lease = Some(model.clone());
-                    },
-                );
-                model
-            };
+            let interaction_lease = cx.model_for(hover_card_id, || 0u32);
             let interaction_lease_now = cx
                 .watch_model(&interaction_lease)
                 .layout()
@@ -760,7 +698,7 @@ impl HoverCard {
                     overlay_motion::shadcn_motion_ease_bezier(cx),
                 );
             let (open_change, open_change_complete) =
-                cx.with_state(HoverCardOpenChangeCallbackState::default, |state| {
+                cx.slot_state(HoverCardOpenChangeCallbackState::default, |state| {
                     hover_card_open_change_events(state, opening, motion.present, motion.animating)
                 });
             if let (Some(open), Some(on_open_change)) = (open_change, self.on_open_change.as_ref())
@@ -1129,7 +1067,7 @@ impl HoverCardTrigger {
     /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
     pub fn build<H: UiHost, T>(child: T) -> HoverCardTriggerBuild<H, T>
     where
-        T: UiChildIntoElement<H>,
+        T: IntoUiElement<H>,
     {
         HoverCardTriggerBuild {
             child: Some(child),
@@ -1145,14 +1083,14 @@ impl HoverCardTrigger {
 
 impl<H: UiHost, T> HoverCardTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     pub fn into_trigger(self, cx: &mut ElementContext<'_, H>) -> HoverCardTrigger {
         HoverCardTrigger::new(
             self.child
                 .expect("expected hover card trigger child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
     }
 
@@ -1162,22 +1100,12 @@ where
     }
 }
 
-impl<H: UiHost, T> UiHostBoundIntoElement<H> for HoverCardTriggerBuild<H, T>
+impl<H: UiHost, T> IntoUiElement<H> for HoverCardTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        HoverCardTriggerBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, T> UiChildIntoElement<H> for HoverCardTriggerBuild<H, T>
-where
-    T: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         HoverCardTriggerBuild::into_element(self, cx)
     }
 }
@@ -1206,7 +1134,7 @@ impl HoverCardAnchor {
     /// keep using [`HoverCardAnchor::new`] with an already-landed child.
     pub fn build<H: UiHost, T>(child: T) -> HoverCardAnchorBuild<H, T>
     where
-        T: UiChildIntoElement<H>,
+        T: IntoUiElement<H>,
     {
         HoverCardAnchorBuild {
             child: Some(child),
@@ -1226,14 +1154,14 @@ impl HoverCardAnchor {
 
 impl<H: UiHost, T> HoverCardAnchorBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     pub fn into_anchor(self, cx: &mut ElementContext<'_, H>) -> HoverCardAnchor {
         HoverCardAnchor::new(
             self.child
                 .expect("expected hover card anchor child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
     }
 
@@ -1243,22 +1171,12 @@ where
     }
 }
 
-impl<H: UiHost, T> UiHostBoundIntoElement<H> for HoverCardAnchorBuild<H, T>
+impl<H: UiHost, T> IntoUiElement<H> for HoverCardAnchorBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        HoverCardAnchorBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, T> UiChildIntoElement<H> for HoverCardAnchorBuild<H, T>
-where
-    T: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         HoverCardAnchorBuild::into_element(self, cx)
     }
 }

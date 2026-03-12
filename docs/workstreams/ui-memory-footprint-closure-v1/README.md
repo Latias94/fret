@@ -1098,7 +1098,7 @@ external sampler:
   - `apps/fret-examples/src/hello_world_compare_demo.rs`
   - `apps/fret-demo/src/bin/hello_world_compare_demo.rs`
   - Shape: `500x500` window, centered `"Hello, World!"` label, one row of six colored swatches.
-  - Runtime posture: `fret::App::minimal_defaults()`, config files off, accessibility off.
+  - Runtime posture: `fret::FretApp::new(...).minimal_defaults()`, config files off, accessibility off.
   - Isolation knobs:
     - `FRET_HELLO_WORLD_COMPARE_NO_TEXT=1`
     - `FRET_HELLO_WORLD_COMPARE_NO_SWATCHES=1`

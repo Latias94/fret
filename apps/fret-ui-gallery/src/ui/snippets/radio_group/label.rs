@@ -3,24 +3,11 @@ pub const SOURCE: &str = include_str!("label.rs");
 // region: example
 use fret_core::Px;
 use fret_ui_kit::primitives::control_registry::ControlId;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default)]
-struct Models {
-    value: Option<Model<Option<Arc<str>>>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let value = cx.with_state(Models::default, |st| st.value.clone());
-    let value = match value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Some(Arc::<str>::from("free")));
-            cx.with_state(Models::default, |st| st.value = Some(model.clone()));
-            model
-        }
-    };
+    let value = cx.local_model_keyed("value", || Some(Arc::<str>::from("free")));
 
     let control_id = ControlId::from("ui-gallery-radio-group-label");
     let radio_group = shadcn::RadioGroup::new(value)

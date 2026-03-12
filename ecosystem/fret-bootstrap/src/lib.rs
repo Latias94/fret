@@ -363,7 +363,7 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
             svg_max_ready_entries,
         };
         self.inner = self.inner.init_app(move |app| {
-            fret_ui_assets::install_app_with_budgets(app, budgets);
+            fret_ui_assets::app::install_with_budgets(app, budgets);
         });
 
         self

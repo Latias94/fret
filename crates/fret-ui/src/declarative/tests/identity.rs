@@ -1,4 +1,6 @@
 use super::*;
+use crate::GlobalElementId;
+use fret_runtime::ModelId;
 
 #[test]
 fn named_scopes_produce_stable_element_ids_across_frames() {
@@ -188,6 +190,166 @@ fn element_tree_duplicate_ids_detect_duplicates_in_one_frame() {
 
     let duplicates = super::super::mount::element_tree_duplicate_ids(&[a, b]);
     assert_eq!(duplicates, vec![GlobalElementId(1)]);
+}
+
+#[test]
+fn local_model_assigns_distinct_callsite_slots_and_preserves_ids_across_frames() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let observed = Arc::new(std::sync::Mutex::new(Vec::<(ModelId, ModelId)>::new()));
+    let mut root: Option<NodeId> = None;
+
+    for frame in 0..2 {
+        let observed = observed.clone();
+        let root_node = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "local-model-callsite-stability",
+            move |cx| {
+                let first = cx.local_model(|| 1u32);
+                let second = cx.local_model(|| 2u32);
+                observed.lock().unwrap().push((first.id(), second.id()));
+                vec![cx.text("leaf")]
+            },
+        );
+
+        root.get_or_insert(root_node);
+        if frame == 0 {
+            ui.set_root(root_node);
+        }
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        app.advance_frame();
+    }
+
+    let observed = observed.lock().unwrap();
+    assert_eq!(observed.len(), 2);
+    assert_ne!(
+        observed[0].0, observed[0].1,
+        "distinct local_model callsites should not share a slot"
+    );
+    assert_eq!(
+        observed[0], observed[1],
+        "expected local_model callsite slots to preserve model identity across frames"
+    );
+}
+
+#[test]
+fn local_model_keyed_preserves_model_identity_across_reorder() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let observed = Arc::new(std::sync::Mutex::new(Vec::<Vec<(u64, ModelId)>>::new()));
+    let orders: [Vec<u64>; 2] = [vec![1, 2, 3], vec![3, 2, 1]];
+
+    let mut root: Option<NodeId> = None;
+    for (frame, items) in orders.into_iter().enumerate() {
+        let observed = observed.clone();
+        let root_node = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "local-model-keyed-reorder",
+            move |cx| {
+                let mut frame_results = Vec::new();
+                let mut elements = Vec::new();
+                for item in items {
+                    let model = cx.local_model_keyed(item, || item);
+                    frame_results.push((item, model.id()));
+                    elements.push(cx.keyed(item, |cx| cx.text("row")));
+                }
+                observed.lock().unwrap().push(frame_results);
+                elements
+            },
+        );
+
+        root.get_or_insert(root_node);
+        if frame == 0 {
+            ui.set_root(root_node);
+        }
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        app.advance_frame();
+    }
+
+    let observed = observed.lock().unwrap();
+    assert_eq!(observed.len(), 2);
+    let first: std::collections::HashMap<u64, ModelId> = observed[0].iter().copied().collect();
+    let second: std::collections::HashMap<u64, ModelId> = observed[1].iter().copied().collect();
+    assert_eq!(
+        first, second,
+        "expected local_model_keyed to preserve model identity by key across reorder"
+    );
+}
+
+#[test]
+fn model_for_preserves_model_identity_for_explicit_element_id() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let ids = Arc::new(std::sync::Mutex::new(Vec::<ModelId>::new()));
+
+    let mut root: Option<NodeId> = None;
+    for frame in 0..2 {
+        let ids = ids.clone();
+        let root_node = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "model-for-explicit-id",
+            move |cx| {
+                let overlay_id = GlobalElementId(0xC0FFEE);
+                let model = cx.model_for(overlay_id, || frame as u64);
+                ids.lock().unwrap().push(model.id());
+                vec![cx.text("leaf")]
+            },
+        );
+
+        root.get_or_insert(root_node);
+        if frame == 0 {
+            ui.set_root(root_node);
+        }
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        app.advance_frame();
+    }
+
+    let ids = ids.lock().unwrap();
+    assert_eq!(ids.len(), 2);
+    assert_eq!(ids[0], ids[1]);
 }
 
 #[test]

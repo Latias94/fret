@@ -53,16 +53,10 @@ impl std::fmt::Debug for TranscriptionController {
     }
 }
 
-#[derive(Debug, Default, Clone)]
-struct TranscriptionProviderState {
-    controller: Option<TranscriptionController>,
-}
-
 pub fn use_transcription_controller<H: UiHost>(
     cx: &ElementContext<'_, H>,
 ) -> Option<TranscriptionController> {
-    cx.inherited_state::<TranscriptionProviderState>()
-        .and_then(|st| st.controller.clone())
+    cx.provided::<TranscriptionController>().cloned()
 }
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -209,23 +203,21 @@ impl Transcription {
                     on_seek: on_seek.clone(),
                 };
 
-                cx.with_state(TranscriptionProviderState::default, |st| {
-                    st.controller = Some(controller.clone());
-                });
-
-                let mut out: Vec<AnyElement> = Vec::new();
-                for (raw_index, seg) in segments.iter().cloned().enumerate() {
-                    if is_blank(seg.text.as_ref()) {
-                        continue;
+                cx.provide(controller.clone(), |cx| {
+                    let mut out: Vec<AnyElement> = Vec::new();
+                    for (raw_index, seg) in segments.iter().cloned().enumerate() {
+                        if is_blank(seg.text.as_ref()) {
+                            continue;
+                        }
+                        let children = children.clone();
+                        out.push(
+                            cx.keyed(format!("transcription-seg-{raw_index}"), move |cx| {
+                                children(cx, seg.clone(), raw_index)
+                            }),
+                        );
                     }
-                    let children = children.clone();
-                    out.push(
-                        cx.keyed(format!("transcription-seg-{raw_index}"), move |cx| {
-                            children(cx, seg.clone(), raw_index)
-                        }),
-                    );
-                }
-                out
+                    out
+                })
             },
         );
 

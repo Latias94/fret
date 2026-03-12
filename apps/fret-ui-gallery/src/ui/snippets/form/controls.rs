@@ -1,30 +1,11 @@
 pub const SOURCE: &str = include_str!("controls.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default)]
-struct Models {
-    checkbox: Option<Model<bool>>,
-    switch: Option<Model<bool>>,
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (checkbox, switch) = cx.with_state(Models::default, |st| {
-        (st.checkbox.clone(), st.switch.clone())
-    });
-    let (checkbox, switch) = match (checkbox, switch) {
-        (Some(checkbox), Some(switch)) => (checkbox, switch),
-        _ => {
-            let checkbox = cx.app.models_mut().insert(false);
-            let switch = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.checkbox = Some(checkbox.clone());
-                st.switch = Some(switch.clone());
-            });
-            (checkbox, switch)
-        }
-    };
+    let checkbox = cx.local_model_keyed("checkbox", || false);
+    let switch = cx.local_model_keyed("switch", || false);
 
     let max_w_md = LayoutRefinement::default()
         .w_full()

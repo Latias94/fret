@@ -1,18 +1,72 @@
 pub const SOURCE: &str = include_str!("image.rs");
 
 // region: example
-use fret_app::App;
-use fret_core::{Color as CoreColor, ImageId};
+use fret::UiCx;
+use fret_core::{Color as CoreColor, ImageColorSpace, ImageId};
 use fret_ui::Theme;
-use fret_ui_assets::ui::ImageSourceElementContextExt as _;
+use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
 use fret_ui_kit::declarative::{ModelWatchExt as _, style as decl_style};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::{Arc, OnceLock};
 
-pub fn render(
-    cx: &mut ElementContext<'_, App>,
-    event_cover_image: Model<Option<ImageId>>,
-) -> AnyElement {
+fn demo_event_cover_source() -> &'static ImageSource {
+    static SOURCE: OnceLock<ImageSource> = OnceLock::new();
+    SOURCE.get_or_init(|| {
+        // Keep the snippet self-contained instead of depending on repo-relative demo assets.
+        ImageSource::rgba8(
+            320,
+            180,
+            demo_event_cover_rgba8(320, 180),
+            ImageColorSpace::Srgb,
+        )
+    })
+}
+
+fn demo_event_cover_rgba8(width: u32, height: u32) -> Vec<u8> {
+    let mut out = vec![0u8; (width as usize) * (height as usize) * 4];
+    let width_f = (width.saturating_sub(1)).max(1) as f32;
+    let height_f = (height.saturating_sub(1)).max(1) as f32;
+
+    for y in 0..height {
+        for x in 0..width {
+            let idx = ((y as usize) * (width as usize) + (x as usize)) * 4;
+            let fx = x as f32 / width_f;
+            let fy = y as f32 / height_f;
+
+            let mut r = (18.0 + 72.0 * fx) as u8;
+            let mut g = (24.0 + 124.0 * (1.0 - fy)) as u8;
+            let mut b = (44.0 + 156.0 * fy) as u8;
+
+            let border = x < 3 || y < 3 || x + 3 >= width || y + 3 >= height;
+            let banner = y > height / 5 && y < (height * 2) / 5;
+            let focus =
+                x > width / 6 && x < (width * 3) / 5 && y > height / 4 && y < (height * 4) / 5;
+
+            if border {
+                r = 245;
+                g = 245;
+                b = 245;
+            } else if banner {
+                r = r.saturating_add(14);
+                g = g.saturating_add(14);
+                b = b.saturating_add(10);
+            } else if focus {
+                r = r.saturating_add(24);
+                g = g.saturating_add(24);
+                b = b.saturating_add(24);
+            }
+
+            out[idx] = r;
+            out[idx + 1] = g;
+            out[idx + 2] = b;
+            out[idx + 3] = 255;
+        }
+    }
+
+    out
+}
+
+pub fn render(cx: &mut UiCx<'_>, event_cover_image: Model<Option<ImageId>>) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
     let max_w_sm = LayoutRefinement::default()
         .w_full()
@@ -36,40 +90,10 @@ pub fn render(
 
             let event_cover_fallback = cx.watch_model(&event_cover_image).copied().flatten();
 
-            #[cfg(not(target_arch = "wasm32"))]
-            let (event_cover, event_cover_state, event_cover_path_exists) = {
-                static EVENT_COVER_TEST_JPG: OnceLock<Option<fret_ui_assets::ImageSource>> =
-                    OnceLock::new();
-                let source = EVENT_COVER_TEST_JPG.get_or_init(|| {
-                    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                        .join("../../assets/textures/test.jpg");
-                    if path.exists() {
-                        Some(fret_ui_assets::ImageSource::from_path(Arc::new(path)))
-                    } else {
-                        None
-                    }
-                });
-                let (state, image) = source.as_ref().map_or((None, None), |source| {
-                    let state = cx.use_image_source_state(source);
-                    let image = state.image;
-                    (Some(state), image)
-                });
-                let path_exists = source.is_some();
-
-                (image.or(event_cover_fallback), state, path_exists)
-            };
-
-            #[cfg(target_arch = "wasm32")]
-            let (event_cover, event_cover_state, event_cover_path_exists) = {
-                static EVENT_COVER_TEST_JPG: OnceLock<fret_ui_assets::ImageSource> =
-                    OnceLock::new();
-                let source = EVENT_COVER_TEST_JPG.get_or_init(|| {
-                    fret_ui_assets::ImageSource::from_url(Arc::<str>::from("textures/test.jpg"))
-                });
-                let state = cx.use_image_source_state(source);
-                let image = state.image;
-                (image.or(event_cover_fallback), Some(state), true)
-            };
+            let event_cover_state = cx.use_image_source_state(demo_event_cover_source());
+            let event_cover = event_cover_state.image.or(event_cover_fallback);
+            let event_cover_source_available = true;
+            let event_cover_state = Some(event_cover_state);
 
             let image = shadcn::MediaImage::maybe(event_cover)
                 .loading(true)
@@ -115,7 +139,7 @@ pub fn render(
                     .unwrap_or("-");
 
                 let text: Arc<str> = Arc::from(format!(
-                    "event_cover: status={status} image={has_image} intrinsic={intrinsic} path_exists={event_cover_path_exists} err={error}"
+                    "event_cover: status={status} image={has_image} intrinsic={intrinsic} source_available={event_cover_source_available} err={error}"
                 ));
                 Some(
                     shadcn::Badge::new(text)

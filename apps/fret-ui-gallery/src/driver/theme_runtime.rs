@@ -184,21 +184,21 @@ impl UiGalleryDriver {
         };
 
         let base = match base {
-            "neutral" => shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-            "zinc" => shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
-            "slate" => shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-            "stone" => shadcn::shadcn_themes::ShadcnBaseColor::Stone,
-            "gray" => shadcn::shadcn_themes::ShadcnBaseColor::Gray,
+            "neutral" => shadcn::themes::ShadcnBaseColor::Neutral,
+            "zinc" => shadcn::themes::ShadcnBaseColor::Zinc,
+            "slate" => shadcn::themes::ShadcnBaseColor::Slate,
+            "stone" => shadcn::themes::ShadcnBaseColor::Stone,
+            "gray" => shadcn::themes::ShadcnBaseColor::Gray,
             _ => return,
         };
 
         let scheme = match scheme {
-            "light" => shadcn::shadcn_themes::ShadcnColorScheme::Light,
-            "dark" => shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+            "light" => shadcn::themes::ShadcnColorScheme::Light,
+            "dark" => shadcn::themes::ShadcnColorScheme::Dark,
             _ => return,
         };
 
-        shadcn::shadcn_themes::apply_shadcn_new_york(app, base, scheme);
+        shadcn::themes::apply_shadcn_new_york(app, base, scheme);
 
         #[cfg(feature = "gallery-material3")]
         fret_ui::Theme::with_global_mut(app, |theme| {
@@ -206,10 +206,10 @@ impl UiGalleryDriver {
                 fret_ui_material3::tokens::v30::TypographyOptions::default(),
                 fret_ui_material3::tokens::v30::ColorSchemeOptions {
                     mode: match scheme {
-                        shadcn::shadcn_themes::ShadcnColorScheme::Light => {
+                        shadcn::themes::ShadcnColorScheme::Light => {
                             fret_ui_material3::tokens::v30::SchemeMode::Light
                         }
-                        shadcn::shadcn_themes::ShadcnColorScheme::Dark => {
+                        shadcn::themes::ShadcnColorScheme::Dark => {
                             fret_ui_material3::tokens::v30::SchemeMode::Dark
                         }
                     },

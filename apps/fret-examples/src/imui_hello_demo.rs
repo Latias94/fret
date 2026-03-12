@@ -1,25 +1,26 @@
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*};
 
 struct ImUiHelloView;
 
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("imui-hello-demo")
         .window("imui_hello_demo", (520.0, 240.0))
-        .run_view::<ImUiHelloView>()?;
+        .view::<ImUiHelloView>()?
+        .run()?;
     Ok(())
 }
 
 impl View for ImUiHelloView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let count_state = cx.use_local_with(|| 0u32);
-        let enabled_state = cx.use_local_with(|| false);
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        let count_state = cx.state().local_init(|| 0u32);
+        let enabled_state = cx.state().local_init(|| false);
 
-        let count = count_state.layout(cx).value_or_default();
-        let enabled = enabled_state.paint(cx).value_or_default();
+        let count = cx.state().watch(&count_state).layout().value_or_default();
+        let enabled = cx.state().watch(&enabled_state).paint().value_or_default();
 
         fret_imui::imui_vstack(cx.elements(), |ui| {
             use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;

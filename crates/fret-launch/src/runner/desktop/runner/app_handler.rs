@@ -645,7 +645,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                 let mut renderer = Renderer::new(&context.adapter, &context.device);
 
-                let renderer_caps = fret_render::RendererCapabilities::from_wgpu_context(&context);
+                let renderer_caps = fret_render::RendererCapabilities::from_adapter_device(
+                    &context.adapter,
+                    &context.device,
+                );
                 self.app
                     .set_global::<fret_render::RendererCapabilities>(renderer_caps.clone());
 
@@ -870,7 +873,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
             let mut renderer = Renderer::new(&context.adapter, &context.device);
 
-            let renderer_caps = fret_render::RendererCapabilities::from_wgpu_context(&context);
+            let renderer_caps = fret_render::RendererCapabilities::from_adapter_device(
+                &context.adapter,
+                &context.device,
+            );
             self.app
                 .set_global::<fret_render::RendererCapabilities>(renderer_caps.clone());
 

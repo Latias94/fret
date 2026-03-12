@@ -61,7 +61,7 @@ This ADR does not define the final API shape for line clamp, but it **forbids** 
 
 ## References
 
-- Workstream: `docs/workstreams/text-layout-integration-v1.md` (Failure mode F2).
+- Workstream: `docs/workstreams/text-layout-integration-v1/text-layout-integration-v1.md` (Failure mode F2).
 - Geometry queries: `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`,
   `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`.
 - Text system v2 direction: `docs/adr/0142-text-system-v2-parley-attributed-spans-and-quality-baseline.md`.

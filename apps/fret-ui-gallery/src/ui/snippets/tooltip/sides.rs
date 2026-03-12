@@ -1,7 +1,8 @@
 pub const SOURCE: &str = include_str!("sides.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_kit::IntoUiElement;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::time::Duration;
 
 fn make_tooltip<H: UiHost>(
@@ -9,7 +10,7 @@ fn make_tooltip<H: UiHost>(
     label: &'static str,
     side: shadcn::TooltipSide,
     content: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     shadcn::Tooltip::new(
         shadcn::Button::new(label)
             .variant(shadcn::ButtonVariant::Outline)
@@ -30,10 +31,14 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             vec![
                 ui::h_row(|cx| {
                     vec![
-                        make_tooltip(cx, "Left", shadcn::TooltipSide::Left, "Add to library"),
-                        make_tooltip(cx, "Top", shadcn::TooltipSide::Top, "Add to library"),
-                        make_tooltip(cx, "Bottom", shadcn::TooltipSide::Bottom, "Add to library"),
-                        make_tooltip(cx, "Right", shadcn::TooltipSide::Right, "Add to library"),
+                        make_tooltip(cx, "Left", shadcn::TooltipSide::Left, "Add to library")
+                            .into_element(cx),
+                        make_tooltip(cx, "Top", shadcn::TooltipSide::Top, "Add to library")
+                            .into_element(cx),
+                        make_tooltip(cx, "Bottom", shadcn::TooltipSide::Bottom, "Add to library")
+                            .into_element(cx),
+                        make_tooltip(cx, "Right", shadcn::TooltipSide::Right, "Add to library")
+                            .into_element(cx),
                     ]
                 })
                 .gap(Space::N2)

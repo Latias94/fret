@@ -209,22 +209,7 @@ fn wire_column_actions_command_handler<H: UiHost>(
 }
 
 fn menu_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
-    let open = cx.with_state(|| None::<Model<bool>>, |st| st.clone());
-    match open {
-        Some(open) => open,
-        None => {
-            let open = cx.app.models_mut().insert(false);
-            cx.with_state(
-                || None::<Model<bool>>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some(open.clone());
-                    }
-                },
-            );
-            open
-        }
-    }
+    cx.local_model(|| false)
 }
 
 fn render_column_actions_menu<H: UiHost>(

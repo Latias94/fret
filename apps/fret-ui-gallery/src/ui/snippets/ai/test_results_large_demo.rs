@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("test_results_large_demo.rs");
 
 // region: example
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
@@ -9,21 +8,8 @@ use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-#[derive(Default)]
-struct DemoModels {
-    activated: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let activated = cx.with_state(DemoModels::default, |st| st.activated.clone());
-    let activated = match activated {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(DemoModels::default, |st| st.activated = Some(model.clone()));
-            model
-        }
-    };
+    let activated = cx.local_model_keyed("activated", || false);
 
     let activated_now = cx
         .get_model_copied(&activated, Invalidation::Layout)

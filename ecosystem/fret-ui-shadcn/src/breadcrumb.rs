@@ -10,6 +10,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::motion::drive_tween_color_for_element;
 use fret_ui_kit::declarative::style as decl_style;
@@ -319,12 +320,15 @@ impl BreadcrumbItem {
             BreadcrumbItemKind::Ellipsis => breadcrumb_ellipsis(cx, muted)
                 .attach_semantics(SemanticsDecoration::default().role(SemanticsRole::ListItem)),
             BreadcrumbItemKind::Page => {
-                breadcrumb_text(cx, self.label, base_style, fg, truncate, layout).attach_semantics(
-                    SemanticsDecoration::default()
-                        .role(SemanticsRole::Link)
-                        .disabled(true)
-                        .read_only(true),
-                )
+                let label = self.label;
+                breadcrumb_text(cx, label.clone(), base_style, fg, truncate, layout)
+                    .attach_semantics(
+                        SemanticsDecoration::default()
+                            .role(SemanticsRole::Link)
+                            .label(label)
+                            .disabled(true)
+                            .read_only(true),
+                    )
             }
             BreadcrumbItemKind::Link => {
                 let disabled = self.disabled
@@ -716,9 +720,9 @@ pub mod primitives {
         }
     }
 
-    #[derive(Clone)]
     pub struct BreadcrumbLink {
         label: Arc<str>,
+        children: Vec<AnyElement>,
         command: Option<CommandId>,
         on_activate: Option<OnActivate>,
         href: Option<Arc<str>>,
@@ -733,6 +737,7 @@ pub mod primitives {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             f.debug_struct("BreadcrumbLink")
                 .field("label", &self.label)
+                .field("children_len", &self.children.len())
                 .field("command", &self.command)
                 .field("on_activate", &self.on_activate.is_some())
                 .field("href", &self.href)
@@ -749,6 +754,7 @@ pub mod primitives {
         pub fn new(label: impl Into<Arc<str>>) -> Self {
             Self {
                 label: label.into(),
+                children: Vec::new(),
                 command: None,
                 on_activate: None,
                 href: None,
@@ -758,6 +764,11 @@ pub mod primitives {
                 chrome: ChromeRefinement::default(),
                 layout: LayoutRefinement::default(),
             }
+        }
+
+        pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+            self.children = children.into_iter().collect();
+            self
         }
 
         pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
@@ -811,6 +822,7 @@ pub mod primitives {
             };
             let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
             let label = self.label.clone();
+            let children = self.children;
             let text_px = style.size;
             let font_weight = style.weight;
             let line_height = style.line_height;
@@ -870,28 +882,41 @@ pub mod primitives {
                         tailwind_transition_ease_in_out,
                     );
                     let color = fg_motion.value;
+                    let mut custom_children = if children.is_empty() {
+                        None
+                    } else {
+                        Some(children)
+                    };
                     let children = vec![cx.container(
                         {
                             let theme = Theme::global(&*cx.app);
                             decl_style::container_props(theme, chrome.clone(), layout.clone())
                         },
                         move |cx| {
-                            let mut text = ui::text(label.clone())
-                                .text_size_px(text_px)
-                                .font_weight(font_weight)
-                                .text_color(ColorRef::Color(color))
-                                .wrap(wrap)
-                                .overflow(overflow);
+                            if let Some(children) = custom_children.take() {
+                                current_color::scope_children(
+                                    cx,
+                                    ColorRef::Color(color),
+                                    move |_cx| children,
+                                )
+                            } else {
+                                let mut text = ui::text(label.clone())
+                                    .text_size_px(text_px)
+                                    .font_weight(font_weight)
+                                    .text_color(ColorRef::Color(color))
+                                    .wrap(wrap)
+                                    .overflow(overflow);
 
-                            if let Some(line_height) = line_height {
-                                text = text.line_height_px(line_height);
+                                if let Some(line_height) = line_height {
+                                    text = text.line_height_px(line_height);
+                                }
+
+                                if let Some(letter_spacing_em) = letter_spacing_em {
+                                    text = text.letter_spacing_em(letter_spacing_em);
+                                }
+
+                                vec![text.into_element(cx)]
                             }
-
-                            if let Some(letter_spacing_em) = letter_spacing_em {
-                                text = text.letter_spacing_em(letter_spacing_em);
-                            }
-
-                            vec![text.into_element(cx)]
                         },
                     )];
 
@@ -908,31 +933,43 @@ pub mod primitives {
                     let theme = Theme::global(&*cx.app);
                     decl_style::container_props(theme, chrome, layout)
                 };
+                let mut custom_children = if children.is_empty() {
+                    None
+                } else {
+                    Some(children)
+                };
                 cx.container(props, move |cx| {
-                    let mut text = ui::text(label)
-                        .text_size_px(text_px)
-                        .font_weight(font_weight)
-                        .text_color(ColorRef::Color(muted))
-                        .wrap(wrap)
-                        .overflow(overflow);
+                    if let Some(children) = custom_children.take() {
+                        current_color::scope_children(cx, ColorRef::Color(muted), move |_cx| {
+                            children
+                        })
+                    } else {
+                        let mut text = ui::text(label)
+                            .text_size_px(text_px)
+                            .font_weight(font_weight)
+                            .text_color(ColorRef::Color(muted))
+                            .wrap(wrap)
+                            .overflow(overflow);
 
-                    if let Some(line_height) = line_height {
-                        text = text.line_height_px(line_height);
+                        if let Some(line_height) = line_height {
+                            text = text.line_height_px(line_height);
+                        }
+
+                        if let Some(letter_spacing_em) = letter_spacing_em {
+                            text = text.letter_spacing_em(letter_spacing_em);
+                        }
+
+                        vec![text.into_element(cx)]
                     }
-
-                    if let Some(letter_spacing_em) = letter_spacing_em {
-                        text = text.letter_spacing_em(letter_spacing_em);
-                    }
-
-                    vec![text.into_element(cx)]
                 })
             }
         }
     }
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug)]
     pub struct BreadcrumbPage {
         label: Arc<str>,
+        children: Vec<AnyElement>,
         truncate: bool,
         chrome: ChromeRefinement,
         layout: LayoutRefinement,
@@ -942,10 +979,16 @@ pub mod primitives {
         pub fn new(label: impl Into<Arc<str>>) -> Self {
             Self {
                 label: label.into(),
+                children: Vec::new(),
                 truncate: false,
                 chrome: ChromeRefinement::default(),
                 layout: LayoutRefinement::default(),
             }
+        }
+
+        pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+            self.children = children.into_iter().collect();
+            self
         }
 
         /// Enables shadcn-aligned `truncate` behavior (single-line + ellipsis overflow).
@@ -974,6 +1017,8 @@ pub mod primitives {
                 (style, fg, props)
             };
             let label = self.label;
+            let children = self.children;
+            let label_for_semantics = label.clone();
             let text_px = style.size;
             let font_weight = style.weight;
             let line_height = style.line_height;
@@ -983,27 +1028,37 @@ pub mod primitives {
             } else {
                 (TextWrap::Word, TextOverflow::Clip)
             };
+            let mut custom_children = if children.is_empty() {
+                None
+            } else {
+                Some(children)
+            };
             cx.container(props, move |cx| {
-                let mut text = ui::text(label)
-                    .text_size_px(text_px)
-                    .font_weight(font_weight)
-                    .text_color(ColorRef::Color(fg))
-                    .wrap(wrap)
-                    .overflow(overflow);
+                if let Some(children) = custom_children.take() {
+                    current_color::scope_children(cx, ColorRef::Color(fg), move |_cx| children)
+                } else {
+                    let mut text = ui::text(label.clone())
+                        .text_size_px(text_px)
+                        .font_weight(font_weight)
+                        .text_color(ColorRef::Color(fg))
+                        .wrap(wrap)
+                        .overflow(overflow);
 
-                if let Some(line_height) = line_height {
-                    text = text.line_height_px(line_height);
+                    if let Some(line_height) = line_height {
+                        text = text.line_height_px(line_height);
+                    }
+
+                    if let Some(letter_spacing_em) = letter_spacing_em {
+                        text = text.letter_spacing_em(letter_spacing_em);
+                    }
+
+                    vec![text.into_element(cx)]
                 }
-
-                if let Some(letter_spacing_em) = letter_spacing_em {
-                    text = text.letter_spacing_em(letter_spacing_em);
-                }
-
-                vec![text.into_element(cx)]
             })
             .attach_semantics(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::Link)
+                    .label(label_for_semantics)
                     .disabled(true)
                     .read_only(true),
             )
@@ -1342,10 +1397,12 @@ mod tests {
             "expected breadcrumb list semantics"
         );
         assert!(
-            snap.nodes
-                .iter()
-                .any(|n| n.role == SemanticsRole::Link && n.flags.disabled),
-            "expected current page to approximate upstream disabled current-page link semantics"
+            snap.nodes.iter().any(|n| {
+                n.role == SemanticsRole::Link
+                    && n.flags.disabled
+                    && n.label.as_deref() == Some("Components")
+            }),
+            "expected current page to approximate upstream disabled current-page link semantics with the item label"
         );
     }
 
@@ -1401,10 +1458,13 @@ mod tests {
             "expected primitives::BreadcrumbItem to emit listitem semantics"
         );
         assert!(
-            snap.nodes
-                .iter()
-                .any(|n| n.role == SemanticsRole::Link && n.flags.disabled && n.flags.read_only),
-            "expected primitives::BreadcrumbPage to approximate upstream disabled current-page link semantics"
+            snap.nodes.iter().any(|n| {
+                n.role == SemanticsRole::Link
+                    && n.flags.disabled
+                    && n.flags.read_only
+                    && n.label.as_deref() == Some("Breadcrumb")
+            }),
+            "expected primitives::BreadcrumbPage to approximate upstream disabled current-page link semantics with a stable label"
         );
         assert!(
             snap.nodes.iter().any(|n| n.flags.hidden),
@@ -1415,6 +1475,95 @@ mod tests {
                 .iter()
                 .any(|n| n.flags.hidden && n.label.as_deref() == Some("More")),
             "expected breadcrumb ellipsis to expose the upstream fallback label while remaining hidden"
+        );
+    }
+
+    #[test]
+    fn breadcrumb_link_children_with_command_keep_link_semantics_without_open_url_fallback() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(640.0), Px(120.0)),
+        );
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-breadcrumb-link-children-command",
+            |cx| {
+                vec![
+                    primitives::BreadcrumbLink::new("Home")
+                        .href("/")
+                        .on_click("ui_gallery.app.open")
+                        .children([cx.text("Home")])
+                        .into_element(cx)
+                        .test_id("breadcrumb-link-children-command"),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let _ = app.flush_effects();
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("breadcrumb-link-children-command"))
+            .expect("expected breadcrumb link semantics node");
+        assert_eq!(node.role, SemanticsRole::Link);
+        assert_eq!(node.label.as_deref(), Some("Home"));
+        assert_eq!(node.value.as_deref(), Some("/"));
+
+        let center = Point::new(
+            Px(node.bounds.origin.x.0 + node.bounds.size.width.0 * 0.5),
+            Px(node.bounds.origin.y.0 + node.bounds.size.height.0 * 0.5),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
+                is_click: true,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        assert!(
+            !effects
+                .iter()
+                .any(|effect| matches!(effect, Effect::OpenUrl { .. })),
+            "expected breadcrumb link command path to suppress href fallback OpenUrl effects"
         );
     }
 

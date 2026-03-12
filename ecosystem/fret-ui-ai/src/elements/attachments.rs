@@ -22,19 +22,13 @@ use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Items, LayoutRefinement, MetricRef, Radius, Space};
 use fret_ui_kit::{WidgetStateProperty, WidgetStates};
 use fret_ui_shadcn::button::ButtonStyle;
-use fret_ui_shadcn::{self as shadcn, Button, ButtonSize, ButtonVariant};
+use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, facade as shadcn};
 
 pub type OnAttachmentActivate = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>;
 pub type OnAttachmentRemove = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>;
 
-#[derive(Debug, Default, Clone)]
-struct AttachmentProviderState {
-    parts: Option<AttachmentChildParts>,
-}
-
 fn use_attachment_parts<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<AttachmentChildParts> {
-    cx.inherited_state::<AttachmentProviderState>()
-        .and_then(|st| st.parts.clone())
+    cx.provided::<AttachmentChildParts>().cloned()
 }
 
 fn alpha(color: Color, a: f32) -> Color {
@@ -566,10 +560,7 @@ impl Attachment {
                     info_test_id: info_test_id.clone(),
                     remove_test_id: remove_test_id.clone(),
                 };
-                cx.with_state(AttachmentProviderState::default, |st| {
-                    st.parts = Some(parts.clone());
-                });
-                let content = (children.as_ref())(cx, parts);
+                let content = cx.provide(parts.clone(), |cx| (children.as_ref())(cx, parts));
 
                 (pressable, chrome, move |_cx| content)
             });

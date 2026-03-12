@@ -90,7 +90,7 @@ Key upstream behaviors/surfaces:
 
 Still missing (relative to upstream shadcn/ui v4):
 
-_None tracked at this time._
+- No additional public-surface drift is tracked here at this time.
 
 ### Submenus
 
@@ -111,9 +111,15 @@ Notes on API mapping:
 - Pass: Fret also exposes a parts bridge via `DropdownMenu::into_element_parts(...)`, so shadcn-style
   `DropdownMenuTrigger` / `DropdownMenuContent` call sites no longer need to be translated into a
   different authoring shape.
+- Pass: Checkable items now expose a source-aligned snapshot + callback path:
+  - `DropdownMenuCheckboxItem::from_checked(...)` + `.on_checked_change(...)`
+  - `DropdownMenuRadioGroup::from_value(...)` + `.on_value_change(...)`
 - Note: Fret intentionally does not add a separate generic `compose()` builder for `DropdownMenu`
   today. The typed `DropdownMenuEntry` model is already the important contract, and the parts bridge
   keeps placement/content slots explicit without weakening entry semantics.
+- Note: A generic `compose()` / nested children API is still not the next recommended step. The
+  parts bridge already covers the docs-style `Trigger` / `Content` path, and typed entries remain
+  the more important contract boundary.
 - Groups/labels/shortcuts/destructive variant are modeled via:
   `DropdownMenuEntry::{Group,Label}` and `DropdownMenuItem::{trailing,variant}`.
 

@@ -123,5 +123,5 @@ Recommended v1 consolidation points:
 
 - `crates/fret-core/src/semantics.rs` (`SemanticsRole::Link`, `SemanticsNode.value`)
 - ADR 0227: `docs/adr/0227-semantics-decoration-states-and-relations-v2.md`
-- Router UI workstream: `docs/workstreams/router-ui-v1.md`
+- Router UI workstream: `docs/workstreams/router-ui-v1/router-ui-v1.md`
 - GPUI reference link element (in-repo snapshot): `repo-ref/gpui-component/crates/ui/src/link.rs`

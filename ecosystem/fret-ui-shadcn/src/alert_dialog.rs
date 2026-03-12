@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextWrap,
+    Color, Corners, Edges, FontWeight, Point, Px, SemanticsRole, TextAlign, TextOverflow, TextWrap,
 };
 use fret_runtime::Model;
 use fret_ui::GlobalElementId;
@@ -18,9 +18,8 @@ use fret_ui_kit::primitives::alert_dialog as radix_alert_dialog;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::typography::scope_description_text;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Radius, Space, UiChildIntoElement, UiHostBoundIntoElement, UiPatch, UiPatchTarget,
-    UiSupportsChrome, UiSupportsLayout, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayController,
+    OverlayPresence, Radius, Space, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -78,12 +77,6 @@ impl AlertDialogOverlay {
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 
-#[derive(Default, Clone)]
-struct AlertDialogHandleState {
-    active_trigger: Option<Model<Option<GlobalElementId>>>,
-    content_element: Option<Model<Option<GlobalElementId>>>,
-}
-
 #[derive(Clone)]
 pub struct AlertDialogHandle {
     open: Model<bool>,
@@ -116,27 +109,8 @@ impl AlertDialogHandle {
             .default_open(default_open)
             .open_model(cx);
 
-        let state = cx.with_state(AlertDialogHandleState::default, |st| st.clone());
-        let active_trigger = match state.active_trigger {
-            Some(model) => model,
-            None => {
-                let model = cx.app.models_mut().insert(None::<GlobalElementId>);
-                cx.with_state(AlertDialogHandleState::default, |st| {
-                    st.active_trigger = Some(model.clone())
-                });
-                model
-            }
-        };
-        let content_element = match state.content_element {
-            Some(model) => model,
-            None => {
-                let model = cx.app.models_mut().insert(None::<GlobalElementId>);
-                cx.with_state(AlertDialogHandleState::default, |st| {
-                    st.content_element = Some(model.clone())
-                });
-                model
-            }
-        };
+        let active_trigger = cx.local_model_keyed("active_trigger", || None::<GlobalElementId>);
+        let content_element = cx.local_model_keyed("content_element", || None::<GlobalElementId>);
 
         Self {
             open,
@@ -350,13 +324,13 @@ impl AlertDialog {
     pub fn build<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
-        trigger: impl UiChildIntoElement<H>,
-        content: impl UiChildIntoElement<H>,
+        trigger: impl IntoUiElement<H>,
+        content: impl IntoUiElement<H>,
     ) -> AnyElement {
         self.into_element(
             cx,
-            move |cx| trigger.into_child_element(cx),
-            move |cx| content.into_child_element(cx),
+            move |cx| trigger.into_element(cx),
+            move |cx| content.into_element(cx),
         )
     }
 
@@ -426,7 +400,9 @@ impl AlertDialog {
                 .unwrap_or(id);
             let overlay_root_name = radix_alert_dialog::alert_dialog_root_name(id);
             let prev_content_element =
-                cx.with_state(AlertDialogA11yState::default, |st| st.content_element);
+                cx.keyed_slot_state("a11y", AlertDialogA11yState::default, |st| {
+                    st.content_element
+                });
 
             let motion = OverlayController::transition_with_durations_and_cubic_bezier_duration(
                 cx,
@@ -436,7 +412,7 @@ impl AlertDialog {
                 overlay_motion::shadcn_overlay_ease_bezier(cx),
             );
             let (open_change, open_change_complete) =
-                cx.with_state(AlertDialogOpenChangeCallbackState::default, |state| {
+                cx.slot_state(AlertDialogOpenChangeCallbackState::default, |state| {
                     alert_dialog_open_change_events(
                         state,
                         is_open,
@@ -575,7 +551,7 @@ impl AlertDialog {
                                 *value = Some(content_element)
                             });
                     }
-                    cx.with_state(AlertDialogA11yState::default, |st| {
+                    cx.keyed_slot_state("a11y", AlertDialogA11yState::default, |st| {
                         st.content_element = Some(content_element)
                     });
                 }
@@ -766,7 +742,7 @@ impl AlertDialogTrigger {
     /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
     pub fn build<H: UiHost, T>(child: T) -> AlertDialogTriggerBuild<H, T>
     where
-        T: UiChildIntoElement<H>,
+        T: IntoUiElement<H>,
     {
         AlertDialogTriggerBuild {
             child: Some(child),
@@ -828,35 +804,25 @@ impl AlertDialogTrigger {
 
 impl<H: UiHost, T> AlertDialogTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         AlertDialogTrigger::new(
             self.child
                 .expect("expected alert dialog trigger child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
         .into_element(cx)
     }
 }
 
-impl<H: UiHost, T> UiHostBoundIntoElement<H> for AlertDialogTriggerBuild<H, T>
+impl<H: UiHost, T> IntoUiElement<H> for AlertDialogTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        AlertDialogTriggerBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, T> UiChildIntoElement<H> for AlertDialogTriggerBuild<H, T>
-where
-    T: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         AlertDialogTriggerBuild::into_element(self, cx)
     }
 }
@@ -874,13 +840,13 @@ impl<H: UiHost> AlertDialogCompositionTriggerArg<H> for AlertDialogTrigger {
 
 impl<H: UiHost, T> AlertDialogCompositionTriggerArg<H> for AlertDialogTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     fn into_alert_dialog_trigger(self, cx: &mut ElementContext<'_, H>) -> AlertDialogTrigger {
         AlertDialogTrigger::new(
             self.child
                 .expect("expected alert dialog trigger child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
     }
 }
@@ -968,26 +934,14 @@ impl AlertDialogContent {
             .p(Space::N6)
             .merge(self.chrome);
 
-        let default_max_w = match self.size {
-            AlertDialogContentSize::Default => Px(512.0),
-            AlertDialogContentSize::Sm => Px(320.0),
-        };
         let layout = LayoutRefinement::default()
             .w_full()
-            .max_w(default_max_w)
+            .max_w(alert_dialog_content_default_max_width(self.size))
+            .min_w_0()
+            .min_h_0()
             .merge(self.layout);
 
-        if let Some(max_w) = layout
-            .size
-            .as_ref()
-            .and_then(|s| s.max_width.as_ref())
-            .and_then(|m| match m {
-                fret_ui_kit::LengthRefinement::Px(metric) => Some(metric.resolve(&theme)),
-                _ => None,
-            })
-        {
-            crate::a11y_modal::register_modal_content_max_width(cx.app, max_w);
-        }
+        register_alert_dialog_content_max_width_hint(cx, &theme, &layout);
 
         let props = decl_style::container_props(&theme, chrome, layout);
         let children = self.children;
@@ -999,7 +953,7 @@ impl AlertDialogContent {
             },
             shadcn_layout::VStackProps::default()
                 .gap(Space::N4)
-                .layout(LayoutRefinement::default().w_full())
+                .layout(LayoutRefinement::default().w_full().min_w_0().min_h_0())
                 .items_stretch(),
             children,
         );
@@ -1051,6 +1005,15 @@ where
 
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).snapshot();
+        let layout = LayoutRefinement::default()
+            .w_full()
+            .max_w(alert_dialog_content_default_max_width(self.size))
+            .min_w_0()
+            .min_h_0()
+            .merge(self.layout.clone());
+        register_alert_dialog_content_max_width_hint(cx, &theme, &layout);
+
         let content = AlertDialogContent::new(collect_built_alert_dialog_children(
             cx,
             self.build
@@ -1065,6 +1028,31 @@ where
         } else {
             content
         }
+    }
+}
+
+fn alert_dialog_content_default_max_width(size: AlertDialogContentSize) -> Px {
+    match size {
+        AlertDialogContentSize::Default => Px(512.0),
+        AlertDialogContentSize::Sm => Px(320.0),
+    }
+}
+
+fn register_alert_dialog_content_max_width_hint<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &ThemeSnapshot,
+    layout: &LayoutRefinement,
+) {
+    if let Some(max_w) = layout
+        .size
+        .as_ref()
+        .and_then(|s| s.max_width.as_ref())
+        .and_then(|m| match m {
+            fret_ui_kit::LengthRefinement::Px(metric) => Some(metric.resolve(theme)),
+            _ => None,
+        })
+    {
+        crate::a11y_modal::register_modal_content_max_width(cx.app, max_w);
     }
 }
 
@@ -1087,22 +1075,12 @@ impl<H: UiHost, B> UiSupportsLayout for AlertDialogContentBuild<H, B> where
 {
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for AlertDialogContentBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for AlertDialogContentBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        AlertDialogContentBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for AlertDialogContentBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         AlertDialogContentBuild::into_element(self, cx)
     }
 }
@@ -1154,21 +1132,30 @@ impl AlertDialogHeader {
         // Upstream: `sm:group-data-[size=default]` switches from centered to left-aligned header.
         // We approximate this by inferring `size` from the committed content max-width.
         let left_aligned = sm_breakpoint && !content_is_sm;
+        let text_align = if left_aligned {
+            TextAlign::Start
+        } else {
+            TextAlign::Center
+        };
 
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
             ChromeRefinement::default(),
-            LayoutRefinement::default().w_full(),
+            LayoutRefinement::default().w_full().min_w_0(),
         );
 
-        let children = self.children;
+        let children = self
+            .children
+            .into_iter()
+            .map(|child| apply_alert_dialog_header_text_alignment(child, text_align))
+            .collect();
         let Some(media) = self.media else {
-            return shadcn_layout::container_vstack(
+            return shadcn_layout::container_vstack_fill_width(
                 cx,
                 props,
                 shadcn_layout::VStackProps::default()
                     .gap(Space::N1p5)
-                    .layout(LayoutRefinement::default().w_full())
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
                     .items(if left_aligned {
                         fret_ui_kit::Items::Stretch
                     } else {
@@ -1179,42 +1166,38 @@ impl AlertDialogHeader {
         };
 
         if left_aligned {
-            let text = shadcn_layout::container_vstack(
-                cx,
-                decl_style::container_props(
-                    Theme::global(&*cx.app),
-                    ChromeRefinement::default(),
-                    LayoutRefinement::default().w_full().min_w_0(),
-                ),
-                shadcn_layout::VStackProps::default()
-                    .gap(Space::N1p5)
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .items_stretch(),
-                children,
-            );
+            let text = ui::v_flex(move |_cx| children)
+                .gap(Space::N1p5)
+                .items_start()
+                .layout(LayoutRefinement::default().flex_1().min_w_0())
+                .into_element(cx);
 
-            shadcn_layout::container_hstack(
-                cx,
-                props,
-                shadcn_layout::HStackProps::default()
-                    .gap(Space::N6)
-                    .layout(LayoutRefinement::default().w_full())
-                    .items_start(),
-                vec![media, text],
-            )
-        } else {
-            let mut children = children;
-            children.insert(0, media);
-            shadcn_layout::container_vstack(
-                cx,
-                props,
-                shadcn_layout::VStackProps::default()
-                    .gap(Space::N1p5)
-                    .layout(LayoutRefinement::default().w_full())
-                    .items_center(),
-                children,
-            )
+            return cx.container(props, move |cx| {
+                vec![
+                    ui::h_flex(move |_cx| vec![media, text])
+                        .gap(Space::N6)
+                        .items_start()
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .into_element(cx),
+                ]
+            });
         }
+
+        let text = ui::v_flex(move |_cx| children)
+            .gap(Space::N1p5)
+            .items_stretch()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx);
+
+        cx.container(props, move |cx| {
+            vec![
+                ui::v_flex(move |_cx| vec![media, text])
+                    .gap(Space::N1p5)
+                    .items_center()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx),
+            ]
+        })
     }
 }
 
@@ -1256,22 +1239,12 @@ where
     }
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for AlertDialogHeaderBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for AlertDialogHeaderBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        AlertDialogHeaderBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for AlertDialogHeaderBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         AlertDialogHeaderBuild::into_element(self, cx)
     }
 }
@@ -1379,7 +1352,31 @@ impl AlertDialogFooter {
         );
 
         let mut children = children;
-        if sm_breakpoint {
+        if content_is_sm {
+            // Tailwind (size=sm): `grid grid-cols-2 gap-2`
+            // This size-specific layout wins over viewport row stacking; otherwise desktop `sm:`
+            // would incorrectly collapse back to an intrinsic-width flex row.
+            let children: Vec<AnyElement> = children
+                .into_iter()
+                .map(|child| {
+                    let child = apply_alert_dialog_footer_fill_width(child);
+                    ui::v_flex(move |_cx| vec![child])
+                        .items_stretch()
+                        .layout(LayoutRefinement::default().w_full().min_w_0().flex_1())
+                        .into_element(cx)
+                })
+                .collect();
+
+            cx.container(props, move |cx| {
+                vec![
+                    ui::h_flex(move |_cx| children)
+                        .gap(Space::N2)
+                        .items_stretch()
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .into_element(cx),
+                ]
+            })
+        } else if sm_breakpoint {
             shadcn_layout::container_hstack(
                 cx,
                 props,
@@ -1388,35 +1385,6 @@ impl AlertDialogFooter {
                     .layout(LayoutRefinement::default().w_full())
                     .justify_end()
                     .items_center(),
-                children,
-            )
-        } else if content_is_sm {
-            // Tailwind (size=sm): `grid grid-cols-2 gap-2`
-            let theme = Theme::global(&*cx.app).snapshot();
-            let layout = decl_style::layout_style(
-                &theme,
-                LayoutRefinement::default().flex_1().min_w_0().w_full(),
-            );
-            let children: Vec<AnyElement> = children
-                .into_iter()
-                .map(|child| {
-                    cx.container(
-                        ContainerProps {
-                            layout,
-                            ..Default::default()
-                        },
-                        move |_cx| vec![child],
-                    )
-                })
-                .collect();
-
-            shadcn_layout::container_hstack(
-                cx,
-                props,
-                shadcn_layout::HStackProps::default()
-                    .gap(Space::N2)
-                    .layout(LayoutRefinement::default().w_full())
-                    .items_stretch(),
                 children,
             )
         } else {
@@ -1464,22 +1432,12 @@ where
     }
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for AlertDialogFooterBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for AlertDialogFooterBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        AlertDialogFooterBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for AlertDialogFooterBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         AlertDialogFooterBuild::into_element(self, cx)
     }
 }
@@ -1557,6 +1515,73 @@ fn patch_alert_dialog_title_text_style_recursive(
         color,
         -0.02,
     );
+}
+
+fn apply_alert_dialog_header_text_alignment(
+    mut element: AnyElement,
+    align: TextAlign,
+) -> AnyElement {
+    let apply_text = |layout: &mut LayoutStyle, text_align: &mut TextAlign| {
+        if matches!(layout.size.width, Length::Auto) {
+            layout.size.width = Length::Fill;
+        }
+        if layout.size.min_width.is_none() {
+            layout.size.min_width = Some(Length::Px(Px(0.0)));
+        }
+        *text_align = align;
+    };
+
+    match &mut element.kind {
+        ElementKind::Text(props) => apply_text(&mut props.layout, &mut props.align),
+        ElementKind::StyledText(props) => apply_text(&mut props.layout, &mut props.align),
+        ElementKind::SelectableText(props) => apply_text(&mut props.layout, &mut props.align),
+        _ => {}
+    }
+
+    element.children = element
+        .children
+        .into_iter()
+        .map(|child| apply_alert_dialog_header_text_alignment(child, align))
+        .collect();
+    element
+}
+
+fn apply_alert_dialog_footer_fill_width(mut element: AnyElement) -> AnyElement {
+    let apply_layout = |layout: &mut LayoutStyle| {
+        if matches!(layout.size.width, Length::Auto) {
+            layout.size.width = Length::Fill;
+        }
+        if layout.size.min_width.is_none() {
+            layout.size.min_width = Some(Length::Px(Px(0.0)));
+        }
+        if layout.flex.grow == 0.0 {
+            layout.flex.grow = 1.0;
+        }
+        if layout.flex.shrink == 0.0 {
+            layout.flex.shrink = 1.0;
+        }
+        if matches!(layout.flex.basis, Length::Auto) {
+            layout.flex.basis = Length::Px(Px(0.0));
+        }
+    };
+
+    match &mut element.kind {
+        ElementKind::Container(props) => apply_layout(&mut props.layout),
+        ElementKind::SemanticFlex(props) => apply_layout(&mut props.flex.layout),
+        ElementKind::Pressable(props) => apply_layout(&mut props.layout),
+        ElementKind::Flex(props) => apply_layout(&mut props.layout),
+        ElementKind::Row(props) => apply_layout(&mut props.layout),
+        ElementKind::Column(props) => apply_layout(&mut props.layout),
+        ElementKind::Stack(props) => apply_layout(&mut props.layout),
+        _ => {}
+    }
+
+    element.children = element
+        .children
+        .into_iter()
+        .map(apply_alert_dialog_footer_fill_width)
+        .collect();
+    element
 }
 
 #[derive(Debug)]
@@ -2525,6 +2550,7 @@ mod tests {
         window: AppWindowId,
         bounds: Rect,
         open: Model<bool>,
+        content_size: AlertDialogContentSize,
         cancel_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
         action_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
     ) -> fret_ui::elements::GlobalElementId {
@@ -2600,7 +2626,9 @@ mod tests {
                         );
 
                         let footer = AlertDialogFooter::new(vec![cancel, action]).into_element(cx);
-                        AlertDialogContent::new(vec![footer]).into_element(cx)
+                        AlertDialogContent::new(vec![footer])
+                            .size(content_size)
+                            .into_element(cx)
                     },
                 );
 
@@ -2610,6 +2638,196 @@ mod tests {
         ui.set_root(root);
         OverlayController::render(ui, app, services, window, bounds);
         trigger_id.expect("trigger id")
+    }
+
+    fn render_alert_dialog_frame_with_real_content(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        content_size: AlertDialogContentSize,
+        content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        description_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        cancel_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        action_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+    ) {
+        OverlayController::begin_frame(app, window);
+
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "test",
+            |cx| {
+                let trigger = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st, _id| Vec::new(),
+                );
+
+                let open_for_dialog = open.clone();
+                let open_for_cancel = open.clone();
+                let open_for_action = open.clone();
+                let content_id_out = content_id_out.clone();
+                let description_id_out = description_id_out.clone();
+                let cancel_id_out = cancel_id_out.clone();
+                let action_id_out = action_id_out.clone();
+
+                let alert = AlertDialog::new(open_for_dialog).into_element(
+                    cx,
+                    |_cx| trigger,
+                    move |cx| {
+                        let content = AlertDialogContent::build(move |cx, children| {
+                            let title = AlertDialogTitle::new("Delete the production project?")
+                                .into_element(cx);
+                            let description = AlertDialogDescription::new(
+                                "This dialog is mounted separately from its triggers. Closing restores focus to whichever detached trigger opened it most recently, and the content should wrap within the alert dialog panel instead of measuring against the window width.",
+                            )
+                            .into_element(cx);
+                            description_id_out.set(Some(description.id));
+                            children.push(
+                                AlertDialogHeader::new(vec![title, description]).into_element(cx),
+                            );
+
+                            let cancel = AlertDialogCancel::new("Cancel", open_for_cancel.clone())
+                                .into_element(cx);
+                            cancel_id_out.set(Some(cancel.id));
+
+                            let action = AlertDialogAction::new("Delete", open_for_action.clone())
+                                .variant(ButtonVariant::Destructive)
+                                .into_element(cx);
+                            action_id_out.set(Some(action.id));
+
+                            children.push(
+                                AlertDialogFooter::new(vec![cancel, action]).into_element(cx),
+                            );
+                        })
+                        .size(content_size)
+                        .into_element(cx);
+                        content_id_out.set(Some(content.id));
+                        content
+                    },
+                );
+
+                vec![alert]
+            },
+        );
+
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn render_alert_dialog_frame_with_media_content(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        content_size: AlertDialogContentSize,
+        title_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        description_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        cancel_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        action_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+    ) {
+        OverlayController::begin_frame(app, window);
+
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "alert-dialog-media-test",
+            |cx| {
+                let trigger = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st, _id| Vec::new(),
+                );
+
+                let open_for_dialog = open.clone();
+                let open_for_cancel = open.clone();
+                let open_for_action = open.clone();
+                let title_id_out = title_id_out.clone();
+                let description_id_out = description_id_out.clone();
+                let content_id_out = content_id_out.clone();
+                let cancel_id_out = cancel_id_out.clone();
+                let action_id_out = action_id_out.clone();
+
+                let alert = AlertDialog::new(open_for_dialog).into_element(
+                    cx,
+                    |_cx| trigger,
+                    move |cx| {
+                        let content = AlertDialogContent::build(move |cx, children| {
+                            let title = AlertDialogTitle::new("Delete chat?").into_element(cx);
+                            title_id_out.set(Some(title.id));
+
+                            let description = AlertDialogDescription::new(
+                                "This will permanently delete this chat conversation. Review settings if you need to clear related memories.",
+                            )
+                            .into_element(cx);
+                            description_id_out.set(Some(description.id));
+
+                            let media = AlertDialogMedia::new(ui::text("!").into_element(cx))
+                                .into_element(cx);
+
+                            children.push(
+                                AlertDialogHeader::new(vec![title, description])
+                                    .media(media)
+                                    .into_element(cx),
+                            );
+
+                            let cancel = AlertDialogCancel::new("Cancel", open_for_cancel.clone())
+                                .into_element(cx);
+                            cancel_id_out.set(Some(cancel.id));
+
+                            let action = AlertDialogAction::new("Delete", open_for_action.clone())
+                                .variant(ButtonVariant::Destructive)
+                                .into_element(cx);
+                            action_id_out.set(Some(action.id));
+
+                            children.push(
+                                AlertDialogFooter::new(vec![cancel, action]).into_element(cx),
+                            );
+                        })
+                        .size(content_size)
+                        .into_element(cx);
+                        content_id_out.set(Some(content.id));
+                        content
+                    },
+                );
+
+                vec![alert]
+            },
+        );
+
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
     }
 
     #[test]
@@ -2641,6 +2859,7 @@ mod tests {
                 window,
                 base_bounds,
                 open.clone(),
+                AlertDialogContentSize::Default,
                 cancel_id.clone(),
                 action_id.clone(),
             );
@@ -2675,6 +2894,7 @@ mod tests {
                 window,
                 sm_bounds,
                 open.clone(),
+                AlertDialogContentSize::Default,
                 cancel_id.clone(),
                 action_id.clone(),
             );
@@ -2695,6 +2915,538 @@ mod tests {
         .expect("action bounds");
         assert!((cancel_bounds.origin.y.0 - action_bounds.origin.y.0).abs() < 0.5);
         assert!(cancel_bounds.origin.x.0 < action_bounds.origin.x.0);
+    }
+
+    #[test]
+    fn alert_dialog_small_footer_keeps_two_equal_columns_on_sm_viewport() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let content_id = Rc::new(Cell::new(None));
+        let description_id = Rc::new(Cell::new(None));
+        let cancel_id = Rc::new(Cell::new(None));
+        let action_id = Rc::new(Cell::new(None));
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        for frame in 1..=2 {
+            app.set_frame_id(FrameId(frame));
+            render_alert_dialog_frame_with_real_content(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                AlertDialogContentSize::Sm,
+                content_id.clone(),
+                description_id.clone(),
+                cancel_id.clone(),
+                action_id.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let cancel_bounds = bounds_for_element(
+            &mut app,
+            window,
+            cancel_id.get().expect("cancel element id"),
+        )
+        .expect("cancel bounds");
+        let action_bounds = bounds_for_element(
+            &mut app,
+            window,
+            action_id.get().expect("action element id"),
+        )
+        .expect("action bounds");
+
+        assert!(
+            (cancel_bounds.origin.y.0 - action_bounds.origin.y.0).abs() < 0.5,
+            "expected small footer actions to share one row, got cancel={cancel_bounds:?} action={action_bounds:?}"
+        );
+        assert!(
+            (cancel_bounds.size.width.0 - action_bounds.size.width.0).abs() < 1.0,
+            "expected small footer actions to keep equal-width columns, got cancel={cancel_bounds:?} action={action_bounds:?}"
+        );
+        assert!(cancel_bounds.origin.x.0 < action_bounds.origin.x.0);
+    }
+
+    #[test]
+    fn alert_dialog_real_content_stays_within_panel_bounds_on_sm_viewport() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let content_id = Rc::new(Cell::new(None));
+        let description_id = Rc::new(Cell::new(None));
+        let cancel_id = Rc::new(Cell::new(None));
+        let action_id = Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        for frame in 1..=2 {
+            app.set_frame_id(FrameId(frame));
+            render_alert_dialog_frame_with_real_content(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                AlertDialogContentSize::Default,
+                content_id.clone(),
+                description_id.clone(),
+                cancel_id.clone(),
+                action_id.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let content_bounds = bounds_for_element(
+            &mut app,
+            window,
+            content_id.get().expect("content element id"),
+        )
+        .expect("content bounds");
+        let description_bounds = bounds_for_element(
+            &mut app,
+            window,
+            description_id.get().expect("description element id"),
+        )
+        .expect("description bounds");
+        let cancel_bounds = bounds_for_element(
+            &mut app,
+            window,
+            cancel_id.get().expect("cancel element id"),
+        )
+        .expect("cancel bounds");
+        let action_bounds = bounds_for_element(
+            &mut app,
+            window,
+            action_id.get().expect("action element id"),
+        )
+        .expect("action bounds");
+
+        let content_left = content_bounds.origin.x.0 - 0.5;
+        let content_right = content_bounds.origin.x.0 + content_bounds.size.width.0 + 0.5;
+
+        assert!(
+            content_bounds.size.width.0 <= 512.5,
+            "expected alert dialog content width to stay near shadcn's sm:max-w-lg, got {content_bounds:?}"
+        );
+        assert!(
+            description_bounds.origin.x.0 >= content_left
+                && description_bounds.origin.x.0 + description_bounds.size.width.0 <= content_right,
+            "expected description to stay inside alert dialog content; content={content_bounds:?} description={description_bounds:?}"
+        );
+        assert!(
+            cancel_bounds.origin.x.0 >= content_left
+                && cancel_bounds.origin.x.0 + cancel_bounds.size.width.0 <= content_right,
+            "expected cancel button to stay inside alert dialog content; content={content_bounds:?} cancel={cancel_bounds:?}"
+        );
+        assert!(
+            action_bounds.origin.x.0 >= content_left
+                && action_bounds.origin.x.0 + action_bounds.size.width.0 <= content_right,
+            "expected action button to stay inside alert dialog content; content={content_bounds:?} action={action_bounds:?}"
+        );
+    }
+
+    #[test]
+    fn alert_dialog_panel_keeps_text_and_footer_within_compact_height() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let render_frame = |ui: &mut UiTree<App>,
+                            app: &mut App,
+                            services: &mut dyn fret_core::UiServices,
+                            frame| {
+            app.set_frame_id(FrameId(frame));
+            OverlayController::begin_frame(app, window);
+
+            let mut trigger_id: Option<fret_ui::elements::GlobalElementId> = None;
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "alert-dialog-compact-panel",
+                |cx| {
+                    let trigger = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |cx, _st, id| {
+                            cx.pressable_toggle_bool(&open);
+                            trigger_id = Some(id);
+                            vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                        },
+                    );
+
+                    let open_for_children = open.clone();
+                    let alert = AlertDialog::new(open.clone()).into_element(
+                        cx,
+                        |_cx| trigger,
+                        |cx| {
+                            let header = AlertDialogHeader::new(vec![
+                                AlertDialogTitle::new("Are you absolutely sure?").into_element(cx),
+                                AlertDialogDescription::new(
+                                    "This action cannot be undone. This will permanently delete your account from our servers.",
+                                )
+                                .into_element(cx),
+                            ])
+                            .into_element(cx);
+                            let footer = AlertDialogFooter::new(vec![
+                                AlertDialogCancel::new("Cancel", open_for_children.clone())
+                                    .into_element(cx),
+                                AlertDialogAction::new("Continue", open_for_children.clone())
+                                    .into_element(cx),
+                            ])
+                            .into_element(cx);
+
+                            AlertDialogContent::new(vec![header, footer]).into_element(cx)
+                        },
+                    );
+
+                    vec![alert]
+                },
+            );
+
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+            trigger_id.expect("trigger id")
+        };
+
+        let _trigger = render_frame(&mut ui, &mut app, &mut services, 1);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        let _ = render_frame(&mut ui, &mut app, &mut services, 2);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alert_dialog = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == fret_core::SemanticsRole::AlertDialog)
+            .expect("alert dialog semantics node");
+        let title = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Heading
+                    && n.label.as_deref() == Some("Are you absolutely sure?")
+            })
+            .expect("title semantics node");
+        let description = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Text
+                    && n.label.as_deref()
+                        == Some(
+                            "This action cannot be undone. This will permanently delete your account from our servers.",
+                        )
+            })
+            .expect("description semantics node");
+        let cancel = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Button && n.label.as_deref() == Some("Cancel")
+            })
+            .expect("cancel button semantics node");
+        let action = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Button && n.label.as_deref() == Some("Continue")
+            })
+            .expect("action button semantics node");
+
+        let panel_left = alert_dialog.bounds.origin.x.0 - 0.5;
+        let panel_right = alert_dialog.bounds.origin.x.0 + alert_dialog.bounds.size.width.0 + 0.5;
+        let panel_top = alert_dialog.bounds.origin.y.0 - 0.5;
+        let panel_bottom = alert_dialog.bounds.origin.y.0 + alert_dialog.bounds.size.height.0 + 0.5;
+
+        assert!(
+            alert_dialog.bounds.size.width.0 <= 512.5,
+            "expected alert dialog width to stay near shadcn's sm:max-w-lg, got {:?}",
+            alert_dialog.bounds
+        );
+        assert!(
+            alert_dialog.bounds.size.height.0 <= 260.0,
+            "expected alert dialog height to remain compact for header+footer content, got {:?}",
+            alert_dialog.bounds
+        );
+        for (label, node) in [
+            ("title", title),
+            ("description", description),
+            ("cancel", cancel),
+            ("action", action),
+        ] {
+            assert!(
+                node.bounds.origin.x.0 >= panel_left
+                    && node.bounds.origin.x.0 + node.bounds.size.width.0 <= panel_right
+                    && node.bounds.origin.y.0 >= panel_top
+                    && node.bounds.origin.y.0 + node.bounds.size.height.0 <= panel_bottom,
+                "expected {label} to stay inside alert dialog panel; panel={:?} node={:?}",
+                alert_dialog.bounds,
+                node.bounds
+            );
+        }
+    }
+
+    #[test]
+    fn alert_dialog_media_panel_stays_compact_within_default_width() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let title_id = Rc::new(Cell::new(None));
+        let description_id = Rc::new(Cell::new(None));
+        let content_id = Rc::new(Cell::new(None));
+        let cancel_id = Rc::new(Cell::new(None));
+        let action_id = Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        for frame in 1..=2 {
+            app.set_frame_id(FrameId(frame));
+            render_alert_dialog_frame_with_media_content(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                AlertDialogContentSize::Default,
+                title_id.clone(),
+                description_id.clone(),
+                content_id.clone(),
+                cancel_id.clone(),
+                action_id.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let content_bounds = bounds_for_element(
+            &mut app,
+            window,
+            content_id.get().expect("content element id"),
+        )
+        .expect("content bounds");
+        let title_bounds =
+            bounds_for_element(&mut app, window, title_id.get().expect("title element id"))
+                .expect("title bounds");
+        let description_bounds = bounds_for_element(
+            &mut app,
+            window,
+            description_id.get().expect("description element id"),
+        )
+        .expect("description bounds");
+        let cancel_bounds = bounds_for_element(
+            &mut app,
+            window,
+            cancel_id.get().expect("cancel element id"),
+        )
+        .expect("cancel bounds");
+        let action_bounds = bounds_for_element(
+            &mut app,
+            window,
+            action_id.get().expect("action element id"),
+        )
+        .expect("action bounds");
+
+        let content_left = content_bounds.origin.x.0 - 0.5;
+        let content_right = content_bounds.origin.x.0 + content_bounds.size.width.0 + 0.5;
+        let content_bottom = content_bounds.origin.y.0 + content_bounds.size.height.0 + 0.5;
+
+        assert!(
+            content_bounds.size.width.0 <= 512.5,
+            "expected media alert dialog content width to stay near the default max width, got {content_bounds:?}"
+        );
+        assert!(
+            content_bounds.size.height.0 <= 260.0,
+            "expected media alert dialog height to stay compact, got {content_bounds:?}"
+        );
+        for (label, bounds) in [
+            ("title", title_bounds),
+            ("description", description_bounds),
+            ("cancel", cancel_bounds),
+            ("action", action_bounds),
+        ] {
+            assert!(
+                bounds.origin.x.0 >= content_left
+                    && bounds.origin.x.0 + bounds.size.width.0 <= content_right
+                    && bounds.origin.y.0 + bounds.size.height.0 <= content_bottom,
+                "expected {label} to stay inside media alert dialog content; content={content_bounds:?} node={bounds:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn alert_dialog_small_media_panel_keeps_text_and_footer_within_compact_height() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let title_id = Rc::new(Cell::new(None));
+        let description_id = Rc::new(Cell::new(None));
+        let content_id = Rc::new(Cell::new(None));
+        let cancel_id = Rc::new(Cell::new(None));
+        let action_id = Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        for frame in 1..=2 {
+            app.set_frame_id(FrameId(frame));
+            render_alert_dialog_frame_with_media_content(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                AlertDialogContentSize::Sm,
+                title_id.clone(),
+                description_id.clone(),
+                content_id.clone(),
+                cancel_id.clone(),
+                action_id.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let content_bounds = bounds_for_element(
+            &mut app,
+            window,
+            content_id.get().expect("content element id"),
+        )
+        .expect("content bounds");
+        let title_bounds =
+            bounds_for_element(&mut app, window, title_id.get().expect("title element id"))
+                .expect("title bounds");
+        let description_bounds = bounds_for_element(
+            &mut app,
+            window,
+            description_id.get().expect("description element id"),
+        )
+        .expect("description bounds");
+        let cancel_bounds = bounds_for_element(
+            &mut app,
+            window,
+            cancel_id.get().expect("cancel element id"),
+        )
+        .expect("cancel bounds");
+        let action_bounds = bounds_for_element(
+            &mut app,
+            window,
+            action_id.get().expect("action element id"),
+        )
+        .expect("action bounds");
+
+        let content_left = content_bounds.origin.x.0 - 0.5;
+        let content_right = content_bounds.origin.x.0 + content_bounds.size.width.0 + 0.5;
+        let content_bottom = content_bounds.origin.y.0 + content_bounds.size.height.0 + 0.5;
+
+        assert!(
+            content_bounds.size.width.0 <= 320.5,
+            "expected small media alert dialog content width to stay near the small max width, got {content_bounds:?}"
+        );
+        assert!(
+            content_bounds.size.height.0 <= 320.0,
+            "expected small media alert dialog height to stay compact, got {content_bounds:?}"
+        );
+        for (label, bounds) in [
+            ("title", title_bounds),
+            ("description", description_bounds),
+            ("cancel", cancel_bounds),
+            ("action", action_bounds),
+        ] {
+            assert!(
+                bounds.origin.x.0 >= content_left
+                    && bounds.origin.x.0 + bounds.size.width.0 <= content_right
+                    && bounds.origin.y.0 + bounds.size.height.0 <= content_bottom,
+                "expected {label} to stay inside small media alert dialog content; content={content_bounds:?} node={bounds:?}"
+            );
+        }
+        assert!(
+            (cancel_bounds.origin.y.0 - action_bounds.origin.y.0).abs() < 0.5,
+            "expected small media footer buttons to share one row, got cancel={cancel_bounds:?} action={action_bounds:?}"
+        );
+        assert!(
+            (cancel_bounds.size.width.0 - action_bounds.size.width.0).abs() < 1.0,
+            "expected small media footer buttons to keep equal widths, got cancel={cancel_bounds:?} action={action_bounds:?}"
+        );
     }
 
     fn render_alert_dialog_frame_with_auto_focus_hooks(

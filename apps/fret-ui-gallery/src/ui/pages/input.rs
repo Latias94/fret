@@ -1,9 +1,10 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::input as snippets;
 
-pub(super) fn preview_input(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(super) fn preview_input(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let basic = snippets::basic::render(cx);
     let field = snippets::field::render(cx);
     let field_group = snippets::field_group::render(cx);
@@ -46,9 +47,9 @@ pub(super) fn preview_input(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             DocSection::new("Usage", usage)
                 .description("Copyable minimal usage for `Input` before the example matrix.")
                 .code_rust(
-                    r#"use fret_ui_shadcn::{self as shadcn, prelude::*};
+                    r#"use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-let value = cx.app.models_mut().insert(String::new());
+let value = cx.local_model_keyed("value", String::new);
 
 shadcn::Input::new(value)
     .a11y_label("Search")

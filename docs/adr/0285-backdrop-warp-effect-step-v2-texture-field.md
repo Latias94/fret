@@ -105,6 +105,6 @@ Cons:
 
 ## Tracking
 
-- Workstream: `docs/workstreams/renderer-effect-backdrop-warp-v2.md`
-- TODO: `docs/workstreams/renderer-effect-backdrop-warp-v2-todo.md`
-- Milestones: `docs/workstreams/renderer-effect-backdrop-warp-v2-milestones.md`
+- Workstream: `docs/workstreams/renderer-effect-backdrop-warp-v2/renderer-effect-backdrop-warp-v2.md`
+- TODO: `docs/workstreams/renderer-effect-backdrop-warp-v2/renderer-effect-backdrop-warp-v2-todo.md`
+- Milestones: `docs/workstreams/renderer-effect-backdrop-warp-v2/renderer-effect-backdrop-warp-v2-milestones.md`

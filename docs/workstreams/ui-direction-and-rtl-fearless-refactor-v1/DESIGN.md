@@ -28,7 +28,7 @@ to a `crates/*` contract change when we can’t get stable parity outcomes witho
 ## Source of truth
 
 - Radix direction semantics audit: `docs/audits/radix-direction.md`
-- shadcn docs parity tracker: `docs/workstreams/ui-gallery-shadcn-docs-alignment-v4-todo.md`
+- shadcn docs parity tracker: `docs/workstreams/standalone/ui-gallery-shadcn-docs-alignment-v4-todo.md`
 
 ## Invariants (must hold)
 

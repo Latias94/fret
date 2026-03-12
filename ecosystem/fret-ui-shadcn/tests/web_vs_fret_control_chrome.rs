@@ -1652,7 +1652,7 @@ fn web_vs_fret_button_group_size_geometry_and_chrome_match() {
         .a11y_label("ButtonGroupSizeLg");
 
         vec![
-            ui::v_stack(move |cx| {
+            decl_stack::v_stack(move |cx| {
                 vec![
                     group_sm.into_element(cx),
                     group_md.into_element(cx),

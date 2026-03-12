@@ -15,8 +15,8 @@ use fret_ui_kit::primitives::tooltip as radix_tooltip;
 use fret_ui_kit::tooltip_provider;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space,
-    UiChildIntoElement, UiHostBoundIntoElement, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayPresence,
+    Radius, Space, ui,
 };
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -163,27 +163,14 @@ struct TooltipTriggerEventModels {
 fn tooltip_trigger_event_models<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> TooltipTriggerEventModels {
-    #[derive(Default)]
-    struct State {
-        models: Option<TooltipTriggerEventModels>,
-    }
-
-    let existing = cx.with_state(State::default, |st| st.models.clone());
-    if let Some(models) = existing {
-        return models;
-    }
-
-    let models = TooltipTriggerEventModels {
-        has_pointer_move_opened: cx.app.models_mut().insert(false),
+    TooltipTriggerEventModels {
+        has_pointer_move_opened: cx.local_model_keyed("has_pointer_move_opened", || false),
         pointer_transit_geometry: tooltip_provider::pointer_transit_geometry_model(cx),
-        suppress_hover_open: cx.app.models_mut().insert(false),
-        suppress_focus_open: cx.app.models_mut().insert(false),
-        close_requested: cx.app.models_mut().insert(false),
-        close_reason: cx.app.models_mut().insert(None),
-    };
-
-    cx.with_state(State::default, |st| st.models = Some(models.clone()));
-    models
+        suppress_hover_open: cx.local_model_keyed("suppress_hover_open", || false),
+        suppress_focus_open: cx.local_model_keyed("suppress_focus_open", || false),
+        close_requested: cx.local_model_keyed("close_requested", || false),
+        close_reason: cx.local_model_keyed("close_reason", || None),
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -603,10 +590,10 @@ impl Tooltip {
     /// Host-bound builder-first constructor that late-lands the trigger/content at the call site.
     pub fn build<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
-        trigger: impl UiChildIntoElement<H>,
+        trigger: impl IntoUiElement<H>,
         content: impl Into<TooltipContentArg>,
     ) -> Self {
-        Self::new(trigger.into_child_element(cx), content)
+        Self::new(trigger.into_element(cx), content)
     }
 
     pub fn align(mut self, align: TooltipAlign) -> Self {
@@ -836,23 +823,7 @@ impl Tooltip {
             let event_models = tooltip_trigger_event_models(cx);
             let tooltip_id = cx.root_id();
 
-            #[derive(Default)]
-            struct TooltipOpenModelState {
-                model: Option<Model<bool>>,
-            }
-
-            let open = cx.with_state_for(tooltip_id, TooltipOpenModelState::default, |st| {
-                st.model.clone()
-            });
-            let open = if let Some(model) = open {
-                model
-            } else {
-                let model = cx.app.models_mut().insert(false);
-                cx.with_state_for(tooltip_id, TooltipOpenModelState::default, |st| {
-                    st.model = Some(model.clone());
-                });
-                model
-            };
+            let open = cx.model_for(tooltip_id, || false);
             let open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
 
             let close_requested = cx
@@ -876,7 +847,7 @@ impl Tooltip {
                 .copied()
                 .unwrap_or(false);
 
-            let left_hover = cx.with_state(TooltipTriggerHoverEdgeState::default, |st| {
+            let left_hover = cx.slot_state(TooltipTriggerHoverEdgeState::default, |st| {
                 let left = st.was_hovered && !hovered;
                 st.was_hovered = hovered;
                 left
@@ -1169,7 +1140,7 @@ impl Tooltip {
                     overlay_motion::shadcn_motion_ease_bezier(cx),
                 );
             let (open_change, open_change_complete) =
-                cx.with_state(TooltipOpenChangeCallbackState::default, |state| {
+                cx.slot_state(TooltipOpenChangeCallbackState::default, |state| {
                     tooltip_open_change_events(state, opening, motion.present, motion.animating)
                 });
             if let (Some(open), Some(handler)) = (open_change, on_open_change.as_ref()) {
@@ -1426,7 +1397,7 @@ impl TooltipTrigger {
     /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
     pub fn build<H: UiHost, T>(child: T) -> TooltipTriggerBuild<H, T>
     where
-        T: UiChildIntoElement<H>,
+        T: IntoUiElement<H>,
     {
         TooltipTriggerBuild {
             child: Some(child),
@@ -1442,14 +1413,14 @@ impl TooltipTrigger {
 
 impl<H: UiHost, T> TooltipTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     pub fn into_trigger(self, cx: &mut ElementContext<'_, H>) -> TooltipTrigger {
         TooltipTrigger::new(
             self.child
                 .expect("expected tooltip trigger child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
     }
 
@@ -1459,22 +1430,12 @@ where
     }
 }
 
-impl<H: UiHost, T> UiHostBoundIntoElement<H> for TooltipTriggerBuild<H, T>
+impl<H: UiHost, T> IntoUiElement<H> for TooltipTriggerBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        TooltipTriggerBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, T> UiChildIntoElement<H> for TooltipTriggerBuild<H, T>
-where
-    T: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         TooltipTriggerBuild::into_element(self, cx)
     }
 }
@@ -1503,7 +1464,7 @@ impl TooltipAnchor {
     /// keep using [`TooltipAnchor::new`] with an already-landed child.
     pub fn build<H: UiHost, T>(child: T) -> TooltipAnchorBuild<H, T>
     where
-        T: UiChildIntoElement<H>,
+        T: IntoUiElement<H>,
     {
         TooltipAnchorBuild {
             child: Some(child),
@@ -1523,14 +1484,14 @@ impl TooltipAnchor {
 
 impl<H: UiHost, T> TooltipAnchorBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     pub fn into_anchor(self, cx: &mut ElementContext<'_, H>) -> TooltipAnchor {
         TooltipAnchor::new(
             self.child
                 .expect("expected tooltip anchor child")
-                .into_child_element(cx),
+                .into_element(cx),
         )
     }
 
@@ -1540,22 +1501,12 @@ where
     }
 }
 
-impl<H: UiHost, T> UiHostBoundIntoElement<H> for TooltipAnchorBuild<H, T>
+impl<H: UiHost, T> IntoUiElement<H> for TooltipAnchorBuild<H, T>
 where
-    T: UiChildIntoElement<H>,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        TooltipAnchorBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, T> UiChildIntoElement<H> for TooltipAnchorBuild<H, T>
-where
-    T: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         TooltipAnchorBuild::into_element(self, cx)
     }
 }

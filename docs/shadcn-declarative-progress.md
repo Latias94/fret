@@ -40,8 +40,8 @@ viewport/DPI stress variants for the highest-risk families (menus, listboxes, ca
 
 Workstream notes (implementation-oriented; not contracts):
 
-- `docs/workstreams/shadcn-web-goldens-v4.md`
-- `docs/workstreams/shadcn-web-goldens-v4-todo.md`
+- `docs/workstreams/shadcn-web-goldens-v4/shadcn-web-goldens-v4.md`
+- `docs/workstreams/shadcn-web-goldens-v4/shadcn-web-goldens-v4-todo.md`
 
 Decision note (scope + sequencing):
 
@@ -77,7 +77,7 @@ P2:
 Related (out-of-scope for v4 parity tracking):
 
 - Shadcn-styled “blocks/recipes” that are not part of the v4 taxonomy live under
-  `fret-ui-shadcn::extras` and are tracked separately in `docs/workstreams/shadcn-extras.md`.
+  `fret-ui-shadcn::extras` and are tracked separately in `docs/workstreams/shadcn-extras/shadcn-extras.md`.
 
 ## Layering & Ownership
 
@@ -131,8 +131,8 @@ Implementation anchors:
 - Builder substrate: `ecosystem/fret-ui-kit/src/ui_builder.rs`
 - shadcn opt-in glue: `ecosystem/fret-ui-shadcn/src/ui_ext/mod.rs`
 - ADR: `docs/adr/0160-unified-authoring-builder-surface-v1.md`
-- Coverage audit note: `docs/workstreams/authoring-ergonomics-fluent-builder.md`
-- TODO tracker: `docs/workstreams/authoring-ergonomics-fluent-builder-todo.md`
+- Coverage audit note: `docs/workstreams/authoring-ergonomics-fluent-builder/authoring-ergonomics-fluent-builder.md`
+- TODO tracker: `docs/workstreams/authoring-ergonomics-fluent-builder/authoring-ergonomics-fluent-builder-todo.md`
 
 ### Status
 
@@ -147,15 +147,42 @@ Implementation anchors:
 Recommended imports for app code:
 
 ```rust
-use fret_ui_shadcn::prelude::*;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 ```
 
 Guidelines:
 
 - Prefer `ui()` for all authoring (chrome + layout + debug helpers).
 - Prefer composing shadcn components over introducing new wrapper nodes.
+- First-party app surfaces should prefer `use fret_ui_shadcn::{facade as shadcn, prelude::*};`;
+  `apps/fret-examples` and the curated `apps/fret-ui-gallery` snippet batches are now gated this way.
+- Non-curated seams should stay explicit in app code: use `fret_ui_shadcn::advanced::*` for
+  environment / `UiServices` hooks, and use `shadcn::raw::*` only for the documented escape-hatch
+  lanes (`typography` prose helpers, `extras`, breadcrumb primitives, and low-level icon helpers)
+  instead of importing `fret_ui_shadcn::*` directly.
 - `StyledExt` exists in `fret-ui-kit` but is intentionally not part of the shadcn prelude to avoid splitting the
   ecosystem into competing patterns.
+
+### Authoring surface alignment rules
+
+This tracker follows the repo-wide authoring reset and the focused conversion-surface follow-up:
+
+- app-facing starter docs, cookbook snippets, and UI Gallery teaching samples should prefer `Ui`,
+  `UiChild`, and `UiCx` on the app lane rather than raw `AnyElement` or legacy split conversion
+  trait names,
+- reusable generic helpers in `fret-ui-shadcn` / `fret-ui-kit` should converge on the unified
+  component conversion trait tracked in
+  `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md`,
+- advanced/manual-assembly reusable helpers should prefer `IntoUiElement<H>` directly, including
+  heterogeneous child-collection and single-child builder seams,
+- shadcn opt-in authoring glue in `ecosystem/fret-ui-shadcn/src/ui_ext/` now also lands through
+  `IntoUiElement<H>` directly, so adapter macros do not re-teach `UiIntoElement`,
+- shadcn `ui_builder_ext/*` helper closures now also accept values that implement
+  `IntoUiElement<H>`, so trigger/content/cell builders do not have to pre-land into `AnyElement`,
+- `UiHostBoundIntoElement`, `UiBuilderHostBoundIntoElementExt`, and `UiChildIntoElement` are
+  already deleted from code and should not be taught on first-party shadcn surfaces,
+- keep `AnyElement` explicit only for justified raw seams such as diagnostics, overlay/controller
+  internals, or low-level helper plumbing.
 
 Before (low density; props structs + wrappers):
 
@@ -382,17 +409,17 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | avatar | `avatar` | Present | In review | Audit: `docs/audits/shadcn-avatar.md`; gallery order now mirrors shadcn docs with dedicated `Badge with Icon` / `Avatar Group with Icon` / `API Reference` sections, while `Fallback only` stays a Fret-only follow-up; shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`avatar-demo`) |
 | badge | `badge` | Present | In review | Audit: `docs/audits/shadcn-badge.md`; gallery order now mirrors shadcn docs with a dedicated `API Reference` section, while numeric count badges stay in a Fret-only follow-up; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`badge-demo`) |
 | breadcrumb | `breadcrumb` | Present | In review | Semantics alignment landed for root/list/current-page/presentation affordances; gallery usage now mirrors shadcn docs via primitives while the compact builder remains a Fret shorthand; audit: `docs/audits/shadcn-breadcrumb.md`; gates: `ecosystem/fret-ui-shadcn/src/breadcrumb.rs` |
-| button | `button` | Present | In review | Audit: `docs/audits/shadcn-button.md`; gallery order now mirrors shadcn docs with explicit `Usage` / `Cursor` / `Default` / `Outline` / `Secondary` / `Ghost` / `Destructive` / `Link` / `API Reference` sections; the second upstream Link path maps to `ButtonRender::Link` (`Link (Semantic)`), while cursor ownership stays runtime/pressable-owned; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`button-demo`) |
+| button | `button` | Present | In review | Audit: `docs/audits/shadcn-button.md`; gallery order now mirrors shadcn docs with explicit `Usage` / `Cursor` / `Default` / `Outline` / `Secondary` / `Ghost` / `Destructive` / `Link` / `API Reference` sections; the second upstream Link path maps to `ButtonRender::Link` (`Link (Semantic)`), logical `data-icon` child compositions now map to `leading_children(...)` / `trailing_children(...)`, and cursor ownership stays runtime/pressable-owned; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`button-demo`) |
 | button-group | `button_group` | Present | In review | Audit: `docs/audits/shadcn-button-group.md`; gallery order now mirrors shadcn docs with dedicated `Usage` / `Accessibility` / `ButtonGroup vs ToggleGroup` / `API Reference` sections; `ButtonGroupText` keeps an explicit `.children(...)` surface while `Flex-1 items` stays a Fret-only caller-owned layout example |
 | calendar | `calendar` | Present | In review | Audit: `docs/audits/shadcn-calendar.md`; headless month grid lives in `fret-ui-kit` (`headless::calendar`); gallery now includes upstream doc-only `About` / `Date Picker` / `Selected Date (With TimeZone)` sections before examples; caller owns `rounded/border` and page width, recipe owns inner chrome |
 | card | `card` | Present | In review | Audit: `docs/audits/shadcn-card.md`; docs-first gallery path already matches shadcn base Card docs, and `CardFooter` now owns a fill-width + `min-w-0` inner row/column budget so footer-only text wraps against the card width instead of collapsing per word; shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`card-with-form`) |
-| carousel | `carousel` | Defer | In review | Audit: `docs/audits/shadcn-carousel.md`; existing compact + parts surfaces already cover the Embla-shaped authoring story, and no active mechanism/public-surface drift is identified; status stays `Defer` because carousel is not currently editor-critical |
+| carousel | `carousel` | Defer | In review | Audit: `docs/audits/shadcn-carousel.md`; gallery now mirrors the upstream Carousel docs structure first (`Demo` / `About` / `Usage` / `Examples` / `Options` / `API` / `Events` / `Plugins` / `RTL` / `API Reference`) while keeping engine/diagnostics follow-ups explicit; no active mechanism/public-surface drift is identified, and status stays `Defer` because carousel is not currently editor-critical |
 | chart | `chart` | Defer | In review | Audit: `docs/audits/shadcn-chart.md`; chart recipe surface, tooltip/legend contracts, and existing chart gates are already partially audited; status stays `Defer` because broader chart-engine work is not currently editor-critical |
 | checkbox | `checkbox` | Present | In review | Audit: `docs/audits/shadcn-checkbox.md`; gallery now mirrors the base Checkbox docs path first with explicit `API Reference`, while `Label Association` and `With Title` stay as focused Fret follow-ups; checkbox chrome, focus ring, and indicator visuals remain recipe-owned, surrounding field layout stays caller-owned, and existing layout/focus gates continue to cover `checkbox-demo` parity |
 | collapsible | `collapsible` | Present | In review | Audit: `docs/audits/shadcn-collapsible.md`; gallery now mirrors the base Collapsible docs path first with explicit `Controlled State` / `Basic` / `Settings Panel` / `File Tree` / `RTL` / `API Reference` sections; composable children stay on `collapsible::primitives`, the compact top-level wrapper remains the Fret-first ergonomic surface, and disclosure motion/semantics remain recipe-owned while surrounding width/gap/card layout stay caller-owned |
 | command | `command` | Present | In review | `CommandPalette` provides cmdk-style active-descendant navigation + filtering/scoring (value + keywords), plus group/separator/empty + checkmark/shortcut; root chrome stays recipe-owned while width caps such as `max-w-sm` stay caller-owned; gallery page order now mirrors shadcn docs before Fret-specific extras; audit: `docs/audits/shadcn-command.md`; shadcn-web gates: `web_vs_fret_command_dialog_*` + `web_vs_fret_combobox_demo_*` |
 | context-menu | `context_menu` | Present | In review | Right click + (macOS) ctrl-click + Shift+F10; anchors to click position for web/Radix parity; trigger surface stays caller-owned while explicit panel width overrides live on `ContextMenuContent::min_width(...)`; parts bridge remains `ContextMenu::into_element_parts(...)`; audit: `docs/audits/shadcn-context-menu.md`; gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`, `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs` |
-| dialog | `dialog` | Present | In review | `compose()` + parts bridge are present; gallery order now mirrors shadcn docs before Fret-specific parts docs; explicit `DialogClose` still differs from upstream default `showCloseButton` surface; audit: `docs/audits/shadcn-dialog.md`; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` |
+| dialog | `dialog` | Present | In review | `compose()` + parts bridge are present; `DialogContent` now owns the upstream-style default close affordance with `show_close_button(false)` for opt-out, while `DialogClose` remains available for explicit/custom close actions; gallery order now mirrors shadcn docs before Fret-specific parts docs; audit: `docs/audits/shadcn-dialog.md`; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` |
 | drawer | `drawer` | Present | In review | `direction(...)` now aliases the upstream Vaul/shadcn placement prop while `DrawerClose::from_scope().build(...)` covers the common `asChild` close path; gallery order now mirrors shadcn docs before the Fret-specific snap-points recipe; audit: `docs/audits/shadcn-drawer.md` |
 | dropdown-menu | `dropdown_menu` | Present | In review | Menu navigation + typeahead + dismissible popover infra (ADR 0074); now includes `Label`/`Group`/`Shortcut` + destructive items; trigger sizing stays caller-owned while explicit panel width overrides live on `DropdownMenuContent::min_width(...)`; parts bridge remains `DropdownMenu::into_element_parts(...)`; audit: `docs/audits/shadcn-dropdown-menu.md`; gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` |
 | empty | `empty` | Present | In review | Audit: `docs/audits/shadcn-empty.md`; gallery now mirrors the base Empty docs with explicit `Usage` / `API Reference` sections, while the current recipe intentionally stays aligned to the in-repo `new-york-v4` web geometry gates (`empty-demo`, `empty-background`, `empty-outline`) instead of re-translating base source defaults in this pass; caller still owns preview height, background paint, inline content layout, embedded `InputGroup` width, and page/grid placement constraints |

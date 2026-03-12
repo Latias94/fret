@@ -6,8 +6,7 @@ use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space};
-use fret_ui_shadcn as shadcn;
-use fret_ui_shadcn::prelude::*;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     use std::sync::Arc;
@@ -25,8 +24,6 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     use fret_ui::action::OnActivate;
     use fret_ui::canvas::CanvasPainter;
     use fret_ui::element::{CanvasCachePolicy, Length, PointerRegionProps, SemanticsDecoration};
-    use fret_ui_shadcn::ButtonVariant;
-
     #[derive(Debug, Clone, Copy, PartialEq)]
     struct ConnectOverlayDragState {
         pointer_id: fret_core::PointerId,
@@ -57,11 +54,6 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         reset_epoch: fret_runtime::Model<u64>,
     }
 
-    #[derive(Default)]
-    struct LocalModelsState {
-        models: Option<LocalModels>,
-    }
-
     let header = ui::v_flex(|cx| {
         vec![
             cx.text("Canvas world layer (spike)"),
@@ -72,35 +64,40 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     .gap(Space::N2)
     .into_element(cx);
 
-    let models_opt = cx.with_state(LocalModelsState::default, |st| st.models.clone());
-    let (models, created) = if let Some(models) = models_opt {
-        (models, false)
-    } else {
-        let models_mut = cx.app.models_mut();
-        let models = LocalModels {
-            view: models_mut.insert(PanZoom2D::default()),
-            scale_mode: models_mut.insert(CanvasWorldScaleMode::ScaleWithZoom),
-            overlay_clicks: models_mut.insert(0u64),
-            node_clicks: models_mut.insert(0u64),
-            bounds_store: models_mut.insert(CanvasWorldBoundsStore::default()),
-            selected_count: models_mut.insert(0u64),
-            marquee_blocked_count: models_mut.insert(0u64),
-            node_a_canvas_pos: models_mut.insert(Point::new(Px(420.0), Px(80.0))),
-            node_b_canvas_pos: models_mut.insert(Point::new(Px(760.0), Px(260.0))),
-            connect_drag_started_count: models_mut.insert(0u64),
-            connect_drag_up_count: models_mut.insert(0u64),
-            connect_drag_hit_count: models_mut.insert(0u64),
-            connect_overlay_drag_state: models_mut.insert(None),
-            node_a_screen_bounds: models_mut.insert(None),
-            node_b_screen_bounds: models_mut.insert(None),
-            node_dragged_count: models_mut.insert(0u64),
-            connections: models_mut.insert(Vec::<(u64, u64)>::new()),
-            reset_epoch: models_mut.insert(0u64),
-        };
-        cx.with_state(LocalModelsState::default, |st| {
-            st.models = Some(models.clone())
-        });
-        (models, true)
+    let created = cx.slot_state(
+        || false,
+        |initialized| {
+            if *initialized {
+                false
+            } else {
+                *initialized = true;
+                true
+            }
+        },
+    );
+    let models = LocalModels {
+        view: cx.local_model_keyed("view", PanZoom2D::default),
+        scale_mode: cx.local_model_keyed("scale_mode", || CanvasWorldScaleMode::ScaleWithZoom),
+        overlay_clicks: cx.local_model_keyed("overlay_clicks", || 0u64),
+        node_clicks: cx.local_model_keyed("node_clicks", || 0u64),
+        bounds_store: cx.local_model_keyed("bounds_store", CanvasWorldBoundsStore::default),
+        selected_count: cx.local_model_keyed("selected_count", || 0u64),
+        marquee_blocked_count: cx.local_model_keyed("marquee_blocked_count", || 0u64),
+        node_a_canvas_pos: cx
+            .local_model_keyed("node_a_canvas_pos", || Point::new(Px(420.0), Px(80.0))),
+        node_b_canvas_pos: cx
+            .local_model_keyed("node_b_canvas_pos", || Point::new(Px(760.0), Px(260.0))),
+        connect_drag_started_count: cx.local_model_keyed("connect_drag_started_count", || 0u64),
+        connect_drag_up_count: cx.local_model_keyed("connect_drag_up_count", || 0u64),
+        connect_drag_hit_count: cx.local_model_keyed("connect_drag_hit_count", || 0u64),
+        connect_overlay_drag_state: cx.local_model_keyed("connect_overlay_drag_state", || {
+            None::<ConnectOverlayDragState>
+        }),
+        node_a_screen_bounds: cx.local_model_keyed("node_a_screen_bounds", || None::<Rect>),
+        node_b_screen_bounds: cx.local_model_keyed("node_b_screen_bounds", || None::<Rect>),
+        node_dragged_count: cx.local_model_keyed("node_dragged_count", || 0u64),
+        connections: cx.local_model_keyed("connections", Vec::<(u64, u64)>::new),
+        reset_epoch: cx.local_model_keyed("reset_epoch", || 0u64),
     };
 
     if created {
@@ -605,7 +602,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                         ui_ai::WorkflowNodeFooter::new([shadcn::Button::new("Click node")
                             .test_id("ui-ai-cwl-node-click")
                             .on_activate(on_node_activate.clone())
-                            .variant(ButtonVariant::Secondary)
+                            .variant(shadcn::ButtonVariant::Secondary)
                             .into_element(cx)])
                         .into_element(cx),
                     ])
@@ -1444,13 +1441,13 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
             let mode_scale = shadcn::Button::new("Mode: Scale-with-zoom")
                 .test_id("ui-ai-cwl-mode-scale-with-zoom")
-                .variant(ButtonVariant::Secondary)
+                .variant(shadcn::ButtonVariant::Secondary)
                 .on_activate(on_mode_scale)
                 .into_element(cx);
 
             let mode_semantic = shadcn::Button::new("Mode: Semantic zoom")
                 .test_id("ui-ai-cwl-mode-semantic-zoom")
-                .variant(ButtonVariant::Secondary)
+                .variant(shadcn::ButtonVariant::Secondary)
                 .on_activate(on_mode_semantic)
                 .into_element(cx);
 
@@ -1466,13 +1463,13 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             });
             let commit_connection = shadcn::Button::new("Commit connection")
                 .test_id("ui-ai-cwl-commit-connection")
-                .variant(ButtonVariant::Secondary)
+                .variant(shadcn::ButtonVariant::Secondary)
                 .on_activate(on_commit_connection)
                 .into_element(cx);
 
             let overlay = shadcn::Button::new(format!("Overlay clicks: {overlay_clicks_value}"))
                 .test_id("ui-ai-cwl-overlay-click")
-                .variant(ButtonVariant::Outline)
+                .variant(shadcn::ButtonVariant::Outline)
                 .on_activate(on_overlay_activate)
                 .into_element(cx);
 
@@ -1531,7 +1528,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 }
             }
 
-            let layout_settled = cx.with_state(BoundsStabilityState::default, |st| {
+            let layout_settled = cx.slot_state(BoundsStabilityState::default, |st| {
                 let (Some(a), Some(b)) = (a_screen, b_screen) else {
                     st.last = None;
                     st.stable_frames = 0;
@@ -1622,7 +1619,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
             let reset = shadcn::Button::new("Reset")
                 .test_id("ui-ai-cwl-reset")
-                .variant(ButtonVariant::Secondary)
+                .variant(shadcn::ButtonVariant::Secondary)
                 .on_activate(on_reset)
                 .into_element(cx);
 
@@ -1652,7 +1649,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
             let fit_view = shadcn::Button::new("Fit view")
                 .test_id("ui-ai-cwl-fit-view")
-                .variant(ButtonVariant::Secondary)
+                .variant(shadcn::ButtonVariant::Secondary)
                 .on_activate(on_fit_view)
                 .into_element(cx);
 

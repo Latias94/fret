@@ -1,80 +1,15 @@
 pub const SOURCE: &str = include_str!("side.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default, Clone)]
-struct Models {
-    demo_name: Option<Model<String>>,
-    demo_username: Option<Model<String>>,
-    side_top_open: Option<Model<bool>>,
-    side_right_open: Option<Model<bool>>,
-    side_bottom_open: Option<Model<bool>>,
-    side_left_open: Option<Model<bool>>,
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state = cx.with_state(Models::default, |st| st.clone());
-
-    let demo_name = match state.demo_name {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::from("Pedro Duarte"));
-            cx.with_state(Models::default, |st| st.demo_name = Some(model.clone()));
-            model
-        }
-    };
-
-    let demo_username = match state.demo_username {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::from("@peduarte"));
-            cx.with_state(Models::default, |st| st.demo_username = Some(model.clone()));
-            model
-        }
-    };
-
-    let side_top_open = match state.side_top_open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.side_top_open = Some(model.clone()));
-            model
-        }
-    };
-
-    let side_right_open = match state.side_right_open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.side_right_open = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let side_bottom_open = match state.side_bottom_open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.side_bottom_open = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let side_left_open = match state.side_left_open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.side_left_open = Some(model.clone())
-            });
-            model
-        }
-    };
+    let demo_name = cx.local_model_keyed("demo_name", || String::from("Pedro Duarte"));
+    let demo_username = cx.local_model_keyed("demo_username", || String::from("@peduarte"));
+    let side_top_open = cx.local_model_keyed("side_top_open", || false);
+    let side_right_open = cx.local_model_keyed("side_right_open", || false);
+    let side_bottom_open = cx.local_model_keyed("side_bottom_open", || false);
+    let side_left_open = cx.local_model_keyed("side_left_open", || false);
 
     let side_sheet = |cx: &mut ElementContext<'_, H>,
                       id: &'static str,

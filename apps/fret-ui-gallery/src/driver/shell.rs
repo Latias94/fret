@@ -5,9 +5,9 @@ use fret_ui::{ElementContext, Invalidation};
 use fret_ui_shadcn::{decl_style, prelude::*};
 use std::sync::Arc;
 
-use crate::spec::{
-    BISECT_SIMPLE_CONTENT, BISECT_SIMPLE_SIDEBAR, PAGE_INTRO, PAGE_MAGIC_PATTERNS_TORTURE,
-};
+#[cfg(feature = "gallery-dev")]
+use crate::spec::PAGE_MAGIC_PATTERNS_TORTURE;
+use crate::spec::{BISECT_SIMPLE_CONTENT, BISECT_SIMPLE_SIDEBAR, PAGE_INTRO};
 use crate::ui;
 
 pub(super) fn sidebar_view(
@@ -145,7 +145,10 @@ pub(super) fn content_view(
     // Do not cache the content subtree for pages that intentionally animate without input.
     // View-cache reuse skips rerendering declarative closures, which would freeze time-driven
     // material params like the magic patterns torture stripes.
+    #[cfg(feature = "gallery-dev")]
     let cache_content = cache_content && selected.as_ref() != PAGE_MAGIC_PATTERNS_TORTURE;
+    #[cfg(not(feature = "gallery-dev"))]
+    let cache_content = cache_content;
 
     if cache_content {
         cx.view_cache(

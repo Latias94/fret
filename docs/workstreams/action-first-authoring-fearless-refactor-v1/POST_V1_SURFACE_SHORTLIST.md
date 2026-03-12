@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Post-v1 Surface Shortlist
 
 Status: draft recommendation
-Last updated: 2026-03-09
+Last updated: 2026-03-12
 
 Related:
 
@@ -30,16 +30,18 @@ The intent is to stop treating every remaining density complaint as equally urge
 
 ## Current conclusion
 
-As of 2026-03-09, the repo does **not** need another broad helper-expansion pass.
+As of 2026-03-12, the repo still does **not** need another broad helper-expansion pass.
 
 The highest-value post-v1 work is now:
 
-1. make the existing default path product-like and hard to misuse,
-2. improve invalidation/local-state ergonomics only where medium-surface evidence still shows a real
-   cliff,
-3. finish only the builder-first seams that still block cross-cutting default authoring,
-4. revisit keyed-list / payload-row handler ergonomics only if the above still leaves repeated keyed-list handler noise,
-5. keep macros and `DataTable` helper expansion deferred.
+1. collapse the remaining conversion-surface taxonomy through the dedicated `into-element`
+   workstream,
+2. reopen keyed/list/build-sink density on the canonical trio
+   (`simple_todo_v2_target`, `todo_demo`, scaffold template),
+3. make the existing default path product-like and hard to misuse around that same evidence set,
+4. improve invalidation/local-state ergonomics only where medium-surface evidence still shows a real
+   cliff after the first two steps,
+5. keep broad builder-family expansion, macros, and `DataTable` helper expansion deferred.
 
 In practical terms, the next phase should optimize for **surface clarity and evidence-backed density
 improvements**, not for adding more API names.
@@ -62,11 +64,12 @@ Builder-seam inventory update (as of 2026-03-09):
 
 | Priority | Surface | Why it is still worth doing | Entry condition | Recommended outcome |
 | --- | --- | --- | --- | --- |
-| P0 | Default-path productization | The runtime path exists, but users still infer the intended story from scattered examples/docs. This is the largest remaining adoption risk. | Default/comparison/advanced taxonomy is still uneven across docs, templates, cookbook, and gallery. | Tighten the onboarding ladder and keep the same recommended path visible everywhere. |
-| P1 | Invalidation ergonomics (`AFA-postv1-004`) | This remains important because it defines the default rerender rule, even though the next move now looks more like policy/productization than API expansion. | Keep the policy explicit: tracked writes rerender by default, `notify()` stays an escape hatch, and only reopen API work if a new real medium surface contradicts that rule. | Keep `notify()` as a low-level escape hatch; avoid adding another generic helper unless evidence changes. |
-| P1 | Local-state ergonomics (`AFA-postv1-001`) | `LocalState<T>` is viable and default-ready, but the remaining distance is now architectural: it is still model-backed and still visibly different from the north-star plain-Rust feel. | Reopen additive API work only if a real medium surface is still blocked after the current `use_local*` path; otherwise treat this as a runtime/ownership question rather than a helper backlog item. | Do not add more sugar by default; only pursue further work with a stronger runtime-level proposal. |
-| P2 | Builder-first last-mile seams (`AFA-postv1-002`, maintenance mode) | The broad cleanup plus the later `Alert` / `ScrollArea` / `Field` closures mean this is no longer an active expansion track. | Reopen only if a new cross-surface host/root seam still forces eager landing across multiple real default-facing surfaces. | Keep existing builders; avoid more family-by-family expansion without new evidence. |
-| P3 | Keyed-list / payload-row handler ergonomics (`AFA-postv1-003`, maintenance mode) | A deliberately narrow helper already landed and current todo-like surfaces adopted it, so this is no longer an active expansion track. | Reopen only if a new medium surface shows the same row-local pressure beyond the existing todo-like evidence; command/query/form surfaces still do not count. | Keep the current helper as-is; do not widen keyed-list sugar without new evidence. |
+| P0 | Conversion-surface cleanup (`into-element` workstream) | This is the clearest remaining reason Fret still feels less unified than GPUI when writing helpers/snippets/components. | App-facing surfaces are already narrow enough that the remaining pain is mostly on helper/component lanes. | Collapse the public conversion story to one concept and keep raw `AnyElement` explicit. |
+| P1 | Keyed/list/build-sink density (`AFA-postv1-003`, reopened) | The canonical trio still exposes visible list wiring and sink boilerplate that shapes day-to-day authoring feel. | Treat `simple_todo_v2_target`, `todo_demo`, and the scaffold template as the evidence set; do not wait for unrelated medium surfaces first. | Land one narrow list-authoring improvement and keep action identity explicit. |
+| P1 | Default-path productization | The runtime path exists, but users still infer the intended story from scattered examples/docs. This is the largest remaining adoption risk once the conversion story is clearer. | Default/comparison/advanced taxonomy is still uneven across docs, templates, cookbook, and gallery. | Tighten the onboarding ladder and keep the same recommended path visible everywhere, especially across the canonical trio. |
+| P2 | Invalidation ergonomics (`AFA-postv1-004`) | This remains important because it defines the default rerender rule, even though the next move now looks more like policy/productization than API expansion. | Keep the policy explicit: tracked writes rerender by default, `notify()` stays an escape hatch, and only reopen API work if a new real medium surface contradicts that rule after P0/P1 land. | Keep `notify()` as a low-level escape hatch; avoid adding another generic helper unless evidence changes. |
+| P2 | Local-state ergonomics (`AFA-postv1-001`) | `LocalState<T>` is viable and default-ready, but the remaining distance is now architectural: it is still model-backed and still visibly different from the north-star plain-Rust feel. | Reopen additive API work only if a real medium surface is still blocked after the current `use_local*` path plus the P0/P1 productization work; otherwise treat this as a runtime/ownership question rather than a helper backlog item. | Do not add more sugar by default; only pursue further work with a stronger runtime-level proposal. |
+| P3 | Builder-first last-mile seams outside keyed lists (`AFA-postv1-002`, maintenance mode) | The broad cleanup plus the later `Alert` / `ScrollArea` / `Field` closures mean this is no longer an active expansion track. | Reopen only if a new cross-surface host/root seam still forces eager landing across multiple real default-facing surfaces outside the canonical keyed/list slice. | Keep existing builders; avoid more family-by-family expansion without new evidence. |
 | P4 | Hard-delete/quarantine follow-through | Important for facade hygiene, but not the next authoring-density win. | Deprecation windows and product-policy decisions must mature first. | Continue policy/gate work; do not let cleanup displace the higher-value authoring surfaces above. |
 
 ---
@@ -77,7 +80,7 @@ Builder-seam inventory update (as of 2026-03-09):
 | --- | --- | --- |
 | `DataTable` helper/macro expansion | The audit already shows the main pressure is business-table recipe assembly, not primitive table builders. The repo now has a curated default recipe plus a gallery slice and smoke gate. | Revisit only if the curated recipe still looks materially too noisy in multiple app-grade examples. |
 | Broad macro design (`AFA-postv1-005`) | Macros would freeze a still-settling mental model too early. They are optional polish, not a v2 prerequisite. | Revisit only after productization + invalidation + keyed-list / payload-row ergonomics still leave repeated structural boilerplate. |
-| Broader keyed-list / payload-row sugar beyond `on_payload_action_notify_local_update_if::<...>(...)` | The current evidence slice is already covered by the narrow helper, and the remaining visible root handler tables are intentional for action identity / ownership clarity. | Revisit only if a second non-todo medium surface shows the same row-local handler-placement noise. |
+| Broad keyed-list / payload-row sugar beyond a narrow canonical-trio fix | The repo should improve list authoring feel, but only through the smallest change that helps the canonical trio without hiding action identity or widening generic sugar everywhere. | Revisit broader expansion only if the canonical trio still looks materially too noisy after the first narrow fix. |
 | Compat-runner removal | The current policy already says it is an intentional advanced interop seam for now. | Revisit only if the caller families shrink or a clear quarantine boundary exists. |
 | `use_state` hard delete | Current policy keeps it as an explicit raw-model seam rather than a default local-state story. | Revisit only after the repo decides whether that explicit seam should remain permanent. |
 | More `DataTable`-specific surface tweaks in this workstream | That would blur the line between business-table productization and the main action-first/view-runtime surface. | Track separately if a future business-table workstream is needed. |
@@ -102,7 +105,25 @@ predictable product surface instead of leaving it as an expert-only reading exer
 
 ## Concrete next implementation order
 
-### 1. Productize the current default path first
+### 1. Collapse the conversion surface first
+
+Recommended deliverables:
+
+- land the focused `into-element` cleanup,
+- keep app-facing `Ui` / `UiChild` and one component conversion concept as the taught story,
+- prevent helper/component docs from reintroducing legacy split conversion names.
+
+### 2. Reopen keyed/list/build-sink density on the canonical trio
+
+Recommended deliverables:
+
+- keep `simple_todo_v2_target`, `todo_demo`, and the scaffold template aligned on one intended
+  writing style,
+- evaluate one narrow list-authoring improvement (`ui::for_each_keyed`, `ui::keyed_column`, or an
+  equivalent sink-friendly helper family) against those three surfaces,
+- keep action identity explicit instead of hiding it behind broad sugar.
+
+### 3. Productize the current default path next
 
 Recommended deliverables:
 
@@ -110,7 +131,7 @@ Recommended deliverables:
 - make gallery/cookbook pages explicitly distinguish default vs comparison vs advanced,
 - keep policy gates aligned with that default story.
 
-### 2. Re-open invalidation/local-state only where evidence remains
+### 4. Re-open invalidation/local-state only where evidence remains
 
 Recommended deliverables:
 
@@ -118,7 +139,7 @@ Recommended deliverables:
 - one small runtime/API move only if it clearly removes repeated tracked-write noise,
 - diagnostics evidence showing rebuild reasons stay explainable.
 
-### 3. Re-open builder-first seam work only with new evidence
+### 5. Re-open builder-first seam work outside keyed lists only with new evidence
 
 Recommended deliverables:
 
@@ -127,15 +148,7 @@ Recommended deliverables:
 - treat families with existing builders but low migration (for example `Card`) as adoption work,
   not as automatic new-surface candidates.
 
-### 4. Re-open keyed-list / payload-row handler ergonomics only with new evidence
-
-Recommended deliverables:
-
-- none by default,
-- reopen only after steps 1-3 and only if a new medium surface still looks materially worse than
-  the current root-handler story even with the existing narrow helper.
-
-### 5. Leave macros and `DataTable` expansion out of the critical path
+### 6. Leave macros and `DataTable` expansion out of the critical path
 
 Recommended deliverables:
 

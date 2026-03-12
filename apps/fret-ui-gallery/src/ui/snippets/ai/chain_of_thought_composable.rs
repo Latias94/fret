@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("chain_of_thought_composable.rs");
 use fret_core::FontWeight;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::{Items, LayoutRefinement, Space, ui};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ui_ai::ChainOfThought::new()

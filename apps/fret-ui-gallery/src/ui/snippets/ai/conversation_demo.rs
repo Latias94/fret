@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("conversation_demo.rs");
 // region: example
 use fret_core::{Px, SemanticsRole};
 use fret_icons::IconId;
-use fret_runtime::Model;
+use fret_ui::Invalidation;
 use fret_ui::action::OnActivate;
 use fret_ui::element::SemanticsProps;
 use fret_ui_ai as ui_ai;
@@ -49,50 +49,16 @@ fn build_seeded_messages(count: usize) -> Arc<[ui_ai::AiMessage]> {
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    #[derive(Default)]
-    struct DemoModels {
-        messages: Option<Model<Arc<[ui_ai::AiMessage]>>>,
-        prompt: Option<Model<String>>,
-        next_id: Option<Model<u64>>,
-        exported_md_len: Option<Model<u64>>,
-    }
-
-    let needs_init = cx.with_state(DemoModels::default, |st| {
-        st.messages.is_none()
-            || st.prompt.is_none()
-            || st.next_id.is_none()
-            || st.exported_md_len.is_none()
+    let messages_model = cx.local_model_keyed("messages", || {
+        build_seeded_messages(diag_seed_message_count())
     });
-    if needs_init {
-        let initial_messages = build_seeded_messages(diag_seed_message_count());
-        let next_id_value = (initial_messages.len() as u64).max(3) + 1;
-        let messages = cx.app.models_mut().insert(initial_messages);
-        let prompt = cx.app.models_mut().insert(String::new());
-        let next_id = cx.app.models_mut().insert(next_id_value);
-        let exported_md_len = cx.app.models_mut().insert(0u64);
-
-        cx.with_state(DemoModels::default, move |st| {
-            st.messages = Some(messages.clone());
-            st.prompt = Some(prompt.clone());
-            st.next_id = Some(next_id.clone());
-            st.exported_md_len = Some(exported_md_len.clone());
-        });
-    }
-
-    let (messages_model, prompt_model, next_id_model, exported_md_len_model) =
-        cx.with_state(DemoModels::default, |st| {
-            (
-                st.messages.clone().expect("messages"),
-                st.prompt.clone().expect("prompt"),
-                st.next_id.clone().expect("next_id"),
-                st.exported_md_len.clone().expect("exported_md_len"),
-            )
-        });
+    let prompt_model = cx.local_model_keyed("prompt", String::new);
+    let next_id_model =
+        cx.local_model_keyed("next_id", || (diag_seed_message_count() as u64).max(3) + 1);
+    let exported_md_len_model = cx.local_model_keyed("exported_md_len", || 0u64);
 
     let messages = cx
-        .app
-        .models_mut()
-        .get_cloned(&messages_model)
+        .get_model_cloned(&messages_model, Invalidation::Layout)
         .unwrap_or_default();
     let revision = messages.len().min(u64::MAX as usize) as u64;
     let messages_empty = messages.is_empty();
@@ -209,9 +175,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         });
 
     let exported_md_len = cx
-        .app
-        .models_mut()
-        .get_copied(&exported_md_len_model)
+        .get_model_copied(&exported_md_len_model, Invalidation::Paint)
         .unwrap_or(0);
     let instrumentation = cx.semantics(
         SemanticsProps {

@@ -14,11 +14,8 @@ use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState, create_column_helper};
-use fret_ui_kit::ui;
-use fret_ui_shadcn::button::{Button, ButtonSize, ButtonVariant};
-use fret_ui_shadcn::{
-    DataTable, DataTablePagination, DataTableToolbar, DataTableViewOutput, Space,
-};
+use fret_ui_kit::{Space, ui};
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -33,7 +30,7 @@ struct DemoRow {
 pub struct DemoWindowState {
     ui: UiTree<App>,
     table_state: Model<TableState>,
-    table_output: Model<DataTableViewOutput>,
+    table_output: Model<shadcn::DataTableViewOutput>,
     rows: Arc<[DemoRow]>,
     started_at: Instant,
     frame: u64,
@@ -67,7 +64,9 @@ impl DataTableDemoDriver {
         let mut table_state = TableState::default();
         table_state.pagination.page_size = 50;
         let table_state = app.models_mut().insert(table_state);
-        let table_output = app.models_mut().insert(DataTableViewOutput::default());
+        let table_output = app
+            .models_mut()
+            .insert(shadcn::DataTableViewOutput::default());
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -256,9 +255,9 @@ fn render(_driver: &mut DataTableDemoDriver, context: WinitRenderContext<'_, Dem
 
             let header = ui::h_row(|cx| {
                 [
-                    Button::new("Close")
-                        .variant(ButtonVariant::Outline)
-                        .size(ButtonSize::Sm)
+                    shadcn::Button::new("Close")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
                         .on_click(CommandId::from("datatable_demo.close"))
                         .into_element(cx),
                     cx.text(Arc::from(format!(
@@ -272,20 +271,24 @@ fn render(_driver: &mut DataTableDemoDriver, context: WinitRenderContext<'_, Dem
 
             let columns_for_header: Arc<[(Arc<str>, Arc<str>)]> = Arc::clone(&columns_for_menu);
             let columns_for_toolbar = Arc::clone(&columns_for_header);
-            let toolbar =
-                DataTableToolbar::new(table_state.clone(), Arc::clone(&columns), move |col| {
+            let toolbar = shadcn::DataTableToolbar::new(
+                table_state.clone(),
+                Arc::clone(&columns),
+                move |col| {
                     columns_for_toolbar
                         .iter()
                         .find_map(|(id, label)| {
                             (id.as_ref() == col.id.as_ref()).then(|| Arc::clone(label))
                         })
                         .unwrap_or_else(|| Arc::clone(&col.id))
-                })
-                .into_element(cx);
-            let pagination = DataTablePagination::new(table_state.clone(), table_output.clone())
-                .into_element(cx);
+                },
+            )
+            .into_element(cx);
+            let pagination =
+                shadcn::DataTablePagination::new(table_state.clone(), table_output.clone())
+                    .into_element(cx);
 
-            let data_table = DataTable::new()
+            let data_table = shadcn::DataTable::new()
                 .output_model(table_output.clone())
                 .into_element(
                     cx,

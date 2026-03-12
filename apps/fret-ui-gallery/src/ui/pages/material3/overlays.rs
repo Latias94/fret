@@ -1,11 +1,12 @@
 use super::*;
+use fret::UiCx;
 
 use crate::ui::snippets;
 
 use super::shared::{MATERIAL3_INTRO, render_material3_demo_page};
 
 pub(in crate::ui) fn preview_material3_bottom_sheet(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     open: Model<bool>,
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::bottom_sheet::render(cx, open);
@@ -19,7 +20,7 @@ pub(in crate::ui) fn preview_material3_bottom_sheet(
 }
 
 pub(in crate::ui) fn preview_material3_dialog(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     open: Model<bool>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
@@ -34,7 +35,7 @@ pub(in crate::ui) fn preview_material3_dialog(
 }
 
 pub(in crate::ui) fn preview_material3_menu(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     open: Model<bool>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
@@ -49,7 +50,7 @@ pub(in crate::ui) fn preview_material3_menu(
 }
 
 pub(in crate::ui) fn preview_material3_snackbar(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::snackbar::render(cx, last_action);
@@ -62,9 +63,7 @@ pub(in crate::ui) fn preview_material3_snackbar(
     )
 }
 
-pub(in crate::ui) fn preview_material3_tooltip(
-    cx: &mut ElementContext<'_, App>,
-) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_material3_tooltip(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::material3::tooltip::render(cx);
 
     render_material3_demo_page(

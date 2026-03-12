@@ -12,7 +12,7 @@
 
 #![cfg(not(target_arch = "wasm32"))]
 
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_core::Point;
 use fret_core::scene::{Color, DropShadowV1, EffectChain, EffectMode, EffectStep};
 
@@ -40,18 +40,18 @@ fn shadow_chain() -> EffectChain {
 struct DropShadowBasicsView;
 
 impl View for DropShadowBasicsView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let enabled_state = cx.use_local_with(|| true);
-        let stress_state = cx.use_local_with(|| false);
+        let enabled_state = cx.state().local_init(|| true);
+        let stress_state = cx.state().local_init(|| false);
 
-        let enabled = enabled_state.watch(cx).layout().value_or(true);
-        let stress = stress_state.watch(cx).layout().value_or(false);
+        let enabled = cx.state().watch(&enabled_state).layout().value_or(true);
+        let stress = cx.state().watch(&stress_state).layout().value_or(false);
 
         let toolbar = ui::v_flex(|cx| {
             let row_shadow = ui::h_flex(|cx| {
@@ -93,7 +93,7 @@ impl View for DropShadowBasicsView {
 
         let chain = shadow_chain();
 
-        let card = |cx: &mut ElementContext<'_, App>, title: String| -> AnyElement {
+        let card = |cx: &mut UiCx<'_>, title: String| -> AnyElement {
             let surface = ui::v_flex(|cx| {
                 ui::children![
                     cx;
@@ -188,7 +188,8 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-drop-shadow-basics")
         .window("cookbook-drop-shadow-basics", (1280.0, 860.0))
         .config_files(false)
-        .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_view::<DropShadowBasicsView>()
+        .setup(fret_cookbook::install_cookbook_defaults)
+        .view::<DropShadowBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

@@ -16,9 +16,8 @@ use fret_ui_kit::declarative::form::FormRegistry;
 use fret_ui_kit::headless::form_state::{FormState, FormValidateMode};
 use fret_ui_kit::headless::form_validation::{first_error, required_trimmed};
 use fret_ui_kit::ui;
-use fret_ui_kit::{LayoutRefinement, OverlayController};
-use fret_ui_shadcn::button::{Button, ButtonSize, ButtonVariant};
-use fret_ui_shadcn::{DatePicker, Form, FormField, Input, Select, SelectItem, Space};
+use fret_ui_kit::{LayoutRefinement, OverlayController, Space};
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 use time::Date;
 
@@ -266,18 +265,18 @@ fn render(_driver: &mut FormDemoDriver, context: WinitRenderContext<'_, DemoWind
 
             let header = ui::h_row(|cx| {
                 [
-                    Button::new("Close")
-                        .variant(ButtonVariant::Outline)
-                        .size(ButtonSize::Sm)
+                    shadcn::Button::new("Close")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
                         .on_click(CommandId::from("form_demo.close"))
                         .into_element(cx),
-                    Button::new("Reset")
-                        .variant(ButtonVariant::Outline)
-                        .size(ButtonSize::Sm)
+                    shadcn::Button::new("Reset")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
                         .on_click(CommandId::from("form_demo.reset"))
                         .into_element(cx),
-                    Button::new("Submit")
-                        .size(ButtonSize::Sm)
+                    shadcn::Button::new("Submit")
+                        .size(shadcn::ButtonSize::Sm)
                         .on_click(CommandId::from("form_demo.submit"))
                         .into_element(cx),
                     cx.text(Arc::from(format!(
@@ -291,45 +290,43 @@ fn render(_driver: &mut FormDemoDriver, context: WinitRenderContext<'_, DemoWind
             .into_element(cx);
 
             let form = {
-                Form::new(vec![
-                    FormField::new(
+                shadcn::Form::new(vec![
+                    shadcn::FormField::new(
                         form_state.clone(),
                         "name",
-                        vec![Input::new(name.clone()).into_element(cx)],
+                        vec![shadcn::Input::new(name.clone()).into_element(cx)],
                     )
                     .label("Name")
                     .into_element(cx),
-                    FormField::new(
+                    shadcn::FormField::new(
                         form_state.clone(),
                         "email",
-                        vec![Input::new(email.clone()).into_element(cx)],
+                        vec![shadcn::Input::new(email.clone()).into_element(cx)],
                     )
                     .label("Email")
                     .into_element(cx),
-                    FormField::new(
+                    shadcn::FormField::new(
                         form_state.clone(),
                         "role",
                         vec![
-                            Select::new(role.clone(), role_open.clone())
+                            shadcn::Select::new(role.clone(), role_open.clone())
                                 .a11y_label("Role")
-                                .value(
-                                    fret_ui_shadcn::SelectValue::new().placeholder("Pick a role"),
-                                )
+                                .value(shadcn::SelectValue::new().placeholder("Pick a role"))
                                 .items([
-                                    SelectItem::new("admin", "Admin"),
-                                    SelectItem::new("editor", "Editor"),
-                                    SelectItem::new("viewer", "Viewer"),
+                                    shadcn::SelectItem::new("admin", "Admin"),
+                                    shadcn::SelectItem::new("editor", "Editor"),
+                                    shadcn::SelectItem::new("viewer", "Viewer"),
                                 ])
                                 .into_element(cx),
                         ],
                     )
                     .label("Role")
                     .into_element(cx),
-                    FormField::new(
+                    shadcn::FormField::new(
                         form_state.clone(),
                         "start_date",
                         vec![
-                            DatePicker::new_controllable(
+                            shadcn::DatePicker::new_controllable(
                                 cx,
                                 Some(start_date.clone()),
                                 None,
@@ -448,7 +445,7 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    fret::run_native_with_fn_driver_with_hooks(
+    fret::advanced::run_native_with_fn_driver_with_hooks(
         config,
         app,
         FormDemoDriver::default(),

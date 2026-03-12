@@ -1,18 +1,19 @@
 pub const SOURCE: &str = include_str!("link_render.rs");
 
 // region: example
-use fret_app::App;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret::UiCx;
+use fret_ui_kit::IntoUiElement;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
-fn icon(cx: &mut ElementContext<'_, App>, id: &'static str) -> AnyElement {
-    shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
+fn icon(cx: &mut UiCx<'_>, id: &'static str) -> impl IntoUiElement<fret_app::App> + use<> {
+    fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let media = shadcn::ItemMedia::new([icon(cx, "lucide.house")])
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+    let media = shadcn::ItemMedia::new([icon(cx, "lucide.house").into_element(cx)])
         .variant(shadcn::ItemMediaVariant::Icon)
         .into_element(cx);
     let content = shadcn::ItemContent::new([
@@ -20,7 +21,8 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         shadcn::ItemDescription::new("Overview of your account and activity.").into_element(cx),
     ])
     .into_element(cx);
-    let actions = shadcn::ItemActions::new([icon(cx, "lucide.chevron-right")]).into_element(cx);
+    let actions = shadcn::ItemActions::new([icon(cx, "lucide.chevron-right").into_element(cx)])
+        .into_element(cx);
 
     shadcn::Item::new([media, content, actions])
         .render(shadcn::ItemRender::Link {

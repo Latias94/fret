@@ -60,11 +60,11 @@ Use these for:
 
 ### Keep older notes as specialized background, not umbrella sources
 
-- `docs/workstreams/diag-fearless-refactor-v1.md`
+- `docs/workstreams/diag-fearless-refactor-v1/diag-fearless-refactor-v1.md`
 - `docs/workstreams/diag-architecture-fearless-refactor-v1/README.md`
-- `docs/workstreams/diag-devtools-gui-v1.md`
-- `docs/workstreams/diag-devtools-gui-v1-ai-mcp.md`
-- `docs/workstreams/diag-simplification-v1-m0-baseline.md`
+- `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md`
+- `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md`
+- `docs/workstreams/diag-simplification-v1/diag-simplification-v1-m0-baseline.md`
 
 Intent:
 

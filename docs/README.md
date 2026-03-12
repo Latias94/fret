@@ -15,6 +15,13 @@ Default onboarding ladder:
 - **Comparison**: `simple_todo_v2_target` when you want to compare authoring density or local-state/list tradeoffs
 - **Advanced**: gallery, interop, docking, renderer, and maintainer harnesses
 
+Default app-author surface to keep in your head:
+
+- `use fret::app::prelude::*;`
+- `FretApp::new(...).window(...).view::<MyView>()?.run()`
+- `impl View for MyView { fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui { ... } }`
+- grouped defaults first: `cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()`
+
 ## Command conventions (docs)
 
 Unless a document says otherwise:
@@ -37,44 +44,47 @@ Unless a document says otherwise:
 - Open source readiness (README + examples + defaults polish): [docs/workstreams/open-source-readiness-fearless-refactor-v1/DESIGN.md](./workstreams/open-source-readiness-fearless-refactor-v1/DESIGN.md)
 - Framework modularity (Bevy-like consumption profiles): `docs/workstreams/framework-modularity-fearless-refactor-v1/design.md`
 - Launch/app public surface refactor (`fret-launch` + `fret` facade + GPUI comparison): `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/EXPORT_INVENTORY.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/CONFIG_INVENTORY.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/TODO.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/MILESTONES.md`, and `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/FINAL_STATUS.md`
-- App entry builder v1 (`fret::App` onboarding + builder/hook story): `docs/workstreams/app-entry-builder-v1/DESIGN.md`, `docs/workstreams/app-entry-builder-v1/TODO.md`, and `docs/workstreams/app-entry-builder-v1/MILESTONES.md`
+- App entry builder v1 (`fret::FretApp` onboarding + builder/hook story): `docs/workstreams/app-entry-builder-v1/DESIGN.md`, `docs/workstreams/app-entry-builder-v1/TODO.md`, and `docs/workstreams/app-entry-builder-v1/MILESTONES.md`
+- Authoring surface + ecosystem reset (pre-release, no-compat cleanup): `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TODO.md`, `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, and `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/MIGRATION_MATRIX.md`
+- Ecosystem integration traits budget (install/router/docking/query/catalog seams): `docs/workstreams/ecosystem-integration-traits-v1/DESIGN.md`, `docs/workstreams/ecosystem-integration-traits-v1/TODO.md`, `docs/workstreams/ecosystem-integration-traits-v1/MILESTONES.md`, `docs/workstreams/ecosystem-integration-traits-v1/TARGET_INTERFACE_STATE.md`, and `docs/workstreams/ecosystem-integration-traits-v1/MIGRATION_MATRIX.md`
+- Into-element surface cleanup (follow-on to the authoring reset; collapse public conversion vocabulary): `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TODO.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, and `docs/workstreams/into-element-surface-fearless-refactor-v1/MIGRATION_MATRIX.md`
 - Overlay + input arbitration v2: `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md`
-- Overlay + pointer occlusion v2 progress: `docs/workstreams/overlay-input-arbitration-v2.md`
+- Overlay + pointer occlusion v2 progress: `docs/workstreams/overlay-input-arbitration-v2/overlay-input-arbitration-v2.md`
 - UI focus + overlay focus containment (fearless refactor v1): `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
 - Foreground style context refactor (inheritance is context, not a wrapper fragment): `docs/workstreams/foreground-style-context-fearless-refactor-v1/DESIGN.md`
-- Foundation closure (P0, cross-workstream milestones): `docs/workstreams/foundation-closure-p0.md` and `docs/workstreams/foundation-closure-p0-todo.md`
-- Headless table engine parity (TanStack Table core): `docs/workstreams/headless-table-tanstack-parity.md` and `docs/workstreams/headless-table-tanstack-parity-todo.md`
+- Foundation closure (P0, cross-workstream milestones): `docs/workstreams/foundation-closure-p0/foundation-closure-p0.md` and `docs/workstreams/foundation-closure-p0/foundation-closure-p0-todo.md`
+- Headless table engine parity (TanStack Table core): `docs/workstreams/headless-table-tanstack-parity/headless-table-tanstack-parity.md` and `docs/workstreams/headless-table-tanstack-parity/headless-table-tanstack-parity-todo.md`
 - Theme token alignment (semantic vs named vs component-derived): `docs/workstreams/theme-token-alignment-v1/design.md`, `docs/workstreams/theme-token-alignment-v1/todo.md`, and `docs/workstreams/theme-token-alignment-v1/milestones.md`
 - Charts (ECharts alignment): `docs/audits/echarts-alignment.md` and `docs/delinea-echarts-alignment.md`
-- Text system v2 tracker: `docs/workstreams/text-system-v2-parley.md`
-- UI typography presets (stable control text line boxes): `docs/workstreams/ui-typography-presets-v1.md`
+- Text system v2 tracker: `docs/workstreams/standalone/text-system-v2-parley.md`
+- UI typography presets (stable control text line boxes): `docs/workstreams/ui-typography-presets-v1/ui-typography-presets-v1.md`
 - Text style cascade fearless refactor (GPUI-style subtree text refinement for passive text): `docs/workstreams/text-style-cascade-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/text-style-cascade-fearless-refactor-v1/TODO.md`, and `docs/workstreams/text-style-cascade-fearless-refactor-v1/MILESTONES.md`
-- Font system audit + roadmap: `docs/workstreams/font-system-v1.md`
-- Input dispatch v2 tracker: `docs/workstreams/input-dispatch-v2.md`
-- Mobile bring-up v1 (scroll + IME + keyboard avoidance): `docs/workstreams/mobile-bringup-v1.md`, `docs/workstreams/mobile-bringup-v1-todo.md`, and `docs/workstreams/mobile-bringup-v1-milestones.md`
+- Font system audit + roadmap: `docs/workstreams/standalone/font-system-v1.md`
+- Input dispatch v2 tracker: `docs/workstreams/input-dispatch-v2/input-dispatch-v2.md`
+- Mobile bring-up v1 (scroll + IME + keyboard avoidance): `docs/workstreams/mobile-bringup-v1/mobile-bringup-v1.md`, `docs/workstreams/mobile-bringup-v1/mobile-bringup-v1-todo.md`, and `docs/workstreams/mobile-bringup-v1/mobile-bringup-v1-milestones.md`
 - Mobile graphics backend selection v1 (Vulkan/Metal-first + override + diagnostics): `docs/workstreams/mobile-gfx-backend-v1/design.md`, `docs/workstreams/mobile-gfx-backend-v1/todo.md`, and `docs/workstreams/mobile-gfx-backend-v1/milestones.md`
-- Gesture recognizers v1 (component-layer policy): `docs/workstreams/gesture-recognizers-v1.md`, `docs/workstreams/gesture-recognizers-v1-todo.md`, and `docs/workstreams/gesture-recognizers-v1-milestones.md`
+- Gesture recognizers v1 (component-layer policy): `docs/workstreams/gesture-recognizers-v1/gesture-recognizers-v1.md`, `docs/workstreams/gesture-recognizers-v1/gesture-recognizers-v1-todo.md`, and `docs/workstreams/gesture-recognizers-v1/gesture-recognizers-v1-milestones.md`
 - Node graph roadmap: `docs/node-graph-roadmap.md`
 - Layout engine refactor: `docs/layout-engine-refactor-roadmap.md`
-- Percent sizing semantics v1 (percent/fraction closure): `docs/workstreams/length-percentage-semantics-v1.md` and `docs/workstreams/length-percentage-semantics-v1-todo.md`
+- Percent sizing semantics v1 (percent/fraction closure): `docs/workstreams/length-percentage-semantics-v1/length-percentage-semantics-v1.md` and `docs/workstreams/length-percentage-semantics-v1/length-percentage-semantics-v1-todo.md`
 - Renderer refactor: `docs/renderer-refactor-roadmap.md`
 - Renderer contract surface summary: `docs/renderer-contracts.md`
 - GPU debugging (RenderDoc): `docs/renderdoc-inspection.md`
 - Debugging playbook: `docs/debugging-playbook.md`
 - CPU timeline profiling (Tracy): `docs/tracy.md`
 - UI gallery profiling report (native): `docs/perf/ui-gallery-profile-report.md`
-- UI Gallery docs-style component pages tracker: `docs/workstreams/ui-gallery-docs-page-layout-refactor.md`
-- AI Elements port + selector surface alignment: `docs/workstreams/ai-elements-port.md`, `docs/workstreams/ai-elements-port-todo.md`, and `docs/workstreams/ai-elements-upstream-alignment.md`
+- UI Gallery docs-style component pages tracker: `docs/workstreams/standalone/ui-gallery-docs-page-layout-refactor.md`
+- AI Elements port + selector surface alignment: `docs/workstreams/ai-elements-port/ai-elements-port.md`, `docs/workstreams/ai-elements-port/ai-elements-port-todo.md`, and `docs/workstreams/standalone/ai-elements-upstream-alignment.md`
 - UI diagnostics + scripted repros: `docs/ui-diagnostics-and-scripted-tests.md`
 - Diag artifact + evidence model (M2): `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`
 - Inspect workflow (picker + scripts): `docs/debugging-ui-with-inspector-and-scripts.md`
 - Window style profiles (ecosystem recipes): `docs/window-style-profiles.md`
 - Viewport panels (engine/video): `docs/viewport-panels.md`
 - Gizmo + viewport integration: `docs/gizmo-viewport-integration.md`
-- Docking multi-window parity (ImGui-style tear-off): `docs/workstreams/docking-multiwindow-imgui-parity.md` (macOS: `docs/workstreams/macos-docking-multiwindow-imgui-parity.md`)
+- Docking multi-window parity (ImGui-style tear-off): `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md` (macOS: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`)
 - Docking diagnostics hardening (multi-window arbitration scripts + bounded evidence): `docs/workstreams/docking-arbitration-diag-hardening-v1/`
 - UI diagnostics timebase decoupling v1 (no-frame liveness + `reason_code=timeout.no_frames`): `docs/workstreams/ui-diagnostics-timebase-decoupling-v1/README.md`
-- Localization/i18n v1 tracker: `docs/workstreams/localization-i18n-v1.md` and `docs/workstreams/localization-i18n-v1-todo.md`
+- Localization/i18n v1 tracker: `docs/workstreams/localization-i18n-v1/localization-i18n-v1.md` and `docs/workstreams/localization-i18n-v1/localization-i18n-v1-todo.md`
 - Contracts: `docs/adr/`
 - Audit notes index (non-authoritative): `docs/audits/README.md`
 - Workstream notes (non-authoritative): `docs/workstreams/`
@@ -115,24 +125,27 @@ Fret’s kernel/runtime primitives are intentionally small (`Model<T>`, tracked 
 driver-boundary inbox draining), so the default app-authoring story lives in ecosystem crates and is
 now taught as `LocalState` + view runtime + typed actions.
 
-- Workstream: `docs/workstreams/state-management-v1.md` and `docs/workstreams/state-management-v1-todo.md`
+- Workstream: `docs/workstreams/state-management-v1/state-management-v1.md` and `docs/workstreams/state-management-v1/state-management-v1-todo.md`
 - Action-first authoring + view runtime (v1, available now):
   - Workstream: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
   - Endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
   - ADRs: `docs/adr/0307-action-registry-and-typed-action-dispatch-v1.md`, `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
   - Template entry points: `cargo run -p fretboard -- new hello`, `cargo run -p fretboard -- new simple-todo`, `cargo run -p fretboard -- new todo`
 - Recommended building blocks:
-  - View runtime + hooks + typed unit actions (golden path): `ecosystem/fret` (`View`, `ViewCx`, `fret::actions!`)
+  - View runtime + hooks + typed unit actions (golden path): `ecosystem/fret` (`View`, `AppUi`, `fret::actions!`)
   - Derived state (selectors/computed): `ecosystem/fret-selector`
   - Async resources (loading/error/cache/invalidation): `ecosystem/fret-query`
-- Per-item/payload dispatch (advanced): `fret::payload_actions!` + `ViewCx::on_payload_action*` (use when unit actions are not enough).
+- Canonical startup/import reminder:
+  - app-facing imports live under `use fret::app::prelude::*;`
+  - default native startup uses `FretApp::new(...).window(...).view::<MyView>()?.run()`
+- Per-item/payload dispatch (advanced): `fret::payload_actions!` + `cx.actions().payload::<A>()` / `cx.actions().payload_locals::<A>(...)` (use when unit actions are not enough).
 - Default entrypoints (recommended mental model):
   - `LocalState<T>` / `LocalState<Vec<_>>` - default for view-owned state, including starter keyed lists.
-  - `cx.on_action_notify_locals::<A>(|tx| ...)` - default for most typed UI actions that coordinate view-owned `LocalState<T>` slots.
-  - `cx.on_action_notify_models::<A>(|models| ...)` - drop down when coordinating shared `Model<T>` graphs (cross-view ownership).
-  - `cx.on_action_notify_transient::<A>(...)` - default when the real work must happen with `&mut App` in `render()`.
+  - `cx.actions().locals::<A>(|tx| ...)` - default for most typed UI actions that coordinate view-owned `LocalState<T>` slots.
+  - `cx.actions().models::<A>(|models| ...)` - drop down when coordinating shared `Model<T>` graphs (cross-view ownership).
+  - `cx.actions().transient::<A>(...)` - default when the real work must happen with `&mut App` in `render()`.
   - `on_activate(...)` / `on_activate_notify(...)` - local pressable/widget glue only; do not treat these as the default replacement for typed action handlers.
-  - Treat raw `on_action` / `on_action_notify` and single-model aliases as advanced shorthands; keep first-contact docs and templates focused on the three entrypoints above. The remaining in-tree examples are cookbook-only host-side categories (toasts, router availability sync, background scheduling, RAF effects).
+  - Treat raw `on_action` / `on_action_notify` and single-model aliases as advanced shorthands; keep first-contact docs and templates focused on the three entrypoints above. The remaining in-tree examples are cookbook-only host-side categories (toasts, background scheduling, RAF effects).
 - Surface taxonomy:
   - **Default**: `hello`, `simple-todo`, `todo`, plus stable cookbook lessons
   - **Comparison**: `simple_todo_v2_target` and other evidence-oriented side-by-side samples

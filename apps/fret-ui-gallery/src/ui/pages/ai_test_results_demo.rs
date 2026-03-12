@@ -2,16 +2,17 @@ use super::super::*;
 
 use crate::ui::doc_layout::DocSection;
 use crate::ui::snippets::ai as snippets;
+use fret::{UiChild, UiCx};
+use fret_ui_kit::ui::UiElementSinkExt as _;
 
-fn status_colors_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let row =
-        |status: &'static str, color: &'static str, use_case: &'static str| {
-            shadcn::TableRow::build(3, move |cx, out| {
-                out.push_ui(cx, shadcn::TableCell::build(ui::text(status)));
-                out.push_ui(cx, shadcn::TableCell::build(ui::text(color)));
-                out.push_ui(cx, shadcn::TableCell::build(ui::text(use_case)));
-            })
-        };
+fn status_colors_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let row = |status: &'static str, color: &'static str, use_case: &'static str| {
+        shadcn::TableRow::build(3, move |cx, out| {
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(status)));
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(color)));
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(use_case)));
+        })
+    };
 
     shadcn::Table::build(|cx, out| {
         out.push_ui(
@@ -40,7 +41,7 @@ fn status_colors_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .into_element(cx)
 }
 
-fn parts_props_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
+fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let row = |part: &'static str, inputs: &'static str, notes: &'static str| {
         shadcn::TableRow::build(3, move |cx, out| {
             out.push_ui(cx, shadcn::TableCell::build(ui::text(part)));
@@ -83,10 +84,7 @@ fn parts_props_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .into_element(cx)
 }
 
-pub(super) fn preview_ai_test_results_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
+pub(super) fn preview_ai_test_results_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let overview = snippets::test_results_demo::render(cx);
     let features = crate::ui::doc_layout::notes(
         cx,
@@ -100,10 +98,12 @@ pub(super) fn preview_ai_test_results_demo(
         ],
     );
     let status_colors = status_colors_table(cx);
+    let status_colors = status_colors.into_element(cx);
     let basic = snippets::test_results_basic::render(cx);
     let suites = snippets::test_results_suites::render(cx);
     let errors = snippets::test_results_errors::render(cx);
     let props = parts_props_table(cx);
+    let props = props.into_element(cx);
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,

@@ -2,12 +2,7 @@ pub const SOURCE: &str = include_str!("scrollable_content.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default, Clone)]
-struct Models {
-    open: Option<Model<bool>>,
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn lorem_block<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -30,15 +25,7 @@ fn lorem_block<H: UiHost>(
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    let open = match state.open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.open = Some(model.clone()));
-            model
-        }
-    };
+    let open = cx.local_model_keyed("open", || false);
 
     let open_for_trigger = open.clone();
     shadcn::Dialog::new(open.clone()).into_element(
@@ -63,7 +50,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .into_element(cx);
 
             shadcn::DialogContent::new([
-                shadcn::DialogClose::from_scope().into_element(cx),
                 shadcn::DialogHeader::new([
                     shadcn::DialogTitle::new("Scrollable Content").into_element(cx),
                     shadcn::DialogDescription::new(

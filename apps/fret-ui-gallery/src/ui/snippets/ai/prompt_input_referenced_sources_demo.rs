@@ -1,36 +1,18 @@
 pub const SOURCE: &str = include_str!("prompt_input_referenced_sources_demo.rs");
 
 // region: example
-use fret_runtime::Model;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
-use fret_ui_shadcn::prelude::*;
-use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default)]
-struct DemoModels {
-    sources: Option<Model<Vec<ui_ai::AttachmentSourceDocumentData>>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let sources = cx.with_state(DemoModels::default, |st| st.sources.clone());
-    let sources = match sources {
-        Some(model) => model,
-        None => {
-            let model = cx
-                .app
-                .models_mut()
-                .insert(Vec::<ui_ai::AttachmentSourceDocumentData>::new());
-            cx.with_state(DemoModels::default, |st| st.sources = Some(model.clone()));
-            model
-        }
-    };
+    let sources = cx.local_model_keyed("sources", Vec::<ui_ai::AttachmentSourceDocumentData>::new);
 
-    let add = Button::new("Add referenced source")
-        .variant(ButtonVariant::Secondary)
-        .size(ButtonSize::Sm)
+    let add = shadcn::Button::new("Add referenced source")
+        .variant(shadcn::ButtonVariant::Secondary)
+        .size(shadcn::ButtonSize::Sm)
         .test_id("ui-gallery-ai-prompt-input-referenced-sources-add")
         .on_activate(Arc::new({
             let sources = sources.clone();

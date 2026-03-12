@@ -2,34 +2,12 @@
   "schema_version": 2,
   "meta": {
     "name": "ui-gallery-dropdown-menu-docs-smoke",
-    "required_capabilities": ["diag.script_v2"]
+    "required_capabilities": ["diag.script_v2"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "dropdown_menu"
+    }
   },
   "steps": [
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
-      },
-      "timeout_frames": 240
-    },
-    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "dropdown menu" },
-    { "type": "wait_frames", "n": 2 },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-dropdown-menu" }
-      },
-      "timeout_frames": 240
-    },
-    {
-      "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-dropdown-menu" }
-    },
     {
       "type": "wait_until",
       "predicate": {

@@ -33,6 +33,22 @@ Rule of thumb:
 - Prefer a **narrow, source-aligned surface** that matches the upstream component contract while
   preserving Fret internals.
 
+If curated docs/examples still have to spell `UiIntoElement`, `UiChildIntoElement`,
+`UiHostBoundIntoElement`, or `UiBuilderHostBoundIntoElementExt`, classify that as
+**conversion-surface drift** rather than a component-parity success. The owning follow-up tracker
+is:
+
+- `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
+
+Target guidance:
+
+- app-facing helpers teach `Ui` / `UiChild`,
+- reusable generic helpers converge on the unified component conversion trait,
+- advanced/manual-assembly reusable helpers converge on `IntoUiElement<H>` instead of
+  `UiChildIntoElement<H>`,
+- raw `AnyElement` remains explicit for justified raw seams only.
+
 ## Preferred adaptation patterns
 
 ### 1) Text / IME widgets

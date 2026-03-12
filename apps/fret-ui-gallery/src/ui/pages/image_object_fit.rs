@@ -1,10 +1,11 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::image_object_fit as snippets;
 
 pub(super) fn preview_image_object_fit(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     square_image: Model<Option<ImageId>>,
     wide_image: Model<Option<ImageId>>,

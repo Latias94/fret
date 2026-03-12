@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("invalid.rs");
 // region: example
 use fret_core::Px;
 use fret_ui_kit::declarative::ElementContextThemeExt;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let destructive = cx.with_theme(|theme| theme.color_token("destructive"));

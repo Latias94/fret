@@ -3,14 +3,8 @@ pub const SOURCE: &str = include_str!("demo.rs");
 // region: example
 use fret_core::{Axis, Edges};
 use fret_ui::element::{FlexProps, LayoutStyle, Length, SemanticsDecoration};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
-
-#[derive(Default, Clone)]
-struct Models {
-    pending_promise: Option<Model<Option<shadcn::ToastId>>>,
-    active_type: Option<Model<Arc<str>>>,
-}
 
 fn wrap_controls_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -47,29 +41,8 @@ pub fn render<H: UiHost>(
 
     let sonner = shadcn::Sonner::global(&mut *cx.app);
 
-    let (pending_promise, active_type) = cx.with_state(Models::default, |st| {
-        (st.pending_promise.clone(), st.active_type.clone())
-    });
-
-    let pending_promise = match pending_promise {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(None::<shadcn::ToastId>);
-            cx.with_state(Models::default, |st| {
-                st.pending_promise = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let active_type = match active_type {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Arc::<str>::from("Default"));
-            cx.with_state(Models::default, |st| st.active_type = Some(model.clone()));
-            model
-        }
-    };
+    let pending_promise = cx.local_model_keyed("pending_promise", || None::<shadcn::ToastId>);
+    let active_type = cx.local_model_keyed("active_type", || Arc::<str>::from("Default"));
 
     let current_active = cx
         .get_model_cloned(&active_type, Invalidation::Layout)
@@ -98,16 +71,16 @@ pub fn render<H: UiHost>(
             .test_id(test_id);
 
         if active {
-            let bg = shadcn::ColorRef::Token {
+            let bg = fret_ui_shadcn::ColorRef::Token {
                 key: "accent",
                 fallback: fret_ui_kit::ColorFallback::ThemeHoverBackground,
             };
-            let fg = shadcn::ColorRef::Token {
+            let fg = fret_ui_shadcn::ColorRef::Token {
                 key: "accent-foreground",
                 fallback: fret_ui_kit::ColorFallback::ThemeTextPrimary,
             };
             button = button.style(
-                shadcn::button::ButtonStyle::default()
+                fret_ui_shadcn::button::ButtonStyle::default()
                     .background(fret_ui_kit::WidgetStateProperty::new(Some(bg)))
                     .foreground(fret_ui_kit::WidgetStateProperty::new(Some(fg))),
             );
@@ -441,7 +414,7 @@ pub fn render<H: UiHost>(
     ui::v_flex(move |cx| {
         vec![
             buttons,
-            shadcn::typography::muted(
+            shadcn::raw::typography::muted(
                 cx,
                 if pending {
                     "Promise toast pending: click Promise again to resolve."

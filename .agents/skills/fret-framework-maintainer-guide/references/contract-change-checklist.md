@@ -19,6 +19,8 @@ If the change affects input, focus, overlays, text, diagnostics, or other hard-t
 Treat diagnostics artifacts as first-class regression protection:
 
 - Correctness: `tools/diag-scripts/*.json` (schema v2 preferred) + `capture_bundle`
+- Layout ownership / size negotiation: geometry assertions or `capture_layout_sidecar`
+- Visual chrome / clipping / focus-visible: `capture_screenshot` when a screenshot explains the regression better than prose
 - Perf: `fretboard diag perf` suites or `tools/perf/*` gate scripts + worst bundle paths
 - Attribution: `fretboard diag stats <bundle.json> --sort time --top 30` plus the exact failing metric/threshold key
 
@@ -32,6 +34,11 @@ Before/after a refactor that may cross boundaries:
 - Add at least one gate for any behavior change (unit test or diag script)
 - If perf is in scope, record a perf gate run + worst bundles
 - Keep evidence commit-addressable: reviewers should be able to rerun the exact command later
+- If the public story changes, audit and update the first-party exemplar/docs surface:
+  - `docs/crate-usage-guide.md`
+  - `docs/shadcn-declarative-progress.md`
+  - `apps/fret-ui-gallery/src/ui/snippets/**`
+  - `apps/fret-ui-gallery/src/lib.rs`
 
 ## 4) Deliverables 3-pack
 
@@ -56,8 +63,12 @@ Instead:
 
 - `docs/architecture.md`
 - `docs/dependency-policy.md`
+- `docs/crate-usage-guide.md`
+- `docs/shadcn-declarative-progress.md`
 - `docs/adr/`
 - `docs/adr/IMPLEMENTATION_ALIGNMENT.md`
 - `tools/diag-scripts/`
 - `tools/perf/`
+- `apps/fret-ui-gallery/src/lib.rs`
+- `apps/fret-ui-gallery/src/driver/render_flow.rs`
 - `python3 tools/check_layering.py`

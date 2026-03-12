@@ -2,36 +2,12 @@ pub const SOURCE: &str = include_str!("select.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default, Clone)]
-struct Models {
-    value: Option<Model<Option<Arc<str>>>>,
-    open: Option<Model<bool>>,
-}
-
-fn ensure_models<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> (Model<Option<Arc<str>>>, Model<bool>) {
-    let state = cx.with_state(Models::default, |st| st.clone());
-    match (state.value, state.open) {
-        (Some(value), Some(open)) => (value, open),
-        _ => {
-            let models = cx.app.models_mut();
-            let value = models.insert(Some(Arc::<str>::from("engineering")));
-            let open = models.insert(false);
-            cx.with_state(Models::default, |st| {
-                st.value = Some(value.clone());
-                st.open = Some(open.clone());
-            });
-            (value, open)
-        }
-    }
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (value, open) = ensure_models(cx);
+    let value = cx.local_model_keyed("value", || Some(Arc::<str>::from("engineering")));
+    let open = cx.local_model_keyed("open", || false);
     let max_w_md = LayoutRefinement::default().w_full().max_w(Px(520.0));
 
     shadcn::Field::new([

@@ -138,7 +138,7 @@ explain policy/routing/focus failures with targeted evidence.
 ## References
 
 - `docs/ui-diagnostics-and-scripted-tests.md`
-- `docs/workstreams/ui-gallery-layout-correctness.md`
+- `docs/workstreams/standalone/ui-gallery-layout-correctness.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/text-and-ime.md`
 - `tools/diag-scripts/ui-gallery-select-*.json`
 - `tools/diag-scripts/ui-gallery-combobox-*.json`

@@ -16,9 +16,29 @@ Experimental learning project (not production-ready).
 
 ## Features
 
-- `app-integration`: helpers that integrate with `fret-app` (optional)
+- `app-integration`: explicit app helpers under `fret_ui_shadcn::app::{install, install_with, ...}` and advanced hooks under `fret_ui_shadcn::advanced::{...}` (optional)
 - `state-selector` / `state-query`: opt into derived/async state helpers
 - `state`: enables both selector + query integration
+
+## App integration
+
+Keep the component taxonomy and app wiring separate:
+
+- recipes/components should prefer the curated facade import
+  `use fret_ui_shadcn::{facade as shadcn, prelude::*};`
+- app-owned setup stays under `fret_ui_shadcn::app::*`
+- environment / `UiServices`-boundary hooks stay under `fret_ui_shadcn::advanced::*`
+- raw root access stays an explicit escape hatch for low-level/internal use
+
+Example:
+
+```rust
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
+
+fret_ui_shadcn::app::install(app);
+
+let _button = shadcn::Button::new("Save");
+```
 
 ## Upstream references (non-normative)
 

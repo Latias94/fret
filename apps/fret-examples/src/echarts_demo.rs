@@ -1,6 +1,4 @@
-use fret_app::App;
-use fret_bootstrap::ui_app_with_hooks;
-use fret_core::AppWindowId;
+use fret::advanced::prelude::*;
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Invalidation};
@@ -27,7 +25,7 @@ pub fn run() -> anyhow::Result<()> {
         .map_err(anyhow::Error::from)
 }
 
-fn init_window(app: &mut App, _window: AppWindowId) -> EchartsDemoState {
+fn init_window(app: &mut KernelApp, _window: AppWindowId) -> EchartsDemoState {
     fn build_chart(option_json: &str) -> (ChartEngine, ChartSpec) {
         let translated = fret_chart::echarts::translate_json_str(option_json)
             .expect("valid v1 ECharts option JSON");
@@ -103,10 +101,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> EchartsDemoState {
     }
 }
 
-fn view(
-    cx: &mut ElementContext<'_, App>,
-    st: &mut EchartsDemoState,
-) -> fret_bootstrap::ui_app_driver::ViewElements {
+fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut EchartsDemoState) -> ViewElements {
     for chart in &st.charts {
         cx.observe_model(&chart.engine, Invalidation::Paint);
     }

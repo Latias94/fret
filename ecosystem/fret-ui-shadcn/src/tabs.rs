@@ -2674,7 +2674,7 @@ impl Tabs {
                     let easing = theme.easing_token("easing.motion.standard");
 
                     let (switched, exiting_values) =
-                        cx.with_state(TabsContentPresenceRuntime::default, |st| {
+                        cx.keyed_slot_state("content_presence", TabsContentPresenceRuntime::default, |st| {
                             let switched = st.active_value.is_some() && st.active_value != active_value;
                             if switched {
                                 if let Some(prev) = st.active_value.take() {
@@ -2770,7 +2770,7 @@ impl Tabs {
                     }
 
                     if !prune.is_empty() {
-                        cx.with_state(TabsContentPresenceRuntime::default, |st| {
+                        cx.keyed_slot_state("content_presence", TabsContentPresenceRuntime::default, |st| {
                             st.exiting_values.retain(|v| !prune.iter().any(|p| p == v));
                         });
                     }
@@ -4602,6 +4602,67 @@ mod tests {
         ui.layout_all(app, services, bounds, 1.0);
     }
 
+    fn render_presence_motion_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<Option<Arc<str>>>,
+        alpha_content_id_out: &Cell<Option<GlobalElementId>>,
+        beta_content_id_out: &Cell<Option<GlobalElementId>>,
+    ) {
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "tabs-presence-motion",
+            |cx| {
+                let alpha_content = cx.pressable_with_id(
+                    PressableProps {
+                        layout: LayoutStyle::default(),
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st, id| {
+                        alpha_content_id_out.set(Some(id));
+                        Vec::new()
+                    },
+                );
+                let beta_content = cx.pressable_with_id(
+                    PressableProps {
+                        layout: LayoutStyle::default(),
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st, id| {
+                        beta_content_id_out.set(Some(id));
+                        Vec::new()
+                    },
+                );
+
+                let items = vec![
+                    TabsItem::new("alpha", "Alpha", vec![alpha_content]),
+                    TabsItem::new("beta", "Beta", vec![beta_content]),
+                ];
+
+                vec![
+                    Tabs::new(model)
+                        .content_presence_motion(true)
+                        .items(items)
+                        .into_element(cx),
+                ]
+            },
+        );
+
+        ui.set_root(root);
+        ui.layout_all(app, services, bounds, 1.0);
+    }
+
     #[test]
     fn tabs_manual_activation_does_not_change_model_on_arrow_navigation() {
         let window = AppWindowId::default();
@@ -4812,6 +4873,93 @@ mod tests {
         }
 
         assert!(node_for_element(&mut app, window, alpha_content_id).is_some());
+    }
+
+    #[test]
+    fn tabs_presence_motion_keeps_outgoing_panel_until_transition_settles() {
+        use std::time::Duration;
+
+        use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let alpha_content_id: Cell<Option<GlobalElementId>> = Cell::new(None);
+        let beta_content_id: Cell<Option<GlobalElementId>> = Cell::new(None);
+
+        bump_frame(&mut app);
+        render_presence_motion_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            &alpha_content_id,
+            &beta_content_id,
+        );
+
+        let alpha_content_id = alpha_content_id.get().expect("alpha content id");
+        assert!(node_for_element(&mut app, window, alpha_content_id).is_some());
+
+        let _ = app
+            .models_mut()
+            .update(&model, |v| *v = Some(Arc::from("beta")));
+
+        let alpha_after_switch = Cell::new(Some(alpha_content_id));
+        let beta_after_switch = Cell::new(None);
+
+        bump_frame(&mut app);
+        render_presence_motion_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            &alpha_after_switch,
+            &beta_after_switch,
+        );
+
+        let beta_content_id = beta_after_switch.get().expect("beta content id");
+        assert!(
+            node_for_element(&mut app, window, alpha_content_id).is_some(),
+            "outgoing panel should remain mounted during the exit transition"
+        );
+        assert!(
+            node_for_element(&mut app, window, beta_content_id).is_some(),
+            "incoming panel should mount immediately when selection changes"
+        );
+
+        let settle = ticks_60hz_for_duration(Duration::from_millis(150)) + 2;
+        for _ in 0..settle {
+            bump_frame(&mut app);
+            render_presence_motion_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                &Cell::new(Some(alpha_content_id)),
+                &Cell::new(Some(beta_content_id)),
+            );
+        }
+
+        assert!(
+            node_for_element(&mut app, window, alpha_content_id).is_none(),
+            "outgoing panel should be pruned after the exit transition settles"
+        );
+        assert!(node_for_element(&mut app, window, beta_content_id).is_some());
     }
 
     #[test]

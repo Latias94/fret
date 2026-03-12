@@ -17,7 +17,7 @@ Use these defaults unless a domain requires a custom policy:
 References:
 
 - `docs/integrating-tokio-and-reqwest.md`
-- `docs/workstreams/state-management-v1-extension-contract.md`
+- `docs/workstreams/state-management-v1/state-management-v1-extension-contract.md`
 
 ## Recipes you can copy
 

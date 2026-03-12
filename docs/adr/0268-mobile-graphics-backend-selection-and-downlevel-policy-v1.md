@@ -131,8 +131,8 @@ pipeline creation.
 
 Bring-up workstream:
 
-- `docs/workstreams/mobile-bringup-v1.md`
-- `docs/workstreams/mobile-bringup-v1-device-packaging.md`
+- `docs/workstreams/mobile-bringup-v1/mobile-bringup-v1.md`
+- `docs/workstreams/mobile-bringup-v1/mobile-bringup-v1-device-packaging.md`
 
 Expected implementation loci (not exhaustive):
 

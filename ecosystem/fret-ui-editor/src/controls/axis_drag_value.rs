@@ -25,9 +25,9 @@ use crate::controls::numeric_input::{NumericFormatFn, NumericParseFn, NumericVal
 use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
-    editor_axis_segment, editor_icon_button_segment, editor_input_group_divider,
-    editor_input_group_frame, editor_input_group_frame_with_overrides, editor_input_group_inset,
-    editor_input_group_row, EditorInputGroupFrameOverrides,
+    EditorInputGroupFrameOverrides, editor_axis_segment, editor_icon_button_segment,
+    editor_input_group_divider, editor_input_group_frame, editor_input_group_frame_with_overrides,
+    editor_input_group_inset, editor_input_group_row,
 };
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::EditorFrameState;

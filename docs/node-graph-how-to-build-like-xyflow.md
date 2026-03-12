@@ -6,7 +6,7 @@ following the same mental model many teams have from XyFlow / React Flow.
 For the parity matrix and milestones, see:
 
 - `docs/node-graph-xyflow-parity.md`
-- `docs/workstreams/fret-node-xyflow-parity.md`
+- `docs/workstreams/standalone/fret-node-xyflow-parity.md`
 
 ## Mental model: three layers
 

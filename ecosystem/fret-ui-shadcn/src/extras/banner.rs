@@ -50,14 +50,8 @@ struct BannerScope {
     on_close: Option<OnActivate>,
 }
 
-#[derive(Default)]
-struct BannerScopeState {
-    scope: Option<BannerScope>,
-}
-
 fn banner_scope_inherited<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<BannerScope> {
-    cx.inherited_state_where::<BannerScopeState>(|st| st.scope.is_some())
-        .and_then(|st| st.scope.clone())
+    cx.provided::<BannerScope>().cloned()
 }
 
 #[track_caller]
@@ -66,15 +60,7 @@ fn with_banner_scope_provider<H: UiHost, R>(
     scope: BannerScope,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(BannerScopeState::default, |st| st.scope.take());
-    cx.with_state(BannerScopeState::default, |st| {
-        st.scope = Some(scope);
-    });
-    let out = f(cx);
-    cx.with_state(BannerScopeState::default, |st| {
-        st.scope = prev;
-    });
-    out
+    cx.provide(scope, f)
 }
 
 /// A dismissible banner block inspired by Kibo's shadcn blocks.

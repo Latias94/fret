@@ -1,42 +1,12 @@
 pub const SOURCE: &str = include_str!("actions.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_ui_kit::ui::UiElementSinkExt;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default, Clone)]
-struct TableModels {
-    actions_open_1: Option<Model<bool>>,
-    actions_open_2: Option<Model<bool>>,
-    actions_open_3: Option<Model<bool>>,
-}
-
-fn ensure_models(cx: &mut ElementContext<'_, App>) -> (Model<bool>, Model<bool>, Model<bool>) {
-    let state = cx.with_state(TableModels::default, |st| st.clone());
-    match (
-        state.actions_open_1,
-        state.actions_open_2,
-        state.actions_open_3,
-    ) {
-        (Some(open_1), Some(open_2), Some(open_3)) => (open_1, open_2, open_3),
-        _ => {
-            let models = cx.app.models_mut();
-            let open_1 = models.insert(false);
-            let open_2 = models.insert(false);
-            let open_3 = models.insert(false);
-            cx.with_state(TableModels::default, |st| {
-                st.actions_open_1 = Some(open_1.clone());
-                st.actions_open_2 = Some(open_2.clone());
-                st.actions_open_3 = Some(open_3.clone());
-            });
-            (open_1, open_2, open_3)
-        }
-    }
-}
-
-fn align_end(cx: &mut ElementContext<'_, App>, child: AnyElement) -> AnyElement {
+fn align_end(cx: &mut UiCx<'_>, child: AnyElement) -> AnyElement {
     ui::h_flex(move |_cx| [child])
         .layout(LayoutRefinement::default().w_full())
         .justify_end()
@@ -44,7 +14,7 @@ fn align_end(cx: &mut ElementContext<'_, App>, child: AnyElement) -> AnyElement 
 }
 
 fn action_row(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     product: &'static str,
     price: &'static str,
     open_model: Model<bool>,
@@ -69,8 +39,9 @@ fn action_row(
                 shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Duplicate")),
                 shadcn::DropdownMenuEntry::Separator,
                 shadcn::DropdownMenuEntry::Item(
-                    shadcn::DropdownMenuItem::new("Delete")
-                        .variant(shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive),
+                    shadcn::DropdownMenuItem::new("Delete").variant(
+                        fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                    ),
                 ),
             ]
         },
@@ -86,8 +57,10 @@ fn action_row(
     .test_id(row_test_id)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let (open_1, open_2, open_3) = ensure_models(cx);
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+    let open_1 = cx.local_model_keyed("actions_open_1", || false);
+    let open_2 = cx.local_model_keyed("actions_open_2", || false);
+    let open_3 = cx.local_model_keyed("actions_open_3", || false);
 
     shadcn::Table::build(|cx, out| {
         out.push_ui(
@@ -120,7 +93,13 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             cx,
             shadcn::TableBody::build(|cx, out| {
                 out.push(action_row(cx, "Gaming Mouse", "$129.99", open_1, "row-1"));
-                out.push(action_row(cx, "Mechanical Keyboard", "$89.99", open_2, "row-2"));
+                out.push(action_row(
+                    cx,
+                    "Mechanical Keyboard",
+                    "$89.99",
+                    open_2,
+                    "row-2",
+                ));
                 out.push(action_row(cx, "4K Monitor", "$299.99", open_3, "row-3"));
             }),
         );

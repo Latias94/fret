@@ -2,24 +2,18 @@ pub const SOURCE: &str = include_str!("file_tree_large.rs");
 
 // region: example
 use fret_core::{Px, TextAlign, TextOverflow, TextWrap};
-use fret_runtime::Model;
 use fret_ui::action::ActionCx;
 use fret_ui::element::{AnyElement, Length, SemanticsDecoration, SizeStyle, TextProps};
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ModelWatchExt;
-use fret_ui_kit::{LayoutRefinement, Space, ui};
+use fret_ui_kit::{IntoUiElement, LayoutRefinement, Space, ui};
 use std::sync::Arc;
-
-#[derive(Default)]
-struct LargeFileTreeModels {
-    selected: Option<Model<Option<Arc<str>>>>,
-}
 
 fn invisible_marker<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     test_id: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     cx.text_props(TextProps {
         layout: fret_ui::element::LayoutStyle {
             size: SizeStyle {
@@ -37,6 +31,7 @@ fn invisible_marker<H: UiHost>(
         align: TextAlign::Start,
         ink_overflow: Default::default(),
     })
+    .into_element(cx)
     .attach_semantics(
         SemanticsDecoration::default()
             .role(fret_core::SemanticsRole::Group)
@@ -45,17 +40,7 @@ fn invisible_marker<H: UiHost>(
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let selected = cx.with_state(LargeFileTreeModels::default, |st| st.selected.clone());
-    let selected = match selected {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(None::<Arc<str>>);
-            cx.with_state(LargeFileTreeModels::default, |st| {
-                st.selected = Some(model.clone())
-            });
-            model
-        }
-    };
+    let selected = cx.local_model_keyed("selected", || None::<Arc<str>>);
 
     let selected_value = cx.watch_model(&selected).layout().cloned().flatten();
 
@@ -94,10 +79,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
     let mut out = vec![tree];
     if selected_value.as_deref() == Some("big/0500.txt") {
-        out.push(invisible_marker(
-            cx,
-            "ui-ai-file-tree-large-selected-marker",
-        ));
+        out.push(invisible_marker(cx, "ui-ai-file-tree-large-selected-marker").into_element(cx));
     }
 
     ui::v_flex(move |_cx| out)
@@ -106,7 +88,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .into_element(cx)
 }
 
-pub fn preview<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn preview<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+) -> impl IntoUiElement<H> + use<H> {
     render(cx)
 }
 // endregion: example

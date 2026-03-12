@@ -1,25 +1,15 @@
 pub const SOURCE: &str = include_str!("events.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign, TextProps};
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
-
-#[derive(Default, Clone)]
-struct Models {
-    api_handle: Option<Model<Option<shadcn::CarouselApi>>>,
-    api_cursor: Option<Model<shadcn::CarouselEventCursor>>,
-    cursor_synced: Option<Model<bool>>,
-    select_seen: Option<Model<bool>>,
-    reinit_seen: Option<Model<bool>>,
-    selected_index: Option<Model<usize>>,
-}
 
 #[derive(Debug, Clone, Copy)]
 struct SlideVisual {
@@ -27,7 +17,7 @@ struct SlideVisual {
     line_height_px: Px,
 }
 
-fn slide_card(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual) -> AnyElement {
+fn slide_card(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
 
     let number = ui::text(format!("{idx}"))
@@ -55,63 +45,15 @@ fn slide_card(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual)
     shadcn::Card::new([content]).into_element(cx)
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let max_w_xs = Px(320.0);
 
-    let state = cx.with_state(Models::default, |st| st.clone());
-    let api_handle = match state.api_handle {
-        Some(model) => model,
-        None => {
-            let model: Model<Option<shadcn::CarouselApi>> = cx.app.models_mut().insert(None);
-            cx.with_state(Models::default, |st| st.api_handle = Some(model.clone()));
-            model
-        }
-    };
-    let api_cursor = match state.api_cursor {
-        Some(model) => model,
-        None => {
-            let model: Model<shadcn::CarouselEventCursor> = cx
-                .app
-                .models_mut()
-                .insert(shadcn::CarouselEventCursor::default());
-            cx.with_state(Models::default, |st| st.api_cursor = Some(model.clone()));
-            model
-        }
-    };
-    let cursor_synced = match state.cursor_synced {
-        Some(model) => model,
-        None => {
-            let model: Model<bool> = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.cursor_synced = Some(model.clone()));
-            model
-        }
-    };
-    let select_seen = match state.select_seen {
-        Some(model) => model,
-        None => {
-            let model: Model<bool> = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.select_seen = Some(model.clone()));
-            model
-        }
-    };
-    let reinit_seen = match state.reinit_seen {
-        Some(model) => model,
-        None => {
-            let model: Model<bool> = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.reinit_seen = Some(model.clone()));
-            model
-        }
-    };
-    let selected_index = match state.selected_index {
-        Some(model) => model,
-        None => {
-            let model: Model<usize> = cx.app.models_mut().insert(0);
-            cx.with_state(Models::default, |st| {
-                st.selected_index = Some(model.clone())
-            });
-            model
-        }
-    };
+    let api_handle = cx.local_model_keyed("api_handle", || None::<shadcn::CarouselApi>);
+    let api_cursor = cx.local_model_keyed("api_cursor", shadcn::CarouselEventCursor::default);
+    let cursor_synced = cx.local_model_keyed("cursor_synced", || false);
+    let select_seen = cx.local_model_keyed("select_seen", || false);
+    let reinit_seen = cx.local_model_keyed("reinit_seen", || false);
+    let selected_index = cx.local_model_keyed("selected_index", || 0usize);
 
     // Upstream docs: `setApi` + `api.on("select"|"reInit", ...)`.
     // Fret: poll a cursor for the same outcomes.

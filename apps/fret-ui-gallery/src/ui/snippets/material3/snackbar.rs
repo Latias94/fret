@@ -7,25 +7,15 @@ use fret_runtime::CommandId;
 use fret_ui::action::OnActivate;
 use fret_ui_kit::ToastStore;
 use fret_ui_material3 as material3;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 const CMD_TOAST_ACTION: &str = "ui_gallery.toast.action";
-
-#[derive(Default)]
-struct State {
-    store: Option<Model<ToastStore>>,
-}
 
 pub fn render<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     last_action: Model<Arc<str>>,
 ) -> AnyElement {
-    let store = cx.with_state(State::default, |st| st.store.clone());
-    let store = store.unwrap_or_else(|| {
-        let store = cx.app.models_mut().insert(ToastStore::default());
-        cx.with_state(State::default, |st| st.store = Some(store.clone()));
-        store
-    });
+    let store = cx.local_model_keyed("store", ToastStore::default);
 
     let host_layer = material3::SnackbarHost::new(store.clone())
         .max_snackbars(1)

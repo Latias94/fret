@@ -32,7 +32,7 @@ use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Invalidation};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::ui;
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::facade as shadcn;
 
 mod pack;
 mod script_studio;
@@ -2477,16 +2477,15 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                             let _ = host.models_mut().update(&selected_bundle_dirs_model, |v| {
                                 *v = data.bundle_dirs.into_iter().map(Arc::<str>::from).collect();
                             });
-                            let _ = host.models_mut().update(
-                                &selected_capability_sources_model,
-                                |v| {
-                                    *v = data
-                                        .capability_sources
-                                        .into_iter()
-                                        .map(Arc::<str>::from)
-                                        .collect();
-                                },
-                            );
+                            let _ =
+                                host.models_mut()
+                                    .update(&selected_capability_sources_model, |v| {
+                                        *v = data
+                                            .capability_sources
+                                            .into_iter()
+                                            .map(Arc::<str>::from)
+                                            .collect();
+                                    });
                             let _ = host.models_mut().update(
                                 &selected_capabilities_checks_model,
                                 |v| {
@@ -4841,7 +4840,9 @@ fn capability_source_display_from_value(value: &serde_json::Value) -> Option<Str
     }
 }
 
-fn regression_item_capability_source_display(item: &fret_diag::regression_summary::RegressionItemSummaryV1) -> Option<String> {
+fn regression_item_capability_source_display(
+    item: &fret_diag::regression_summary::RegressionItemSummaryV1,
+) -> Option<String> {
     item.evidence
         .as_ref()
         .and_then(|evidence| evidence.extra.as_ref())
@@ -4898,7 +4899,9 @@ fn load_regression_summary_drilldown(
             continue;
         }
         if let Some(source) = regression_item_capability_source_display(&item)
-            && !capability_sources.iter().any(|existing| existing == &source)
+            && !capability_sources
+                .iter()
+                .any(|existing| existing == &source)
         {
             capability_sources.push(source);
         }

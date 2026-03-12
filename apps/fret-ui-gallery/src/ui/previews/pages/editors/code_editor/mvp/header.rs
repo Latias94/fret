@@ -1,7 +1,8 @@
 use super::{gates, models::CodeEditorMvpHandles, prelude::*, word_boundary};
+use fret::UiCx;
 
 pub(super) fn build_header(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     syntax_rust: Model<bool>,
     syntax_enabled: bool,

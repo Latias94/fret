@@ -14,7 +14,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return;
         };
 
-        let renderer_caps = fret_render::RendererCapabilities::from_wgpu_context(&gfx.ctx);
+        let renderer_caps = fret_render::RendererCapabilities::from_adapter_device(
+            &gfx.ctx.adapter,
+            &gfx.ctx.device,
+        );
         self.app
             .set_global::<fret_render::RendererCapabilities>(renderer_caps.clone());
         self.renderer_caps = Some(renderer_caps);

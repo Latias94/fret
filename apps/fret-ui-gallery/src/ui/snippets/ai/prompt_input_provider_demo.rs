@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("prompt_input_provider_demo.rs");
 
 // region: example
 use fret_core::{Corners, Edges, Px, SemanticsRole};
-use fret_runtime::Model;
+use fret_ui::Invalidation;
 use fret_ui::element::{ContainerProps, PressableA11y, PressableProps};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
@@ -10,50 +10,10 @@ use fret_ui_kit::{ColorRef, LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-#[derive(Default)]
-struct DemoModels {
-    text: Option<Model<String>>,
-    attachments: Option<Model<Vec<ui_ai::AttachmentData>>>,
-    sent_count: Option<Model<u32>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let text = cx.with_state(DemoModels::default, |st| st.text.clone());
-    let text = match text {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(DemoModels::default, |st| st.text = Some(model.clone()));
-            model
-        }
-    };
-
-    let attachments = cx.with_state(DemoModels::default, |st| st.attachments.clone());
-    let attachments = match attachments {
-        Some(model) => model,
-        None => {
-            let model = cx
-                .app
-                .models_mut()
-                .insert(Vec::<ui_ai::AttachmentData>::new());
-            cx.with_state(DemoModels::default, |st| {
-                st.attachments = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let sent_count = cx.with_state(DemoModels::default, |st| st.sent_count.clone());
-    let sent_count = match sent_count {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(0u32);
-            cx.with_state(DemoModels::default, |st| {
-                st.sent_count = Some(model.clone())
-            });
-            model
-        }
-    };
+    let text = cx.local_model_keyed("text", String::new);
+    let attachments = cx.local_model_keyed("attachments", Vec::<ui_ai::AttachmentData>::new);
+    let sent_count = cx.local_model_keyed("sent_count", || 0u32);
 
     let on_send: fret_ui::action::OnActivate = Arc::new({
         let sent_count = sent_count.clone();
@@ -134,13 +94,11 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 },
             );
 
-            let sent_marker = cx
-                .app
-                .models_mut()
-                .read(&sent_count, |v| *v)
-                .ok()
-                .and_then(|n| (n == 1).then_some(()))
-                .map(|_| {
+            let sent_marker = (cx
+                .get_model_copied(&sent_count, Invalidation::Paint)
+                .unwrap_or(0)
+                == 1)
+                .then(|| {
                     cx.text("")
                         .test_id("ui-gallery-ai-prompt-input-provider-sent-count-1")
                 });

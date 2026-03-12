@@ -2,13 +2,12 @@ pub const SOURCE: &str = include_str!("voice_selector_demo.rs");
 
 // region: example
 use fret_core::Px;
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{Items, LayoutRefinement, Space};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Clone, Copy)]
@@ -72,13 +71,6 @@ const DEMO_VOICES: &[DemoVoice] = &[
     },
 ];
 
-#[derive(Default)]
-struct DemoModels {
-    open: Option<Model<bool>>,
-    value: Option<Model<Option<Arc<str>>>>,
-    playing: Option<Model<Option<Arc<str>>>>,
-}
-
 fn selector_voices() -> Arc<[ui_ai::VoiceSelectorVoice]> {
     Arc::from(
         DEMO_VOICES
@@ -91,31 +83,15 @@ fn selector_voices() -> Arc<[ui_ai::VoiceSelectorVoice]> {
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let needs_init = cx.with_state(DemoModels::default, |st| {
-        st.open.is_none() || st.value.is_none() || st.playing.is_none()
-    });
-    if needs_init {
-        let open = cx.app.models_mut().insert(false);
-        let value = cx.app.models_mut().insert(None::<Arc<str>>);
-        let playing = cx.app.models_mut().insert(None::<Arc<str>>);
-        cx.with_state(DemoModels::default, move |st| {
-            st.open = Some(open.clone());
-            st.value = Some(value.clone());
-            st.playing = Some(playing.clone());
-        });
-    }
-
-    let (open, value, playing) = cx.with_state(DemoModels::default, |st| {
-        (
-            st.open.clone().expect("open"),
-            st.value.clone().expect("value"),
-            st.playing.clone().expect("playing"),
-        )
-    });
+    let open = cx.local_model_keyed("open", || false);
+    let value = cx.local_model_keyed("value", || None::<Arc<str>>);
+    let playing = cx.local_model_keyed("playing", || None::<Arc<str>>);
 
     let voices = selector_voices();
 
-    let selected = cx.app.models().read(&value, |v| v.clone()).ok().flatten();
+    let selected = cx
+        .get_model_cloned(&value, Invalidation::Layout)
+        .unwrap_or(None);
     let selected_voice = selected
         .as_deref()
         .and_then(|id| DEMO_VOICES.iter().copied().find(|voice| voice.id == id));
@@ -148,7 +124,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             }),
     );
 
-    let playing_now = cx.app.models().read(&playing, |v| v.clone()).ok().flatten();
+    let playing_now = cx
+        .get_model_cloned(&playing, Invalidation::Paint)
+        .unwrap_or(None);
 
     let selector = ui_ai::VoiceSelector::from_arc(voices)
         .open_model(open.clone())

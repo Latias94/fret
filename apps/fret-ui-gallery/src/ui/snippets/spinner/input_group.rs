@@ -2,31 +2,11 @@ pub const SOURCE: &str = include_str!("input_group.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default)]
-struct Models {
-    input_value: Option<Model<String>>,
-    textarea_value: Option<Model<String>>,
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (input_value, textarea_value) = cx.with_state(Models::default, |st| {
-        (st.input_value.clone(), st.textarea_value.clone())
-    });
-
-    let (input_value, textarea_value) = match (input_value, textarea_value) {
-        (Some(input_value), Some(textarea_value)) => (input_value, textarea_value),
-        _ => {
-            let input_value = cx.app.models_mut().insert(String::new());
-            let textarea_value = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| {
-                st.input_value = Some(input_value.clone());
-                st.textarea_value = Some(textarea_value.clone());
-            });
-            (input_value, textarea_value)
-        }
-    };
+    let input_value = cx.local_model_keyed("input_value", String::new);
+    let textarea_value = cx.local_model_keyed("textarea_value", String::new);
 
     let input = shadcn::InputGroup::new(input_value)
         .placeholder("Send a message...")
@@ -39,7 +19,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let validating = ui::h_row(|cx| {
         vec![
             shadcn::Spinner::new().into_element(cx),
-            shadcn::typography::muted(cx, "Validating..."),
+            shadcn::raw::typography::muted(cx, "Validating..."),
         ]
     })
     .gap(Space::N2)

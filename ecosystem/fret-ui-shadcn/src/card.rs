@@ -6,8 +6,8 @@ use fret_ui::element::{AnyElement, ElementKind};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, Space, UiChildIntoElement,
-    UiHostBoundIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, Space, UiPatch, UiPatchTarget,
+    UiSupportsChrome, UiSupportsLayout, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -49,15 +49,8 @@ pub enum CardSize {
     Sm,
 }
 
-#[derive(Debug, Default)]
-struct CardSizeProviderState {
-    current: Option<CardSize>,
-}
-
 fn card_size_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> CardSize {
-    cx.inherited_state_where::<CardSizeProviderState>(|st| st.current.is_some())
-        .and_then(|st| st.current)
-        .unwrap_or_default()
+    cx.provided::<CardSize>().copied().unwrap_or_default()
 }
 
 #[track_caller]
@@ -66,16 +59,7 @@ fn with_card_size_provider<H: UiHost, R>(
     size: CardSize,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(CardSizeProviderState::default, |st| {
-        let prev = st.current;
-        st.current = Some(size);
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(CardSizeProviderState::default, |st| {
-        st.current = prev;
-    });
-    out
+    cx.provide(size, f)
 }
 
 fn card_chrome(theme: &Theme, _size: CardSize) -> ChromeRefinement {
@@ -285,22 +269,12 @@ impl<H: UiHost, B> UiSupportsLayout for CardBuild<H, B> where
 {
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for CardBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for CardBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        CardBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for CardBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         CardBuild::into_element(self, cx)
     }
 }
@@ -606,22 +580,12 @@ impl<H: UiHost, B> UiSupportsLayout for CardHeaderBuild<H, B> where
 {
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for CardHeaderBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for CardHeaderBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        CardHeaderBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for CardHeaderBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         CardHeaderBuild::into_element(self, cx)
     }
 }
@@ -693,7 +657,7 @@ mod tests {
     };
     use fret_ui::elements::GlobalElementId;
     use fret_ui_kit::ui::UiElementSinkExt as _;
-    use fret_ui_kit::{MetricRef, UiBuilderHostBoundIntoElementExt as _, UiExt as _};
+    use fret_ui_kit::{MetricRef, UiExt as _};
 
     #[test]
     fn card_action_marker_matches_semantics_decoration_test_id() {
@@ -1874,22 +1838,12 @@ impl<H: UiHost, B> UiSupportsLayout for CardContentBuild<H, B> where
 {
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for CardContentBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for CardContentBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        CardContentBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for CardContentBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         CardContentBuild::into_element(self, cx)
     }
 }
@@ -2178,22 +2132,12 @@ impl<H: UiHost, B> UiSupportsLayout for CardFooterBuild<H, B> where
 {
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for CardFooterBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for CardFooterBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        CardFooterBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for CardFooterBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         CardFooterBuild::into_element(self, cx)
     }
 }

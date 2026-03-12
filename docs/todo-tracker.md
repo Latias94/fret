@@ -26,8 +26,8 @@ It complements (but does not replace) ADRs:
 ## P0 - Workspace crate boundaries
 
 - Track render/web-runner/facade boundary refactors in:
-  - `docs/workstreams/workspace-crate-boundaries-v1.md`
-  - `docs/workstreams/workspace-crate-boundaries-v1-todo.md`
+  - `docs/workstreams/workspace-crate-boundaries-v1/workspace-crate-boundaries-v1.md`
+  - `docs/workstreams/workspace-crate-boundaries-v1/workspace-crate-boundaries-v1-todo.md`
 
 ## P0 - Adaptive layout (container queries)
 
@@ -35,9 +35,9 @@ It complements (but does not replace) ADRs:
   (docking/editor reality), not only viewport width.
   - ADR: `docs/adr/0231-container-queries-and-frame-lagged-layout-queries-v1.md`
   - Workstream:
-    - `docs/workstreams/container-queries-v1.md`
-    - `docs/workstreams/container-queries-v1-todo.md`
-    - `docs/workstreams/container-queries-v1-milestones.md`
+    - `docs/workstreams/container-queries-v1/container-queries-v1.md`
+    - `docs/workstreams/container-queries-v1/container-queries-v1-todo.md`
+    - `docs/workstreams/container-queries-v1/container-queries-v1-milestones.md`
 
 ## P0 - Environment queries (viewport/device capabilities)
 
@@ -46,15 +46,15 @@ It complements (but does not replace) ADRs:
   `cx.bounds` magic numbers.
   - ADR: `docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md`
   - Workstream:
-    - `docs/workstreams/environment-queries-v1.md`
-    - `docs/workstreams/environment-queries-v1-todo.md`
-    - `docs/workstreams/environment-queries-v1-milestones.md`
+    - `docs/workstreams/environment-queries-v1/environment-queries-v1.md`
+    - `docs/workstreams/environment-queries-v1/environment-queries-v1-todo.md`
+    - `docs/workstreams/environment-queries-v1/environment-queries-v1-milestones.md`
 
 ## P1 - Authoring surfaces (imui convergence)
 
 - Track the fearless v2 consolidation of immediate-style authoring in:
-  - `docs/workstreams/imui-authoring-facade-v2.md`
-  - `docs/workstreams/imui-authoring-facade-v2-todo.md`
+  - `docs/workstreams/imui-authoring-facade-v2/imui-authoring-facade-v2.md`
+  - `docs/workstreams/imui-authoring-facade-v2/imui-authoring-facade-v2-todo.md`
 - Keep official ecosystem `imui` adapters accepting `&mut impl fret_authoring::UiWriter<H>` to avoid concrete `ImUi` coupling.
 
 ## P0 - IME / Text Input
@@ -139,17 +139,17 @@ It complements (but does not replace) ADRs:
 - **Unify rich text under attributed spans (shaping vs paint split)**
   - Goal: make Markdown/code highlighting structurally compatible with wrapping and geometry queries without “many Text nodes”.
   - ADRs: `docs/adr/0142-text-system-v2-parley-attributed-spans-and-quality-baseline.md`
-  - Workstream: `docs/workstreams/text-system-v2-parley.md`
+  - Workstream: `docs/workstreams/standalone/text-system-v2-parley.md`
 
 - **Stop theme-only changes from forcing reshaping/re-wrapping**
   - Problem: current v1 `RichText` run colors participate in shaping/layout cache keys, so recolors can trigger expensive rework.
   - ADRs: `docs/adr/0142-text-system-v2-parley-attributed-spans-and-quality-baseline.md`, `docs/adr/0107-rich-text-runs-and-text-quality-v2.md`
-  - Workstream: `docs/workstreams/text-system-v2-parley.md`
+  - Workstream: `docs/workstreams/standalone/text-system-v2-parley.md`
 
 - **Wrapper-owned wrapping and truncation (not backend-owned)**
   - Goal: keep wrapping/ellipsis policy stable and testable across backends and platforms.
   - Reference: Zed/GPUI `LineWrapper` (`repo-ref/zed/crates/gpui/src/text_system/line_wrapper.rs`)
-  - Workstream: `docs/workstreams/text-system-v2-parley.md`
+  - Workstream: `docs/workstreams/standalone/text-system-v2-parley.md`
 
 - **Text quality baseline: gamma/contrast tuning + subpixel coherence**
   - Problem: current text shaders apply raw atlas coverage without contrast/gamma correction, which can look "soft" under DPI scaling and on light-on-dark surfaces.
@@ -170,7 +170,7 @@ It complements (but does not replace) ADRs:
 - **Budgeted, evictable glyph atlases**
   - Problem: append-only atlas growth is a long-session risk; eviction must be deterministic and observable.
   - ADRs: `docs/adr/0142-text-system-v2-parley-attributed-spans-and-quality-baseline.md`, `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
-  - Workstream: `docs/workstreams/text-system-v2-parley.md`
+  - Workstream: `docs/workstreams/standalone/text-system-v2-parley.md`
 
 ## P0 - Themes / Token Consistency / shadcn Alignment
 
@@ -182,13 +182,13 @@ It complements (but does not replace) ADRs:
 - **Zed-aligned shortcut display policy for menus** (done)
   - Problem: shortcut labels in menus should be stable and understandable; they should not flicker based on live focus, and should remain consistent with command palette display.
   - ADRs: `docs/adr/0168-os-menubar-effect-setmenubar.md`, `docs/adr/0023-command-metadata-menus-and-palette.md`, `docs/adr/0021-keymap-file-format.md`, `docs/adr/0022-when-expressions.md`
-  - Workstream: `docs/workstreams/os-menubar.md` (MVP 2)
+  - Workstream: `docs/workstreams/standalone/os-menubar.md` (MVP 2)
   - Reference: Zed/GPUI `repo-ref/zed/crates/gpui/src/platform/mac/platform.rs` (`bindings_for_action` selection comment)
   - Evidence: `crates/fret-runtime/src/keymap.rs` (`display_shortcut_for_command_sequence`), used by OS menubar + command palette + in-window menu surfaces.
 
 - **Menu bar presentation modes (OS vs in-window)** (done)
   - Goal: let apps choose native OS menubar vs client-side in-window menubar while sharing one data-only `MenuBar` and one keymap/when model.
-  - Workstream: `docs/workstreams/os-menubar.md` (MVP 2.5)
+  - Workstream: `docs/workstreams/standalone/os-menubar.md` (MVP 2.5)
   - Evidence: `crates/fret-app/src/settings.rs` (`SettingsFileV1.menu_bar`), `crates/fret-app/src/menu_bar.rs` (`sync_os_menu_bar`), `apps/fret-ui-gallery/src/driver.rs` (in-window fallback decision).
   - Current: `fret-ui-gallery` exposes a basic Settings sheet to toggle `menu_bar.os` / `menu_bar.in_window` and write `.fret/settings.json` (`apps/fret-ui-gallery/src/driver.rs`).
 
@@ -209,7 +209,7 @@ It complements (but does not replace) ADRs:
 - **Define quit semantics for menu + window close** (done)
   - Problem: `Effect::QuitApp` exits the native event loop immediately; we need a clear policy for "Quit" vs closing windows (and unsaved changes prompts) in the golden path.
   - ADRs: `docs/adr/0001-app-effects.md`, `docs/adr/0093-window-close-and-web-runner-destroy.md`
-  - Workstream: `docs/workstreams/os-menubar.md` (MVP 3 gap)
+  - Workstream: `docs/workstreams/standalone/os-menubar.md` (MVP 3 gap)
   - Current: native `QuitApp` requests are mediated by `before_close_window` (prompt gate) and then force-close all windows before exiting, so quit works with "unsaved changes" prompts without re-entrancy.
   - Evidence: `crates/fret-launch/src/runner/desktop/mod.rs` (`Effect::QuitApp`, `WindowRequest::Close` + `exit_on_main_window_close`), `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (global `app.quit` handling).
 
@@ -320,9 +320,9 @@ It complements (but does not replace) ADRs:
 - **ImGui-style multi-window tear-off parity (macOS-first, but cross-platform)**
   - Goal: editor-grade “tear off → hover another window → re-dock → close empty window” experience.
   - Workstream:
-    - Narrative: `docs/workstreams/docking-multiwindow-imgui-parity.md`
-    - TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity-todo.md`
-    - macOS detail: `docs/workstreams/macos-docking-multiwindow-imgui-parity.md`
+    - Narrative: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
+    - TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
+    - macOS detail: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
   - Contract gates:
     - `docs/adr/0013-docking-ops-and-persistence.md`
     - `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`

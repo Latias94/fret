@@ -1,4 +1,5 @@
-use fret::prelude::*;
+use fret::app::prelude::*;
+use fret_runtime::Model;
 use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState, create_column_helper};
 use std::sync::Arc;
 
@@ -21,7 +22,7 @@ struct DataTableBasicsView {
 }
 
 impl View for DataTableBasicsView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut App, _window: WindowId) -> Self {
         let rows: Arc<[DemoRow]> = (0..2_000)
             .map(|i| DemoRow {
                 id: i as u64,
@@ -54,7 +55,7 @@ impl View for DataTableBasicsView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
 
         let header = shadcn::CardHeader::build(|cx, out| {
@@ -135,7 +136,7 @@ impl View for DataTableBasicsView {
         .max_w(Px(1180.0));
 
         let root = fret_cookbook::scaffold::centered_page_background_ui(cx, TEST_ID_ROOT, card);
-        vec![root].into()
+        root.into()
     }
 }
 
@@ -143,7 +144,8 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-data-table-basics")
         .window("cookbook-data-table-basics", (1180.0, 820.0))
         .config_files(false)
-        .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_view::<DataTableBasicsView>()
+        .setup(fret_cookbook::install_cookbook_defaults)
+        .view::<DataTableBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

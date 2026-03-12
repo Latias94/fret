@@ -15,7 +15,7 @@ implementation evidence:
 - `FnDriver` is sufficient as the preferred advanced example posture.
 - The main problem was posture / naming / facade defaults, not missing launch hooks.
 - The examples-side direct `WinitAppDriver` inventory is now zero.
-- `fret::run_native_with_configured_fn_driver(...)` closed the last app-facing helper gap for
+- `fret::advanced::run_native_with_configured_fn_driver(...)` closed the last app-facing helper gap for
   preconfigured drivers.
 
 ## Landed outcomes

@@ -1,13 +1,12 @@
 pub const SOURCE: &str = include_str!("model_selector_demo.rs");
 
 // region: example
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::SemanticsProps;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{Justify, LayoutRefinement, Space};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Clone, Copy)]
@@ -57,38 +56,10 @@ const MODELS: &[DemoModel] = &[
     },
 ];
 
-#[derive(Default)]
-struct DemoModels {
-    open: Option<Model<bool>>,
-    query: Option<Model<String>>,
-    selected: Option<Model<Arc<str>>>,
-}
-
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let needs_init = cx.with_state(DemoModels::default, |st| {
-        st.open.is_none() || st.query.is_none() || st.selected.is_none()
-    });
-    if needs_init {
-        let open = cx.app.models_mut().insert(false);
-        let query = cx.app.models_mut().insert(String::new());
-        let selected = cx
-            .app
-            .models_mut()
-            .insert(Arc::<str>::from("openai-gpt-4o"));
-        cx.with_state(DemoModels::default, move |st| {
-            st.open = Some(open.clone());
-            st.query = Some(query.clone());
-            st.selected = Some(selected.clone());
-        });
-    }
-
-    let (open, query, selected) = cx.with_state(DemoModels::default, |st| {
-        (
-            st.open.clone().expect("open"),
-            st.query.clone().expect("query"),
-            st.selected.clone().expect("selected"),
-        )
-    });
+    let open = cx.local_model_keyed("open", || false);
+    let query = cx.local_model_keyed("query", String::new);
+    let selected = cx.local_model_keyed("selected", || Arc::<str>::from("openai-gpt-4o"));
 
     let selected_now = cx
         .get_model_cloned(&selected, Invalidation::Paint)
@@ -168,7 +139,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
                 let name = ui_ai::ModelSelectorName::new(model.name).into_element(cx);
 
-                let check = shadcn::icon::icon_with(
+                let check = icon::icon_with(
                     cx,
                     fret_icons::ids::ui::CHECK,
                     Some(fret_core::Px(16.0)),

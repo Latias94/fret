@@ -1,18 +1,16 @@
 use std::sync::Arc;
 
-use fret_app::{App, CommandId, Effect, WindowRequest};
-use fret_bootstrap::ui_app_with_hooks;
-use fret_core::{AppWindowId, Px};
+use fret::advanced::prelude::*;
+use fret_app::{CommandId, Effect, WindowRequest};
+use fret_core::Px;
 use fret_runtime::{
     RunnerWindowStyleDiagnosticsStore, WindowBackgroundMaterialRequest, WindowDecorationsRequest,
     WindowStyleRequest,
 };
 use fret_ui::ElementContext;
 use fret_ui::element::{LayoutStyle, Length, SemanticsDecoration, SizeStyle};
-use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
-use fret_ui_shadcn::button::{Button, ButtonSize, ButtonVariant};
-use fret_ui_shadcn::{Card, CardContent, CardDescription, CardHeader, CardTitle};
+use fret_ui_shadcn::facade as shadcn;
 
 const CMD_TO_NONE: &str = "launcher_utility_window_materials_demo.to_none";
 const CMD_TO_MICA: &str = "launcher_utility_window_materials_demo.to_mica";
@@ -24,6 +22,25 @@ const TEST_ID_TO_NONE: &str = "utility-window.materials.to_none";
 const TEST_ID_TO_MICA: &str = "utility-window.materials.to_mica";
 const TEST_ID_TO_ACRYLIC: &str = "utility-window.materials.to_acrylic";
 const TEST_ID_STYLE_TEXT: &str = "utility-window.materials.style_effective";
+
+fn install_commands(app: &mut KernelApp) {
+    app.commands_mut().register(
+        CommandId::from(CMD_TO_NONE),
+        fret_app::CommandMeta::new("Background material: None"),
+    );
+    app.commands_mut().register(
+        CommandId::from(CMD_TO_MICA),
+        fret_app::CommandMeta::new("Background material: Mica"),
+    );
+    app.commands_mut().register(
+        CommandId::from(CMD_TO_ACRYLIC),
+        fret_app::CommandMeta::new("Background material: Acrylic"),
+    );
+    app.commands_mut().register(
+        CommandId::from(CMD_QUIT),
+        fret_app::CommandMeta::new("Quit"),
+    );
+}
 
 pub fn run() -> anyhow::Result<()> {
     ui_app_with_hooks(
@@ -43,24 +60,7 @@ pub fn run() -> anyhow::Result<()> {
             ..Default::default()
         };
     })
-    .init_app(|app| {
-        app.commands_mut().register(
-            CommandId::from(CMD_TO_NONE),
-            fret_app::CommandMeta::new("Background material: None"),
-        );
-        app.commands_mut().register(
-            CommandId::from(CMD_TO_MICA),
-            fret_app::CommandMeta::new("Background material: Mica"),
-        );
-        app.commands_mut().register(
-            CommandId::from(CMD_TO_ACRYLIC),
-            fret_app::CommandMeta::new("Background material: Acrylic"),
-        );
-        app.commands_mut().register(
-            CommandId::from(CMD_QUIT),
-            fret_app::CommandMeta::new("Quit"),
-        );
-    })
+    .setup(install_commands)
     .run()
     .map_err(anyhow::Error::from)
 }
@@ -70,7 +70,7 @@ struct LauncherUtilityWindowMaterialsState {
     status: fret_runtime::Model<Arc<str>>,
 }
 
-fn init_window(app: &mut App, window: AppWindowId) -> LauncherUtilityWindowMaterialsState {
+fn init_window(app: &mut KernelApp, window: AppWindowId) -> LauncherUtilityWindowMaterialsState {
     LauncherUtilityWindowMaterialsState {
         window,
         status: app.models_mut().insert(Arc::from("Idle")),
@@ -78,16 +78,16 @@ fn init_window(app: &mut App, window: AppWindowId) -> LauncherUtilityWindowMater
 }
 
 fn configure_driver(
-    driver: fret_bootstrap::ui_app_driver::UiAppDriver<LauncherUtilityWindowMaterialsState>,
-) -> fret_bootstrap::ui_app_driver::UiAppDriver<LauncherUtilityWindowMaterialsState> {
+    driver: UiAppDriver<LauncherUtilityWindowMaterialsState>,
+) -> UiAppDriver<LauncherUtilityWindowMaterialsState> {
     driver.on_command(on_command)
 }
 
 fn on_command(
-    app: &mut App,
+    app: &mut KernelApp,
     _services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
-    _ui: &mut fret_ui::UiTree<App>,
+    _ui: &mut fret_ui::UiTree<KernelApp>,
     st: &mut LauncherUtilityWindowMaterialsState,
     command: &CommandId,
 ) {
@@ -116,9 +116,9 @@ fn on_command(
 }
 
 fn view(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     st: &mut LauncherUtilityWindowMaterialsState,
-) -> fret_bootstrap::ui_app_driver::ViewElements {
+) -> ViewElements {
     let theme = cx.theme().snapshot();
     let color_muted_foreground = theme.color_token("muted-foreground");
     let color_secondary = theme.color_token("secondary");
@@ -168,16 +168,16 @@ fn view(
         },
     );
 
-    let content = Card::new([
-        CardHeader::new([
-            CardTitle::new("Background material").into_element(cx),
-            CardDescription::new(
+    let content = shadcn::Card::new([
+        shadcn::CardHeader::new([
+            shadcn::CardTitle::new("Background material").into_element(cx),
+            shadcn::CardDescription::new(
                 "Requests are capability-gated and observable via diagnostics snapshots.",
             )
             .into_element(cx),
         ])
         .into_element(cx),
-        CardContent::new([ui::v_flex(move |cx| {
+        shadcn::CardContent::new([ui::v_flex(move |cx| {
             let style_line = ui::text(style_text)
                 .font_monospace()
                 .text_sm()
@@ -190,27 +190,27 @@ fn view(
 
             let buttons_row = ui::h_flex(move |cx| {
                 [
-                    Button::new("None")
-                        .variant(ButtonVariant::Secondary)
-                        .size(ButtonSize::Sm)
+                    shadcn::Button::new("None")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .size(shadcn::ButtonSize::Sm)
                         .on_click(CommandId::from(CMD_TO_NONE))
                         .test_id(TEST_ID_TO_NONE)
                         .into_element(cx),
-                    Button::new("Mica")
-                        .variant(ButtonVariant::Secondary)
-                        .size(ButtonSize::Sm)
+                    shadcn::Button::new("Mica")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .size(shadcn::ButtonSize::Sm)
                         .on_click(CommandId::from(CMD_TO_MICA))
                         .test_id(TEST_ID_TO_MICA)
                         .into_element(cx),
-                    Button::new("Acrylic")
-                        .variant(ButtonVariant::Secondary)
-                        .size(ButtonSize::Sm)
+                    shadcn::Button::new("Acrylic")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .size(shadcn::ButtonSize::Sm)
                         .on_click(CommandId::from(CMD_TO_ACRYLIC))
                         .test_id(TEST_ID_TO_ACRYLIC)
                         .into_element(cx),
-                    Button::new("Quit")
-                        .variant(ButtonVariant::Destructive)
-                        .size(ButtonSize::Sm)
+                    shadcn::Button::new("Quit")
+                        .variant(shadcn::ButtonVariant::Destructive)
+                        .size(shadcn::ButtonSize::Sm)
                         .on_click(CommandId::from(CMD_QUIT))
                         .into_element(cx),
                 ]

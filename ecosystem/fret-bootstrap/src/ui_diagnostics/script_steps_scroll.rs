@@ -158,11 +158,23 @@ pub(super) fn handle_scroll_into_view_step(
             *force_dump_label = Some(format!("script-step-{step_index:04}-scroll_into_view"));
         }
     } else if state.remaining_frames == 0 {
-        *force_dump_label = Some(format!(
-            "script-step-{step_index:04}-scroll_into_view-timeout"
-        ));
+        let timeout_reason = match (container_node.is_some(), target_node.is_some()) {
+            (false, false) => "scroll_into_view_container_and_target_not_found",
+            (false, true) => "scroll_into_view_container_not_found",
+            (true, false) => "scroll_into_view_target_not_found",
+            (true, true) => "scroll_into_view_timeout",
+        };
+        let dump_suffix = match timeout_reason {
+            "scroll_into_view_container_and_target_not_found" => {
+                "scroll_into_view-container-and-target-not-found"
+            }
+            "scroll_into_view_container_not_found" => "scroll_into_view-container-not-found",
+            "scroll_into_view_target_not_found" => "scroll_into_view-target-not-found",
+            _ => "scroll_into_view-timeout",
+        };
+        *force_dump_label = Some(format!("script-step-{step_index:04}-{dump_suffix}"));
         *stop_script = true;
-        *failure_reason = Some("scroll_into_view_timeout".to_string());
+        *failure_reason = Some(timeout_reason.to_string());
         active.v2_step_state = None;
         output.request_redraw = true;
     } else {

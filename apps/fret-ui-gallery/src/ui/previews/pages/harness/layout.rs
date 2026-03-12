@@ -1,11 +1,9 @@
 use super::super::super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
+use fret::UiCx;
 
-pub(in crate::ui) fn preview_layout(
-    cx: &mut ElementContext<'_, App>,
-    theme: &Theme,
-) -> Vec<AnyElement> {
-    let boxy = |cx: &mut ElementContext<'_, App>, label: &str, color: fret_core::Color| {
+pub(in crate::ui) fn preview_layout(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+    let boxy = |cx: &mut UiCx<'_>, label: &str, color: fret_core::Color| {
         cx.container(
             decl_style::container_props(
                 theme,

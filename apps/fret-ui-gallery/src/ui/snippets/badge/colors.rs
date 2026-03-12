@@ -4,18 +4,18 @@ pub const SOURCE: &str = include_str!("colors.rs");
 use fret_core::Color;
 use fret_core::window::ColorScheme;
 use fret_ui::Invalidation;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_kit::IntoUiElement;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn row<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+fn row<H: UiHost, F>(children: F) -> impl IntoUiElement<H> + use<H, F>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+{
     fret_ui_kit::ui::h_flex(children)
         .gap(Space::N2)
         .wrap()
         .w_full()
         .items_center()
-        .into_element(cx)
 }
 
 fn bg_fg_for_scheme(
@@ -51,7 +51,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         bg_fg_for_scheme(0xFA_F5_FF, 0x7E_22_CE, 0x3B_07_64, 0xD8_B4_FE, scheme);
     let (red_bg, red_fg) = bg_fg_for_scheme(0xFE_F2_F2, 0xB9_1C_1C, 0x45_0A_0A, 0xFD_A4_AF, scheme);
 
-    row(cx, |cx| {
+    row(|cx| {
         vec![
             shadcn::Badge::new("Blue")
                 .refine_style(
@@ -95,6 +95,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .into_element(cx),
         ]
     })
+    .into_element(cx)
     .test_id("ui-gallery-badge-colors")
 }
 // endregion: example

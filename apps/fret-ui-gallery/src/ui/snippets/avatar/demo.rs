@@ -2,14 +2,15 @@ pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use fret_core::ImageId;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_kit::IntoUiElement;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn avatar_with_image<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     avatar_image: Model<Option<ImageId>>,
     size: shadcn::AvatarSize,
     fallback_text: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let image = shadcn::AvatarImage::model(avatar_image.clone()).into_element(cx);
     let fallback = shadcn::AvatarFallback::new(fallback_text)
         .when_image_missing_model(avatar_image)
@@ -25,7 +26,7 @@ fn avatar_with_badge<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     avatar_image: Model<Option<ImageId>>,
     fallback_text: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let image = shadcn::AvatarImage::model(avatar_image.clone()).into_element(cx);
     let fallback = shadcn::AvatarFallback::new(fallback_text)
         .when_image_missing_model(avatar_image)
@@ -52,6 +53,7 @@ pub fn render<H: UiHost>(
                     shadcn::AvatarSize::Default,
                     fallback,
                 )
+                .into_element(cx)
             })
             .collect::<Vec<_>>();
         let count =
@@ -67,8 +69,11 @@ pub fn render<H: UiHost>(
     fret_ui_kit::ui::h_flex(|cx| {
         vec![
             avatar_with_image(cx, avatar_image.clone(), shadcn::AvatarSize::Default, "CN")
+                .into_element(cx)
                 .test_id("ui-gallery-avatar-demo-basic"),
-            avatar_with_badge(cx, avatar_image, "ER").test_id("ui-gallery-avatar-demo-badge"),
+            avatar_with_badge(cx, avatar_image, "ER")
+                .into_element(cx)
+                .test_id("ui-gallery-avatar-demo-badge"),
             group,
         ]
     })

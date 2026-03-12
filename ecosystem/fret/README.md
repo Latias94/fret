@@ -68,6 +68,20 @@ Enable selector/query helpers (optional):
 fret = { path = "../fret", features = ["state"] }
 ```
 
+Enable the explicit router extension surface (optional):
+
+```toml
+[dependencies]
+fret = { path = "../fret", features = ["router"] }
+```
+
+Enable the explicit docking surface (optional):
+
+```toml
+[dependencies]
+fret = { path = "../fret", features = ["docking"] }
+```
+
 If your crate lives under `apps/` in this repository:
 
 ```toml
@@ -85,12 +99,12 @@ fret = { path = "../fret", default-features = false, features = ["desktop", "sha
 ## Minimal app skeleton
 
 ```rust,ignore
-use fret::prelude::*;
+use fret::app::prelude::*;
 
 struct HelloView;
 
 impl View for HelloView {
-    fn render(&mut self, _cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, _ui: &mut AppUi<'_, '_>) -> Ui {
         shadcn::Label::new("Hello from Fret!").into()
     }
 }
@@ -107,7 +121,9 @@ fn main() -> fret::Result<()> {
 
 - `desktop`: enable the native desktop stack (winit + wgpu) via `fret-framework/native-wgpu`.
 - `app`: recommended baseline for apps (shadcn).
-- `state`: enable selector/query helpers for `ViewCx` (`use_selector`, `use_query`).
+- `state`: enable selector/query helpers on `AppUi` (`cx.data().selector(...)`, `cx.data().query(...)`) for the default app surface.
+- `router`: enable the explicit app-level router surface (`fret::router::{app::install, RouterUiStore, RouterOutlet, ...}`).
+- `docking`: enable the explicit advanced docking surface (`fret::docking::{core::*, DockManager, handle_dock_op, ...}`).
 - `batteries`: “works out of the box” opt-in bundle (config files + UI assets + icons + preloading + diagnostics).
 - `config-files`: load layered config files from `.fret/` (settings/keymap/menubar).
 - `diagnostics`: enable default diagnostics wiring (tracing + panic hook; plus extra dev tooling).
@@ -132,27 +148,51 @@ Related workstream: `docs/workstreams/fret-launch-app-surface-fearless-refactor-
 
 ## Choosing a native entry path
 
-- App authors (default recommendation): `fret::App::new(...).window(...).view::<V>()?`
-- App authors with driver hooks: `fret::App::new(...).window(...).view_with_hooks::<V>(...)?`
-- Advanced integration with `fret` defaults: `fret::run_native_with_fn_driver(...)`
-- Advanced integration with `FnDriver` hooks preserved: `fret::run_native_with_fn_driver_with_hooks(...)`
-- Advanced integration with a preconfigured `FnDriver`: `fret::run_native_with_configured_fn_driver(...)`
-- Advanced low-level interop driver path (compat seam, non-default): `fret::run_native_with_compat_driver(...)`
+- App authors (default recommendation): `fret::FretApp::new(...).window(...).view::<V>()?`
+- App authors with driver hooks: `fret::FretApp::new(...).window(...).view_with_hooks::<V>(...)?`
+- Advanced integration with `fret` defaults: `fret::advanced::run_native_with_fn_driver(...)`
+- Advanced integration with `FnDriver` hooks preserved: `fret::advanced::run_native_with_fn_driver_with_hooks(...)`
+- Advanced integration with a preconfigured `FnDriver`: `fret::advanced::run_native_with_configured_fn_driver(...)`
+- Advanced low-level interop driver path (compat seam, non-default): `fret::advanced::interop::run_native_with_compat_driver(...)`
+- Advanced low-level runtime/render/viewport seams: `fret::advanced::{kernel::*, interop::*}`
 
 ## What remains first-class on `fret`
 
 Advanced users do **not** need to drop to `fret-launch` immediately. The `fret` facade keeps the
 following seams first-class:
 
-- `App::{view::<V>, view_with_hooks::<V>}`
-- `UiAppBuilder::configure(...)` for launch/window config
-- `UiAppBuilder::on_gpu_ready(...)`
-- `UiAppBuilder::install_custom_effects(...)`
+- `FretApp::{setup(...), view::<V>(), view_with_hooks::<V>()}`
+- `UiAppBuilder::{configure(...), setup(...), setup_with(...)}`
+- `fret::advanced::FretAppAdvancedExt::install(...)`
+- `fret::advanced::UiAppBuilderAdvancedExt::{install(...), on_gpu_ready(...), install_custom_effects(...)}`
 - `UiAppDriver::{window_create_spec, window_created, before_close_window}`
 - `UiAppDriver::{record_engine_frame, viewport_input, handle_global_command}`
+- `fret::advanced::{kernel::*, interop::*}`
 
-The builder chain is now the only app-author entry story on `fret`. Advanced users still keep
-real extension seams without dropping to `fret-launch` immediately.
+The default builder chain stays small and app-facing on `fret`. Advanced users still keep the same
+extension seams without dropping to `fret-launch` immediately, but the GPU/effects/bootstrap hooks
+now live explicitly under `fret::advanced` instead of the default inherent builder surface.
+
+Optional ecosystems also stay explicit. For example, the router integration lives under
+`fret::router`; wire it with `FretApp::setup(fret::router::app::install)` instead of expecting it
+to appear in `fret::app::prelude::*`. Docking similarly lives under `fret::docking` so advanced
+apps can opt into panel registries, dock ops, and retained-host wiring without turning docking into
+part of the default app prelude. The default design-system surface is similarly curated under
+`fret::shadcn`: keep component names at `shadcn::Button` / `shadcn::Card`, use
+`shadcn::app::install(...)` for app wiring, `shadcn::themes::apply_shadcn_new_york(...)` for
+explicit presets, and `shadcn::raw::*` only when you intentionally need the full underlying crate
+surface. Environment / `UiServices`-boundary hooks stay off the curated lane: if you only depend
+on `fret`, reach them through `fret::shadcn::raw::advanced::*`; if you depend on the recipe crate
+directly, use `fret_ui_shadcn::advanced::*`. Reusable ecosystem bundles can share the same
+`.setup(...)` seam by implementing
+`fret::integration::InstallIntoApp`; ordinary app docs/examples should still teach plain installer
+functions first. For small app-local composition, it is also acceptable to write
+`.setup((install_a, install_b))`; prefer a named bundle type once that composition becomes
+reusable or crate-facing API. Because Rust does not let a trait-bound-only `fn(&mut App)`
+implementation accept plain function items without explicit casts, `InstallIntoApp` stays broad in
+implementation. Treat that as an internal accommodation: keep `.setup(...)` on named installer
+functions, tuples, or named bundles, and reserve `.setup_with(...)` for one-off inline closures or
+runtime-captured values.
 
 That makes `fret` suitable for both general-purpose desktop apps and many editor-style customizations
 before you need to depend on `fret-bootstrap` or `fret-launch` directly.
@@ -171,10 +211,11 @@ Mapping (rough):
 
 - `fret::UiAppBuilder` -> `fret_bootstrap::UiAppBootstrapBuilder`
 - `fret::UiAppDriver` -> `fret_bootstrap::ui_app_driver::UiAppDriver`
-- `fret::run_native_with_fn_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new_fn(...)`
-- `fret::run_native_with_fn_driver_with_hooks(...)` -> `fret_bootstrap::BootstrapBuilder::new_fn_with_hooks(...)`
-- `fret::run_native_with_configured_fn_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new(...)` with a preconfigured `FnDriver`
-- `fret::run_native_with_compat_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new(...)` for advanced low-level interop / retained driver cases
+- `fret::advanced::run_native_with_fn_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new_fn(...)`
+- `fret::advanced::run_native_with_fn_driver_with_hooks(...)` -> `fret_bootstrap::BootstrapBuilder::new_fn_with_hooks(...)`
+- `fret::advanced::run_native_with_configured_fn_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new(...)` with a preconfigured `FnDriver`
+- `fret::advanced::interop::run_native_with_compat_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new(...)` for advanced low-level interop / retained driver cases
+- `fret::advanced::kernel::*` -> `fret-framework::*`
 
 The recommended manual-assembly entry point remains `fret-bootstrap`, keeping the underlying driver
 hotpatch-friendly (function-pointer `FnDriver` surface, per ADR 0105 / 0110).

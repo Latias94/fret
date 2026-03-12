@@ -21,9 +21,9 @@ Contracts and foundations:
 Workstreams:
 
 - This workstream: `docs/workstreams/diag-architecture-fearless-refactor-v1/DESIGN.md`
-- Simplification (artifact parity + transport): `docs/workstreams/diag-simplification-v1.md`
+- Simplification (artifact parity + transport): `docs/workstreams/diag-simplification-v1/diag-simplification-v1.md`
 - Extensibility + capabilities: `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`
-- DevTools GUI: `docs/workstreams/diag-devtools-gui-v1.md`
+- DevTools GUI: `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md`
 
 ---
 

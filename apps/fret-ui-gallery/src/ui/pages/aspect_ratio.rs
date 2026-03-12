@@ -1,10 +1,11 @@
 use super::super::*;
+use fret::UiCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::aspect_ratio as snippets;
 
 pub(super) fn preview_aspect_ratio(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut UiCx<'_>,
     wide_image: Option<Model<Option<ImageId>>>,
     tall_image: Option<Model<Option<ImageId>>>,
     square_image: Option<Model<Option<ImageId>>>,

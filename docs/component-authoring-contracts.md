@@ -29,7 +29,12 @@ at least one regression test before expanding usage.
 
 - `fret_ui::ElementContext` (the primary API surface for building element subtrees)
   - Identity: `ElementContext::scope(...)`, `ElementContext::keyed(...)`
-  - Local state: `ElementContext::{with_state, with_state_for}`
+  - Local state:
+    - authored local models: `ElementContext::{local_model, local_model_keyed}`
+    - explicit-identity models: `ElementContext::model_for(...)`
+    - helper/runtime slots: `ElementContext::{slot_state, slot_id, keyed_slot_id}`
+    - explicit identity slots: `ElementContext::{state_for, with_state_for}`
+    - lower-level compatibility API: `ElementContext::with_state(...)`
   - Model reads + observation: `ElementContext::{observe_model, read_model_ref, get_model_*}`
   - Focus reads: `ElementContext::{focused_element, is_focused_element}`
   - Cross-frame geometry queries: `ElementContext::{last_bounds_for_element, last_visual_bounds_for_element}`
@@ -44,7 +49,7 @@ at least one regression test before expanding usage.
 - Anchoring helpers for overlays: `fret_ui_kit::overlay::*`
 - Control chrome wrapper (focus ring + clipping split): `fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props`
 - Styling refinements: `fret_ui_kit::{ChromeRefinement, LayoutRefinement, StyledExt, Space, Radius, ColorRef, MetricRef}`
-- Unified authoring builder surface (ADR 0160): `fret_ui_kit::{UiExt, UiPatchTarget, UiIntoElement, UiBuilder}`
+- Unified authoring builder surface (ADR 0160): `fret_ui_kit::{UiExt, UiPatchTarget, IntoUiElement, UiBuilder}`
 
 ## Unified authoring builder surface (ADR 0160)
 
@@ -61,7 +66,7 @@ If you want other crates to style/layout your component in a uniform way, implem
 your public component types:
 
 - `UiPatchTarget`: apply aggregated `{ chrome, layout }` patches.
-- `UiIntoElement`: render into `AnyElement` (so `UiBuilder::into_element(cx)` works).
+- `IntoUiElement<H>`: public reusable-component conversion contract for landing into `AnyElement`.
 - `UiSupportsChrome` / `UiSupportsLayout` (optional): enable the full fluent method set.
 
 Practical pattern (recommended):
@@ -78,15 +83,20 @@ prefer the `macro_rules!` helpers exported by `fret-ui-kit`:
 - `fret_ui_kit::ui_component_*_patch_only!(MyType);` (patch-only; see below)
 - `fret_ui_kit::ui_into_element_render_once!(MyType);` (when a type implements `RenderOnce`)
 
-#### Adapter strategy (RenderOnce vs UiIntoElement)
+#### Implementation strategy (host-agnostic vs `RenderOnce`)
 
 Near-term decision:
 
-- Prefer explicit `UiIntoElement` impls for component types that can render directly into `AnyElement`.
-- For types that already implement `fret_ui::element::RenderOnce`, use `fret_ui_kit::ui_into_element_render_once!(MyType);`.
-- We intentionally do **not** provide a blanket impl `UiIntoElement for T: RenderOnce` today due to Rust coherence constraints
-  (see `ONB-macro-052` in the onboarding workstream TODO). This keeps the ecosystem surface explicit and avoids surprising
-  overlap with existing impls.
+- Prefer explicit `impl<H: UiHost> IntoUiElement<H> for MyType` for reusable component types that
+  can render directly into `AnyElement`.
+- For types that already implement `fret_ui::element::RenderOnce`, use
+  `fret_ui_kit::ui_into_element_render_once!(MyType);`.
+- If a host-agnostic type already has `refine_style` / `refine_layout` plus an inherent
+  `into_element(self, cx)`, prefer the `fret_ui_kit` helper macros so the required adapter glue
+  stays internal instead of becoming part of the taught component-authoring vocabulary.
+- We intentionally do **not** provide a blanket conversion impl for all `RenderOnce` types due to
+  Rust coherence constraints (see `ONB-macro-052` in the onboarding workstream TODO). This keeps
+  the ecosystem surface explicit and avoids surprising overlap with existing impls.
 
 In-tree example:
 
@@ -105,7 +115,7 @@ Typical examples:
 
 In these cases:
 
-- implement `UiPatchTarget` (+ `UiSupports*`) **without** implementing `UiIntoElement`,
+- implement `UiPatchTarget` (+ `UiSupports*`) **without** implementing either conversion trait,
 - use `UiBuilder::build()` to produce the patched value, then pass it into the owning component.
 
 The `ui_component_*_patch_only!` macros exist to make this a 1-liner.
@@ -142,8 +152,25 @@ Public constructors/setters that accept children should use:
 - `ElementContext::scope(...)` derives stable element identity from the callsite.
 - `ElementContext::keyed(key, ...)` derives stable identity from `(callsite, key)` and should be used
   for list-like rendering (virtual list items, menus, etc.).
-- `ElementContext::{with_state, with_state_for}` store **element-local, cross-frame** state in the
-  runtime store keyed by `(GlobalElementId, TypeId)`.
+- `ElementContext::root_state(...)` stores **root-scoped shared** state under the current element
+  root (`(GlobalElementId, TypeId)`).
+- `ElementContext::local_model(...)` stores a helper-local `Model<T>` in a synthetic callsite slot.
+- `ElementContext::local_model_keyed(...)` stores a helper-local `Model<T>` in a synthetic
+  `(callsite, key)` slot and is the recommended default for authored local `Model<T>` state in
+  reorderable collections and copyable examples.
+- `ElementContext::model_for(...)` stores a helper-local `Model<T>` under an explicitly chosen
+  `GlobalElementId` and is the preferred surface for overlay/portal helpers that already own a
+  stable explicit identity. Like `state_for`, it is keyed by `(GlobalElementId, TypeId)`, so
+  different model value types may share one explicit identity but same-typed sibling models still
+  need separate explicit ids.
+- `ElementContext::slot_state(...)` stores **helper-local callsite slots** under a
+  synthetic child id derived from `(current_root, caller_location, slot_index)`.
+- `ElementContext::slot_id(...)` / `keyed_slot_id(...)` allocate a
+  reusable helper-local slot id for helpers that must touch the same logical slot more than once
+  per render.
+- `ElementContext::state_for(...)` stores state under an explicitly chosen `GlobalElementId`.
+- `ElementContext::provide(...)` / `provided(...)` model inherited provider values without forcing
+  components to hand-roll save/restore logic on top of root state.
 
 Practical note (ecosystem ergonomics):
 
@@ -155,6 +182,10 @@ Practical note (ecosystem ergonomics):
 Practical guidance:
 
 - Use `keyed` whenever the child set can reorder or be filtered.
+- Prefer `local_model` / `local_model_keyed` for authored local `Model<T>` state instead of
+  hand-rolling `with_state + app.models_mut().insert(...)` shells.
+- Use `root_state` for shared per-root runtime state, `slot_state` for helper internals such as
+  uncontrolled models/hysteresis/memo caches, and `provide` for inherited provider values.
 - Avoid capturing element IDs in long-lived app state unless you also control their lifetime and
   re-derivation strategy (IDs are stable but not global identifiers).
 
@@ -321,8 +352,8 @@ Feature flags to be aware of:
 
 1. **Layering:** ensure it can be expressed via existing `fret-ui` mechanisms + component policy.
 2. **Identity:** use `scope`/`keyed` correctly; avoid unstable identity in lists.
-3. **State:** store UI-local state via `with_state` or app models; avoid global singletons in
-   runtime.
+3. **State:** store UI-local state via `root_state` / `slot_state` / `provide` / app models as
+   appropriate; avoid global singletons in runtime.
 4. **Invalidation:** register observation for every model read (layout vs paint vs hit-test).
 5. **Hooks:** implement interaction policy via action hooks + headless helpers.
 6. **Semantics:** pick a role, set label/value/flags, and stamp collection metadata where needed.

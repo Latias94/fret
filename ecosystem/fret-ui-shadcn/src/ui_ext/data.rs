@@ -18,8 +18,10 @@ impl<TData> ::fret_ui_kit::UiPatchTarget for DataTableToolbar<TData> {
     }
 }
 
-impl<TData: 'static> ::fret_ui_kit::UiIntoElement for DataTableToolbar<TData> {
-    fn into_element<H: ::fret_ui::UiHost>(
+impl<H: ::fret_ui::UiHost, TData: 'static> ::fret_ui_kit::IntoUiElement<H>
+    for DataTableToolbar<TData>
+{
+    fn into_element(
         self,
         cx: &mut ::fret_ui::ElementContext<'_, H>,
     ) -> ::fret_ui::element::AnyElement {

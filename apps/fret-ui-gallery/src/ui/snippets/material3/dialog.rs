@@ -9,40 +9,13 @@ use fret_ui_kit::{ColorRef, WidgetStateProperty};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-#[derive(Default)]
-struct DialogPageModels {
-    override_open: Option<Model<bool>>,
-    selected: Option<Model<Option<Arc<str>>>>,
-}
-
 pub fn render<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     last_action: Model<Arc<str>>,
 ) -> AnyElement {
-    let override_open = cx.with_state(DialogPageModels::default, |st| st.override_open.clone());
-    let override_open = match override_open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(DialogPageModels::default, |st| {
-                st.override_open = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let selected = cx.with_state(DialogPageModels::default, |st| st.selected.clone());
-    let selected = match selected {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(None::<Arc<str>>);
-            cx.with_state(DialogPageModels::default, |st| {
-                st.selected = Some(model.clone())
-            });
-            model
-        }
-    };
+    let override_open = cx.local_model_keyed("override_open", || false);
+    let selected = cx.local_model_keyed("selected", || None::<Arc<str>>);
 
     let is_open = cx
         .get_model_copied(&open, Invalidation::Layout)

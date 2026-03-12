@@ -1,4 +1,4 @@
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_core::ImageColorSpace;
 use fret_icons::FrozenIconRegistry;
 use fret_ui::element::{ImageProps, SvgIconProps};
@@ -59,7 +59,7 @@ struct IconsAndAssetsBasicsView {
 }
 
 impl View for IconsAndAssetsBasicsView {
-    fn init(app: &mut App, window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, window: AppWindowId) -> Self {
         // Ensure the UI assets caches exist and set budgets explicitly (optional).
         fret_ui_assets::UiAssets::configure(
             app,
@@ -94,18 +94,20 @@ impl View for IconsAndAssetsBasicsView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
-        let assets_reload_bumps_state = cx.use_local::<u64>();
+        let assets_reload_bumps_state = cx.state().local::<u64>();
 
-        cx.on_action_notify_local_update::<act::BumpReload, u64>(
-            &assets_reload_bumps_state,
-            |value| {
+        cx.actions()
+            .local_update::<act::BumpReload, u64>(&assets_reload_bumps_state, |value| {
                 *value = value.wrapping_add(1);
-            },
-        );
+            });
 
-        let bumps = assets_reload_bumps_state.watch(cx).layout().value_or(0);
+        let bumps = cx
+            .state()
+            .watch(&assets_reload_bumps_state)
+            .layout()
+            .value_or(0);
         if bumps != self.applied_assets_reload_bumps {
             fret_ui_assets::bump_ui_assets_reload_epoch(&mut *cx.app);
             self.applied_assets_reload_bumps = bumps;
@@ -185,11 +187,11 @@ impl View for IconsAndAssetsBasicsView {
                 shadcn::CardContent::build(|cx, out| {
                     out.push_ui(
                         cx,
-                        ui::v_flex(|cx: &mut ElementContext<'_, App>| {
+                        ui::v_flex(|cx: &mut UiCx<'_>| {
                             let frozen = cx.app.global::<FrozenIconRegistry>().cloned();
                             let preload = cx
                                 .app
-                                .global::<fret::prelude::icon::IconSvgPreloadDiagnostics>()
+                                .global::<icon::IconSvgPreloadDiagnostics>()
                                 .copied();
                             let frozen_len = frozen.as_ref().map(|v| v.len()).unwrap_or(0);
                             let preload_entries = preload.map(|v| v.entries).unwrap_or(0);
@@ -257,32 +259,30 @@ impl View for IconsAndAssetsBasicsView {
             fret_ui_assets::image_asset_state::ImageLoadingStatus::Error => "error",
         };
 
-        let render_image = |cx: &mut ElementContext<'_, App>,
-                            title: &str,
-                            st: &fret_ui_assets::ImageSourceState|
-         -> AnyElement {
-            let box_el = ui::container(|cx| {
-                if let Some(image) = st.image {
-                    let mut props = ImageProps::new(image);
-                    props.layout =
-                        style::layout_style(&theme, LayoutRefinement::default().size_full());
-                    [cx.image_props(props)]
-                } else {
-                    [cx.spinner()]
-                }
-            })
-            .border_1()
-            .border_color(ColorRef::Color(theme.color_token("border")))
-            .rounded(Radius::Lg)
-            .w_px(Px(160.0))
-            .h_px(Px(160.0))
-            .overflow_hidden();
+        let render_image =
+            |cx: &mut UiCx<'_>, title: &str, st: &fret_ui_assets::ImageSourceState| -> AnyElement {
+                let box_el = ui::container(|cx| {
+                    if let Some(image) = st.image {
+                        let mut props = ImageProps::new(image);
+                        props.layout =
+                            style::layout_style(&theme, LayoutRefinement::default().size_full());
+                        [cx.image_props(props)]
+                    } else {
+                        [cx.spinner()]
+                    }
+                })
+                .border_1()
+                .border_color(ColorRef::Color(theme.color_token("border")))
+                .rounded(Radius::Lg)
+                .w_px(Px(160.0))
+                .h_px(Px(160.0))
+                .overflow_hidden();
 
-            ui::v_flex(|cx| ui::children![cx; shadcn::Label::new(title), box_el])
-                .gap(Space::N2)
-                .w_full()
-                .into_element(cx)
-        };
+                ui::v_flex(|cx| ui::children![cx; shadcn::Label::new(title), box_el])
+                    .gap(Space::N2)
+                    .w_full()
+                    .into_element(cx)
+            };
 
         let image_panel = shadcn::Card::build(|cx, out| {
             out.push_ui(
@@ -448,7 +448,8 @@ fn main() -> anyhow::Result<()> {
         // Register Lucide vendor icons during bootstrap so the icon SVG preload step (if enabled)
         // includes them.
         .register_icon_pack(fret_icons_lucide::register_vendor_icons)
-        .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_view::<IconsAndAssetsBasicsView>()
+        .setup(fret_cookbook::install_cookbook_defaults)
+        .view::<IconsAndAssetsBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

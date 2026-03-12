@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+use std::fmt;
 use std::sync::Arc;
 
-use fret_core::{AppWindowId, Edges, NodeId, PanelKey, Rect, UiServices};
+use fret_core::{AppWindowId, Edges, NodeId, PanelKey, PanelKind, Rect, UiServices};
 use fret_ui::{UiHost, UiTree, declarative};
 
 use super::DockManager;
@@ -35,6 +37,157 @@ pub fn render_cached_panel_root<H: UiHost + 'static>(
             f,
         )]
     })
+}
+
+/// Contribution-level dock panel seam keyed by stable `PanelKind`.
+///
+/// This is intended for reusable panel packs. The app still owns the final registry/service that
+/// aggregates panel contributions for a window.
+pub trait DockPanelFactory<H: UiHost>: Send + Sync + 'static {
+    /// Stable kind handled by this contribution.
+    fn panel_kind(&self) -> PanelKind;
+
+    /// Build or render the UI root for the requested panel instance.
+    ///
+    /// The default story is one factory per `PanelKind`, but factories receive the full
+    /// `PanelKey` so singleton and multi-instance panels can share the same contribution seam.
+    ///
+    /// Return `None` for panels that intentionally have no UI node (for example pure viewport
+    /// panels).
+    fn build_panel(&self, panel: &PanelKey, cx: &mut DockPanelFactoryCx<'_, H>) -> Option<NodeId>;
+}
+
+/// Build-time context passed to `DockPanelFactory`.
+pub struct DockPanelFactoryCx<'a, H: UiHost> {
+    pub ui: &'a mut UiTree<H>,
+    pub app: &'a mut H,
+    pub services: &'a mut dyn UiServices,
+    pub window: AppWindowId,
+    pub bounds: Rect,
+}
+
+impl<'a, H: UiHost + 'static> DockPanelFactoryCx<'a, H> {
+    /// Convenience helper that preserves the existing retained/root caching story for panel UI.
+    pub fn render_cached_panel_root(
+        &mut self,
+        root_name: &str,
+        f: impl FnOnce(&mut fret_ui::ElementContext<'_, H>) -> Vec<fret_ui::element::AnyElement>,
+    ) -> NodeId {
+        render_cached_panel_root(
+            self.ui,
+            self.app,
+            self.services,
+            self.window,
+            self.bounds,
+            root_name,
+            f,
+        )
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DuplicateDockPanelKindError {
+    pub kind: PanelKind,
+}
+
+impl fmt::Display for DuplicateDockPanelKindError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "duplicate dock panel factory registration for panel kind `{}`",
+            self.kind.0
+        )
+    }
+}
+
+impl std::error::Error for DuplicateDockPanelKindError {}
+
+/// App-owned aggregation point for reusable dock panel factories.
+pub struct DockPanelRegistryBuilder<H: UiHost> {
+    factories: HashMap<PanelKind, Arc<dyn DockPanelFactory<H>>>,
+}
+
+impl<H: UiHost + 'static> Default for DockPanelRegistryBuilder<H> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<H: UiHost + 'static> DockPanelRegistryBuilder<H> {
+    pub fn new() -> Self {
+        Self {
+            factories: HashMap::new(),
+        }
+    }
+
+    pub fn try_register<F>(&mut self, factory: F) -> Result<&mut Self, DuplicateDockPanelKindError>
+    where
+        F: DockPanelFactory<H>,
+    {
+        self.try_register_arc(Arc::new(factory))
+    }
+
+    pub fn register<F>(&mut self, factory: F) -> &mut Self
+    where
+        F: DockPanelFactory<H>,
+    {
+        self.try_register(factory)
+            .expect("duplicate dock panel kind registered in DockPanelRegistryBuilder")
+    }
+
+    pub fn try_register_arc(
+        &mut self,
+        factory: Arc<dyn DockPanelFactory<H>>,
+    ) -> Result<&mut Self, DuplicateDockPanelKindError> {
+        let kind = factory.panel_kind();
+        if self.factories.contains_key(&kind) {
+            return Err(DuplicateDockPanelKindError { kind });
+        }
+        self.factories.insert(kind, factory);
+        Ok(self)
+    }
+
+    pub fn register_arc(&mut self, factory: Arc<dyn DockPanelFactory<H>>) -> &mut Self {
+        self.try_register_arc(factory)
+            .expect("duplicate dock panel kind registered in DockPanelRegistryBuilder")
+    }
+
+    pub fn build(self) -> DockPanelFactoryRegistry<H> {
+        DockPanelFactoryRegistry {
+            factories: self.factories,
+        }
+    }
+
+    pub fn build_arc(self) -> Arc<dyn DockPanelRegistry<H>> {
+        Arc::new(self.build())
+    }
+}
+
+/// `DockPanelRegistry` implementation backed by contribution-level `DockPanelFactory` values.
+pub struct DockPanelFactoryRegistry<H: UiHost> {
+    factories: HashMap<PanelKind, Arc<dyn DockPanelFactory<H>>>,
+}
+
+impl<H: UiHost + 'static> DockPanelRegistry<H> for DockPanelFactoryRegistry<H> {
+    fn render_panel(
+        &self,
+        ui: &mut UiTree<H>,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        panel: &PanelKey,
+    ) -> Option<NodeId> {
+        let factory = self.factories.get(&panel.kind)?;
+        let mut cx = DockPanelFactoryCx {
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+        };
+        factory.build_panel(panel, &mut cx)
+    }
 }
 
 /// App-owned registry that can render panel UI content for docking.

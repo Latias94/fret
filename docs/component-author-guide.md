@@ -21,6 +21,17 @@ Recommended layering:
 Avoid depending on backend crates (`fret-launch`, `winit`, `wgpu`, `web-sys`) unless your crate is
 explicitly a runner/tooling crate.
 
+If you intentionally consume the `fret` facade instead of depending on `fret-ui-kit` directly,
+prefer:
+
+```rust
+use fret::component::prelude::*;
+```
+
+This keeps reusable component code on the curated component-author surface (`ComponentCx`,
+`UiBuilder`, `UiPatchTarget`, semantics/layout helpers) instead of the app-facing `fret::app`
+surface.
+
 ### Typical dependency sets (examples)
 
 **A) Headless / engine crate**
@@ -103,7 +114,10 @@ utilities that fragment authoring.
 Minimal integration contract (ecosystem-level, stable-ish):
 
 - Implement `fret_ui_kit::UiPatchTarget` so `.ui()` becomes available via `fret_ui_kit::UiExt`.
-- Implement `fret_ui_kit::UiIntoElement` so `.into_element(cx)` is available from `UiBuilder`.
+- Implement `fret_ui_kit::IntoUiElement<H>` for reusable generic helpers.
+- For host-agnostic component types that already have an inherent `into_element(self, cx)`,
+  prefer the `fret_ui_kit` helper macros so any adapter glue stays internal rather than becoming
+  part of the public teaching surface.
 - Optionally implement `fret_ui_kit::UiSupportsChrome` / `UiSupportsLayout` to enable the full
   fluent method set (padding, sizing, radius, etc.).
 

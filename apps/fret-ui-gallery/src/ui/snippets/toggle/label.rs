@@ -3,20 +3,10 @@ pub const SOURCE: &str = include_str!("label.rs");
 // region: example
 use fret_core::Px;
 use fret_ui_kit::primitives::control_registry::ControlId;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-#[derive(Default)]
-struct Models {
-    pressed: Option<Model<bool>>,
-}
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let pressed = cx.with_state(Models::default, |st| st.pressed.clone());
-    let pressed = pressed.unwrap_or_else(|| {
-        let model = cx.app.models_mut().insert(false);
-        cx.with_state(Models::default, |st| st.pressed = Some(model.clone()));
-        model
-    });
+    let pressed = cx.local_model_keyed("pressed", || false);
     let pressed_now = cx
         .get_model_cloned(&pressed, Invalidation::Paint)
         .unwrap_or(false);
@@ -47,7 +37,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             ])
             .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
             .into_element(cx),
-            shadcn::typography::muted(cx, format!("Pressed: {pressed_now}"))
+            shadcn::raw::typography::muted(cx, format!("Pressed: {pressed_now}"))
                 .test_id("ui-gallery-toggle-label-state"),
         ]
     })
