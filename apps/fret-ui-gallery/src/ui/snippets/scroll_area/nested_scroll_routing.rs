@@ -4,8 +4,29 @@ pub const SOURCE: &str = include_str!("nested_scroll_routing.rs");
 use fret_core::{Point, Px};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui::scroll::ScrollHandle;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
+
+fn row<H: UiHost>(cx: &mut ElementContext<'_, H>, i: usize) -> impl IntoUiElement<H> + use<H> {
+    let zebra = (i % 2) == 0;
+    let theme = cx.theme();
+    let bg = if zebra {
+        theme.color_token("muted")
+    } else {
+        theme.color_token("background")
+    };
+
+    let props = decl_style::container_props(
+        theme,
+        ChromeRefinement::default()
+            .bg(ColorRef::Color(bg))
+            .rounded(Radius::Sm)
+            .p(Space::N2),
+        LayoutRefinement::default().w_full().h_px(Px(32.0)),
+    );
+    ui::container_props(props, |_cx| Vec::<AnyElement>::new())
+}
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     cx.named("ui-gallery.scroll_area.nested_scroll_routing", |cx| {
@@ -76,36 +97,16 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .test_id("ui-gallery-scroll-area-nested-inner"),
             );
 
-        let row = |cx: &mut ElementContext<'_, H>, i: usize| {
-            let zebra = (i % 2) == 0;
-            let theme = cx.theme();
-            let bg = if zebra {
-                theme.color_token("muted")
-            } else {
-                theme.color_token("background")
-            };
-
-            let props = decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .bg(ColorRef::Color(bg))
-                    .rounded(Radius::Sm)
-                    .p(Space::N2),
-                LayoutRefinement::default().w_full().h_px(Px(32.0)),
-            );
-            cx.container(props, |_cx| Vec::new())
-        };
-
         let outer_body = ui::v_flex(|cx| {
             let mut out: Vec<AnyElement> = Vec::new();
             // Keep the nested horizontal rail visible without requiring an outer scroll first;
             // diagnostics scripts target the inner viewport directly.
             for i in 0..2 {
-                out.push(row(cx, i));
+                out.push(row(cx, i).into_element(cx));
             }
             out.push(inner);
             for i in 2..36 {
-                out.push(row(cx, i));
+                out.push(row(cx, i).into_element(cx));
             }
             out
         })

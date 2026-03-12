@@ -1009,6 +1009,17 @@ fn selected_resizable_snippet_helpers_prefer_into_ui_element_over_anyelement() {
 }
 
 #[test]
+fn selected_scroll_area_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/scroll_area/nested_scroll_routing.rs",
+        &[
+            "fn row<H: UiHost>(cx: &mut ElementContext<'_, H>, i: usize) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &["fn row<H: UiHost>(cx: &mut ElementContext<'_, H>, i: usize) -> AnyElement"],
+    );
+}
+
+#[test]
 fn selected_data_table_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     for relative_path in [
         "src/ui/snippets/data_table/basic_demo.rs",
