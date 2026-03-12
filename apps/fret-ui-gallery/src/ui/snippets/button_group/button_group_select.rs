@@ -5,50 +5,10 @@ use fret_core::{FontId, Px};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default)]
-struct Models {
-    currency_value: Option<Model<Option<Arc<str>>>>,
-    currency_open: Option<Model<bool>>,
-    amount_value: Option<Model<String>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (currency_value, currency_open, amount_value) = cx.with_state(Models::default, |st| {
-        (
-            st.currency_value.clone(),
-            st.currency_open.clone(),
-            st.amount_value.clone(),
-        )
-    });
-
-    let currency_value = match currency_value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Some(Arc::<str>::from("$")));
-            cx.with_state(Models::default, |st| {
-                st.currency_value = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let currency_open = match currency_open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.currency_open = Some(model.clone()));
-            model
-        }
-    };
-
-    let amount_value = match amount_value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| st.amount_value = Some(model.clone()));
-            model
-        }
-    };
+    let currency_value = cx.local_model_keyed("currency_value", || Some(Arc::<str>::from("$")));
+    let currency_open = cx.local_model_keyed("currency_open", || false);
+    let amount_value = cx.local_model_keyed("amount_value", String::new);
 
     let currencies: &[(&'static str, &'static str)] =
         &[("$", "US Dollar"), ("€", "Euro"), ("£", "British Pound")];

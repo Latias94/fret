@@ -3,13 +3,6 @@ pub const SOURCE: &str = include_str!("demo.rs");
 // region: example
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default, Clone)]
-struct Models {
-    open: Option<Model<bool>>,
-    name: Option<Model<String>>,
-    username: Option<Model<String>>,
-}
-
 fn profile_fields<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     name: Model<String>,
@@ -31,34 +24,9 @@ fn profile_fields<H: UiHost>(
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let state = cx.with_state(Models::default, |st| st.clone());
-
-    let open = match state.open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.open = Some(model.clone()));
-            model
-        }
-    };
-
-    let name = match state.name {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::from("Pedro Duarte"));
-            cx.with_state(Models::default, |st| st.name = Some(model.clone()));
-            model
-        }
-    };
-
-    let username = match state.username {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::from("@peduarte"));
-            cx.with_state(Models::default, |st| st.username = Some(model.clone()));
-            model
-        }
-    };
+    let open = cx.local_model_keyed("open", || false);
+    let name = cx.local_model_keyed("name", || String::from("Pedro Duarte"));
+    let username = cx.local_model_keyed("username", || String::from("@peduarte"));
 
     let trigger_open = open.clone();
     let save_open = open.clone();

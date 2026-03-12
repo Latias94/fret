@@ -25,7 +25,7 @@ pub fn button_group_with_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) ->
 
 #[allow(dead_code)]
 pub fn button_group_with_text<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let site_name = cx.app.models_mut().insert(String::new());
+    let site_name = cx.local_model(String::new);
 
     shadcn::ButtonGroup::new([
         shadcn::ButtonGroupText::new_children([ui::text("https://").into_element(cx)]).into(),

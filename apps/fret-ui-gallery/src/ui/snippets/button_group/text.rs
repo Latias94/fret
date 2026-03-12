@@ -4,21 +4,8 @@ pub const SOURCE: &str = include_str!("text.rs");
 use fret_core::{FontWeight, Px};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default)]
-struct Models {
-    url_value: Option<Model<String>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let url_value = cx.with_state(Models::default, |st| st.url_value.clone());
-    let url_value = match url_value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| st.url_value = Some(model.clone()));
-            model
-        }
-    };
+    let url_value = cx.local_model(String::new);
 
     let icon_id = |id: &'static str| fret_icons::IconId::new_static(id);
 
@@ -30,7 +17,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .font_weight(FontWeight::MEDIUM)
                 .into_element(cx),
         ])
-            .into(),
+        .into(),
         shadcn::Input::new(url_value)
             .a11y_label("URL")
             .placeholder("my-app")

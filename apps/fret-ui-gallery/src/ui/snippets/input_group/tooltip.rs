@@ -6,32 +6,10 @@ use fret_icons::IconId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::time::Duration;
 
-#[derive(Default)]
-struct Models {
-    password: Option<Model<String>>,
-    email: Option<Model<String>>,
-    api_key: Option<Model<String>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (password, email, api_key) = cx.with_state(Models::default, |st| {
-        (st.password.clone(), st.email.clone(), st.api_key.clone())
-    });
-
-    let (password, email, api_key) = match (password, email, api_key) {
-        (Some(password), Some(email), Some(api_key)) => (password, email, api_key),
-        _ => {
-            let password = cx.app.models_mut().insert(String::new());
-            let email = cx.app.models_mut().insert(String::new());
-            let api_key = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| {
-                st.password = Some(password.clone());
-                st.email = Some(email.clone());
-                st.api_key = Some(api_key.clone());
-            });
-            (password, email, api_key)
-        }
-    };
+    let password = cx.local_model_keyed("password", String::new);
+    let email = cx.local_model_keyed("email", String::new);
+    let api_key = cx.local_model_keyed("api_key", String::new);
 
     let max_w = LayoutRefinement::default().w_full().max_w(Px(420.0));
 

@@ -4,32 +4,9 @@ pub const SOURCE: &str = include_str!("input_group.rs");
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default)]
-struct Models {
-    message_value: Option<Model<String>>,
-    voice_enabled: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let message_value = cx.with_state(Models::default, |st| st.message_value.clone());
-    let message_value = match message_value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| st.message_value = Some(model.clone()));
-            model
-        }
-    };
-
-    let voice_enabled = cx.with_state(Models::default, |st| st.voice_enabled.clone());
-    let voice_enabled = match voice_enabled {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.voice_enabled = Some(model.clone()));
-            model
-        }
-    };
+    let message_value = cx.local_model_keyed("message_value", String::new);
+    let voice_enabled = cx.local_model_keyed("voice_enabled", || false);
 
     let voice_enabled_now = cx
         .get_model_cloned(&voice_enabled, Invalidation::Paint)

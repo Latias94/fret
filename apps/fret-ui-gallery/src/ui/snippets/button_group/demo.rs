@@ -5,37 +5,9 @@ use fret_core::{Corners, Px};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-#[derive(Default)]
-struct Models {
-    menu_open: Option<Model<bool>>,
-    label_value: Option<Model<Option<Arc<str>>>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (menu_open, label_value) = cx.with_state(Models::default, |st| {
-        (st.menu_open.clone(), st.label_value.clone())
-    });
-
-    let menu_open = match menu_open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.menu_open = Some(model.clone()));
-            model
-        }
-    };
-
-    let label_value = match label_value {
-        Some(model) => model,
-        None => {
-            let model = cx
-                .app
-                .models_mut()
-                .insert(Some(Arc::<str>::from("personal")));
-            cx.with_state(Models::default, |st| st.label_value = Some(model.clone()));
-            model
-        }
-    };
+    let menu_open = cx.local_model_keyed("menu_open", || false);
+    let label_value = cx.local_model_keyed("label_value", || Some(Arc::<str>::from("personal")));
 
     let icon_id = |id: &'static str| fret_icons::IconId::new_static(id);
 

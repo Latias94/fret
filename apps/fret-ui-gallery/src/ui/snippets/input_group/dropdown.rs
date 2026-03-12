@@ -5,30 +5,9 @@ use fret_core::Px;
 use fret_icons::IconId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default)]
-struct Models {
-    value: Option<Model<String>>,
-    open: Option<Model<bool>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (value, open) = cx.with_state(Models::default, |st| (st.value.clone(), st.open.clone()));
-    let value = match value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| st.value = Some(model.clone()));
-            model
-        }
-    };
-    let open = match open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.open = Some(model.clone()));
-            model
-        }
-    };
+    let value = cx.local_model_keyed("value", String::new);
+    let open = cx.local_model_keyed("open", || false);
 
     let trigger = shadcn::InputGroupButton::new("")
         .a11y_label("More")

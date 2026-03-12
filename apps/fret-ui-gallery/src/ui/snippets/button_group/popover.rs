@@ -4,32 +4,9 @@ pub const SOURCE: &str = include_str!("popover.rs");
 use fret_core::{Corners, Px};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default)]
-struct Models {
-    open: Option<Model<bool>>,
-    text: Option<Model<String>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (open, text) = cx.with_state(Models::default, |st| (st.open.clone(), st.text.clone()));
-
-    let open = match open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.open = Some(model.clone()));
-            model
-        }
-    };
-
-    let text = match text {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| st.text = Some(model.clone()));
-            model
-        }
-    };
+    let open = cx.local_model_keyed("open", || false);
+    let text = cx.local_model_keyed("text", String::new);
 
     let icon_id = |id: &'static str| fret_icons::IconId::new_static(id);
 

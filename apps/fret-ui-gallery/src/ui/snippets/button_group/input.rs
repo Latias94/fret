@@ -4,21 +4,8 @@ pub const SOURCE: &str = include_str!("input.rs");
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default)]
-struct Models {
-    search_value: Option<Model<String>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let search_value = cx.with_state(Models::default, |st| st.search_value.clone());
-    let search_value = match search_value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| st.search_value = Some(model.clone()));
-            model
-        }
-    };
+    let search_value = cx.local_model(String::new);
 
     let icon_id = |id: &'static str| fret_icons::IconId::new_static(id);
 

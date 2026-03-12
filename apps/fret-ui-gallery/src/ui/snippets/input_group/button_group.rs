@@ -5,21 +5,8 @@ use fret_core::Px;
 use fret_icons::IconId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default)]
-struct Models {
-    url: Option<Model<String>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let url = cx.with_state(Models::default, |st| st.url.clone());
-    let url = match url {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| st.url = Some(model.clone()));
-            model
-        }
-    };
+    let url = cx.local_model(String::new);
 
     let group = shadcn::InputGroup::new(url)
         .a11y_label("URL")

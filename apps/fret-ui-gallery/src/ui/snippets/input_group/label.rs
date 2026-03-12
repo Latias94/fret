@@ -7,28 +7,9 @@ use fret_ui_kit::primitives::control_registry::ControlId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::time::Duration;
 
-#[derive(Default)]
-struct Models {
-    username: Option<Model<String>>,
-    email: Option<Model<String>>,
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (username, email) = cx.with_state(Models::default, |st| {
-        (st.username.clone(), st.email.clone())
-    });
-    let (username, email) = match (username, email) {
-        (Some(username), Some(email)) => (username, email),
-        _ => {
-            let username = cx.app.models_mut().insert(String::new());
-            let email = cx.app.models_mut().insert(String::new());
-            cx.with_state(Models::default, |st| {
-                st.username = Some(username.clone());
-                st.email = Some(email.clone());
-            });
-            (username, email)
-        }
-    };
+    let username = cx.local_model_keyed("username", String::new);
+    let email = cx.local_model_keyed("email", String::new);
 
     let max_w = LayoutRefinement::default().w_full().max_w(Px(420.0));
     let email_id = ControlId::from("ui-gallery-input-group-label-email");
