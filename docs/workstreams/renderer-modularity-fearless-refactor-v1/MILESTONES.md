@@ -225,6 +225,10 @@ Current snapshot (2026-03-12):
   - prepared-glyph keyed raster packing now lives behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `prepared_glyph_raster(...)` no longer owns keyed `PreparedGlyphRaster` field packing directly
+- The fiftieth internal `text/mod.rs` split has landed:
+  - prepared-glyph raster-key derivation now lives behind a dedicated helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `prepared_glyph_raster(...)` no longer shares the atlas-lookup key helper directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
