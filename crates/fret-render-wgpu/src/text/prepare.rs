@@ -37,6 +37,12 @@ struct PreparedGlyphRaster {
     data: Vec<u8>,
 }
 
+struct PreparedGlyphContext {
+    glyph_id: u16,
+    face_key: FontFaceKey,
+    size_bits: u32,
+}
+
 impl PreparedGlyphRaster {
     fn bounds(&self, x: i32, y: i32) -> (GlyphKey, f32, f32, f32, f32) {
         (
@@ -310,17 +316,22 @@ impl TextSystem {
         lines.push(layout);
 
         for g in prepared_glyphs {
-            let Ok(glyph_id) = u16::try_from(g.id) else {
+            let Some(context) = self.prepare_prepared_glyph_context(&g, face_usage) else {
                 continue;
             };
-            let face_key = self.register_prepared_glyph_face(&g, face_usage);
             let (x, x_bin, y, y_bin) = prepared_glyph_origin_bins(&g);
 
             let paint_span = prepared_glyph_paint_span(resolved_spans, &g);
-
-            let size_bits = g.font_size.to_bits();
             let Some((glyph_key, x0_px, y0_px, w_px, h_px)) = self.resolve_prepared_glyph_bounds(
-                &g, glyph_id, face_key, size_bits, x_bin, y_bin, x, y, epoch,
+                &g,
+                context.glyph_id,
+                context.face_key,
+                context.size_bits,
+                x_bin,
+                y_bin,
+                x,
+                y,
+                epoch,
             ) else {
                 continue;
             };
@@ -329,6 +340,20 @@ impl TextSystem {
                 glyph_key, x0_px, y0_px, w_px, h_px, paint_span, scale,
             ));
         }
+    }
+
+    fn prepare_prepared_glyph_context(
+        &mut self,
+        glyph: &ParleyGlyph,
+        face_usage: &mut HashMap<FontFaceKey, (u32, u32)>,
+    ) -> Option<PreparedGlyphContext> {
+        let glyph_id = u16::try_from(glyph.id).ok()?;
+        let face_key = self.register_prepared_glyph_face(glyph, face_usage);
+        Some(PreparedGlyphContext {
+            glyph_id,
+            face_key,
+            size_bits: glyph.font_size.to_bits(),
+        })
     }
 
     fn register_prepared_glyph_face(

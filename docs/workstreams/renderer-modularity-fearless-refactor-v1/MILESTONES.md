@@ -142,6 +142,10 @@ Current snapshot (2026-03-12):
   - prepared-glyph origin/bin quantization now lives behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `materialize_prepared_line(...)` no longer owns `x/y` subpixel bin setup directly
+- The thirtieth internal `text/mod.rs` split has landed:
+  - prepared-glyph context assembly now lives behind a dedicated helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `materialize_prepared_line(...)` no longer owns `glyph_id/face_key/size_bits` setup directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
