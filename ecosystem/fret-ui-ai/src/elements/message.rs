@@ -318,7 +318,7 @@ mod ui_builder_integration_tests {
                 + fret_ui_kit::UiSupportsLayout,
         >() {
         }
-        fn assert_into_element<T: fret_ui_kit::UiIntoElement>() {}
+        fn assert_into_element<T: fret_ui_kit::IntoUiElement<fret_app::App>>() {}
 
         assert_layout_only::<Message>();
         assert_into_element::<Message>();

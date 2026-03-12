@@ -2,6 +2,7 @@ const CRATE_USAGE_GUIDE: &str = include_str!("../../../docs/crate-usage-guide.md
 const COMPONENT_AUTHOR_GUIDE: &str = include_str!("../../../docs/component-author-guide.md");
 const COMPONENT_AUTHORING_CONTRACTS: &str =
     include_str!("../../../docs/component-authoring-contracts.md");
+const FIRST_HOUR: &str = include_str!("../../../docs/first-hour.md");
 
 #[test]
 fn curated_docs_prefer_unified_component_conversion_vocabulary() {
@@ -12,6 +13,7 @@ fn curated_docs_prefer_unified_component_conversion_vocabulary() {
             "docs/component-authoring-contracts.md",
             COMPONENT_AUTHORING_CONTRACTS,
         ),
+        ("docs/first-hour.md", FIRST_HOUR),
     ] {
         assert!(
             source.contains("IntoUiElement<H>"),
@@ -29,6 +31,7 @@ fn curated_docs_avoid_legacy_conversion_trait_names() {
             "docs/component-authoring-contracts.md",
             COMPONENT_AUTHORING_CONTRACTS,
         ),
+        ("docs/first-hour.md", FIRST_HOUR),
     ] {
         for legacy_name in [
             "UiIntoElement",

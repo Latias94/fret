@@ -183,12 +183,18 @@ Current execution note on 2026-03-12:
 - `UiHostBoundIntoElement<H>` is already deleted from the codebase.
 - `UiIntoElement` now survives only as `fret_ui_kit::ui_builder::UiIntoElement`, marked
   `#[doc(hidden)]` and treated as internal landing scaffolding rather than public vocabulary.
+- exported `fret_ui_kit` adapter macros (`ui_component_*`, `ui_into_element_render_once!`) and the
+  built-in primitive glue now implement `IntoUiElement<H>` directly, so the remaining
+  `UiIntoElement` scaffold is narrower than the first-party macro/component authoring surface.
 - `UiChildIntoElement<H>` is now deleted from the codebase; heterogeneous child collection in
   `fret_ui_kit::ui` / `imui` lands directly through `IntoUiElement<H>`.
 - direct-crate shadcn authoring now also gets the same landing ergonomics:
   `fret_ui_shadcn::prelude::*` re-exports `IntoUiElement`, so typed helpers such as
   `shadcn::raw::typography::*` can land through `.into_element(cx)` without ad-hoc trait imports
   on first-party examples.
+- first-party ecosystem consumers and curated docs now also avoid the old name:
+  `docs/first-hour.md` and the `fret-ui-ai` message/workflow builder smoke tests now spell
+  `IntoUiElement<H>` rather than `UiIntoElement`.
 - when a first-party shadcn example still targets an eager constructor that owns
   `new(children: Vec<AnyElement>)`, the teaching surface should prefer
   `ui::children![cx; ...]` over `vec![...into_element(cx)]` so typed values remain the visible

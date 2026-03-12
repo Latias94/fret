@@ -144,7 +144,7 @@ mod ui_builder_integration_tests {
             T: fret_ui_kit::UiPatchTarget
                 + fret_ui_kit::UiSupportsChrome
                 + fret_ui_kit::UiSupportsLayout
-                + fret_ui_kit::UiIntoElement,
+                + fret_ui_kit::IntoUiElement<fret_app::App>,
         >() {
         }
         assert_chrome_layout::<WorkflowPanel>();

@@ -172,6 +172,12 @@ Implementation note on 2026-03-12:
 - `fret-ui-shadcn::prelude::*` now re-exports `IntoUiElement`, so direct-crate first-party
   shadcn examples do not need ad-hoc trait imports just to land typed helpers such as
   `shadcn::raw::typography::*`.
+- first-party docs/tests no longer need to mention the old scaffold name for ordinary authoring:
+  `docs/first-hour.md` now teaches `IntoUiElement<H>`, and `fret-ui-ai` builder smoke tests
+  (`elements/message.rs`, `elements/workflow/panel.rs`) now assert against the public
+  `IntoUiElement<fret_app::App>` contract instead of `UiIntoElement`.
+- exported `fret-ui-kit` adapter macros now attach `IntoUiElement<H>` directly, which shrinks the
+  remaining `UiIntoElement` usage to internal `fret-ui-kit` scaffolding and source-policy tests.
 - typography remains decoupled from the model-heavy constructor lane:
   this sweep does not mix with `checkbox`, `progress`, or `switch` refactors.
 - selected advanced/manual-assembly examples now also keep reusable helpers off raw landed return

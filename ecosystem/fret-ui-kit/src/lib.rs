@@ -48,9 +48,9 @@ macro_rules! ui_component_chrome_layout {
         impl $crate::UiSupportsChrome for $ty {}
         impl $crate::UiSupportsLayout for $ty {}
 
-        impl $crate::ui_builder::UiIntoElement for $ty {
+        impl<H: ::fret_ui::UiHost> $crate::IntoUiElement<H> for $ty {
             #[track_caller]
-            fn into_element<H: ::fret_ui::UiHost>(
+            fn into_element(
                 self,
                 cx: &mut ::fret_ui::ElementContext<'_, H>,
             ) -> ::fret_ui::element::AnyElement {
@@ -77,9 +77,9 @@ macro_rules! ui_component_layout_only {
 
         impl $crate::UiSupportsLayout for $ty {}
 
-        impl $crate::ui_builder::UiIntoElement for $ty {
+        impl<H: ::fret_ui::UiHost> $crate::IntoUiElement<H> for $ty {
             #[track_caller]
-            fn into_element<H: ::fret_ui::UiHost>(
+            fn into_element(
                 self,
                 cx: &mut ::fret_ui::ElementContext<'_, H>,
             ) -> ::fret_ui::element::AnyElement {
@@ -131,9 +131,9 @@ macro_rules! ui_component_passthrough {
             }
         }
 
-        impl $crate::ui_builder::UiIntoElement for $ty {
+        impl<H: ::fret_ui::UiHost> $crate::IntoUiElement<H> for $ty {
             #[track_caller]
-            fn into_element<H: ::fret_ui::UiHost>(
+            fn into_element(
                 self,
                 cx: &mut ::fret_ui::ElementContext<'_, H>,
             ) -> ::fret_ui::element::AnyElement {
@@ -162,9 +162,9 @@ macro_rules! ui_component_passthrough_patch_only {
 #[macro_export]
 macro_rules! ui_into_element_render_once {
     ($ty:ty) => {
-        impl $crate::ui_builder::UiIntoElement for $ty {
+        impl<H: ::fret_ui::UiHost> $crate::IntoUiElement<H> for $ty {
             #[track_caller]
-            fn into_element<H: ::fret_ui::UiHost>(
+            fn into_element(
                 self,
                 cx: &mut ::fret_ui::ElementContext<'_, H>,
             ) -> ::fret_ui::element::AnyElement {
@@ -345,7 +345,9 @@ mod ui_component_macro_tests {
 
     #[test]
     fn ui_component_chrome_layout_macro_compiles() {
-        fn assert_traits<T: UiPatchTarget + UiSupportsChrome + UiSupportsLayout + UiIntoElement>() {
+        fn assert_traits<
+            T: UiPatchTarget + UiSupportsChrome + UiSupportsLayout + IntoUiElement<fret_app::App>,
+        >() {
         }
         assert_traits::<DummyComponent>();
     }
@@ -366,7 +368,7 @@ mod ui_component_macro_tests {
 
     #[test]
     fn ui_into_element_render_once_macro_compiles() {
-        fn assert_into_element<T: UiIntoElement>() {}
+        fn assert_into_element<T: IntoUiElement<fret_app::App>>() {}
         assert_into_element::<DummyRenderOnceComponent>();
     }
 }
@@ -424,6 +426,16 @@ mod source_policy_tests {
     fn ui_into_element_scaffolding_stays_internal_to_ui_builder_module() {
         assert!(UI_BUILDER_RS.contains("#[doc(hidden)]"));
         assert!(UI_BUILDER_RS.contains("pub trait UiIntoElement: Sized"));
+    }
+
+    #[test]
+    fn exported_component_macros_attach_public_conversion_trait_directly() {
+        let tests_start = LIB_RS.find("#[cfg(test)]").unwrap_or(LIB_RS.len());
+        let public_surface = &LIB_RS[..tests_start];
+        assert!(!public_surface.contains("impl $crate::ui_builder::UiIntoElement for $ty"));
+        assert!(
+            public_surface.contains("impl<H: ::fret_ui::UiHost> $crate::IntoUiElement<H> for $ty")
+        );
     }
 
     #[test]

@@ -4,7 +4,7 @@ use fret_ui::{ElementContext, UiHost};
 use crate::primitives::aspect_ratio::AspectRatio;
 use crate::primitives::label::Label;
 use crate::primitives::separator::Separator;
-use crate::{UiIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout};
+use crate::{IntoUiElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout};
 
 impl UiPatchTarget for Label {
     fn apply_ui_patch(self, _patch: UiPatch) -> Self {
@@ -12,8 +12,8 @@ impl UiPatchTarget for Label {
     }
 }
 
-impl UiIntoElement for Label {
-    fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+impl<H: UiHost> IntoUiElement<H> for Label {
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         Label::into_element(self, cx)
     }
 }
@@ -26,8 +26,8 @@ impl UiPatchTarget for Separator {
 
 impl UiSupportsLayout for Separator {}
 
-impl UiIntoElement for Separator {
-    fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+impl<H: UiHost> IntoUiElement<H> for Separator {
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         Separator::into_element(self, cx)
     }
 }
@@ -41,8 +41,8 @@ impl UiPatchTarget for AspectRatio {
 impl UiSupportsChrome for AspectRatio {}
 impl UiSupportsLayout for AspectRatio {}
 
-impl UiIntoElement for AspectRatio {
-    fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+impl<H: UiHost> IntoUiElement<H> for AspectRatio {
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         AspectRatio::into_element(self, cx)
     }
 }
