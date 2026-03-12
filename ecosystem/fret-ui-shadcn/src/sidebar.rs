@@ -709,7 +709,7 @@ impl SidebarProvider {
             .unwrap_or(false);
 
         let (open_changed, open_mobile_changed) = cx
-            .with_state(SidebarProviderOpenChangeCallbackState::default, |state| {
+            .slot_state(SidebarProviderOpenChangeCallbackState::default, |state| {
                 sidebar_provider_open_change_events(state, open_now, open_mobile_now)
             });
         if let (Some(open), Some(handler)) = (open_changed, self.on_open_change.as_ref()) {

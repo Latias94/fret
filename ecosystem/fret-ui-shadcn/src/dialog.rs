@@ -472,7 +472,7 @@ impl Dialog {
                 overlay_motion::shadcn_overlay_ease_bezier(cx),
             );
             let (open_change, open_change_complete) = cx
-                .with_state(DialogOpenChangeCallbackState::default, |state| {
+                .slot_state(DialogOpenChangeCallbackState::default, |state| {
                     dialog_open_change_events(state, is_open, motion.present, motion.animating)
                 });
             if let (Some(open), Some(on_open_change)) = (open_change, self.on_open_change.as_ref())

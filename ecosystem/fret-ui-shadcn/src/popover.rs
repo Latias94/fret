@@ -733,7 +733,7 @@ impl Popover {
                     overlay_motion::shadcn_motion_ease_bezier(cx),
                 );
             let (open_change, open_change_complete) =
-                cx.with_state(PopoverOpenChangeCallbackState::default, |state| {
+                cx.slot_state(PopoverOpenChangeCallbackState::default, |state| {
                     popover_open_change_events(state, is_open, motion.present, motion.animating)
                 });
             if let (Some(open), Some(on_open_change)) = (open_change, self.on_open_change.as_ref())
@@ -1682,23 +1682,24 @@ mod tests {
                 ])
                 .test_id("popover-build-panel");
 
-                let trigger: PopoverTriggerBuild<App, _> = PopoverTrigger::build(cx.pressable_with_id(
-                    PressableProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Px(Px(120.0));
-                            layout.size.height = Length::Px(Px(40.0));
-                            layout
+                let trigger: PopoverTriggerBuild<App, _> =
+                    PopoverTrigger::build(cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
                         },
-                        enabled: true,
-                        focusable: true,
-                        ..Default::default()
-                    },
-                    move |cx, _st, id| {
-                        trigger_id.set(Some(id));
-                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
-                    },
-                ));
+                        move |cx, _st, id| {
+                            trigger_id.set(Some(id));
+                            vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                        },
+                    ));
                 let popover = Popover::new(open.clone()).build(cx, trigger, content);
                 vec![popover]
             },

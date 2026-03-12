@@ -698,7 +698,7 @@ impl HoverCard {
                     overlay_motion::shadcn_motion_ease_bezier(cx),
                 );
             let (open_change, open_change_complete) =
-                cx.with_state(HoverCardOpenChangeCallbackState::default, |state| {
+                cx.slot_state(HoverCardOpenChangeCallbackState::default, |state| {
                     hover_card_open_change_events(state, opening, motion.present, motion.animating)
                 });
             if let (Some(open), Some(on_open_change)) = (open_change, self.on_open_change.as_ref())

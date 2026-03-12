@@ -499,7 +499,7 @@ impl Sheet {
                 overlay_motion::shadcn_motion_ease_bezier(cx),
             );
             let (open_change, open_change_complete) = cx
-                .with_state(SheetOpenChangeCallbackState::default, |state| {
+                .slot_state(SheetOpenChangeCallbackState::default, |state| {
                     sheet_open_change_events(state, is_open, motion.present, motion.animating)
                 });
             if let (Some(open), Some(on_open_change)) = (open_change, self.on_open_change.as_ref())

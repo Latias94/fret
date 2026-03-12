@@ -436,7 +436,7 @@ impl AlertDialog {
                 overlay_motion::shadcn_overlay_ease_bezier(cx),
             );
             let (open_change, open_change_complete) =
-                cx.with_state(AlertDialogOpenChangeCallbackState::default, |state| {
+                cx.slot_state(AlertDialogOpenChangeCallbackState::default, |state| {
                     alert_dialog_open_change_events(
                         state,
                         is_open,

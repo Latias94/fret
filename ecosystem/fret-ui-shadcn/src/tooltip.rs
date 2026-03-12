@@ -1140,7 +1140,7 @@ impl Tooltip {
                     overlay_motion::shadcn_motion_ease_bezier(cx),
                 );
             let (open_change, open_change_complete) =
-                cx.with_state(TooltipOpenChangeCallbackState::default, |state| {
+                cx.slot_state(TooltipOpenChangeCallbackState::default, |state| {
                     tooltip_open_change_events(state, opening, motion.present, motion.animating)
                 });
             if let (Some(open), Some(handler)) = (open_change, on_open_change.as_ref()) {

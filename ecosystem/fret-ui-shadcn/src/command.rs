@@ -2678,10 +2678,10 @@ impl CommandPalette {
             }
 
             if let Some(handler) = on_value_change.as_ref() {
-                let change = cx
-                    .with_state(CommandPaletteValueChangeCallbackState::default, |state| {
-                        command_palette_value_change_event(state, next_active.clone())
-                    });
+                let change = cx.slot_state(
+                    CommandPaletteValueChangeCallbackState::default,
+                    |state| command_palette_value_change_event(state, next_active.clone()),
+                );
                 if let Some(value) = change {
                     handler(value);
                 }

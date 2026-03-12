@@ -1985,15 +1985,17 @@ impl NavigationMenu {
                         present: motion.present,
                         interactive: is_open,
                     };
-                    let open_change_complete =
-                        cx.with_state(NavigationMenuOpenChangeCallbackState::default, |state| {
+                    let open_change_complete = cx.slot_state(
+                        NavigationMenuOpenChangeCallbackState::default,
+                        |state| {
                             navigation_menu_open_change_complete_event(
                                 state,
                                 is_open,
                                 overlay_presence.present,
                                 motion.animating,
                             )
-                        });
+                        },
+                    );
                     if let (Some(open), Some(handler)) =
                         (open_change_complete, on_open_change_complete.as_ref())
                     {
