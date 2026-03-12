@@ -111,6 +111,10 @@ fn apply_theme(app: &mut KernelApp, dark: bool) {
     );
 }
 
+fn install_light_theme(app: &mut KernelApp) {
+    apply_theme(app, false);
+}
+
 #[derive(Clone)]
 struct SelectModel {
     value: Model<Option<Arc<str>>>,
@@ -205,10 +209,7 @@ pub fn run() -> anyhow::Result<()> {
     FretApp::new("async-playground")
         .window("async-playground", (1180.0, 720.0))
         .config_files(false)
-        .setup(|app| {
-            install_tokio_spawner(app);
-            apply_theme(app, false);
-        })
+        .setup((install_tokio_spawner, install_light_theme))
         .view::<AsyncPlaygroundView>()?
         .run()
         .map_err(anyhow::Error::from)
@@ -865,9 +866,10 @@ fn query_panel_for_mode(
         FetchMode::Async => {
             let search = cx.watch_model(&st.search_input).layout().value_or_default();
             let symbol = cx.watch_model(&st.stock_symbol).layout().value_or_default();
-            cx.data().query_async(key, policy.clone(), move |token| async move {
-                mock_fetch_async(token, id, delay, fail_mode, search, symbol).await
-            })
+            cx.data()
+                .query_async(key, policy.clone(), move |token| async move {
+                    mock_fetch_async(token, id, delay, fail_mode, search, symbol).await
+                })
         }
     };
 

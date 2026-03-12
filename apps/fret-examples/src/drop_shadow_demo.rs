@@ -35,6 +35,14 @@ fn shadow_chain() -> EffectChain {
     .sanitize()
 }
 
+fn install_demo_theme(app: &mut KernelApp) {
+    shadcn::themes::apply_shadcn_new_york(
+        app,
+        shadcn::themes::ShadcnBaseColor::Slate,
+        shadcn::themes::ShadcnColorScheme::Dark,
+    );
+}
+
 fn card<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     title: Arc<str>,
@@ -292,13 +300,7 @@ impl View for DropShadowDemoView {
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("drop-shadow-demo")
         .window("drop-shadow-demo", (1280.0, 720.0))
-        .setup(|app| {
-            shadcn::themes::apply_shadcn_new_york(
-                app,
-                shadcn::themes::ShadcnBaseColor::Slate,
-                shadcn::themes::ShadcnColorScheme::Dark,
-            );
-        })
+        .setup(install_demo_theme)
         .view::<DropShadowDemoView>()?
         .run()
         .map_err(anyhow::Error::from)

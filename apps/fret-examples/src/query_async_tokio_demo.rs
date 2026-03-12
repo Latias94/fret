@@ -256,18 +256,19 @@ impl View for QueryAsyncTokioDemoView {
     }
 }
 
+fn install_dark_theme(app: &mut KernelApp) {
+    shadcn::themes::apply_shadcn_new_york(
+        app,
+        shadcn::themes::ShadcnBaseColor::Zinc,
+        shadcn::themes::ShadcnColorScheme::Dark,
+    );
+}
+
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("query-async-tokio-demo")
         .window("query-async-tokio-demo", (560.0, 360.0))
         .config_files(false)
-        .setup(|app| {
-            install_tokio_spawner(app);
-            shadcn::themes::apply_shadcn_new_york(
-                app,
-                shadcn::themes::ShadcnBaseColor::Zinc,
-                shadcn::themes::ShadcnColorScheme::Dark,
-            );
-        })
+        .setup((install_tokio_spawner, install_dark_theme))
         .view::<QueryAsyncTokioDemoView>()?
         .run()
         .map_err(anyhow::Error::from)

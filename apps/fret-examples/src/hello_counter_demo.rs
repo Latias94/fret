@@ -28,17 +28,19 @@ const TEST_ID_STEP_1: &str = "hello-counter.step.1";
 const TEST_ID_STEP_5: &str = "hello-counter.step.5";
 const TEST_ID_STEP_10: &str = "hello-counter.step.10";
 
+fn install_demo_theme(app: &mut App) {
+    shadcn::themes::apply_shadcn_new_york(
+        app,
+        shadcn::themes::ShadcnBaseColor::Slate,
+        shadcn::themes::ShadcnColorScheme::Light,
+    );
+}
+
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("hello-counter-demo")
         .window("hello-counter-demo", (520.0, 420.0))
         .config_files(false)
-        .setup(|app| {
-            shadcn::themes::apply_shadcn_new_york(
-                app,
-                shadcn::themes::ShadcnBaseColor::Slate,
-                shadcn::themes::ShadcnColorScheme::Light,
-            );
-        })
+        .setup(install_demo_theme)
         .view::<HelloCounterView>()?
         .run()
         .map_err(anyhow::Error::from)

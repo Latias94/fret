@@ -25,6 +25,14 @@ mod act {
     fret::actions!([Reset = "postprocess_theme_demo.reset.v1"]);
 }
 
+fn install_demo_theme(app: &mut KernelApp) {
+    shadcn::themes::apply_shadcn_new_york(
+        app,
+        shadcn::themes::ShadcnBaseColor::Slate,
+        shadcn::themes::ShadcnColorScheme::Dark,
+    );
+}
+
 const WGSL: &str = r#"
 // Params packing (EffectParamsV1 is 64 bytes):
 // - vec4s[0].x: chromatic_offset_px
@@ -146,13 +154,7 @@ struct ThemePostprocessView {
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("postprocess-theme-demo")
         .window("postprocess-theme-demo", (1200.0, 760.0))
-        .setup(|app| {
-            shadcn::themes::apply_shadcn_new_york(
-                app,
-                shadcn::themes::ShadcnBaseColor::Slate,
-                shadcn::themes::ShadcnColorScheme::Dark,
-            );
-        })
+        .setup(install_demo_theme)
         .view::<ThemePostprocessView>()?
         .install_custom_effects(install_custom_effect)
         .run()

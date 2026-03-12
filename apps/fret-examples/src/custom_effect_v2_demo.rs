@@ -94,16 +94,18 @@ struct CustomEffectV2View {
     st: CustomEffectV2State,
 }
 
+fn install_demo_theme(app: &mut KernelApp) {
+    shadcn::themes::apply_shadcn_new_york(
+        app,
+        shadcn::themes::ShadcnBaseColor::Slate,
+        shadcn::themes::ShadcnColorScheme::Dark,
+    );
+}
+
 pub fn run() -> anyhow::Result<()> {
     let builder = FretApp::new("custom-effect-v2-demo")
         .window("custom-effect-v2-demo", (1100.0, 720.0))
-        .setup(|app| {
-            shadcn::themes::apply_shadcn_new_york(
-                app,
-                shadcn::themes::ShadcnBaseColor::Slate,
-                shadcn::themes::ShadcnColorScheme::Dark,
-            );
-        })
+        .setup(install_demo_theme)
         .view::<CustomEffectV2View>()?;
 
     install_into(builder).run().map_err(anyhow::Error::from)

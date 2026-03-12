@@ -29,16 +29,18 @@ mod act {
     ]);
 }
 
+fn install_demo_theme(app: &mut KernelApp) {
+    shadcn::themes::apply_shadcn_new_york(
+        app,
+        shadcn::themes::ShadcnBaseColor::Slate,
+        shadcn::themes::ShadcnColorScheme::Light,
+    );
+}
+
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("genui-demo")
         .window("genui-demo", (980.0, 720.0))
-        .setup(|app| {
-            shadcn::themes::apply_shadcn_new_york(
-                app,
-                shadcn::themes::ShadcnBaseColor::Slate,
-                shadcn::themes::ShadcnColorScheme::Light,
-            );
-        })
+        .setup(install_demo_theme)
         .view::<GenUiView>()?
         .run()
         .map_err(anyhow::Error::from)

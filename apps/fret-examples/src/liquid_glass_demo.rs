@@ -402,16 +402,18 @@ struct LiquidGlassView {
     st: LiquidGlassState,
 }
 
+fn install_demo_theme(app: &mut KernelApp) {
+    shadcn::themes::apply_shadcn_new_york(
+        app,
+        shadcn::themes::ShadcnBaseColor::Slate,
+        shadcn::themes::ShadcnColorScheme::Dark,
+    );
+}
+
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("liquid-glass-demo")
         .window("liquid-glass-demo", (1280.0, 720.0))
-        .setup(|app| {
-            shadcn::themes::apply_shadcn_new_york(
-                app,
-                shadcn::themes::ShadcnBaseColor::Slate,
-                shadcn::themes::ShadcnColorScheme::Dark,
-            );
-        })
+        .setup(install_demo_theme)
         .view::<LiquidGlassView>()?
         .install_custom_effects(install_custom_effects)
         .run()
