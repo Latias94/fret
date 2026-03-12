@@ -33,7 +33,7 @@ References (non-normative):
 - Fret paint replay caching: `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
 - Fret invalidation propagation: `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`
 - GPUI cached views + range replay: `repo-ref/zed/crates/gpui/src/view.rs`, `repo-ref/zed/crates/gpui/src/window.rs`
-- Planned refactor notes: `docs/workstreams/gpui-parity-refactor.md`
+- Planned refactor notes: `docs/workstreams/gpui-parity-refactor/gpui-parity-refactor.md`
 
 ## Decision
 

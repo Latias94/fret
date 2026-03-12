@@ -4,7 +4,7 @@
 
 - Scroll extent correctness / caching:
   - `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
-  - `docs/workstreams/scroll-extents-dom-parity.md`
+  - `docs/workstreams/scroll-extents-dom-parity/scroll-extents-dom-parity.md`
 - Aggregation mechanism + validation:
   - `crates/fret-ui/src/tree/ui_tree_subtree_layout_dirty.rs`
   - `crates/fret-ui/src/runtime_config.rs`

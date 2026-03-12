@@ -462,7 +462,7 @@ Success criteria:
 - ADR 0067: overlay policy boundary: `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
 - ADR 0212: identity debug paths + staged state: `docs/adr/0212-element-identity-debug-paths-and-frame-staged-element-state.md`
 - ADR 0213: ViewCache subtree reuse + state retention: `docs/adr/0224-view-cache-subtree-reuse-and-state-retention.md`
-- Workstream tracker: `docs/workstreams/gpui-parity-refactor-todo.md` (MVP2-cache-005)
+- Workstream tracker: `docs/workstreams/gpui-parity-refactor/gpui-parity-refactor-todo.md` (MVP2-cache-005)
 - Flutter lifecycle reference: `packages/flutter/lib/src/widgets/framework.dart` (Flutter upstream).
   - Anchors (pinned `repo-ref/flutter`, may drift upstream):
     - `_InactiveElements` (~`framework.dart:2099`)

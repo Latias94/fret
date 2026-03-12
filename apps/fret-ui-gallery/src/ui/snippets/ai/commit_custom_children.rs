@@ -38,7 +38,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         (
             12u32,
             0u32,
-            "docs/workstreams/ai-elements-port.md",
+            "docs/workstreams/ai-elements-port/ai-elements-port.md",
             ui_ai::CommitFileStatusKind::Added,
             Some(
                 shadcn::Badge::new("NEW")

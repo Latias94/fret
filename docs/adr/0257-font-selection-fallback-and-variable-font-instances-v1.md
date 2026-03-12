@@ -216,7 +216,7 @@ Semantics (v1):
 
 ## Implementation plan (tracked)
 
-Workstream: `docs/workstreams/font-system-v1.md`
+Workstream: `docs/workstreams/standalone/font-system-v1.md`
 
 Milestones:
 

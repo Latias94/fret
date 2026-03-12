@@ -1,6 +1,6 @@
 # Authoring Surface + Ecosystem (Fearless Refactor v1) — TODO
 
-This TODO list tracks the work described in `DESIGN.md`.
+This TODO list tracks the remaining closeout work described in `DESIGN.md`.
 
 Because this is a pre-release reset, "done" means we actually delete the old surface rather than
 carrying compatibility-only baggage.
@@ -18,6 +18,13 @@ Execution note on 2026-03-12:
 - do not reopen broad surface redesign here,
 - route remaining conversion-surface work to
   `docs/workstreams/into-element-surface-fearless-refactor-v1/`.
+
+Status note:
+
+- treat `MIGRATION_MATRIX.md` as the source of truth for lane/row status and delete-readiness,
+- treat unchecked early bookkeeping items in this file as historical planning residue unless they
+  still map to an active closeout task below,
+- when this file and the matrix disagree, prefer the matrix plus the current source gates/tests.
 
 ## M0 — Freeze the target product surface
 

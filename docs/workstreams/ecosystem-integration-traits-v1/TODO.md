@@ -146,7 +146,7 @@ surface.
 
 - [x] Add a single target note explaining how typed routes, canonical `RouteLocation`, and query
   integration fit together.
-  - Landed on 2026-03-11 in `docs/workstreams/router-v1.md`.
+  - Landed on 2026-03-11 in `docs/workstreams/router-v1/router-v1.md`.
 - [x] Pick one in-tree app as the first codec-based migration target.
   - Landed on 2026-03-11: `apps/fret-cookbook/examples/router_basics.rs` now teaches an
     app-defined `RouteCodec` plus typed-route router link helpers.

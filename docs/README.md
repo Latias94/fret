@@ -49,42 +49,42 @@ Unless a document says otherwise:
 - Ecosystem integration traits budget (install/router/docking/query/catalog seams): `docs/workstreams/ecosystem-integration-traits-v1/DESIGN.md`, `docs/workstreams/ecosystem-integration-traits-v1/TODO.md`, `docs/workstreams/ecosystem-integration-traits-v1/MILESTONES.md`, `docs/workstreams/ecosystem-integration-traits-v1/TARGET_INTERFACE_STATE.md`, and `docs/workstreams/ecosystem-integration-traits-v1/MIGRATION_MATRIX.md`
 - Into-element surface cleanup (follow-on to the authoring reset; collapse public conversion vocabulary): `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TODO.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, and `docs/workstreams/into-element-surface-fearless-refactor-v1/MIGRATION_MATRIX.md`
 - Overlay + input arbitration v2: `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md`
-- Overlay + pointer occlusion v2 progress: `docs/workstreams/overlay-input-arbitration-v2.md`
+- Overlay + pointer occlusion v2 progress: `docs/workstreams/overlay-input-arbitration-v2/overlay-input-arbitration-v2.md`
 - UI focus + overlay focus containment (fearless refactor v1): `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
 - Foreground style context refactor (inheritance is context, not a wrapper fragment): `docs/workstreams/foreground-style-context-fearless-refactor-v1/DESIGN.md`
-- Foundation closure (P0, cross-workstream milestones): `docs/workstreams/foundation-closure-p0.md` and `docs/workstreams/foundation-closure-p0-todo.md`
-- Headless table engine parity (TanStack Table core): `docs/workstreams/headless-table-tanstack-parity.md` and `docs/workstreams/headless-table-tanstack-parity-todo.md`
+- Foundation closure (P0, cross-workstream milestones): `docs/workstreams/foundation-closure-p0/foundation-closure-p0.md` and `docs/workstreams/foundation-closure-p0/foundation-closure-p0-todo.md`
+- Headless table engine parity (TanStack Table core): `docs/workstreams/headless-table-tanstack-parity/headless-table-tanstack-parity.md` and `docs/workstreams/headless-table-tanstack-parity/headless-table-tanstack-parity-todo.md`
 - Theme token alignment (semantic vs named vs component-derived): `docs/workstreams/theme-token-alignment-v1/design.md`, `docs/workstreams/theme-token-alignment-v1/todo.md`, and `docs/workstreams/theme-token-alignment-v1/milestones.md`
 - Charts (ECharts alignment): `docs/audits/echarts-alignment.md` and `docs/delinea-echarts-alignment.md`
-- Text system v2 tracker: `docs/workstreams/text-system-v2-parley.md`
-- UI typography presets (stable control text line boxes): `docs/workstreams/ui-typography-presets-v1.md`
+- Text system v2 tracker: `docs/workstreams/standalone/text-system-v2-parley.md`
+- UI typography presets (stable control text line boxes): `docs/workstreams/ui-typography-presets-v1/ui-typography-presets-v1.md`
 - Text style cascade fearless refactor (GPUI-style subtree text refinement for passive text): `docs/workstreams/text-style-cascade-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/text-style-cascade-fearless-refactor-v1/TODO.md`, and `docs/workstreams/text-style-cascade-fearless-refactor-v1/MILESTONES.md`
-- Font system audit + roadmap: `docs/workstreams/font-system-v1.md`
-- Input dispatch v2 tracker: `docs/workstreams/input-dispatch-v2.md`
-- Mobile bring-up v1 (scroll + IME + keyboard avoidance): `docs/workstreams/mobile-bringup-v1.md`, `docs/workstreams/mobile-bringup-v1-todo.md`, and `docs/workstreams/mobile-bringup-v1-milestones.md`
+- Font system audit + roadmap: `docs/workstreams/standalone/font-system-v1.md`
+- Input dispatch v2 tracker: `docs/workstreams/input-dispatch-v2/input-dispatch-v2.md`
+- Mobile bring-up v1 (scroll + IME + keyboard avoidance): `docs/workstreams/mobile-bringup-v1/mobile-bringup-v1.md`, `docs/workstreams/mobile-bringup-v1/mobile-bringup-v1-todo.md`, and `docs/workstreams/mobile-bringup-v1/mobile-bringup-v1-milestones.md`
 - Mobile graphics backend selection v1 (Vulkan/Metal-first + override + diagnostics): `docs/workstreams/mobile-gfx-backend-v1/design.md`, `docs/workstreams/mobile-gfx-backend-v1/todo.md`, and `docs/workstreams/mobile-gfx-backend-v1/milestones.md`
-- Gesture recognizers v1 (component-layer policy): `docs/workstreams/gesture-recognizers-v1.md`, `docs/workstreams/gesture-recognizers-v1-todo.md`, and `docs/workstreams/gesture-recognizers-v1-milestones.md`
+- Gesture recognizers v1 (component-layer policy): `docs/workstreams/gesture-recognizers-v1/gesture-recognizers-v1.md`, `docs/workstreams/gesture-recognizers-v1/gesture-recognizers-v1-todo.md`, and `docs/workstreams/gesture-recognizers-v1/gesture-recognizers-v1-milestones.md`
 - Node graph roadmap: `docs/node-graph-roadmap.md`
 - Layout engine refactor: `docs/layout-engine-refactor-roadmap.md`
-- Percent sizing semantics v1 (percent/fraction closure): `docs/workstreams/length-percentage-semantics-v1.md` and `docs/workstreams/length-percentage-semantics-v1-todo.md`
+- Percent sizing semantics v1 (percent/fraction closure): `docs/workstreams/length-percentage-semantics-v1/length-percentage-semantics-v1.md` and `docs/workstreams/length-percentage-semantics-v1/length-percentage-semantics-v1-todo.md`
 - Renderer refactor: `docs/renderer-refactor-roadmap.md`
 - Renderer contract surface summary: `docs/renderer-contracts.md`
 - GPU debugging (RenderDoc): `docs/renderdoc-inspection.md`
 - Debugging playbook: `docs/debugging-playbook.md`
 - CPU timeline profiling (Tracy): `docs/tracy.md`
 - UI gallery profiling report (native): `docs/perf/ui-gallery-profile-report.md`
-- UI Gallery docs-style component pages tracker: `docs/workstreams/ui-gallery-docs-page-layout-refactor.md`
-- AI Elements port + selector surface alignment: `docs/workstreams/ai-elements-port.md`, `docs/workstreams/ai-elements-port-todo.md`, and `docs/workstreams/ai-elements-upstream-alignment.md`
+- UI Gallery docs-style component pages tracker: `docs/workstreams/standalone/ui-gallery-docs-page-layout-refactor.md`
+- AI Elements port + selector surface alignment: `docs/workstreams/ai-elements-port/ai-elements-port.md`, `docs/workstreams/ai-elements-port/ai-elements-port-todo.md`, and `docs/workstreams/standalone/ai-elements-upstream-alignment.md`
 - UI diagnostics + scripted repros: `docs/ui-diagnostics-and-scripted-tests.md`
 - Diag artifact + evidence model (M2): `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`
 - Inspect workflow (picker + scripts): `docs/debugging-ui-with-inspector-and-scripts.md`
 - Window style profiles (ecosystem recipes): `docs/window-style-profiles.md`
 - Viewport panels (engine/video): `docs/viewport-panels.md`
 - Gizmo + viewport integration: `docs/gizmo-viewport-integration.md`
-- Docking multi-window parity (ImGui-style tear-off): `docs/workstreams/docking-multiwindow-imgui-parity.md` (macOS: `docs/workstreams/macos-docking-multiwindow-imgui-parity.md`)
+- Docking multi-window parity (ImGui-style tear-off): `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md` (macOS: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`)
 - Docking diagnostics hardening (multi-window arbitration scripts + bounded evidence): `docs/workstreams/docking-arbitration-diag-hardening-v1/`
 - UI diagnostics timebase decoupling v1 (no-frame liveness + `reason_code=timeout.no_frames`): `docs/workstreams/ui-diagnostics-timebase-decoupling-v1/README.md`
-- Localization/i18n v1 tracker: `docs/workstreams/localization-i18n-v1.md` and `docs/workstreams/localization-i18n-v1-todo.md`
+- Localization/i18n v1 tracker: `docs/workstreams/localization-i18n-v1/localization-i18n-v1.md` and `docs/workstreams/localization-i18n-v1/localization-i18n-v1-todo.md`
 - Contracts: `docs/adr/`
 - Audit notes index (non-authoritative): `docs/audits/README.md`
 - Workstream notes (non-authoritative): `docs/workstreams/`
@@ -125,7 +125,7 @@ Fret’s kernel/runtime primitives are intentionally small (`Model<T>`, tracked 
 driver-boundary inbox draining), so the default app-authoring story lives in ecosystem crates and is
 now taught as `LocalState` + view runtime + typed actions.
 
-- Workstream: `docs/workstreams/state-management-v1.md` and `docs/workstreams/state-management-v1-todo.md`
+- Workstream: `docs/workstreams/state-management-v1/state-management-v1.md` and `docs/workstreams/state-management-v1/state-management-v1-todo.md`
 - Action-first authoring + view runtime (v1, available now):
   - Workstream: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
   - Endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`

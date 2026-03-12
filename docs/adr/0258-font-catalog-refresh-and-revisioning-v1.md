@@ -110,4 +110,4 @@ Current knobs:
 
 ## Workstream tracking
 
-See `docs/workstreams/font-catalog-refresh-policy-v1.md`.
+See `docs/workstreams/standalone/font-catalog-refresh-policy-v1.md`.

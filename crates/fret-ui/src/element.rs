@@ -235,7 +235,7 @@ pub enum ElementKind {
     /// Experimental view-level cache boundary wrapper.
     ///
     /// When enabled by the runtime, this marks a subtree as a cache root for range-replay and
-    /// invalidation containment experiments (see `docs/workstreams/gpui-parity-refactor.md`).
+    /// invalidation containment experiments (see `docs/workstreams/gpui-parity-refactor/gpui-parity-refactor.md`).
     ViewCache(ViewCacheProps),
     VisualTransform(VisualTransformProps),
     RenderTransform(RenderTransformProps),

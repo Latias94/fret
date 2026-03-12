@@ -350,7 +350,7 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] `Regression` now uses a summary-first master/detail layout with inspector sections,
   - [x] failing summary rows now expose lane/failure/item badges for faster scanning,
   - [x] `Regression Workspace` now uses a clearer summary strip (`Aggregate Status` + `Primary Actions` + `Dashboard Preview`).
-  - [x] Documented in `docs/workstreams/diag-devtools-gui-refresh-v1.md`.
+  - [x] Documented in `docs/workstreams/standalone/diag-devtools-gui-refresh-v1.md`.
 
 ## Next focus after GUI refresh
 

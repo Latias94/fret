@@ -118,5 +118,5 @@ debug-only “no system fonts” mode on native:
 ## Related docs
 
 - ADR 0258: `docs/adr/0258-font-catalog-refresh-and-revisioning-v1.md`
-- Workstream: `docs/workstreams/font-system-v1.md`
+- Workstream: `docs/workstreams/standalone/font-system-v1.md`
 - Audit note: `docs/audits/font-system-parley-zed-xilem-2026-02.md`

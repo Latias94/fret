@@ -26,15 +26,15 @@ Workstream docs live under `docs/workstreams/` (living implementation trackers; 
 
 Active tracker highlights:
 
-- Text system v2 (Parley + attributed spans): `docs/workstreams/text-system-v2-parley.md` (see also `docs/todo-tracker.md`).
-- UI typography presets (stable control text line boxes): `docs/workstreams/ui-typography-presets-v1.md`.
+- Text system v2 (Parley + attributed spans): `docs/workstreams/standalone/text-system-v2-parley.md` (see also `docs/todo-tracker.md`).
+- UI typography presets (stable control text line boxes): `docs/workstreams/ui-typography-presets-v1/ui-typography-presets-v1.md`.
 - Text style cascade fearless refactor (mechanism contract + ecosystem migration): `docs/workstreams/text-style-cascade-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/text-style-cascade-fearless-refactor-v1/TODO.md`, and `docs/workstreams/text-style-cascade-fearless-refactor-v1/MILESTONES.md`.
-- Headless table engine parity (TanStack Table core): `docs/workstreams/headless-table-tanstack-parity.md` (TODOs: `docs/workstreams/headless-table-tanstack-parity-todo.md`).
+- Headless table engine parity (TanStack Table core): `docs/workstreams/headless-table-tanstack-parity/headless-table-tanstack-parity.md` (TODOs: `docs/workstreams/headless-table-tanstack-parity/headless-table-tanstack-parity-todo.md`).
 - Fonts bootstrap + invalidation contract: `docs/adr/0147-font-stack-bootstrap-and-textfontstackkey-v1.md`.
-- Docking multi-window parity (ImGui-style tear-off): `docs/workstreams/docking-multiwindow-imgui-parity.md` (TODOs: `docs/workstreams/docking-multiwindow-imgui-parity-todo.md`).
-- Docking N-ary split graph (canonical form + ops semantics): `docs/workstreams/docking-nary-split-graph-v1.md` (TODOs: `docs/workstreams/docking-nary-split-graph-v1-todo.md`).
-- Immediate-mode authoring convergence (imui v2): `docs/workstreams/imui-authoring-facade-v2.md` (TODOs: `docs/workstreams/imui-authoring-facade-v2-todo.md`).
-- Foundation closure tracker (P0 cross-workstream milestones): `docs/workstreams/foundation-closure-p0.md` (TODOs: `docs/workstreams/foundation-closure-p0-todo.md`).
+- Docking multi-window parity (ImGui-style tear-off): `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md` (TODOs: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`).
+- Docking N-ary split graph (canonical form + ops semantics): `docs/workstreams/docking-nary-split-graph-v1/docking-nary-split-graph-v1.md` (TODOs: `docs/workstreams/docking-nary-split-graph-v1/docking-nary-split-graph-v1-todo.md`).
+- Immediate-mode authoring convergence (imui v2): `docs/workstreams/imui-authoring-facade-v2/imui-authoring-facade-v2.md` (TODOs: `docs/workstreams/imui-authoring-facade-v2/imui-authoring-facade-v2-todo.md`).
+- Foundation closure tracker (P0 cross-workstream milestones): `docs/workstreams/foundation-closure-p0/foundation-closure-p0.md` (TODOs: `docs/workstreams/foundation-closure-p0/foundation-closure-p0-todo.md`).
 - Authoring surface + ecosystem reset (pre-release, no-compat cleanup): `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TODO.md`, `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, and `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/MIGRATION_MATRIX.md`.
 - Ecosystem integration traits budget (install/catalog/router/docking/query seams): `docs/workstreams/ecosystem-integration-traits-v1/DESIGN.md`, `docs/workstreams/ecosystem-integration-traits-v1/TODO.md`, `docs/workstreams/ecosystem-integration-traits-v1/MILESTONES.md`, `docs/workstreams/ecosystem-integration-traits-v1/TARGET_INTERFACE_STATE.md`, and `docs/workstreams/ecosystem-integration-traits-v1/MIGRATION_MATRIX.md`.
 - Into-element surface cleanup (follow-on to the authoring reset; conversion vocabulary collapse): `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TODO.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, and `docs/workstreams/into-element-surface-fearless-refactor-v1/MIGRATION_MATRIX.md`.
@@ -74,7 +74,7 @@ Subsystem roadmaps (living docs, not ADRs):
 - Node graph: `docs/node-graph-roadmap.md` (tracked TODOs for `ecosystem/fret-node`; contracts in ADR 0126).
 - Layout engine: `docs/layout-engine-refactor-roadmap.md`.
 - Renderer: `docs/renderer-refactor-roadmap.md`.
-- OS menubar: `docs/workstreams/os-menubar.md`.
+- OS menubar: `docs/workstreams/standalone/os-menubar.md`.
 
 For the declarative layout refactor phases (P0–P5) toward a window-scoped Taffy engine + viewport roots, see:
 `docs/layout-engine-refactor-roadmap.md`.

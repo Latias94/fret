@@ -183,7 +183,7 @@ Implementation note on 2026-03-12:
   with explicit `.into_element(cx)` only at the stack/row collection seam.
 - selected UI Gallery popover snippets now also keep layout-wrapper helpers off raw landed returns
   by default:
-  `src/ui/snippets/popover/basic.rs`
+  `src/ui/snippets/popover/{basic,demo,with_form}.rs`
   now uses `centered<H, B>(body: B) -> impl IntoUiElement<H> + use<H, B>`
   where `B: IntoUiElement<H>`,
   so the wrapper no longer forces callers to pre-land `AnyElement`.
@@ -220,6 +220,42 @@ Implementation note on 2026-03-12:
   and `src/ui/snippets/button/size.rs`
   now also keeps `row(...) -> impl IntoUiElement<H> + use<H>`,
   with explicit `.into_element(cx)` only at vector collection and final render-boundary seams.
+- selected UI Gallery hover-card and tooltip snippets now also keep local overlay/content helpers
+  off raw landed returns by default:
+  `src/ui/snippets/hover_card/{sides,trigger_delays}.rs`
+  now use `card(...)` and `demo_content(...) -> impl IntoUiElement<H> + use<H>`;
+  `src/ui/snippets/tooltip/{rtl,sides}.rs`
+  now use `make_tooltip(...) -> impl IntoUiElement<H> + use<H>`, and
+  `src/ui/snippets/tooltip/rtl.rs`
+  now also keeps `make_tooltip_with_test_ids(...) -> impl IntoUiElement<H> + use<H>`,
+  with explicit `.into_element(cx)` only at row child-collection seams and the final
+  render/provider boundary.
+- selected UI Gallery resizable snippets now also keep panel/container wrapper helpers off raw
+  landed returns by default:
+  `src/ui/snippets/resizable/usage.rs`
+  now uses `panel(...) -> impl IntoUiElement<H> + use<H>`;
+  `src/ui/snippets/resizable/{vertical,handle}.rs`
+  now use `box_group<H, B>(..., body: B) -> impl IntoUiElement<H> + use<H, B>` where
+  `B: IntoUiElement<H>`,
+  and `panel(...) -> impl IntoUiElement<H> + use<H>`,
+  with explicit `.into_element(cx)` only at `ResizablePanel::new([..])` entry seams and the final
+  render boundary.
+- selected UI Gallery data-table and table-action snippets now also keep alignment/footer/row
+  helpers off raw landed returns by default:
+  `src/ui/snippets/data_table/{basic_demo,default_demo,guide_demo}.rs`
+  now use `align_end<B>(child: B) -> impl IntoUiElement<fret_app::App> + use<B>` where
+  `B: IntoUiElement<fret_app::App>`;
+  `src/ui/snippets/data_table/default_demo.rs`
+  now also keeps `footer(...) -> impl IntoUiElement<fret_app::App> + use<>`;
+  `src/ui/snippets/data_table/{basic_demo,rtl_demo}.rs`
+  now keep `bottom_controls(...) -> impl IntoUiElement<fret_app::App> + use<>`;
+  `src/ui/snippets/data_table/rtl_demo.rs`
+  now uses `align_inline_start<B>(cx, child) -> impl IntoUiElement<fret_app::App> + use<B>`;
+  `src/ui/snippets/table/actions.rs`
+  now uses `align_end<B>(child: B) -> impl IntoUiElement<fret_app::App> + use<B>` and
+  `action_row(...) -> impl IntoUiElement<fret_app::App> + use<>`,
+  with explicit `.into_element(cx)` only at data-table cell/table-row seams and final render
+  boundaries.
 - selected UI Gallery button-group, toggle-group, and drawer snippets now also expose reusable
   helpers as `IntoUiElement`-based signatures:
   `src/ui/snippets/button_group/api_reference.rs`
@@ -250,8 +286,9 @@ Validation note on 2026-03-12:
 
 - verified the expanded UI Gallery helper gate with
   `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app selected_`;
-  the focused source gate now covers 19 `selected_*` checks and passed after the AI wrapper,
-  breadcrumb, `item/extras_rtl`, avatar, and button helper migrations landed.
+  the focused source gate now covers 24 `selected_*` checks and passed after the AI wrapper,
+  breadcrumb, `item/extras_rtl`, avatar, button, popover, hover-card, tooltip, resizable,
+  data-table, and table-action helper migrations landed.
 
 ## M4 — Delete the old public surface
 
@@ -325,6 +362,15 @@ Implementation note on 2026-03-12:
 - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that selected
   `button_group/*`, `toggle_group/*`, and `drawer/*` reusable helpers stay on `IntoUiElement`
   signatures rather than reverting to raw `AnyElement`.
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that selected
+  `hover_card/*` content helpers and `tooltip/*` helper builders stay on `IntoUiElement<H>`
+  signatures rather than reverting to raw `AnyElement`.
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that selected
+  `resizable/*` panel/container wrapper helpers stay on `IntoUiElement<H>`-based signatures
+  rather than reverting to raw `AnyElement`.
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that selected
+  `data_table/*` alignment/footer helpers and `table/actions.rs` row helpers stay on
+  `IntoUiElement<fret_app::App>` rather than reverting to raw `AnyElement`.
 - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that selected
   `item/*`, `toast/*`, and `motion_presets/*` helpers stay on `IntoUiElement` signatures rather
   than reverting to raw `AnyElement`.

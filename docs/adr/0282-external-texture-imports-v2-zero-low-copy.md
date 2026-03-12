@@ -56,7 +56,7 @@ the public UI contract stable and portable:
 
 This ADR is tracked as a workstream:
 
-- `docs/workstreams/external-texture-imports-v2-zero-low-copy.md`
+- `docs/workstreams/external-texture-imports-v2-zero-low-copy/external-texture-imports-v2-zero-low-copy.md`
 
 ## Non-goals (v2)
 
@@ -290,12 +290,12 @@ This ADR can move out of Draft once the following are true:
 
 - v1 contract + staging: `docs/adr/0234-imported-render-targets-and-external-texture-imports-v1.md`
 - Workstream tracking:
-  - `docs/workstreams/external-texture-imports-v1.md`
-  - `docs/workstreams/external-texture-imports-v1-todo.md`
-  - `docs/workstreams/external-texture-imports-v1-milestones.md`
+  - `docs/workstreams/external-texture-imports-v1/external-texture-imports-v1.md`
+  - `docs/workstreams/external-texture-imports-v1/external-texture-imports-v1-todo.md`
+  - `docs/workstreams/external-texture-imports-v1/external-texture-imports-v1-milestones.md`
 - Capability surface (today): `crates/fret-render-wgpu/src/capabilities.rs`
 - Native adapter seam (today): `crates/fret-launch/src/runner/native_external_import.rs`
 - v2 workstream tracking:
-  - `docs/workstreams/external-texture-imports-v2-zero-low-copy.md`
-  - `docs/workstreams/external-texture-imports-v2-zero-low-copy-todo.md`
-  - `docs/workstreams/external-texture-imports-v2-zero-low-copy-milestones.md`
+  - `docs/workstreams/external-texture-imports-v2-zero-low-copy/external-texture-imports-v2-zero-low-copy.md`
+  - `docs/workstreams/external-texture-imports-v2-zero-low-copy/external-texture-imports-v2-zero-low-copy-todo.md`
+  - `docs/workstreams/external-texture-imports-v2-zero-low-copy/external-texture-imports-v2-zero-low-copy-milestones.md`

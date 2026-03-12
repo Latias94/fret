@@ -54,9 +54,9 @@ Design constraints:
 Now / Next / Later (high level):
 
 - **Now**: lock refactor invariants (derived internals + invalidation discipline) via conformance tests (workstream M0).
-  - Detailed contract checklist: `docs/workstreams/fret-node-internals-m0.md`
+  - Detailed contract checklist: `docs/workstreams/standalone/fret-node-internals-m0.md`
 - **Next**: stabilize built-in add-ons API (minimap/controls/background theming) without policy bleed (workstream M2).
-  - Workstream: `docs/workstreams/fret-node-addons-api-m2.md`
+  - Workstream: `docs/workstreams/standalone/fret-node-addons-api-m2.md`
 - **Later**: scale targets (5k–20k) + deterministic patch units for collaboration (NG3/workstream M6 + future milestones).
 
 ### Headless substrate (present)
@@ -111,7 +111,7 @@ See `docs/node-graph-xyflow-parity.md` for the detailed parity and gap map (mech
 
 ## Refactor tracking (workstreams)
 
-When doing larger refactors, treat `docs/workstreams/fret-node-xyflow-parity.md` as the active
+When doing larger refactors, treat `docs/workstreams/standalone/fret-node-xyflow-parity.md` as the active
 execution plan (milestones + gates + evidence anchors). This roadmap remains a “what/why” view and
 should not accumulate ambiguous TODOs that aren’t tied to an exit criterion.
 
@@ -224,4 +224,4 @@ Legend:
   - Tests: `ecosystem/fret-node/src/ops/tests.rs` (`graph_diff_is_deterministic_and_roundtrips`, `graph_diff_roundtrips_when_a_port_changes_structurally`, `graph_diff_roundtrips_when_deleting_a_port_with_incident_edges`)
 - [ ] Patch unit minimality follow-ups (optional, deferred).
   - Consider port structural setter ops (key/dir/kind/capacity) if we need more minimal collaboration diffs.
-  - Workstream: `docs/workstreams/fret-node-deterministic-patch-units-m6.md`
+  - Workstream: `docs/workstreams/standalone/fret-node-deterministic-patch-units-m6.md`

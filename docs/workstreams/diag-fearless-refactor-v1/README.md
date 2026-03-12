@@ -20,9 +20,9 @@ This workstream is intentionally scoped to refactors and additive sidecars. It m
 
 Canonical tracking docs (kept up to date as implementation evolves):
 
-- Workstream overview: `docs/workstreams/diag-fearless-refactor-v1.md`
-- TODO tracker: `docs/workstreams/diag-fearless-refactor-v1-todo.md`
-- Milestones: `docs/workstreams/diag-fearless-refactor-v1-milestones.md`
+- Workstream overview: `docs/workstreams/diag-fearless-refactor-v1/diag-fearless-refactor-v1.md`
+- TODO tracker: `docs/workstreams/diag-fearless-refactor-v1/diag-fearless-refactor-v1-todo.md`
+- Milestones: `docs/workstreams/diag-fearless-refactor-v1/diag-fearless-refactor-v1-milestones.md`
 
 Related living docs:
 
@@ -87,8 +87,8 @@ Related living docs:
 
 See:
 
-- TODO list: `docs/workstreams/diag-fearless-refactor-v1-todo.md`
-- Milestones: `docs/workstreams/diag-fearless-refactor-v1-milestones.md`
+- TODO list: `docs/workstreams/diag-fearless-refactor-v1/diag-fearless-refactor-v1-todo.md`
+- Milestones: `docs/workstreams/diag-fearless-refactor-v1/diag-fearless-refactor-v1-milestones.md`
 - Migration plan: `docs/workstreams/diag-fearless-refactor-v1/migration-plan.md`
 - Sidecar details: `docs/workstreams/diag-fearless-refactor-v1/frames-index.md`
 - Agent loop: `docs/workstreams/diag-fearless-refactor-v1/agent-loop.md`

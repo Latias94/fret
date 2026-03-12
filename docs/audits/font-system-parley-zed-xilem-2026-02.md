@@ -14,7 +14,7 @@ See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Scope: **font enumeration**, **caching**, **fallback chain semantics**, and **variable font instance identity**.
 
 This audit is intended to inform and de-risk the active font-system workstream:
-`docs/workstreams/font-system-v1.md` and ADR 0257:
+`docs/workstreams/standalone/font-system-v1.md` and ADR 0257:
 `docs/adr/0257-font-selection-fallback-and-variable-font-instances-v1.md`.
 
 ## Baseline: current Fret direction
@@ -150,7 +150,7 @@ Recommendation:
 
 ## Proposed milestones (workstream alignment)
 
-Use `docs/workstreams/font-system-v1.md` as the living tracker, with these “audit-informed” closures:
+Use `docs/workstreams/standalone/font-system-v1.md` as the living tracker, with these “audit-informed” closures:
 
 - M0: variable font identity correctness (coords + synthesis if needed).
 - M1: explicit fallback composition rules (script/locale + curated overrides).

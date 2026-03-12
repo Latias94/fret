@@ -102,7 +102,7 @@ Cons:
 
 ## Tracking
 
-- Workstream: `docs/workstreams/renderer-drop-shadow-effect-v1.md`
-- TODO: `docs/workstreams/renderer-drop-shadow-effect-v1-todo.md`
-- Milestones: `docs/workstreams/renderer-drop-shadow-effect-v1-milestones.md`
+- Workstream: `docs/workstreams/renderer-drop-shadow-effect-v1/renderer-drop-shadow-effect-v1.md`
+- TODO: `docs/workstreams/renderer-drop-shadow-effect-v1/renderer-drop-shadow-effect-v1-todo.md`
+- Milestones: `docs/workstreams/renderer-drop-shadow-effect-v1/renderer-drop-shadow-effect-v1-milestones.md`
 

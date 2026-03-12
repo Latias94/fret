@@ -23,14 +23,14 @@ It does not replace the existing notes immediately. Instead, it ties together th
 separate threads that already exist in-tree:
 
 - editor controls and gaps:
-  - `docs/workstreams/ui-editor-v1.md`
-  - `docs/workstreams/ui-editor-v1-todo.md`
-  - `docs/workstreams/ui-editor-imgui-alignment-v1.md`
-  - `docs/workstreams/ui-editor-egui-imgui-gap-v1.md`
+  - `docs/workstreams/ui-editor-v1/ui-editor-v1.md`
+  - `docs/workstreams/ui-editor-v1/ui-editor-v1-todo.md`
+  - `docs/workstreams/standalone/ui-editor-imgui-alignment-v1.md`
+  - `docs/workstreams/standalone/ui-editor-egui-imgui-gap-v1.md`
 - immediate authoring boundary:
-  - `docs/workstreams/imui-authoring-facade-v2.md`
+  - `docs/workstreams/imui-authoring-facade-v2/imui-authoring-facade-v2.md`
 - workspace shell and docking follow-ups:
-  - `docs/workstreams/workspace-crate-boundaries-v1.md`
+  - `docs/workstreams/workspace-crate-boundaries-v1/workspace-crate-boundaries-v1.md`
   - `docs/workstreams/workspace-shell-tabstrip-fearless-refactor-v1/DESIGN.md`
   - `docs/workstreams/workspace-tabstrip-editor-grade-v1/DESIGN.md`
 - theme/token layering:
@@ -153,10 +153,10 @@ The end state must be teachable and maintainable:
 
 ### Existing workstreams
 
-- `docs/workstreams/ui-editor-v1.md`
-- `docs/workstreams/imui-authoring-facade-v2.md`
+- `docs/workstreams/ui-editor-v1/ui-editor-v1.md`
+- `docs/workstreams/imui-authoring-facade-v2/imui-authoring-facade-v2.md`
 - `docs/workstreams/theme-token-alignment-v1/design.md`
-- `docs/workstreams/workspace-crate-boundaries-v1.md`
+- `docs/workstreams/workspace-crate-boundaries-v1/workspace-crate-boundaries-v1.md`
 
 ### This workstream's audit notes
 

@@ -210,12 +210,23 @@ First-party UI Gallery examples already using this rule now include:
 - `src/ui/snippets/avatar/{badge_icon,group_count_icon}.rs::icon(...)`
 - `src/ui/snippets/button/{demo,size,with_icon,link_render,rtl,loading,variants,button_group,rounded}.rs::wrap_row(...)`
 - `src/ui/snippets/button/size.rs::row(...)`
+- `src/ui/snippets/popover/{basic,demo,with_form}.rs::centered(...)`
+- `src/ui/snippets/resizable/{usage,vertical,handle}.rs::panel(...)`
+- `src/ui/snippets/resizable/{vertical,handle}.rs::box_group(...)`
+- `src/ui/snippets/data_table/{basic_demo,default_demo,guide_demo}.rs::align_end(...)`
+- `src/ui/snippets/data_table/{basic_demo,rtl_demo}.rs::bottom_controls(...)`
+- `src/ui/snippets/data_table/default_demo.rs::footer(...)`
+- `src/ui/snippets/data_table/rtl_demo.rs::align_inline_start(...)`
+- `src/ui/snippets/table/actions.rs::{align_end(...), action_row(...)}`
+- `src/ui/snippets/hover_card/{sides,trigger_delays}.rs::{card(...), demo_content(...)}`
+- `src/ui/snippets/tooltip/{rtl,sides}.rs::make_tooltip(...)`
+- `src/ui/snippets/tooltip/rtl.rs::make_tooltip_with_test_ids(...)`
 - `src/ui/snippets/breadcrumb/dropdown.rs::dot_separator(...)`
 - `src/ui/snippets/item/extras_rtl.rs::{outline_button_sm(...), item_basic(...)}`
 
 Those examples keep explicit `.into_element(cx)` seams only where the surrounding API still
-intentionally consumes raw landed children, such as `DocSection::new(...)`, child arrays, and
-`ItemActions::new(...)`.
+intentionally consumes raw landed children, such as `DocSection::new(...)`, child arrays,
+overlay/provider constructor seams, data-table cell/table-row seams, and `ItemActions::new(...)`.
 
 Implementation fallback rule:
 

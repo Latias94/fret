@@ -44,7 +44,7 @@ patterns.
 - Default text style resolution today:
   - `crates/fret-ui/src/text/props.rs`
 - Existing typography policy workstream:
-  - `docs/workstreams/ui-typography-presets-v1.md`
+  - `docs/workstreams/ui-typography-presets-v1/ui-typography-presets-v1.md`
 - Existing foreground migration workstream:
   - `docs/workstreams/foreground-style-context-fearless-refactor-v1/DESIGN.md`
 - Follow-on visual-text recipe gap (`Shimmer` / streaming plan text):

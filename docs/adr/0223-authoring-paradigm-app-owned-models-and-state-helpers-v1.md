@@ -140,10 +140,10 @@ authoring story.
 
 Tracking and adoption work is captured in:
 
-- `docs/workstreams/state-management-v1.md` (state layers + typed routing + query adoption)
-- `docs/workstreams/state-management-v1-todo.md` (concrete tasks and evidence anchors)
-- `docs/workstreams/authoring-paradigm-gpui-style-v1.md` (authoring story consolidation)
-- `docs/workstreams/authoring-paradigm-gpui-style-v1-todo.md` (milestones)
+- `docs/workstreams/state-management-v1/state-management-v1.md` (state layers + typed routing + query adoption)
+- `docs/workstreams/state-management-v1/state-management-v1-todo.md` (concrete tasks and evidence anchors)
+- `docs/workstreams/authoring-paradigm-gpui-style-v1/authoring-paradigm-gpui-style-v1.md` (authoring story consolidation)
+- `docs/workstreams/authoring-paradigm-gpui-style-v1/authoring-paradigm-gpui-style-v1-todo.md` (milestones)
 
 ## Open Questions (Decision Gates)
 

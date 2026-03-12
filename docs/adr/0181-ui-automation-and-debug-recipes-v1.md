@@ -22,7 +22,7 @@ Related:
 
 Workstream notes:
 
-- `docs/workstreams/ui-automation-and-debug-recipes-v1.md`
+- `docs/workstreams/ui-automation-and-debug-recipes-v1/ui-automation-and-debug-recipes-v1.md`
 
 ## Context
 

@@ -916,7 +916,7 @@ fn preview_ai_unwired(cx: &mut UiCx<'_>, _theme: &Theme, id: &str) -> Vec<AnyEle
         shadcn::Alert::new(vec![
             shadcn::AlertTitle::new("AI demo not wired").into_element(cx),
             shadcn::AlertDescription::new(format!(
-                "Page `{id}` exists in the nav spec, but does not have a preview implementation yet. See `docs/workstreams/ai-elements-port-todo.md`."
+                "Page `{id}` exists in the nav spec, but does not have a preview implementation yet. See `docs/workstreams/ai-elements-port/ai-elements-port-todo.md`."
             ))
             .into_element(cx),
         ])

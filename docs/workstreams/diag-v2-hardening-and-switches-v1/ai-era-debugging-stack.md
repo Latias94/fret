@@ -84,7 +84,7 @@ Guideline:
 
 Related:
 
-- `docs/workstreams/diag-ai-agent-debugging-v1.md`
+- `docs/workstreams/diag-ai-agent-debugging-v1/diag-ai-agent-debugging-v1.md`
 - `docs/workstreams/diag-v2-hardening-and-switches-v1/per-run-layout.md`
 
 ### Layer 2: Stable targets (selectors)
@@ -144,7 +144,7 @@ Key principle:
 
 Related:
 
-- `docs/workstreams/diag-devtools-gui-v1.md`
+- `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md`
 
 ## Gaps vs ImGui Test Engine (summary)
 

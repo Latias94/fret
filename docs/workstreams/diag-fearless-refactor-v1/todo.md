@@ -10,7 +10,7 @@ scope: diagnostics, automation, tooling, refactor
 Status note:
 
 - This file contains historical notes and may drift.
-- For the up-to-date tracker, see `docs/workstreams/diag-fearless-refactor-v1-todo.md`.
+- For the up-to-date tracker, see `docs/workstreams/diag-fearless-refactor-v1/diag-fearless-refactor-v1-todo.md`.
 
 ## M1: Make the monolith smaller (safe mechanical moves)
 

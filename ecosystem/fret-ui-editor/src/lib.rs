@@ -5,7 +5,7 @@
 //! - editor-specific interaction policy and composition belong in ecosystem crates.
 //!
 //! v1 scope is tracked in:
-//! - `docs/workstreams/ui-editor-v1.md`
+//! - `docs/workstreams/ui-editor-v1/ui-editor-v1.md`
 
 #![forbid(unsafe_code)]
 

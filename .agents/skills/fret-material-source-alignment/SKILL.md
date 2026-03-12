@@ -227,7 +227,7 @@ Prefer bounded, fast gates that catch regressions without compiling the entire w
 ## Evidence anchors
 
 - Layering and contracts: `docs/architecture.md`, `docs/runtime-contract-matrix.md`
-- Material workstream context: `docs/workstreams/material3-refactor-plan.md`, `docs/workstreams/material3-todo.md`
+- Material workstream context: `docs/workstreams/material3/material3-refactor-plan.md`, `docs/workstreams/material3/material3-todo.md`
 - Material mechanism/foundation ADR: `docs/adr/0226-material3-state-layer-and-ripple-primitives.md`
 - Reference notes:
   - `.agents/skills/fret-material-source-alignment/references/material-reference-stack.md`

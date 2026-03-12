@@ -19,7 +19,7 @@ observe.
 Related ADRs / docs:
 
 - ADR 0210 (appendData + incremental caches): `docs/adr/0210-delinea-appenddata-and-incremental-caches.md`
-- Workstream: `docs/workstreams/delinea-engine-contract-closure-v1.md` (M3)
+- Workstream: `docs/workstreams/delinea-engine-contract-closure-v1/delinea-engine-contract-closure-v1.md` (M3)
 
 ## Goals
 

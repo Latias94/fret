@@ -172,7 +172,7 @@ Additional defaults (pressed/capture/activate/text selection) may be introduced 
 explicitly out of scope for v1 to keep the migration low risk.
 
 Status note (implementation alignment): we intentionally keep the catalog minimal until a concrete,
-cross-surface motivation exists. See `docs/workstreams/input-dispatch-v2-todo.md` (IDV2-def-006/007)
+cross-surface motivation exists. See `docs/workstreams/input-dispatch-v2/input-dispatch-v2-todo.md` (IDV2-def-006/007)
 for the current boundary decision and the "defer by default" rule for new defaults.
 
 ### 3) Standardize an action availability query API

@@ -140,4 +140,4 @@ Performance notes:
 - ADR 0066: `fret-ui` runtime contract surface + modal barrier gates
 - ADR 0067: overlay policy architecture (dismissal/focus/portal in component layer)
 - ADR 0068: focus traversal and focus scopes
-- Overlay + input arbitration v2 progress: `docs/workstreams/overlay-input-arbitration-v2.md`
+- Overlay + input arbitration v2 progress: `docs/workstreams/overlay-input-arbitration-v2/overlay-input-arbitration-v2.md`

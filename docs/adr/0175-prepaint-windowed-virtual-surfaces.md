@@ -224,7 +224,7 @@ Diagnostics requirements (v2):
 
 ## Implementation Notes (v1 Progress)
 
-This ADR defines a contract; the implementation is tracked in `docs/workstreams/gpui-parity-refactor-todo.md` (MVP5).
+This ADR defines a contract; the implementation is tracked in `docs/workstreams/gpui-parity-refactor/gpui-parity-refactor-todo.md` (MVP5).
 
 Early evidence that the runtime is moving toward this model:
 

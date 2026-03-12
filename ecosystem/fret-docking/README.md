@@ -14,7 +14,7 @@ Key docs:
 - Docking layering: [`docs/adr/0075-docking-layering-b-route-and-retained-bridge.md`](../../docs/adr/0075-docking-layering-b-route-and-retained-bridge.md)
 - Arbitration checklist: [`docs/docking-arbitration-checklist.md`](../../docs/docking-arbitration-checklist.md)
 - ImGui parity matrix: [`docs/docking-imgui-parity-matrix.md`](../../docs/docking-imgui-parity-matrix.md)
-- N-ary split graph plan: [`docs/workstreams/docking-nary-split-graph-v1.md`](../../docs/workstreams/docking-nary-split-graph-v1.md)
+- N-ary split graph plan: [`docs/workstreams/docking-nary-split-graph-v1/docking-nary-split-graph-v1.md`](../../docs/workstreams/docking-nary-split-graph-v1/docking-nary-split-graph-v1.md)
 
 ## Reference repos (non-normative)
 

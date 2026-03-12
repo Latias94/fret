@@ -317,7 +317,7 @@ This workstream is complete only when it leaves behind:
 - Architecture overview: `docs/architecture.md`
 - Node graph roadmap: `docs/node-graph-roadmap.md`
 - XyFlow parity map: `docs/node-graph-xyflow-parity.md`
-- XYFlow gap analysis: `docs/workstreams/xyflow-gap-analysis.md`
+- XYFlow gap analysis: `docs/workstreams/standalone/xyflow-gap-analysis.md`
 
 ## Evidence anchors to preserve while refactoring
 

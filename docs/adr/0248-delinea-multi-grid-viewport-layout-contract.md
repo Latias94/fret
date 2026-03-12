@@ -28,7 +28,7 @@ engine instance without pushing pixel/layout semantics into the engine.
 - ADR 0192: axis scales + coordinate mapping.
 - ADR 0195: interaction and hit testing contract.
 - ADR 0196: multi-axis + layout contract (single-grid v1; explicitly calls out multi-grid as a follow-up).
-- Workstream tracker: `docs/workstreams/delinea-engine-contract-closure-v1.md` (M1).
+- Workstream tracker: `docs/workstreams/delinea-engine-contract-closure-v1/delinea-engine-contract-closure-v1.md` (M1).
 
 ## Decision
 
@@ -129,4 +129,4 @@ To keep v1 codepaths simple:
 - ECharts `gridIndex` translation: `ecosystem/fret-chart/src/echarts/mod.rs`
 - Retained multi-canvas builder: `ecosystem/fret-chart/src/retained/multi_grid.rs`
 - Per-grid plot viewport patching: `ecosystem/fret-chart/src/retained/canvas.rs` (`grid_override`)
-- Workstream context: `docs/workstreams/delinea-engine-contract-closure-v1.md`
+- Workstream context: `docs/workstreams/delinea-engine-contract-closure-v1/delinea-engine-contract-closure-v1.md`

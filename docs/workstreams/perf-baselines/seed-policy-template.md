@@ -121,9 +121,9 @@ target/debug/fretboard diag perf ui-gallery-steady \
 
 When updating seed policy:
 
-1. Record the exact command in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
+1. Record the exact command in `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md`.
 2. Capture validation run (`--perf-baseline`) and confirm `check.perf_thresholds.json` failures are `0`.
-3. Update `docs/workstreams/ui-perf-zed-smoothness-v1-todo.md` with the policy decision.
+3. Update `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-todo.md` with the policy decision.
 4. Keep `docs/workstreams/perf-baselines/*.json` policy header (`threshold_seed_policy`) in sync with the run.
 5. For preset changes, bump preset version file (for example `ui-gallery-steady.v2.json`) instead of in-place overwrite.
 

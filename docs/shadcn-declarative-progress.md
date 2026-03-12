@@ -40,8 +40,8 @@ viewport/DPI stress variants for the highest-risk families (menus, listboxes, ca
 
 Workstream notes (implementation-oriented; not contracts):
 
-- `docs/workstreams/shadcn-web-goldens-v4.md`
-- `docs/workstreams/shadcn-web-goldens-v4-todo.md`
+- `docs/workstreams/shadcn-web-goldens-v4/shadcn-web-goldens-v4.md`
+- `docs/workstreams/shadcn-web-goldens-v4/shadcn-web-goldens-v4-todo.md`
 
 Decision note (scope + sequencing):
 
@@ -77,7 +77,7 @@ P2:
 Related (out-of-scope for v4 parity tracking):
 
 - Shadcn-styled “blocks/recipes” that are not part of the v4 taxonomy live under
-  `fret-ui-shadcn::extras` and are tracked separately in `docs/workstreams/shadcn-extras.md`.
+  `fret-ui-shadcn::extras` and are tracked separately in `docs/workstreams/shadcn-extras/shadcn-extras.md`.
 
 ## Layering & Ownership
 
@@ -131,8 +131,8 @@ Implementation anchors:
 - Builder substrate: `ecosystem/fret-ui-kit/src/ui_builder.rs`
 - shadcn opt-in glue: `ecosystem/fret-ui-shadcn/src/ui_ext/mod.rs`
 - ADR: `docs/adr/0160-unified-authoring-builder-surface-v1.md`
-- Coverage audit note: `docs/workstreams/authoring-ergonomics-fluent-builder.md`
-- TODO tracker: `docs/workstreams/authoring-ergonomics-fluent-builder-todo.md`
+- Coverage audit note: `docs/workstreams/authoring-ergonomics-fluent-builder/authoring-ergonomics-fluent-builder.md`
+- TODO tracker: `docs/workstreams/authoring-ergonomics-fluent-builder/authoring-ergonomics-fluent-builder-todo.md`
 
 ### Status
 

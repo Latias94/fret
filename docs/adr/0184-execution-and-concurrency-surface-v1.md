@@ -374,7 +374,7 @@ Evidence (as of 2026-01-26):
 - Ecosystem integration guidance: `docs/adr/0111-ecosystem-integration-contracts.md`
 - Dev hotpatch reset boundaries: `docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md`
 - Platform capabilities matrix (portability diagnostics): `docs/adr/0054-platform-capabilities-and-portability-matrix.md`
-- Implementation plan (notes): `docs/workstreams/execution-concurrency-surface-v1.md`
+- Implementation plan (notes): `docs/workstreams/standalone/execution-concurrency-surface-v1.md`
 - Non-normative references:
   - Flutter TaskRunner model (embedder-configurable runners): `repo-ref/flutter/docs/about/The-Engine-architecture.md`
   - GPUI dispatcher/executor substrate: `repo-ref/zed/crates/gpui/src/executor.rs`, `repo-ref/zed/crates/gpui/src/platform_scheduler.rs`

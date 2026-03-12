@@ -44,5 +44,5 @@ Workstream entry:
 
 ## Cross-workstream alignment
 
-- [x] Ensure `docs/workstreams/mobile-bringup-v1.md` references ADR 0261/0262/0263 in its contract anchors.
-- [ ] Ensure `docs/workstreams/gesture-recognizers-v1.md` stays policy-only and does not redefine runtime invariants.
+- [x] Ensure `docs/workstreams/mobile-bringup-v1/mobile-bringup-v1.md` references ADR 0261/0262/0263 in its contract anchors.
+- [ ] Ensure `docs/workstreams/gesture-recognizers-v1/gesture-recognizers-v1.md` stays policy-only and does not redefine runtime invariants.

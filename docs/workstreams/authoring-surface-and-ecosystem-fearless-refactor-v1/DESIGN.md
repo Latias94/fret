@@ -1,6 +1,6 @@
 # Authoring Surface + Ecosystem (Fearless Refactor v1)
 
-Status: proposed pre-release reset
+Status: closeout lane for the pre-release surface reset
 
 This workstream is about making Fret's public authoring story dramatically simpler before the
 first public release.
@@ -15,6 +15,14 @@ It is intentionally a **fearless refactor** plan:
 This document is **not** an ADR. If this workstream changes hard contracts in `crates/fret-ui`,
 `fret-runtime`, input/focus, overlays, text, or renderer semantics, the relevant ADRs must be
 updated separately.
+
+Execution note on 2026-03-12:
+
+- treat this document as rationale + target-shape context, not the live migration ledger,
+- use `MIGRATION_MATRIX.md` for row-by-row status and deletion readiness,
+- use `TODO.md` for the remaining closeout checklist,
+- route remaining conversion-vocabulary redesign to
+  `docs/workstreams/into-element-surface-fearless-refactor-v1/`.
 
 ## Problem Statement
 

@@ -76,9 +76,9 @@ can run it before/after a change.
 For each landed refactor milestone, record 1–3 evidence anchors (paths + key functions/tests) and
 the exact commands used to validate the change. Workstream notes live in:
 
-- `docs/workstreams/renderer-vnext-fearless-refactor-v1.md`
-- `docs/workstreams/renderer-vnext-fearless-refactor-v1-refactor-design.md`
-- `docs/workstreams/renderer-execute-pass-recorders-modularization-v1.md`
+- `docs/workstreams/renderer-vnext-fearless-refactor-v1/renderer-vnext-fearless-refactor-v1.md`
+- `docs/workstreams/renderer-vnext-fearless-refactor-v1/renderer-vnext-fearless-refactor-v1-refactor-design.md`
+- `docs/workstreams/renderer-execute-pass-recorders-modularization-v1/renderer-execute-pass-recorders-modularization-v1.md`
 
 ## Non-goals
 
@@ -108,5 +108,5 @@ Initial anchors (as the workstream progresses):
 - Execute: `crates/fret-render-wgpu/src/renderer/render_scene/render.rs`
 - Execute (pass inputs): `crates/fret-render-wgpu/src/renderer/render_scene/ctx.rs`
 - Execute (effect recorders): `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs`
-- Execute (executor refactor design): `docs/workstreams/renderer-execute-pass-recorders-modularization-v1-refactor-design.md`
+- Execute (executor refactor design): `docs/workstreams/renderer-execute-pass-recorders-modularization-v1/renderer-execute-pass-recorders-modularization-v1-refactor-design.md`
 - Gates: `crates/fret-render-wgpu/tests/*_conformance.rs`

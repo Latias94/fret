@@ -212,7 +212,7 @@ Primary apps / tools:
 - script generation helper: `apps/fret-diag-scriptgen/src/main.rs`
 - export helper: `apps/fret-diag-export/src/main.rs`
 - offline viewer: `tools/fret-bundle-viewer`
-- DevTools GUI workstream: `docs/workstreams/diag-devtools-gui-v1.md`
+- DevTools GUI workstream: `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md`
 
 Owns:
 

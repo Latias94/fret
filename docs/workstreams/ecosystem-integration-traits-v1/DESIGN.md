@@ -10,11 +10,11 @@ Related:
 - `docs/adr/0111-ecosystem-integration-contracts.md`
 - `docs/adr/0148-component-ecosystem-authoring-conventions-v1.md`
 - `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/DESIGN.md`
-- `docs/workstreams/component-ecosystem-state-integration-v1.md`
-- `docs/workstreams/router-v1.md`
-- `docs/workstreams/router-ui-v1.md`
-- `docs/workstreams/query-lifecycle-v1.md`
-- `docs/workstreams/state-management-v1-extension-contract.md`
+- `docs/workstreams/component-ecosystem-state-integration-v1/component-ecosystem-state-integration-v1.md`
+- `docs/workstreams/router-v1/router-v1.md`
+- `docs/workstreams/router-ui-v1/router-ui-v1.md`
+- `docs/workstreams/query-lifecycle-v1/query-lifecycle-v1.md`
+- `docs/workstreams/state-management-v1/state-management-v1-extension-contract.md`
 
 This workstream defines a **trait budget** for ecosystem integration before the first public
 release.

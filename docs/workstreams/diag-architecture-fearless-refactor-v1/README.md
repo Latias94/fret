@@ -33,6 +33,6 @@ Start here:
 
 Related active workstreams:
 
-- Simplification (transport + artifacts): `docs/workstreams/diag-simplification-v1.md`
+- Simplification (transport + artifacts): `docs/workstreams/diag-simplification-v1/diag-simplification-v1.md`
 - Extensibility + capabilities: `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`
-- DevTools GUI: `docs/workstreams/diag-devtools-gui-v1.md`
+- DevTools GUI: `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md`

@@ -228,7 +228,7 @@ Planned outcomes:
 
 ## P1: Manifest-first artifacts (transport-neutral)
 
-- [x] Write a single “canonical per-run layout” doc (point to `docs/workstreams/diag-simplification-v1.md` and reconcile terminology). See: `docs/workstreams/diag-v2-hardening-and-switches-v1/per-run-layout.md`.
+- [x] Write a single “canonical per-run layout” doc (point to `docs/workstreams/diag-simplification-v1/diag-simplification-v1.md` and reconcile terminology). See: `docs/workstreams/diag-v2-hardening-and-switches-v1/per-run-layout.md`.
 - [x] Ensure filesystem transport produces a per-run manifest for `diag run/suite/repro/perf`.
 - [x] Provide an opt-in manual `diag poke --wait --record-run` workflow that writes a tooling-owned per-run manifest directory for a dump.
 - [x] Ensure DevTools WS transport always materializes a per-run manifest alongside `script.result.json`.

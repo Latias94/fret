@@ -1,0 +1,211 @@
+# Onboarding Ergonomics + Ecosystem Interop — Milestones (v1)
+
+Status: Historical reference (superseded by action-first v2 onboarding docs)
+
+This plan is intentionally staged: docs + templates first, then runnable interop evidence, then
+optional tooling/macros.
+
+Design note:
+
+- `docs/workstreams/onboarding-ergonomics-v1/onboarding-ergonomics-v1.md`
+
+TODO tracker:
+
+- `docs/workstreams/onboarding-ergonomics-v1/onboarding-ergonomics-v1-todo.md`
+
+Status note (2026-03-08): milestone language below predates the in-tree action-first/view-runtime convergence. Read MVU/`Model<T>` references as historical planning context; the current onboarding ladder is documented in `docs/first-hour.md` and `docs/examples/todo-app-golden-path.md`.
+
+---
+
+## Milestone 0 (M0): Docs-first onboarding ladder
+
+Outcome:
+
+- A new user can find a single doc that tells them “what to do in the first hour”.
+
+Deliverables:
+
+- “First hour” doc exists and is linked from a discoverable place (decision: `README.md` or `docs/README.md`).
+- `docs/examples/todo-app-golden-path.md` clearly distinguishes:
+  - “simple-todo baseline” (view runtime + typed actions + keyed lists; today this means `LocalState<Vec<_>>` for view-owned starter lists),
+  - “best practice baseline” (selector + query).
+
+Acceptance:
+
+- A reviewer can follow the doc end-to-end without needing to open runner/kernel code.
+
+---
+
+## Milestone 1 (M1): Tiered templates
+
+Outcome:
+
+- Templates match the onboarding ladder (progressive disclosure).
+
+Deliverables:
+
+- `fretboard new simple-todo` scaffold exists.
+- Existing `todo` scaffold remains the “best practice baseline”.
+
+Acceptance:
+
+- Both templates compile and run (native).
+- `simple-todo` has no selector/query deps.
+- Both templates teach keyed list rendering.
+
+Evidence (current):
+
+- `apps/fretboard/src/scaffold/templates.rs`
+- `docs/first-hour.md` (template matrix + progressive disclosure ladder)
+- `docs/examples/todo-app-golden-path.md` (baseline intent)
+- `apps/fret-examples/src/todo_demo.rs` (baseline reference implementation)
+
+---
+
+## Milestone 2 (M2): Authoring density (composition macros)
+
+Outcome:
+
+- The `simple-todo` path feels “GPUI/iced-like”: composition is uniform and call-site adapter noise is reduced.
+
+Deliverables:
+
+- An iced-like `children![...]` macro exists for heterogeneous child lists.
+- `simple-todo` template can be authored without repetitive `.into_element(cx)` for common components.
+  - Either by `children![...]`, and/or by ecosystem constructors accepting `UiIntoElement` children.
+
+Evidence (current):
+
+- `ecosystem/fret-ui-kit/src/lib.rs` (`children!`)
+- `ecosystem/fret-ui-kit/src/ui.rs` (`ui::*` layout constructors accept `UiIntoElement` children)
+- `apps/fretboard/src/scaffold/templates.rs` (`simple-todo` template)
+- `apps/fret-examples/src/assets_demo.rs` (example: `ui::children!` replaces `vec![...]` in panel builder)
+- `apps/fret-examples/src/cjk_conformance_demo.rs` (example: `ui::children!` replaces `vec![...]` root return)
+- `apps/fret-examples/src/emoji_conformance_demo.rs` (example: `ui::children!` replaces `vec![...]` root return)
+- `apps/fret-examples/src/genui_demo.rs` (example: replace `vec![...]` child lists with arrays/`ui::children!`)
+- `apps/fret-examples/src/hello_counter_demo.rs` (example: reduce `.into_element(cx)` noise via `UiIntoElement` children)
+
+Acceptance:
+
+- A reviewer can scan `simple-todo` and not see “adapter noise” dominate the code (goal: composition reads first).
+- Suggested quant target (bikesheddable):
+  - `< 10` explicit `.into_element(cx)` calls in template UI code (conversion moves into ecosystem boundaries).
+
+---
+
+## Milestone 3 (M3): Interop “Tier A” demo + cookbook
+
+Outcome:
+
+- Interop is not just a concept; it is a runnable, debuggable path.
+
+Deliverables:
+
+- Minimal embedded-viewport demo exists (offscreen render target + input forwarding).
+- Interop cookbook doc exists (Tier A only; explicit pitfalls section).
+
+Acceptance:
+
+- Demo shows visible feedback from forwarded input (e.g. click counter + last event text).
+- At least one scripted repro exists (screenshot / trace) so regressions are reviewable.
+
+Evidence (scripted repro):
+
+- `tools/diag-scripts/embedded-viewport-demo-input-forwarding.json`
+
+---
+
+## Milestone 4 (M4): Third-party integration helpers (stable-ish, ecosystem-only)
+
+Outcome:
+
+- Third-party ecosystem crates can opt into `.ui()` with minimal ceremony, without copying internal macros.
+
+Deliverables:
+
+- `macro_rules!` helpers exist in `fret-ui-kit` to implement `UiPatchTarget`/`UiSupports*`/`UiIntoElement` in one line.
+- The “IntoElement-like adapter” posture is decided for third-party components:
+  - blanket impl (preferred) or derive (fallback) is documented with the coherence constraint.
+
+Evidence (current):
+
+- `ecosystem/fret-ui-kit/src/lib.rs` (`ui_component_*` helpers)
+- `docs/component-authoring-contracts.md` (recommended usage + patch-only)
+- `ecosystem/fret-ui-ai/src/elements/message.rs` (external-style sample)
+- `ecosystem/fret-ui-ai/src/elements/workflow/panel.rs` (patch-only sample)
+
+Acceptance:
+
+- A minimal third-party-style component can integrate with `.ui()` without bespoke glue code.
+- A third-party component type can opt into `.ui()` in one line (macro_rules helper), and avoid per-type `UiIntoElement` glue
+  via blanket impl or derive (documented with coherence constraints).
+
+---
+
+## Milestone 5 (M5): Commands macros (optional, but high leverage)
+
+Outcome:
+
+- Third-party crates can declare `CommandId` + `CommandMeta` + default keybindings with low boilerplate (GPUI-like).
+
+Deliverables:
+
+- A command macro plan exists (`commands!{...}` / `#[derive(Action)]`-style), with a small prototype on 1–2 crates.
+
+Acceptance:
+
+- The generated output remains “thin plumbing” (no hidden policy), and app integration stays explicit (`install(app)`).
+
+---
+
+## Milestone 6 (M6): Action-first/view-runtime clarity
+
+Outcome:
+
+- Users understand the historical MVU context, but learn the current action-first/view-runtime default path first.
+
+Deliverables:
+
+- Historical MVU docs explain the old “tick refresh” behavior only as migration/archive context.
+- A scoped proposal exists for an opt-in “more precise invalidation” mode (if we choose to pursue it).
+
+Acceptance:
+
+- the action-first posture is explicit in docs; perf-sensitive users have clear guidance.
+
+Evidence (current):
+
+- `docs/examples/todo-app-golden-path.md`
+- `ecosystem/fret/src/view.rs`
+
+---
+
+## (Optional) Milestone 7 (M7): Demo shell consolidation
+
+Outcome:
+
+- The “what do I run?” story is unambiguous for both native and wasm.
+
+Deliverables:
+
+- `apps/fret-demo` and `apps/fret-demo-web` are the documented canonical shells.
+- Core onboarding demos (at least `simple-todo`) run on both native and wasm through the same selection mechanism.
+- `ui_gallery` is selectable and runnable in the native shell (mirroring wasm).
+
+Acceptance:
+
+- `fretboard dev web --demo simple-todo` works.
+- Native has an equivalent runnable path:
+  - `fretboard dev native --demo simple-todo` (mirrors wasm’s `?demo=...` selection), or
+  - `fretboard dev native --bin simple_todo_demo` (bin-centric; supports hotpatch workflows).
+
+Evidence (current):
+
+- `apps/fret-examples/src/simple_todo_demo.rs` (cross-platform demo implementation)
+- `apps/fret-demo-web/src/wasm.rs` (web `?demo=simple-todo` selection)
+- `apps/fret-demo/src/main.rs` (native `-- <id>` selection; includes `simple-todo`)
+- `apps/fret-demo/src/bin/simple_todo_demo.rs` (native bin entry; supports `--bin`)
+- `apps/fretboard/src/dev.rs` (`fretboard dev native --demo <id>` parity with web)
+- `apps/fretboard/src/demos.rs` (`fretboard dev web --demo simple-todo` validation list)
+- `apps/fret-demo/src/bin/ui_gallery.rs` (native bin, feature-gated)
+- `apps/fret-demo-web/src/wasm.rs` (wasm selection already supports `ui_gallery`)

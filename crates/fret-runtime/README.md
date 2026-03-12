@@ -16,7 +16,7 @@ It must remain backend-agnostic and avoid forcing a specific async runtime.
 The contract surface in this crate must not require Tokio (or any specific executor).
 Async work is **app-owned** and the runtime boundary communicates via explicit messages/effects.
 
-See `docs/workstreams/bottom-up-fearless-refactor-v1.md` for the program-level policy.
+See `docs/workstreams/bottom-up-fearless-refactor-v1/bottom-up-fearless-refactor-v1.md` for the program-level policy.
 
 ## Module ownership map (v1)
 

@@ -152,5 +152,5 @@ If an app needs periodic refresh, it should model it explicitly:
 - Update `ecosystem/fret-query` to implement D1–D6 semantics.
 - Add tests to prevent “stale_time implies polling” regressions.
 - Update demos and docs that currently set `stale_time` intending “freshness” semantics.
-- Track follow-ups in `docs/workstreams/query-lifecycle-v1-todo.md`.
+- Track follow-ups in `docs/workstreams/query-lifecycle-v1/query-lifecycle-v1-todo.md`.
 

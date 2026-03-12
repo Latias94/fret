@@ -19,7 +19,7 @@ Scope note:
 - For the **interactive inspect workflow** (hover/pick overlay, shortcuts, and selector copy UX), see:
   `docs/debugging-ui-with-inspector-and-scripts.md`.
 - For the planned **DevTools GUI** that wraps these same contracts (inspect/pick/scripts/bundles) with a user-facing UI,
-  see: `docs/workstreams/diag-devtools-gui-v1.md`.
+  see: `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md`.
 
 The goal is GPUI/Zed-style "inspectable, shareable repro units":
 
@@ -31,7 +31,7 @@ Related ADRs:
 
 - ADR 0159: `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 - ADR 0033 (Semantics/a11y): `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
-- Roadmap/TODO: `docs/workstreams/ui-diagnostics-inspector-todo.md`
+- Roadmap/TODO: `docs/workstreams/ui-diagnostics-inspector-v1/ui-diagnostics-inspector-todo.md`
 
 Implementation pointers (where the code lives today):
 

@@ -523,7 +523,7 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
     - `ecosystem/fret-chart/src/retained/multi_grid.rs` (retained multi-grid host)
     - `ecosystem/fret-chart/src/retained/canvas.rs` (per-grid plot viewport patching via `grid_override`)
     - `apps/fret-examples/src/echarts_multi_grid_demo.rs` (demo)
-    - Workstream tracker: `docs/workstreams/delinea-engine-contract-closure-v1.md` (M1 contract + acceptance gates)
+    - Workstream tracker: `docs/workstreams/delinea-engine-contract-closure-v1/delinea-engine-contract-closure-v1.md` (M1 contract + acceptance gates)
 - Category axis indexing under zoom for non-bar series (S4).
 - VisualMap: multiple maps per series and per-item attribute pipelines (S7).
 - Series-specific LOD / downsampling policies + conformance harness (S8).
@@ -533,7 +533,7 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 ## Recommended Next Steps (P0 -> P1)
 
 Workstream tracker for engine-level contract closure (multi-grid + transform lineage + incremental updates):
-`docs/workstreams/delinea-engine-contract-closure-v1.md`.
+`docs/workstreams/delinea-engine-contract-closure-v1/delinea-engine-contract-closure-v1.md`.
 
 1. P0: Expand the existing “filter processor” stage (ECharts `dataZoomProcessor` analogue) to cover the remaining order-sensitive multi-dim composition gaps and to emit a unified participation contract (selection + masks) (S2).
 2. P0: Add a general transform graph (cached nodes + derived columns) and migrate DataZoom/filtering to it incrementally (ECharts-class dataset transforms).

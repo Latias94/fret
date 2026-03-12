@@ -17,10 +17,10 @@ This workstream finishes the “v2” transition and simplifies diagnostics conf
 Related / prerequisites:
 
 - Living usage: `docs/ui-diagnostics-and-scripted-tests.md`
-- Simplification tracker: `docs/workstreams/diag-simplification-v1.md`
+- Simplification tracker: `docs/workstreams/diag-simplification-v1/diag-simplification-v1.md`
 - Capabilities + evidence: `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`
-- AI packet + indexing: `docs/workstreams/diag-ai-agent-debugging-v1.md`
-- Bundle schema v2 tracker: `docs/workstreams/diag-bundle-schema-v2.md`
+- AI packet + indexing: `docs/workstreams/diag-ai-agent-debugging-v1/diag-ai-agent-debugging-v1.md`
+- Bundle schema v2 tracker: `docs/workstreams/diag-bundle-schema-v2/diag-bundle-schema-v2.md`
 - Contracts: `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`, `docs/adr/0189-ui-diagnostics-extensibility-and-capabilities-v1.md`
 - Script library modularization (taxonomy + suites): `docs/workstreams/diag-v2-hardening-and-switches-v1/script-library.md`
 - Canonical per-run artifact layout: `docs/workstreams/diag-v2-hardening-and-switches-v1/per-run-layout.md`
@@ -95,7 +95,7 @@ required, inconsistent semantics, or transport divergence). Each item includes e
 - Why it matters: as long as `bundle.json` is the “real artifact”, compat cannot be retired and web/WS transport remains
   constrained. The canonical artifact should be manifest/chunks with `bundle.json` as an optional compatibility view.
 - Evidence:
-  - chunking/materialization direction: `docs/workstreams/diag-simplification-v1.md`
+  - chunking/materialization direction: `docs/workstreams/diag-simplification-v1/diag-simplification-v1.md`
   - schema2 writing is still opt-in via config/env: `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_dump.rs`,
     `docs/ui-diagnostics-and-scripted-tests.md`
 

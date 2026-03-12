@@ -48,9 +48,9 @@ Defaults if unclear:
    - `docs/shadcn-declarative-progress.md`
    - `apps/fret-ui-gallery/src/lib.rs`
 3. Create (or update) a crate audit note using the template:
-   - `docs/workstreams/bottom-up-fearless-refactor-v1-crate-audit-template.md`
+   - `docs/workstreams/bottom-up-fearless-refactor-v1/bottom-up-fearless-refactor-v1-crate-audit-template.md`
 4. Update the audits index:
-   - `docs/workstreams/bottom-up-fearless-refactor-v1-crate-audits.md`
+   - `docs/workstreams/bottom-up-fearless-refactor-v1/bottom-up-fearless-refactor-v1-crate-audits.md`
 
 ## Workflow
 
@@ -111,7 +111,7 @@ Prefer producing:
 - Layering policy: `docs/dependency-policy.md`
 - Crate/layer usage map: `docs/crate-usage-guide.md`
 - Shadcn authoring golden path: `docs/shadcn-declarative-progress.md`
-- Audit note template: `docs/workstreams/bottom-up-fearless-refactor-v1-crate-audit-template.md`
+- Audit note template: `docs/workstreams/bottom-up-fearless-refactor-v1/bottom-up-fearless-refactor-v1-crate-audit-template.md`
 - UI Gallery authoring gates: `apps/fret-ui-gallery/src/lib.rs`
 - UI Gallery snippet exemplars: `apps/fret-ui-gallery/src/ui/snippets/`
 - UI Gallery geometry/test-id helpers: `apps/fret-ui-gallery/src/driver/render_flow.rs`

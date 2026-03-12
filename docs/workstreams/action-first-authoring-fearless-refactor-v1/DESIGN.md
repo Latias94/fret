@@ -133,11 +133,11 @@ These v1 decisions are locked to keep the implementation plan executable:
 
 ### Workstreams (existing)
 
-- GPUI parity (experience + performance): `docs/workstreams/gpui-parity-refactor.md`
-- Authoring paradigm consolidation: `docs/workstreams/authoring-paradigm-gpui-style-v1.md`
-- Fluent builder ergonomics: `docs/workstreams/authoring-ergonomics-fluent-builder.md`
-- imui facade (implemented): `docs/workstreams/imui-authoring-facade-v2.md`
-- GenUI spec rendering (implemented): `docs/workstreams/genui-json-render-v1.md`
+- GPUI parity (experience + performance): `docs/workstreams/gpui-parity-refactor/gpui-parity-refactor.md`
+- Authoring paradigm consolidation: `docs/workstreams/authoring-paradigm-gpui-style-v1/authoring-paradigm-gpui-style-v1.md`
+- Fluent builder ergonomics: `docs/workstreams/authoring-ergonomics-fluent-builder/authoring-ergonomics-fluent-builder.md`
+- imui facade (implemented): `docs/workstreams/imui-authoring-facade-v2/imui-authoring-facade-v2.md`
+- GenUI spec rendering (implemented): `docs/workstreams/genui-json-render-v1/genui-json-render-v1.md`
 
 ### Upstream references (non-normative)
 
