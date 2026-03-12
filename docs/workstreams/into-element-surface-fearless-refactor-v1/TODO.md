@@ -133,8 +133,9 @@ Implementation note on 2026-03-12:
   types by default:
   `apps/fret-examples/src/assets_demo.rs` (`render_image_panel`, `render_svg_panel`),
   `apps/fret-examples/src/async_playground_demo.rs` (`status_badge`),
-  and `apps/fret-examples/src/postprocess_theme_demo.rs` (`stage_body`, `stage_cards`)
-  now return `impl IntoUiElement<KernelApp>`.
+  `apps/fret-examples/src/postprocess_theme_demo.rs` (`stage_body`, `stage_cards`),
+  and `apps/fret-examples/src/drop_shadow_demo.rs` (`card<H>(...)`)
+  now return `impl IntoUiElement<...>`.
 - selected UI Gallery AI doc pages now keep page-local helpers on the default app-facing child
   surface:
   `ai_persona_demo.rs`, `ai_commit_demo.rs`, `ai_context_demo.rs`,

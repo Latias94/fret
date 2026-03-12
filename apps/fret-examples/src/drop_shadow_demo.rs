@@ -14,7 +14,7 @@ use fret_core::scene::{Color, DropShadowV1, EffectChain, EffectMode, EffectQuali
 use fret_core::{Corners, Edges, Point, Px};
 use fret_runtime::Model;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length, Overflow, SizeStyle, SpacerProps};
-use fret_ui_kit::{LayoutRefinement, Space, ui};
+use fret_ui_kit::{IntoUiElement, LayoutRefinement, Space, ui};
 use fret_ui_shadcn::facade as shadcn;
 
 fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
@@ -48,7 +48,7 @@ fn card<H: UiHost>(
     title: Arc<str>,
     subtitle: Arc<str>,
     enabled: bool,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let radius = Px(16.0);
 
     let mut outer_layout = LayoutStyle::default();
@@ -186,12 +186,13 @@ impl View for DropShadowDemoView {
                                 let mut row_items = Vec::with_capacity(cols);
                                 for c in 0..cols {
                                     let i = r * cols + c;
-                                    row_items.push(card(
+                                    let card = card(
                                         cx,
                                         Arc::from(format!("Card {i}")),
                                         Arc::from("Shadow behind content (scissored)"),
                                         enabled,
-                                    ));
+                                    );
+                                    row_items.push(card.into_element(cx));
                                 }
                                 out.push(
                                     ui::h_row(move |_cx| row_items)

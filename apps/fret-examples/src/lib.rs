@@ -428,6 +428,25 @@ mod authoring_surface_policy_tests {
         }
     }
 
+    fn assert_advanced_generic_helpers_prefer_into_ui_element(
+        src: &str,
+        required_markers: &[&str],
+        forbidden_markers: &[&str],
+    ) {
+        let normalized = src.split_whitespace().collect::<String>();
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(normalized.contains(&marker), "missing marker: {marker}");
+        }
+        for marker in forbidden_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "legacy marker still present: {marker}"
+            );
+        }
+    }
+
     #[test]
     fn migrated_examples_use_the_explicit_advanced_surface() {
         for src in [
@@ -838,6 +857,16 @@ mod authoring_surface_policy_tests {
                 "fn status_badge(cx: &mut UiCx<'_>, diag: Option<&QueryDiag>) -> AnyElement",
                 "fn status_badge(cx: &mut ElementContext<'_, KernelApp>, diag: Option<&QueryDiag>) -> AnyElement",
                 "fn snapshot_entry_for_key(cx: &mut ElementContext<'_, KernelApp>,",
+            ],
+        );
+
+        assert_advanced_generic_helpers_prefer_into_ui_element(
+            DROP_SHADOW_DEMO,
+            &[
+                "fn card<H: UiHost>(cx: &mut ElementContext<'_, H>, title: Arc<str>, subtitle: Arc<str>, enabled: bool) -> impl IntoUiElement<H> + use<H>",
+            ],
+            &[
+                "fn card<H: UiHost>(cx: &mut ElementContext<'_, H>, title: Arc<str>, subtitle: Arc<str>, enabled: bool) -> AnyElement",
             ],
         );
     }
