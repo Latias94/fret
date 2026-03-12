@@ -388,6 +388,10 @@ As of 2026-03-12:
   - prepared-glyph raster placement extraction now returns a dedicated placement struct in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `prepared_glyph_raster_from_image(...)` no longer carries raw placement tuples across the next helper boundary
+- The seventy-sixth internal text split has landed:
+  - prepared-glyph raster metadata decoding now returns a dedicated metadata struct in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `prepared_glyph_raster_from_image_parts(...)` no longer forwards raw `kind` and `bytes_per_pixel` values across the next helper boundary
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed

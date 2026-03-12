@@ -53,6 +53,11 @@ struct PreparedGlyphRasterPlacement {
     top: i32,
 }
 
+struct PreparedGlyphRasterMetadata {
+    kind: GlyphQuadKind,
+    bytes_per_pixel: u32,
+}
+
 struct PreparedGlyphContext {
     glyph_id: u16,
     face_key: FontFaceKey,
@@ -1024,11 +1029,20 @@ fn prepared_glyph_raster_placement(
 
 fn prepared_glyph_raster_metadata(
     content: parley::swash::scale::image::Content,
-) -> (GlyphQuadKind, u32) {
+) -> PreparedGlyphRasterMetadata {
     match content {
-        parley::swash::scale::image::Content::Mask => (GlyphQuadKind::Mask, 1),
-        parley::swash::scale::image::Content::Color => (GlyphQuadKind::Color, 4),
-        parley::swash::scale::image::Content::SubpixelMask => (GlyphQuadKind::Subpixel, 4),
+        parley::swash::scale::image::Content::Mask => PreparedGlyphRasterMetadata {
+            kind: GlyphQuadKind::Mask,
+            bytes_per_pixel: 1,
+        },
+        parley::swash::scale::image::Content::Color => PreparedGlyphRasterMetadata {
+            kind: GlyphQuadKind::Color,
+            bytes_per_pixel: 4,
+        },
+        parley::swash::scale::image::Content::SubpixelMask => PreparedGlyphRasterMetadata {
+            kind: GlyphQuadKind::Subpixel,
+            bytes_per_pixel: 4,
+        },
     }
 }
 
@@ -1044,20 +1058,9 @@ fn prepared_glyph_raster_from_image_parts(
     left: i32,
     top: i32,
 ) -> PreparedGlyphRaster {
-    let (kind, bytes_per_pixel) = prepared_glyph_raster_metadata(image.content);
+    let metadata = prepared_glyph_raster_metadata(image.content);
     prepared_glyph_raster_from_image_parts_with_metadata(
-        face_key,
-        glyph_id,
-        size_bits,
-        x_bin,
-        y_bin,
-        image,
-        width,
-        height,
-        left,
-        top,
-        kind,
-        bytes_per_pixel,
+        face_key, glyph_id, size_bits, x_bin, y_bin, image, width, height, left, top, metadata,
     )
 }
 
@@ -1072,9 +1075,12 @@ fn prepared_glyph_raster_from_image_parts_with_metadata(
     height: u32,
     left: i32,
     top: i32,
-    kind: GlyphQuadKind,
-    bytes_per_pixel: u32,
+    metadata: PreparedGlyphRasterMetadata,
 ) -> PreparedGlyphRaster {
+    let PreparedGlyphRasterMetadata {
+        kind,
+        bytes_per_pixel,
+    } = metadata;
     prepared_glyph_raster_from_image_parts_with_payload(
         face_key,
         glyph_id,
