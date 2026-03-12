@@ -333,9 +333,8 @@ impl TextSystem {
         });
 
         let shape_key = TextShapeKey::from_blob_key(&key);
-        let shape = if let Some(shape) = self.shape_cache.get(&shape_key) {
-            self.perf_frame_shape_cache_hits = self.perf_frame_shape_cache_hits.saturating_add(1);
-            shape.clone()
+        let shape = if let Some(shape) = self.try_reuse_cached_shape(&shape_key) {
+            shape
         } else {
             self.perf_frame_shape_cache_misses =
                 self.perf_frame_shape_cache_misses.saturating_add(1);
@@ -1281,9 +1280,7 @@ impl TextSystem {
                     font_faces: Arc::from(face_usages),
                 })
             };
-            self.perf_frame_shapes_created = self.perf_frame_shapes_created.saturating_add(1);
-            self.shape_cache.insert(shape_key.clone(), shape.clone());
-            shape
+            self.cache_prepared_shape(shape_key, shape)
         };
 
         self.finalize_prepared_blob(

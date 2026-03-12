@@ -68,6 +68,9 @@ Current snapshot (2026-03-12):
   - blob-cache fast-path reuse and prepared-blob finalization helpers moved into
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `text/mod.rs` no longer owns prepare cache reuse or prepared-blob finalization directly
+- The twelfth internal `text/mod.rs` split has landed:
+  - shape-cache hit/store helpers moved into `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `text/mod.rs` no longer owns shape-cache hit/store bookkeeping directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed

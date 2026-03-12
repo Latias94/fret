@@ -2,7 +2,7 @@ use super::{TextBlob, TextShape, TextSystem};
 use fret_core::{
     AttributedText, TextBlobId, TextConstraints, TextInputRef, TextMetrics, TextStyle,
 };
-use fret_render_text::cache_keys::TextBlobKey;
+use fret_render_text::cache_keys::{TextBlobKey, TextShapeKey};
 use fret_render_text::decorations::TextDecorationMetricsPx;
 use fret_render_text::font_instance_key::FontFaceKey;
 use fret_render_text::font_trace::FontTraceFamilyResolved;
@@ -160,6 +160,25 @@ impl TextSystem {
         self.blob_cache.insert(key.clone(), id);
         self.blob_key_by_id.insert(id, key);
         (id, metrics)
+    }
+
+    pub(super) fn try_reuse_cached_shape(
+        &mut self,
+        shape_key: &TextShapeKey,
+    ) -> Option<Arc<TextShape>> {
+        let shape = self.shape_cache.get(shape_key)?.clone();
+        self.perf_frame_shape_cache_hits = self.perf_frame_shape_cache_hits.saturating_add(1);
+        Some(shape)
+    }
+
+    pub(super) fn cache_prepared_shape(
+        &mut self,
+        shape_key: TextShapeKey,
+        shape: Arc<TextShape>,
+    ) -> Arc<TextShape> {
+        self.perf_frame_shapes_created = self.perf_frame_shapes_created.saturating_add(1);
+        self.shape_cache.insert(shape_key, shape.clone());
+        shape
     }
 
     pub(super) fn maybe_record_font_trace_entry(

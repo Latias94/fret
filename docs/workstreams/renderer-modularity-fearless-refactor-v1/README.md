@@ -126,6 +126,9 @@ As of 2026-03-12:
   - blob-cache fast-path reuse and prepared-blob finalization helpers now live under
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `text/mod.rs` no longer owns prepare cache reuse or prepared-blob finalization directly
+- The twelfth internal text split has landed:
+  - shape-cache hit/store helpers now live under `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `text/mod.rs` no longer owns shape-cache hit/store bookkeeping directly
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
@@ -155,6 +158,10 @@ As of 2026-03-12:
   - `cargo check -p fret-launch -p fret-examples`: passed
   - `python3 tools/check_layering.py`: passed
 - Internal text split verification remains green after the prepare cache-helper extraction:
+  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+- Internal text split verification remains green after the prepare shape-cache extraction:
   - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
   - `python3 tools/check_layering.py`: passed
