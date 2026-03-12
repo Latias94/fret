@@ -474,11 +474,7 @@ impl TextSystem {
     ) -> Option<parley::swash::scale::image::Image> {
         let font_ref = prepared_glyph_font_ref(glyph)?;
         let mut scaler = self.build_prepared_glyph_scaler(glyph, font_ref);
-
-        let offset_px = parley::swash::zeno::Vector::new(
-            subpixel_bin_as_float(x_bin),
-            subpixel_bin_as_float(y_bin),
-        );
+        let offset_px = prepared_glyph_offset_px(x_bin, y_bin);
 
         let Some(image) = parley::swash::scale::Render::new(&[
             parley::swash::scale::Source::ColorOutline(0),
@@ -646,6 +642,10 @@ fn prepared_glyph_paint_span(
 
 fn prepared_glyph_font_ref<'a>(glyph: &'a ParleyGlyph) -> Option<parley::swash::FontRef<'a>> {
     parley::swash::FontRef::from_index(glyph.font.data.data(), glyph.font.index as usize)
+}
+
+fn prepared_glyph_offset_px(x_bin: u8, y_bin: u8) -> parley::swash::zeno::Vector {
+    parley::swash::zeno::Vector::new(subpixel_bin_as_float(x_bin), subpixel_bin_as_float(y_bin))
 }
 
 fn prepared_glyph_raster_from_image(
