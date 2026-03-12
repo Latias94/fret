@@ -5,7 +5,7 @@ use fret_core::{ImageColorSpace, ImageId, Px};
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
 use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
-use fret_ui_kit::{LayoutRefinement, MetricRef, Space, ui};
+use fret_ui_kit::{IntoUiElement, LayoutRefinement, MetricRef, Space, ui};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 use std::sync::OnceLock;
@@ -103,7 +103,7 @@ fn render_list_attachment<H: UiHost + 'static>(
     data: ui_ai::AttachmentData,
     on_remove: ui_ai::OnAttachmentRemove,
     test_id: Option<&'static str>,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let mut attachment = ui_ai::Attachment::new(data)
         .variant(ui_ai::AttachmentVariant::List)
         .show_media_type(true)
@@ -160,6 +160,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     on_remove.clone(),
                     (item_id.as_ref() == "att-image").then_some("ui-ai-attachment-list-att-image"),
                 )
+                .into_element(cx)
             })
         })
         .collect::<Vec<_>>();

@@ -15,7 +15,7 @@ use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::ui;
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
+use fret_ui_kit::{ChromeRefinement, IntoUiElement, LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 use std::time::Duration;
@@ -78,7 +78,7 @@ fn body_text<H: UiHost>(
     style: TextStyle,
     color: Color,
     align: TextAlign,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     cx.text_props(TextProps {
         layout: fill_text_layout(),
         text: text.into(),
@@ -109,7 +109,7 @@ fn underlined_text(text: Arc<str>) -> AttributedText {
 fn clear_action<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     transcript: Model<String>,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let theme = Theme::global(&*cx.app);
     let muted = muted_fg(theme);
     let foreground = theme.color_token("foreground");
@@ -280,8 +280,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     }))
                     .into_element(cx);
 
-                let clear_button =
-                    (!transcript_now.is_empty()).then(|| clear_action(cx, transcript.clone()));
+                let clear_button = (!transcript_now.is_empty())
+                    .then(|| clear_action(cx, transcript.clone()).into_element(cx));
 
                 let mut control_row = vec![speech_input];
                 if let Some(clear_button) = clear_button {
@@ -297,6 +297,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                         "Click the microphone to start speaking"
                     };
                     body_text(cx, message, muted_text_style, muted, TextAlign::Center)
+                        .into_element(cx)
                         .attach_semantics(SemanticsDecoration::default().test_id(
                             if processing_now {
                                 "ui-ai-speech-input-demo-processing"
@@ -313,7 +314,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                                 transcript_label_style,
                                 muted,
                                 TextAlign::Start,
-                            ),
+                            )
+                            .into_element(cx),
                             body_text(
                                 cx,
                                 transcript_now.clone(),
@@ -321,6 +323,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                                 foreground,
                                 TextAlign::Start,
                             )
+                            .into_element(cx)
                             .attach_semantics(
                                 SemanticsDecoration::default()
                                     .test_id("ui-ai-speech-input-demo-transcript"),

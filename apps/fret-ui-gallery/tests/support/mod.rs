@@ -63,8 +63,12 @@ pub fn assert_default_app_surface(
     expected_patterns: &[&str],
     surface_label: &str,
 ) {
+    let normalized = source.split_whitespace().collect::<String>();
+
     assert!(
-        source.contains("use fret::UiCx;"),
+        source.contains("use fret::UiCx;")
+            || normalized.contains("usefret::{UiChild,UiCx};")
+            || normalized.contains("usefret::{UiCx,UiChild};"),
         "{} should use the default app helper context alias",
         path.display()
     );

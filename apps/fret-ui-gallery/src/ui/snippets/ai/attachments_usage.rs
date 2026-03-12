@@ -7,7 +7,7 @@ use fret_ui::element::{ContainerProps, InteractivityGateProps};
 use fret_ui_ai as ui_ai;
 use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
 use fret_ui_kit::ui;
-use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_kit::{IntoUiElement, LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::OnceLock;
 
@@ -71,7 +71,7 @@ fn demo_preview_rgba8(width: u32, height: u32, accent: (u8, u8, u8)) -> Vec<u8> 
 fn render_grid_attachment<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     data: ui_ai::AttachmentData,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     ui_ai::Attachment::new(data)
         .variant(ui_ai::AttachmentVariant::Grid)
         .into_element_with_children(cx, move |cx, _parts| {
@@ -116,8 +116,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .media_type("application/pdf");
 
     let children = vec![
-        render_grid_attachment(cx, ui_ai::AttachmentData::File(image)),
-        render_grid_attachment(cx, ui_ai::AttachmentData::File(doc)),
+        render_grid_attachment(cx, ui_ai::AttachmentData::File(image)).into_element(cx),
+        render_grid_attachment(cx, ui_ai::AttachmentData::File(doc)).into_element(cx),
     ];
 
     ui::v_flex(move |cx| {

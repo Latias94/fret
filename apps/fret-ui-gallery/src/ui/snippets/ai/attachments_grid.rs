@@ -7,8 +7,8 @@ use fret_ui::Theme;
 use fret_ui::element::{ContainerProps, InteractivityGateProps};
 use fret_ui_ai as ui_ai;
 use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
-use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::ui;
+use fret_ui_kit::{IntoUiElement, LayoutRefinement};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 use std::sync::OnceLock;
@@ -119,7 +119,7 @@ fn render_grid_attachment<H: UiHost + 'static>(
     on_remove: ui_ai::OnAttachmentRemove,
     test_id: Option<&'static str>,
     remove_test_id: Option<&'static str>,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let mut attachment = ui_ai::Attachment::new(data)
         .variant(ui_ai::AttachmentVariant::Grid)
         .on_remove(on_remove);
@@ -193,6 +193,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     (item_id.as_ref() == "att-image")
                         .then_some("ui-ai-attachment-grid-att-image-remove"),
                 )
+                .into_element(cx)
             })
         })
         .collect::<Vec<_>>();

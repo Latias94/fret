@@ -72,10 +72,35 @@ fn helper(cx: &mut UiCx<'_>) -> impl fret_ui_kit::IntoUiElement<KernelApp> + use
 
 - do not default those helpers to `AnyElement` unless the function is actually raw composition
   glue (overlay/effect/manual-assembly internals).
-- current first-party examples on that lane now include `custom_effect_v1_demo.rs::{plain_lens,
-  custom_effect_lens}` and `custom_effect_v2_demo.rs::{plain_lens, custom_effect_lens}`; the raw
-  `lens_shell(..., body: AnyElement)` seam remains explicit because it owns effect-layer/body
-  assembly.
+- current first-party examples on that lane now include
+  `custom_effect_v1_demo.rs::{stage, lens_row, plain_lens, custom_effect_lens, lens_shell,
+  inspector}` and
+  `custom_effect_v2_demo.rs::{stage, lens_row, plain_lens, custom_effect_lens, lens_shell,
+  inspector}`; those helpers now stay on `IntoUiElement<KernelApp>`, while the internal
+  `body.into_element(cx)` step inside `lens_shell(...)` remains explicit because it owns
+  effect-layer/body assembly.
+- `apps/fret-cookbook/examples/customv1_basics.rs::{panel_shell, preview_content}` now also uses
+  `impl IntoUiElement<KernelApp> + use<...>` for non-raw helper composition while the effect-layer
+  body assembly remains the intentional raw landing seam.
+- `apps/fret-cookbook/examples/drop_shadow_basics.rs::shadow_card(...)` and
+  `apps/fret-cookbook/examples/icons_and_assets_basics.rs::render_image_preview(...)` now follow
+  the same rule: non-raw helper composition stays on `IntoUiElement<KernelApp>`, while effect
+  layering and sibling child-collection remain explicit landing seams.
+- `apps/fret-cookbook/examples/chart_interactions_basics.rs::chart_canvas(...)` remains a valid
+  raw helper example because retained-subtree adoption is itself the bridge boundary; do not hide
+  `AnyElement` there unless the retained/cached subtree APIs grow a higher-level typed helper.
+- `apps/fret-examples/src/custom_effect_v3_demo.rs::{stage, stage_controls, animated_backdrop,
+  lens_row, lens_shell}` now also follows the typed-helper rule: these helpers return
+  `impl IntoUiElement<KernelApp> + use<>`, with explicit `.into_element(cx)` kept only at the
+  heterogenous sibling child-collection seams that intentionally still want `AnyElement`.
+- `apps/fret-examples/src/postprocess_theme_demo.rs::{inspector, stage, stage_body, stage_cards}`
+  now follows the same rule: helper composition stays on `IntoUiElement<KernelApp>`, while the
+  root two-pane layout and effect-layer compare branches remain explicit landing seams.
+- `apps/fret-examples/src/async_playground_demo::{header_bar, body, catalog_panel, main_panel,
+  inspector_panel, policy_editor, query_panel_for_mode, query_inputs_row, query_result_view,
+  status_badge}` now also follows the typed-helper rule: local composition stays on
+  `IntoUiElement<KernelApp>`, while `TabsItem::new([..])`, `ScrollArea::new([..])`, and other
+  heterogenous child arrays remain explicit landing seams.
 - Rust 2024 precise captures note: if the helper wants `+ use<...>` and also accepts a flexible
   label/input argument, prefer a named generic such as `fn helper<L>(..., label: L) -> impl
   IntoUiElement<KernelApp> + use<L> where L: Into<Arc<str>>` rather than argument-position
@@ -98,6 +123,14 @@ fn helper(cx: &mut UiCx<'_>) -> impl fret_ui_kit::IntoUiElement<fret_app::App> +
 - do not teach `KernelApp` on that lane: it is not a public type on the top-level `fret` facade,
   so Gallery/default-app snippets should spell `fret_app::App` when they need the concrete host
   type.
+- current first-party examples on that lane now include
+  `apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs::{lens, inspector}`,
+  `apps/fret-examples/src/custom_effect_v2_web_demo.rs::{lens, inspector}`,
+  `apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs::{lens, inspector}`, and
+  `apps/fret-examples/src/custom_effect_v2_glass_chrome_web_demo.rs::{label_row, lens,
+  controls_panel}`.
+- keep `.into_element(cx)` explicit only where those demos intentionally still assemble raw stage
+  child arrays, overlay child collections, or other concrete landing seams.
 
 ## Component Surface
 
@@ -202,7 +235,13 @@ First-party UI Gallery examples already using this rule now include:
 
 - `src/ui/snippets/ai/{context_default,context_demo}.rs::centered(...)`
 - `src/ui/snippets/ai/{file_tree_basic,file_tree_expanded}.rs::preview(...)`
+- `src/ui/snippets/ai/file_tree_large.rs::{preview(...), invisible_marker(...)}`
 - `src/ui/snippets/ai/test_results_demo.rs::progress_section(...)`
+- `src/ui/snippets/ai/attachments_usage.rs::render_grid_attachment(...)`
+- `src/ui/snippets/ai/attachments_grid.rs::render_grid_attachment(...)`
+- `src/ui/snippets/ai/attachments_list.rs::render_list_attachment(...)`
+- `src/ui/snippets/ai/file_tree_demo.rs::invisible_marker(...)`
+- `src/ui/snippets/ai/speech_input_demo.rs::{body_text(...), clear_action(...)}`
 - `src/ui/snippets/avatar/{with_badge,fallback_only,sizes,dropdown}.rs::wrap_row(...)`
 - `src/ui/snippets/avatar/{demo,group,sizes,group_count}.rs::avatar_with_image(...)`
 - `src/ui/snippets/avatar/{demo,with_badge}.rs::avatar_with_badge(...)`
@@ -210,6 +249,22 @@ First-party UI Gallery examples already using this rule now include:
 - `src/ui/snippets/avatar/{badge_icon,group_count_icon}.rs::icon(...)`
 - `src/ui/snippets/button/{demo,size,with_icon,link_render,rtl,loading,variants,button_group,rounded}.rs::wrap_row(...)`
 - `src/ui/snippets/button/size.rs::row(...)`
+- `src/ui/snippets/tabs/demo.rs::field(...)`
+- `src/ui/snippets/collapsible/basic.rs::rotated_lucide(...)`
+- `src/ui/snippets/collapsible/settings_panel.rs::radius_input(...)`
+- `src/ui/snippets/collapsible/rtl.rs::details_collapsible(...)`
+- `src/ui/snippets/collapsible/file_tree.rs::{rotated_lucide(...), file_leaf(...), folder(...)}`
+- `src/ui/snippets/drawer/responsive_dialog.rs::{profile_field(...), profile_form(...)}`
+- `src/ui/snippets/drawer/sides.rs::side_button(...)`
+- `src/ui/snippets/drawer/scrollable_content.rs::paragraph_block(...)`
+- `src/ui/snippets/sheet/{demo,rtl}.rs::profile_fields(...)`
+- `src/ui/snippets/dialog/{demo,rtl}.rs::profile_fields(...)`
+- `src/ui/snippets/dialog/{scrollable_content,sticky_footer}.rs::lorem_block(...)`
+- `src/ui/snippets/separator/menu.rs::section(...)`
+- `src/ui/snippets/separator/list.rs::row(...)`
+- `src/ui/snippets/sidebar/{demo,controlled,mobile,rtl}.rs::menu_button(...)`
+- `src/ui/snippets/aspect_ratio/{portrait,square,rtl}.rs::{portrait_image(...), square_image(...), rtl_image(...), ratio_example(...)}`
+- `src/ui/snippets/combobox/{long_list,input_group,trigger_button,groups_with_separator,groups,disabled,custom_items,clear_button,invalid}.rs::{state_row(...), state_rows(...)}`
 - `src/ui/snippets/popover/{basic,demo,with_form}.rs::centered(...)`
 - `src/ui/snippets/resizable/{usage,vertical,handle}.rs::panel(...)`
 - `src/ui/snippets/resizable/{vertical,handle}.rs::box_group(...)`
@@ -217,16 +272,41 @@ First-party UI Gallery examples already using this rule now include:
 - `src/ui/snippets/data_table/{basic_demo,rtl_demo}.rs::bottom_controls(...)`
 - `src/ui/snippets/data_table/default_demo.rs::footer(...)`
 - `src/ui/snippets/data_table/rtl_demo.rs::align_inline_start(...)`
+- `src/ui/snippets/table/{demo,footer,rtl}.rs::make_invoice_table(...)`
 - `src/ui/snippets/table/actions.rs::{align_end(...), action_row(...)}`
 - `src/ui/snippets/hover_card/{sides,trigger_delays}.rs::{card(...), demo_content(...)}`
 - `src/ui/snippets/tooltip/{rtl,sides}.rs::make_tooltip(...)`
 - `src/ui/snippets/tooltip/rtl.rs::make_tooltip_with_test_ids(...)`
 - `src/ui/snippets/breadcrumb/dropdown.rs::dot_separator(...)`
+- `src/ui/snippets/carousel/{basic,sizes,plugin_wheel_gestures,spacing_responsive,loop_carousel,loop_downgrade_cannot_loop,spacing,usage,sizes_thirds,parts,duration_embla,rtl,plugin_autoplay,plugin_autoplay_controlled}.rs::{slide_card(...), slide(...)}`
+- `src/ui/snippets/carousel/{options,api,plugin_autoplay_delays,plugin_autoplay_stop_on_last_snap,events}.rs::slide_card(...)`
+- `src/ui/snippets/carousel/plugin_autoplay_stop_on_focus.rs::slide(...)`
+- `src/ui/snippets/item/avatar.rs::{icon_button(...), item_team(...)}`
+- `src/ui/snippets/item/icon.rs::{icon(...), item_icon(...)}`
+- `src/ui/snippets/item/{link,link_render,dropdown}.rs::icon(...)`
 - `src/ui/snippets/item/extras_rtl.rs::{outline_button_sm(...), item_basic(...)}`
+- `src/ui/snippets/item/gallery.rs::{icon(...), icon_button(...), outline_button(...), outline_button_sm(...), item_basic(...), item_icon(...), item_avatar(...), item_team(...)}`
 
 Those examples keep explicit `.into_element(cx)` seams only where the surrounding API still
 intentionally consumes raw landed children, such as `DocSection::new(...)`, child arrays,
-overlay/provider constructor seams, data-table cell/table-row seams, and `ItemActions::new(...)`.
+overlay/provider constructor seams, `TabsItem::new(...)`,
+`Collapsible::into_element_with_open_model(...)`, `DrawerContent::new(...)`,
+`SheetContent::new(...)`, `DialogContent::new(...)`,
+`Table::build(...).into_element(cx).test_id(test_id)` wrapper seams, data-table/table cell-row
+seams, sibling child-collection seams like the selected `combobox/*::state_rows(...)` callers,
+`CarouselItem::new(...)`, `ItemMedia::new(...)`, and `ItemActions::new(...)`.
+
+The same rule also applies to ecosystem-level explicit landing helpers:
+
+- `ecosystem/fret-ui-shadcn/src/ui_builder_ext/*::into_element(...)` should remain
+  `-> AnyElement` because those extension methods are themselves named landing seams.
+- Their closure inputs should still accept values via `IntoUiElement<H>` rather than regressing to
+  `AnyElement`-typed closure signatures.
+
+The same wrapper rule also applies to internal gallery scaffolds:
+
+- `src/ui/doc_layout.rs::demo_shell<B>(...)`
+- `src/ui/previews/pages/editors/code_editor/mvp/gates.rs::gate_panel<B>(...)`
 
 Implementation fallback rule:
 

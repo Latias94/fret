@@ -121,9 +121,9 @@ Implementation note on 2026-03-12:
   `App` / `WindowId`,
   extracted helpers returning `impl UiChild`,
   and one explicit `card/content.into_element(cx)` landing seam before the page shell.
-- `apps/fret-cookbook/examples/customv1_basics.rs` now uses `IntoUiElement<KernelApp>` for its
-  advanced reusable `panel_shell(...)` helper instead of spelling the old
-  `UiChildIntoElement<KernelApp>` child-pipeline trait.
+- `apps/fret-cookbook/examples/customv1_basics.rs` now keeps both advanced reusable helpers
+  `panel_shell(...)` and `preview_content(...)` on `IntoUiElement<KernelApp>`-based signatures
+  instead of returning raw `AnyElement` for non-raw composition.
 - `fret-ui-shadcn` `ui_ext/support.rs` and `ui_ext/data.rs` now implement
   `IntoUiElement<H>` directly, so shadcn reusable glue no longer spells
   `UiIntoElement` on those adapters.
@@ -132,14 +132,48 @@ Implementation note on 2026-03-12:
 - selected advanced/manual-assembly examples now also keep reusable helpers off raw landed return
   types by default:
   `apps/fret-examples/src/assets_demo.rs` (`render_image_panel`, `render_svg_panel`),
-  `apps/fret-examples/src/async_playground_demo.rs` (`status_badge`),
-  `apps/fret-examples/src/custom_effect_v1_demo.rs` (`plain_lens`, `custom_effect_lens`),
-  `apps/fret-examples/src/custom_effect_v2_demo.rs` (`plain_lens`, `custom_effect_lens`),
-  `apps/fret-examples/src/postprocess_theme_demo.rs` (`stage_body`, `stage_cards`),
+  `apps/fret-examples/src/async_playground_demo.rs`
+  (`header_bar`, `body`, `catalog_panel`, `main_panel`, `inspector_panel`,
+  `policy_editor`, `query_panel_for_mode`, `query_inputs_row`, `query_result_view`,
+  `status_badge`),
+  `apps/fret-examples/src/custom_effect_v1_demo.rs`
+  (`stage`, `lens_row`, `lens_shell`, `plain_lens`, `custom_effect_lens`, `inspector`),
+  `apps/fret-examples/src/custom_effect_v2_demo.rs`
+  (`stage`, `lens_row`, `lens_shell`, `plain_lens`, `custom_effect_lens`, `inspector`),
+  `apps/fret-examples/src/custom_effect_v3_demo.rs`
+  (`stage`, `stage_controls`, `animated_backdrop`, `lens_row`, `lens_shell`),
+  `apps/fret-examples/src/postprocess_theme_demo.rs`
+  (`inspector`, `stage`, `stage_body`, `stage_cards`),
   `apps/fret-examples/src/drop_shadow_demo.rs` (`card<H>(...)`),
   `apps/fret-examples/src/markdown_demo.rs` (`render_image_placeholder<H>(...)`),
-  and `apps/fret-examples/src/liquid_glass_demo.rs` (`lens_panel<H>(...)`)
+  `apps/fret-examples/src/liquid_glass_demo.rs` (`lens_panel<H>(...)`),
+  `apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs`
+  (`lens`, `inspector`),
+  `apps/fret-examples/src/custom_effect_v2_web_demo.rs`
+  (`lens`, `inspector`),
+  `apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs`
+  (`lens`, `inspector`),
+  and `apps/fret-examples/src/custom_effect_v2_glass_chrome_web_demo.rs`
+  (`label_row`, `lens`, `controls_panel`),
+  `apps/fret-cookbook/examples/customv1_basics.rs`
+  (`panel_shell(...)`, `preview_content(...)`),
+  `apps/fret-cookbook/examples/drop_shadow_basics.rs` (`shadow_card(...)`),
+  and `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
+  (`render_image_preview(...)`)
   now return `impl IntoUiElement<...>`.
+- `apps/fret-examples/src/hello_world_compare_demo.rs` now keeps its local `swatch(...)` closure
+  off raw landed returns by default; it lands explicitly only where the surrounding child array
+  wants raw elements.
+- `apps/fret-cookbook/examples/chart_interactions_basics.rs::chart_canvas(...)` is now treated as
+  an intentional raw retained seam rather than migration debt: it owns
+  `RetainedSubtreeProps::new::<KernelApp>(...)` and `cached_subtree_with(...)` landing.
+- selected default-app WebGPU examples now also keep reusable helpers off raw landed returns by
+  default:
+  `custom_effect_v2_identity_web_demo`, `custom_effect_v2_web_demo`,
+  `custom_effect_v2_lut_web_demo`, and `custom_effect_v2_glass_chrome_web_demo`
+  now use `impl IntoUiElement<fret_app::App> + use<>` for non-raw helper composition, with
+  explicit `.into_element(cx)` reserved for stage child arrays, overlay child collections, and
+  other concrete raw landing seams.
 - selected UI Gallery AI doc pages now keep page-local helpers on the default app-facing child
   surface:
   `ai_persona_demo.rs`, `ai_commit_demo.rs`, `ai_context_demo.rs`,
@@ -162,8 +196,8 @@ Implementation note on 2026-03-12:
 - selected UI Gallery combobox snippets now also keep local state display helpers off raw landed
   returns by default:
   `src/ui/snippets/combobox/{long_list,input_group,trigger_button,groups_with_separator,groups,disabled,custom_items,clear_button,invalid}.rs`
-  now use `state_row(...) -> impl IntoUiElement<fret_app::App> + use<>`,
-  while the snippet `render(...) -> AnyElement` entrypoint remains unchanged.
+  now use `state_row(...)` and `state_rows(...) -> impl IntoUiElement<fret_app::App> + use<>`,
+  with explicit `.into_element(cx)` only at sibling child-collection and render-boundary seams.
 - selected UI Gallery pagination snippets now also keep local page label helpers off raw landed
   returns by default:
   `src/ui/snippets/pagination/{simple,usage}.rs`
@@ -171,11 +205,11 @@ Implementation note on 2026-03-12:
   with explicit `.into_element(cx)` only at the `PaginationLink::new([..])` seam.
 - selected UI Gallery carousel snippets now also keep local slide helpers off raw landed returns
   by default:
-  `src/ui/snippets/carousel/{basic,sizes,plugin_wheel_gestures,spacing_responsive,loop_carousel,options,loop_downgrade_cannot_loop,spacing,usage,sizes_thirds,parts}.rs`
-  now use `slide_card(...) -> impl IntoUiElement<fret_app::App> + use<>` and, where present,
-  `slide(...) -> impl IntoUiElement<fret_app::App> + use<>`,
-  with explicit `.into_element(cx)` only at `ui::container(...)` and `CarouselItem::new(...)`
-  seams.
+  `src/ui/snippets/carousel/{basic,sizes,plugin_wheel_gestures,spacing_responsive,loop_carousel,options,loop_downgrade_cannot_loop,spacing,usage,sizes_thirds,parts,api,duration_embla,rtl,plugin_autoplay,plugin_autoplay_delays,plugin_autoplay_controlled,plugin_autoplay_stop_on_focus,plugin_autoplay_stop_on_last_snap,events}.rs`
+  now keep `slide_card(...) -> impl IntoUiElement<fret_app::App> + use<>` wherever a card helper
+  exists and `slide(...) -> impl IntoUiElement<fret_app::App> + use<>` wherever a slide wrapper
+  exists, with explicit `.into_element(cx)` only at `ui::container(...)`,
+  `CarouselItem::new(...)`, and final child-collection seams.
 - selected UI Gallery skeleton snippets now also keep local shape/row helpers off raw landed
   returns by default:
   `src/ui/snippets/skeleton/{avatar,rtl,form,table}.rs`
@@ -200,11 +234,29 @@ Implementation note on 2026-03-12:
   `B: IntoUiElement<H>`;
   `src/ui/snippets/ai/{file_tree_basic,file_tree_expanded}.rs`
   now use `preview(...) -> impl IntoUiElement<H> + use<H>`;
+  `src/ui/snippets/ai/file_tree_large.rs`
+  now uses `preview(...)` and `invisible_marker(...) -> impl IntoUiElement<H> + use<H>`;
   `src/ui/snippets/ai/test_results_demo.rs`
   now uses `progress_section(...) -> impl IntoUiElement<H> + use<H>`;
+  `src/ui/snippets/ai/attachments_usage.rs`
+  now uses `render_grid_attachment(...) -> impl IntoUiElement<H> + use<H>`;
+  `src/ui/snippets/ai/{attachments_grid,attachments_list}.rs`
+  now use `render_grid_attachment(...)` / `render_list_attachment(...) -> impl IntoUiElement<H> + use<H>`;
+  `src/ui/snippets/ai/file_tree_demo.rs`
+  now uses `invisible_marker(...) -> impl IntoUiElement<H> + use<H>`;
+  `src/ui/snippets/ai/speech_input_demo.rs`
+  now uses `body_text(...)` and `clear_action(...) -> impl IntoUiElement<H> + use<H>`;
   `src/ui/snippets/breadcrumb/dropdown.rs`
   now uses `dot_separator(...) -> impl IntoUiElement<H> + use<H>`,
   with explicit `.into_element(cx)` only at doc-section, child-array, and breadcrumb-list seams.
+- internal UI Gallery wrapper shells now also keep raw landing local instead of forcing pre-landed
+  `AnyElement` inputs:
+  `src/ui/doc_layout.rs`
+  now uses `demo_shell<B>(...) -> impl IntoUiElement<fret_app::App> + use<B>` and lands the body
+  at the shell boundary;
+  `src/ui/previews/pages/editors/code_editor/mvp/gates.rs`
+  now uses `gate_panel<B>(...) -> impl IntoUiElement<fret_app::App> + use<B>` and lands the
+  editor child only at the preview-panel boundary.
 - selected UI Gallery avatar snippets now also keep row wrappers, avatar builders, and group/icon
   helpers off raw landed returns by default:
   `src/ui/snippets/avatar/{demo,group,with_badge,fallback_only,sizes,group_count,group_count_icon,badge_icon,dropdown}.rs`
@@ -220,6 +272,19 @@ Implementation note on 2026-03-12:
   and `src/ui/snippets/button/size.rs`
   now also keeps `row(...) -> impl IntoUiElement<H> + use<H>`,
   with explicit `.into_element(cx)` only at vector collection and final render-boundary seams.
+- selected UI Gallery tabs snippets now also keep local form-field helpers off raw landed returns
+  by default:
+  `src/ui/snippets/tabs/demo.rs`
+  now uses `field(...) -> impl IntoUiElement<fret_app::App> + use<>`,
+  with explicit `.into_element(cx)` only at `CardContent::new(...)` child vectors and
+  `TabsItem::new(...)` seams.
+- selected UI Gallery collapsible snippets now also keep icon/field/tree helpers off raw landed
+  returns by default:
+  `src/ui/snippets/collapsible/{basic,settings_panel,rtl,file_tree}.rs`
+  now use `rotated_lucide(...)`, `radius_input(...)`, `details_collapsible(...)`,
+  `file_leaf(...)`, and `folder(...) -> impl IntoUiElement<H> + use<H>`,
+  with explicit `.into_element(cx)` only at child arrays, `with_direction_provider(...)`, and
+  `Collapsible::into_element_with_open_model(...)` seams.
 - selected UI Gallery hover-card and tooltip snippets now also keep local overlay/content helpers
   off raw landed returns by default:
   `src/ui/snippets/hover_card/{sides,trigger_delays}.rs`
@@ -264,31 +329,96 @@ Implementation note on 2026-03-12:
   `src/ui/snippets/toggle_group/size.rs`
   now uses `group(...) -> impl IntoUiElement<H> + use<H>`;
   `src/ui/snippets/drawer/demo.rs`
-  now uses `goal_adjust_button(...)` and `goal_chart(...) -> impl IntoUiElement<H> + use<H>`.
+  now uses `goal_adjust_button(...)` and `goal_chart(...) -> impl IntoUiElement<H> + use<H>`;
+  `src/ui/snippets/drawer/{responsive_dialog,sides,scrollable_content}.rs`
+  now use `profile_field(...)`, `profile_form(...)`, `side_button(...)`, and
+  `paragraph_block(...) -> impl IntoUiElement<H> + use<H>`,
+  with explicit `.into_element(cx)` only at `DialogContent::new(...)`,
+  `DrawerContent::new(...)`, child vectors, and scroll-area/content seams.
+- selected UI Gallery sheet and dialog snippets now also keep shared form helpers off raw landed
+  returns by default:
+  `src/ui/snippets/sheet/{demo,rtl}.rs` and `src/ui/snippets/dialog/{demo,rtl}.rs`
+  now use `profile_fields(...) -> impl IntoUiElement<H> + use<H>`,
+  with explicit `.into_element(cx)` only at `SheetContent::new(...)`,
+  `DialogContent::new(...)`, and intermediate container seams.
+- selected UI Gallery dialog scroll-content snippets now also keep paragraph/content helpers off
+  raw landed returns by default:
+  `src/ui/snippets/dialog/{scrollable_content,sticky_footer}.rs`
+  now use `lorem_block(...) -> impl IntoUiElement<H> + use<H>`,
+  with explicit `.into_element(cx)` only at `ScrollArea::new([..])`,
+  `DialogContent::new(...)`, and final dialog-content seams.
+- selected UI Gallery separator snippets now also keep local section/row helpers off raw landed
+  returns by default:
+  `src/ui/snippets/separator/{menu,list}.rs`
+  now use `section(...)` and `row(...) -> impl IntoUiElement<H> + use<H>`,
+  with explicit `.into_element(cx)` only at sibling child-collection seams.
+- selected UI Gallery table snippets now also keep shared table wrappers off raw landed returns by
+  default:
+  `src/ui/snippets/table/{demo,footer,rtl}.rs`
+  now use `make_invoice_table(...) -> impl IntoUiElement<fret_app::App> + use<>`,
+  with the explicit raw landing kept inside the helper at
+  `Table::build(...).into_element(cx).test_id(test_id)` because the table builder still needs an
+  internal semantics-decoration seam.
+- selected UI Gallery sidebar snippets now also keep menu-entry helpers off raw landed returns by
+  default:
+  `src/ui/snippets/sidebar/{demo,controlled,mobile}.rs`
+  now use `menu_button(...) -> impl IntoUiElement<H> + use<H>`;
+  `src/ui/snippets/sidebar/rtl.rs`
+  now uses `menu_button(...) -> impl IntoUiElement<fret_app::App> + use<>`,
+  with explicit `.into_element(cx)` only at `SidebarMenuItem::new(...)` seams.
+- selected UI Gallery aspect-ratio snippets now also keep image/frame helpers off raw landed
+  returns by default:
+  `src/ui/snippets/aspect_ratio/{portrait,square,rtl}.rs`
+  now use `portrait_image(...)`, `square_image(...)`, `rtl_image(...)`, and
+  `ratio_example(...) -> impl IntoUiElement<H> + use<H>`,
+  with explicit `.into_element(cx)` only at `AspectRatio::with_child(...)` and render-boundary
+  seams.
 - selected UI Gallery item, toast, and motion-presets snippets now also keep local helpers off raw
   landed returns by default:
-  `src/ui/snippets/item/{avatar,icon,link,link_render,extras_rtl}.rs`
+  `src/ui/snippets/item/{avatar,icon,link,link_render,dropdown,extras_rtl,gallery}.rs`
   now keep `icon_button(...)`, `item_team(...)`, `item_icon(...)`, `icon(...)`,
-  `outline_button_sm(...)`, and `item_basic(...)` helpers on
-  `impl IntoUiElement<fret_app::App> + use<>`, with explicit `.into_element(cx)` only at
-  `ItemMedia::new(...)`, `ItemActions::new(...)`, and the final render-boundary seams;
+  `outline_button(...)`, `outline_button_sm(...)`, `item_basic(...)`, and `item_avatar(...)`
+  helpers on `impl IntoUiElement<fret_app::App> + use<>`, with explicit `.into_element(cx)` only
+  at `ItemMedia::new(...)`, `ItemActions::new(...)`, dropdown child arrays, vector collection,
+  and the final render-boundary seams;
   `src/ui/snippets/toast/deprecated.rs`
   now uses `centered<B>(body: B) -> impl IntoUiElement<fret_app::App> + use<B>`;
   `src/ui/snippets/motion_presets/fluid_tabs_demo.rs`
   now uses `panel(...) -> impl IntoUiElement<fret_app::App> + use<>`.
 - explicit raw seams remain where the helper is genuinely low-level composition glue, for example
-  `postprocess_theme_demo.rs::stage(...)` where the function arbitrates effect-layer composition
-  and compare-mode raw/processed branching, plus `custom_effect_v1_demo.rs::lens_shell(...)` and
-  `custom_effect_v2_demo.rs::lens_shell(...)` where the helper explicitly owns raw effect-layer
-  body assembly.
+  the internal body-landing step inside `custom_effect_v1_demo.rs::lens_shell(...)` and
+  `custom_effect_v2_demo.rs::lens_shell(...)`, plus stage child arrays and retained-subtree
+  bridges that intentionally still own raw `AnyElement` assembly.
+- heterogenous sibling arrays remain valid explicit landing seams even after helper migration; for
+  example `custom_effect_v3_demo.rs::{stage, stage_controls}` and
+  `postprocess_theme_demo.rs::render(...)` now keep helpers on `IntoUiElement<KernelApp>` but
+  still call `.into_element(cx)` where the surrounding child collection intentionally wants
+  `AnyElement`.
+- `async_playground_demo.rs` now follows the same rule:
+  local helpers stay on `IntoUiElement<KernelApp>`, while
+  `render(...)`, `body(...)`, `main_panel(...)`, `inspector_panel(...)`, and
+  `query_panel_for_mode(...)` still land explicitly at heterogenous child arrays,
+  `TabsItem::new([..])`, and `ScrollArea::new([..])` seams.
 
 Validation note on 2026-03-12:
 
 - verified the expanded UI Gallery helper gate with
   `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app selected_`;
-  the focused source gate now covers 24 `selected_*` checks and passed after the AI wrapper,
-  breadcrumb, `item/extras_rtl`, avatar, button, popover, hover-card, tooltip, resizable,
-  data-table, and table-action helper migrations landed.
+  the focused source gate now covers 32 `selected_*` checks and passed after the AI wrapper,
+  breadcrumb, avatar, button, tabs, collapsible, drawer, sheet, dialog (including scrollable and
+  sticky-footer content helpers), separator, table, sidebar, aspect-ratio, popover, hover-card,
+  tooltip, resizable, data-table, table-action, combobox state-row/state-rows, item
+  (`extras_rtl`, `dropdown`, `gallery`), and carousel (`basic`/`usage` plus `api`,
+  `duration_embla`, `rtl`, `plugin_autoplay*`, and `events`) helper migrations landed.
+- verified the advanced example helper gate with
+  `cargo nextest run -p fret-examples --lib`;
+  the source gate now also records `custom_effect_v3_demo.rs::{stage, stage_controls,
+  animated_backdrop, lens_row, lens_shell}` and `postprocess_theme_demo.rs::{inspector, stage,
+  stage_body, stage_cards}` plus
+  `async_playground_demo.rs::{header_bar, body, catalog_panel, main_panel, inspector_panel,
+  policy_editor, query_panel_for_mode, query_inputs_row, query_result_view, status_badge}`
+  on `IntoUiElement<KernelApp>`-based signatures, with explicit `.into_element(cx)` kept only at
+  heterogenous sibling child-collection, tabs-item, and scroll-area seams.
 
 ## M4 — Delete the old public surface
 
@@ -321,6 +451,9 @@ Implementation note on 2026-03-12:
   reintroducing direct `UiIntoElement` glue.
 - `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs` now also guards that
   `ui_builder_ext/*` reusable helper closures keep accepting `IntoUiElement<H>`.
+- `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs` now also guards that
+  `ui_builder_ext/*::into_element(...)` remains an explicit `AnyElement` landing seam while its
+  closure inputs do not regress to `AnyElement`-typed signatures.
 - `ecosystem/fret/tests/reusable_component_helper_surface.rs` now guards the facade-level
   source/doc story: shadcn reusable helpers stay on `IntoUiElement<H>` rather than requiring
   pre-landed `AnyElement` inputs.
@@ -342,8 +475,8 @@ Implementation note on 2026-03-12:
   `context_menu/*` snippet trigger helpers stay on `IntoUiElement<H>` rather than reverting to raw
   `AnyElement`.
 - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that selected
-  `combobox/*` snippet state-row helpers stay on `IntoUiElement<fret_app::App>` rather than
-  reverting to raw `AnyElement`.
+  `combobox/*` snippet `state_row(...)` and `state_rows(...)` helpers stay on
+  `IntoUiElement<fret_app::App>` rather than reverting to raw `AnyElement`.
 - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that selected
   `pagination/*` snippet page-number helpers stay on `IntoUiElement<H>` rather than reverting to
   raw `AnyElement`.

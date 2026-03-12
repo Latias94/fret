@@ -1,5 +1,6 @@
 use super::*;
 use fret::UiCx;
+use fret_ui_kit::IntoUiElement;
 
 pub(in crate::ui) struct DocSection {
     pub title: &'static str,
@@ -404,7 +405,7 @@ fn render_section(cx: &mut UiCx<'_>, section: DocSection) -> AnyElement {
 
     let shell = shell && title != "Notes";
     let preview = if shell {
-        demo_shell(cx, max_w, preview)
+        demo_shell(cx, max_w, preview).into_element(cx)
     } else {
         preview
     };
@@ -486,7 +487,14 @@ fn render_section(cx: &mut UiCx<'_>, section: DocSection) -> AnyElement {
     }
 }
 
-fn demo_shell(cx: &mut UiCx<'_>, max_w: Px, body: AnyElement) -> AnyElement {
+fn demo_shell<B>(
+    cx: &mut UiCx<'_>,
+    max_w: Px,
+    body: B,
+) -> impl IntoUiElement<fret_app::App> + use<B>
+where
+    B: IntoUiElement<fret_app::App>,
+{
     let props = cx.with_theme(|theme| {
         decl_style::container_props(
             theme,
@@ -501,7 +509,7 @@ fn demo_shell(cx: &mut UiCx<'_>, max_w: Px, body: AnyElement) -> AnyElement {
                 .overflow_visible(),
         )
     });
-    cx.container(props, move |_cx| [body])
+    cx.container(props, move |cx| [body.into_element(cx)])
 }
 
 fn auto_tabs_test_id_prefix(title: &'static str, title_test_id: Option<&'static str>) -> Arc<str> {
