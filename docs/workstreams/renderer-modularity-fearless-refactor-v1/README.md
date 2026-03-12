@@ -396,6 +396,10 @@ As of 2026-03-12:
   - prepared-glyph raster part assembly now forwards a dedicated placement struct into the metadata stage in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `prepared_glyph_raster_from_image_with_placement(...)` no longer reprojects placement into raw fields before entering the next helper
+- The seventy-eighth internal text split has landed:
+  - prepared-glyph raster assembly helpers now live in
+    `crates/fret-render-wgpu/src/text/prepare/glyph_raster.rs`
+  - `crates/fret-render-wgpu/src/text/prepare.rs` no longer hosts the raster data structs and low-level raster assembly chain inline
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
