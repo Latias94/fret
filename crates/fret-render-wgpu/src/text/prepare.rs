@@ -385,7 +385,7 @@ impl TextSystem {
         glyph: &ParleyGlyph,
         face_usage: &mut HashMap<FontFaceKey, (u32, u32)>,
     ) -> Option<PreparedGlyphContext> {
-        let glyph_id = u16::try_from(glyph.id).ok()?;
+        let glyph_id = prepared_glyph_id(glyph)?;
         let face_key = self.register_prepared_glyph_face(glyph, face_usage);
         Some(PreparedGlyphContext {
             glyph_id,
@@ -708,6 +708,10 @@ fn prepared_glyph_paint_span(
 
 fn prepared_glyph_font_ref<'a>(glyph: &'a ParleyGlyph) -> Option<parley::swash::FontRef<'a>> {
     parley::swash::FontRef::from_index(glyph.font.data.data(), glyph.font.index as usize)
+}
+
+fn prepared_glyph_id(glyph: &ParleyGlyph) -> Option<u16> {
+    u16::try_from(glyph.id).ok()
 }
 
 fn prepared_glyph_size_bits(glyph: &ParleyGlyph) -> u32 {

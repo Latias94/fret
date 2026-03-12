@@ -253,6 +253,10 @@ Current snapshot (2026-03-12):
   - prepared-glyph size-bit derivation now lives behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `prepare_prepared_glyph_context(...)` no longer owns font-size bit packing directly
+- The fifty-seventh internal `text/mod.rs` split has landed:
+  - prepared-glyph id conversion now lives behind a pure helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `prepare_prepared_glyph_context(...)` no longer owns `glyph.id -> u16` conversion directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
