@@ -360,6 +360,14 @@ As of 2026-03-12:
   - prepared-glyph image rendering after scaler construction now lives behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `render_prepared_glyph_image_with_font_ref(...)` no longer owns scaler/render dispatch directly
+- The sixty-ninth internal text split has landed:
+  - prepared-glyph raster assembly after placement extraction now lives behind a dedicated helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `prepared_glyph_raster_from_image(...)` no longer owns placement-backed raster assembly directly
+- The seventieth internal text split has landed:
+  - prepared-glyph raster assembly after image-content metadata decoding now lives behind a dedicated helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `prepared_glyph_raster_from_image_parts(...)` no longer owns content-metadata-backed raster assembly directly
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
