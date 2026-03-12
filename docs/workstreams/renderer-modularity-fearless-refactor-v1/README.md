@@ -269,6 +269,11 @@ As of 2026-03-12:
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `prepared_glyph_raster_from_image(...)` no longer owns zero-size placement guarding and field
     unpacking directly
+- The forty-seventh internal text split has landed:
+  - prepared-glyph atlas insertion argument packing now lives behind a dedicated helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `insert_prepared_glyph_raster(...)` no longer owns `GlyphAtlas::get_or_insert(...)` argument
+    packing directly
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed

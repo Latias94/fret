@@ -547,26 +547,8 @@ impl TextSystem {
     }
 
     fn insert_prepared_glyph_raster(&mut self, raster: PreparedGlyphRaster, epoch: u64) {
-        let PreparedGlyphRaster {
-            glyph_key,
-            width,
-            height,
-            left,
-            top,
-            bytes_per_pixel,
-            data,
-        } = raster;
-        let atlas = self.prepared_glyph_atlas_mut(glyph_key.kind);
-        let _ = atlas.get_or_insert(
-            glyph_key,
-            width,
-            height,
-            left,
-            top,
-            bytes_per_pixel,
-            data,
-            epoch,
-        );
+        let atlas = self.prepared_glyph_atlas_mut(raster.glyph_key.kind);
+        insert_prepared_glyph_raster_into_atlas(atlas, raster, epoch);
     }
 
     fn commit_prepared_glyph_raster(
@@ -728,6 +710,32 @@ fn prepared_glyph_bounds_from_atlas_entry(
         entry.w as f32,
         entry.h as f32,
     )
+}
+
+fn insert_prepared_glyph_raster_into_atlas(
+    atlas: &mut GlyphAtlas,
+    raster: PreparedGlyphRaster,
+    epoch: u64,
+) {
+    let PreparedGlyphRaster {
+        glyph_key,
+        width,
+        height,
+        left,
+        top,
+        bytes_per_pixel,
+        data,
+    } = raster;
+    let _ = atlas.get_or_insert(
+        glyph_key,
+        width,
+        height,
+        left,
+        top,
+        bytes_per_pixel,
+        data,
+        epoch,
+    );
 }
 
 fn prepared_glyph_face_key(glyph: &ParleyGlyph, font_data_id: u64, face_index: u32) -> FontFaceKey {
