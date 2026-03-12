@@ -8,6 +8,7 @@ use fret_ui::Theme;
 use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::declarative::table::TableViewOutput;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -74,14 +75,18 @@ const LANG_AR: Lang = Lang {
     next: "التالي",
 };
 
-fn align_inline_start(cx: &mut UiCx<'_>, child: AnyElement) -> AnyElement {
+fn align_inline_start<B>(cx: &mut UiCx<'_>, child: B) -> impl IntoUiElement<fret_app::App> + use<B>
+where
+    B: IntoUiElement<fret_app::App>,
+{
     let dir = shadcn::use_direction(cx, None);
-    let row = ui::h_flex(move |_cx| [child]).layout(LayoutRefinement::default().w_full());
+    let row =
+        ui::h_flex(move |cx| ui::children![cx; child]).layout(LayoutRefinement::default().w_full());
     let row = match dir {
         shadcn::LayoutDirection::Rtl => row.justify_end(),
         shadcn::LayoutDirection::Ltr => row.justify_start(),
     };
-    row.into_element(cx)
+    row
 }
 
 fn bottom_controls(
@@ -89,7 +94,7 @@ fn bottom_controls(
     state: Model<TableState>,
     output: Model<TableViewOutput>,
     lang: Lang,
-) -> AnyElement {
+) -> impl IntoUiElement<fret_app::App> + use<> {
     let state_value = cx.watch_model(&state).layout().cloned().unwrap_or_default();
     let output_value = cx
         .watch_model(&output)
@@ -154,7 +159,6 @@ fn bottom_controls(
     .layout(LayoutRefinement::default().w_full())
     .items_center()
     .gap(Space::N2)
-    .into_element(cx)
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
@@ -283,12 +287,12 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                     "email" => cx.text(row.email.as_ref()),
                     "amount" => {
                         let amount = Arc::<str>::from(format!("${}.00", row.amount_usd));
-                        let amount_text = ui::text( amount)
+                        let amount_text = ui::text(amount)
                             .text_sm()
                             .tabular_nums()
                             .nowrap()
                             .into_element(cx);
-                        align_inline_start(cx, amount_text)
+                        align_inline_start(cx, amount_text).into_element(cx)
                     }
                     "actions" => cx.keyed(("ui-gallery-data-table-rtl-row-actions", row.key), |cx| {
                         let open = cx.local_model(|| false);
@@ -347,7 +351,9 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
             )
             .test_id("ui-gallery-data-table-rtl-table");
 
-        let controls = bottom_controls(cx, state, output, lang).test_id("ui-gallery-data-table-rtl-footer");
+        let controls = bottom_controls(cx, state, output, lang)
+            .into_element(cx)
+            .test_id("ui-gallery-data-table-rtl-footer");
 
         ui::v_flex(move |_cx| vec![direction_toggle, toolbar, table, controls])
                 .gap(Space::N4)

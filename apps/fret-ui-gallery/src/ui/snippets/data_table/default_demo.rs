@@ -7,6 +7,7 @@ use fret_runtime::Model;
 use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::declarative::table::TableViewOutput;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -20,18 +21,20 @@ struct InvoiceRow {
     amount_usd: u64,
 }
 
-fn align_end(cx: &mut UiCx<'_>, child: AnyElement) -> AnyElement {
-    ui::h_flex(move |_cx| [child])
+fn align_end<B>(child: B) -> impl IntoUiElement<fret_app::App> + use<B>
+where
+    B: IntoUiElement<fret_app::App>,
+{
+    ui::h_flex(move |cx| ui::children![cx; child])
         .layout(LayoutRefinement::default().w_full())
         .justify_end()
-        .into_element(cx)
 }
 
 fn footer(
     cx: &mut UiCx<'_>,
     state: Model<TableState>,
     output: Model<TableViewOutput>,
-) -> AnyElement {
+) -> impl IntoUiElement<fret_app::App> + use<> {
     let state_value = cx.watch_model(&state).layout().cloned().unwrap_or_default();
     let output_value = cx
         .watch_model(&output)
@@ -95,7 +98,6 @@ fn footer(
     .layout(LayoutRefinement::default().w_full())
     .items_center()
     .gap(Space::N2)
-    .into_element(cx)
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
@@ -200,14 +202,16 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                 "amount" => {
                     let amount = Arc::<str>::from(format!("${}.00", row.amount_usd));
                     let amount_text = ui::text(amount).text_sm().tabular_nums().into_element(cx);
-                    align_end(cx, amount_text)
+                    align_end(amount_text).into_element(cx)
                 }
                 _ => cx.text("?"),
             },
         )
         .test_id("ui-gallery-data-table-default-root");
 
-    let footer = footer(cx, state, output).test_id("ui-gallery-data-table-default-footer");
+    let footer = footer(cx, state, output)
+        .into_element(cx)
+        .test_id("ui-gallery-data-table-default-footer");
 
     ui::v_flex(move |_cx| vec![toolbar, table, footer])
         .gap(Space::N4)

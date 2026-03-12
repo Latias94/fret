@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("settings_panel.rs");
 
 // region: example
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn radius_input<H: UiHost>(
@@ -8,7 +9,7 @@ fn radius_input<H: UiHost>(
     test_id: &'static str,
     a11y: &'static str,
     value: Model<String>,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     shadcn::Input::new(value)
         .a11y_label(a11y)
         .placeholder("0")
@@ -50,13 +51,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             "ui-gallery-collapsible-settings-radius-x",
                             "Radius X",
                             radius_x.clone(),
-                        ),
+                        )
+                        .into_element(cx),
                         radius_input(
                             cx,
                             "ui-gallery-collapsible-settings-radius-y",
                             "Radius Y",
                             radius_y.clone(),
-                        ),
+                        )
+                        .into_element(cx),
                     ]
                 })
                 .gap(Space::N2)
@@ -78,13 +81,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             "ui-gallery-collapsible-settings-radius-bl",
                             "Bottom-left",
                             radius_bl.clone(),
-                        ),
+                        )
+                        .into_element(cx),
                         radius_input(
                             cx,
                             "ui-gallery-collapsible-settings-radius-br",
                             "Bottom-right",
                             radius_br.clone(),
-                        ),
+                        )
+                        .into_element(cx),
                     ]
                 })
                 .gap(Space::N2)

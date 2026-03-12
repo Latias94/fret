@@ -2,13 +2,14 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
 use fret_ui::Theme;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn rtl_image<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     demo_image: Option<Model<Option<fret_core::ImageId>>>,
     content_test_id: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let image = if let Some(image) = demo_image {
         shadcn::MediaImage::model(image)
     } else {
@@ -31,11 +32,11 @@ fn ratio_example<H: UiHost>(
     test_id: &'static str,
     content_test_id: &'static str,
     demo_image: Option<Model<Option<fret_core::ImageId>>>,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let theme = Theme::global(&*cx.app);
     let muted_bg = theme.color_token("muted");
     let border = theme.color_token("border");
-    let content = rtl_image(cx, demo_image, content_test_id);
+    let content = rtl_image(cx, demo_image, content_test_id).into_element(cx);
 
     let frame = shadcn::AspectRatio::with_child(content)
         .ratio(ratio)
@@ -53,7 +54,6 @@ fn ratio_example<H: UiHost>(
     ui::h_flex(move |_cx| vec![frame])
         .layout(LayoutRefinement::default().w_full().min_w_0())
         .justify_center()
-        .into_element(cx)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -66,6 +66,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             "ui-gallery-aspect-ratio-rtl-content",
             None,
         )
+        .into_element(cx)
     })
 }
 // endregion: example

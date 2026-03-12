@@ -6,6 +6,7 @@ use fret_core::Px;
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::AnyElement;
 use fret_ui_headless::table::{ColumnDef, RowKey, Table, TableState};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::declarative::table::TableViewOutput;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -83,11 +84,13 @@ fn wire_selection_commands<H: UiHost + 'static>(
     );
 }
 
-fn align_end(cx: &mut UiCx<'_>, child: AnyElement) -> AnyElement {
-    ui::h_flex(move |_cx| [child])
+fn align_end<B>(child: B) -> impl IntoUiElement<fret_app::App> + use<B>
+where
+    B: IntoUiElement<fret_app::App>,
+{
+    ui::h_flex(move |cx| ui::children![cx; child])
         .layout(LayoutRefinement::default().w_full())
         .justify_end()
-        .into_element(cx)
 }
 
 fn legacy_demo_content(
@@ -432,7 +435,7 @@ fn legacy_demo_content(
                                 },
                             );
 
-                        align_end(cx, menu)
+                        align_end(menu).into_element(cx)
                     }),
                     _ => cx.text("?"),
                 };

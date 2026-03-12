@@ -5,6 +5,7 @@ use fret::UiCx;
 use fret_core::{Edges, LayoutDirection};
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
@@ -16,7 +17,11 @@ struct SlideVisual {
     line_height_px: Px,
 }
 
-fn slide_card(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement {
+fn slide_card(
+    cx: &mut UiCx<'_>,
+    idx: usize,
+    visual: SlideVisual,
+) -> impl IntoUiElement<fret_app::App> + use<> {
     let theme = Theme::global(&*cx.app).clone();
 
     let number = ui::text(format!("{idx}"))
@@ -44,12 +49,13 @@ fn slide_card(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement 
     shadcn::Card::new([content]).into_element(cx)
 }
 
-fn slide(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement {
-    let card = slide_card(cx, idx, visual);
-    ui::container(move |_cx| vec![card])
-        .w_full()
-        .p_1()
-        .into_element(cx)
+fn slide(
+    cx: &mut UiCx<'_>,
+    idx: usize,
+    visual: SlideVisual,
+) -> impl IntoUiElement<fret_app::App> + use<> {
+    let card = slide_card(cx, idx, visual).into_element(cx);
+    ui::container(move |_cx| vec![card]).w_full().p_1()
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
@@ -62,7 +68,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         line_height_px: Px(40.0),
     };
     let items = (1..=5)
-        .map(|idx| shadcn::CarouselItem::new(slide(cx, idx, visual)))
+        .map(|idx| shadcn::CarouselItem::new(slide(cx, idx, visual).into_element(cx)))
         .collect::<Vec<_>>();
 
     let carousel = shadcn::DirectionProvider::new(LayoutDirection::Rtl).into_element(cx, |cx| {

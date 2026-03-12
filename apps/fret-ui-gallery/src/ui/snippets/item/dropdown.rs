@@ -3,10 +3,11 @@ pub const SOURCE: &str = include_str!("dropdown.rs");
 // region: example
 use fret::UiCx;
 use fret_core::Edges;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn icon(cx: &mut UiCx<'_>, id: &'static str) -> AnyElement {
+fn icon(cx: &mut UiCx<'_>, id: &'static str) -> impl IntoUiElement<fret_app::App> + use<> {
     fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
 }
 
@@ -31,7 +32,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                     .toggle_model(dropdown_open.clone())
                     .children([
                         ui::text("Select").text_sm().into_element(cx),
-                        icon(cx, "lucide.chevron-down"),
+                        icon(cx, "lucide.chevron-down").into_element(cx),
                     ])
                     .test_id("ui-gallery-item-dropdown-trigger")
                     .into_element(cx)

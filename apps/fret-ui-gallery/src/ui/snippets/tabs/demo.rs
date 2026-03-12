@@ -3,28 +3,27 @@ pub const SOURCE: &str = include_str!("demo.rs");
 // region: example
 use fret::UiCx;
 use fret_core::Px;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 fn field(
-    cx: &mut UiCx<'_>,
     label: &'static str,
     model: Model<String>,
     a11y: &'static str,
     password: bool,
-) -> AnyElement {
+) -> impl IntoUiElement<fret_app::App> + use<> {
     let mut input = shadcn::Input::new(model)
         .a11y_label(a11y)
         .refine_layout(LayoutRefinement::default().w_full().min_w_0());
     if password {
         input = input.password();
     }
-    let input = input.into_element(cx);
-    ui::v_flex(move |cx| vec![shadcn::Label::new(label).into_element(cx), input])
+
+    ui::v_flex(move |cx| ui::children![cx; shadcn::Label::new(label), input])
         .gap(Space::N2)
         .items_start()
         .layout(LayoutRefinement::default().w_full().min_w_0())
-        .into_element(cx)
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
@@ -34,69 +33,58 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let new_password = cx.local_model_keyed("new_password", String::new);
 
     let account_card = {
-        let header = shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Account").into_element(cx),
+        let header = shadcn::CardHeader::new(ui::children![
+            cx;
+            shadcn::CardTitle::new("Account"),
             shadcn::CardDescription::new(
                 "Make changes to your account here. Click save when you're done.",
             )
-            .into_element(cx),
-        ])
-        .into_element(cx);
+        ]);
 
         let content = ui::v_flex(move |cx| {
-            vec![
-                field(cx, "Name", name.clone(), "Name", false),
-                field(cx, "Username", username.clone(), "Username", false),
+            ui::children![
+                cx;
+                field("Name", name.clone(), "Name", false),
+                field("Username", username.clone(), "Username", false)
             ]
         })
         .gap(Space::N4)
         .items_start()
-        .layout(LayoutRefinement::default().w_full().min_w_0())
-        .into_element(cx);
-        let content = shadcn::CardContent::new(vec![content]).into_element(cx);
+        .layout(LayoutRefinement::default().w_full().min_w_0());
+        let content = shadcn::CardContent::new(ui::children![cx; content]);
         let footer =
-            shadcn::CardFooter::new(vec![shadcn::Button::new("Save changes").into_element(cx)])
-                .into_element(cx);
-        shadcn::Card::new(vec![header, content, footer]).into_element(cx)
+            shadcn::CardFooter::new(ui::children![cx; shadcn::Button::new("Save changes")]);
+        shadcn::Card::new(ui::children![cx; header, content, footer]).into_element(cx)
     };
 
     let password_card = {
-        let header = shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Password").into_element(cx),
+        let header = shadcn::CardHeader::new(ui::children![
+            cx;
+            shadcn::CardTitle::new("Password"),
             shadcn::CardDescription::new(
                 "Change your password here. After saving, you'll be logged out.",
             )
-            .into_element(cx),
-        ])
-        .into_element(cx);
+        ]);
 
         let content = ui::v_flex(move |cx| {
-            vec![
+            ui::children![
+                cx;
                 field(
-                    cx,
                     "Current password",
                     current_password.clone(),
                     "Current password",
                     true,
                 ),
-                field(
-                    cx,
-                    "New password",
-                    new_password.clone(),
-                    "New password",
-                    true,
-                ),
+                field("New password", new_password.clone(), "New password", true)
             ]
         })
         .gap(Space::N4)
         .items_start()
-        .layout(LayoutRefinement::default().w_full().min_w_0())
-        .into_element(cx);
-        let content = shadcn::CardContent::new(vec![content]).into_element(cx);
+        .layout(LayoutRefinement::default().w_full().min_w_0());
+        let content = shadcn::CardContent::new(ui::children![cx; content]);
         let footer =
-            shadcn::CardFooter::new(vec![shadcn::Button::new("Save password").into_element(cx)])
-                .into_element(cx);
-        shadcn::Card::new(vec![header, content, footer]).into_element(cx)
+            shadcn::CardFooter::new(ui::children![cx; shadcn::Button::new("Save password")]);
+        shadcn::Card::new(ui::children![cx; header, content, footer]).into_element(cx)
     };
 
     shadcn::Tabs::uncontrolled(Some(Arc::<str>::from("account")))
