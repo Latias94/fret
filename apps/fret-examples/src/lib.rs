@@ -319,6 +319,13 @@ mod authoring_surface_policy_tests {
         assert!(src.contains("todo_page(cx, theme, card).into()"));
     }
 
+    fn assert_avoids_legacy_conversion_names(src: &str) {
+        assert!(!src.contains("UiIntoElement"));
+        assert!(!src.contains("UiHostBoundIntoElement"));
+        assert!(!src.contains("UiChildIntoElement"));
+        assert!(!src.contains("UiBuilderHostBoundIntoElementExt"));
+    }
+
     fn assert_view_runtime_example_uses_app_ui_aliases(src: &str) {
         assert!(
             src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui")
@@ -462,6 +469,7 @@ mod authoring_surface_policy_tests {
     #[test]
     fn todo_demo_prefers_default_app_surface() {
         assert_uses_default_app_surface(TODO_DEMO);
+        assert_avoids_legacy_conversion_names(TODO_DEMO);
     }
 
     #[test]

@@ -104,6 +104,13 @@ mod authoring_surface_policy_tests {
         assert!(!src.contains("cx.on_payload_action_notify_"));
     }
 
+    fn assert_avoids_legacy_conversion_names(src: &str) {
+        assert!(!src.contains("UiIntoElement"));
+        assert!(!src.contains("UiHostBoundIntoElement"));
+        assert!(!src.contains("UiChildIntoElement"));
+        assert!(!src.contains("UiBuilderHostBoundIntoElementExt"));
+    }
+
     fn assert_uses_app_surface_doc(src: &str) {
         assert!(src.contains("use fret::app::prelude::*;"));
         assert!(src.contains("AppUi<'_, '_>"));
@@ -191,6 +198,7 @@ mod authoring_surface_policy_tests {
         assert!(SIMPLE_TODO_EXAMPLE.contains("impl UiChild"));
         assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("impl UiChild"));
         assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("cx.actions().locals::<act::Add>"));
+        assert_avoids_legacy_conversion_names(SIMPLE_TODO_V2_TARGET_EXAMPLE);
     }
 
     #[test]
@@ -490,12 +498,12 @@ mod authoring_surface_policy_tests {
         assert_advanced_helpers_prefer_uicx(
             CUSTOM_V1_EXAMPLE,
             &[
-                "fn panel_shell<I: UiChildIntoElement<KernelApp>>(cx: &mut UiCx<'_>,",
+                "body: impl IntoUiElement<KernelApp>,",
                 "fn preview_content(cx: &mut UiCx<'_>, label: &str) -> AnyElement",
                 "let swatch = |_cx: &mut UiCx<'_>, rgb: u32|",
             ],
             &[
-                "fn panel_shell<I: UiChildIntoElement<KernelApp>>(cx: &mut ElementContext<'_, KernelApp>,",
+                "UiChildIntoElement<KernelApp>",
                 "fn preview_content(cx: &mut ElementContext<'_, KernelApp>, label: &str) -> AnyElement",
                 "let swatch = |_cx: &mut ElementContext<'_, KernelApp>, rgb: u32|",
             ],

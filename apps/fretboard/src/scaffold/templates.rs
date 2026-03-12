@@ -1325,6 +1325,10 @@ mod tests {
         assert!(!src.contains("decl_style::container_props"));
         assert!(!src.contains(".refine_style("));
         assert!(!src.contains(".refine_layout("));
+        assert!(!src.contains("UiIntoElement"));
+        assert!(!src.contains("UiHostBoundIntoElement"));
+        assert!(!src.contains("UiChildIntoElement"));
+        assert!(!src.contains("UiBuilderHostBoundIntoElementExt"));
 
         let into_element_count = src.matches(".into_element(cx)").count();
         assert!(
@@ -1396,6 +1400,10 @@ mod tests {
         assert!(!src.contains("fret_selector"));
         assert!(!src.contains(".refine_style("));
         assert!(!src.contains(".refine_layout("));
+        assert!(!src.contains("UiIntoElement"));
+        assert!(!src.contains("UiHostBoundIntoElement"));
+        assert!(!src.contains("UiChildIntoElement"));
+        assert!(!src.contains("UiBuilderHostBoundIntoElementExt"));
 
         let into_element_count = src.matches(".into_element(cx)").count();
         assert!(

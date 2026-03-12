@@ -61,13 +61,13 @@ fn install_custom_effect(app: &mut KernelApp, effects: &mut dyn fret_core::Custo
     app.set_global(CookbookCustomV1Effect(id));
 }
 
-fn panel_shell<I: UiChildIntoElement<KernelApp>>(
+fn panel_shell(
     cx: &mut UiCx<'_>,
     title: &str,
-    body: I,
+    body: impl IntoUiElement<KernelApp>,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
-    let body = body.into_child_element(cx);
+    let body = body.into_element(cx);
 
     shadcn::Card::build(|cx, out| {
         out.push_ui(

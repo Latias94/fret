@@ -117,6 +117,9 @@ Implementation note on 2026-03-12:
   `App` / `WindowId`,
   extracted helpers returning `impl UiChild`,
   and one explicit `card/content.into_element(cx)` landing seam before the page shell.
+- `apps/fret-cookbook/examples/customv1_basics.rs` now uses `IntoUiElement<KernelApp>` for its
+  advanced reusable `panel_shell(...)` helper instead of spelling the old
+  `UiChildIntoElement<KernelApp>` child-pipeline trait.
 
 ## M4 — Delete the old public surface
 
@@ -130,13 +133,20 @@ Implementation note on 2026-03-12:
 
 - [x] Add a gate that the app prelude does not publicly re-export old conversion traits.
 - [x] Add a gate that the component prelude exports exactly one public conversion trait.
-- [ ] Add a source/doc gate that the canonical authoring compare set (`simple_todo_v2_target`,
+- [x] Add a source/doc gate that the canonical authoring compare set (`simple_todo_v2_target`,
   `todo_demo`, and the simple-todo scaffold template) stays on the target conversion vocabulary.
 - [x] Add a source/doc gate that app-facing examples prefer `Ui` / `UiChild`.
 - [ ] Add a source/doc gate that generic reusable first-party helpers prefer the unified
   conversion trait over raw `AnyElement` when a raw landed element is not required.
 - [ ] Add a source gate that old names (`UiChildIntoElement`, `UiHostBoundIntoElement`,
   `UiBuilderHostBoundIntoElementExt`) do not return in curated surfaces.
+
+Implementation note on 2026-03-12:
+
+- the canonical compare set now has direct stale-name guards in:
+  `apps/fret-cookbook/src/lib.rs`,
+  `apps/fret-examples/src/lib.rs`,
+  and `apps/fretboard/src/scaffold/templates.rs`.
 
 ## M6 — Keep advanced/raw seams explicit and justified
 
