@@ -150,6 +150,10 @@ Current snapshot (2026-03-12):
   - prepared-line per-glyph materialization now lives behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `materialize_prepared_line(...)` now just iterates prepared glyphs and pushes returned instances
+- The thirty-second internal `text/mod.rs` split has landed:
+  - prepared-line glyph-drain materialization now lives behind a dedicated helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `materialize_prepared_line(...)` no longer owns the prepared-glyph loop directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed

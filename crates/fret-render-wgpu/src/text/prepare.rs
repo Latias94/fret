@@ -314,11 +314,33 @@ impl TextSystem {
             glyphs: prepared_glyphs,
         } = prepared_line;
         lines.push(layout);
+        self.materialize_prepared_line_glyphs(
+            prepared_glyphs,
+            resolved_spans,
+            scale,
+            epoch,
+            glyphs,
+            face_usage,
+        );
+    }
 
-        for g in prepared_glyphs {
-            let Some(instance) =
-                self.materialize_prepared_line_glyph(&g, resolved_spans, scale, epoch, face_usage)
-            else {
+    fn materialize_prepared_line_glyphs(
+        &mut self,
+        prepared_glyphs: Vec<ParleyGlyph>,
+        resolved_spans: Option<&[ResolvedSpan]>,
+        scale: f32,
+        epoch: u64,
+        glyphs: &mut Vec<GlyphInstance>,
+        face_usage: &mut HashMap<FontFaceKey, (u32, u32)>,
+    ) {
+        for glyph in prepared_glyphs {
+            let Some(instance) = self.materialize_prepared_line_glyph(
+                &glyph,
+                resolved_spans,
+                scale,
+                epoch,
+                face_usage,
+            ) else {
                 continue;
             };
             glyphs.push(instance);
