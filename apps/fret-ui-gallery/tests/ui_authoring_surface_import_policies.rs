@@ -146,6 +146,26 @@ fn gallery_source_tree_rejects_legacy_shadcn_alias_patterns() {
 }
 
 #[test]
+fn gallery_source_tree_avoids_legacy_conversion_trait_names() {
+    for path in gallery_rust_sources() {
+        let source = read_path(&path);
+        for legacy_name in [
+            "UiIntoElement",
+            "UiChildIntoElement",
+            "UiHostBoundIntoElement",
+            "UiBuilderHostBoundIntoElementExt",
+        ] {
+            assert!(
+                !source.contains(legacy_name),
+                "{} reintroduced legacy conversion name `{}` into the first-party gallery surface",
+                path.display(),
+                legacy_name
+            );
+        }
+    }
+}
+
+#[test]
 fn gallery_ai_snippet_batch_prefers_curated_shadcn_facade_imports() {
     assert_curated_facade_only(&[
         "src/ui/snippets/ai/audio_player_demo.rs",

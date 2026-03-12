@@ -163,6 +163,24 @@ Guidelines:
 - `StyledExt` exists in `fret-ui-kit` but is intentionally not part of the shadcn prelude to avoid splitting the
   ecosystem into competing patterns.
 
+### Authoring surface alignment rules
+
+This tracker follows the repo-wide authoring reset and the focused conversion-surface follow-up:
+
+- app-facing starter docs, cookbook snippets, and UI Gallery teaching samples should prefer `Ui`,
+  `UiChild`, and `UiCx` on the app lane rather than raw `AnyElement` or legacy split conversion
+  trait names,
+- reusable generic helpers in `fret-ui-shadcn` / `fret-ui-kit` should converge on the unified
+  component conversion trait tracked in
+  `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md`,
+- advanced/manual-assembly reusable helpers should prefer `IntoUiElement<H>` rather than
+  child-pipeline traits such as `UiChildIntoElement<H>`,
+- `UiHostBoundIntoElement` and `UiBuilderHostBoundIntoElementExt` are already deleted from code;
+  `UiChildIntoElement` remains only as the thin heterogeneous-child bridge and should not be
+  taught on first-party shadcn surfaces,
+- keep `AnyElement` explicit only for justified raw seams such as diagnostics, overlay/controller
+  internals, or low-level helper plumbing.
+
 Before (low density; props structs + wrappers):
 
 ```rust
