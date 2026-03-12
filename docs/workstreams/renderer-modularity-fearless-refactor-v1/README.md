@@ -412,6 +412,10 @@ As of 2026-03-12:
   - prepared-glyph face registration and context helpers now live in
     `crates/fret-render-wgpu/src/text/prepare/glyph_face.rs`
   - `crates/fret-render-wgpu/src/text/prepare.rs` no longer hosts the prepared-glyph face/context chain inline
+- The eighty-second internal text split has landed:
+  - font face metadata helpers now live in
+    `crates/fret-render-wgpu/src/text/prepare/face_metadata.rs`
+  - `crates/fret-render-wgpu/src/text/prepare.rs` no longer hosts the font trace and decoration-metrics read chain inline
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed

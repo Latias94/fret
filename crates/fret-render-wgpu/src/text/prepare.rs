@@ -7,9 +7,7 @@ use fret_core::{
     geometry::Px,
 };
 use fret_render_text::cache_keys::{TextBlobKey, TextShapeKey};
-use fret_render_text::decorations::TextDecorationMetricsPx;
 use fret_render_text::font_instance_key::FontFaceKey;
-use fret_render_text::font_trace::FontTraceFamilyResolved;
 use fret_render_text::{
     parley_shaper::ParleyGlyph,
     prepare_layout::PreparedLine,
@@ -17,6 +15,7 @@ use fret_render_text::{
 };
 use std::{collections::HashMap, sync::Arc};
 
+mod face_metadata;
 mod glyph_bounds;
 mod glyph_face;
 mod glyph_raster;
@@ -374,93 +373,6 @@ impl TextSystem {
             GlyphQuadKind::Color => &mut self.color_atlas,
             GlyphQuadKind::Subpixel => &mut self.subpixel_atlas,
         }
-    }
-
-    pub(super) fn maybe_record_font_trace_entry(
-        &mut self,
-        text: &str,
-        style: &TextStyle,
-        constraints: TextConstraints,
-        shape: &Arc<TextShape>,
-    ) {
-        let mut families: Vec<FontTraceFamilyResolved> =
-            Vec::with_capacity(shape.font_faces.len().max(1));
-        for usage in shape.font_faces.iter() {
-            let family = self
-                .family_name_for_face(usage.font_data_id, usage.face_index)
-                .unwrap_or_else(|| {
-                    format!(
-                        "font_data_id={} face_index={}",
-                        usage.font_data_id, usage.face_index
-                    )
-                });
-            families.push(FontTraceFamilyResolved {
-                family,
-                glyphs: usage.glyphs,
-                missing_glyphs: usage.missing_glyphs,
-            });
-        }
-        self.font_trace.maybe_record(
-            text,
-            style,
-            constraints,
-            &self.fallback_policy,
-            shape.missing_glyphs,
-            families,
-        );
-    }
-
-    pub(super) fn decoration_metrics_for_shape(
-        &self,
-        style: &TextStyle,
-        scale: f32,
-        shape: &Arc<TextShape>,
-    ) -> Option<TextDecorationMetricsPx> {
-        let usage = shape.font_faces.first()?;
-
-        let face_key = FontFaceKey {
-            font_data_id: usage.font_data_id,
-            face_index: usage.face_index,
-            variation_key: usage.variation_key,
-            synthesis_embolden: usage.synthesis_embolden,
-            synthesis_skew_degrees: usage.synthesis_skew_degrees,
-        };
-
-        let font_data = self
-            .font_data_by_face
-            .get(&(usage.font_data_id, usage.face_index))?;
-        let coords: &[i16] = self
-            .font_instance_coords_by_face
-            .get(&face_key)
-            .map(|v| v.as_ref())
-            .unwrap_or(&[]);
-
-        let ppem = style.size.0 * scale;
-        fret_render_text::decorations::decoration_metrics_px_for_font_bytes(
-            font_data.data.data(),
-            usage.face_index,
-            coords,
-            ppem,
-        )
-    }
-
-    fn family_name_for_face(&mut self, font_data_id: u64, face_index: u32) -> Option<String> {
-        if let Some(name) = self
-            .font_face_family_name_cache
-            .get(&(font_data_id, face_index))
-            .cloned()
-        {
-            return Some(name);
-        }
-
-        let font_data = self.font_data_by_face.get(&(font_data_id, face_index))?;
-        let name = fret_render_text::font_names::best_family_name_from_font_bytes(
-            font_data.data.data(),
-            face_index,
-        )?;
-        self.font_face_family_name_cache
-            .insert((font_data_id, face_index), name.clone());
-        Some(name)
     }
 
     pub(super) fn wrap_for_prepare(
