@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::{FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::Invalidation;
@@ -13,25 +13,9 @@ use std::sync::Arc;
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 const CMD_APP_SAVE: &str = "ui_gallery.app.save";
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    #[derive(Default, Clone)]
-    struct NavigationMenuModels {
-        rtl_value: Option<Model<Option<Arc<str>>>>,
-    }
-
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let muted_foreground = cx.with_theme(|theme| theme.color_token("muted-foreground"));
-
-    let state = cx.with_state(NavigationMenuModels::default, |st| st.clone());
-    let rtl_value = match state.rtl_value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(None::<Arc<str>>);
-            cx.with_state(NavigationMenuModels::default, |st| {
-                st.rtl_value = Some(model.clone())
-            });
-            model
-        }
-    };
+    let rtl_value = cx.local_model(|| None::<Arc<str>>);
 
     let md_breakpoint = fret_ui_kit::declarative::viewport_width_at_least(
         cx,
@@ -46,7 +30,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
     );
 
-    let list_item = |cx: &mut ElementContext<'_, App>,
+    let list_item = |cx: &mut UiCx<'_>,
                      model: Model<Option<Arc<str>>>,
                      title: &'static str,
                      description: &'static str,
@@ -106,7 +90,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .into_element(cx)
     };
 
-    let icon_row = |cx: &mut ElementContext<'_, App>,
+    let icon_row = |cx: &mut UiCx<'_>,
                     model: Model<Option<Arc<str>>>,
                     icon: &'static str,
                     label: &'static str,

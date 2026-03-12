@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::{FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::Invalidation;
@@ -15,42 +15,16 @@ use std::sync::Arc;
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 const CMD_APP_SAVE: &str = "ui_gallery.app.save";
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    #[derive(Default, Clone)]
-    struct NavigationMenuModels {
-        demo_value: Option<Model<Option<Arc<str>>>>,
-        md_breakpoint_query_container: Option<Model<bool>>,
-    }
-
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let muted_foreground = cx.with_theme(|theme| theme.color_token("muted-foreground"));
-
-    let state = cx.with_state(NavigationMenuModels::default, |st| st.clone());
-    let demo_value = match state.demo_value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(None::<Arc<str>>);
-            cx.with_state(NavigationMenuModels::default, |st| {
-                st.demo_value = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let md_breakpoint_query_container = match state.md_breakpoint_query_container {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(NavigationMenuModels::default, |st| {
-                st.md_breakpoint_query_container = Some(model.clone())
-            });
-            model
-        }
-    };
+    let demo_value = cx.local_model_keyed("demo_value", || None::<Arc<str>>);
+    let md_breakpoint_query_container =
+        cx.local_model_keyed("md_breakpoint_query_container", || false);
     let use_container_query = cx
         .get_model_copied(&md_breakpoint_query_container, Invalidation::Layout)
         .unwrap_or(false);
 
-    let list_item = |cx: &mut ElementContext<'_, App>,
+    let list_item = |cx: &mut UiCx<'_>,
                      model: Model<Option<Arc<str>>>,
                      title: &'static str,
                      description: &'static str,
@@ -108,7 +82,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .into_element(cx)
     };
 
-    let icon_row = |cx: &mut ElementContext<'_, App>,
+    let icon_row = |cx: &mut UiCx<'_>,
                     model: Model<Option<Arc<str>>>,
                     icon: &'static str,
                     label: &'static str,

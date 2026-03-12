@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::{SemanticsRole, TimerToken};
 use fret_runtime::Effect;
 use fret_ui::Invalidation;
@@ -10,33 +10,11 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 use std::time::Duration;
 
-#[derive(Default, Clone)]
-struct ProgressModels {
-    value: Option<Model<f32>>,
-    timer_token: Option<Model<Option<TimerToken>>>,
-}
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+    let value = cx.local_model_keyed("value", || 13.0);
+    let timer_token = cx.local_model_keyed("timer_token", || None::<TimerToken>);
 
-fn ensure_models(cx: &mut ElementContext<'_, App>) -> (Model<f32>, Model<Option<TimerToken>>) {
-    let state = cx.with_state(ProgressModels::default, |st| st.clone());
-    match (state.value, state.timer_token) {
-        (Some(value), Some(token)) => (value, token),
-        _ => {
-            let models = cx.app.models_mut();
-            let value = models.insert(13.0);
-            let token = models.insert(None::<TimerToken>);
-            cx.with_state(ProgressModels::default, |st| {
-                st.value = Some(value.clone());
-                st.timer_token = Some(token.clone());
-            });
-            (value, token)
-        }
-    }
-}
-
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let (value, timer_token) = ensure_models(cx);
-
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
+    let centered = |cx: &mut UiCx<'_>, body: AnyElement| {
         ui::h_flex(move |_cx| [body])
             .layout(LayoutRefinement::default().w_full())
             .justify_center()

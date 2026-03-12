@@ -1,33 +1,14 @@
 pub const SOURCE: &str = include_str!("controlled.rs");
 
 // region: example
-use fret_app::App;
+use fret::UiCx;
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-#[derive(Default, Clone)]
-struct ProgressModels {
-    values: Option<Model<Vec<f32>>>,
-}
+pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+    let values = cx.local_model(|| vec![50.0]);
 
-fn ensure_values(cx: &mut ElementContext<'_, App>) -> Model<Vec<f32>> {
-    let state = cx.with_state(ProgressModels::default, |st| st.clone());
-    match state.values {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(vec![50.0]);
-            cx.with_state(ProgressModels::default, |st| {
-                st.values = Some(model.clone())
-            });
-            model
-        }
-    }
-}
-
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let values = ensure_values(cx);
-
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
+    let centered = |cx: &mut UiCx<'_>, body: AnyElement| {
         ui::h_flex(move |_cx| [body])
             .layout(LayoutRefinement::default().w_full())
             .justify_center()
