@@ -425,7 +425,7 @@ impl TextSystem {
     }
 
     fn cache_prepared_glyph_instance_coords(&mut self, glyph: &ParleyGlyph, face_key: FontFaceKey) {
-        if !glyph.normalized_coords.is_empty() {
+        if prepared_glyph_has_normalized_coords(glyph) {
             self.font_instance_coords_by_face
                 .entry(face_key)
                 .or_insert_with(|| glyph.normalized_coords.clone());
@@ -741,6 +741,10 @@ fn prepared_glyph_scaler_size(glyph: &ParleyGlyph) -> f32 {
     glyph.font_size.max(1.0)
 }
 
+fn prepared_glyph_has_normalized_coords(glyph: &ParleyGlyph) -> bool {
+    !glyph.normalized_coords.is_empty()
+}
+
 fn prepared_glyph_scaler_builder<'a>(
     parley_scale: &'a mut parley::swash::scale::ScaleContext,
     glyph: &'a ParleyGlyph,
@@ -875,7 +879,7 @@ fn apply_prepared_glyph_normalized_coords<'a>(
     scaler_builder: parley::swash::scale::ScalerBuilder<'a>,
     glyph: &'a ParleyGlyph,
 ) -> parley::swash::scale::ScalerBuilder<'a> {
-    if glyph.normalized_coords.is_empty() {
+    if !prepared_glyph_has_normalized_coords(glyph) {
         return scaler_builder;
     }
     scaler_builder.normalized_coords(glyph.normalized_coords.iter())
