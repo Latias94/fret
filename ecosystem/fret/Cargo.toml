@@ -82,8 +82,6 @@ icons = [
     "fret-bootstrap/icons-ui-semantic-lucide",
     "fret-ui-kit/icons",
 ]
-# Backwards-compat alias (prefer `icons`).
-icons-lucide = ["icons"]
 preload-icon-svgs = ["fret-bootstrap/preload-icon-svgs"]
 command-palette = ["fret-bootstrap/ui-app-command-palette"]
 

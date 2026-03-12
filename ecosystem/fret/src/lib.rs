@@ -69,18 +69,13 @@ pub type WindowId = fret_core::AppWindowId;
 #[cfg(feature = "shadcn")]
 pub use fret_ui_shadcn::facade as shadcn;
 
-/// Re-export the `IconRegistry` type for app code that wants to install a custom icon pack.
-pub use fret_icons::IconRegistry;
-
 /// Re-export portable action/command identity types for app code and macros.
-pub use fret_runtime::{ActionId, ActionMeta, ActionRegistry, CommandId, TypedAction};
+pub use fret_runtime::{ActionId, CommandId, TypedAction};
 
 pub mod actions;
 pub mod view;
 pub mod workspace_menu;
 pub mod workspace_shell;
-
-pub use workspace_shell::{workspace_shell_model, workspace_shell_model_default_menu};
 
 /// Explicit app-integration contracts for reusable ecosystem bundles.
 pub mod integration;
@@ -825,19 +820,6 @@ impl<S: 'static> UiAppBuilder<S> {
         }
     }
 
-    pub fn register_icon_pack(self, register: fn(&mut IconRegistry)) -> Self {
-        Self {
-            inner: self.inner.register_icon_pack(register),
-        }
-    }
-
-    #[cfg(feature = "icons")]
-    pub fn with_lucide_icons(self) -> Self {
-        Self {
-            inner: self.inner.with_lucide_icons(),
-        }
-    }
-
     #[cfg(feature = "ui-assets")]
     pub fn with_ui_assets_budgets(
         self,
@@ -1077,7 +1059,7 @@ fn shadcn_sync_theme_from_environment_on_global_changes<S>(
 mod builder_surface_tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    use super::{FretApp, IconRegistry};
+    use super::FretApp;
     use crate::advanced::{
         FretAppAdvancedExt as _, KernelApp, UiAppBuilderAdvancedExt as _, ViewElements,
     };
@@ -1111,8 +1093,6 @@ mod builder_surface_tests {
     }
 
     fn install(_app: &mut App, _services: &mut dyn UiServices) {}
-
-    fn register_icon_pack(_registry: &mut IconRegistry) {}
 
     fn on_view_event(
         _app: &mut KernelApp,
@@ -1208,7 +1188,6 @@ mod builder_surface_tests {
             .window("Builder View Smoke", (640.0, 480.0))
             .setup(install_app)
             .install(install)
-            .register_icon_pack(register_icon_pack)
             .view_with_hooks::<SmokeView>(|driver| {
                 driver
                     .on_event(on_view_event)
@@ -1382,6 +1361,8 @@ mod tests {
 #[cfg(test)]
 mod authoring_surface_policy_tests {
     const APP_ENTRY_RS: &str = include_str!("app_entry.rs");
+    const ACTIONS_RS: &str = include_str!("actions.rs");
+    const CARGO_TOML: &str = include_str!("../Cargo.toml");
     const ROOT_README: &str = include_str!("../../../README.md");
     const DOCS_README: &str = include_str!("../../../docs/README.md");
     const FIRST_HOUR: &str = include_str!("../../../docs/first-hour.md");
@@ -1709,13 +1690,26 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn usage_docs_prefer_explicit_app_submodules_for_optional_ecosystems() {
+        assert!(CRATE_USAGE_GUIDE.contains("`FretApp::setup(fret_icons_lucide::app::install)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`FretApp::setup(fret_icons_radix::app::install)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret_icons_lucide::app::install`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret_icons_radix::app::install`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret_ui_assets::app::install_with_budgets(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret_ui_assets::advanced::{install_with_ui_services(...), install_with_ui_services_and_budgets(...)}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret_node::app::install(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`BootstrapBuilder::register_icon_pack(...)`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`FretApp::register_icon_pack(...)`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`UiAppBuilder::register_icon_pack(...)`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`UiAppBuilder::with_lucide_icons()`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`fret_icons_radix::install_app`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`fret_ui_assets::install_app_with_budgets`"));
+    }
+
+    #[test]
+    fn todo_golden_path_keeps_icon_pack_setup_on_app_install_surface() {
+        assert!(TODO_APP_GOLDEN_PATH.contains("`.setup(fret_icons_radix::app::install)`"));
+        assert!(!TODO_APP_GOLDEN_PATH.contains(".register_icon_pack("));
+        assert!(!TODO_APP_GOLDEN_PATH.contains("IconRegistry"));
     }
 
     #[test]
@@ -1870,6 +1864,58 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn root_surface_omits_low_level_action_registry_aliases() {
+        let root_header = root_surface_header_source();
+        let app_prelude = app_prelude_source();
+
+        assert!(!root_header.contains("ActionMeta"));
+        assert!(!root_header.contains("ActionRegistry"));
+        assert!(root_header.contains("pub use fret_runtime::{ActionId, CommandId, TypedAction};"));
+        assert!(ACTIONS_RS.contains(
+            "pub use fret_runtime::{ActionId, ActionMeta, ActionRegistry, TypedAction};"
+        ));
+        assert!(!app_prelude_exports_symbol("ActionMeta"));
+        assert!(!app_prelude_exports_symbol("ActionRegistry"));
+        assert!(!app_prelude.contains("ActionMeta"));
+        assert!(!app_prelude.contains("ActionRegistry"));
+    }
+
+    #[test]
+    fn root_surface_omits_workspace_shell_shortcuts() {
+        let root_header = root_surface_header_source();
+        let public_surface = crate_public_surface_source();
+
+        assert!(!root_header.contains(
+            "pub use workspace_shell::{workspace_shell_model, workspace_shell_model_default_menu};"
+        ));
+        assert!(public_surface.contains("pub mod workspace_shell;"));
+        assert!(!app_prelude_exports_symbol("workspace_shell_model"));
+        assert!(!app_prelude_exports_symbol(
+            "workspace_shell_model_default_menu"
+        ));
+    }
+
+    #[test]
+    fn root_surface_omits_icon_registry_and_icon_pack_builder_helpers() {
+        let root_header = root_surface_header_source();
+        let app_prelude = app_prelude_source();
+        let ui_app_builder = ui_app_builder_impl_source();
+
+        assert!(!root_header.contains("pub use fret_icons::IconRegistry;"));
+        assert!(!app_prelude_exports_symbol("IconRegistry"));
+        assert!(!app_prelude.contains("IconRegistry"));
+        assert!(!APP_ENTRY_RS.contains("pub fn register_icon_pack("));
+        assert!(!ui_app_builder.contains("pub fn register_icon_pack("));
+        assert!(!ui_app_builder.contains("pub fn with_lucide_icons("));
+    }
+
+    #[test]
+    fn crate_feature_surface_omits_compat_icon_aliases() {
+        assert!(CARGO_TOML.contains("icons = ["));
+        assert!(!CARGO_TOML.contains("icons-lucide = [\"icons\"]"));
+    }
+
+    #[test]
     fn view_runtime_exposes_only_app_ui_as_the_public_context_name() {
         assert!(!VIEW_RS.contains("pub type ViewCx"));
         assert!(
@@ -1990,6 +2036,7 @@ mod authoring_surface_policy_tests {
         );
         assert!(!APP_ENTRY_RS.contains("pub fn install_app("));
         assert!(!APP_ENTRY_RS.contains("pub fn install("));
+        assert!(!APP_ENTRY_RS.contains("pub fn register_icon_pack("));
         assert!(!APP_ENTRY_RS.contains("pub fn run_view("));
         assert!(!APP_ENTRY_RS.contains("pub fn run_view_with_hooks("));
 
@@ -2000,6 +2047,8 @@ mod authoring_surface_policy_tests {
         );
         assert!(!ui_app_builder.contains("pub fn init_app("));
         assert!(!ui_app_builder.contains("pub fn install("));
+        assert!(!ui_app_builder.contains("pub fn register_icon_pack("));
+        assert!(!ui_app_builder.contains("pub fn with_lucide_icons("));
         assert!(!ui_app_builder.contains("pub fn install_custom_effects("));
         assert!(!ui_app_builder.contains("pub fn on_gpu_ready("));
 

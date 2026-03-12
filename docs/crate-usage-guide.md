@@ -302,8 +302,13 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 **Recommended integration:**
 
 - **Component crates:** depend on `fret-icons` (and use semantic `IconId`s). Avoid depending on a specific pack.
-- **Apps:** enable `fret-bootstrap/icons-lucide` or `fret-bootstrap/icons-radix` and call the corresponding builder helper
-  (`with_lucide_icons()` / `with_radix_icons()`). For custom packs, call `BootstrapBuilder::register_icon_pack(...)`.
+- **Apps using `fret`:** keep the default Lucide pack on `fret`'s `icons` feature, or install an
+  explicit pack through `FretApp::setup(fret_icons_lucide::app::install)` /
+  `FretApp::setup(fret_icons_radix::app::install)`. For custom packs, publish the same shape on
+  your own crate and call `FretApp::setup(my_icons::app::install)`.
+- **Apps using `fret-bootstrap` directly:** use `BootstrapBuilder::with_lucide_icons()` /
+  `BootstrapBuilder::with_radix_icons()`. For custom packs, call
+  `BootstrapBuilder::register_icon_pack(...)`.
 - **Direct app wiring:** when you depend on a pack directly, use the explicit `crate::app` seam
   (`fret_icons_lucide::app::install`, `fret_icons_radix::app::install`) instead of root-level
   install helpers.

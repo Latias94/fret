@@ -97,7 +97,7 @@ The current builder surface is intentionally small but complete enough for gener
 - `ui_assets_budgets(...)`
 - `setup(...)`
 - `setup_with(...)`
-- `register_icon_pack(...)`
+- icon-pack app installers via `setup(...::app::install)`
 - `view::<V>()`
 - `view_with_hooks::<V>(configure)`
 - `run_view::<V>()` / `run_view_with_hooks::<V>(...)`
@@ -106,6 +106,9 @@ This is enough to keep the first-app story compact while leaving real seams avai
 
 Hooks that need `UiServices`, GPU-ready customization, or custom effect installation remain
 available only through explicit advanced builder extensions.
+
+Pack-specific or raw registry helpers such as `register_icon_pack(...)` stay below the `fret`
+facade on `fret-bootstrap`, where manual assembly is already explicit.
 
 This naming convergence applies to the `fret` facade builder surface. The lower-level
 `fret_bootstrap` raw/manual-assembly builders intentionally remain explicit and may keep older

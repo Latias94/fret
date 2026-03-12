@@ -21,7 +21,6 @@ pub struct FretApp {
     command_palette: bool,
     setup_hooks: Vec<AppSetupHook>,
     install_hooks: Vec<fn(&mut crate::app::App, &mut dyn fret_core::UiServices)>,
-    register_icon_pack_hooks: Vec<fn(&mut crate::IconRegistry)>,
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
@@ -37,7 +36,6 @@ impl FretApp {
             command_palette: false,
             setup_hooks: Vec::new(),
             install_hooks: Vec::new(),
-            register_icon_pack_hooks: Vec::new(),
         }
     }
 
@@ -88,20 +86,14 @@ impl FretApp {
     /// Run app-level setup during bootstrap.
     ///
     /// This is the canonical ecosystem integration seam for app-level add-ons such as command
-    /// registration, theme/bootstrap setup, optional recipe-crate globals, or reusable app
-    /// integration bundles that implement [`InstallIntoApp`].
+    /// registration, theme/bootstrap setup, icon-pack app installers, optional recipe-crate
+    /// globals, or reusable app integration bundles that implement [`InstallIntoApp`].
     pub fn setup<T>(mut self, setup: T) -> Self
     where
         T: InstallIntoApp + 'static,
     {
         self.setup_hooks
             .push(Box::new(move |app| setup.install_into_app(app)));
-        self
-    }
-
-    /// Register one or more custom icon packs (runs during bootstrap).
-    pub fn register_icon_pack(mut self, register: fn(&mut crate::IconRegistry)) -> Self {
-        self.register_icon_pack_hooks.push(register);
         self
     }
 
@@ -135,7 +127,6 @@ impl FretApp {
             command_palette,
             setup_hooks,
             install_hooks,
-            register_icon_pack_hooks,
         } = self;
 
         let driver =
@@ -173,7 +164,6 @@ impl FretApp {
             defaults,
             setup_hooks,
             install_hooks,
-            register_icon_pack_hooks,
             driver,
         )
     }
@@ -194,7 +184,6 @@ fn finish_builder<S: 'static>(
     defaults: Defaults,
     setup_hooks: Vec<AppSetupHook>,
     install_hooks: Vec<fn(&mut crate::app::App, &mut dyn fret_core::UiServices)>,
-    register_icon_pack_hooks: Vec<fn(&mut crate::IconRegistry)>,
     driver: UiAppDriver<S>,
 ) -> Result<UiAppBuilder<S>> {
     let mut builder = fret_bootstrap::BootstrapBuilder::new(
@@ -207,9 +196,6 @@ fn finish_builder<S: 'static>(
     }
     for f in install_hooks {
         builder = builder.install(f);
-    }
-    for f in register_icon_pack_hooks {
-        builder = builder.register_icon_pack(f);
     }
 
     let builder = crate::apply_desktop_defaults_with(builder, defaults)

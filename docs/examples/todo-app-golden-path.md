@@ -394,7 +394,10 @@ Recommended for apps:
 
 - `fret` enables a default icon pack via `fret/icons` (Lucide).
 - To use another pack, add it as an explicit dependency and install it via the entry seams:
-  - `.setup(fret_icons_radix::app::install)`, or
-  - `.register_icon_pack(fret_icons_radix::register_vendor_icons)`.
+  - `.setup(fret_icons_radix::app::install)`.
 
-If you need a custom pack, call `.register_icon_pack(...)` with your own `fn(&mut IconRegistry)` implementation.
+If you need a custom pack, expose the same app-facing seam from your own crate and call
+`.setup(my_icons::app::install)`.
+
+If you intentionally need raw registry control, drop to
+`fret_bootstrap::BootstrapBuilder::register_icon_pack(...)`.

@@ -18,7 +18,7 @@
 - [x] `ui_assets_budgets(...)`
 - [x] `setup(...)`
 - [x] `setup_with(...)`
-- [x] `register_icon_pack(...)`
+- [x] icon-pack app installers via `setup(...::app::install)`
 - [x] `view::<V>()`
 - [x] `view_with_hooks::<V>(configure)`
 - [x] `run_view::<V>()` / `run_view_with_hooks::<V>(...)`

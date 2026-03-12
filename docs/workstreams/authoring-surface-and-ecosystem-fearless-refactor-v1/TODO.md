@@ -176,6 +176,13 @@ Companion docs:
 - [x] Remove `run_view::<V>()` / `run_view_with_hooks::<V>(...)` from the default app surface once
   docs/templates/examples and gates all prefer `view::<V>()?.run()`.
 - [ ] Remove old default-path names that are no longer canonical.
+- [ ] Remove root-level low-level aliases that are no longer part of the default facade vocabulary.
+  - [x] 2026-03-12: removed `fret::ActionMeta` / `fret::ActionRegistry`; low-level registry
+    access remains explicit under `fret::actions::*`.
+  - [x] 2026-03-12: removed `fret::IconRegistry`; raw icon registry access now stays explicit via
+    `fret-icons` / `fret-bootstrap` while app-facing icon packs install through `.setup(...::app::install)`.
+  - [x] 2026-03-12: removed root `workspace_shell_model*` shortcuts; editor-style workspace shell
+    assembly now stays explicit under `fret::workspace_shell::*`.
 - [x] Remove flat `AppUi` data/effects helpers that duplicate the grouped `cx.data()` /
   `cx.effects()` surface.
 - [x] Remove public flat `AppUi::use_local*` helpers that duplicate the grouped `cx.state()`
@@ -186,6 +193,11 @@ Companion docs:
   while keeping raw handler registration as an explicit advanced seam.
 - [ ] Remove duplicate or ambiguous exports from the app prelude.
 - [ ] Remove compatibility-only aliases that survive only for internal inertia.
+  - [x] 2026-03-12: removed the `fret/icons-lucide` compatibility feature alias; the canonical
+    feature name for the default Lucide pack is now just `icons`.
+  - [x] 2026-03-12: removed `FretApp::register_icon_pack(...)`,
+    `UiAppBuilder::register_icon_pack(...)`, and `UiAppBuilder::with_lucide_icons()` from the
+    default `fret` facade; explicit pack setup now flows through `setup(...::app::install)`.
 - [ ] Remove dead docs and stale guidance after the migration is complete.
 
 ## M6 — Add gates so the surface stays clean
@@ -222,6 +234,14 @@ Companion docs:
 - [ ] Keep layering checks green.
   - 2026-03-12: `python3 tools/check_layering.py` passed after the split-ecosystem shortcut audit
     guards landed.
+  - 2026-03-12: keep the `fret` root facade free of low-level action registry aliases; the source
+    gate now requires those names to stay under `fret::actions::*` instead.
+  - 2026-03-12: keep icon registry / icon-pack builder helpers off the default `fret` facade; the
+    source gates now require app-facing icon setup to stay on `.setup(...::app::install)`.
+  - 2026-03-12: keep the `fret` feature surface on canonical names only; the source gate now
+    forbids the old `icons-lucide = ["icons"]` alias from returning.
+  - 2026-03-12: keep workspace-shell helpers module-scoped; the source gate now forbids root
+    `workspace_shell_model*` shortcuts from returning.
 
 ## Exit Criteria
 
