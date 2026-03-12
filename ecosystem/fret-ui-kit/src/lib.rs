@@ -160,7 +160,7 @@ macro_rules! ui_component_passthrough_patch_only {
 ///
 /// Note: we intentionally avoid a blanket impl due to coherence restrictions on upstream types.
 #[macro_export]
-macro_rules! ui_into_element_render_once {
+macro_rules! ui_component_render_once {
     ($ty:ty) => {
         impl<H: ::fret_ui::UiHost> $crate::IntoUiElement<H> for $ty {
             #[track_caller]
@@ -364,10 +364,10 @@ mod ui_component_macro_tests {
         }
     }
 
-    ui_into_element_render_once!(DummyRenderOnceComponent);
+    ui_component_render_once!(DummyRenderOnceComponent);
 
     #[test]
-    fn ui_into_element_render_once_macro_compiles() {
+    fn ui_component_render_once_macro_compiles() {
         fn assert_into_element<T: IntoUiElement<fret_app::App>>() {}
         assert_into_element::<DummyRenderOnceComponent>();
     }
@@ -436,6 +436,8 @@ mod source_policy_tests {
         assert!(
             public_surface.contains("impl<H: ::fret_ui::UiHost> $crate::IntoUiElement<H> for $ty")
         );
+        assert!(public_surface.contains("macro_rules! ui_component_render_once"));
+        assert!(!public_surface.contains("macro_rules! ui_into_element_render_once"));
     }
 
     #[test]

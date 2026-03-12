@@ -20,6 +20,11 @@ fn curated_docs_prefer_unified_component_conversion_vocabulary() {
             "{label} should teach IntoUiElement<H> on the curated component surface"
         );
     }
+
+    assert!(
+        COMPONENT_AUTHORING_CONTRACTS.contains("ui_component_render_once!"),
+        "docs/component-authoring-contracts.md should teach the renamed RenderOnce macro"
+    );
 }
 
 #[test]
@@ -45,4 +50,9 @@ fn curated_docs_avoid_legacy_conversion_trait_names() {
             );
         }
     }
+
+    assert!(
+        !COMPONENT_AUTHORING_CONTRACTS.contains("ui_into_element_render_once!"),
+        "docs/component-authoring-contracts.md reintroduced the legacy RenderOnce macro name"
+    );
 }

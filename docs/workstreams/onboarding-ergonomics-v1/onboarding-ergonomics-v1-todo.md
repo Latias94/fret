@@ -203,7 +203,7 @@ Status note (2026-03-08): this tracker predates the in-tree action-first/view-ru
 - [!] ONB-macro-052 Add a blanket impl: `UiIntoElement` for all `T: fret_ui::element::RenderOnce`.
   - Goal: eliminate repetitive `impl UiIntoElement` boilerplate in third-party crates.
   - Note: blocked by Rust coherence (would conflict with `UiIntoElement for AnyElement` if upstream adds `RenderOnce`).
-    Use `fret_ui_kit::ui_into_element_render_once!(Ty)` instead.
+    Use `fret_ui_kit::ui_component_render_once!(Ty)` instead.
   - Evidence:
     - `crates/fret-ui/src/element.rs` (`RenderOnce`)
     - `ecosystem/fret-ui-kit/src/ui_builder.rs` (`UiIntoElement`)

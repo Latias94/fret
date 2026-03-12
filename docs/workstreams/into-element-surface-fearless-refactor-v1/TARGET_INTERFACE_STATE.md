@@ -183,7 +183,7 @@ Current execution note on 2026-03-12:
 - `UiHostBoundIntoElement<H>` is already deleted from the codebase.
 - `UiIntoElement` now survives only as `fret_ui_kit::ui_builder::UiIntoElement`, marked
   `#[doc(hidden)]` and treated as internal landing scaffolding rather than public vocabulary.
-- exported `fret_ui_kit` adapter macros (`ui_component_*`, `ui_into_element_render_once!`) and the
+- exported `fret_ui_kit` adapter macros (`ui_component_*`, `ui_component_render_once!`) and the
   built-in primitive glue now implement `IntoUiElement<H>` directly, so the remaining
   `UiIntoElement` scaffold is narrower than the first-party macro/component authoring surface.
 - `UiChildIntoElement<H>` is now deleted from the codebase; heterogeneous child collection in

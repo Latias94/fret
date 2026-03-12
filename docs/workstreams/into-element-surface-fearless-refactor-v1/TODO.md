@@ -178,6 +178,9 @@ Implementation note on 2026-03-12:
   `IntoUiElement<fret_app::App>` contract instead of `UiIntoElement`.
 - exported `fret-ui-kit` adapter macros now attach `IntoUiElement<H>` directly, which shrinks the
   remaining `UiIntoElement` usage to internal `fret-ui-kit` scaffolding and source-policy tests.
+- the RenderOnce helper macro is now also renamed onto the public vocabulary:
+  component-authoring docs should teach `fret_ui_kit::ui_component_render_once!(Ty)` rather than
+  the old `ui_into_element_render_once!` name.
 - typography remains decoupled from the model-heavy constructor lane:
   this sweep does not mix with `checkbox`, `progress`, or `switch` refactors.
 - selected advanced/manual-assembly examples now also keep reusable helpers off raw landed return

@@ -81,7 +81,7 @@ prefer the `macro_rules!` helpers exported by `fret-ui-kit`:
 - `fret_ui_kit::ui_component_chrome_layout!(MyType);`
 - `fret_ui_kit::ui_component_layout_only!(MyType);`
 - `fret_ui_kit::ui_component_*_patch_only!(MyType);` (patch-only; see below)
-- `fret_ui_kit::ui_into_element_render_once!(MyType);` (when a type implements `RenderOnce`)
+- `fret_ui_kit::ui_component_render_once!(MyType);` (when a type implements `RenderOnce`)
 
 #### Implementation strategy (host-agnostic vs `RenderOnce`)
 
@@ -90,7 +90,7 @@ Near-term decision:
 - Prefer explicit `impl<H: UiHost> IntoUiElement<H> for MyType` for reusable component types that
   can render directly into `AnyElement`.
 - For types that already implement `fret_ui::element::RenderOnce`, use
-  `fret_ui_kit::ui_into_element_render_once!(MyType);`.
+  `fret_ui_kit::ui_component_render_once!(MyType);`.
 - If a host-agnostic type already has `refine_style` / `refine_layout` plus an inherent
   `into_element(self, cx)`, prefer the `fret_ui_kit` helper macros so the required adapter glue
   stays internal instead of becoming part of the taught component-authoring vocabulary.
