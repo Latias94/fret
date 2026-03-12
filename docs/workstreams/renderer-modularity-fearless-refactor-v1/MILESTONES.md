@@ -154,6 +154,10 @@ Current snapshot (2026-03-12):
   - prepared-line glyph-drain materialization now lives behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `materialize_prepared_line(...)` no longer owns the prepared-glyph loop directly
+- The thirty-third internal `text/mod.rs` split has landed:
+  - prepared-glyph face-key construction now lives behind a pure helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `register_prepared_glyph_face(...)` no longer owns `FontFaceKey` construction directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed

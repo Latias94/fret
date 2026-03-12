@@ -399,17 +399,7 @@ impl TextSystem {
             .entry((font_data_id, face_index))
             .or_insert_with(|| glyph.font.clone());
 
-        let face_key = FontFaceKey {
-            font_data_id,
-            face_index,
-            variation_key: variation_key_from_normalized_coords(&glyph.normalized_coords),
-            synthesis_embolden: glyph.synthesis.embolden(),
-            synthesis_skew_degrees: glyph
-                .synthesis
-                .skew()
-                .unwrap_or(0.0)
-                .clamp(i8::MIN as f32, i8::MAX as f32) as i8,
-        };
+        let face_key = prepared_glyph_face_key(glyph, font_data_id, face_index);
         if !glyph.normalized_coords.is_empty() {
             self.font_instance_coords_by_face
                 .entry(face_key)
@@ -709,6 +699,20 @@ fn prepared_glyph_bounds_from_atlas_entry(
         entry.w as f32,
         entry.h as f32,
     )
+}
+
+fn prepared_glyph_face_key(glyph: &ParleyGlyph, font_data_id: u64, face_index: u32) -> FontFaceKey {
+    FontFaceKey {
+        font_data_id,
+        face_index,
+        variation_key: variation_key_from_normalized_coords(&glyph.normalized_coords),
+        synthesis_embolden: glyph.synthesis.embolden(),
+        synthesis_skew_degrees: glyph
+            .synthesis
+            .skew()
+            .unwrap_or(0.0)
+            .clamp(i8::MIN as f32, i8::MAX as f32) as i8,
+    }
 }
 
 fn prepared_glyph_instance(
