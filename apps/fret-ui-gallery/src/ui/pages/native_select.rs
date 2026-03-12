@@ -5,110 +5,14 @@ use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::native_select as snippets;
 
 pub(super) fn preview_native_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
-    #[derive(Default)]
-    struct NativeSelectPageModels {
-        demo_value: Option<Model<Option<Arc<str>>>>,
-        demo_open: Option<Model<bool>>,
-        groups_value: Option<Model<Option<Arc<str>>>>,
-        groups_open: Option<Model<bool>>,
-        disabled_value: Option<Model<Option<Arc<str>>>>,
-        disabled_open: Option<Model<bool>>,
-        invalid_value: Option<Model<Option<Arc<str>>>>,
-        invalid_open: Option<Model<bool>>,
-    }
-
-    let (
-        demo_value,
-        demo_open,
-        groups_value,
-        groups_open,
-        disabled_value,
-        disabled_open,
-        invalid_value,
-        invalid_open,
-    ) = cx.with_state(NativeSelectPageModels::default, |st| {
-        (
-            st.demo_value.clone(),
-            st.demo_open.clone(),
-            st.groups_value.clone(),
-            st.groups_open.clone(),
-            st.disabled_value.clone(),
-            st.disabled_open.clone(),
-            st.invalid_value.clone(),
-            st.invalid_open.clone(),
-        )
-    });
-
-    let (
-        demo_value,
-        demo_open,
-        groups_value,
-        groups_open,
-        disabled_value,
-        disabled_open,
-        invalid_value,
-        invalid_open,
-    ) = match (
-        demo_value,
-        demo_open,
-        groups_value,
-        groups_open,
-        disabled_value,
-        disabled_open,
-        invalid_value,
-        invalid_open,
-    ) {
-        (
-            Some(demo_value),
-            Some(demo_open),
-            Some(groups_value),
-            Some(groups_open),
-            Some(disabled_value),
-            Some(disabled_open),
-            Some(invalid_value),
-            Some(invalid_open),
-        ) => (
-            demo_value,
-            demo_open,
-            groups_value,
-            groups_open,
-            disabled_value,
-            disabled_open,
-            invalid_value,
-            invalid_open,
-        ),
-        _ => {
-            let models = cx.app.models_mut();
-            let demo_value = models.insert(None);
-            let demo_open = models.insert(false);
-            let groups_value = models.insert(None);
-            let groups_open = models.insert(false);
-            let disabled_value = models.insert(None);
-            let disabled_open = models.insert(false);
-            let invalid_value = models.insert(None);
-            let invalid_open = models.insert(false);
-            cx.with_state(NativeSelectPageModels::default, |st| {
-                st.demo_value = Some(demo_value.clone());
-                st.demo_open = Some(demo_open.clone());
-                st.groups_value = Some(groups_value.clone());
-                st.groups_open = Some(groups_open.clone());
-                st.disabled_value = Some(disabled_value.clone());
-                st.disabled_open = Some(disabled_open.clone());
-                st.invalid_value = Some(invalid_value.clone());
-                st.invalid_open = Some(invalid_open.clone());
-            });
-            (
-                demo_value,
-                demo_open,
-                groups_value,
-                groups_open,
-                disabled_value,
-                disabled_open,
-                invalid_value,
-                invalid_open,
-            )
-        }
-    };
+    let demo_value = cx.local_model_keyed("demo_value", || None::<Arc<str>>);
+    let demo_open = cx.local_model_keyed("demo_open", || false);
+    let groups_value = cx.local_model_keyed("groups_value", || None::<Arc<str>>);
+    let groups_open = cx.local_model_keyed("groups_open", || false);
+    let disabled_value = cx.local_model_keyed("disabled_value", || None::<Arc<str>>);
+    let disabled_open = cx.local_model_keyed("disabled_open", || false);
+    let invalid_value = cx.local_model_keyed("invalid_value", || None::<Arc<str>>);
+    let invalid_open = cx.local_model_keyed("invalid_open", || false);
 
     let demo = snippets::demo::render(cx, demo_value, demo_open);
     let usage = snippets::usage::render(cx);

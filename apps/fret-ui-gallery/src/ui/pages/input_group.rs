@@ -71,7 +71,7 @@ pub(super) fn preview_input_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .code_rust(
                     r#"use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-let query = cx.app.models_mut().insert(String::new());
+let query = cx.local_model_keyed("query", String::new);
 
 shadcn::InputGroup::new(query).into_element_parts(cx, |cx| {
     vec![

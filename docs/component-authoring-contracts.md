@@ -29,7 +29,11 @@ at least one regression test before expanding usage.
 
 - `fret_ui::ElementContext` (the primary API surface for building element subtrees)
   - Identity: `ElementContext::scope(...)`, `ElementContext::keyed(...)`
-  - Local state: `ElementContext::{with_state, with_state_for}`
+  - Local state:
+    - authored local models: `ElementContext::{local_model, local_model_keyed}`
+    - helper/runtime slots: `ElementContext::{slot_state, slot_id, keyed_slot_id}`
+    - explicit identity slots: `ElementContext::{state_for, with_state_for}`
+    - lower-level compatibility API: `ElementContext::with_state(...)`
   - Model reads + observation: `ElementContext::{observe_model, read_model_ref, get_model_*}`
   - Focus reads: `ElementContext::{focused_element, is_focused_element}`
   - Cross-frame geometry queries: `ElementContext::{last_bounds_for_element, last_visual_bounds_for_element}`
@@ -142,8 +146,20 @@ Public constructors/setters that accept children should use:
 - `ElementContext::scope(...)` derives stable element identity from the callsite.
 - `ElementContext::keyed(key, ...)` derives stable identity from `(callsite, key)` and should be used
   for list-like rendering (virtual list items, menus, etc.).
-- `ElementContext::{with_state, with_state_for}` store **element-local, cross-frame** state in the
-  runtime store keyed by `(GlobalElementId, TypeId)`.
+- `ElementContext::root_state(...)` stores **root-scoped shared** state under the current element
+  root (`(GlobalElementId, TypeId)`).
+- `ElementContext::local_model(...)` stores a helper-local `Model<T>` in a synthetic callsite slot.
+- `ElementContext::local_model_keyed(...)` stores a helper-local `Model<T>` in a synthetic
+  `(callsite, key)` slot and is the recommended default for authored local `Model<T>` state in
+  reorderable collections and copyable examples.
+- `ElementContext::slot_state(...)` stores **helper-local callsite slots** under a
+  synthetic child id derived from `(current_root, caller_location, slot_index)`.
+- `ElementContext::slot_id(...)` / `keyed_slot_id(...)` allocate a
+  reusable helper-local slot id for helpers that must touch the same logical slot more than once
+  per render.
+- `ElementContext::state_for(...)` stores state under an explicitly chosen `GlobalElementId`.
+- `ElementContext::provide(...)` / `provided(...)` model inherited provider values without forcing
+  components to hand-roll save/restore logic on top of root state.
 
 Practical note (ecosystem ergonomics):
 
@@ -155,6 +171,10 @@ Practical note (ecosystem ergonomics):
 Practical guidance:
 
 - Use `keyed` whenever the child set can reorder or be filtered.
+- Prefer `local_model` / `local_model_keyed` for authored local `Model<T>` state instead of
+  hand-rolling `with_state + app.models_mut().insert(...)` shells.
+- Use `root_state` for shared per-root runtime state, `slot_state` for helper internals such as
+  uncontrolled models/hysteresis/memo caches, and `provide` for inherited provider values.
 - Avoid capturing element IDs in long-lived app state unless you also control their lifetime and
   re-derivation strategy (IDs are stable but not global identifiers).
 
@@ -321,8 +341,8 @@ Feature flags to be aware of:
 
 1. **Layering:** ensure it can be expressed via existing `fret-ui` mechanisms + component policy.
 2. **Identity:** use `scope`/`keyed` correctly; avoid unstable identity in lists.
-3. **State:** store UI-local state via `with_state` or app models; avoid global singletons in
-   runtime.
+3. **State:** store UI-local state via `root_state` / `slot_state` / `provide` / app models as
+   appropriate; avoid global singletons in runtime.
 4. **Invalidation:** register observation for every model read (layout vs paint vs hit-test).
 5. **Hooks:** implement interaction policy via action hooks + headless helpers.
 6. **Semantics:** pick a role, set label/value/flags, and stamp collection metadata where needed.

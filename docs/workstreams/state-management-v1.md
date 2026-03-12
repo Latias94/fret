@@ -55,10 +55,19 @@ Goal: component/app-local mutable values with explicit invalidation.
 Recommended primitives:
 
 - `Model<T>` for app/window-level state (`App::models_mut().insert(...)`)
-- `ElementContext::with_state_for(...)` for element-owned cross-frame component state
+- `ElementContext::{local_model, local_model_keyed}` for authored local `Model<T>` state in app
+  code, snippets, and component examples
+- `ElementContext::root_state(...)` for root-scoped shared component runtime state
+- `ElementContext::slot_state(...)` for helper-local slot state
+- `ElementContext::state_for(...)` for explicitly keyed element-owned state
+- `ElementContext::provide(...)` for inherited provider values
 
 Guidelines:
 
+- Prefer `local_model_keyed(...)` as the default copyable authoring surface when the state is local
+  to one element subtree but still needs to be a `Model<T>`.
+- Reserve `with_state + App::models_mut().insert(...)` for low-level migration/compat work, not as
+  the teaching surface for new code.
 - If a value affects rendering, make it observable (model or element state), otherwise view caching
   will reuse stale output.
 - Prefer granular models (split state) over “one giant model” to keep invalidation cheap.
@@ -130,7 +139,7 @@ Current solution (ecosystem-level):
 
 - `fret::actions!` for stable unit actions that must remain reachable from keymaps/menus/palette,
 - `fret::payload_actions!` for per-item pointer/programmatic intents with typed payloads,
-- `ViewCx::{on_action*, on_payload_action*}` for handling without string parsing.
+- `AppUi::{on_action*, on_payload_action*}` for handling without string parsing.
 
 Guidance:
 

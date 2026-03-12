@@ -49,7 +49,7 @@ pub(super) fn preview_input(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .code_rust(
                     r#"use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-let value = cx.app.models_mut().insert(String::new());
+let value = cx.local_model_keyed("value", String::new);
 
 shadcn::Input::new(value)
     .a11y_label("Search")

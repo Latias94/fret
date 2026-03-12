@@ -11,39 +11,6 @@ pub(super) fn preview_date_picker(
     month: Model<CalendarMonth>,
     selected: Model<Option<Date>>,
 ) -> Vec<AnyElement> {
-    #[derive(Default)]
-    struct DatePickerModels {
-        basic_open: Option<Model<bool>>,
-        basic_month: Option<Model<CalendarMonth>>,
-        basic_selected: Option<Model<Option<Date>>>,
-        range_open: Option<Model<bool>>,
-        range_month: Option<Model<CalendarMonth>>,
-        range_selected: Option<Model<DateRangeSelection>>,
-        dob_open: Option<Model<bool>>,
-        dob_month: Option<Model<CalendarMonth>>,
-        dob_selected: Option<Model<Option<Date>>>,
-        rtl_open: Option<Model<bool>>,
-        rtl_month: Option<Model<CalendarMonth>>,
-        rtl_selected: Option<Model<Option<Date>>>,
-        presets_open: Option<Model<bool>>,
-        presets_month: Option<Model<CalendarMonth>>,
-        presets_selected: Option<Model<Option<Date>>>,
-        input_open: Option<Model<bool>>,
-        input_month: Option<Model<CalendarMonth>>,
-        input_selected: Option<Model<Option<Date>>>,
-        input_value: Option<Model<String>>,
-        input_last_selected: Option<Date>,
-        natural_open: Option<Model<bool>>,
-        natural_month: Option<Model<CalendarMonth>>,
-        natural_selected: Option<Model<Option<Date>>>,
-        natural_value: Option<Model<String>>,
-        natural_last_selected: Option<Date>,
-        time_open: Option<Model<bool>>,
-        time_month: Option<Model<CalendarMonth>>,
-        time_selected: Option<Model<Option<Date>>>,
-        time_value: Option<Model<String>>,
-    }
-
     fn parse_iso_date_ymd(raw: &str) -> Option<Date> {
         let raw = raw.trim();
         let (year, rest) = raw.split_once('-')?;
@@ -64,308 +31,69 @@ pub(super) fn preview_date_picker(
         .ok()
         .and_then(|raw| parse_iso_date_ymd(&raw))
         .unwrap_or_else(|| time::OffsetDateTime::now_utc().date());
+    let diag_month = CalendarMonth::from_date(
+        Date::from_calendar_date(2024, time::Month::February, 1).expect("valid date"),
+    );
 
-    let (
-        basic_open,
-        basic_month,
-        basic_selected,
-        range_open,
-        range_month,
-        range_selected,
-        dob_open,
-        dob_month,
-        dob_selected,
-        rtl_open,
-        rtl_month,
-        rtl_selected,
-        presets_open,
-        presets_month,
-        presets_selected,
-        input_open,
-        input_month,
-        input_selected,
-        input_value,
-        natural_open,
-        natural_month,
-        natural_selected,
-        natural_value,
-        time_open,
-        time_month,
-        time_selected,
-        time_value,
-    ) = cx.with_state(DatePickerModels::default, |st| {
-        (
-            st.basic_open.clone(),
-            st.basic_month.clone(),
-            st.basic_selected.clone(),
-            st.range_open.clone(),
-            st.range_month.clone(),
-            st.range_selected.clone(),
-            st.dob_open.clone(),
-            st.dob_month.clone(),
-            st.dob_selected.clone(),
-            st.rtl_open.clone(),
-            st.rtl_month.clone(),
-            st.rtl_selected.clone(),
-            st.presets_open.clone(),
-            st.presets_month.clone(),
-            st.presets_selected.clone(),
-            st.input_open.clone(),
-            st.input_month.clone(),
-            st.input_selected.clone(),
-            st.input_value.clone(),
-            st.natural_open.clone(),
-            st.natural_month.clone(),
-            st.natural_selected.clone(),
-            st.natural_value.clone(),
-            st.time_open.clone(),
-            st.time_month.clone(),
-            st.time_selected.clone(),
-            st.time_value.clone(),
-        )
-    });
-
-    let (
-        basic_open,
-        basic_month,
-        basic_selected,
-        range_open,
-        range_month,
-        range_selected,
-        dob_open,
-        dob_month,
-        dob_selected,
-        rtl_open,
-        rtl_month,
-        rtl_selected,
-        presets_open,
-        presets_month,
-        presets_selected,
-        input_open,
-        input_month,
-        input_selected,
-        input_value,
-        natural_open,
-        natural_month,
-        natural_selected,
-        natural_value,
-        time_open,
-        time_month,
-        time_selected,
-        time_value,
-    ) = match (
-        basic_open,
-        basic_month,
-        basic_selected,
-        range_open,
-        range_month,
-        range_selected,
-        dob_open,
-        dob_month,
-        dob_selected,
-        rtl_open,
-        rtl_month,
-        rtl_selected,
-        presets_open,
-        presets_month,
-        presets_selected,
-        input_open,
-        input_month,
-        input_selected,
-        input_value,
-        natural_open,
-        natural_month,
-        natural_selected,
-        natural_value,
-        time_open,
-        time_month,
-        time_selected,
-        time_value,
-    ) {
-        (
-            Some(basic_open),
-            Some(basic_month),
-            Some(basic_selected),
-            Some(range_open),
-            Some(range_month),
-            Some(range_selected),
-            Some(dob_open),
-            Some(dob_month),
-            Some(dob_selected),
-            Some(rtl_open),
-            Some(rtl_month),
-            Some(rtl_selected),
-            Some(presets_open),
-            Some(presets_month),
-            Some(presets_selected),
-            Some(input_open),
-            Some(input_month),
-            Some(input_selected),
-            Some(input_value),
-            Some(natural_open),
-            Some(natural_month),
-            Some(natural_selected),
-            Some(natural_value),
-            Some(time_open),
-            Some(time_month),
-            Some(time_selected),
-            Some(time_value),
-        ) => (
-            basic_open,
-            basic_month,
-            basic_selected,
-            range_open,
-            range_month,
-            range_selected,
-            dob_open,
-            dob_month,
-            dob_selected,
-            rtl_open,
-            rtl_month,
-            rtl_selected,
-            presets_open,
-            presets_month,
-            presets_selected,
-            input_open,
-            input_month,
-            input_selected,
-            input_value,
-            natural_open,
-            natural_month,
-            natural_selected,
-            natural_value,
-            time_open,
-            time_month,
-            time_selected,
-            time_value,
-        ),
-        _ => {
-            let basic_open = cx.app.models_mut().insert(false);
-            let range_open = cx.app.models_mut().insert(false);
-            let diag_month = CalendarMonth::from_date(
-                Date::from_calendar_date(2024, time::Month::February, 1).expect("valid date"),
-            );
-            let basic_month = cx.app.models_mut().insert(if diag_calendar_roving {
-                diag_month
-            } else {
-                CalendarMonth::from_date(today)
-            });
-            let basic_selected = cx.app.models_mut().insert(None::<Date>);
-            let range_month = cx.app.models_mut().insert(if diag_calendar_roving {
-                diag_month
-            } else {
-                CalendarMonth::from_date(today)
-            });
-            let range_selected = cx.app.models_mut().insert(if diag_calendar_roving {
-                DateRangeSelection::default()
-            } else {
-                DateRangeSelection::default()
-            });
-            let dob_open = cx.app.models_mut().insert(false);
-            let dob_month = cx.app.models_mut().insert(if diag_calendar_roving {
-                diag_month
-            } else {
-                CalendarMonth::from_date(today)
-            });
-            let dob_selected = cx.app.models_mut().insert(None::<Date>);
-            let rtl_open = cx.app.models_mut().insert(false);
-            let rtl_month = cx.app.models_mut().insert(if diag_calendar_roving {
-                diag_month
-            } else {
-                CalendarMonth::from_date(today)
-            });
-            let rtl_selected = cx.app.models_mut().insert(Some(today));
-
-            let presets_open = cx.app.models_mut().insert(false);
-            let presets_month = cx.app.models_mut().insert(CalendarMonth::from_date(today));
-            let presets_selected = cx.app.models_mut().insert(None::<Date>);
-
-            let input_open = cx.app.models_mut().insert(false);
-            let input_seed = Date::from_calendar_date(2025, time::Month::June, 1).expect("date");
-            let input_month = cx
-                .app
-                .models_mut()
-                .insert(CalendarMonth::from_date(input_seed));
-            let input_selected = cx.app.models_mut().insert(Some(input_seed));
-            let input_value = cx.app.models_mut().insert(String::from("June 01, 2025"));
-
-            let input_last_selected = Some(input_seed);
-
-            let natural_open = cx.app.models_mut().insert(false);
-            let natural_seed_value = String::from("In 2 days");
-            let natural_selected = cx.app.models_mut().insert(None::<Date>);
-            let natural_month = cx.app.models_mut().insert(CalendarMonth::from_date(today));
-            let natural_value = cx.app.models_mut().insert(natural_seed_value);
-            let natural_last_selected = None;
-
-            let time_open = cx.app.models_mut().insert(false);
-            let time_month = cx.app.models_mut().insert(CalendarMonth::from_date(today));
-            let time_selected = cx.app.models_mut().insert(None::<Date>);
-            let time_value = cx.app.models_mut().insert(String::from("10:30:00"));
-
-            cx.with_state(DatePickerModels::default, |st| {
-                st.basic_open = Some(basic_open.clone());
-                st.basic_month = Some(basic_month.clone());
-                st.basic_selected = Some(basic_selected.clone());
-                st.range_open = Some(range_open.clone());
-                st.range_month = Some(range_month.clone());
-                st.range_selected = Some(range_selected.clone());
-                st.dob_open = Some(dob_open.clone());
-                st.dob_month = Some(dob_month.clone());
-                st.dob_selected = Some(dob_selected.clone());
-                st.rtl_open = Some(rtl_open.clone());
-                st.rtl_month = Some(rtl_month.clone());
-                st.rtl_selected = Some(rtl_selected.clone());
-                st.presets_open = Some(presets_open.clone());
-                st.presets_month = Some(presets_month.clone());
-                st.presets_selected = Some(presets_selected.clone());
-                st.input_open = Some(input_open.clone());
-                st.input_month = Some(input_month.clone());
-                st.input_selected = Some(input_selected.clone());
-                st.input_value = Some(input_value.clone());
-                st.input_last_selected = input_last_selected;
-                st.natural_open = Some(natural_open.clone());
-                st.natural_month = Some(natural_month.clone());
-                st.natural_selected = Some(natural_selected.clone());
-                st.natural_value = Some(natural_value.clone());
-                st.natural_last_selected = natural_last_selected;
-                st.time_open = Some(time_open.clone());
-                st.time_month = Some(time_month.clone());
-                st.time_selected = Some(time_selected.clone());
-                st.time_value = Some(time_value.clone());
-            });
-
-            (
-                basic_open,
-                basic_month,
-                basic_selected,
-                range_open,
-                range_month,
-                range_selected,
-                dob_open,
-                dob_month,
-                dob_selected,
-                rtl_open,
-                rtl_month,
-                rtl_selected,
-                presets_open,
-                presets_month,
-                presets_selected,
-                input_open,
-                input_month,
-                input_selected,
-                input_value,
-                natural_open,
-                natural_month,
-                natural_selected,
-                natural_value,
-                time_open,
-                time_month,
-                time_selected,
-                time_value,
-            )
+    let basic_open = cx.local_model_keyed("basic_open", || false);
+    let basic_month = cx.local_model_keyed("basic_month", || {
+        if diag_calendar_roving {
+            diag_month
+        } else {
+            CalendarMonth::from_date(today)
         }
-    };
+    });
+    let basic_selected = cx.local_model_keyed("basic_selected", || None::<Date>);
+
+    let range_open = cx.local_model_keyed("range_open", || false);
+    let range_month = cx.local_model_keyed("range_month", || {
+        if diag_calendar_roving {
+            diag_month
+        } else {
+            CalendarMonth::from_date(today)
+        }
+    });
+    let range_selected = cx.local_model_keyed("range_selected", DateRangeSelection::default);
+
+    let dob_open = cx.local_model_keyed("dob_open", || false);
+    let dob_month = cx.local_model_keyed("dob_month", || {
+        if diag_calendar_roving {
+            diag_month
+        } else {
+            CalendarMonth::from_date(today)
+        }
+    });
+    let dob_selected = cx.local_model_keyed("dob_selected", || None::<Date>);
+
+    let rtl_open = cx.local_model_keyed("rtl_open", || false);
+    let rtl_month = cx.local_model_keyed("rtl_month", || {
+        if diag_calendar_roving {
+            diag_month
+        } else {
+            CalendarMonth::from_date(today)
+        }
+    });
+    let rtl_selected = cx.local_model_keyed("rtl_selected", || Some(today));
+
+    let presets_open = cx.local_model_keyed("presets_open", || false);
+    let presets_month = cx.local_model_keyed("presets_month", || CalendarMonth::from_date(today));
+    let presets_selected = cx.local_model_keyed("presets_selected", || None::<Date>);
+
+    let input_seed = Date::from_calendar_date(2025, time::Month::June, 1).expect("date");
+    let input_open = cx.local_model_keyed("input_open", || false);
+    let input_month = cx.local_model_keyed("input_month", || CalendarMonth::from_date(input_seed));
+    let input_selected = cx.local_model_keyed("input_selected", || Some(input_seed));
+    let input_value = cx.local_model_keyed("input_value", || String::from("June 01, 2025"));
+
+    let natural_open = cx.local_model_keyed("natural_open", || false);
+    let natural_month = cx.local_model_keyed("natural_month", || CalendarMonth::from_date(today));
+    let natural_selected = cx.local_model_keyed("natural_selected", || None::<Date>);
+    let natural_value = cx.local_model_keyed("natural_value", || String::from("In 2 days"));
+
+    let time_open = cx.local_model_keyed("time_open", || false);
+    let time_month = cx.local_model_keyed("time_month", || CalendarMonth::from_date(today));
+    let time_selected = cx.local_model_keyed("time_selected", || None::<Date>);
+    let time_value = cx.local_model_keyed("time_value", || String::from("10:30:00"));
 
     let demo = snippets::demo::render(cx, open.clone(), month.clone(), selected.clone());
     let basic = snippets::basic::render(

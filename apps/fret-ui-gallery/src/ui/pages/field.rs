@@ -76,8 +76,8 @@ pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .code_rust(
                     r#"use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-let full_name = cx.app.models_mut().insert(String::new());
-let newsletter = cx.app.models_mut().insert(false);
+let full_name = cx.local_model_keyed("full_name", String::new);
+let newsletter = cx.local_model_keyed("newsletter", || false);
 
 shadcn::FieldSet::new([
     shadcn::FieldLegend::new("Profile").into_element(cx),
