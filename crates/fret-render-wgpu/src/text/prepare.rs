@@ -466,46 +466,16 @@ impl TextSystem {
         };
 
         let glyph_key = prepared_glyph_key(face_key, glyph.id, size_bits, x_bin, y_bin, kind);
-
-        let data = image.data;
-        match kind {
-            GlyphQuadKind::Mask => {
-                let _ = self.mask_atlas.get_or_insert(
-                    glyph_key,
-                    placement.width,
-                    placement.height,
-                    placement.left,
-                    placement.top,
-                    bytes_per_pixel,
-                    data,
-                    epoch,
-                );
-            }
-            GlyphQuadKind::Color => {
-                let _ = self.color_atlas.get_or_insert(
-                    glyph_key,
-                    placement.width,
-                    placement.height,
-                    placement.left,
-                    placement.top,
-                    bytes_per_pixel,
-                    data,
-                    epoch,
-                );
-            }
-            GlyphQuadKind::Subpixel => {
-                let _ = self.subpixel_atlas.get_or_insert(
-                    glyph_key,
-                    placement.width,
-                    placement.height,
-                    placement.left,
-                    placement.top,
-                    bytes_per_pixel,
-                    data,
-                    epoch,
-                );
-            }
-        }
+        self.insert_prepared_glyph_raster(
+            glyph_key,
+            placement.width,
+            placement.height,
+            placement.left,
+            placement.top,
+            bytes_per_pixel,
+            image.data,
+            epoch,
+        );
 
         Some((
             glyph_key,
@@ -514,6 +484,57 @@ impl TextSystem {
             placement.width as f32,
             placement.height as f32,
         ))
+    }
+
+    fn insert_prepared_glyph_raster(
+        &mut self,
+        glyph_key: GlyphKey,
+        width: u32,
+        height: u32,
+        left: i32,
+        top: i32,
+        bytes_per_pixel: u32,
+        data: Vec<u8>,
+        epoch: u64,
+    ) {
+        match glyph_key.kind {
+            GlyphQuadKind::Mask => {
+                let _ = self.mask_atlas.get_or_insert(
+                    glyph_key,
+                    width,
+                    height,
+                    left,
+                    top,
+                    bytes_per_pixel,
+                    data,
+                    epoch,
+                );
+            }
+            GlyphQuadKind::Color => {
+                let _ = self.color_atlas.get_or_insert(
+                    glyph_key,
+                    width,
+                    height,
+                    left,
+                    top,
+                    bytes_per_pixel,
+                    data,
+                    epoch,
+                );
+            }
+            GlyphQuadKind::Subpixel => {
+                let _ = self.subpixel_atlas.get_or_insert(
+                    glyph_key,
+                    width,
+                    height,
+                    left,
+                    top,
+                    bytes_per_pixel,
+                    data,
+                    epoch,
+                );
+            }
+        }
     }
 
     pub(super) fn maybe_record_font_trace_entry(
