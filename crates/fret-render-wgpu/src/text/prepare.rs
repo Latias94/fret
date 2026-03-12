@@ -27,6 +27,28 @@ pub(super) struct PrepareShapeBuildContext {
     pub(super) lines: Vec<TextLine>,
 }
 
+struct PreparedGlyphRaster {
+    glyph_key: GlyphKey,
+    width: u32,
+    height: u32,
+    left: i32,
+    top: i32,
+    bytes_per_pixel: u32,
+    data: Vec<u8>,
+}
+
+impl PreparedGlyphRaster {
+    fn bounds(&self, x: i32, y: i32) -> (GlyphKey, f32, f32, f32, f32) {
+        (
+            self.glyph_key,
+            x as f32 + self.left as f32,
+            y as f32 - self.top as f32,
+            self.width as f32,
+            self.height as f32,
+        )
+    }
+}
+
 impl TextSystem {
     #[allow(dead_code)]
     pub fn prepare_input(
@@ -423,6 +445,22 @@ impl TextSystem {
         y: i32,
         epoch: u64,
     ) -> Option<(GlyphKey, f32, f32, f32, f32)> {
+        let raster =
+            self.render_prepared_glyph_raster(glyph, glyph_id, face_key, size_bits, x_bin, y_bin)?;
+        let bounds = raster.bounds(x, y);
+        self.insert_prepared_glyph_raster(raster, epoch);
+        Some(bounds)
+    }
+
+    fn render_prepared_glyph_raster(
+        &mut self,
+        glyph: &ParleyGlyph,
+        glyph_id: u16,
+        face_key: FontFaceKey,
+        size_bits: u32,
+        x_bin: u8,
+        y_bin: u8,
+    ) -> Option<PreparedGlyphRaster> {
         let Some(font_ref) =
             parley::swash::FontRef::from_index(glyph.font.data.data(), glyph.font.index as usize)
         else {
@@ -465,72 +503,52 @@ impl TextSystem {
             parley::swash::scale::image::Content::SubpixelMask => (GlyphQuadKind::Subpixel, 4),
         };
 
-        let glyph_key = prepared_glyph_key(face_key, glyph.id, size_bits, x_bin, y_bin, kind);
-        self.insert_prepared_glyph_raster(
-            glyph_key,
-            placement.width,
-            placement.height,
-            placement.left,
-            placement.top,
+        Some(PreparedGlyphRaster {
+            glyph_key: prepared_glyph_key(face_key, glyph.id, size_bits, x_bin, y_bin, kind),
+            width: placement.width,
+            height: placement.height,
+            left: placement.left,
+            top: placement.top,
             bytes_per_pixel,
-            image.data,
-            epoch,
-        );
-
-        Some((
-            glyph_key,
-            x as f32 + placement.left as f32,
-            y as f32 - placement.top as f32,
-            placement.width as f32,
-            placement.height as f32,
-        ))
+            data: image.data,
+        })
     }
 
-    fn insert_prepared_glyph_raster(
-        &mut self,
-        glyph_key: GlyphKey,
-        width: u32,
-        height: u32,
-        left: i32,
-        top: i32,
-        bytes_per_pixel: u32,
-        data: Vec<u8>,
-        epoch: u64,
-    ) {
-        match glyph_key.kind {
+    fn insert_prepared_glyph_raster(&mut self, raster: PreparedGlyphRaster, epoch: u64) {
+        match raster.glyph_key.kind {
             GlyphQuadKind::Mask => {
                 let _ = self.mask_atlas.get_or_insert(
-                    glyph_key,
-                    width,
-                    height,
-                    left,
-                    top,
-                    bytes_per_pixel,
-                    data,
+                    raster.glyph_key,
+                    raster.width,
+                    raster.height,
+                    raster.left,
+                    raster.top,
+                    raster.bytes_per_pixel,
+                    raster.data,
                     epoch,
                 );
             }
             GlyphQuadKind::Color => {
                 let _ = self.color_atlas.get_or_insert(
-                    glyph_key,
-                    width,
-                    height,
-                    left,
-                    top,
-                    bytes_per_pixel,
-                    data,
+                    raster.glyph_key,
+                    raster.width,
+                    raster.height,
+                    raster.left,
+                    raster.top,
+                    raster.bytes_per_pixel,
+                    raster.data,
                     epoch,
                 );
             }
             GlyphQuadKind::Subpixel => {
                 let _ = self.subpixel_atlas.get_or_insert(
-                    glyph_key,
-                    width,
-                    height,
-                    left,
-                    top,
-                    bytes_per_pixel,
-                    data,
+                    raster.glyph_key,
+                    raster.width,
+                    raster.height,
+                    raster.left,
+                    raster.top,
+                    raster.bytes_per_pixel,
+                    raster.data,
                     epoch,
                 );
             }
