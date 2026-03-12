@@ -278,10 +278,10 @@ fn selected_tabs_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/tabs/demo.rs",
         &[
-            "fn field(cx: &mut UiCx<'_>, label: &'static str, model: Model<String>, a11y: &'static str, password: bool,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn field(label: &'static str, model: Model<String>, a11y: &'static str, password: bool,) -> impl IntoUiElement<fret_app::App> + use<>",
         ],
         &[
-            "fn field(cx: &mut UiCx<'_>, label: &'static str, model: Model<String>, a11y: &'static str, password: bool,) -> AnyElement",
+            "fn field(label: &'static str, model: Model<String>, a11y: &'static str, password: bool,) -> AnyElement",
         ],
     );
 }
@@ -305,6 +305,29 @@ fn card_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "app-facing snippet surface",
         );
     }
+}
+
+#[test]
+fn selected_card_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/card/meeting_notes.rs",
+        &[
+            "fn marker(cx: &mut UiCx<'_>, text: &'static str) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn item(cx: &mut UiCx<'_>, n: &'static str, content: &'static str, test_id: Option<&'static str>,) -> impl IntoUiElement<fret_app::App> + use<>",
+        ],
+        &[
+            "fn marker(cx: &mut UiCx<'_>, text: &'static str) -> AnyElement",
+            "fn item(cx: &mut UiCx<'_>, n: &'static str, content: &'static str, test_id: Option<&'static str>,) -> AnyElement",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/card/compositions.rs",
+        &[
+            "fn cell(cx: &mut UiCx<'_>, test_id: &'static str, card: shadcn::Card,) -> impl IntoUiElement<fret_app::App> + use<>",
+        ],
+        &["fn cell(cx: &mut UiCx<'_>, test_id: &'static str, card: shadcn::Card,) -> AnyElement"],
+    );
 }
 
 #[test]
@@ -1038,10 +1061,10 @@ fn selected_table_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
             &[
-                "fn make_invoice_table(cx: &mut UiCx<'_>, rows: &[(&'static str, &'static str, &'static str, &'static str)], include_footer: bool, test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+                "fn make_invoice_table(rows: &[(&'static str, &'static str, &'static str, &'static str)], include_footer: bool, test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
             ],
             &[
-                "fn make_invoice_table(cx: &mut UiCx<'_>, rows: &[(&'static str, &'static str, &'static str, &'static str)], include_footer: bool, test_id: &'static str,) -> AnyElement",
+                "fn make_invoice_table(rows: &[(&'static str, &'static str, &'static str, &'static str)], include_footer: bool, test_id: &'static str,) -> AnyElement",
             ],
         );
     }

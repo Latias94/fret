@@ -5,6 +5,7 @@ use fret::UiCx;
 use fret_core::ImageColorSpace;
 use fret_ui::Theme;
 use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -69,6 +70,41 @@ fn demo_avatar_rgba8(width: u32, height: u32) -> Vec<u8> {
     out
 }
 
+fn marker(cx: &mut UiCx<'_>, text: &'static str) -> impl IntoUiElement<fret_app::App> + use<> {
+    ui::text(text)
+        .text_sm()
+        .w_space(Space::N4)
+        .text_align(fret_core::TextAlign::End)
+        .into_element(cx)
+}
+
+fn item(
+    cx: &mut UiCx<'_>,
+    n: &'static str,
+    content: &'static str,
+    test_id: Option<&'static str>,
+) -> impl IntoUiElement<fret_app::App> + use<> {
+    let row = ui::h_flex(|cx| {
+        vec![
+            marker(cx, n).into_element(cx),
+            ui::text(content)
+                .text_sm()
+                .flex_1()
+                .min_w_0()
+                .into_element(cx),
+        ]
+    })
+    .gap(Space::N2)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full())
+    .into_element(cx);
+
+    match test_id {
+        Some(id) => row.test_id(id),
+        None => row,
+    }
+}
+
 pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
 
@@ -117,61 +153,30 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
             cx.container(props, |cx| {
                 vec![
                     ui::v_flex(|cx| {
-                        let marker = |cx: &mut UiCx<'_>, text: &str| {
-                            ui::text(text)
-                                .text_sm()
-                                .w_space(Space::N4)
-                                .text_align(fret_core::TextAlign::End)
-                                .into_element(cx)
-                        };
-
-                        let item =
-                            |cx: &mut UiCx<'_>,
-                             n: &str,
-                             content: &str,
-                             test_id: Option<&'static str>| {
-                                let row = ui::h_flex(|cx| {
-                                    vec![
-                                        marker(cx, n),
-                                        ui::text(content)
-                                            .text_sm()
-                                            .flex_1()
-                                            .min_w_0()
-                                            .into_element(cx),
-                                    ]
-                                })
-                                .gap(Space::N2)
-                                .items_start()
-                                .layout(LayoutRefinement::default().w_full())
-                                .into_element(cx);
-
-                                match test_id {
-                                    Some(id) => row.test_id(id),
-                                    None => row,
-                                }
-                            };
-
                         vec![
                             item(
                                 cx,
                                 "1.",
                                 "New analytics widgets for daily/weekly metrics",
                                 None,
-                            ),
-                            item(cx, "2.", "Simplified navigation menu", None),
+                            )
+                            .into_element(cx),
+                            item(cx, "2.", "Simplified navigation menu", None).into_element(cx),
                             item(
                                 cx,
                                 "3.",
                                 "Dark mode support",
                                 Some("ui-gallery-card-notes-item-dark-mode"),
-                            ),
-                            item(cx, "4.", "Timeline: 6 weeks", None),
+                            )
+                            .into_element(cx),
+                            item(cx, "4.", "Timeline: 6 weeks", None).into_element(cx),
                             item(
                                 cx,
                                 "5.",
                                 "Follow-up meeting scheduled for next Tuesday",
                                 None,
-                            ),
+                            )
+                            .into_element(cx),
                         ]
                     })
                     .gap(Space::N2)

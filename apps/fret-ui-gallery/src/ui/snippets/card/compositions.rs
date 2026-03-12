@@ -3,25 +3,29 @@ pub const SOURCE: &str = include_str!("compositions.rs");
 // region: example
 use fret::UiCx;
 use fret_ui::Theme;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
+fn cell(
+    cx: &mut UiCx<'_>,
+    test_id: &'static str,
+    card: shadcn::Card,
+) -> impl IntoUiElement<fret_app::App> + use<> {
+    let card = card
+        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(260.0)))
+        .into_element(cx)
+        .test_id(test_id);
+
+    ui::v_flex(move |_cx| vec![card])
+        .w_full()
+        .min_w_0()
+        .items_start()
+}
+
 pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
-
-    let cell = |cx: &mut UiCx<'_>, test_id: &'static str, card: shadcn::Card| {
-        let card = card
-            .refine_layout(LayoutRefinement::default().w_full().max_w(Px(260.0)))
-            .into_element(cx)
-            .test_id(test_id);
-
-        ui::v_flex(move |_cx| vec![card])
-            .w_full()
-            .min_w_0()
-            .items_start()
-            .into_element(cx)
-    };
 
     let gap = MetricRef::space(Space::N4).resolve(&theme);
     let layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full().min_w_0());
@@ -42,7 +46,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                     ])
                     .into_element(cx),
                 ]);
-                cell(cx, "ui-gallery-card-compositions-content-only", card)
+                cell(cx, "ui-gallery-card-compositions-content-only", card).into_element(cx)
             };
 
             let header_only = {
@@ -56,7 +60,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                     ])
                     .into_element(cx),
                 ]);
-                cell(cx, "ui-gallery-card-compositions-header-only", card)
+                cell(cx, "ui-gallery-card-compositions-header-only", card).into_element(cx)
             };
 
             let header_and_content = {
@@ -70,7 +74,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                     ])
                     .into_element(cx),
                 ]);
-                cell(cx, "ui-gallery-card-compositions-header-content", card)
+                cell(cx, "ui-gallery-card-compositions-header-content", card).into_element(cx)
             };
 
             let footer_only = {
@@ -80,7 +84,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                     ])
                     .into_element(cx),
                 ]);
-                cell(cx, "ui-gallery-card-compositions-footer-only", card)
+                cell(cx, "ui-gallery-card-compositions-footer-only", card).into_element(cx)
             };
 
             let header_and_footer = {
@@ -94,7 +98,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                     ])
                     .into_element(cx),
                 ]);
-                cell(cx, "ui-gallery-card-compositions-header-footer", card)
+                cell(cx, "ui-gallery-card-compositions-header-footer", card).into_element(cx)
             };
 
             let content_and_footer = {
@@ -108,7 +112,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                     ])
                     .into_element(cx),
                 ]);
-                cell(cx, "ui-gallery-card-compositions-content-footer", card)
+                cell(cx, "ui-gallery-card-compositions-content-footer", card).into_element(cx)
             };
 
             let header_content_footer = {
@@ -131,6 +135,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                     "ui-gallery-card-compositions-header-content-footer",
                     card,
                 )
+                .into_element(cx)
             };
 
             let bordered_sections = {
@@ -152,7 +157,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                     .border_top(true)
                     .into_element(cx),
                 ]);
-                cell(cx, "ui-gallery-card-compositions-bordered-sections", card)
+                cell(cx, "ui-gallery-card-compositions-bordered-sections", card).into_element(cx)
             };
 
             vec![
