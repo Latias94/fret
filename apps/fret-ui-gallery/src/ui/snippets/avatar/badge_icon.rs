@@ -3,19 +3,18 @@ pub const SOURCE: &str = include_str!("badge_icon.rs");
 // region: example
 use fret_core::Px;
 use fret_ui::Theme;
-use fret_ui_kit::ColorRef;
+use fret_ui_kit::{ColorRef, IntoUiElement};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn wrap_row<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+fn wrap_row<H: UiHost, F>(children: F) -> impl IntoUiElement<H> + use<H, F>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+{
     fret_ui_kit::ui::h_flex(children)
         .gap(Space::N4)
         .wrap()
         .w_full()
         .items_center()
-        .into_element(cx)
 }
 
 fn icon<H: UiHost>(
@@ -23,7 +22,7 @@ fn icon<H: UiHost>(
     name: &'static str,
     size: Px,
     fg: ColorRef,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     fret_ui_shadcn::icon::icon_with(
         cx,
         fret_icons::IconId::new_static(name),
@@ -36,7 +35,7 @@ pub fn render<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     avatar_image: Model<Option<fret_core::ImageId>>,
 ) -> AnyElement {
-    wrap_row(cx, |cx| {
+    wrap_row(|cx| {
         let image = shadcn::AvatarImage::model(avatar_image.clone()).into_element(cx);
         let fallback = shadcn::AvatarFallback::new("CN")
             .when_image_missing_model(avatar_image)
@@ -45,7 +44,8 @@ pub fn render<H: UiHost>(
 
         let primary_fg = Theme::global(&*cx.app).color_token("primary-foreground");
         let fg = ColorRef::Color(primary_fg);
-        let badge = shadcn::AvatarBadge::new().children([icon(cx, "lucide.plus", Px(10.0), fg)]);
+        let badge = shadcn::AvatarBadge::new()
+            .children([icon(cx, "lucide.plus", Px(10.0), fg).into_element(cx)]);
         let badge = badge.into_element(cx);
 
         vec![
@@ -55,6 +55,7 @@ pub fn render<H: UiHost>(
                 .test_id("ui-gallery-avatar-badge-icon"),
         ]
     })
+    .into_element(cx)
     .test_id("ui-gallery-avatar-badge-icon-row")
 }
 // endregion: example

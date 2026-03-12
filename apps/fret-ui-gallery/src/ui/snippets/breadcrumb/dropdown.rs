@@ -3,11 +3,12 @@ pub const SOURCE: &str = include_str!("dropdown.rs");
 // region: example
 use fret_core::Px;
 use fret_ui::Theme;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use shadcn::raw::breadcrumb::primitives as bc;
 use std::sync::Arc;
 
-fn dot_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+fn dot_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H> {
     bc::BreadcrumbSeparator::new()
         .kind(bc::BreadcrumbSeparatorKind::Icon {
             icon: fret_icons::IconId::new_static("lucide.dot"),
@@ -93,9 +94,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
             vec![
                 home,
-                dot_separator(cx),
+                dot_separator(cx).into_element(cx),
                 components_dropdown,
-                dot_separator(cx),
+                dot_separator(cx).into_element(cx),
                 page,
             ]
         });

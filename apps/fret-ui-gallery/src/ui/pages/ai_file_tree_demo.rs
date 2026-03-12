@@ -6,8 +6,8 @@ use fret::UiCx;
 
 pub(super) fn preview_ai_file_tree_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let demo = snippets::file_tree_demo::render(cx);
-    let basic = snippets::file_tree_basic::preview(cx);
-    let expanded = snippets::file_tree_expanded::preview(cx);
+    let basic = snippets::file_tree_basic::preview(cx).into_element(cx);
+    let expanded = snippets::file_tree_expanded::preview(cx).into_element(cx);
     let large = snippets::file_tree_large::preview(cx);
 
     let body = crate::ui::doc_layout::render_doc_page(

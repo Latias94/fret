@@ -72,6 +72,32 @@ fn helper(cx: &mut UiCx<'_>) -> impl fret_ui_kit::IntoUiElement<KernelApp> + use
 
 - do not default those helpers to `AnyElement` unless the function is actually raw composition
   glue (overlay/effect/manual-assembly internals).
+- current first-party examples on that lane now include `custom_effect_v1_demo.rs::{plain_lens,
+  custom_effect_lens}` and `custom_effect_v2_demo.rs::{plain_lens, custom_effect_lens}`; the raw
+  `lens_shell(..., body: AnyElement)` seam remains explicit because it owns effect-layer/body
+  assembly.
+- Rust 2024 precise captures note: if the helper wants `+ use<...>` and also accepts a flexible
+  label/input argument, prefer a named generic such as `fn helper<L>(..., label: L) -> impl
+  IntoUiElement<KernelApp> + use<L> where L: Into<Arc<str>>` rather than argument-position
+  `impl Into<Arc<str>>`, because precise captures currently require all type parameters to appear
+  in the `use<...>` list.
+- semantics ergonomics follow-up: explicit `.into_element(cx).attach_semantics(...)` is an
+  acceptable local workaround, but if that pattern becomes common the framework should add a
+  unified decorator helper on top of public `IntoUiElement<H>` rather than multiplying builder-
+  specific semantics methods across ecosystem components.
+
+Default-app reusable helper note on 2026-03-12:
+
+- if a helper lives on the default app-facing surface (`use fret::UiCx;`) but is still authored as
+  a reusable typed landing helper rather than `impl UiChild`, prefer:
+
+```rust
+fn helper(cx: &mut UiCx<'_>) -> impl fret_ui_kit::IntoUiElement<fret_app::App> + use<>
+```
+
+- do not teach `KernelApp` on that lane: it is not a public type on the top-level `fret` facade,
+  so Gallery/default-app snippets should spell `fret_app::App` when they need the concrete host
+  type.
 
 ## Component Surface
 
@@ -160,6 +186,42 @@ fn page(cx: &mut UiCx<'_>, content: impl UiChild) -> AnyElement
 ```rust
 fn footer<H: UiHost>(cx: &mut ComponentCx<'_, H>) -> impl IntoUiElement<H>
 ```
+
+Wrapper/composer helper rule:
+
+```rust
+fn centered<H: UiHost, B>(body: B) -> impl IntoUiElement<H> + use<H, B>
+where
+    B: IntoUiElement<H>
+```
+
+If a helper only wraps/layouts child content, prefer accepting `IntoUiElement<H>` instead of
+forcing callers to pre-land `AnyElement`.
+
+First-party UI Gallery examples already using this rule now include:
+
+- `src/ui/snippets/ai/{context_default,context_demo}.rs::centered(...)`
+- `src/ui/snippets/ai/{file_tree_basic,file_tree_expanded}.rs::preview(...)`
+- `src/ui/snippets/ai/test_results_demo.rs::progress_section(...)`
+- `src/ui/snippets/avatar/{with_badge,fallback_only,sizes,dropdown}.rs::wrap_row(...)`
+- `src/ui/snippets/avatar/{demo,group,sizes,group_count}.rs::avatar_with_image(...)`
+- `src/ui/snippets/avatar/{demo,with_badge}.rs::avatar_with_badge(...)`
+- `src/ui/snippets/avatar/{group,group_count}.rs::{group(...), group_with_count(...)}`
+- `src/ui/snippets/avatar/{badge_icon,group_count_icon}.rs::icon(...)`
+- `src/ui/snippets/breadcrumb/dropdown.rs::dot_separator(...)`
+- `src/ui/snippets/item/extras_rtl.rs::{outline_button_sm(...), item_basic(...)}`
+
+Those examples keep explicit `.into_element(cx)` seams only where the surrounding API still
+intentionally consumes raw landed children, such as `DocSection::new(...)`, child arrays, and
+`ItemActions::new(...)`.
+
+Implementation fallback rule:
+
+- if an ecosystem builder or recipe type does not yet implement `IntoUiElement<H>` directly,
+  it is still acceptable for the helper to land internally with `.into_element(cx)` and expose the
+  result as `impl IntoUiElement<H>`.
+- keep that fallback inside the helper so callers still see the unified conversion contract rather
+  than a raw `AnyElement` signature.
 
 ### Raw helper
 

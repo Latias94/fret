@@ -133,6 +133,8 @@ Implementation note on 2026-03-12:
   types by default:
   `apps/fret-examples/src/assets_demo.rs` (`render_image_panel`, `render_svg_panel`),
   `apps/fret-examples/src/async_playground_demo.rs` (`status_badge`),
+  `apps/fret-examples/src/custom_effect_v1_demo.rs` (`plain_lens`, `custom_effect_lens`),
+  `apps/fret-examples/src/custom_effect_v2_demo.rs` (`plain_lens`, `custom_effect_lens`),
   `apps/fret-examples/src/postprocess_theme_demo.rs` (`stage_body`, `stage_cards`),
   `apps/fret-examples/src/drop_shadow_demo.rs` (`card<H>(...)`),
   `apps/fret-examples/src/markdown_demo.rs` (`render_image_placeholder<H>(...)`),
@@ -147,9 +149,102 @@ Implementation note on 2026-03-12:
   now return `impl UiChild + use<>` for page-local notes/table helpers, with explicit
   `.into_element(cx)` seams only where `DocSection::new(...)` still intentionally consumes
   `AnyElement`.
+- selected UI Gallery badge snippets now also keep their local layout helper off raw landed
+  returns by default:
+  `src/ui/snippets/badge/{demo,spinner,rtl,counts,colors,icon,variants}.rs`
+  now use `fn row<H: UiHost, F>(children: F) -> impl IntoUiElement<H> + use<H, F>`,
+  while the snippet `render(...) -> AnyElement` entrypoint remains unchanged.
+- selected UI Gallery context-menu snippets now also keep local trigger helpers off raw landed
+  returns by default:
+  `src/ui/snippets/context_menu/{basic,radio,checkboxes,groups,icons,shortcuts,destructive,demo,rtl,submenu}.rs`
+  now use `trigger_surface(...) -> impl IntoUiElement<H> + use<...>`,
+  with explicit `.into_element(cx)` only at the menu trigger seam.
+- selected UI Gallery combobox snippets now also keep local state display helpers off raw landed
+  returns by default:
+  `src/ui/snippets/combobox/{long_list,input_group,trigger_button,groups_with_separator,groups,disabled,custom_items,clear_button,invalid}.rs`
+  now use `state_row(...) -> impl IntoUiElement<fret_app::App> + use<>`,
+  while the snippet `render(...) -> AnyElement` entrypoint remains unchanged.
+- selected UI Gallery pagination snippets now also keep local page label helpers off raw landed
+  returns by default:
+  `src/ui/snippets/pagination/{simple,usage}.rs`
+  now use `page_number(...) -> impl IntoUiElement<H> + use<H>`,
+  with explicit `.into_element(cx)` only at the `PaginationLink::new([..])` seam.
+- selected UI Gallery carousel snippets now also keep local slide helpers off raw landed returns
+  by default:
+  `src/ui/snippets/carousel/{basic,sizes,plugin_wheel_gestures,spacing_responsive,loop_carousel,options,loop_downgrade_cannot_loop,spacing,usage,sizes_thirds,parts}.rs`
+  now use `slide_card(...) -> impl IntoUiElement<fret_app::App> + use<>` and, where present,
+  `slide(...) -> impl IntoUiElement<fret_app::App> + use<>`,
+  with explicit `.into_element(cx)` only at `ui::container(...)` and `CarouselItem::new(...)`
+  seams.
+- selected UI Gallery skeleton snippets now also keep local shape/row helpers off raw landed
+  returns by default:
+  `src/ui/snippets/skeleton/{avatar,rtl,form,table}.rs`
+  now use `round(...)` / `row(...) -> impl IntoUiElement<H> + use<H>`,
+  with explicit `.into_element(cx)` only at the stack/row collection seam.
+- selected UI Gallery popover snippets now also keep layout-wrapper helpers off raw landed returns
+  by default:
+  `src/ui/snippets/popover/basic.rs`
+  now uses `centered<H, B>(body: B) -> impl IntoUiElement<H> + use<H, B>`
+  where `B: IntoUiElement<H>`,
+  so the wrapper no longer forces callers to pre-land `AnyElement`.
+- selected UI Gallery dropdown-menu snippets now also keep preview wrappers on the unified
+  conversion contract:
+  `src/ui/snippets/dropdown_menu/mod.rs`
+  now uses `preview_frame<H, B>(body: B) -> impl IntoUiElement<H> + use<H, B>` and
+  `preview_frame_with<H, F, B>(...) -> impl IntoUiElement<H> + use<H, F, B>`,
+  and child snippets land them explicitly with `.into_element(cx)` at the render boundary.
+- selected UI Gallery AI snippet wrappers and doc-preview helpers now also keep local layout and
+  section helpers off raw landed returns by default:
+  `src/ui/snippets/ai/{context_default,context_demo}.rs`
+  now use `centered<H, B>(body: B) -> impl IntoUiElement<H> + use<H, B>` where
+  `B: IntoUiElement<H>`;
+  `src/ui/snippets/ai/{file_tree_basic,file_tree_expanded}.rs`
+  now use `preview(...) -> impl IntoUiElement<H> + use<H>`;
+  `src/ui/snippets/ai/test_results_demo.rs`
+  now uses `progress_section(...) -> impl IntoUiElement<H> + use<H>`;
+  `src/ui/snippets/breadcrumb/dropdown.rs`
+  now uses `dot_separator(...) -> impl IntoUiElement<H> + use<H>`,
+  with explicit `.into_element(cx)` only at doc-section, child-array, and breadcrumb-list seams.
+- selected UI Gallery avatar snippets now also keep row wrappers, avatar builders, and group/icon
+  helpers off raw landed returns by default:
+  `src/ui/snippets/avatar/{demo,group,with_badge,fallback_only,sizes,group_count,group_count_icon,badge_icon,dropdown}.rs`
+  now use `wrap_row(...)`, `avatar_with_image(...)`, `avatar_with_badge(...)`,
+  `avatar_fallback_only(...)`, `group(...)`, `group_with_count(...)`, and `icon(...)`
+  as `impl IntoUiElement<H> + use<...>` helpers,
+  with explicit `.into_element(cx)` only at `AvatarGroup::new(...)`, `children([..])`, and final
+  render-boundary seams.
+- selected UI Gallery button-group, toggle-group, and drawer snippets now also expose reusable
+  helpers as `IntoUiElement`-based signatures:
+  `src/ui/snippets/button_group/api_reference.rs`
+  now exports `basic_button_group(...)`, `button_group_with_separator(...)`, and
+  `button_group_with_text(...) -> impl IntoUiElement<H> + use<H>`;
+  `src/ui/snippets/toggle_group/size.rs`
+  now uses `group(...) -> impl IntoUiElement<H> + use<H>`;
+  `src/ui/snippets/drawer/demo.rs`
+  now uses `goal_adjust_button(...)` and `goal_chart(...) -> impl IntoUiElement<H> + use<H>`.
+- selected UI Gallery item, toast, and motion-presets snippets now also keep local helpers off raw
+  landed returns by default:
+  `src/ui/snippets/item/{avatar,icon,link,link_render,extras_rtl}.rs`
+  now keep `icon_button(...)`, `item_team(...)`, `item_icon(...)`, `icon(...)`,
+  `outline_button_sm(...)`, and `item_basic(...)` helpers on
+  `impl IntoUiElement<fret_app::App> + use<>`, with explicit `.into_element(cx)` only at
+  `ItemMedia::new(...)`, `ItemActions::new(...)`, and the final render-boundary seams;
+  `src/ui/snippets/toast/deprecated.rs`
+  now uses `centered<B>(body: B) -> impl IntoUiElement<fret_app::App> + use<B>`;
+  `src/ui/snippets/motion_presets/fluid_tabs_demo.rs`
+  now uses `panel(...) -> impl IntoUiElement<fret_app::App> + use<>`.
 - explicit raw seams remain where the helper is genuinely low-level composition glue, for example
   `postprocess_theme_demo.rs::stage(...)` where the function arbitrates effect-layer composition
-  and compare-mode raw/processed branching.
+  and compare-mode raw/processed branching, plus `custom_effect_v1_demo.rs::lens_shell(...)` and
+  `custom_effect_v2_demo.rs::lens_shell(...)` where the helper explicitly owns raw effect-layer
+  body assembly.
+
+Validation note on 2026-03-12:
+
+- verified the expanded UI Gallery helper gate with
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app selected_`;
+  the focused source gate now covers 18 `selected_*` checks and passed after the AI wrapper,
+  breadcrumb, `item/extras_rtl`, and avatar helper migrations landed.
 
 ## M4 — Delete the old public surface
 
@@ -192,6 +287,40 @@ Implementation note on 2026-03-12:
 - semantic decorator helper names are now neutralized to `UiElement*Ext`, and
   `ecosystem/fret-ui-kit::source_policy_tests` guards against reintroducing the old
   `UiIntoElement*Ext` export names on declarative surfaces.
+- future ergonomics follow-up: if explicit `.into_element(cx).attach_semantics(...)` starts
+  showing up frequently in app/ecosystem call sites, add one unified semantics decorator helper on
+  top of the public `IntoUiElement<H>` contract rather than teaching per-component builder-specific
+  `.a11y(...)` APIs.
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now guards that selected
+  `badge/*` snippet helpers stay on `IntoUiElement<H>` rather than reverting to raw `AnyElement`
+  row helpers.
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that selected
+  `context_menu/*` snippet trigger helpers stay on `IntoUiElement<H>` rather than reverting to raw
+  `AnyElement`.
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that selected
+  `combobox/*` snippet state-row helpers stay on `IntoUiElement<fret_app::App>` rather than
+  reverting to raw `AnyElement`.
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that selected
+  `pagination/*` snippet page-number helpers stay on `IntoUiElement<H>` rather than reverting to
+  raw `AnyElement`.
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that selected
+  `carousel/*` snippet slide helpers stay on `IntoUiElement<fret_app::App>` rather than
+  reverting to raw `AnyElement`.
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that selected
+  `skeleton/*` snippet shape/row helpers stay on `IntoUiElement<H>` rather than reverting to raw
+  `AnyElement`.
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that selected
+  `popover/*` wrapper helpers accept/return `IntoUiElement<H>` rather than forcing pre-landed
+  `AnyElement`.
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that
+  `dropdown_menu/mod.rs` preview wrappers stay on `IntoUiElement<H>` rather than forcing
+  pre-landed `AnyElement`.
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that selected
+  `button_group/*`, `toggle_group/*`, and `drawer/*` reusable helpers stay on `IntoUiElement`
+  signatures rather than reverting to raw `AnyElement`.
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` now also guards that selected
+  `item/*`, `toast/*`, and `motion_presets/*` helpers stay on `IntoUiElement` signatures rather
+  than reverting to raw `AnyElement`.
 
 ## M6 — Keep advanced/raw seams explicit and justified
 

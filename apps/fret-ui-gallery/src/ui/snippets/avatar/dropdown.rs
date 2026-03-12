@@ -2,18 +2,18 @@ pub const SOURCE: &str = include_str!("dropdown.rs");
 
 // region: example
 use fret_core::{Corners, ImageId, Px};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn wrap_row<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+fn wrap_row<H: UiHost, F>(children: F) -> impl IntoUiElement<H> + use<H, F>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+{
     fret_ui_kit::ui::h_flex(children)
         .gap(Space::N4)
         .wrap()
         .w_full()
         .items_center()
-        .into_element(cx)
 }
 
 pub fn render<H: UiHost>(
@@ -21,7 +21,7 @@ pub fn render<H: UiHost>(
     avatar_image: Model<Option<ImageId>>,
     open: Model<bool>,
 ) -> AnyElement {
-    wrap_row(cx, |cx| {
+    wrap_row(|cx| {
         let avatar_image_for_trigger = avatar_image.clone();
 
         let entries = |_cx: &mut ElementContext<'_, H>| {
@@ -85,6 +85,7 @@ pub fn render<H: UiHost>(
             ),
         ]
     })
+    .into_element(cx)
     .test_id("ui-gallery-avatar-dropdown-row")
 }
 // endregion: example

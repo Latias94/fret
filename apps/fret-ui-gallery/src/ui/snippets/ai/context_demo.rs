@@ -2,15 +2,16 @@ pub const SOURCE: &str = include_str!("context_demo.rs");
 
 // region: example
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::LayoutRefinement;
-use fret_ui_kit::ui;
+use fret_ui_kit::{IntoUiElement, LayoutRefinement, ui};
 use fret_ui_shadcn::prelude::*;
 
-fn centered<H: UiHost>(cx: &mut ElementContext<'_, H>, body: AnyElement) -> AnyElement {
-    ui::h_flex(move |_cx| [body])
+fn centered<H: UiHost, B>(body: B) -> impl IntoUiElement<H> + use<H, B>
+where
+    B: IntoUiElement<H>,
+{
+    ui::h_flex(move |cx| [body.into_element(cx)])
         .layout(LayoutRefinement::default().w_full().min_w_0())
         .justify_center()
-        .into_element(cx)
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -59,6 +60,6 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         ])
         .into_element(cx);
 
-    centered(cx, context)
+    centered(context).into_element(cx)
 }
 // endregion: example

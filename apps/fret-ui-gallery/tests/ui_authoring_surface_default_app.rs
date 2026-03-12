@@ -50,6 +50,36 @@ fn assert_selected_page_helpers_prefer_ui_child(
     }
 }
 
+fn assert_selected_generic_helpers_prefer_into_ui_element(
+    relative_path: &str,
+    required_markers: &[&str],
+    forbidden_markers: &[&str],
+) {
+    let path = manifest_path(relative_path);
+    let source = read_path(&path);
+    let normalized = source.split_whitespace().collect::<String>();
+
+    for marker in required_markers {
+        let marker = marker.split_whitespace().collect::<String>();
+        assert!(
+            normalized.contains(&marker),
+            "{} is missing marker `{}`",
+            path.display(),
+            marker
+        );
+    }
+
+    for marker in forbidden_markers {
+        let marker = marker.split_whitespace().collect::<String>();
+        assert!(
+            !normalized.contains(&marker),
+            "{} reintroduced legacy helper marker `{}`",
+            path.display(),
+            marker
+        );
+    }
+}
+
 #[test]
 fn gallery_sources_do_not_depend_on_the_legacy_fret_prelude() {
     let menubar = read("src/driver/menubar.rs");
@@ -413,6 +443,482 @@ fn selected_ai_doc_page_helpers_prefer_uichild_over_anyelement() {
         "src/ui/pages/ai_chain_of_thought_demo.rs",
         &["fn chain_of_thought_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
         &["fn chain_of_thought_props_table(cx: &mut UiCx<'_>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn selected_badge_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    for relative_path in [
+        "src/ui/snippets/badge/demo.rs",
+        "src/ui/snippets/badge/spinner.rs",
+        "src/ui/snippets/badge/rtl.rs",
+        "src/ui/snippets/badge/counts.rs",
+        "src/ui/snippets/badge/colors.rs",
+        "src/ui/snippets/badge/icon.rs",
+        "src/ui/snippets/badge/variants.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["fn row<H: UiHost, F>(children: F) -> impl IntoUiElement<H> + use<H, F>"],
+            &[
+                "fn row<H: UiHost>(cx: &mut ElementContext<'_, H>, children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>) -> AnyElement",
+            ],
+        );
+    }
+}
+
+#[test]
+fn selected_avatar_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    for relative_path in [
+        "src/ui/snippets/avatar/with_badge.rs",
+        "src/ui/snippets/avatar/fallback_only.rs",
+        "src/ui/snippets/avatar/sizes.rs",
+        "src/ui/snippets/avatar/badge_icon.rs",
+        "src/ui/snippets/avatar/dropdown.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "fn wrap_row<H: UiHost, F>(children: F) -> impl IntoUiElement<H> + use<H, F> where F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>",
+            ],
+            &[
+                "fn wrap_row<H: UiHost>(cx: &mut ElementContext<'_, H>, children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>) -> AnyElement",
+            ],
+        );
+    }
+
+    for relative_path in [
+        "src/ui/snippets/avatar/demo.rs",
+        "src/ui/snippets/avatar/group.rs",
+        "src/ui/snippets/avatar/group_count.rs",
+        "src/ui/snippets/avatar/group_count_icon.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "fn avatar_with_image<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<ImageId>>, size: shadcn::AvatarSize, fallback_text: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            ],
+            &[
+                "fn avatar_with_image<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<ImageId>>, size: shadcn::AvatarSize, fallback_text: &'static str,) -> AnyElement",
+            ],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/avatar/sizes.rs",
+        &[
+            "fn avatar_with_image<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<ImageId>>, size: shadcn::AvatarSize, fallback_text: &'static str, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &[
+            "fn avatar_with_image<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<ImageId>>, size: shadcn::AvatarSize, fallback_text: &'static str, test_id: &'static str,) -> AnyElement",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/avatar/demo.rs",
+        &[
+            "fn avatar_with_badge<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<ImageId>>, fallback_text: &'static str,) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &[
+            "fn avatar_with_badge<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<ImageId>>, fallback_text: &'static str,) -> AnyElement",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/avatar/with_badge.rs",
+        &[
+            "fn avatar_with_badge<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<fret_core::ImageId>>, size: shadcn::AvatarSize, badge: shadcn::AvatarBadge, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &[
+            "fn avatar_with_badge<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<fret_core::ImageId>>, size: shadcn::AvatarSize, badge: shadcn::AvatarBadge, test_id: &'static str,) -> AnyElement",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/avatar/fallback_only.rs",
+        &[
+            "fn avatar_fallback_only<H: UiHost>(cx: &mut ElementContext<'_, H>, size: shadcn::AvatarSize, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &[
+            "fn avatar_fallback_only<H: UiHost>(cx: &mut ElementContext<'_, H>, size: shadcn::AvatarSize, test_id: &'static str,) -> AnyElement",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/avatar/group.rs",
+        &[
+            "fn group<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<ImageId>>, size: shadcn::AvatarSize, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &[
+            "fn group<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<ImageId>>, size: shadcn::AvatarSize, test_id: &'static str,) -> AnyElement",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/avatar/group_count.rs",
+        &[
+            "fn group_with_count<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<ImageId>>, size: shadcn::AvatarSize, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &[
+            "fn group_with_count<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<ImageId>>, size: shadcn::AvatarSize, test_id: &'static str,) -> AnyElement",
+        ],
+    );
+
+    for relative_path in [
+        "src/ui/snippets/avatar/group_count_icon.rs",
+        "src/ui/snippets/avatar/badge_icon.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "fn icon<H: UiHost>(cx: &mut ElementContext<'_, H>, name: &'static str, size: Px, fg: ColorRef,) -> impl IntoUiElement<H> + use<H>",
+            ],
+            &[
+                "fn icon<H: UiHost>(cx: &mut ElementContext<'_, H>, name: &'static str, size: Px, fg: ColorRef,) -> AnyElement",
+            ],
+        );
+    }
+}
+
+#[test]
+fn selected_context_menu_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    for relative_path in [
+        "src/ui/snippets/context_menu/basic.rs",
+        "src/ui/snippets/context_menu/radio.rs",
+        "src/ui/snippets/context_menu/checkboxes.rs",
+        "src/ui/snippets/context_menu/groups.rs",
+        "src/ui/snippets/context_menu/icons.rs",
+        "src/ui/snippets/context_menu/shortcuts.rs",
+        "src/ui/snippets/context_menu/destructive.rs",
+        "src/ui/snippets/context_menu/rtl.rs",
+        "src/ui/snippets/context_menu/submenu.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "fn trigger_surface<H: UiHost>(label: &'static str) -> impl IntoUiElement<H> + use<H>",
+            ],
+            &[
+                "fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str) -> AnyElement",
+            ],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/context_menu/demo.rs",
+        &[
+            "fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &["fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn selected_combobox_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    for relative_path in [
+        "src/ui/snippets/combobox/long_list.rs",
+        "src/ui/snippets/combobox/input_group.rs",
+        "src/ui/snippets/combobox/trigger_button.rs",
+        "src/ui/snippets/combobox/groups_with_separator.rs",
+        "src/ui/snippets/combobox/groups.rs",
+        "src/ui/snippets/combobox/disabled.rs",
+        "src/ui/snippets/combobox/custom_items.rs",
+        "src/ui/snippets/combobox/clear_button.rs",
+        "src/ui/snippets/combobox/invalid.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "fn state_row(cx: &mut UiCx<'_>, text: Arc<str>, test_id: Arc<str>,) -> impl IntoUiElement<fret_app::App> + use<>",
+            ],
+            &["fn state_row(cx: &mut UiCx<'_>, text: Arc<str>, test_id: Arc<str>) -> AnyElement"],
+        );
+    }
+}
+
+#[test]
+fn selected_pagination_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    for relative_path in [
+        "src/ui/snippets/pagination/simple.rs",
+        "src/ui/snippets/pagination/usage.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["fn page_number<H: UiHost>(label: &'static str) -> impl IntoUiElement<H> + use<H>"],
+            &[
+                "fn page_number<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str) -> AnyElement",
+            ],
+        );
+    }
+}
+
+#[test]
+fn selected_carousel_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    for relative_path in [
+        "src/ui/snippets/carousel/basic.rs",
+        "src/ui/snippets/carousel/sizes.rs",
+        "src/ui/snippets/carousel/plugin_wheel_gestures.rs",
+        "src/ui/snippets/carousel/spacing_responsive.rs",
+        "src/ui/snippets/carousel/loop_carousel.rs",
+        "src/ui/snippets/carousel/loop_downgrade_cannot_loop.rs",
+        "src/ui/snippets/carousel/spacing.rs",
+        "src/ui/snippets/carousel/sizes_thirds.rs",
+        "src/ui/snippets/carousel/parts.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "fn slide_card(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual,) -> impl IntoUiElement<fret_app::App> + use<>",
+                "fn slide(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual,) -> impl IntoUiElement<fret_app::App> + use<>",
+            ],
+            &[
+                "fn slide_card(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement",
+                "fn slide(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement",
+            ],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/carousel/options.rs",
+        &[
+            "fn slide_card(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual,) -> impl IntoUiElement<fret_app::App> + use<>",
+        ],
+        &["fn slide_card(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement"],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/carousel/usage.rs",
+        &[
+            "fn slide_card(cx: &mut UiCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn slide(cx: &mut UiCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + use<>",
+        ],
+        &[
+            "fn slide_card(cx: &mut UiCx<'_>, idx: usize) -> AnyElement",
+            "fn slide(cx: &mut UiCx<'_>, idx: usize) -> AnyElement",
+        ],
+    );
+}
+
+#[test]
+fn selected_skeleton_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    for relative_path in [
+        "src/ui/snippets/skeleton/avatar.rs",
+        "src/ui/snippets/skeleton/rtl.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["fn round<H: UiHost>(size: f32) -> impl IntoUiElement<H> + use<H>"],
+            &["fn round<H: UiHost>(cx: &mut ElementContext<'_, H>, size: f32) -> AnyElement"],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/skeleton/form.rs",
+        &["fn row<H: UiHost>(label_w: Px) -> impl IntoUiElement<H> + use<H>"],
+        &["fn row<H: UiHost>(cx: &mut ElementContext<'_, H>, label_w: Px) -> AnyElement"],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/skeleton/table.rs",
+        &["fn row<H: UiHost>() -> impl IntoUiElement<H> + use<H>"],
+        &["fn row<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn selected_popover_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/popover/basic.rs",
+        &[
+            "fn centered<H: UiHost, B>(body: B) -> impl IntoUiElement<H> + use<H, B> where B: IntoUiElement<H>",
+        ],
+        &["fn centered<H: UiHost>(cx: &mut ElementContext<'_, H>, body: AnyElement) -> AnyElement"],
+    );
+}
+
+#[test]
+fn selected_dropdown_menu_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/dropdown_menu/mod.rs",
+        &[
+            "fn preview_frame<H: UiHost, B>(body: B) -> impl IntoUiElement<H> + use<H, B> where B: IntoUiElement<H>",
+            "fn preview_frame_with<H: UiHost, F, B>(cx: &mut ElementContext<'_, H>, build: F,) -> impl IntoUiElement<H> + use<H, F, B> where F: FnOnce(&mut ElementContext<'_, H>) -> B, B: IntoUiElement<H>",
+        ],
+        &[
+            "fn preview_frame<H: UiHost>(cx: &mut ElementContext<'_, H>, body: AnyElement) -> AnyElement",
+            "fn preview_frame_with<H: UiHost>(cx: &mut ElementContext<'_, H>, build: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,) -> AnyElement",
+        ],
+    );
+}
+
+#[test]
+fn selected_ai_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    for relative_path in [
+        "src/ui/snippets/ai/context_default.rs",
+        "src/ui/snippets/ai/context_demo.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "fn centered<H: UiHost, B>(body: B) -> impl IntoUiElement<H> + use<H, B> where B: IntoUiElement<H>",
+            ],
+            &[
+                "fn centered<H: UiHost>(cx: &mut ElementContext<'_, H>, body: AnyElement) -> AnyElement",
+            ],
+        );
+    }
+
+    for relative_path in [
+        "src/ui/snippets/ai/file_tree_basic.rs",
+        "src/ui/snippets/ai/file_tree_expanded.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "pub fn preview<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>,) -> impl IntoUiElement<H> + use<H>",
+            ],
+            &["pub fn preview<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/ai/test_results_demo.rs",
+        &[
+            "fn progress_section<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &["fn progress_section<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn selected_breadcrumb_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/breadcrumb/dropdown.rs",
+        &[
+            "fn dot_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &["fn dot_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn selected_button_group_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/button_group/api_reference.rs",
+        &[
+            "pub fn basic_button_group<H: UiHost>(cx: &mut ElementContext<'_, H>,) -> impl IntoUiElement<H> + use<H>",
+            "pub fn button_group_with_separator<H: UiHost>(cx: &mut ElementContext<'_, H>,) -> impl IntoUiElement<H> + use<H>",
+            "pub fn button_group_with_text<H: UiHost>(cx: &mut ElementContext<'_, H>,) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &[
+            "pub fn basic_button_group<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement",
+            "pub fn button_group_with_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement",
+            "pub fn button_group_with_text<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement",
+        ],
+    );
+}
+
+#[test]
+fn selected_toggle_group_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/toggle_group/size.rs",
+        &[
+            "fn group<H: UiHost>(cx: &mut ElementContext<'_, H>, size: shadcn::ToggleSize,) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &[
+            "fn group<H: UiHost>(cx: &mut ElementContext<'_, H>, size: shadcn::ToggleSize) -> AnyElement",
+        ],
+    );
+}
+
+#[test]
+fn selected_drawer_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/drawer/demo.rs",
+        &[
+            "fn goal_adjust_button<H: UiHost>(goal: Model<i32>, adjustment: i32, icon: &'static str, a11y_label: &'static str, disabled: bool, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            "fn goal_chart<H: UiHost>(cx: &mut ElementContext<'_, H>, goal: i32,) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &[
+            "fn goal_adjust_button<H: UiHost>(cx: &mut ElementContext<'_, H>, goal: Model<i32>, adjustment: i32, icon: &'static str, a11y_label: &'static str, disabled: bool, test_id: &'static str,) -> AnyElement",
+            "fn goal_chart<H: UiHost>(cx: &mut ElementContext<'_, H>, goal: i32) -> AnyElement",
+        ],
+    );
+}
+
+#[test]
+fn selected_item_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/item/avatar.rs",
+        &[
+            "fn icon_button(cx: &mut UiCx<'_>, icon_id: &'static str, variant: shadcn::ButtonVariant, test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn item_team(cx: &mut UiCx<'_>, test_id: &'static str, action_test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+        ],
+        &[
+            "fn icon_button(cx: &mut UiCx<'_>, icon_id: &'static str, variant: shadcn::ButtonVariant, test_id: &'static str,) -> AnyElement",
+            "fn item_team(cx: &mut UiCx<'_>, test_id: &'static str, action_test_id: &'static str) -> AnyElement",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/item/icon.rs",
+        &[
+            "fn icon(cx: &mut UiCx<'_>, id: &'static str) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn item_icon(cx: &mut UiCx<'_>, icon_id: &'static str, title: &'static str, description: &'static str, test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+        ],
+        &[
+            "fn icon(cx: &mut UiCx<'_>, id: &'static str) -> AnyElement",
+            "fn item_icon(cx: &mut UiCx<'_>, icon_id: &'static str, title: &'static str, description: &'static str, test_id: &'static str,) -> AnyElement",
+        ],
+    );
+
+    for relative_path in [
+        "src/ui/snippets/item/link.rs",
+        "src/ui/snippets/item/link_render.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "fn icon(cx: &mut UiCx<'_>, id: &'static str) -> impl IntoUiElement<fret_app::App> + use<>",
+            ],
+            &["fn icon(cx: &mut UiCx<'_>, id: &'static str) -> AnyElement"],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/item/extras_rtl.rs",
+        &[
+            "fn outline_button_sm(cx: &mut UiCx<'_>, label: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn item_basic(cx: &mut UiCx<'_>, title: &'static str, description: &'static str, actions: Vec<AnyElement>, test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+        ],
+        &[
+            "fn outline_button_sm(cx: &mut UiCx<'_>, label: &'static str) -> AnyElement",
+            "fn item_basic(cx: &mut UiCx<'_>, title: &'static str, description: &'static str, actions: Vec<AnyElement>, test_id: &'static str,) -> AnyElement",
+        ],
+    );
+}
+
+#[test]
+fn selected_toast_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/toast/deprecated.rs",
+        &[
+            "fn centered<B>(body: B) -> impl IntoUiElement<fret_app::App> + use<B> where B: IntoUiElement<fret_app::App>",
+        ],
+        &["fn centered(cx: &mut UiCx<'_>, body: AnyElement) -> AnyElement"],
+    );
+}
+
+#[test]
+fn selected_motion_presets_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/motion_presets/fluid_tabs_demo.rs",
+        &[
+            "fn panel(cx: &mut UiCx<'_>, title: &'static str, description: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+        ],
+        &[
+            "fn panel(cx: &mut UiCx<'_>, title: &'static str, description: &'static str) -> AnyElement",
+        ],
     );
 }
 
