@@ -505,14 +505,9 @@ impl TextSystem {
         y: i32,
         epoch: u64,
     ) -> Option<(GlyphKey, f32, f32, f32, f32)> {
-        self.resolve_prepared_glyph_atlas_hit_bounds(
-            face_key, glyph.id, size_bits, x_bin, y_bin, x, y, epoch,
+        self.resolve_prepared_glyph_hit_or_miss_bounds(
+            glyph, glyph_id, face_key, size_bits, x_bin, y_bin, x, y, epoch,
         )
-        .or_else(|| {
-            self.materialize_prepared_glyph_miss(
-                glyph, glyph_id, face_key, size_bits, x_bin, y_bin, x, y, epoch,
-            )
-        })
     }
 
     fn render_prepared_glyph_raster(
@@ -587,6 +582,28 @@ impl TextSystem {
         Some(prepared_glyph_bounds_from_atlas_entry(
             glyph_key, entry, x, y,
         ))
+    }
+
+    fn resolve_prepared_glyph_hit_or_miss_bounds(
+        &mut self,
+        glyph: &ParleyGlyph,
+        glyph_id: u16,
+        face_key: FontFaceKey,
+        size_bits: u32,
+        x_bin: u8,
+        y_bin: u8,
+        x: i32,
+        y: i32,
+        epoch: u64,
+    ) -> Option<(GlyphKey, f32, f32, f32, f32)> {
+        self.resolve_prepared_glyph_atlas_hit_bounds(
+            face_key, glyph.id, size_bits, x_bin, y_bin, x, y, epoch,
+        )
+        .or_else(|| {
+            self.materialize_prepared_glyph_miss(
+                glyph, glyph_id, face_key, size_bits, x_bin, y_bin, x, y, epoch,
+            )
+        })
     }
 
     fn prepared_glyph_atlas_mut(&mut self, kind: GlyphQuadKind) -> &mut GlyphAtlas {

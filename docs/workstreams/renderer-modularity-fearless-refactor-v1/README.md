@@ -323,6 +323,10 @@ As of 2026-03-12:
   - prepared-glyph context assembly now lives behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `prepare_prepared_glyph_context(...)` no longer owns `PreparedGlyphContext` field packing directly
+- The sixtieth internal text split has landed:
+  - prepared-glyph atlas-hit fallback dispatch now lives behind a dedicated helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `resolve_prepared_glyph_bounds(...)` no longer owns atlas-hit vs miss-fallback branching directly
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
