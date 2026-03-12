@@ -13,6 +13,7 @@ use fret_render_text::decorations::TextDecorationMetricsPx;
 use fret_render_text::font_instance_key::{FontFaceKey, variation_key_from_normalized_coords};
 use fret_render_text::font_trace::FontTraceFamilyResolved;
 use fret_render_text::{
+    parley_shaper::ParleyGlyph,
     prepare_layout::PreparedLine,
     spans::{ResolvedSpan, paint_span_for_text_range},
 };
@@ -290,44 +291,12 @@ impl TextSystem {
             let Ok(glyph_id) = u16::try_from(g.id) else {
                 continue;
             };
-            let font_data_id = g.font.data.id();
-            let face_index = g.font.index;
-            self.font_data_by_face
-                .entry((font_data_id, face_index))
-                .or_insert_with(|| g.font.clone());
-
-            let variation_key = variation_key_from_normalized_coords(&g.normalized_coords);
-            let synthesis_embolden = g.synthesis.embolden();
-            let synthesis_skew_degrees =
-                g.synthesis
-                    .skew()
-                    .unwrap_or(0.0)
-                    .clamp(i8::MIN as f32, i8::MAX as f32) as i8;
-
-            let face_key = FontFaceKey {
-                font_data_id,
-                face_index,
-                variation_key,
-                synthesis_embolden,
-                synthesis_skew_degrees,
-            };
-            if !g.normalized_coords.is_empty() {
-                self.font_instance_coords_by_face
-                    .entry(face_key)
-                    .or_insert_with(|| g.normalized_coords.clone());
-            }
-
-            let usage = face_usage.entry(face_key).or_insert((0, 0));
-            usage.0 = usage.0.saturating_add(1);
-            if g.id == 0 {
-                usage.1 = usage.1.saturating_add(1);
-            }
+            let face_key = self.register_prepared_glyph_face(&g, face_usage);
 
             let (x, x_bin) = subpixel_bin_q4(g.x);
             let (y, y_bin) = subpixel_bin_y(g.y);
 
-            let paint_span = resolved_spans
-                .and_then(|spans| paint_span_for_text_range(spans, &g.text_range, g.is_rtl));
+            let paint_span = prepared_glyph_paint_span(resolved_spans, &g);
 
             let size_bits = g.font_size.to_bits();
             let mut atlas_hit: Option<(GlyphKey, GlyphAtlasEntry)> = None;
@@ -489,6 +458,43 @@ impl TextSystem {
         }
     }
 
+    fn register_prepared_glyph_face(
+        &mut self,
+        glyph: &ParleyGlyph,
+        face_usage: &mut HashMap<FontFaceKey, (u32, u32)>,
+    ) -> FontFaceKey {
+        let font_data_id = glyph.font.data.id();
+        let face_index = glyph.font.index;
+        self.font_data_by_face
+            .entry((font_data_id, face_index))
+            .or_insert_with(|| glyph.font.clone());
+
+        let face_key = FontFaceKey {
+            font_data_id,
+            face_index,
+            variation_key: variation_key_from_normalized_coords(&glyph.normalized_coords),
+            synthesis_embolden: glyph.synthesis.embolden(),
+            synthesis_skew_degrees: glyph
+                .synthesis
+                .skew()
+                .unwrap_or(0.0)
+                .clamp(i8::MIN as f32, i8::MAX as f32) as i8,
+        };
+        if !glyph.normalized_coords.is_empty() {
+            self.font_instance_coords_by_face
+                .entry(face_key)
+                .or_insert_with(|| glyph.normalized_coords.clone());
+        }
+
+        let usage = face_usage.entry(face_key).or_insert((0, 0));
+        usage.0 = usage.0.saturating_add(1);
+        if glyph.id == 0 {
+            usage.1 = usage.1.saturating_add(1);
+        }
+
+        face_key
+    }
+
     pub(super) fn maybe_record_font_trace_entry(
         &mut self,
         text: &str,
@@ -583,4 +589,12 @@ impl TextSystem {
     ) -> crate::text::wrapper::WrappedLayout {
         crate::text::wrapper::wrap_with_constraints(&mut self.parley_shaper, input, constraints)
     }
+}
+
+fn prepared_glyph_paint_span(
+    resolved_spans: Option<&[ResolvedSpan]>,
+    glyph: &ParleyGlyph,
+) -> Option<u16> {
+    resolved_spans
+        .and_then(|spans| paint_span_for_text_range(spans, &glyph.text_range, glyph.is_rtl))
 }

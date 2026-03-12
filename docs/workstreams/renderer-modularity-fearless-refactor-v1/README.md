@@ -137,6 +137,10 @@ As of 2026-03-12:
   - prepared-line glyph materialization now lives under
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `text/mod.rs` no longer owns active prepared-line glyph materialization directly
+- The fifteenth internal text split has landed:
+  - prepared-glyph face bookkeeping and paint-span resolution now live behind dedicated helpers in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `materialize_prepared_line(...)` no longer owns font-face bookkeeping directly
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
@@ -178,6 +182,10 @@ As of 2026-03-12:
   - `cargo check -p fret-launch -p fret-examples`: passed
   - `python3 tools/check_layering.py`: passed
 - Internal text split verification remains green after the prepared-line materialization extraction:
+  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+- Internal text split verification remains green after the prepared-glyph bookkeeping extraction:
   - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
   - `python3 tools/check_layering.py`: passed
