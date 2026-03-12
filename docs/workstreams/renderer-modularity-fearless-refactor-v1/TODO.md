@@ -229,6 +229,25 @@ ID format:
       `crates/fret-render-wgpu/src/text/prepare.rs`
     - `lookup_prepared_glyph_atlas_kind(...)` no longer owns atlas-entry fetch result packing
       directly
+    - prepared-glyph raster metadata decoding now lives behind a pure helper in
+      `crates/fret-render-wgpu/src/text/prepare.rs`
+    - `prepared_glyph_raster_from_image(...)` no longer owns content-kind/bytes-per-pixel mapping
+      directly
+    - prepared-glyph render source selection now lives behind a pure helper in
+      `crates/fret-render-wgpu/src/text/prepare.rs`
+    - `render_prepared_glyph_image_with_scaler(...)` no longer owns the swash source list literal
+      directly
+    - prepared-glyph raster packing now lives behind a dedicated helper in
+      `crates/fret-render-wgpu/src/text/prepare.rs`
+    - `prepared_glyph_raster_from_image(...)` no longer owns `PreparedGlyphRaster` field packing
+      directly
+    - prepared-glyph normalized-coords injection now lives behind a dedicated helper in
+      `crates/fret-render-wgpu/src/text/prepare.rs`
+    - `build_prepared_glyph_scaler(...)` no longer owns normalized-coords branching directly
+    - prepared-glyph raster placement field extraction now lives behind a pure helper in
+      `crates/fret-render-wgpu/src/text/prepare.rs`
+    - `prepared_glyph_raster_from_image(...)` no longer owns zero-size placement guarding and
+      field unpacking directly
 - [ ] RMFR-text-031 Keep `fret_render_text` as the low-level text contract crate and avoid moving
   backend-specific state there prematurely.
 - [ ] RMFR-text-032 Add focused tests around any extracted text subdomain whose behavior was
@@ -285,7 +304,7 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: prepared-glyph normalized-coords helper in `text/prepare.rs`.
+  - Latest landed slice: prepared-glyph raster placement field helper in `text/prepare.rs`.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

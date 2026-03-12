@@ -818,11 +818,7 @@ fn prepared_glyph_raster_from_image(
     x_bin: u8,
     y_bin: u8,
 ) -> Option<PreparedGlyphRaster> {
-    if image.placement.width == 0 || image.placement.height == 0 {
-        return None;
-    }
-
-    let placement = image.placement;
+    let (width, height, left, top) = prepared_glyph_raster_placement_fields(&image)?;
     let (kind, bytes_per_pixel) = prepared_glyph_raster_metadata(image.content);
     Some(prepared_glyph_raster(
         face_key,
@@ -831,12 +827,27 @@ fn prepared_glyph_raster_from_image(
         x_bin,
         y_bin,
         kind,
+        width,
+        height,
+        left,
+        top,
+        bytes_per_pixel,
+        image.data,
+    ))
+}
+
+fn prepared_glyph_raster_placement_fields(
+    image: &parley::swash::scale::image::Image,
+) -> Option<(u32, u32, i32, i32)> {
+    let placement = image.placement;
+    if placement.width == 0 || placement.height == 0 {
+        return None;
+    }
+    Some((
         placement.width,
         placement.height,
         placement.left,
         placement.top,
-        bytes_per_pixel,
-        image.data,
     ))
 }
 

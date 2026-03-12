@@ -206,6 +206,11 @@ Current snapshot (2026-03-12):
   - prepared-glyph normalized-coords injection now lives behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `build_prepared_glyph_scaler(...)` no longer owns normalized-coords branching directly
+- The forty-sixth internal `text/mod.rs` split has landed:
+  - prepared-glyph raster placement field extraction now lives behind a pure helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `prepared_glyph_raster_from_image(...)` no longer owns zero-size placement guarding and field
+    unpacking directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
