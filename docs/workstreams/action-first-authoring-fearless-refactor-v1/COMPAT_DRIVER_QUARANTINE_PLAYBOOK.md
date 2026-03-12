@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Compat Driver Quarantine Playbook
 
-Status: draft, execution playbook
-Last updated: 2026-03-09
+Status: executed reference note
+Last updated: 2026-03-12
 
 Related:
 
@@ -14,25 +14,24 @@ Related:
 
 ## Purpose
 
-This note records the future execution plan for the day the repo decides that
-`run_native_with_compat_driver(...)` should stop living on the main `fret` facade.
+This note records the execution plan that was used when
+`run_native_with_compat_driver(...)` stopped living on the main `fret` facade.
 
 It is intentionally **not** a delete playbook.
 
-Current policy says:
+Landed outcome:
 
-- keep the surface for now,
+- keep the capability,
 - classify it as advanced low-level interop,
-- and only reduce it later through an explicit quarantine step.
+- and expose it through `fret::advanced::interop::run_native_with_compat_driver(...)`.
 
-This playbook exists so future surface reduction can happen as a short, reviewable patch instead of
-reopening the same policy discussion.
+This note now exists as reviewable execution evidence for that quarantine step.
 
 ---
 
 ## Preconditions
 
-Do **not** execute this playbook unless all of the following are true:
+The landed patch followed these preconditions:
 
 1. the repo explicitly decides that public-surface reduction is worth the churn,
 2. `COMPAT_DRIVER_CALLER_INVENTORY.md` has been refreshed and still reflects the active caller
@@ -43,7 +42,7 @@ Do **not** execute this playbook unless all of the following are true:
    path,
 5. the patch owner can validate the affected advanced demos or wrappers after the move.
 
-If any precondition fails, stop and update the inventory/policy docs first.
+If these conditions stop being true in a future follow-up, refresh the inventory/policy docs first.
 
 ---
 

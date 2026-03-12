@@ -56,7 +56,7 @@ Non-scope:
 | Surface | Current status | Default-path risk | Hard-delete readiness |
 | --- | --- | --- | --- |
 | `App::ui*` closure-root entry | Removed from code pre-release; docs/tests/gates now only teach `view::<V>()` / `view_with_hooks::<V>(...)` | Closed | Closed |
-| `run_native_with_compat_driver(...)` | Still public; now explicitly classified as advanced low-level interop | Low for default path, medium for facade size | Deferred |
+| `run_native_with_compat_driver(...)` | Root entry removed; quarantined under `fret::advanced::interop::run_native_with_compat_driver(...)` | Low for default path, lower facade-size pressure | Deferred after quarantine |
 | `use_state::<T>()` alias | Still user-visible; now classified as explicit raw-model hook, not default local state | Low for default path, medium for facade clarity | Deferred |
 | `CommandId`-first widget contracts | Action-first aliases landed on the main public builder families, and the curated internal/app-facing menu residue now also prefers `action(...)`; remaining command-shaped usage is now mostly intentional advanced/internal surface area recorded in `COMMAND_FIRST_INTENTIONAL_SURFACES.md` | Medium | Low |
 
@@ -125,39 +125,39 @@ Recommended next action:
 
 ---
 
-### Stage 3 — Decide the compat-runner fate
+### Stage 3 — Quarantine the compat runner and keep capability explicit
 
-Status: **decision drafted**
+Status: **quarantine executed (2026-03-12)**
 
 Recommended decision:
 
-- keep `run_native_with_compat_driver(...)` for now as an advanced low-level interop seam,
-- do not treat it as a near-term hard-delete target,
-- if future surface reduction is desired, quarantine it behind a clearer compat/interop boundary
-  before considering removal.
+- keep `run_native_with_compat_driver(...)` as an advanced low-level interop seam,
+- remove the naked root `fret::run_native_with_compat_driver(...)` entry,
+- keep the capability available under `fret::advanced::interop::run_native_with_compat_driver(...)`,
+- do not treat hard delete as a near-term target while the caller families still exist.
 
 Checklist:
 
 | Item | Status | Notes |
 | --- | --- | --- |
 | Inventory current in-tree callers | Done | `COMPAT_DRIVER_CALLER_INVENTORY.md` now records the current family split |
-| Decide keep-vs-remove policy | Done (draft) | `COMPAT_DRIVER_POLICY_DECISION_DRAFT.md` recommends “keep now, reevaluate later” |
-| If keeping: document as advanced interop | Done | README / crate docs / workstream notes now describe the surface as non-default advanced low-level interop |
-| If removing: migrate/relocate remaining demos first | Open | avoid breaking the only real interop proof points |
-| Add docs gate for default-path exclusion | Done | `tools/gate_compat_runner_default_surface.py` now keeps first-contact docs off `run_native_with_compat_driver(...)` while requiring advanced/non-default wording on the `fret` facade |
+| Decide keep-vs-remove policy | Done | `COMPAT_DRIVER_POLICY_DECISION_DRAFT.md` records “keep capability, quarantine root surface” |
+| Execute quarantine behind explicit boundary | Done | surface now lives under `fret::advanced::interop::run_native_with_compat_driver(...)` |
+| Keep advanced interop wording aligned | Done | README / crate docs / workstream notes now describe the quarantined seam as non-default advanced low-level interop |
+| Hard delete remaining callers | Open | avoid breaking the real retained interop proof points |
+| Add docs gate for default-path exclusion | Done | `tools/gate_compat_runner_default_surface.py` now keeps first-contact docs off compat-runner entrypoints while requiring advanced/non-default wording on the quarantined seam |
 
 Current policy exit criteria:
 
-- the runner surface is clearly retained as advanced interop in docs and workstream notes,
-- it remains outside the default path story,
-- future deletion work is deferred until the caller families shrink or a quarantine boundary exists.
+- the runner capability is clearly retained as advanced interop in docs and workstream notes,
+- the naked root entry is gone from the main `fret` facade,
+- the seam remains outside the default path story,
+- future deletion work is deferred until the caller families shrink materially.
 
 Recommended next action:
 
-- keep the wording stable and move attention to the next unresolved hard-delete blocker rather than
-  forcing a premature runner deletion.
-- if the repo later chooses facade reduction, use `COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md` to move
-  the seam behind an explicit compat boundary before reopening deletion.
+- keep the quarantined path stable and move attention to the next unresolved hard-delete blocker.
+- only reopen deletion if the caller families shrink enough to remove the retained interop need.
 
 ---
 

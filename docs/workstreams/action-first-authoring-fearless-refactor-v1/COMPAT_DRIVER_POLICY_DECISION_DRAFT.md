@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Compat Driver Policy Decision Draft
 
-Last updated: 2026-03-09
+Last updated: 2026-03-12
 
 Related:
 
@@ -13,18 +13,19 @@ Related:
 
 Recommended decision:
 
-- `fret::run_native_with_compat_driver(...)` should **remain available for now**.
+- `run_native_with_compat_driver(...)` should **remain available**.
 - It should be classified as an **advanced low-level interop / runner seam**, not as a default
   app-author entry path.
 - It should **not** be treated as a near-term hard-delete target.
-- If the repo later wants to reduce public surface area further, the next step should be
-  **quarantine behind a clearer compat/interop boundary**, not immediate deletion.
+- The naked root `fret::run_native_with_compat_driver(...)` entry should be removed in favor of
+  `fret::advanced::interop::run_native_with_compat_driver(...)`.
 
 In short:
 
 - **default app path** = `App::view::<V>()` / `App::view_with_hooks::<V>(...)`
 - **advanced runner path** = `run_native_with_fn_driver(...)` family
-- **advanced low-level interop path kept for now** = `run_native_with_compat_driver(...)`
+- **advanced low-level interop path kept** =
+  `fret::advanced::interop::run_native_with_compat_driver(...)`
 
 ---
 
@@ -185,12 +186,13 @@ That wording should be reflected in:
 - `HARD_DELETE_EXECUTION_CHECKLIST.md`
 - `HARD_DELETE_GAP_ANALYSIS.md`
 
-Status update (as of 2026-03-09):
+Status update (as of 2026-03-12):
 
-- `ecosystem/fret/src/lib.rs` and `ecosystem/fret/README.md` now use the same
-  “advanced low-level interop / non-default” wording.
-- `HARD_DELETE_EXECUTION_CHECKLIST.md` and `HARD_DELETE_GAP_ANALYSIS.md` now treat this surface as
-  “defer / reevaluate later” rather than the next obvious hard-delete candidate.
+- `ecosystem/fret/src/lib.rs` no longer exposes a naked root compat-runner function.
+- `ecosystem/fret/src/interop.rs` now owns
+  `fret::advanced::interop::run_native_with_compat_driver(...)`.
+- `ecosystem/fret/README.md` and `tools/gate_compat_runner_default_surface.py` now align on the
+  quarantined advanced path wording.
 
 ---
 
@@ -200,10 +202,11 @@ The correct current stance is:
 
 - keep `run_native_with_compat_driver(...)`,
 - label it as advanced low-level interop,
-- remove it from any default-facing narrative,
+- quarantine it behind `fret::advanced::interop::run_native_with_compat_driver(...)`,
+- remove the naked root entry from the default-facing facade,
 - and stop treating it as the next obvious hard-delete item.
 
 If the repo wants one clean sentence:
 
-> `run_native_with_compat_driver(...)` is currently an intentionally kept advanced interop seam,
-> not a default authoring path and not a near-term hard-delete candidate.
+> `fret::advanced::interop::run_native_with_compat_driver(...)` is an intentionally kept advanced
+> interop seam, not a default authoring path and not a near-term hard-delete candidate.

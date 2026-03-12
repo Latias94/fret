@@ -41,11 +41,11 @@ def main() -> None:
     for path, snippet in [
         (
             FRET_README,
-            "Advanced low-level interop driver path (compat seam, non-default): `fret::run_native_with_compat_driver(...)`",
+            "Advanced low-level interop driver path (compat seam, non-default): `fret::advanced::interop::run_native_with_compat_driver(...)`",
         ),
         (
             FRET_LIB,
-            "`fret::run_native_with_compat_driver(...)` is an advanced low-level interop path (non-default)",
+            "`fret::advanced::interop::run_native_with_compat_driver(...)` is an advanced low-level",
         ),
     ]:
         problem = require_snippet(path, snippet)

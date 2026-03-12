@@ -92,6 +92,10 @@ Adoption note (as of 2026-03-07):
   records the quarantine-first execution steps for `run_native_with_compat_driver(...)`, so future
   facade reduction no longer has to reconstruct how to move that advanced seam out of the default
   top-level surface.
+- Compat-runner quarantine update (as of 2026-03-12): that quarantine step has now landed; the
+  root `fret::run_native_with_compat_driver(...)` entry is gone, the retained seam now lives at
+  `fret::advanced::interop::run_native_with_compat_driver(...)`, and the compat-runner
+  policy/checklist/gate notes now treat the move as executed rather than hypothetical.
 - Source-alignment audit update (as of 2026-03-09):
   `SOURCE_ALIGNMENT_AUDIT_2026-03-09.md` now records that `App::ui*`, compat runner, `use_state`,
   and command-first retained seams are source-aligned, and the missing compat-runner default-path

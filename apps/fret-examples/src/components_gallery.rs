@@ -2191,6 +2191,6 @@ pub fn run() -> anyhow::Result<()> {
     let app = build_app();
     let config = build_runner_config();
 
-    fret::run_native_with_compat_driver(config, app, build_fn_driver())
+    fret::advanced::interop::run_native_with_compat_driver(config, app, build_fn_driver())
         .context("run components_gallery app")
 }

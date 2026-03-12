@@ -201,6 +201,9 @@ Companion docs:
   - [x] 2026-03-12: removed the root `fret::router::install_app(...)` exception; router setup on
     the default app lane now follows the same `fret::router::app::install(...)` pattern as the
     other ecosystem app installers.
+  - [x] 2026-03-12: removed the naked root `fret::run_native_with_compat_driver(...)` entry;
+    retained low-level interop now stays on the explicit
+    `fret::advanced::interop::run_native_with_compat_driver(...)` path.
 - [ ] Remove dead docs and stale guidance after the migration is complete.
 
 ## M6 — Add gates so the surface stays clean

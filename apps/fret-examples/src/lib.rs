@@ -10,7 +10,8 @@ pub(crate) fn run_native_with_compat_driver<D: fret_launch::WinitAppDriver + 'st
     app: fret_app::App,
     driver: D,
 ) -> anyhow::Result<()> {
-    fret::run_native_with_compat_driver(config, app, driver).map_err(anyhow::Error::from)
+    fret::advanced::interop::run_native_with_compat_driver(config, app, driver)
+        .map_err(anyhow::Error::from)
 }
 
 #[cfg(not(target_arch = "wasm32"))]

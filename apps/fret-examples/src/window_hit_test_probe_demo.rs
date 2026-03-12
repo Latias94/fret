@@ -32,7 +32,7 @@ pub fn run() -> anyhow::Result<()> {
     // Keep deterministic overlap: place restored windows relative to the anchor point.
     config.new_window_anchor_offset = (0.0, 0.0);
 
-    fret::run_native_with_compat_driver(config, KernelApp::new(), driver)?;
+    fret::advanced::interop::run_native_with_compat_driver(config, KernelApp::new(), driver)?;
     Ok(())
 }
 

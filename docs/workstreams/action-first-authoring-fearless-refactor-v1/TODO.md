@@ -723,7 +723,7 @@ Current sequencing note (as of 2026-03-09):
 - [x] AFA-postv1-015 Publish a policy decision draft for `run_native_with_compat_driver(...)`.
   - Goal: decide whether the compat runner is actually a near-term hard-delete candidate or an intentionally retained advanced interop seam.
   - Evidence target: one decision note that states the recommended product stance and the conditions under which future quarantine/removal would become reasonable.
-  - Status (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_POLICY_DECISION_DRAFT.md` now recommends keeping `run_native_with_compat_driver(...)` for now as an advanced low-level interop seam, `HARD_DELETE_EXECUTION_CHECKLIST.md` now reflects Stage 3 as “decision drafted”, and `ecosystem/fret/README.md` plus `ecosystem/fret/src/lib.rs` now describe the surface as non-default advanced interop rather than an ambiguous generic compat path.
+  - Status (as of 2026-03-12): `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_POLICY_DECISION_DRAFT.md` now records the landed quarantine outcome: keep the capability, but only under `fret::advanced::interop::run_native_with_compat_driver(...)`; `HARD_DELETE_EXECUTION_CHECKLIST.md` now treats Stage 3 as executed quarantine instead of a draft.
 
 - [x] AFA-postv1-015b Finish compat-runner wording alignment in the workstream docs.
   - Goal: close the gap between the policy draft and the execution docs so Stage 3 is no longer blocked on basic wording drift.
@@ -735,9 +735,9 @@ Current sequencing note (as of 2026-03-09):
     future facade reduction does not have to improvise its sequencing.
   - Evidence target: one execution note that states preconditions, patch shape, validation, release
     wording, and abort conditions for moving the compat runner behind an explicit advanced boundary.
-  - Status (as of 2026-03-09): `COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md` now records the
-    quarantine-first path, and the policy/checklist/status summary docs all point to it as the next
-    concrete action only if the repo later chooses surface reduction.
+  - Status (as of 2026-03-12): `COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md` is now the historical
+    execution record for the landed move to
+    `fret::advanced::interop::run_native_with_compat_driver(...)`.
 
 - [x] AFA-postv1-015d Close the compat-runner default-surface gate gap.
   - Goal: make the source-facing policy enforceable so first-contact docs cannot drift toward

@@ -235,7 +235,7 @@ fn render(_driver: &mut (), context: WinitRenderContext<'_, AlphaModeDemoState>)
 
 pub fn run() -> anyhow::Result<()> {
     let driver = FnDriver::new((), create_window_state, handle_event, render);
-    fret::run_native_with_compat_driver(
+    fret::advanced::interop::run_native_with_compat_driver(
         WinitRunnerConfig {
             main_window_title: "alpha_mode_demo".to_string(),
             main_window_size: fret_launch::WindowLogicalSize::new(920.0, 320.0),

@@ -19,9 +19,9 @@
 //!   and `fret::run_native_with_configured_fn_driver(...)` are the recommended advanced escape
 //!   hatches when you need runner-level customization but
 //!   still want the `fret` defaults/bootstrap story.
-//! - `fret::run_native_with_compat_driver(...)` is an advanced low-level interop path (non-default)
-//!   for retained/bridge integrations that still implement `fret_launch::WinitAppDriver`
-//!   directly.
+//! - `fret::advanced::interop::run_native_with_compat_driver(...)` is an advanced low-level
+//!   interop path (non-default) for retained/bridge integrations that still implement
+//!   `fret_launch::WinitAppDriver` directly.
 //!
 //! ## Getting started (desktop)
 //!
@@ -934,28 +934,6 @@ pub(crate) fn apply_desktop_defaults<D: fret_launch::WinitAppDriver + 'static>(
     apply_desktop_defaults_with(builder, Defaults::default())
 }
 
-/// Run a native desktop app using the compatibility driver path.
-///
-/// Prefer `fret::FretApp` / `UiAppBuilder` for general applications and
-/// `run_native_with_fn_driver(...)` for new advanced integrations. This helper exists for
-/// low-level integrations that still implement `fret_launch::WinitAppDriver` directly while
-/// wanting the higher-level defaults/bootstrap story from `fret`.
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-pub fn run_native_with_compat_driver<D: fret_launch::WinitAppDriver + 'static>(
-    config: fret_launch::WinitRunnerConfig,
-    app: KernelApp,
-    driver: D,
-) -> Result<()> {
-    let builder = fret_bootstrap::BootstrapBuilder::new(app, driver).configure(move |c| {
-        *c = config;
-    });
-
-    let builder = apply_desktop_defaults(builder).map_err(BootstrapError::from)?;
-
-    builder.run().map_err(RunnerError::from)?;
-    Ok(())
-}
-
 /// Run a native desktop app using the advanced `FnDriver` escape hatch.
 ///
 /// This is the recommended low-level path when the app wants the `fret` bootstrap/defaults story
@@ -1366,6 +1344,7 @@ mod authoring_surface_policy_tests {
     const APP_ENTRY_RS: &str = include_str!("app_entry.rs");
     const ACTIONS_RS: &str = include_str!("actions.rs");
     const CARGO_TOML: &str = include_str!("../Cargo.toml");
+    const INTEROP_RS: &str = include_str!("interop.rs");
     const ROOT_README: &str = include_str!("../../../README.md");
     const DOCS_README: &str = include_str!("../../../docs/README.md");
     const FIRST_HOUR: &str = include_str!("../../../docs/first-hour.md");
@@ -1526,6 +1505,22 @@ mod authoring_surface_policy_tests {
         ));
         assert!(!CRATE_README.contains("`UiAppBuilder::on_gpu_ready(...)`"));
         assert!(!CRATE_README.contains("`UiAppBuilder::install_custom_effects(...)`"));
+    }
+
+    #[test]
+    fn readme_and_rustdoc_quarantine_compat_runner_under_advanced_interop() {
+        let public_surface = crate_public_surface_source();
+        let rustdoc = crate_rustdoc();
+
+        assert!(CRATE_README.contains(
+            "`fret::advanced::interop::run_native_with_compat_driver(...)`"
+        ));
+        assert!(rustdoc.contains(
+            "`fret::advanced::interop::run_native_with_compat_driver(...)`"
+        ));
+        assert!(!public_surface.contains("pub fn run_native_with_compat_driver("));
+        assert!(public_surface.contains("pub mod interop;"));
+        assert!(INTEROP_RS.contains("pub fn run_native_with_compat_driver<"));
     }
 
     #[test]
