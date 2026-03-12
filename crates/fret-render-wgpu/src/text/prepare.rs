@@ -43,6 +43,12 @@ struct PreparedGlyphContext {
     size_bits: u32,
 }
 
+const PREPARED_GLYPH_ATLAS_LOOKUP_ORDER: [GlyphQuadKind; 3] = [
+    GlyphQuadKind::Color,
+    GlyphQuadKind::Subpixel,
+    GlyphQuadKind::Mask,
+];
+
 impl PreparedGlyphRaster {
     fn bounds(&self, x: i32, y: i32) -> (GlyphKey, f32, f32, f32, f32) {
         (
@@ -427,37 +433,14 @@ impl TextSystem {
         y_bin: u8,
         epoch: u64,
     ) -> Option<(GlyphKey, GlyphAtlasEntry)> {
-        self.lookup_prepared_glyph_atlas_kind(
-            face_key,
-            glyph_id,
-            size_bits,
-            x_bin,
-            y_bin,
-            GlyphQuadKind::Color,
-            epoch,
-        )
-        .or_else(|| {
-            self.lookup_prepared_glyph_atlas_kind(
-                face_key,
-                glyph_id,
-                size_bits,
-                x_bin,
-                y_bin,
-                GlyphQuadKind::Subpixel,
-                epoch,
-            )
-        })
-        .or_else(|| {
-            self.lookup_prepared_glyph_atlas_kind(
-                face_key,
-                glyph_id,
-                size_bits,
-                x_bin,
-                y_bin,
-                GlyphQuadKind::Mask,
-                epoch,
-            )
-        })
+        for kind in PREPARED_GLYPH_ATLAS_LOOKUP_ORDER {
+            if let Some(hit) = self.lookup_prepared_glyph_atlas_kind(
+                face_key, glyph_id, size_bits, x_bin, y_bin, kind, epoch,
+            ) {
+                return Some(hit);
+            }
+        }
+        None
     }
 
     fn lookup_prepared_glyph_atlas_kind(
