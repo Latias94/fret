@@ -1,7 +1,7 @@
 # Ecosystem Integration Traits v1
 
 Status: Active working plan (pre-release fearless refactor)
-Last updated: 2026-03-11
+Last updated: 2026-03-12
 
 Related:
 
@@ -48,7 +48,8 @@ What is still uneven is the **integration vocabulary** across ecosystem crates.
 
 Today we already have good pieces:
 
-- explicit `install(...)` / `install_app(...)` conventions,
+- explicit app-local installer functions plus crate-owned `crate::app::install(...)` seams where
+  first-party ecosystems expose default app wiring,
 - app-owned plugin and panel guidance,
 - route/query/state workstreams,
 - a cleaned-up shadcn facade with explicit `app`, `themes`, and `raw` seams.
@@ -97,7 +98,7 @@ Use the smallest surface that matches the ownership problem:
 
 | Need | Preferred surface |
 | --- | --- |
-| one-off app setup | free function (`install`, `install_app`) |
+| one-off app setup | free function or explicit app installer seam (`crate::app::install(...)`) |
 | pure configuration/data contribution | struct/enum + registry |
 | stable identity to runtime instance mapping | factory |
 | bidirectional serialization / canonicalization | codec |
@@ -109,12 +110,12 @@ Rule:
 
 ### 4.2 Trait scope must be narrow and one-directional
 
-A good ecosystem trait should answer exactly one question:
+A good ecosystem trait or shared integration contract should answer exactly one question:
 
 - "How do I install this into an app?"
 - "How do I encode/decode this route?"
 - "How do I contribute dock panels?"
-- "How do I contribute command catalog entries?"
+- "How do I contribute command catalog data?"
 
 A bad trait tries to answer all of them at once.
 
@@ -127,7 +128,8 @@ Hard rule:
 Preferred ownership:
 
 - app-integration traits live in `ecosystem/fret` or another ecosystem-level integration module,
-- command-catalog traits live in `ecosystem/fret-ui-kit`,
+- command-catalog ownership lives in `ecosystem/fret-ui-kit` as data contracts + collector
+  helpers; an actual shared trait stays deferred until a second consumer needs it,
 - router traits live in `ecosystem/fret-router`,
 - docking traits live in `ecosystem/fret-docking`,
 - query traits live in `ecosystem/fret-query`.
@@ -166,7 +168,8 @@ Before adding a new ecosystem contract, answer these questions in order:
    - app integration,
    - component/policy surface,
    - or advanced/manual assembly.
-2. Can this stay a free `install(...)` / `install_app(...)` function, registry, factory, or codec?
+2. Can this stay a free installer function, explicit `crate::app::install(...)` seam, registry,
+   factory, or codec?
 3. If a trait is still needed, does it answer exactly one question?
 4. Does the trait live in the owning ecosystem layer rather than `crates/fret-ui`?
 5. Are ordinary app docs still teaching the boring path first?
@@ -238,24 +241,50 @@ Purpose:
   command groups,
 - keep execution routed back to typed actions or `CommandId`.
 
-Target shape:
+v1 shape:
 
 ```rust
-pub trait CommandCatalog: Send + Sync + 'static {
-    fn collect(
-        &self,
-        cx: &mut CommandCatalogCx<'_>,
-        out: &mut Vec<CommandCatalogEntry>,
-    );
+pub struct CommandCatalogOptions {
+    pub hide_disabled: bool,
+}
+
+pub struct CommandCatalogItem {
+    pub label: Arc<str>,
+    pub value: Arc<str>,
+    pub disabled: bool,
+    pub keywords: Vec<Arc<str>>,
+    pub shortcut: Option<Arc<str>>,
+    pub command: CommandId,
+}
+
+pub struct CommandCatalogGroup {
+    pub heading: Arc<str>,
+    pub items: Vec<CommandCatalogItem>,
+}
+
+pub enum CommandCatalogEntry {
+    Item(CommandCatalogItem),
+    Group(CommandCatalogGroup),
+}
+
+pub fn command_catalog_entries_from_host_commands_with_options<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    options: CommandCatalogOptions,
+) -> Vec<CommandCatalogEntry> {
+    // data-only collector helpers in fret-ui-kit::command
 }
 ```
 
 Rules:
 
-- catalog collection is read-only; it does not execute commands itself,
+- the canonical v1 contract is data-first and read-only rather than a shared trait object surface,
+- host-command collection, gating interpretation, and shortcut derivation belong in
+  `fret-ui-kit::command`,
+- recipe crates like `fret-ui-shadcn` can consume and map the shared entries, but should not own
+  the canonical contract,
 - command entries must ultimately route through typed actions or registered commands,
-- the trait should live in a component/policy layer such as `fret-ui-kit::command`,
-- recipe crates like `fret-ui-shadcn` can consume it, but should not own the canonical contract.
+- add an actual shared `CommandCatalog` trait only if a second non-shadcn consumer needs a source
+  interface that the data helpers can no longer cover cleanly.
 
 Use cases:
 
@@ -437,9 +466,9 @@ Rules:
 - do not require a shared component trait,
 - do not leak the raw crate root onto the default app path.
 
-Potential trait usage:
+Potential contract usage:
 
-- consume `CommandCatalog`,
+- consume `CommandCatalog` data contracts / collector helpers,
 - optionally implement `InstallIntoApp` for shadcn app bundles.
 
 ### 7.2 `fret-docking`

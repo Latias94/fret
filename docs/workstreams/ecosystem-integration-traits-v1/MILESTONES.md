@@ -17,8 +17,8 @@ authoring-surface refactor.
 
 Current reading:
 
-- the core justified traits are already mostly landed (`InstallIntoApp`, `CommandCatalog`,
-  `RouteCodec`, `DockPanelFactory`),
+- the core justified seams are already mostly landed (`InstallIntoApp`, the `CommandCatalog`
+  data contract, `RouteCodec`, `DockPanelFactory`),
 - the remaining high-value work is cleanup and closure,
 - conversion-surface redesign is owned by
   `docs/workstreams/into-element-surface-fearless-refactor-v1/`.
@@ -103,7 +103,7 @@ Milestone readout on 2026-03-11:
 | --- | --- | --- |
 | M0 | Done | budget, owners, rejected shapes, and docs index/roadmap links are all recorded |
 | M1 | In progress | `InstallIntoApp` is landed, the first app-helper crates now use explicit `crate::app::*` seams, `fret-ui-shadcn` split its advanced hooks off the default app lane, and one advanced material helper has moved to `advanced::*`, but broader first-party naming cleanup and bundle adoption are still incomplete |
-| M2 | Mostly done | `CommandCatalog`, `RouteCodec`, and `DockPanelFactory` now have the intended ownership story |
+| M2 | Done | the `CommandCatalog` data contract, `RouteCodec`, and `DockPanelFactory` now have the intended ownership story |
 | M3 | Not started | `QueryAdapter` still needs a real-consumer decision; selector remains intentionally trait-free |
 | M4 | In progress | checklist/gate work has started, but hard deletions and full docs/template cleanup remain |
 
