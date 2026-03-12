@@ -241,6 +241,10 @@ Current snapshot (2026-03-12):
   - prepared-glyph synthesis embolden extraction now lives behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `prepared_glyph_face_key(...)` no longer owns synthesis-embolden extraction directly
+- The fifty-fourth internal `text/mod.rs` split has landed:
+  - prepared-glyph font-data cache writes now live behind a dedicated helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `cache_prepared_glyph_face_data(...)` no longer owns font-data entry writes directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed

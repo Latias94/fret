@@ -299,6 +299,10 @@ As of 2026-03-12:
   - prepared-glyph synthesis embolden extraction now lives behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `prepared_glyph_face_key(...)` no longer owns synthesis-embolden extraction directly
+- The fifty-fourth internal text split has landed:
+  - prepared-glyph font-data cache writes now live behind a dedicated helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `cache_prepared_glyph_face_data(...)` no longer owns font-data entry writes directly
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
