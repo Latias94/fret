@@ -5,9 +5,17 @@ use fret_core::Px;
 use fret_core::scene::DashPatternV1;
 use fret_runtime::CommandId;
 use fret_ui::Theme;
+use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
+
+#[derive(Default, Clone)]
+struct BrowserMenuState {
+    show_bookmarks: bool,
+    show_full_urls: bool,
+    person: Option<Arc<str>>,
+}
 
 fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let theme = Theme::global(&*cx.app);
@@ -42,9 +50,16 @@ fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let show_bookmarks = cx.local_model_keyed("show_bookmarks", || true);
-    let show_full_urls = cx.local_model_keyed("show_full_urls", || false);
-    let people = cx.local_model_keyed("people", || Some(Arc::<str>::from("pedro")));
+    let menu_state = cx.local_model(|| BrowserMenuState {
+        show_bookmarks: true,
+        show_full_urls: false,
+        person: Some(Arc::<str>::from("pedro")),
+    });
+    let menu_state_now = cx
+        .watch_model(&menu_state)
+        .layout()
+        .cloned()
+        .unwrap_or_default();
 
     shadcn::ContextMenu::new_controllable(cx, None, false)
         .content_test_id("ui-gallery-context-menu-demo-content")
@@ -112,13 +127,35 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     )
                     .into_entry(),
                     shadcn::ContextMenuSeparator::new().into(),
-                    shadcn::ContextMenuCheckboxItem::new(show_bookmarks.clone(), "Show Bookmarks")
+                    shadcn::ContextMenuCheckboxItem::from_checked(
+                        menu_state_now.show_bookmarks,
+                        "Show Bookmarks",
+                    )
+                        .on_checked_change({
+                            let menu_state = menu_state.clone();
+                            move |host, _action_cx, checked| {
+                                let _ = host.models_mut().update(&menu_state, |state| {
+                                    state.show_bookmarks = checked;
+                                });
+                            }
+                        })
                         .action(CommandId::new(
                             "ui_gallery.context_menu.demo.show_bookmarks",
                         ))
                         .test_id("ui-gallery-context-menu-demo-show-bookmarks")
                         .into(),
-                    shadcn::ContextMenuCheckboxItem::new(show_full_urls.clone(), "Show Full URLs")
+                    shadcn::ContextMenuCheckboxItem::from_checked(
+                        menu_state_now.show_full_urls,
+                        "Show Full URLs",
+                    )
+                        .on_checked_change({
+                            let menu_state = menu_state.clone();
+                            move |host, _action_cx, checked| {
+                                let _ = host.models_mut().update(&menu_state, |state| {
+                                    state.show_full_urls = checked;
+                                });
+                            }
+                        })
                         .action(CommandId::new(
                             "ui_gallery.context_menu.demo.show_full_urls",
                         ))
@@ -126,7 +163,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         .into(),
                     shadcn::ContextMenuSeparator::new().into(),
                     shadcn::ContextMenuLabel::new("People").inset(true).into(),
-                    shadcn::ContextMenuRadioGroup::new(people.clone())
+                    shadcn::ContextMenuRadioGroup::from_value(menu_state_now.person.clone())
+                        .on_value_change({
+                            let menu_state = menu_state.clone();
+                            move |host, _action_cx, value| {
+                                let _ = host
+                                    .models_mut()
+                                    .update(&menu_state, |state| state.person = Some(value));
+                            }
+                        })
                         .item(
                             shadcn::ContextMenuRadioItemSpec::new("pedro", "Pedro Duarte")
                                 .action(CommandId::new("ui_gallery.context_menu.demo.person.pedro"))

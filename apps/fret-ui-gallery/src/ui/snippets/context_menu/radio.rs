@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("radio.rs");
 
 // region: example
 use fret_runtime::CommandId;
+use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -13,7 +14,8 @@ fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static st
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let theme_mode = cx.local_model_keyed("theme_mode", || Some(Arc::<str>::from("system")));
+    let theme_mode = cx.local_model(|| Some(Arc::<str>::from("system")));
+    let theme_mode_now = cx.watch_model(&theme_mode).layout().cloned().flatten();
 
     shadcn::ContextMenu::new_controllable(cx, None, false)
         .content_test_id("ui-gallery-context-menu-radio-content")
@@ -25,7 +27,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             },
             |_cx| {
                 vec![shadcn::ContextMenuEntry::RadioGroup(
-                    shadcn::ContextMenuRadioGroup::new(theme_mode.clone())
+                    shadcn::ContextMenuRadioGroup::from_value(theme_mode_now)
+                        .on_value_change({
+                            let theme_mode = theme_mode.clone();
+                            move |host, _action_cx, value| {
+                                let _ = host
+                                    .models_mut()
+                                    .update(&theme_mode, |selected| *selected = Some(value));
+                            }
+                        })
                         .item(
                             shadcn::ContextMenuRadioItemSpec::new("system", "System").action(
                                 CommandId::new("ui_gallery.context_menu.radio.theme.system"),
