@@ -326,13 +326,7 @@ impl TextSystem {
 
             let (glyph_key, x0_px, y0_px, w_px, h_px) = if let Some((glyph_key, entry)) = atlas_hit
             {
-                (
-                    glyph_key,
-                    x as f32 + entry.placement_left as f32,
-                    y as f32 - entry.placement_top as f32,
-                    entry.w as f32,
-                    entry.h as f32,
-                )
+                prepared_glyph_bounds_from_atlas_entry(glyph_key, entry, x, y)
             } else {
                 let Some(glyph_bounds) = self.materialize_prepared_glyph_miss(
                     &g, glyph_id, face_key, size_bits, x_bin, y_bin, x, y, epoch,
@@ -631,6 +625,21 @@ fn prepared_glyph_paint_span(
 
 fn prepared_glyph_font_ref<'a>(glyph: &'a ParleyGlyph) -> Option<parley::swash::FontRef<'a>> {
     parley::swash::FontRef::from_index(glyph.font.data.data(), glyph.font.index as usize)
+}
+
+fn prepared_glyph_bounds_from_atlas_entry(
+    glyph_key: GlyphKey,
+    entry: GlyphAtlasEntry,
+    x: i32,
+    y: i32,
+) -> (GlyphKey, f32, f32, f32, f32) {
+    (
+        glyph_key,
+        x as f32 + entry.placement_left as f32,
+        y as f32 - entry.placement_top as f32,
+        entry.w as f32,
+        entry.h as f32,
+    )
 }
 
 fn prepared_glyph_offset_px(x_bin: u8, y_bin: u8) -> parley::swash::zeno::Vector {
