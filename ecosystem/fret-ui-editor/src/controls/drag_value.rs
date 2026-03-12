@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::controls::numeric_input::{
     NumericFormatFn, NumericInput, NumericInputErrorDisplay, NumericInputOptions,
-    NumericInputOutcome, NumericParseFn, NumericValidateFn,
+    NumericInputOutcome, NumericInputSelectionBehavior, NumericParseFn, NumericValidateFn,
 };
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
@@ -59,6 +59,7 @@ pub struct DragValueOptions {
     pub layout: LayoutStyle,
     pub prefix: Option<Arc<str>>,
     pub suffix: Option<Arc<str>>,
+    pub selection_behavior: NumericInputSelectionBehavior,
     /// Explicit identity source for internal state (scrub/typing focus restore).
     ///
     /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
@@ -86,6 +87,7 @@ impl Default for DragValueOptions {
             },
             prefix: None,
             suffix: None,
+            selection_behavior: NumericInputSelectionBehavior::ReplaceAllOnFocus,
             id_source: None,
             test_id: None,
         }
@@ -339,6 +341,7 @@ where
                 focusable: typing,
                 prefix: self.options.prefix.clone(),
                 suffix: self.options.suffix.clone(),
+                selection_behavior: self.options.selection_behavior,
                 test_id: typing_test_id,
                 // Avoid growing the row height when a commit-time validation error occurs.
                 // A small trailing status icon keeps the inspector layout stable.

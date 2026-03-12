@@ -55,14 +55,18 @@ Current checkpoint:
 - input-like editor controls now share one state grammar for focus, typed-edit, and invalid
   semantics through `EditorWidgetVisuals` and shared `editor.control.invalid.*` tokens instead of
   mixing per-widget error/focus overrides,
+- editor numeric text-entry now also has a shared baseline policy for "replace current value on
+  initial typed edit", so affixed `NumericInput` / `DragValue` / `Slider` flows behave more like
+  editor fields than generic app forms, and `AxisDragValue` no longer lags behind on validation
+  affordances while typing,
 - editor preset replay is no longer proof-demo-local glue only: the editor theme helpers now expose
   a reusable "host theme sync, then editor preset replay" path for `WindowMetricsService`-driven
   resets, and the promoted proof demo uses that shared ordering,
 - the default proof surface can produce reviewable overview / typing / validation screenshots,
 - `imgui_like_dense` now has a matching screenshot proof so default-vs-dense baseline review does
   not depend on ad-hoc manual launches,
-- and the remaining foundation cleanup is rerun-safe screenshot automation plus follow-up tuning for
-  wide-inspector slack after the new lane grammar landed.
+- and the remaining foundation cleanup is now mostly about finishing the broader text-field policy
+  decisions and follow-up tuning for wide-inspector slack after the new lane grammar landed.
 
 Until those are in better shape, new promoted reusable components should be treated as lower
 priority than baseline correction.

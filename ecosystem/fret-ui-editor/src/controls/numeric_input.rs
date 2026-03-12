@@ -11,7 +11,7 @@ use std::panic::Location;
 use std::sync::{Arc, Mutex};
 
 use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Edges, KeyCode, Px, TextAlign, TextStyle};
+use fret_core::{Axis, Edges, KeyCode, Px, SemanticsInvalid, TextAlign, TextStyle};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, UiFocusActionHost};
 use fret_ui::element::{
@@ -28,7 +28,13 @@ use crate::primitives::input_group::{
     EditorInputGroupFrameOverrides, derived_test_id, editor_icon_segment,
     editor_joined_input_frame_segments_with_overrides, editor_text_segment,
 };
+use crate::primitives::numeric_text_entry::{
+    clear_numeric_error_when_draft_changes, handle_numeric_text_entry_replace_key,
+    numeric_text_entry_focus_state, sync_numeric_text_entry_focus,
+};
 use crate::primitives::style::EditorStyle;
+
+pub use crate::primitives::NumericInputSelectionBehavior;
 
 #[derive(Debug, Clone)]
 pub struct NumericInputOptions {
@@ -47,6 +53,7 @@ pub struct NumericInputOptions {
     pub enabled: bool,
     pub focusable: bool,
     pub error_display: NumericInputErrorDisplay,
+    pub selection_behavior: NumericInputSelectionBehavior,
 }
 
 impl Default for NumericInputOptions {
@@ -69,6 +76,7 @@ impl Default for NumericInputOptions {
             enabled: true,
             focusable: true,
             error_display: NumericInputErrorDisplay::InlineTextAndIcon,
+            selection_behavior: NumericInputSelectionBehavior::ReplaceAllOnFocus,
         }
     }
 }
@@ -163,12 +171,17 @@ where
 
         let draft = draft_model(cx);
         let error = error_model(cx);
+        let focus_state = numeric_text_entry_focus_state(cx);
         let last_draft_text =
             cx.with_state(|| Arc::new(Mutex::new(String::new())), |st| st.clone());
         let current_value = cx
             .get_model_copied(&model, Invalidation::Paint)
             .unwrap_or_default();
         let current_text = (format)(current_value);
+        let has_error = cx
+            .get_model_cloned(&error, Invalidation::Paint)
+            .unwrap_or(None)
+            .is_some();
 
         let (density, frame_chrome, chrome, text_style) = {
             let theme = Theme::global(&*cx.app);
@@ -188,6 +201,7 @@ where
         let placeholder = options.placeholder.clone();
         let focusable = options.focusable;
         let error_display = options.error_display;
+        let selection_behavior = options.selection_behavior;
         let prefix = options.prefix.clone();
         let suffix = options.suffix.clone();
         let input_test_id = derived_test_id(options.test_id.as_ref(), "input");
@@ -263,6 +277,7 @@ where
                 props.focusable = focusable;
                 props.placeholder = placeholder.clone();
                 props.test_id = input_test_id.clone();
+                props.a11y_invalid = has_error.then_some(SemanticsInvalid::True);
                 props.chrome = joined_text_input_style(chrome);
                 props.text_style = text_style_for_field.clone();
 
@@ -270,12 +285,17 @@ where
                 let input_id = input.id;
                 let is_focused = cx.is_focused_element(input_id);
 
+                sync_numeric_text_entry_focus(
+                    cx,
+                    &focus_state,
+                    is_focused,
+                    &current_text,
+                    &draft,
+                    &error_for_field,
+                    selection_behavior,
+                );
+
                 if !is_focused {
-                    let _ = cx
-                        .app
-                        .models_mut()
-                        .update(&draft, |s| *s = current_text.as_ref().to_string());
-                    let _ = cx.app.models_mut().update(&error_for_field, |e| *e = None);
                     let mut last = last_draft_text.lock().unwrap_or_else(|e| e.into_inner());
                     *last = current_text.as_ref().to_string();
                 }
@@ -283,6 +303,7 @@ where
                 let model_for_key = model.clone();
                 let draft_for_key = draft.clone();
                 let error_for_key = error_for_field.clone();
+                let focus_state_for_key = focus_state.clone();
                 let last_draft_for_key = last_draft_text.clone();
                 let parse_for_key = parse.clone();
                 let format_for_key = format.clone();
@@ -291,89 +312,100 @@ where
                 cx.key_add_on_key_down_capture_for(
                     input_id,
                     Arc::new(move |host, action_cx: ActionCx, down| match down.key {
-                        KeyCode::Enter | KeyCode::NumpadEnter => {
-                            let text = host
-                                .models_mut()
-                                .read(&draft_for_key, |s| s.clone())
-                                .unwrap_or_default();
-                            if let Some(v) = (parse_for_key)(&text) {
-                                if let Some(validate) = validate_for_key.as_ref() {
-                                    if let Some(msg) = validate(v) {
-                                        let _ = host
-                                            .models_mut()
-                                            .update(&error_for_key, |e| *e = Some(msg));
+                        _ => {
+                            if let Some(consumed) = handle_numeric_text_entry_replace_key(
+                                host,
+                                action_cx,
+                                down,
+                                &focus_state_for_key,
+                                &draft_for_key,
+                                &error_for_key,
+                            ) {
+                                if consumed {
+                                    return true;
+                                }
+                            }
+                            match down.key {
+                                KeyCode::Enter | KeyCode::NumpadEnter => {
+                                    let text = host
+                                        .models_mut()
+                                        .read(&draft_for_key, |s| s.clone())
+                                        .unwrap_or_default();
+                                    if let Some(v) = (parse_for_key)(&text) {
+                                        if let Some(validate) = validate_for_key.as_ref() {
+                                            if let Some(msg) = validate(v) {
+                                                let _ = host
+                                                    .models_mut()
+                                                    .update(&error_for_key, |e| *e = Some(msg));
+                                                let mut last = last_draft_for_key
+                                                    .lock()
+                                                    .unwrap_or_else(|e| e.into_inner());
+                                                *last = text;
+                                                host.request_redraw(action_cx.window);
+                                                return true;
+                                            }
+                                        }
+
+                                        let _ =
+                                            host.models_mut().update(&model_for_key, |m| *m = v);
+                                        let formatted = (format_for_key)(v);
+                                        let _ = host.models_mut().update(&draft_for_key, |s| {
+                                            *s = formatted.as_ref().to_string()
+                                        });
+                                        let _ =
+                                            host.models_mut().update(&error_for_key, |e| *e = None);
+                                        let mut last = last_draft_for_key
+                                            .lock()
+                                            .unwrap_or_else(|e| e.into_inner());
+                                        *last = formatted.as_ref().to_string();
+                                        if let Some(cb) = on_outcome_for_key.as_ref() {
+                                            cb(host, action_cx, NumericInputOutcome::Committed);
+                                        }
+                                    } else {
+                                        let _ = host.models_mut().update(&error_for_key, |e| {
+                                            *e = Some(Arc::from("Invalid number"))
+                                        });
                                         let mut last = last_draft_for_key
                                             .lock()
                                             .unwrap_or_else(|e| e.into_inner());
                                         *last = text;
-                                        host.request_redraw(action_cx.window);
-                                        return true;
                                     }
+                                    host.request_redraw(action_cx.window);
+                                    true
                                 }
-
-                                let _ = host.models_mut().update(&model_for_key, |m| *m = v);
-                                let formatted = (format_for_key)(v);
-                                let _ = host.models_mut().update(&draft_for_key, |s| {
-                                    *s = formatted.as_ref().to_string()
-                                });
-                                let _ = host.models_mut().update(&error_for_key, |e| *e = None);
-                                let mut last =
-                                    last_draft_for_key.lock().unwrap_or_else(|e| e.into_inner());
-                                *last = formatted.as_ref().to_string();
-                                if let Some(cb) = on_outcome_for_key.as_ref() {
-                                    cb(host, action_cx, NumericInputOutcome::Committed);
+                                KeyCode::Escape => {
+                                    let current = host
+                                        .models_mut()
+                                        .get_copied(&model_for_key)
+                                        .unwrap_or_default();
+                                    let formatted = (format_for_key)(current);
+                                    let _ = host.models_mut().update(&draft_for_key, |s| {
+                                        *s = formatted.as_ref().to_string()
+                                    });
+                                    let _ = host.models_mut().update(&error_for_key, |e| *e = None);
+                                    let mut last = last_draft_for_key
+                                        .lock()
+                                        .unwrap_or_else(|e| e.into_inner());
+                                    *last = formatted.as_ref().to_string();
+                                    if let Some(cb) = on_outcome_for_key.as_ref() {
+                                        cb(host, action_cx, NumericInputOutcome::Canceled);
+                                    }
+                                    host.request_redraw(action_cx.window);
+                                    true
                                 }
-                            } else {
-                                let _ = host.models_mut().update(&error_for_key, |e| {
-                                    *e = Some(Arc::from("Invalid number"))
-                                });
-                                let mut last =
-                                    last_draft_for_key.lock().unwrap_or_else(|e| e.into_inner());
-                                *last = text;
+                                _ => false,
                             }
-                            host.request_redraw(action_cx.window);
-                            true
                         }
-                        KeyCode::Escape => {
-                            let current = host
-                                .models_mut()
-                                .get_copied(&model_for_key)
-                                .unwrap_or_default();
-                            let formatted = (format_for_key)(current);
-                            let _ = host
-                                .models_mut()
-                                .update(&draft_for_key, |s| *s = formatted.as_ref().to_string());
-                            let _ = host.models_mut().update(&error_for_key, |e| *e = None);
-                            let mut last =
-                                last_draft_for_key.lock().unwrap_or_else(|e| e.into_inner());
-                            *last = formatted.as_ref().to_string();
-                            if let Some(cb) = on_outcome_for_key.as_ref() {
-                                cb(host, action_cx, NumericInputOutcome::Canceled);
-                            }
-                            host.request_redraw(action_cx.window);
-                            true
-                        }
-                        _ => false,
                     }),
                 );
 
-                if is_focused {
-                    let draft_text = cx
-                        .get_model_cloned(&draft, Invalidation::Paint)
-                        .unwrap_or_default();
-                    let changed = {
-                        let mut last = last_draft_text.lock().unwrap_or_else(|e| e.into_inner());
-                        if *last == draft_text {
-                            false
-                        } else {
-                            *last = draft_text;
-                            true
-                        }
-                    };
-                    if changed {
-                        let _ = cx.app.models_mut().update(&error_for_field, |e| *e = None);
-                    }
-                }
+                clear_numeric_error_when_draft_changes(
+                    cx,
+                    is_focused,
+                    &draft,
+                    &error_for_field,
+                    &last_draft_text,
+                );
 
                 input
             },

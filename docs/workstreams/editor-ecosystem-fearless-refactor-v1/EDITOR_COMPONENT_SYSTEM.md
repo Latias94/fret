@@ -192,7 +192,9 @@ Default direction:
 
 - interaction feedback should read immediately,
 - scrubbing affordances need larger hit areas than they look,
-- typed-edit mode must still visually belong to the same control family.
+- typed-edit mode must still visually belong to the same control family,
+- and affixed numeric variants should keep prefix/suffix chrome outside the editable draft so
+  typed replacement stays fast in dense inspector workflows.
 
 #### 4) Composite/editor sections
 

@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::controls::numeric_input::{
     NumericFormatFn, NumericInput, NumericInputErrorDisplay, NumericInputOptions,
-    NumericInputOutcome, NumericParseFn, NumericValidateFn,
+    NumericInputOutcome, NumericInputSelectionBehavior, NumericParseFn, NumericValidateFn,
 };
 use crate::primitives::EditorTokenKeys;
 use crate::primitives::drag_value_core::DragValueScalar;
@@ -171,6 +171,7 @@ pub struct SliderOptions {
     pub enabled: bool,
     pub prefix: Option<Arc<str>>,
     pub suffix: Option<Arc<str>>,
+    pub selection_behavior: NumericInputSelectionBehavior,
     pub clamp: bool,
     /// Quantize to a step size in value space (e.g. `0.01` for normalized floats).
     pub step: Option<f64>,
@@ -206,6 +207,7 @@ impl Default for SliderOptions {
             enabled: true,
             prefix: None,
             suffix: None,
+            selection_behavior: NumericInputSelectionBehavior::ReplaceAllOnFocus,
             clamp: true,
             step: None,
             show_value: true,
@@ -834,6 +836,7 @@ where
                 focusable: enabled && typing,
                 prefix: self.options.prefix.clone(),
                 suffix: self.options.suffix.clone(),
+                selection_behavior: self.options.selection_behavior,
                 test_id: typing_test_id,
                 // Avoid growing the row height when a commit-time validation error occurs.
                 // A small trailing status icon keeps the inspector layout stable.

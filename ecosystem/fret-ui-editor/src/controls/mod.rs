@@ -23,8 +23,8 @@ pub use field_status::{FieldStatus, FieldStatusBadge, FieldStatusBadgeOptions};
 pub use icon_button::{IconButton, IconButtonOptions, OnIconButtonActivate};
 pub use mini_search_box::{MiniSearchBox, MiniSearchBoxOptions};
 pub use numeric_input::{
-    NumericFormatFn, NumericInput, NumericInputOptions, NumericInputOutcome, NumericParseFn,
-    NumericValidateFn, OnNumericInputOutcome,
+    NumericFormatFn, NumericInput, NumericInputOptions, NumericInputOutcome,
+    NumericInputSelectionBehavior, NumericParseFn, NumericValidateFn, OnNumericInputOutcome,
 };
 pub use slider::{Slider, SliderOptions};
 pub use text_field::{TextField, TextFieldOptions};

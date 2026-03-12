@@ -7,9 +7,8 @@
 
 use std::sync::Arc;
 
-use fret_core::KeyCode;
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, ActivateReason, OnActivate};
+use fret_ui::action::{ActivateReason, OnActivate};
 use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle, TextInputProps};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::{ChromeRefinement, Size};
@@ -102,13 +101,13 @@ impl MiniSearchBox {
         input_props.focusable = options.focusable;
         input_props.placeholder = options.placeholder.clone();
         input_props.test_id = None;
+        input_props.cancel_command = Some("text.clear".into());
 
         // Joined field: the frame is drawn by the input group. Keep the inner text input
         // transparent and borderless to avoid double chrome.
         input_props.chrome = joined_text_input_style(chrome);
         input_props.text_style = text_style;
 
-        let model_for_input = model.clone();
         let model_for_trailing = model.clone();
 
         editor_joined_input_frame(
@@ -119,32 +118,7 @@ impl MiniSearchBox {
             enabled_for_paint,
             false,
             options.test_id.clone(),
-            move |cx| {
-                let input = cx.text_input(input_props);
-
-                // Basic affordance: Escape clears if there is text.
-                let model_for_key = model_for_input.clone();
-                cx.key_add_on_key_down_capture_for(
-                    input.id,
-                    Arc::new(move |host, action_cx: ActionCx, down| {
-                        if down.key != KeyCode::Escape {
-                            return false;
-                        }
-                        let had_value = host
-                            .models_mut()
-                            .read(&model_for_key, |s| !s.is_empty())
-                            .unwrap_or(false);
-                        if !had_value {
-                            return false;
-                        }
-                        let _ = host.models_mut().update(&model_for_key, |s| s.clear());
-                        host.request_redraw(action_cx.window);
-                        true
-                    }),
-                );
-
-                input
-            },
+            move |cx| cx.text_input(input_props),
             move |cx| {
                 if !has_value {
                     return Vec::new();

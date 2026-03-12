@@ -11,7 +11,7 @@ Related docs:
 
 Status: Active design note (workstream contract, not an ADR)
 
-Last updated: 2026-03-11
+Last updated: 2026-03-12
 
 ## Purpose
 
@@ -153,6 +153,9 @@ During scrubbing or typing:
 - value updates may be emitted continuously,
 - visual state should make it clear that the control is actively editing,
 - undo integration should treat the session as one logical edit when possible.
+- typed numeric entry should default to a select-all-equivalent replace-on-first-edit behavior when
+  focus enters the editor-owned text-entry path, unless a control opts into preserving the draft
+  instead.
 
 ### Commit
 
@@ -168,6 +171,16 @@ Escape should restore the pre-edit value for promoted numeric editing flows.
 
 This is one of the few behaviors that should be treated as sticky once the editor starter set
 depends on it.
+
+### Affixes and validation surfaces
+
+For editor numeric controls with prefix/suffix chrome:
+
+- affixes remain display-only joined segments, not part of the editable draft text,
+- typed entry should therefore replace the numeric draft without requiring the user to delete
+  affixes manually,
+- and joined numeric editors should prefer a compact trailing invalid affordance over layout-growing
+  inline error text unless the control is explicitly acting as a standalone form field.
 
 ### Modifier defaults
 
@@ -188,6 +201,8 @@ Rules:
 - keyboard focus must remain distinct from pointer hover,
 - focus treatment must remain visible even on compact controls,
 - Enter/Escape behavior should be documented for controls that enter edit sessions,
+- search/filter boxes may use Escape-to-clear as an editor policy default, but general text fields
+  should only do so when the surface explicitly opts into that behavior,
 - popup-owning controls should define whether focus remains on trigger, moves into content, or
   restores on close,
 - command/keybinding behavior should not fire through active text input or IME composition

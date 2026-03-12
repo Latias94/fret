@@ -90,10 +90,20 @@ Interaction contract:
       Decision: yes. The dense preset now has matching overview / typing / validation screenshot
       proof coverage via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-imgui-like-dense.json`.
-- [ ] `EER-BASE-117` Close baseline editor text/numeric policy where visuals and interaction are
+- [~] `EER-BASE-117` Close baseline editor text/numeric policy where visuals and interaction are
       coupled:
       Enter/Escape semantics, selection defaults, clear affordances, affix behavior, and error
       presentation.
+      Recent progress: editor numeric text-entry now defaults to a select-all-equivalent
+      replace-on-first-edit policy on focus, `DragValue` / `Slider` typing paths can opt through
+      the same shared setting instead of hand-rolling their own draft replacement behavior, and
+      `AxisDragValue` typing now clears stale validation state while the user edits and exposes the
+      same trailing error affordance class as the other joined numeric editors. `MiniSearchBox`
+      Escape-clear also now routes through the runtime text-input cancel command instead of a
+      widget-local key hook.
+      Remaining work: decide how much of that entry/clear policy should become configurable for
+      general text fields, and whether broader text-selection defaults need a stronger runtime hook
+      than the current editor-owned numeric entry policy.
 - [ ] `EER-BASE-118` Do not promote new reusable editor components until `EER-BASE-110` through
       `EER-BASE-117` are in materially better shape.
 
