@@ -221,6 +221,10 @@ Current snapshot (2026-03-12):
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `prepared_glyph_raster_from_image(...)` no longer owns content decode plus raster assembly
     directly
+- The forty-ninth internal `text/mod.rs` split has landed:
+  - prepared-glyph keyed raster packing now lives behind a dedicated helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `prepared_glyph_raster(...)` no longer owns keyed `PreparedGlyphRaster` field packing directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed

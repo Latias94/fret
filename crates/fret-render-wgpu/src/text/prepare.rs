@@ -900,8 +900,21 @@ fn prepared_glyph_raster(
     bytes_per_pixel: u32,
     data: Vec<u8>,
 ) -> PreparedGlyphRaster {
+    let glyph_key = prepared_glyph_lookup_key(face_key, glyph_id, size_bits, x_bin, y_bin, kind);
+    prepared_glyph_raster_with_key(glyph_key, width, height, left, top, bytes_per_pixel, data)
+}
+
+fn prepared_glyph_raster_with_key(
+    glyph_key: GlyphKey,
+    width: u32,
+    height: u32,
+    left: i32,
+    top: i32,
+    bytes_per_pixel: u32,
+    data: Vec<u8>,
+) -> PreparedGlyphRaster {
     PreparedGlyphRaster {
-        glyph_key: prepared_glyph_key(face_key, glyph_id, size_bits, x_bin, y_bin, kind),
+        glyph_key,
         width,
         height,
         left,
