@@ -2840,26 +2840,8 @@ impl ContextMenu {
         open: Option<Model<bool>>,
         default_open: bool,
     ) -> Self {
-        #[derive(Default)]
-        struct OpenModelState {
-            model: Option<Model<bool>>,
-        }
-
-        let open = if let Some(model) = open {
-            model
-        } else {
-            let existing = cx.with_state(OpenModelState::default, |st| st.model.clone());
-            if let Some(model) = existing {
-                model
-            } else {
-                let model = cx.app.models_mut().insert(default_open);
-                cx.with_state(OpenModelState::default, |st| {
-                    st.model = Some(model.clone());
-                });
-                model
-            }
-        };
-
+        let open =
+            fret_ui_kit::primitives::open_state::open_use_model(cx, open, || default_open).model();
         Self::new(open)
     }
 
@@ -3028,7 +3010,7 @@ impl ContextMenu {
                 overlay_motion::shadcn_motion_ease_bezier(cx),
             );
             let (open_change, open_change_complete) =
-                cx.with_state(ContextMenuOpenChangeCallbackState::default, |state| {
+                cx.slot_state(ContextMenuOpenChangeCallbackState::default, |state| {
                     context_menu_open_change_events(state, is_open, motion.present, motion.animating)
                 });
             if let (Some(open), Some(on_open_change)) =
@@ -3086,7 +3068,7 @@ impl ContextMenu {
             let on_close_auto_focus = self.on_close_auto_focus.clone();
             let open_model_id = open.id();
             let cancel_open: ContextMenuCancelOpenShared =
-                cx.with_state(context_menu_cancel_open_shared, |shared| shared.clone());
+                cx.slot_state(context_menu_cancel_open_shared, |shared| shared.clone());
             let anchor_store_model: Model<HashMap<ModelId, Point>> =
                 menu::context_menu_anchor_store_model(cx.app);
 
@@ -4378,13 +4360,12 @@ impl ContextMenu {
                         geometry: Option<menu::sub::MenuSubmenuGeometry>,
                     }
 
-                    let last_geometry = cx.with_state(SubmenuLastGeometry::default, |st| {
+                    let last_geometry = cx.slot_state(SubmenuLastGeometry::default, |st| {
                         if let Some((_, geometry)) = open_submenu.as_ref() {
                             st.geometry = Some(*geometry);
                         }
                         st.geometry
-                    },
-                    );
+                    });
 
                     if submenu_present {
                         let Some(open_value) = submenu_open_value.clone() else {
@@ -4593,6 +4574,23 @@ mod tests {
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let menu = ContextMenu::new_controllable(cx, Some(controlled.clone()), false);
             assert_eq!(menu.open, controlled);
+        });
+    }
+
+    #[test]
+    fn context_menu_new_controllable_multiple_instances_do_not_share_open_model() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let menu_a = ContextMenu::new_controllable(cx, None, false);
+            let menu_b = ContextMenu::new_controllable(cx, None, false);
+
+            assert_ne!(menu_a.open.id(), menu_b.open.id());
         });
     }
 
@@ -5077,7 +5075,7 @@ mod tests {
             "context-menu-debug-cancel-open",
             |cx| {
                 let shared: ContextMenuCancelOpenShared =
-                    cx.with_state(context_menu_cancel_open_shared, |shared| shared.clone());
+                    cx.slot_state(context_menu_cancel_open_shared, |shared| shared.clone());
                 debug_out.set(Some(shared.clone()));
 
                 let theme = Theme::global(&*cx.app).snapshot();

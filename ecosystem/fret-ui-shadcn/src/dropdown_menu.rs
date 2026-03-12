@@ -1721,26 +1721,8 @@ impl DropdownMenu {
         open: Option<Model<bool>>,
         default_open: bool,
     ) -> Self {
-        #[derive(Default)]
-        struct OpenModelState {
-            model: Option<Model<bool>>,
-        }
-
-        let open = if let Some(model) = open {
-            model
-        } else {
-            let existing = cx.with_state(OpenModelState::default, |st| st.model.clone());
-            if let Some(model) = existing {
-                model
-            } else {
-                let model = cx.app.models_mut().insert(default_open);
-                cx.with_state(OpenModelState::default, |st| {
-                    st.model = Some(model.clone());
-                });
-                model
-            }
-        };
-
+        let open =
+            fret_ui_kit::primitives::open_state::open_use_model(cx, open, || default_open).model();
         Self::new(open)
     }
 
@@ -1929,7 +1911,7 @@ impl DropdownMenu {
                 overlay_motion::shadcn_motion_ease_bezier(cx),
             );
             let (open_change, open_change_complete) =
-                cx.with_state(DropdownMenuOpenChangeCallbackState::default, |state| {
+                cx.slot_state(DropdownMenuOpenChangeCallbackState::default, |state| {
                     dropdown_menu_open_change_events(state, is_open, motion.present, motion.animating)
                 });
             if let (Some(open), Some(on_open_change)) =
@@ -3499,7 +3481,7 @@ impl DropdownMenu {
                         geometry: Option<menu::sub::MenuSubmenuGeometry>,
                     }
 
-                    let last_geometry = cx.with_state(SubmenuLastGeometry::default, |st| {
+                    let last_geometry = cx.slot_state(SubmenuLastGeometry::default, |st| {
                         if let Some((_, geometry)) = open_submenu.as_ref() {
                             st.geometry = Some(*geometry);
                         }
@@ -4616,6 +4598,23 @@ mod tests {
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let menu = DropdownMenu::new_controllable(cx, Some(controlled.clone()), false);
             assert_eq!(menu.open, controlled);
+        });
+    }
+
+    #[test]
+    fn dropdown_menu_new_controllable_multiple_instances_do_not_share_open_model() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let menu_a = DropdownMenu::new_controllable(cx, None, false);
+            let menu_b = DropdownMenu::new_controllable(cx, None, false);
+
+            assert_ne!(menu_a.open.id(), menu_b.open.id());
         });
     }
 
