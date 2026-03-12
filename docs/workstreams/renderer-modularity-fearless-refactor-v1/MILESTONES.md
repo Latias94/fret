@@ -245,6 +245,10 @@ Current snapshot (2026-03-12):
   - prepared-glyph font-data cache writes now live behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `cache_prepared_glyph_face_data(...)` no longer owns font-data entry writes directly
+- The fifty-fifth internal `text/mod.rs` split has landed:
+  - prepared-glyph instance-coords cache writes now live behind a dedicated helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `cache_prepared_glyph_face_data(...)` no longer owns normalized-coords cache writes directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed

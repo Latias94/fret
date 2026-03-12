@@ -415,11 +415,7 @@ impl TextSystem {
         face_index: u32,
     ) {
         self.cache_prepared_glyph_font_data(glyph, font_data_id, face_index);
-        if !glyph.normalized_coords.is_empty() {
-            self.font_instance_coords_by_face
-                .entry(face_key)
-                .or_insert_with(|| glyph.normalized_coords.clone());
-        }
+        self.cache_prepared_glyph_instance_coords(glyph, face_key);
     }
 
     fn cache_prepared_glyph_font_data(
@@ -431,6 +427,14 @@ impl TextSystem {
         self.font_data_by_face
             .entry((font_data_id, face_index))
             .or_insert_with(|| glyph.font.clone());
+    }
+
+    fn cache_prepared_glyph_instance_coords(&mut self, glyph: &ParleyGlyph, face_key: FontFaceKey) {
+        if !glyph.normalized_coords.is_empty() {
+            self.font_instance_coords_by_face
+                .entry(face_key)
+                .or_insert_with(|| glyph.normalized_coords.clone());
+        }
     }
 
     fn lookup_prepared_glyph_atlas(
