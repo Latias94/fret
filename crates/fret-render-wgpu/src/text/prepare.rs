@@ -427,41 +427,53 @@ impl TextSystem {
         y_bin: u8,
         epoch: u64,
     ) -> Option<(GlyphKey, GlyphAtlasEntry)> {
-        let color_key = prepared_glyph_key(
+        self.lookup_prepared_glyph_atlas_kind(
             face_key,
             glyph_id,
             size_bits,
             x_bin,
             y_bin,
             GlyphQuadKind::Color,
-        );
-        if let Some(entry) = self.color_atlas.get(color_key, epoch) {
-            return Some((color_key, entry));
-        }
+            epoch,
+        )
+        .or_else(|| {
+            self.lookup_prepared_glyph_atlas_kind(
+                face_key,
+                glyph_id,
+                size_bits,
+                x_bin,
+                y_bin,
+                GlyphQuadKind::Subpixel,
+                epoch,
+            )
+        })
+        .or_else(|| {
+            self.lookup_prepared_glyph_atlas_kind(
+                face_key,
+                glyph_id,
+                size_bits,
+                x_bin,
+                y_bin,
+                GlyphQuadKind::Mask,
+                epoch,
+            )
+        })
+    }
 
-        let subpixel_key = prepared_glyph_key(
-            face_key,
-            glyph_id,
-            size_bits,
-            x_bin,
-            y_bin,
-            GlyphQuadKind::Subpixel,
-        );
-        if let Some(entry) = self.subpixel_atlas.get(subpixel_key, epoch) {
-            return Some((subpixel_key, entry));
-        }
-
-        let mask_key = prepared_glyph_key(
-            face_key,
-            glyph_id,
-            size_bits,
-            x_bin,
-            y_bin,
-            GlyphQuadKind::Mask,
-        );
-        self.mask_atlas
-            .get(mask_key, epoch)
-            .map(|entry| (mask_key, entry))
+    fn lookup_prepared_glyph_atlas_kind(
+        &mut self,
+        face_key: FontFaceKey,
+        glyph_id: u32,
+        size_bits: u32,
+        x_bin: u8,
+        y_bin: u8,
+        kind: GlyphQuadKind,
+        epoch: u64,
+    ) -> Option<(GlyphKey, GlyphAtlasEntry)> {
+        let glyph_key = prepared_glyph_key(face_key, glyph_id, size_bits, x_bin, y_bin, kind);
+        self.prepared_glyph_atlas_mut(kind)
+            .get(glyph_key, epoch)
+            .map(|entry| (glyph_key, entry))
     }
 
     fn materialize_prepared_glyph_miss(

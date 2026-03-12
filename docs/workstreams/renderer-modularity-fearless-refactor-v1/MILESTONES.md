@@ -166,6 +166,10 @@ Current snapshot (2026-03-12):
   - prepared-glyph face-usage accounting now lives behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `register_prepared_glyph_face(...)` no longer owns face-usage counter updates directly
+- The thirty-sixth internal `text/mod.rs` split has landed:
+  - prepared-glyph per-kind atlas lookup now lives behind a dedicated helper in
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `lookup_prepared_glyph_atlas(...)` no longer owns per-kind atlas lookup branches directly
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
