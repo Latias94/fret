@@ -101,12 +101,15 @@ ID format:
 
 ### D1. Text
 
-- [ ] RMFR-text-030 Split `crates/fret-render-wgpu/src/text/mod.rs` into explicit submodules.
+- [~] RMFR-text-030 Split `crates/fret-render-wgpu/src/text/mod.rs` into explicit submodules.
   - Suggested first slices:
     - font catalog / fallback policy
     - shaping + measurement
     - atlas/cache bookkeeping
     - diagnostics / tests
+  - Landed so far:
+    - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
+    - `text/mod.rs` now goes through atlas accessors instead of touching atlas internals directly
 - [ ] RMFR-text-031 Keep `fret_render_text` as the low-level text contract crate and avoid moving
   backend-specific state there prematurely.
 - [ ] RMFR-text-032 Add focused tests around any extracted text subdomain whose behavior was

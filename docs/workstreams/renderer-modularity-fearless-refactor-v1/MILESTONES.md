@@ -25,11 +25,17 @@ Current snapshot (2026-03-12):
   - `crates/fret-render` now uses explicit re-exports instead of wildcard facade export.
   - `RendererCapabilities::from_adapter_device(...)` now exists and is used in first-party runner
     adoption paths.
+- The first internal `text/mod.rs` split has landed:
+  - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
+  - `text/mod.rs` now depends on atlas accessors instead of atlas internals
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
   - `python3 tools/check_layering.py`: passed
+- Internal text split verification is green:
+  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
 - The strongest current risks are:
   - wildcard facade exports,
   - oversized backend public surface,

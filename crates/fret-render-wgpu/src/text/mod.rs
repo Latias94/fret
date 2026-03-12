@@ -31,6 +31,13 @@ pub use fret_render_text::{
     FontCatalogEntryMetadata, SystemFontRescanResult, SystemFontRescanSeed,
 };
 
+mod atlas;
+
+use self::atlas::{
+    GlyphAtlas, GlyphAtlasEntry, GlyphKey, TEXT_ATLAS_MAX_PAGES, subpixel_bin_as_float,
+    subpixel_bin_q4, subpixel_bin_y,
+};
+
 pub(crate) mod parley_shaper {
     pub use fret_render_text::parley_shaper::*;
 }
@@ -141,59 +148,6 @@ pub(crate) struct TextFontFaceUsage {
 
 pub use fret_render_text::line_layout::TextLineLayout as TextLine;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct GlyphKey {
-    font: FontFaceKey,
-    glyph_id: u32,
-    size_bits: u32,
-    x_bin: u8,
-    y_bin: u8,
-    kind: GlyphQuadKind,
-}
-
-fn subpixel_bin_q4(pos: f32) -> (i32, u8) {
-    // Keep behavior aligned with the legacy 4-way subpixel binning policy.
-    let trunc = pos as i32;
-    let fract = pos - trunc as f32;
-
-    if pos.is_sign_negative() {
-        if fract > -0.125 {
-            (trunc, 0)
-        } else if fract > -0.375 {
-            (trunc - 1, 3)
-        } else if fract > -0.625 {
-            (trunc - 1, 2)
-        } else if fract > -0.875 {
-            (trunc - 1, 1)
-        } else {
-            (trunc - 1, 0)
-        }
-    } else {
-        #[allow(clippy::collapsible_else_if)]
-        if fract < 0.125 {
-            (trunc, 0)
-        } else if fract < 0.375 {
-            (trunc, 1)
-        } else if fract < 0.625 {
-            (trunc, 2)
-        } else if fract < 0.875 {
-            (trunc, 3)
-        } else {
-            (trunc + 1, 0)
-        }
-    }
-}
-
-fn subpixel_bin_as_float(bin: u8) -> f32 {
-    match bin {
-        0 => 0.0,
-        1 => 0.25,
-        2 => 0.5,
-        3 => 0.75,
-        _ => 0.0,
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TextQualitySettings {
     /// Gamma parameter for shader-side alpha correction.
@@ -281,643 +235,6 @@ fn gamma_correction_ratios(gamma: f32) -> [f32; 4] {
         ratios[2] * NORM13,
         ratios[3] * NORM24,
     ]
-}
-
-const SUBPIXEL_VARIANTS_X: u8 = 4;
-const SUBPIXEL_VARIANTS_Y: u8 = if cfg!(target_os = "windows") || cfg!(target_os = "linux") {
-    1
-} else {
-    SUBPIXEL_VARIANTS_X
-};
-
-fn subpixel_bin_y(pos: f32) -> (i32, u8) {
-    let (y, bin) = subpixel_bin_q4(pos);
-    if SUBPIXEL_VARIANTS_Y <= 1 {
-        (y, 0)
-    } else {
-        (y, bin)
-    }
-}
-
-const TEXT_ATLAS_MAX_PAGES: usize = 2;
-
-#[derive(Debug, Default, Clone, Copy)]
-struct GlyphAtlasFramePerf {
-    hits: u64,
-    misses: u64,
-    inserts: u64,
-    evict_glyphs: u64,
-    evict_pages: u64,
-    out_of_space: u64,
-    too_large: u64,
-    pending_uploads: u64,
-    pending_upload_bytes: u64,
-    upload_bytes: u64,
-}
-
-#[derive(Debug, Clone, Copy)]
-struct GlyphAtlasEntry {
-    page: u16,
-    alloc_id: etagere::AllocId,
-    x: u32,
-    y: u32,
-    w: u32,
-    h: u32,
-    placement_left: i32,
-    placement_top: i32,
-    live_refs: u32,
-    last_used_epoch: u64,
-}
-
-#[derive(Debug)]
-struct PendingUpload {
-    x: u32,
-    y: u32,
-    w: u32,
-    h: u32,
-    bytes_per_pixel: u32,
-    data: Vec<u8>,
-}
-
-#[derive(Debug, Default, Clone, Copy)]
-struct GlyphAtlasPerfSnapshot {
-    uploads: u64,
-    upload_bytes: u64,
-    evicted_glyphs: u64,
-    evicted_pages: u64,
-    evicted_page_glyphs: u64,
-    resets: u64,
-}
-
-#[derive(Debug, Default)]
-struct GlyphAtlasPerfStats {
-    uploads: u64,
-    upload_bytes: u64,
-    evicted_glyphs: u64,
-    evicted_pages: u64,
-    evicted_page_glyphs: u64,
-    resets: u64,
-}
-
-struct GlyphAtlasPage {
-    allocator: etagere::BucketedAtlasAllocator,
-    pending: Vec<PendingUpload>,
-    live_glyph_refs: u32,
-    last_used_epoch: u64,
-    bind_group: wgpu::BindGroup,
-    _texture: wgpu::Texture,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum GlyphAtlasInsertError {
-    OutOfSpace,
-    TooLarge,
-}
-
-struct GlyphAtlas {
-    device: wgpu::Device,
-    atlas_bind_group_layout: wgpu::BindGroupLayout,
-    atlas_sampler: wgpu::Sampler,
-    label_prefix: String,
-    width: u32,
-    height: u32,
-    padding_px: u32,
-    format: wgpu::TextureFormat,
-    max_pages: usize,
-    pages: Vec<GlyphAtlasPage>,
-    glyphs: HashMap<GlyphKey, GlyphAtlasEntry>,
-    revision: u64,
-    used_px: u64,
-    perf_frame: GlyphAtlasFramePerf,
-    perf: GlyphAtlasPerfStats,
-}
-
-impl GlyphAtlas {
-    fn new(
-        device: &wgpu::Device,
-        atlas_bind_group_layout: &wgpu::BindGroupLayout,
-        atlas_sampler: &wgpu::Sampler,
-        label_prefix: &str,
-        width: u32,
-        height: u32,
-        format: wgpu::TextureFormat,
-        initial_pages: usize,
-        max_pages: usize,
-    ) -> Self {
-        let padding_px = 1;
-        let max_pages = max_pages.max(1);
-        let initial_pages = initial_pages.min(max_pages);
-        let mut pages: Vec<GlyphAtlasPage> = Vec::with_capacity(max_pages);
-
-        for i in 0..initial_pages {
-            pages.push(Self::create_page(
-                device,
-                atlas_bind_group_layout,
-                atlas_sampler,
-                label_prefix,
-                width,
-                height,
-                format,
-                i,
-            ));
-        }
-
-        Self {
-            device: device.clone(),
-            atlas_bind_group_layout: atlas_bind_group_layout.clone(),
-            atlas_sampler: atlas_sampler.clone(),
-            label_prefix: label_prefix.to_string(),
-            width,
-            height,
-            padding_px,
-            format,
-            max_pages,
-            pages,
-            glyphs: HashMap::new(),
-            revision: 0,
-            used_px: 0,
-            perf_frame: GlyphAtlasFramePerf::default(),
-            perf: GlyphAtlasPerfStats::default(),
-        }
-    }
-
-    fn create_page(
-        device: &wgpu::Device,
-        atlas_bind_group_layout: &wgpu::BindGroupLayout,
-        atlas_sampler: &wgpu::Sampler,
-        label_prefix: &str,
-        width: u32,
-        height: u32,
-        format: wgpu::TextureFormat,
-        i: usize,
-    ) -> GlyphAtlasPage {
-        let texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some(&format!("{label_prefix} page {i}")),
-            size: wgpu::Extent3d {
-                width,
-                height,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-            view_formats: &[],
-        });
-
-        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some(&format!("{label_prefix} bind group page {i}")),
-            layout: atlas_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Sampler(atlas_sampler),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(&view),
-                },
-            ],
-        });
-
-        GlyphAtlasPage {
-            allocator: etagere::BucketedAtlasAllocator::new(etagere::Size::new(
-                width as i32,
-                height as i32,
-            )),
-            pending: Vec::new(),
-            live_glyph_refs: 0,
-            last_used_epoch: 0,
-            bind_group,
-            _texture: texture,
-        }
-    }
-
-    fn try_grow_pages(&mut self) -> bool {
-        if self.pages.len() >= self.max_pages {
-            return false;
-        }
-        let i = self.pages.len();
-        self.pages.push(Self::create_page(
-            &self.device,
-            &self.atlas_bind_group_layout,
-            &self.atlas_sampler,
-            &self.label_prefix,
-            self.width,
-            self.height,
-            self.format,
-            i,
-        ));
-        true
-    }
-
-    fn begin_frame_diagnostics(&mut self) {
-        self.perf_frame = GlyphAtlasFramePerf::default();
-    }
-
-    fn diagnostics_snapshot(&self) -> fret_core::RendererGlyphAtlasPerfSnapshot {
-        let pages = self.pages.len() as u32;
-        let capacity_px = u64::from(self.width)
-            .saturating_mul(u64::from(self.height))
-            .saturating_mul(u64::from(pages));
-        fret_core::RendererGlyphAtlasPerfSnapshot {
-            width: self.width,
-            height: self.height,
-            pages,
-            entries: self.glyphs.len() as u64,
-            used_px: self.used_px,
-            capacity_px,
-            frame_hits: self.perf_frame.hits,
-            frame_misses: self.perf_frame.misses,
-            frame_inserts: self.perf_frame.inserts,
-            frame_evict_glyphs: self.perf_frame.evict_glyphs,
-            frame_evict_pages: self.perf_frame.evict_pages,
-            frame_out_of_space: self.perf_frame.out_of_space,
-            frame_too_large: self.perf_frame.too_large,
-            frame_pending_uploads: self.perf_frame.pending_uploads,
-            frame_pending_upload_bytes: self.perf_frame.pending_upload_bytes,
-            frame_upload_bytes: self.perf_frame.upload_bytes,
-        }
-    }
-
-    fn take_perf_snapshot(&mut self) -> GlyphAtlasPerfSnapshot {
-        let snap = GlyphAtlasPerfSnapshot {
-            uploads: self.perf.uploads,
-            upload_bytes: self.perf.upload_bytes,
-            evicted_glyphs: self.perf.evicted_glyphs,
-            evicted_pages: self.perf.evicted_pages,
-            evicted_page_glyphs: self.perf.evicted_page_glyphs,
-            resets: self.perf.resets,
-        };
-        self.perf = GlyphAtlasPerfStats::default();
-        snap
-    }
-
-    fn reset(&mut self) {
-        self.perf.resets = self.perf.resets.saturating_add(1);
-        self.revision = self.revision.saturating_add(1);
-        self.glyphs.clear();
-        self.used_px = 0;
-        for page in &mut self.pages {
-            page.allocator = etagere::BucketedAtlasAllocator::new(etagere::Size::new(
-                self.width as i32,
-                self.height as i32,
-            ));
-            page.pending.clear();
-            page.live_glyph_refs = 0;
-            page.last_used_epoch = 0;
-        }
-    }
-
-    fn bind_group(&self, page: u16) -> &wgpu::BindGroup {
-        assert!(
-            !self.pages.is_empty(),
-            "glyph atlas has no pages; bind_group() is only valid after at least one insert"
-        );
-        let idx = (page as usize).min(self.pages.len().saturating_sub(1));
-        &self.pages[idx].bind_group
-    }
-
-    fn revision(&self) -> u64 {
-        self.revision
-    }
-
-    fn entry(&self, key: GlyphKey) -> Option<GlyphAtlasEntry> {
-        self.glyphs.get(&key).copied()
-    }
-
-    fn get(&mut self, key: GlyphKey, epoch: u64) -> Option<GlyphAtlasEntry> {
-        let Some(hit) = self.glyphs.get_mut(&key) else {
-            self.perf_frame.misses = self.perf_frame.misses.saturating_add(1);
-            return None;
-        };
-        self.perf_frame.hits = self.perf_frame.hits.saturating_add(1);
-        hit.last_used_epoch = epoch;
-        let idx = (hit.page as usize).min(self.pages.len().saturating_sub(1));
-        self.pages[idx].last_used_epoch = epoch;
-        Some(*hit)
-    }
-
-    fn inc_live_ref(&mut self, key: GlyphKey) {
-        let Some(entry) = self.glyphs.get_mut(&key) else {
-            return;
-        };
-        if entry.live_refs == 0 {
-            let idx = (entry.page as usize).min(self.pages.len().saturating_sub(1));
-            self.pages[idx].live_glyph_refs = self.pages[idx].live_glyph_refs.saturating_add(1);
-        }
-        entry.live_refs = entry.live_refs.saturating_add(1);
-    }
-
-    fn dec_live_ref(&mut self, key: GlyphKey) {
-        let Some(entry) = self.glyphs.get_mut(&key) else {
-            return;
-        };
-        if entry.live_refs == 0 {
-            return;
-        }
-        entry.live_refs -= 1;
-        if entry.live_refs == 0 {
-            let idx = (entry.page as usize).min(self.pages.len().saturating_sub(1));
-            if self.pages[idx].live_glyph_refs > 0 {
-                self.pages[idx].live_glyph_refs -= 1;
-            }
-        }
-    }
-
-    fn inc_live_refs(&mut self, keys: &[GlyphKey]) {
-        for &k in keys {
-            self.inc_live_ref(k);
-        }
-    }
-
-    fn dec_live_refs(&mut self, keys: &[GlyphKey]) {
-        for &k in keys {
-            self.dec_live_ref(k);
-        }
-    }
-
-    fn evict_lru_unreferenced_glyph(&mut self) -> bool {
-        let mut victim: Option<(GlyphKey, GlyphAtlasEntry)> = None;
-        for (&k, &e) in &self.glyphs {
-            if e.live_refs > 0 {
-                continue;
-            }
-            let pick = match victim {
-                None => true,
-                Some((_, prev)) => e.last_used_epoch < prev.last_used_epoch,
-            };
-            if pick {
-                victim = Some((k, e));
-            }
-        }
-
-        let Some((victim_key, victim_entry)) = victim else {
-            return false;
-        };
-
-        let pad = self.padding_px;
-        let w_pad = victim_entry.w.saturating_add(pad.saturating_mul(2));
-        let h_pad = victim_entry.h.saturating_add(pad.saturating_mul(2));
-        self.used_px = self
-            .used_px
-            .saturating_sub(u64::from(w_pad).saturating_mul(u64::from(h_pad)));
-
-        let page_idx = (victim_entry.page as usize).min(self.pages.len().saturating_sub(1));
-        self.pages[page_idx]
-            .allocator
-            .deallocate(victim_entry.alloc_id);
-        self.glyphs.remove(&victim_key);
-        self.perf.evicted_glyphs = self.perf.evicted_glyphs.saturating_add(1);
-        self.revision = self.revision.saturating_add(1);
-        self.perf_frame.evict_glyphs = self.perf_frame.evict_glyphs.saturating_add(1);
-        true
-    }
-
-    fn evict_lru_unreferenced_page(&mut self) -> bool {
-        let mut victim: Option<usize> = None;
-        for (idx, page) in self.pages.iter().enumerate() {
-            if page.live_glyph_refs > 0 {
-                continue;
-            }
-            let pick = match victim {
-                None => true,
-                Some(prev) => page.last_used_epoch < self.pages[prev].last_used_epoch,
-            };
-            if pick {
-                victim = Some(idx);
-            }
-        }
-
-        let Some(victim) = victim else {
-            return false;
-        };
-
-        self.pages[victim].allocator = etagere::BucketedAtlasAllocator::new(etagere::Size::new(
-            self.width as i32,
-            self.height as i32,
-        ));
-        self.pages[victim].pending.clear();
-        self.pages[victim].last_used_epoch = 0;
-        self.pages[victim].live_glyph_refs = 0;
-
-        let victim_page = victim as u16;
-        let keys_to_remove: Vec<GlyphKey> = self
-            .glyphs
-            .iter()
-            .filter_map(|(k, e)| (e.page == victim_page).then_some(*k))
-            .collect();
-        let pad = self.padding_px;
-        self.perf.evicted_pages = self.perf.evicted_pages.saturating_add(1);
-        self.perf.evicted_page_glyphs = self
-            .perf
-            .evicted_page_glyphs
-            .saturating_add(keys_to_remove.len() as u64);
-        for k in keys_to_remove {
-            if let Some(entry) = self.glyphs.remove(&k) {
-                let w_pad = entry.w.saturating_add(pad.saturating_mul(2));
-                let h_pad = entry.h.saturating_add(pad.saturating_mul(2));
-                self.used_px = self
-                    .used_px
-                    .saturating_sub(u64::from(w_pad).saturating_mul(u64::from(h_pad)));
-            }
-        }
-
-        self.revision = self.revision.saturating_add(1);
-        self.perf_frame.evict_pages = self.perf_frame.evict_pages.saturating_add(1);
-        true
-    }
-
-    fn flush_uploads(&mut self, queue: &wgpu::Queue) {
-        for page in &mut self.pages {
-            for upload in std::mem::take(&mut page.pending) {
-                if upload.w == 0 || upload.h == 0 {
-                    continue;
-                }
-
-                let bytes_per_row = upload.w.saturating_mul(upload.bytes_per_pixel);
-                if bytes_per_row == 0 {
-                    continue;
-                }
-
-                let expected_len = (bytes_per_row as usize).saturating_mul(upload.h as usize);
-                debug_assert_eq!(upload.data.len(), expected_len);
-                if upload.data.len() != expected_len {
-                    continue;
-                }
-
-                let aligned_bytes_per_row = bytes_per_row
-                    .div_ceil(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT)
-                    * wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-                let aligned_bytes_per_row = aligned_bytes_per_row.max(bytes_per_row);
-
-                let mut owned: Vec<u8> = Vec::new();
-                let bytes: &[u8] = if aligned_bytes_per_row == bytes_per_row {
-                    &upload.data
-                } else {
-                    owned.resize(
-                        (aligned_bytes_per_row as usize).saturating_mul(upload.h as usize),
-                        0,
-                    );
-                    for row in 0..upload.h as usize {
-                        let src0 = row.saturating_mul(bytes_per_row as usize);
-                        let src1 = src0.saturating_add(bytes_per_row as usize);
-                        let dst0 = row.saturating_mul(aligned_bytes_per_row as usize);
-                        let dst1 = dst0.saturating_add(bytes_per_row as usize);
-                        owned[dst0..dst1].copy_from_slice(&upload.data[src0..src1]);
-                    }
-                    &owned
-                };
-
-                self.perf.uploads = self.perf.uploads.saturating_add(1);
-                self.perf.upload_bytes = self.perf.upload_bytes.saturating_add(bytes.len() as u64);
-                self.perf_frame.upload_bytes = self
-                    .perf_frame
-                    .upload_bytes
-                    .saturating_add(bytes.len() as u64);
-
-                queue.write_texture(
-                    wgpu::TexelCopyTextureInfo {
-                        texture: &page._texture,
-                        mip_level: 0,
-                        origin: wgpu::Origin3d {
-                            x: upload.x,
-                            y: upload.y,
-                            z: 0,
-                        },
-                        aspect: wgpu::TextureAspect::All,
-                    },
-                    bytes,
-                    wgpu::TexelCopyBufferLayout {
-                        offset: 0,
-                        bytes_per_row: Some(aligned_bytes_per_row),
-                        rows_per_image: Some(upload.h),
-                    },
-                    wgpu::Extent3d {
-                        width: upload.w,
-                        height: upload.h,
-                        depth_or_array_layers: 1,
-                    },
-                );
-            }
-        }
-    }
-
-    fn get_or_insert(
-        &mut self,
-        key: GlyphKey,
-        w: u32,
-        h: u32,
-        placement_left: i32,
-        placement_top: i32,
-        bytes_per_pixel: u32,
-        data: Vec<u8>,
-        epoch: u64,
-    ) -> Result<GlyphAtlasEntry, GlyphAtlasInsertError> {
-        if let Some(hit) = self.glyphs.get_mut(&key) {
-            self.perf_frame.hits = self.perf_frame.hits.saturating_add(1);
-            hit.last_used_epoch = epoch;
-            let idx = (hit.page as usize).min(self.pages.len().saturating_sub(1));
-            self.pages[idx].last_used_epoch = epoch;
-            return Ok(*hit);
-        }
-        self.perf_frame.misses = self.perf_frame.misses.saturating_add(1);
-
-        let pad = self.padding_px;
-        let w_pad = w.saturating_add(pad.saturating_mul(2));
-        let h_pad = h.saturating_add(pad.saturating_mul(2));
-        if w == 0 || h == 0 || w_pad == 0 || h_pad == 0 || w_pad > self.width || h_pad > self.height
-        {
-            self.perf_frame.too_large = self.perf_frame.too_large.saturating_add(1);
-            return Err(GlyphAtlasInsertError::TooLarge);
-        }
-
-        let size = etagere::Size::new(w_pad as i32, h_pad as i32);
-
-        if self.pages.is_empty() && !self.try_grow_pages() {
-            self.perf_frame.out_of_space = self.perf_frame.out_of_space.saturating_add(1);
-            return Err(GlyphAtlasInsertError::OutOfSpace);
-        }
-
-        let mut guard = 0_u32;
-        loop {
-            guard = guard.saturating_add(1);
-            if guard >= 128 {
-                self.perf_frame.out_of_space = self.perf_frame.out_of_space.saturating_add(1);
-                return Err(GlyphAtlasInsertError::OutOfSpace);
-            }
-
-            for (page_index, page) in self.pages.iter_mut().enumerate() {
-                let Some(allocation) = page.allocator.allocate(size) else {
-                    continue;
-                };
-
-                let Ok(base_x) = u32::try_from(allocation.rectangle.min.x) else {
-                    page.allocator.deallocate(allocation.id);
-                    continue;
-                };
-                let Ok(base_y) = u32::try_from(allocation.rectangle.min.y) else {
-                    page.allocator.deallocate(allocation.id);
-                    continue;
-                };
-
-                let x = base_x.saturating_add(pad);
-                let y = base_y.saturating_add(pad);
-
-                page.pending.push(PendingUpload {
-                    x,
-                    y,
-                    w,
-                    h,
-                    bytes_per_pixel,
-                    data,
-                });
-                page.last_used_epoch = epoch;
-
-                self.perf_frame.inserts = self.perf_frame.inserts.saturating_add(1);
-                self.perf_frame.pending_uploads = self.perf_frame.pending_uploads.saturating_add(1);
-                self.perf_frame.pending_upload_bytes =
-                    self.perf_frame.pending_upload_bytes.saturating_add(
-                        u64::from(w)
-                            .saturating_mul(u64::from(h))
-                            .saturating_mul(u64::from(bytes_per_pixel)),
-                    );
-                self.used_px = self
-                    .used_px
-                    .saturating_add(u64::from(w_pad).saturating_mul(u64::from(h_pad)));
-
-                let entry = GlyphAtlasEntry {
-                    page: page_index as u16,
-                    alloc_id: allocation.id,
-                    x,
-                    y,
-                    w,
-                    h,
-                    placement_left,
-                    placement_top,
-                    live_refs: 0,
-                    last_used_epoch: epoch,
-                };
-                self.glyphs.insert(key, entry);
-                self.revision = self.revision.saturating_add(1);
-                return Ok(entry);
-            }
-
-            if self.try_grow_pages() {
-                continue;
-            }
-            if self.evict_lru_unreferenced_glyph() {
-                continue;
-            }
-            if self.evict_lru_unreferenced_page() {
-                continue;
-            }
-            self.perf_frame.out_of_space = self.perf_frame.out_of_space.saturating_add(1);
-            return Err(GlyphAtlasInsertError::OutOfSpace);
-        }
-    }
 }
 
 #[allow(dead_code)]
@@ -1467,25 +784,16 @@ impl TextSystem {
     }
 
     pub(crate) fn glyph_uv_for_instance(&self, glyph: &GlyphInstance) -> Option<(u16, [f32; 4])> {
-        let (atlas, w, h) = match glyph.kind() {
-            GlyphQuadKind::Mask => (
-                &self.mask_atlas,
-                self.mask_atlas.width as f32,
-                self.mask_atlas.height as f32,
-            ),
-            GlyphQuadKind::Color => (
-                &self.color_atlas,
-                self.color_atlas.width as f32,
-                self.color_atlas.height as f32,
-            ),
-            GlyphQuadKind::Subpixel => (
-                &self.subpixel_atlas,
-                self.subpixel_atlas.width as f32,
-                self.subpixel_atlas.height as f32,
-            ),
+        let atlas = match glyph.kind() {
+            GlyphQuadKind::Mask => &self.mask_atlas,
+            GlyphQuadKind::Color => &self.color_atlas,
+            GlyphQuadKind::Subpixel => &self.subpixel_atlas,
         };
 
         let entry = atlas.entry(glyph.key)?;
+        let (w, h) = atlas.dimensions();
+        let w = w as f32;
+        let h = h as f32;
         if w <= 0.0 || h <= 0.0 {
             return None;
         }
@@ -1498,9 +806,9 @@ impl TextSystem {
 
     pub(crate) fn debug_atlas_dims(&self, kind: GlyphQuadKind) -> (u32, u32) {
         match kind {
-            GlyphQuadKind::Mask => (self.mask_atlas.width, self.mask_atlas.height),
-            GlyphQuadKind::Color => (self.color_atlas.width, self.color_atlas.height),
-            GlyphQuadKind::Subpixel => (self.subpixel_atlas.width, self.subpixel_atlas.height),
+            GlyphQuadKind::Mask => self.mask_atlas.dimensions(),
+            GlyphQuadKind::Color => self.color_atlas.dimensions(),
+            GlyphQuadKind::Subpixel => self.subpixel_atlas.dimensions(),
         }
     }
 
@@ -1513,34 +821,30 @@ impl TextSystem {
         w: u32,
         h: u32,
     ) -> Option<DebugGlyphAtlasLookup> {
-        let glyphs = match kind {
-            GlyphQuadKind::Mask => &self.mask_atlas.glyphs,
-            GlyphQuadKind::Color => &self.color_atlas.glyphs,
-            GlyphQuadKind::Subpixel => &self.subpixel_atlas.glyphs,
+        let atlas = match kind {
+            GlyphQuadKind::Mask => &self.mask_atlas,
+            GlyphQuadKind::Color => &self.color_atlas,
+            GlyphQuadKind::Subpixel => &self.subpixel_atlas,
         };
 
-        for (k, e) in glyphs.iter() {
-            if e.page == page && e.x == x && e.y == y && e.w == w && e.h == h {
-                return Some(DebugGlyphAtlasLookup {
-                    font_data_id: k.font.font_data_id,
-                    face_index: k.font.face_index,
-                    variation_key: k.font.variation_key,
-                    synthesis_embolden: k.font.synthesis_embolden,
-                    synthesis_skew_degrees: k.font.synthesis_skew_degrees,
-                    glyph_id: k.glyph_id,
-                    size_bits: k.size_bits,
-                    x_bin: k.x_bin,
-                    y_bin: k.y_bin,
-                    kind: match k.kind {
-                        GlyphQuadKind::Mask => "mask",
-                        GlyphQuadKind::Color => "color",
-                        GlyphQuadKind::Subpixel => "subpixel",
-                    },
-                });
-            }
-        }
+        let k = atlas.find_key_for_bounds(page, x, y, w, h)?;
 
-        None
+        Some(DebugGlyphAtlasLookup {
+            font_data_id: k.font.font_data_id,
+            face_index: k.font.face_index,
+            variation_key: k.font.variation_key,
+            synthesis_embolden: k.font.synthesis_embolden,
+            synthesis_skew_degrees: k.font.synthesis_skew_degrees,
+            glyph_id: k.glyph_id,
+            size_bits: k.size_bits,
+            x_bin: k.x_bin,
+            y_bin: k.y_bin,
+            kind: match k.kind {
+                GlyphQuadKind::Mask => "mask",
+                GlyphQuadKind::Color => "color",
+                GlyphQuadKind::Subpixel => "subpixel",
+            },
+        })
     }
 
     pub fn prepare_for_scene(&mut self, scene: &Scene, frame_index: u64) {
@@ -3601,13 +2905,9 @@ mod tests {
             super::GlyphQuadKind::Subpixel => &text.subpixel_atlas,
         };
         let entry = atlas.entry(key).expect("expected atlas entry after ensure");
-        let page_idx = entry.page as usize;
-        let pending = atlas.pages[page_idx]
-            .pending
-            .iter()
-            .find(|p| p.x == entry.x && p.y == entry.y && p.w == entry.w && p.h == entry.h)
-            .expect("expected pending upload for ensured glyph");
-        pending.data.clone()
+        atlas
+            .pending_upload_bytes_for_entry(entry)
+            .expect("expected pending upload for ensured glyph")
     }
 
     #[test]
