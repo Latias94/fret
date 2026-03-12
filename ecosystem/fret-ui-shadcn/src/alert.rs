@@ -11,9 +11,8 @@ use fret_ui_kit::declarative::style as decl_style;
 
 use fret_ui_kit::typography::scope_description_text;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, PaddingRefinement, Radius, Space,
-    UiChildIntoElement, UiHostBoundIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome,
-    UiSupportsLayout, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, PaddingRefinement,
+    Radius, Space, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
 };
 
 const ALERT_ACTION_MARKER_TEST_ID: &str = "__fret_shadcn.alert_action";
@@ -252,22 +251,12 @@ impl<H: UiHost, B> UiSupportsLayout for AlertBuild<H, B> where
 {
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for AlertBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for AlertBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        AlertBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for AlertBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         AlertBuild::into_element(self, cx)
     }
 }
@@ -299,22 +288,12 @@ where
     }
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for AlertActionBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for AlertActionBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        AlertActionBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for AlertActionBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         AlertActionBuild::into_element(self, cx)
     }
 }

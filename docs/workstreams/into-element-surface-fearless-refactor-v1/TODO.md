@@ -45,8 +45,9 @@ Implementation note after the first landing:
   component-facing surfaces.
 - host-agnostic values still feed that public surface through the legacy `UiIntoElement`
   implementation path for now.
-- `UiBuilderHostBoundIntoElementExt` remains as a hidden bridge import in preludes while
-  `UiBuilder<T>` / child-pipeline cleanup is still in progress.
+- `UiBuilderHostBoundIntoElementExt` has now been deleted from the codebase; `UiBuilder<T>`
+  lands through `IntoUiElement<H>` directly and `UiHostBoundIntoElement<H>` remains only as a
+  temporary compatibility alias at the crate root.
 
 Validation note on 2026-03-12:
 
@@ -58,10 +59,10 @@ Validation note on 2026-03-12:
 
 ## M2 — Rewire builders and child pipelines
 
-- [ ] Migrate `UiBuilder<T>` landing paths to the unified public conversion contract without
+- [x] Migrate `UiBuilder<T>` landing paths to the unified public conversion contract without
   relying on the hidden bridge import.
-- [ ] Migrate `ui::children!` to consume the unified contract.
-- [ ] Migrate heterogeneous child builders (`FlexBox`, `ContainerBox`, `StackBox`, and related
+- [x] Migrate `ui::children!` to consume the unified contract.
+- [x] Migrate heterogeneous child builders (`FlexBox`, `ContainerBox`, `StackBox`, and related
   host-bound builders) to the unified contract.
 - [ ] Keep any extra bridging traits private or advanced-only if Rust still needs them
   internally.
@@ -71,6 +72,25 @@ Implementation note on 2026-03-12:
 - `fret-ui-kit::imui::UiWriterUiKitExt::add_ui(...)` now reuses `UiChildIntoElement<H>` instead of
   carrying a second overlapping immediate-mode conversion bridge; keep this posture until the
   child pipeline itself is rewritten.
+- `UiChildIntoElement<H>` is now a thin child-pipeline bridge over `IntoUiElement<H>` rather than
+  a parallel conversion taxonomy.
+- host-bound builders in `fret-ui-kit::ui` now implement `IntoUiElement<H>` directly, and
+  `UiBuilder<T>::into_element(cx)` resolves through the unified contract.
+- `fret-ui-shadcn` duplicate `UiChildIntoElement<H>` impls were removed for types that already
+  implement `IntoUiElement<H>` to prevent overlap with the new blanket child bridge.
+
+Validation note on 2026-03-12:
+
+- verified with
+  `cargo test -p fret-ui-shadcn --lib --no-run --message-format=short`,
+  `cargo test -p fret-ui-kit --lib --no-run --message-format=short`,
+  `cargo test -p fret --lib --no-run --message-format=short`,
+  `cargo test -p fret-examples --lib --no-run --message-format=short`,
+  `cargo check -p fretboard --message-format=short`,
+  `cargo test -p fret --lib --message-format=short`,
+  `cargo test -p fretboard --message-format=short`,
+  `cargo test -p fret-ui-shadcn --lib dropdown_menu_trigger_build_push_ui_accepts_late_landed_child --message-format=short`,
+  and `cargo test -p fret-ui-shadcn --lib popover_build_opens_on_trigger_activate_with_late_landed_parts --message-format=short`.
 
 ## M3 — Migrate first-party surfaces
 
@@ -102,7 +122,7 @@ Implementation note on 2026-03-12:
 - [ ] Remove `UiIntoElement` from curated public surfaces.
 - [ ] Remove `UiHostBoundIntoElement` from curated public surfaces.
 - [ ] Remove `UiChildIntoElement` from curated public surfaces.
-- [ ] Remove `UiBuilderHostBoundIntoElementExt` from curated public surfaces.
+- [x] Remove `UiBuilderHostBoundIntoElementExt` from curated public surfaces.
 - [ ] Rewrite or delete stale docs that still teach the old names.
 
 ## M5 — Add guardrails

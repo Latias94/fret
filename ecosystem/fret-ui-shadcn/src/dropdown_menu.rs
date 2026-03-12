@@ -260,29 +260,12 @@ impl<H: UiHost> IntoUiElement<H> for DropdownMenuTrigger {
     }
 }
 
-impl<H: UiHost> UiChildIntoElement<H> for DropdownMenuTrigger {
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        DropdownMenuTrigger::into_element(self, cx)
-    }
-}
-
 impl<H: UiHost, T> IntoUiElement<H> for DropdownMenuTriggerBuild<H, T>
 where
     T: UiChildIntoElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        DropdownMenuTriggerBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, T> UiChildIntoElement<H> for DropdownMenuTriggerBuild<H, T>
-where
-    T: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         DropdownMenuTriggerBuild::into_element(self, cx)
     }
 }
@@ -4826,7 +4809,7 @@ mod tests {
             "dropdown-menu-build-parts",
             |cx| {
                 let trigger_id = trigger_id.clone();
-                let trigger =
+                let trigger: DropdownMenuTriggerBuild<App, _> =
                     DropdownMenuTrigger::build(cx.pressable_with_id_props(move |cx, _st, id| {
                         trigger_id.set(Some(id));
                         let props = PressableProps {

@@ -20,10 +20,8 @@ macro_rules! children {
         let mut children = ::std::vec::Vec::new();
         $(
             {
-                use $crate::UiBuilderHostBoundIntoElementExt as _;
-                use $crate::UiIntoElement as _;
                 let child = $child;
-                let element = child.into_element(&mut *$cx);
+                let element = $crate::UiChildIntoElement::into_child_element(child, &mut *$cx);
                 children.push(element);
             }
         )+
@@ -231,8 +229,8 @@ pub use style::{
 pub use styled::{RefineStyle, Stylable, Styled, StyledExt};
 pub use ui::UiChildIntoElement;
 pub use ui_builder::{
-    UiBuilder, UiBuilderHostBoundIntoElementExt, UiExt, UiHostBoundIntoElement, UiIntoElement,
-    UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
+    IntoUiElement, UiBuilder, UiExt, UiHostBoundIntoElement, UiIntoElement, UiPatch,
+    UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
 };
 
 pub use overlay_controller::{
@@ -261,7 +259,7 @@ pub use window_overlays::{
 ///
 /// Recommended: `use fret_ui_kit::prelude::*;`
 pub mod prelude {
-    pub use crate::UiBuilderHostBoundIntoElementExt as _;
+    pub use crate::IntoUiElement as _;
     pub use crate::command::ElementCommandGatingExt as _;
     pub use crate::declarative::prelude::*;
     pub use crate::declarative::style;
@@ -286,12 +284,11 @@ pub mod prelude {
 
     pub use crate::{
         ChromeRefinement, ColorFallback, ColorRef, Corners4, Edges4, ImageMetadata,
-        ImageMetadataStore, ImageSamplingExt, LayoutRefinement, MarginEdge, MetricRef,
-        OverrideSlot, Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt,
-        UiChildIntoElement, UiExt, UiHostBoundIntoElement, UiIntoElement, WidgetState,
-        WidgetStateProperty, WidgetStates, merge_override_slot, merge_slot, resolve_override_slot,
-        resolve_override_slot_opt, resolve_override_slot_opt_with, resolve_override_slot_with,
-        resolve_slot,
+        ImageMetadataStore, ImageSamplingExt, IntoUiElement, LayoutRefinement, MarginEdge,
+        MetricRef, OverrideSlot, Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt,
+        UiExt, WidgetState, WidgetStateProperty, WidgetStates, merge_override_slot, merge_slot,
+        resolve_override_slot, resolve_override_slot_opt, resolve_override_slot_opt_with,
+        resolve_override_slot_with, resolve_slot,
     };
     pub use crate::{OverlayArbitrationSnapshot, OverlayController, OverlayKind, OverlayPresence};
     pub use crate::{OverlayRequest, OverlayStackEntryKind};

@@ -22,8 +22,9 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use crate::declarative::style as decl_style;
 use crate::declarative::text as decl_text;
 use crate::{
-    ChromeRefinement, Items, Justify, LayoutRefinement, LengthRefinement, MetricRef, Space,
-    UiBuilder, UiIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
+    ChromeRefinement, IntoUiElement, Items, Justify, LayoutRefinement, LengthRefinement,
+    MetricRef, Space, UiBuilder, UiIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome,
+    UiSupportsLayout,
 };
 
 /// A child value that can be converted into `AnyElement` inside heterogeneous authoring pipelines.
@@ -37,144 +38,11 @@ pub trait UiChildIntoElement<H: UiHost>: Sized {
 
 impl<H: UiHost, T> UiChildIntoElement<H> for T
 where
-    T: UiIntoElement,
+    T: IntoUiElement<H>,
 {
     #[track_caller]
     fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        crate::UiIntoElement::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, F, I> UiChildIntoElement<H> for UiBuilder<FlexBox<H, F>>
-where
-    F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator,
-    I::Item: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        UiBuilder::<FlexBox<H, F>>::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for UiBuilder<FlexBoxBuild<H, B>>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        UiBuilder::<FlexBoxBuild<H, B>>::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, F, I> UiChildIntoElement<H> for UiBuilder<ContainerBox<H, F>>
-where
-    F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator,
-    I::Item: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        UiBuilder::<ContainerBox<H, F>>::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for UiBuilder<ContainerBoxBuild<H, B>>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        UiBuilder::<ContainerBoxBuild<H, B>>::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, F, I> UiChildIntoElement<H> for UiBuilder<ContainerPropsBox<H, F>>
-where
-    F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator,
-    I::Item: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        UiBuilder::<ContainerPropsBox<H, F>>::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for UiBuilder<ContainerPropsBoxBuild<H, B>>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        UiBuilder::<ContainerPropsBoxBuild<H, B>>::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, F, I> UiChildIntoElement<H> for UiBuilder<ScrollAreaBox<H, F>>
-where
-    F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator,
-    I::Item: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        UiBuilder::<ScrollAreaBox<H, F>>::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for UiBuilder<ScrollAreaBoxBuild<H, B>>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        UiBuilder::<ScrollAreaBoxBuild<H, B>>::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, F, I> UiChildIntoElement<H> for UiBuilder<StackBox<H, F>>
-where
-    F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator,
-    I::Item: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        UiBuilder::<StackBox<H, F>>::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, K: Hash, F, T> UiChildIntoElement<H> for UiBuilder<KeyedBox<H, K, F>>
-where
-    F: FnOnce(&mut ElementContext<'_, H>) -> T,
-    T: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        UiBuilder::<KeyedBox<H, K, F>>::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, F, I> UiChildIntoElement<H> for UiBuilder<EffectLayerBox<H, F>>
-where
-    F: FnOnce(&mut ElementContext<'_, H>) -> I,
-    I: IntoIterator,
-    I::Item: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        UiBuilder::<EffectLayerBox<H, F>>::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for UiBuilder<EffectLayerBoxBuild<H, B>>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        UiBuilder::<EffectLayerBoxBuild<H, B>>::into_element(self, cx)
+        IntoUiElement::into_element(self, cx)
     }
 }
 
@@ -426,6 +294,28 @@ where
                 out
             })]
         })
+    }
+}
+
+impl<H: UiHost, F, I> IntoUiElement<H> for FlexBox<H, F>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator,
+    I::Item: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        FlexBox::<H, F>::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> IntoUiElement<H> for FlexBoxBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        FlexBoxBuild::<H, B>::into_element(self, cx)
     }
 }
 
@@ -692,6 +582,50 @@ where
             build(cx, &mut out);
             out
         })
+    }
+}
+
+impl<H: UiHost, F, I> IntoUiElement<H> for ContainerBox<H, F>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator,
+    I::Item: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        ContainerBox::<H, F>::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> IntoUiElement<H> for ContainerBoxBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        ContainerBoxBuild::<H, B>::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, F, I> IntoUiElement<H> for ContainerPropsBox<H, F>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator,
+    I::Item: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        ContainerPropsBox::<H, F>::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> IntoUiElement<H> for ContainerPropsBoxBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        ContainerPropsBoxBuild::<H, B>::into_element(self, cx)
     }
 }
 
@@ -1127,6 +1061,28 @@ where
     }
 }
 
+impl<H: UiHost, F, I> IntoUiElement<H> for ScrollAreaBox<H, F>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator,
+    I::Item: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        ScrollAreaBox::<H, F>::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> IntoUiElement<H> for ScrollAreaBoxBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        ScrollAreaBoxBuild::<H, B>::into_element(self, cx)
+    }
+}
+
 /// Returns a patchable scroll area builder.
 ///
 /// Defaults:
@@ -1204,6 +1160,18 @@ where
     }
 }
 
+impl<H: UiHost, F, I> IntoUiElement<H> for StackBox<H, F>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator,
+    I::Item: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        StackBox::<H, F>::into_element(self, cx)
+    }
+}
+
 /// Returns a patchable stack layout builder.
 ///
 /// Usage:
@@ -1259,6 +1227,17 @@ where
         let key = key.expect("keyed box key already taken");
         let child = child.expect("keyed box child already taken");
         cx.keyed_at(callsite, key, |cx| child(cx).into_child_element(cx))
+    }
+}
+
+impl<H: UiHost, K: Hash, F, T> IntoUiElement<H> for KeyedBox<H, K, F>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> T,
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        KeyedBox::<H, K, F>::into_element(self, cx)
     }
 }
 
@@ -1374,6 +1353,28 @@ where
             build(cx, &mut out);
             out
         })
+    }
+}
+
+impl<H: UiHost, F, I> IntoUiElement<H> for EffectLayerBox<H, F>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator,
+    I::Item: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        EffectLayerBox::<H, F>::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> IntoUiElement<H> for EffectLayerBoxBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        EffectLayerBoxBuild::<H, B>::into_element(self, cx)
     }
 }
 

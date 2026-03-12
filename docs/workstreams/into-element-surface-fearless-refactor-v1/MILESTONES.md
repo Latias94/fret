@@ -26,9 +26,9 @@ Current readout on 2026-03-12:
 | --- | --- | --- |
 | M0 | Done | target vocabulary is locked and the classification table is now recorded in `MIGRATION_MATRIX.md` |
 | M1 | Done | `IntoUiElement<H>` is the curated component conversion name; docs/preludes/tests reflect it |
-| M2 | In progress | child/macros are still on the legacy bridge, but `imui` has been collapsed onto the existing child pipeline instead of growing a second bridge |
-| M3 | In progress | curated `fret` / `fret-ui-kit` surfaces and the canonical todo/scaffold compare set are aligned; broader shadcn/gallery/helper cleanup remains |
-| M4 | Not started | delete-ready posture exists for curated exports, but the old root-level names still exist as migration scaffolding |
+| M2 | Done | `UiBuilder<T>` and host-bound child builders now land through `IntoUiElement<H>`; `UiBuilderHostBoundIntoElementExt` is deleted; child collection is on a thin bridge over the unified contract |
+| M3 | In progress | curated `fret` / `fret-ui-kit` surfaces and the canonical todo/scaffold compare set are aligned; broader shadcn/gallery/helper cleanup and old root-level scaffolding cleanup remain |
+| M4 | In progress | prelude gates are in place and one bridge trait is deleted, but stale-name source/doc guards still need to expand |
 
 ## Milestone 0 — Lock the target conversion vocabulary
 
@@ -86,6 +86,8 @@ Exit criteria:
 - first-party curated examples do not need the old public conversion names to compile or teach.
 - the canonical compare set shows one consistent explicit landing story instead of three
   different ad-hoc `.into_element(cx)` patterns.
+- `UiBuilderHostBoundIntoElementExt` is no longer required to recover method syntax for host-bound
+  builders.
 
 ## Milestone 3 — Delete the split public conversion surface
 
@@ -103,6 +105,8 @@ Exit criteria:
 
 - reviewing the public surface no longer requires mentally translating several "into element"
   concepts into one operation.
+- root-level scaffolding traits that survive the milestone are explicitly justified as temporary
+  compatibility shims rather than silent product surface.
 
 ## Milestone 4 — Lock the surface with gates
 

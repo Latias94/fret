@@ -238,7 +238,6 @@ pub mod app {
         pub use fret_runtime::CommandId;
         pub use fret_ui::{Theme, ThemeSnapshot};
         pub use fret_ui_kit::IntoUiElement as _;
-        pub use fret_ui_kit::UiBuilderHostBoundIntoElementExt as _;
         pub use fret_ui_kit::command::ElementCommandGatingExt as _;
         pub use fret_ui_kit::declarative::icon;
         pub use fret_ui_kit::declarative::{
@@ -279,7 +278,6 @@ pub mod component {
     pub mod prelude {
         pub use crate::ComponentCx;
         pub use fret_ui_kit::IntoUiElement as _;
-        pub use fret_ui_kit::UiBuilderHostBoundIntoElementExt as _;
         pub use fret_ui_kit::command::ElementCommandGatingExt as _;
         pub use fret_ui_kit::declarative::prelude::{
             ActionHooksExt, AnyElementSemanticsExt, CollectionSemanticsExt, ElementContextThemeExt,

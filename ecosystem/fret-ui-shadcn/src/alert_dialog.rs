@@ -18,9 +18,9 @@ use fret_ui_kit::primitives::alert_dialog as radix_alert_dialog;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::typography::scope_description_text;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Radius, Space, UiChildIntoElement, UiHostBoundIntoElement, UiPatch, UiPatchTarget,
-    UiSupportsChrome, UiSupportsLayout, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayController,
+    OverlayPresence, Radius, Space, UiChildIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome,
+    UiSupportsLayout, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -841,22 +841,12 @@ where
     }
 }
 
-impl<H: UiHost, T> UiHostBoundIntoElement<H> for AlertDialogTriggerBuild<H, T>
+impl<H: UiHost, T> IntoUiElement<H> for AlertDialogTriggerBuild<H, T>
 where
     T: UiChildIntoElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        AlertDialogTriggerBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, T> UiChildIntoElement<H> for AlertDialogTriggerBuild<H, T>
-where
-    T: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         AlertDialogTriggerBuild::into_element(self, cx)
     }
 }
@@ -1109,22 +1099,12 @@ impl<H: UiHost, B> UiSupportsLayout for AlertDialogContentBuild<H, B> where
 {
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for AlertDialogContentBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for AlertDialogContentBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        AlertDialogContentBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for AlertDialogContentBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         AlertDialogContentBuild::into_element(self, cx)
     }
 }
@@ -1283,22 +1263,12 @@ where
     }
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for AlertDialogHeaderBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for AlertDialogHeaderBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        AlertDialogHeaderBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for AlertDialogHeaderBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         AlertDialogHeaderBuild::into_element(self, cx)
     }
 }
@@ -1486,22 +1456,12 @@ where
     }
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for AlertDialogFooterBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for AlertDialogFooterBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        AlertDialogFooterBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for AlertDialogFooterBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         AlertDialogFooterBuild::into_element(self, cx)
     }
 }

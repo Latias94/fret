@@ -15,8 +15,8 @@ use fret_ui_kit::primitives::tooltip as radix_tooltip;
 use fret_ui_kit::tooltip_provider;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space,
-    UiChildIntoElement, UiHostBoundIntoElement, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayPresence,
+    Radius, Space, UiChildIntoElement, ui,
 };
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -1430,22 +1430,12 @@ where
     }
 }
 
-impl<H: UiHost, T> UiHostBoundIntoElement<H> for TooltipTriggerBuild<H, T>
+impl<H: UiHost, T> IntoUiElement<H> for TooltipTriggerBuild<H, T>
 where
     T: UiChildIntoElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        TooltipTriggerBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, T> UiChildIntoElement<H> for TooltipTriggerBuild<H, T>
-where
-    T: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         TooltipTriggerBuild::into_element(self, cx)
     }
 }
@@ -1511,22 +1501,12 @@ where
     }
 }
 
-impl<H: UiHost, T> UiHostBoundIntoElement<H> for TooltipAnchorBuild<H, T>
+impl<H: UiHost, T> IntoUiElement<H> for TooltipAnchorBuild<H, T>
 where
     T: UiChildIntoElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        TooltipAnchorBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, T> UiChildIntoElement<H> for TooltipAnchorBuild<H, T>
-where
-    T: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         TooltipAnchorBuild::into_element(self, cx)
     }
 }

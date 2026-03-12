@@ -47,7 +47,7 @@ They should not teach:
 
 ### Hidden but allowed implementation detail
 
-The app prelude may anonymously import whatever conversion trait is needed to keep
+The app prelude may anonymously import the unified conversion trait needed to keep
 `.into_element(cx)` method syntax working.
 
 That import support is not part of the taught product vocabulary.
@@ -104,6 +104,14 @@ The curated component surface should no longer teach or re-export:
 
 If some of those names remain internally for a short migration window, they should be treated as
 temporary scaffolding rather than stable surface.
+
+Current execution note on 2026-03-12:
+
+- `UiBuilderHostBoundIntoElementExt` is already deleted from the codebase.
+- `UiHostBoundIntoElement<H>` currently survives only as a compatibility alias over
+  `IntoUiElement<H>`.
+- `UiChildIntoElement<H>` still survives as the child-pipeline bridge and app-internal substrate
+  behind `UiChild`, but it is no longer a second reusable-component conversion story.
 
 ## Advanced/Raw Surface
 

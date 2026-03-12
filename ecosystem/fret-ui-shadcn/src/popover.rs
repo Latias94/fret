@@ -26,8 +26,8 @@ use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, OverlayPresence, Space, UiChildIntoElement,
-    UiHostBoundIntoElement, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, OverlayPresence, Space,
+    UiChildIntoElement, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -1295,22 +1295,12 @@ where
     }
 }
 
-impl<H: UiHost, T> UiHostBoundIntoElement<H> for PopoverTriggerBuild<H, T>
+impl<H: UiHost, T> IntoUiElement<H> for PopoverTriggerBuild<H, T>
 where
     T: UiChildIntoElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        PopoverTriggerBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, T> UiChildIntoElement<H> for PopoverTriggerBuild<H, T>
-where
-    T: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         PopoverTriggerBuild::into_element(self, cx)
     }
 }
@@ -1377,22 +1367,12 @@ where
     }
 }
 
-impl<H: UiHost, T> UiHostBoundIntoElement<H> for PopoverAnchorBuild<H, T>
+impl<H: UiHost, T> IntoUiElement<H> for PopoverAnchorBuild<H, T>
 where
     T: UiChildIntoElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        PopoverAnchorBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, T> UiChildIntoElement<H> for PopoverAnchorBuild<H, T>
-where
-    T: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         PopoverAnchorBuild::into_element(self, cx)
     }
 }
@@ -1702,7 +1682,7 @@ mod tests {
                 ])
                 .test_id("popover-build-panel");
 
-                let trigger = PopoverTrigger::build(cx.pressable_with_id(
+                let trigger: PopoverTriggerBuild<App, _> = PopoverTrigger::build(cx.pressable_with_id(
                     PressableProps {
                         layout: {
                             let mut layout = LayoutStyle::default();

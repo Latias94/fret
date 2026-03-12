@@ -37,8 +37,8 @@ use fret_ui_kit::declarative::motion_value::{
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, Space, UiChildIntoElement,
-    UiHostBoundIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, Space, UiChildIntoElement,
+    UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
 };
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
@@ -467,22 +467,12 @@ impl<H: UiHost, B> UiSupportsLayout for DrawerContentBuild<H, B> where
 {
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for DrawerContentBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for DrawerContentBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        DrawerContentBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for DrawerContentBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         DrawerContentBuild::into_element(self, cx)
     }
 }
@@ -641,22 +631,12 @@ impl<H: UiHost, B> UiSupportsLayout for DrawerHeaderBuild<H, B> where
 {
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for DrawerHeaderBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for DrawerHeaderBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        DrawerHeaderBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for DrawerHeaderBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         DrawerHeaderBuild::into_element(self, cx)
     }
 }
@@ -777,22 +757,12 @@ impl<H: UiHost, B> UiSupportsLayout for DrawerFooterBuild<H, B> where
 {
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for DrawerFooterBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for DrawerFooterBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        DrawerFooterBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for DrawerFooterBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         DrawerFooterBuild::into_element(self, cx)
     }
 }
@@ -1652,22 +1622,12 @@ where
     }
 }
 
-impl<H: UiHost, T> UiHostBoundIntoElement<H> for DrawerTriggerBuild<H, T>
+impl<H: UiHost, T> IntoUiElement<H> for DrawerTriggerBuild<H, T>
 where
     T: UiChildIntoElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        DrawerTriggerBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, T> UiChildIntoElement<H> for DrawerTriggerBuild<H, T>
-where
-    T: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         DrawerTriggerBuild::into_element(self, cx)
     }
 }

@@ -14,8 +14,8 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, Space, UiChildIntoElement,
-    UiHostBoundIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, Space, UiChildIntoElement,
+    UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
 };
 
 use crate::direction::{LayoutDirection, use_direction};
@@ -301,22 +301,12 @@ impl<H: UiHost, B> UiSupportsLayout for TableBuild<H, B> where
 {
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for TableBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for TableBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        TableBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for TableBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         TableBuild::into_element(self, cx)
     }
 }
@@ -391,22 +381,12 @@ where
     }
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for TableHeaderBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for TableHeaderBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        TableHeaderBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for TableHeaderBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         TableHeaderBuild::into_element(self, cx)
     }
 }
@@ -484,22 +464,12 @@ where
     }
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for TableBodyBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for TableBodyBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        TableBodyBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for TableBodyBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         TableBodyBuild::into_element(self, cx)
     }
 }
@@ -599,22 +569,12 @@ where
     }
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for TableFooterBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for TableFooterBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        TableFooterBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for TableFooterBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         TableFooterBuild::into_element(self, cx)
     }
 }
@@ -894,22 +854,12 @@ where
     }
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for TableRowBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for TableRowBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        TableRowBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for TableRowBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         TableRowBuild::into_element(self, cx)
     }
 }
@@ -1204,22 +1154,12 @@ where
 impl<H: UiHost, T> UiSupportsChrome for TableCellBuild<H, T> where T: UiChildIntoElement<H> {}
 impl<H: UiHost, T> UiSupportsLayout for TableCellBuild<H, T> where T: UiChildIntoElement<H> {}
 
-impl<H: UiHost, T> UiHostBoundIntoElement<H> for TableCellBuild<H, T>
+impl<H: UiHost, T> IntoUiElement<H> for TableCellBuild<H, T>
 where
     T: UiChildIntoElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        TableCellBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, T> UiChildIntoElement<H> for TableCellBuild<H, T>
-where
-    T: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         TableCellBuild::into_element(self, cx)
     }
 }
@@ -1270,7 +1210,7 @@ mod tests {
     use fret_core::{AppWindowId, Color, Point, Px, Rect, Size};
     use fret_ui::element::{ContainerProps, ElementKind, Length, Overflow, TextProps};
     use fret_ui_kit::ui::UiElementSinkExt as _;
-    use fret_ui_kit::{UiBuilderHostBoundIntoElementExt as _, UiExt as _};
+    use fret_ui_kit::UiExt as _;
 
     use fret_ui::UiTree;
 

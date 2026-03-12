@@ -23,8 +23,8 @@ use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::recipes::glass::GlassEffectRefinement;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Space, UiChildIntoElement, UiHostBoundIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayController,
+    OverlayPresence, Space, UiChildIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome,
     UiSupportsLayout, ui,
 };
 
@@ -182,22 +182,12 @@ where
     }
 }
 
-impl<H: UiHost, T> UiHostBoundIntoElement<H> for DialogTriggerBuild<H, T>
+impl<H: UiHost, T> IntoUiElement<H> for DialogTriggerBuild<H, T>
 where
     T: UiChildIntoElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        DialogTriggerBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, T> UiChildIntoElement<H> for DialogTriggerBuild<H, T>
-where
-    T: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         DialogTriggerBuild::into_element(self, cx)
     }
 }
@@ -1065,22 +1055,12 @@ impl<H: UiHost, B> UiSupportsLayout for DialogContentBuild<H, B> where
 {
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for DialogContentBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for DialogContentBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        DialogContentBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for DialogContentBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         DialogContentBuild::into_element(self, cx)
     }
 }
@@ -1396,22 +1376,12 @@ where
     }
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for DialogHeaderBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for DialogHeaderBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        DialogHeaderBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for DialogHeaderBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         DialogHeaderBuild::into_element(self, cx)
     }
 }
@@ -1511,22 +1481,12 @@ where
     }
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for DialogFooterBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for DialogFooterBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        DialogFooterBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for DialogFooterBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         DialogFooterBuild::into_element(self, cx)
     }
 }
@@ -1649,7 +1609,6 @@ mod tests {
     use fret_runtime::FrameId;
     use fret_ui::UiTree;
     use fret_ui::element::PositionStyle;
-    use fret_ui_kit::UiBuilderHostBoundIntoElementExt as _;
     use fret_ui_kit::UiExt as _;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
     use fret_ui_kit::ui::UiElementSinkExt as _;

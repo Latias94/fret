@@ -25,8 +25,8 @@ use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::tooltip_provider;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space,
-    UiChildIntoElement, UiHostBoundIntoElement,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayPresence,
+    Radius, Space, UiChildIntoElement,
 };
 
 use crate::layout as shadcn_layout;
@@ -1100,22 +1100,12 @@ where
     }
 }
 
-impl<H: UiHost, T> UiHostBoundIntoElement<H> for HoverCardTriggerBuild<H, T>
+impl<H: UiHost, T> IntoUiElement<H> for HoverCardTriggerBuild<H, T>
 where
     T: UiChildIntoElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        HoverCardTriggerBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, T> UiChildIntoElement<H> for HoverCardTriggerBuild<H, T>
-where
-    T: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         HoverCardTriggerBuild::into_element(self, cx)
     }
 }
@@ -1181,22 +1171,12 @@ where
     }
 }
 
-impl<H: UiHost, T> UiHostBoundIntoElement<H> for HoverCardAnchorBuild<H, T>
+impl<H: UiHost, T> IntoUiElement<H> for HoverCardAnchorBuild<H, T>
 where
     T: UiChildIntoElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        HoverCardAnchorBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, T> UiChildIntoElement<H> for HoverCardAnchorBuild<H, T>
-where
-    T: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         HoverCardAnchorBuild::into_element(self, cx)
     }
 }

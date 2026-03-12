@@ -18,8 +18,8 @@ use fret_ui_kit::declarative::{
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, OverlayController, OverlayPresence, Space,
-    UiChildIntoElement, UiHostBoundIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, OverlayController,
+    OverlayPresence, Space, UiChildIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome,
     UiSupportsLayout, ui,
 };
 
@@ -137,22 +137,12 @@ where
     }
 }
 
-impl<H: UiHost, T> UiHostBoundIntoElement<H> for SheetTriggerBuild<H, T>
+impl<H: UiHost, T> IntoUiElement<H> for SheetTriggerBuild<H, T>
 where
     T: UiChildIntoElement<H>,
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        SheetTriggerBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, T> UiChildIntoElement<H> for SheetTriggerBuild<H, T>
-where
-    T: UiChildIntoElement<H>,
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         SheetTriggerBuild::into_element(self, cx)
     }
 }
@@ -1372,22 +1362,12 @@ impl<H: UiHost, B> UiSupportsLayout for SheetContentBuild<H, B> where
 {
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for SheetContentBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for SheetContentBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        SheetContentBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for SheetContentBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         SheetContentBuild::into_element(self, cx)
     }
 }
@@ -1454,22 +1434,12 @@ where
     }
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for SheetHeaderBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for SheetHeaderBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        SheetHeaderBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for SheetHeaderBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         SheetHeaderBuild::into_element(self, cx)
     }
 }
@@ -1544,22 +1514,12 @@ where
     }
 }
 
-impl<H: UiHost, B> UiHostBoundIntoElement<H> for SheetFooterBuild<H, B>
+impl<H: UiHost, B> IntoUiElement<H> for SheetFooterBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        SheetFooterBuild::into_element(self, cx)
-    }
-}
-
-impl<H: UiHost, B> UiChildIntoElement<H> for SheetFooterBuild<H, B>
-where
-    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
-{
-    #[track_caller]
-    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         SheetFooterBuild::into_element(self, cx)
     }
 }
@@ -1645,7 +1605,6 @@ mod tests {
     use fret_ui::UiTree;
     use fret_ui::action::DismissReason;
     use fret_ui::element::{ContainerProps, ElementKind, PressableProps};
-    use fret_ui_kit::UiBuilderHostBoundIntoElementExt as _;
     use fret_ui_kit::UiExt as _;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
     use fret_ui_kit::ui::UiElementSinkExt as _;
