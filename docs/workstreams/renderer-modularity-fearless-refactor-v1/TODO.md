@@ -338,6 +338,10 @@ ID format:
       `crates/fret-render-wgpu/src/text/font_runtime_state.rs`
     - `text/mod.rs` no longer owns font-stack key / font-db revision / fallback-policy /
       generic-injection / font-trace fields directly
+    - atlas `TextSystem` flow now lives in
+      `crates/fret-render-wgpu/src/text/atlas_flow.rs`
+    - `crates/fret-render-wgpu/src/text/atlas.rs` no longer owns atlas bind-group access, upload
+      flushing, scene pinning, or glyph ensure glue directly
     - prepared-glyph font-data cache writes now live behind a dedicated helper in
       `crates/fret-render-wgpu/src/text/prepare.rs`
     - `cache_prepared_glyph_face_data(...)` no longer owns font-data entry writes directly
@@ -612,10 +616,10 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: text font-runtime state now lives under
-    `crates/fret-render-wgpu/src/text/font_runtime_state.rs`, and `text/mod.rs` no longer owns
-    font-stack key / font-db revision / fallback-policy / generic-injection / font-trace fields
-    directly.
+  - Latest landed slice: atlas `TextSystem` flow now lives under
+    `crates/fret-render-wgpu/src/text/atlas_flow.rs`, and
+    `crates/fret-render-wgpu/src/text/atlas.rs` no longer owns atlas bind-group access, upload
+    flushing, scene pinning, or glyph ensure glue directly.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

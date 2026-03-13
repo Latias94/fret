@@ -87,6 +87,15 @@ Current snapshot (2026-03-13):
   - `cargo check -p fret-render-wgpu --tests`
   - `cargo nextest run -p fret-render-wgpu text_locale_changes_font_stack_key`
   - `cargo nextest run -p fret-render-wgpu text_measure_matches_prepare`
+- The latest `text/mod.rs` adjacent atlas-flow split has landed:
+  - atlas `TextSystem` flow now lives under
+    `crates/fret-render-wgpu/src/text/atlas_flow.rs`
+  - `crates/fret-render-wgpu/src/text/atlas.rs` no longer owns atlas bind-group access, upload
+    flushing, scene pinning, or glyph ensure glue directly
+- Atlas flow extraction verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu emoji_sequences_use_color_quads_when_color_font_is_available`
+  - `cargo nextest run -p fret-render-wgpu cjk_glyphs_populate_mask_or_subpixel_atlas_when_cjk_lite_font_is_available`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals
@@ -372,6 +381,11 @@ Current snapshot (2026-03-13):
   - prepared-glyph scaler builder assembly now lives behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `build_prepared_glyph_scaler(...)` no longer owns scale-context builder chaining directly
+- The sixty-fourth internal `text/mod.rs` split has landed:
+  - atlas `TextSystem` flow now lives under
+    `crates/fret-render-wgpu/src/text/atlas_flow.rs`
+  - `crates/fret-render-wgpu/src/text/atlas.rs` no longer owns atlas bind-group access, upload
+    flushing, scene pinning, or glyph ensure glue directly
 - The sixty-fourth internal `text/mod.rs` split has landed:
   - prepared-glyph normalized-coords presence checks now live behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`

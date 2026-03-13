@@ -130,6 +130,10 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/text/font_runtime_state.rs`, and `text/mod.rs` no longer owns
   font-stack key / font-db revision / fallback-policy / generic-injection / font-trace fields
   directly.
+- Text atlas `TextSystem` flow now lives under
+  `crates/fret-render-wgpu/src/text/atlas_flow.rs`, and `crates/fret-render-wgpu/src/text/atlas.rs`
+  no longer owns atlas bind-group access, upload flushing, scene pinning, or glyph ensure glue
+  directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:
@@ -425,6 +429,11 @@ As of 2026-03-13:
   - prepared-glyph scaler builder assembly now lives behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `build_prepared_glyph_scaler(...)` no longer owns scale-context builder chaining directly
+- The sixty-fourth internal text split has landed:
+  - atlas `TextSystem` flow now lives under
+    `crates/fret-render-wgpu/src/text/atlas_flow.rs`
+  - `crates/fret-render-wgpu/src/text/atlas.rs` no longer owns atlas bind-group access, upload
+    flushing, scene pinning, or glyph ensure glue directly
 - The sixty-fourth internal text split has landed:
   - prepared-glyph normalized-coords presence checks now live behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`

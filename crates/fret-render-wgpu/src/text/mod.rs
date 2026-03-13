@@ -17,6 +17,7 @@ pub use fret_render_text::{
 
 mod atlas;
 mod atlas_epoch;
+mod atlas_flow;
 mod atlas_runtime_state;
 mod blob_state;
 mod blobs;
