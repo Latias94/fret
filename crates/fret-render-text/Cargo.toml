@@ -12,6 +12,7 @@ description = "Renderer-owned Parley text shaping and wrapping utilities for Fre
 
 [dependencies]
 fret-core = { version = "0.1.0", path = "../fret-core" }
+fret-fonts = { version = "0.1.0", path = "../fret-fonts", default-features = false }
 parley.workspace = true
 read-fonts.workspace = true
 unicode-script.workspace = true

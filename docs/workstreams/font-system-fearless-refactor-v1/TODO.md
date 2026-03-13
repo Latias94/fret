@@ -52,23 +52,23 @@ Regression gates:
 
 ## M2 — Make bundled font profiles manifest-driven
 
-- [ ] Extend `fret-fonts` from "bytes only" to "bytes + manifest/profile metadata".
-- [ ] Define typed bundled roles:
-  - [ ] `UiSans`
-  - [ ] `UiSerif`
-  - [ ] `UiMonospace`
-  - [ ] `EmojiFallback`
-  - [ ] `CjkFallback`
-- [ ] Define bundled profile metadata:
-  - [ ] profile name
-  - [ ] provided roles
-  - [ ] expected family names
-  - [ ] determinism guarantees
+- [x] Extend `fret-fonts` from "bytes only" to "bytes + manifest/profile metadata".
+- [x] Define typed bundled roles:
+  - [x] `UiSans`
+  - [x] `UiSerif`
+  - [x] `UiMonospace`
+  - [x] `EmojiFallback`
+  - [x] `CjkFallback`
+- [x] Define bundled profile metadata:
+  - [x] profile name
+  - [x] provided roles
+  - [x] expected family names
+  - [x] determinism guarantees
 - [ ] Move duplicated bundled-family knowledge out of:
   - [ ] `fret-runtime` curated bootstrap defaults
-  - [ ] renderer fallback-policy hard-coded wasm assumptions
-  - [ ] runner bootstrap special cases
-- [ ] Decide whether the smallest web bootstrap profile guarantees `Serif` or explicitly does not.
+  - [x] renderer fallback-policy hard-coded wasm assumptions
+  - [x] runner bootstrap special cases
+- [x] Decide whether the smallest web bootstrap profile guarantees `Serif` or explicitly does not.
 
 Regression gates:
 

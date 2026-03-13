@@ -52,6 +52,52 @@ fn preferred_text_locale(app: &impl GlobalsHost) -> Option<String> {
         .map(|locale| locale.to_string())
 }
 
+#[cfg_attr(not(any(test, target_arch = "wasm32")), allow(dead_code))]
+fn seed_missing_font_families_from_profile(
+    mut config: TextFontFamilyConfig,
+    ui_sans: &[&str],
+    ui_serif: &[&str],
+    ui_mono: &[&str],
+    common_fallback: &[&str],
+) -> TextFontFamilyConfig {
+    if config.ui_sans.is_empty() {
+        config.ui_sans = ui_sans.iter().map(|family| (*family).to_string()).collect();
+    }
+    if config.ui_serif.is_empty() {
+        config.ui_serif = ui_serif
+            .iter()
+            .map(|family| (*family).to_string())
+            .collect();
+    }
+    if config.ui_mono.is_empty() {
+        config.ui_mono = ui_mono.iter().map(|family| (*family).to_string()).collect();
+    }
+    if config.common_fallback.is_empty() {
+        config.common_fallback = common_fallback
+            .iter()
+            .map(|family| (*family).to_string())
+            .collect();
+    }
+    config
+}
+
+#[cfg(target_arch = "wasm32")]
+fn seed_web_startup_font_config(config: TextFontFamilyConfig) -> TextFontFamilyConfig {
+    let profile = fret_fonts::default_profile();
+    seed_missing_font_families_from_profile(
+        config,
+        profile.ui_sans_families,
+        profile.ui_serif_families,
+        profile.ui_mono_families,
+        profile.common_fallback_families,
+    )
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn seed_web_startup_font_config(config: TextFontFamilyConfig) -> TextFontFamilyConfig {
+    config
+}
+
 #[doc(hidden)]
 pub fn publish_renderer_text_stack_key_if_changed(
     app: &mut impl GlobalsHost,
@@ -131,12 +177,8 @@ pub fn initialize_web_startup_font_environment(
     renderer: &mut impl RendererFontEnvironmentHost,
     config: TextFontFamilyConfig,
 ) -> FontCatalogUpdate {
-    app.set_global::<TextFontFamilyConfig>(config);
-    apply_renderer_font_catalog_update(
-        app,
-        renderer,
-        FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
-    )
+    app.set_global::<TextFontFamilyConfig>(seed_web_startup_font_config(config));
+    apply_renderer_font_catalog_update(app, renderer, FontFamilyDefaultsPolicy::None)
 }
 
 #[doc(hidden)]
@@ -256,6 +298,36 @@ mod tests {
                 .0,
             42,
             "expected the published key to reflect the post-locale renderer state"
+        );
+    }
+
+    #[test]
+    fn seed_missing_font_families_from_profile_preserves_existing_fields() {
+        let config = TextFontFamilyConfig {
+            ui_sans: vec!["Custom Sans".to_string()],
+            ..Default::default()
+        };
+
+        let seeded = seed_missing_font_families_from_profile(
+            config,
+            &["Inter"],
+            &[],
+            &["JetBrains Mono", "Fira Mono"],
+            &["Noto Sans CJK SC", "Noto Color Emoji"],
+        );
+
+        assert_eq!(seeded.ui_sans, vec!["Custom Sans".to_string()]);
+        assert!(seeded.ui_serif.is_empty());
+        assert_eq!(
+            seeded.ui_mono,
+            vec!["JetBrains Mono".to_string(), "Fira Mono".to_string()]
+        );
+        assert_eq!(
+            seeded.common_fallback,
+            vec![
+                "Noto Sans CJK SC".to_string(),
+                "Noto Color Emoji".to_string()
+            ]
         );
     }
 

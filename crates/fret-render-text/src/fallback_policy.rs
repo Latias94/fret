@@ -132,20 +132,41 @@ impl TextFallbackPolicyV1 {
     }
 }
 
+#[cfg_attr(not(any(test, target_arch = "wasm32")), allow(dead_code))]
+fn merged_static_family_lists(lists: &[&[&'static str]]) -> Box<[&'static str]> {
+    let mut seen_lower: HashSet<String> = HashSet::new();
+    let mut families: Vec<&'static str> = Vec::new();
+    for list in lists {
+        for &family in *list {
+            let trimmed = family.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+            let key = trimmed.to_ascii_lowercase();
+            if seen_lower.insert(key) {
+                families.push(trimmed);
+            }
+        }
+    }
+    families.into_boxed_slice()
+}
+
+#[cfg(target_arch = "wasm32")]
+fn wasm_default_common_fallback_families() -> &'static [&'static str] {
+    static FAMILIES: OnceLock<Box<[&'static str]>> = OnceLock::new();
+    FAMILIES.get_or_init(|| {
+        let profile = fret_fonts::default_profile();
+        merged_static_family_lists(&[profile.ui_sans_families, profile.common_fallback_families])
+    })
+}
+
 pub fn default_common_fallback_families() -> &'static [&'static str] {
     // For Web/WASM, there are no system fonts. If the app bundles fonts (e.g. via `fret-fonts`
     // feature flags), include those families in the fallback chain so mixed-script text works
     // without explicit per-span font selection.
     #[cfg(target_arch = "wasm32")]
     {
-        &[
-            // UI (bundled in `fret-fonts` bootstrap)
-            "Inter",
-            // CJK (bundled via `fret-fonts/cjk-lite`)
-            "Noto Sans CJK SC",
-            // Emoji (bundled via `fret-fonts/emoji`)
-            "Noto Color Emoji",
-        ]
+        wasm_default_common_fallback_families()
     }
     #[cfg(target_os = "windows")]
     {
@@ -353,5 +374,22 @@ pub fn default_serif_candidates() -> &'static [&'static str] {
     )))]
     {
         &[]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn merged_static_family_lists_preserves_order_and_dedupes_case_insensitively() {
+        let families = merged_static_family_lists(&[
+            &["Inter", "Noto Sans CJK SC"],
+            &["inter", "Noto Color Emoji", "Noto Sans CJK SC"],
+        ]);
+        assert_eq!(
+            families.as_ref(),
+            &["Inter", "Noto Sans CJK SC", "Noto Color Emoji"]
+        );
     }
 }
