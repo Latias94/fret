@@ -4,13 +4,12 @@ use super::atlas_epoch::TextAtlasEpochState;
 use super::atlas_runtime_state::TextAtlasRuntimeState;
 use super::blob_state::TextBlobState;
 use super::face_cache::TextFaceCacheState;
+use super::font_runtime_state::TextFontRuntimeState;
 use super::frame_perf::TextFramePerfState;
 use super::layout_cache_state::TextLayoutCacheState;
 use super::pin_state::TextPinState;
 use super::quality::{TextQualitySettings, TextQualityState};
 use fret_render_text::fallback_policy::TextFallbackPolicyV1;
-use fret_render_text::font_stack::GenericFamilyInjectionState;
-use fret_render_text::font_trace::FontTraceState;
 
 const TEXT_ATLAS_WIDTH: u32 = 2048;
 const TEXT_ATLAS_HEIGHT: u32 = 2048;
@@ -69,12 +68,8 @@ pub(super) fn build_text_system(device: &wgpu::Device) -> TextSystem {
     let mut out = TextSystem {
         parley_shaper: bootstrap.parley_shaper,
         parley_scale: parley::swash::scale::ScaleContext::new(),
-        // Non-zero by default so callers can treat `0` as "unknown/uninitialized" if desired.
-        font_stack_key: 1,
-        font_db_revision: 1,
-        fallback_policy: bootstrap.fallback_policy,
+        font_runtime: TextFontRuntimeState::new(bootstrap.fallback_policy),
         quality: TextQualityState::new(TextQualitySettings::default()),
-        generic_injections: GenericFamilyInjectionState::default(),
 
         blob_state: TextBlobState::new(),
         layout_cache: TextLayoutCacheState::new(),
@@ -92,8 +87,6 @@ pub(super) fn build_text_system(device: &wgpu::Device) -> TextSystem {
         frame_perf: TextFramePerfState::default(),
 
         atlas_epoch: TextAtlasEpochState::new(1),
-
-        font_trace: FontTraceState::default(),
     };
 
     out.finish_initial_font_bootstrap();

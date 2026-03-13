@@ -126,6 +126,10 @@ As of 2026-03-13:
 - Text layout-cache state now lives under
   `crates/fret-render-wgpu/src/text/layout_cache_state.rs`, and `text/mod.rs` no longer owns
   shape-cache/measure-cache fields directly.
+- Text font-runtime state now lives under
+  `crates/fret-render-wgpu/src/text/font_runtime_state.rs`, and `text/mod.rs` no longer owns
+  font-stack key / font-db revision / fallback-policy / generic-injection / font-trace fields
+  directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:
@@ -408,6 +412,11 @@ As of 2026-03-13:
   - text layout-cache state under
     `crates/fret-render-wgpu/src/text/layout_cache_state.rs`
   - `text/mod.rs` no longer owns shape-cache/measure-cache fields directly
+- The latest internal text state-shell tightening slice has also moved:
+  - text font-runtime state under
+    `crates/fret-render-wgpu/src/text/font_runtime_state.rs`
+  - `text/mod.rs` no longer owns font-stack key / font-db revision / fallback-policy /
+    generic-injection / font-trace fields directly
 - The sixty-second internal text split has landed:
   - prepared-glyph scaler size clamp now lives behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`

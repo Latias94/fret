@@ -2,8 +2,12 @@ use super::{TextFontFamilyConfig, TextSystem};
 
 impl TextSystem {
     pub(super) fn finish_initial_font_bootstrap(&mut self) {
-        let _ = self.apply_font_families_inner(&self.fallback_policy.font_family_config.clone());
-        self.fallback_policy.recompute_key(&self.parley_shaper);
+        let _ = self.apply_font_families_inner(
+            &self.font_runtime.fallback_policy.font_family_config.clone(),
+        );
+        self.font_runtime
+            .fallback_policy
+            .recompute_key(&self.parley_shaper);
         self.recompute_font_stack_key();
     }
 
@@ -19,7 +23,7 @@ impl TextSystem {
     }
 
     pub fn font_stack_key(&self) -> u64 {
-        self.font_stack_key
+        self.font_runtime.font_stack_key
     }
 
     /// Sets the default locale for text shaping and font fallback selection.
@@ -32,16 +36,20 @@ impl TextSystem {
             .filter(|v| parley::swash::text::Language::parse(v).is_some())
             .map(|v| v.to_string());
 
-        if self.fallback_policy.locale_bcp47 == parsed {
+        if self.font_runtime.fallback_policy.locale_bcp47 == parsed {
             return false;
         }
 
-        self.fallback_policy.locale_bcp47 = parsed.clone();
+        self.font_runtime.fallback_policy.locale_bcp47 = parsed.clone();
         let _ = self.parley_shaper.set_default_locale(parsed);
 
-        self.font_db_revision = self.font_db_revision.saturating_add(1);
-        self.fallback_policy.refresh_derived(&self.parley_shaper);
-        self.fallback_policy.recompute_key(&self.parley_shaper);
+        self.font_runtime.font_db_revision = self.font_runtime.font_db_revision.saturating_add(1);
+        self.font_runtime
+            .fallback_policy
+            .refresh_derived(&self.parley_shaper);
+        self.font_runtime
+            .fallback_policy
+            .recompute_key(&self.parley_shaper);
         self.recompute_font_stack_key();
         self.reset_caches_for_font_change();
         true
@@ -56,10 +64,14 @@ impl TextSystem {
 
         let added = self.parley_shaper.add_fonts(fonts);
         if added > 0 {
-            let _ =
-                self.apply_font_families_inner(&self.fallback_policy.font_family_config.clone());
-            self.fallback_policy.recompute_key(&self.parley_shaper);
-            self.font_db_revision = self.font_db_revision.saturating_add(1);
+            let _ = self.apply_font_families_inner(
+                &self.font_runtime.fallback_policy.font_family_config.clone(),
+            );
+            self.font_runtime
+                .fallback_policy
+                .recompute_key(&self.parley_shaper);
+            self.font_runtime.font_db_revision =
+                self.font_runtime.font_db_revision.saturating_add(1);
             self.recompute_font_stack_key();
             self.reset_caches_for_font_change();
         }
@@ -99,11 +111,15 @@ impl TextSystem {
         //
         // This keeps selection/fallback behavior stable across rescan boundaries and prevents
         // stale injected FamilyIds from hanging around.
-        self.generic_injections.clear();
-        let _ = self.apply_font_families_inner(&self.fallback_policy.font_family_config.clone());
+        self.font_runtime.generic_injections.clear();
+        let _ = self.apply_font_families_inner(
+            &self.font_runtime.fallback_policy.font_family_config.clone(),
+        );
 
-        self.font_db_revision = self.font_db_revision.saturating_add(1);
-        self.fallback_policy.recompute_key(&self.parley_shaper);
+        self.font_runtime.font_db_revision = self.font_runtime.font_db_revision.saturating_add(1);
+        self.font_runtime
+            .fallback_policy
+            .recompute_key(&self.parley_shaper);
         self.recompute_font_stack_key();
         self.reset_caches_for_font_change();
         true
@@ -124,8 +140,10 @@ impl TextSystem {
             return false;
         }
 
-        self.font_db_revision = self.font_db_revision.saturating_add(1);
-        self.fallback_policy.recompute_key(&self.parley_shaper);
+        self.font_runtime.font_db_revision = self.font_runtime.font_db_revision.saturating_add(1);
+        self.font_runtime
+            .fallback_policy
+            .recompute_key(&self.parley_shaper);
         self.recompute_font_stack_key();
         self.reset_caches_for_font_change();
         true
@@ -137,20 +155,13 @@ impl TextSystem {
     ) -> (bool, bool, bool) {
         fret_render_text::font_stack::apply_font_families_inner(
             &mut self.parley_shaper,
-            &mut self.fallback_policy,
-            &mut self.generic_injections,
+            &mut self.font_runtime.fallback_policy,
+            &mut self.font_runtime.generic_injections,
             config,
         )
     }
 
     pub(super) fn recompute_font_stack_key(&mut self) {
-        use std::hash::{Hash as _, Hasher as _};
-
-        let mut hasher = std::collections::hash_map::DefaultHasher::new();
-        "fret.text.font_stack_key.v1".hash(&mut hasher);
-        self.font_db_revision.hash(&mut hasher);
-        self.fallback_policy.fallback_policy_key.hash(&mut hasher);
-        let key = hasher.finish();
-        self.font_stack_key = if key == 0 { 1 } else { key };
+        self.font_runtime.recompute_font_stack_key();
     }
 }

@@ -78,6 +78,15 @@ Current snapshot (2026-03-13):
   - text layout-cache state under
     `crates/fret-render-wgpu/src/text/layout_cache_state.rs`
   - `text/mod.rs` no longer owns shape-cache/measure-cache fields directly
+- The latest `text/mod.rs` state-shell tightening slice has also moved:
+  - text font-runtime state under
+    `crates/fret-render-wgpu/src/text/font_runtime_state.rs`
+  - `text/mod.rs` no longer owns font-stack key / font-db revision / fallback-policy /
+    generic-injection / font-trace fields directly
+- Text font-runtime extraction verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu text_locale_changes_font_stack_key`
+  - `cargo nextest run -p fret-render-wgpu text_measure_matches_prepare`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals
@@ -350,6 +359,11 @@ Current snapshot (2026-03-13):
   - text layout-cache state under
     `crates/fret-render-wgpu/src/text/layout_cache_state.rs`
   - `text/mod.rs` no longer owns shape-cache/measure-cache fields directly
+- The latest `text/mod.rs` state-shell tightening slice has also moved:
+  - text font-runtime state under
+    `crates/fret-render-wgpu/src/text/font_runtime_state.rs`
+  - `text/mod.rs` no longer owns font-stack key / font-db revision / fallback-policy /
+    generic-injection / font-trace fields directly
 - The sixty-second internal `text/mod.rs` split has landed:
   - prepared-glyph scaler size clamp now lives behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`

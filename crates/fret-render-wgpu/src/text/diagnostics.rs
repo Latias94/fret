@@ -41,7 +41,7 @@ fn estimate_text_shape_heap_bytes(shape: &TextShape) -> u64 {
 
 impl TextSystem {
     pub fn begin_frame_diagnostics(&mut self) {
-        self.font_trace.begin_frame();
+        self.font_runtime.font_trace.begin_frame();
 
         self.frame_perf.clear();
         self.atlas_runtime.begin_frame_diagnostics();
@@ -51,7 +51,7 @@ impl TextSystem {
         &self,
         frame_id: fret_core::FrameId,
     ) -> fret_core::RendererTextFontTraceSnapshot {
-        self.font_trace.snapshot(frame_id)
+        self.font_runtime.font_trace.snapshot(frame_id)
     }
 
     pub fn diagnostics_snapshot(
@@ -108,9 +108,9 @@ impl TextSystem {
 
         fret_core::RendererTextPerfSnapshot {
             frame_id,
-            font_stack_key: self.font_stack_key,
-            font_db_revision: self.font_db_revision,
-            fallback_policy_key: self.fallback_policy.fallback_policy_key,
+            font_stack_key: self.font_runtime.font_stack_key,
+            font_db_revision: self.font_runtime.font_db_revision,
+            fallback_policy_key: self.font_runtime.fallback_policy.fallback_policy_key,
             frame_missing_glyphs: self.frame_perf.missing_glyphs,
             frame_texts_with_missing_glyphs: self.frame_perf.texts_with_missing_glyphs,
             blobs_live: self.blob_state.blobs.len() as u64,
@@ -147,21 +147,26 @@ impl TextSystem {
     ) -> fret_core::RendererTextFallbackPolicySnapshot {
         fret_core::RendererTextFallbackPolicySnapshot {
             frame_id,
-            font_stack_key: self.font_stack_key,
-            font_db_revision: self.font_db_revision,
-            fallback_policy_key: self.fallback_policy.fallback_policy_key,
+            font_stack_key: self.font_runtime.font_stack_key,
+            font_db_revision: self.font_runtime.font_db_revision,
+            fallback_policy_key: self.font_runtime.fallback_policy.fallback_policy_key,
             system_fonts_enabled: self.parley_shaper.system_fonts_enabled(),
-            locale_bcp47: self.fallback_policy.locale_bcp47.clone(),
+            locale_bcp47: self.font_runtime.fallback_policy.locale_bcp47.clone(),
             common_fallback_injection: self
+                .font_runtime
                 .fallback_policy
                 .font_family_config
                 .common_fallback_injection,
-            prefer_common_fallback: self.fallback_policy.prefer_common_fallback(),
+            prefer_common_fallback: self.font_runtime.fallback_policy.prefer_common_fallback(),
             common_fallback_stack_suffix: self
                 .parley_shaper
                 .common_fallback_stack_suffix()
                 .to_string(),
-            common_fallback_candidates: self.fallback_policy.common_fallback_candidates.clone(),
+            common_fallback_candidates: self
+                .font_runtime
+                .fallback_policy
+                .common_fallback_candidates
+                .clone(),
         }
     }
 

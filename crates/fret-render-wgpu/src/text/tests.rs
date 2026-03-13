@@ -15,6 +15,20 @@ fn pending_upload_bytes_for_key(text: &super::TextSystem, key: super::GlyphKey) 
         .expect("expected pending upload for ensured glyph")
 }
 
+fn reset_bundled_only_font_runtime(text: &mut super::TextSystem) {
+    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    let _ = text.parley_shaper.set_common_fallback_stack_suffix(
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
+    );
+    text.font_runtime.generic_injections.clear();
+    text.font_runtime.font_db_revision = 0;
+    text.font_runtime.font_stack_key = 0;
+}
+
 #[test]
 fn subpixel_mask_to_alpha_uses_channel_max() {
     let data = vec![
@@ -551,14 +565,7 @@ fn glyph_cache_key_tracks_scale_factor_below_one() {
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Keep this test deterministic: bundled fonts only (no system font discovery).
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
-    let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
-    );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    reset_bundled_only_font_runtime(&mut text);
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
@@ -955,14 +962,7 @@ fn cjk_fallback_uses_cjk_lite_font_without_explicit_family_when_system_fonts_are
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
-    let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
-    );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    reset_bundled_only_font_runtime(&mut text);
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
@@ -1070,13 +1070,16 @@ fn font_trace_records_missing_glyphs_for_named_family_when_system_fonts_are_abse
 
     // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
     text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
     );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    text.font_runtime.generic_injections.clear();
+    text.font_runtime.font_db_revision = 0;
+    text.font_runtime.font_stack_key = 0;
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
@@ -1131,13 +1134,16 @@ fn cjk_fallback_uses_common_fallback_for_named_family_when_system_fonts_are_abse
 
     // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
     text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
     );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    text.font_runtime.generic_injections.clear();
+    text.font_runtime.font_db_revision = 0;
+    text.font_runtime.font_stack_key = 0;
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
@@ -1225,13 +1231,16 @@ fn emoji_fallback_uses_bundled_color_font_without_explicit_family_when_system_fo
 
     // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
     text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
     );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    text.font_runtime.generic_injections.clear();
+    text.font_runtime.font_db_revision = 0;
+    text.font_runtime.font_stack_key = 0;
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
@@ -1655,13 +1664,16 @@ fn variable_font_axis_overrides_participate_in_face_key_and_raster_output() {
 
     // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
     text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
     );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    text.font_runtime.generic_injections.clear();
+    text.font_runtime.font_db_revision = 0;
+    text.font_runtime.font_stack_key = 0;
 
     let added = text.add_fonts([ROBOTO_FLEX_SUBSET.to_vec()]);
     assert!(added > 0, "expected variable font to load");
@@ -1763,13 +1775,16 @@ fn variable_font_weight_changes_face_key_and_raster_output() {
 
     // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
     text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
     );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    text.font_runtime.generic_injections.clear();
+    text.font_runtime.font_db_revision = 0;
+    text.font_runtime.font_stack_key = 0;
 
     let added = text.add_fonts([ROBOTO_FLEX_SUBSET.to_vec()]);
     assert!(added > 0, "expected variable font to load");
@@ -1865,13 +1880,16 @@ fn open_type_feature_overrides_can_change_shaped_glyph_output_for_known_font_fix
 
     // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
     text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
     );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    text.font_runtime.generic_injections.clear();
+    text.font_runtime.font_db_revision = 0;
+    text.font_runtime.font_stack_key = 0;
 
     let added = text.add_fonts([INTER_ROMAN.to_vec()]);
     assert!(added > 0, "expected Inter fixture font to load");
@@ -1991,13 +2009,16 @@ fn open_type_feature_overrides_can_change_word_wrap_breakpoints_for_known_font_f
 
     // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
     text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
     );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    text.font_runtime.generic_injections.clear();
+    text.font_runtime.font_db_revision = 0;
+    text.font_runtime.font_stack_key = 0;
 
     let added = text.add_fonts([INTER_ROMAN.to_vec()]);
     assert!(added > 0, "expected Inter fixture font to load");
@@ -2363,13 +2384,16 @@ fn synthesis_skew_participates_in_face_key_and_raster_output() {
 
     // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
     text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
     );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    text.font_runtime.generic_injections.clear();
+    text.font_runtime.font_db_revision = 0;
+    text.font_runtime.font_stack_key = 0;
 
     let fonts: Vec<Vec<u8>> = fret_fonts::cjk_lite_fonts()
         .iter()
@@ -2485,9 +2509,12 @@ fn fallback_policy_key_normalizes_family_candidates_and_stays_stable_across_case
 
     // Make the test independent from host/system fonts.
     text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
     );
 
     let config0 = fret_core::TextFontFamilyConfig {
@@ -2500,7 +2527,7 @@ fn fallback_policy_key_normalizes_family_candidates_and_stays_stable_across_case
         ..Default::default()
     };
     let _ = text.set_font_families(&config0);
-    let key0 = text.fallback_policy.fallback_policy_key;
+    let key0 = text.font_runtime.fallback_policy.fallback_policy_key;
 
     let config1 = fret_core::TextFontFamilyConfig {
         common_fallback_injection: fret_core::TextCommonFallbackInjection::CommonFallback,
@@ -2512,7 +2539,7 @@ fn fallback_policy_key_normalizes_family_candidates_and_stays_stable_across_case
         ..Default::default()
     };
     let _ = text.set_font_families(&config1);
-    let key1 = text.fallback_policy.fallback_policy_key;
+    let key1 = text.font_runtime.fallback_policy.fallback_policy_key;
 
     assert_eq!(
         key0, key1,
@@ -2579,13 +2606,16 @@ fn mixed_script_fallback_uses_bundled_faces_when_system_fonts_are_absent() {
 
     // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
     text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
     );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    text.font_runtime.generic_injections.clear();
+    text.font_runtime.font_db_revision = 0;
+    text.font_runtime.font_stack_key = 0;
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
@@ -2725,13 +2755,16 @@ fn mixed_script_fallback_uses_bundled_faces_for_named_family_when_system_fonts_a
 
     // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
     text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
     );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    text.font_runtime.generic_injections.clear();
+    text.font_runtime.font_db_revision = 0;
+    text.font_runtime.font_stack_key = 0;
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()

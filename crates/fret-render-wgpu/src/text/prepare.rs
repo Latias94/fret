@@ -67,7 +67,7 @@ impl TextSystem {
             text,
             style,
             constraints,
-            self.font_stack_key,
+            self.font_runtime.font_stack_key,
         );
         self.prepare_with_key(key, style, None, constraints)
     }
@@ -93,7 +93,7 @@ impl TextSystem {
             &rich,
             base_style,
             constraints,
-            self.font_stack_key,
+            self.font_runtime.font_stack_key,
         );
         self.prepare_with_key(key, base_style, Some(rich.spans.as_ref()), constraints)
     }

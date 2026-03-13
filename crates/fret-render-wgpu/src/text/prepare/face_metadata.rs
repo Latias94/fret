@@ -30,11 +30,11 @@ impl TextSystem {
                 missing_glyphs: usage.missing_glyphs,
             });
         }
-        self.font_trace.maybe_record(
+        self.font_runtime.font_trace.maybe_record(
             text,
             style,
             constraints,
-            &self.fallback_policy,
+            &self.font_runtime.fallback_policy,
             shape.missing_glyphs,
             families,
         );

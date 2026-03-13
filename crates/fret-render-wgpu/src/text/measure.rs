@@ -13,7 +13,7 @@ impl TextSystem {
             text,
             style,
             constraints,
-            self.font_stack_key,
+            self.font_runtime.font_stack_key,
         );
 
         #[cfg(any())]
@@ -221,7 +221,7 @@ impl TextSystem {
             rich,
             base_style,
             constraints,
-            self.font_stack_key,
+            self.font_runtime.font_stack_key,
         );
 
         #[cfg(any())]
