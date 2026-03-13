@@ -506,7 +506,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             );
             // `request_redraw()` alone may not wake the event loop on some platforms; schedule a
             // one-shot RAF so the initial frame presents without requiring any user input.
-            self.raf_windows.insert(id);
+            self.raf_windows.request(id);
         }
         Ok(id)
     }

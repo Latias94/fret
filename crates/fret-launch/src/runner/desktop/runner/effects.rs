@@ -374,9 +374,8 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
     }
 
     pub(super) fn drain_effects(&mut self, event_loop: &dyn ActiveEventLoop) {
-        const MAX_EFFECT_DRAIN_TURNS: usize = 8;
-
-        for _ in 0..MAX_EFFECT_DRAIN_TURNS {
+        let mut should_exit = false;
+        crate::runner::common::fixed_point::drain_bounded(|| {
             let now = Instant::now();
             let mut did_work = self.dispatcher.drain_turn(now);
             did_work |= self.drain_inboxes(None);
@@ -444,7 +443,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                             // Some platforms may not wake the event loop for `request_redraw()`
                             // alone; scheduling a one-shot RAF ensures the first frame presents
                             // without requiring any input events.
-                            self.raf_windows.insert(window);
+                            self.raf_windows.request(window);
                         }
                     }
                     Effect::ImeAllow { window, enabled } => {
@@ -534,7 +533,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         );
                         if changed && let Some(state) = self.windows.get(window) {
                             state.window.request_redraw();
-                            self.raf_windows.insert(window);
+                            self.raf_windows.request(window);
                         }
                     }
                     Effect::CursorSetIcon { window, icon } => {
@@ -546,7 +545,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         }
                     }
                     Effect::RequestAnimationFrame(window) => {
-                        self.raf_windows.insert(window);
+                        self.raf_windows.request(window);
                         if self.windows.contains_key(window) {
                             self.app.with_global_mut_untracked(
                                 fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
@@ -605,7 +604,8 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
 
                         self.dispatcher.shutdown();
                         event_loop.exit();
-                        return;
+                        should_exit = true;
+                        return false;
                     }
                     Effect::ShowAboutPanel => {
                         #[cfg(target_os = "macos")]
@@ -1501,13 +1501,15 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                 }
                                 self.dispatcher.shutdown();
                                 event_loop.exit();
-                                return;
+                                should_exit = true;
+                                return false;
                             }
 
                             if self.windows.is_empty() {
                                 self.dispatcher.shutdown();
                                 event_loop.exit();
-                                return;
+                                should_exit = true;
+                                return false;
                             }
                         }
                         WindowRequest::Create(create) => {
@@ -1983,8 +1985,12 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
             }
 
             if !did_work {
-                break;
+                return false;
             }
+            true
+        });
+        if should_exit {
+            return;
         }
     }
 

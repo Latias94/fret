@@ -405,19 +405,15 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     ) {
         // ADR 0034: coalesce and bound effect/event draining to prevent unbounded "effect storms"
         // while still allowing same-frame fixed-point progress for common chains.
-        const MAX_EFFECT_DRAIN_TURNS: usize = 8;
-
-        for _ in 0..MAX_EFFECT_DRAIN_TURNS {
+        crate::runner::common::fixed_point::drain_bounded(|| {
             if self.exiting {
-                break;
+                return false;
             }
 
             let mut did_work = self.drain_effects(event_loop, window, gfx, state);
             did_work |= self.dispatch_events(gfx, state);
-            if !did_work {
-                break;
-            }
-        }
+            did_work
+        });
     }
 
     fn with_runner_frame_state<R>(

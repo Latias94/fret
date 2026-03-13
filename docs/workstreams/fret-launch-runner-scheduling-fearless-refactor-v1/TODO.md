@@ -25,14 +25,16 @@ Companion docs:
 - [ ] Add a launch-internal scheduling module for shared semantics:
   - [x] turn bookkeeping
   - [x] frame commit bookkeeping
-  - [ ] redraw / RAF coalescing
-  - [ ] bounded fixed-point drain policy
+  - [x] RAF coalescing
+  - [x] bounded fixed-point drain policy
+- [x] Keep one-shot redraw coalescing app-owned in `fret-app`.
 - [x] Keep the extracted surface internal-only; do not widen public crate exports.
 - [ ] Add unit tests for:
   - [x] `TickId` incrementing once per runner turn
   - [x] `FrameId` incrementing only on committed present
-  - [ ] redraw request coalescing
-  - [ ] RAF request coalescing
+  - [x] RAF request coalescing
+  - [x] bounded fixed-point drain policy
+  - [ ] redraw request coalescing ownership remains explicitly documented in `fret-app`
 
 ## Desktop runner adoption
 

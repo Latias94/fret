@@ -250,7 +250,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     #[cfg(target_os = "linux")]
     linux_portal_settings_listener_started: bool,
 
-    raf_windows: HashSet<fret_core::AppWindowId>,
+    raf_windows: crate::runner::common::frame_requests::AnimationFrameRequests,
     timers: HashMap<fret_runtime::TimerToken, TimerEntry>,
     clipboard: NativeClipboard,
     diag_clipboard_force_unavailable_windows: HashSet<fret_core::AppWindowId>,

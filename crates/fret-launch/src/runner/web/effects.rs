@@ -1175,7 +1175,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 }
                 Effect::RequestAnimationFrame(target) => {
                     if target == self.app_window {
-                        window.request_redraw();
+                        self.raf_windows.request(target);
                         self.app.with_global_mut_untracked(
                             fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
                             |store, _app| {

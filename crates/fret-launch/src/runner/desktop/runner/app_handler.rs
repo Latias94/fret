@@ -2206,7 +2206,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                         );
                                     },
                                 );
-                                self.raf_windows.insert(app_window);
+                                self.raf_windows.request(app_window);
                                 return;
                             }
                             fret_render::RenderError::SurfaceAcquireFailed {
@@ -2232,7 +2232,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                         );
                                     },
                                 );
-                                self.raf_windows.insert(app_window);
+                                self.raf_windows.request(app_window);
                                 return;
                             }
                             fret_render::RenderError::SurfaceAcquireFailed {
@@ -2252,7 +2252,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                         );
                                     },
                                 );
-                                self.raf_windows.insert(app_window);
+                                self.raf_windows.request(app_window);
                                 return;
                             }
                             fret_render::RenderError::SurfaceAcquireFailed {
@@ -2891,7 +2891,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         let follow_poll = self.dock_tearoff_follow.is_some();
         let wants_poll = drag_poll || follow_poll;
 
-        let wants_raf = !self.raf_windows.is_empty();
+        let wants_raf = self.raf_windows.has_pending();
         if wants_raf {
             for app_window in self.raf_windows.drain() {
                 if let Some(state) = self.windows.get(app_window) {

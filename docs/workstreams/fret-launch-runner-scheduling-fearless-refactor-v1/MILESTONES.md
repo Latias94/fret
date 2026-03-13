@@ -10,7 +10,9 @@ Last updated: 2026-03-13
   - shared turn/frame scheduling helper landed,
   - pure counter semantics tests landed,
   - slot-restoration seam and its regression tests landed,
-  - redraw/RAF coalescing extraction still pending.
+  - shared RAF coalescing helper landed,
+  - shared bounded fixed-point helper landed,
+  - app-owned redraw coalescing ownership is now explicit.
 - M2: Partial
   - desktop `TickId` turn advancement and `FrameId` present commitment now use the shared helper,
   - native timer participation in the bounded drain has now been audited,
@@ -20,10 +22,11 @@ Last updated: 2026-03-13
   - web `FrameId` commitment moved to the post-present path,
   - web frame-state restoration on surface acquire failure is now in place,
   - wake-path audit is now documented,
-  - redraw/RAF coalescing extraction is still pending.
+  - web RAF scheduling now flushes from `about_to_wait()` through the shared helper.
 - M4: Partial
   - ADR 0034 wording was confirmed stable for v1,
-  - implementation-alignment evidence now reflects the shared turn/frame seam and web recovery path.
+  - implementation-alignment evidence now reflects the shared turn/frame seam, shared RAF queue,
+    shared bounded drain helper, and web recovery path.
 
 ## M0 — Workstream agreed
 
@@ -109,13 +112,13 @@ Exit criteria:
 
 ## Remaining closeout blockers (from the current checkpoint)
 
-- shared redraw / RAF coalescing rules are still backend-local,
-- bounded fixed-point drain is still duplicated in backend-local code shape,
 - diagnostics writes still need a turn/frame semantic audit,
-- module thinning is intentionally deferred until semantics and evidence are fully locked.
+- module thinning is intentionally deferred until semantics and evidence are fully locked,
+- remaining backend-local redraw logic still needs an explicit “acceptable sink wiring vs drift”
+  decision.
 
 ## Recommended continuation order
 
-1. Land a dedicated slice for redraw / RAF coalescing semantics.
-2. Land a dedicated slice for diagnostics meaning and regression evidence.
+1. Land a dedicated slice for diagnostics meaning and regression evidence.
+2. Decide whether remaining redraw sink wiring is acceptable as-is.
 3. Only then decide whether structural thinning belongs here or in a separate workstream.

@@ -30,6 +30,18 @@ Implementation update (2026-03-13, batch 2):
   clipboard/file-dialog completions, and devtools keepalive redraw all converge without bypassing
   the next runner turn boundary.
 
+Implementation update (2026-03-13, batch 3):
+
+- Launch now has a shared RAF coalescing helper
+  (`crates/fret-launch/src/runner/common/frame_requests.rs`) used by both desktop and web runners.
+- Web `Effect::RequestAnimationFrame` is now coalesced through the shared helper and flushed from
+  `about_to_wait()`, matching desktop's turn-boundary scheduling shape more closely.
+- The bounded fixed-point drain policy now also uses a shared helper
+  (`crates/fret-launch/src/runner/common/fixed_point.rs`) instead of duplicating the `max=8`
+  loop skeleton in both backends.
+- One-shot redraw coalescing remains intentionally app-owned in `crates/fret-app`; this batch does
+  not move that responsibility into `fret-launch`.
+
 ## Context
 
 Fret's architecture already places the scheduling and presentation responsibility in the correct
@@ -376,11 +388,8 @@ Further deduplication should be justified by either:
 
 The main blockers before calling v1 "closed" are now:
 
-1. shared redraw / RAF coalescing semantics,
-2. a decision on whether bounded fixed-point drain needs shared code or only shared policy plus
-   tests,
-3. diagnostics-store auditing for turn/frame-drive/present meaning,
-4. an explicit decision on which cleanup belongs in this workstream versus a later one.
+1. diagnostics-store auditing for turn/frame-drive/present meaning,
+2. an explicit decision on which cleanup belongs in this workstream versus a later one.
 
 ## Recommended next implementation slices
 
@@ -390,15 +399,14 @@ The safest continuation from this checkpoint is to keep future work narrow and r
 
 Recommended scope:
 
-- extract shared internal rules for one-shot redraw and RAF coalescing,
-- add focused tests for those rules,
-- keep backend-specific wake sinks untouched.
+- completed in batch 3 for RAF coalescing and bounded drain skeleton,
+- redraw coalescing remains app-owned and should stay there unless ADR ownership changes.
 
-Avoid in this slice:
+Follow-up only if needed:
 
-- diagnostics cleanup,
-- large module thinning,
-- timer abstraction redesign.
+- tighten diagnostics around the shared RAF queue,
+- decide whether any remaining redraw-related duplication is actually semantic drift or only sink
+  wiring.
 
 ### Slice B — diagnostics semantic audit
 
@@ -445,6 +453,9 @@ Additional targeted gates recommended for this workstream:
 - Scheduling contract: `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
 - App redraw/effect coalescing: `crates/fret-app/src/app.rs`
 - Launch facade: `crates/fret-launch/src/lib.rs`
+- App-owned redraw coalescing: `crates/fret-app/src/app.rs`
+- Shared fixed-point helper: `crates/fret-launch/src/runner/common/fixed_point.rs`
+- Shared RAF coalescing helper: `crates/fret-launch/src/runner/common/frame_requests.rs`
 - Shared turn/frame seam: `crates/fret-launch/src/runner/common/scheduling.rs`
 - Shared slot restoration seam: `crates/fret-launch/src/runner/common/slot_restore.rs`
 - Desktop runner entry: `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`
@@ -460,7 +471,7 @@ Additional targeted gates recommended for this workstream:
 These do not block the documentation phase, but they should be answered before large code moves.
 
 1. Should the shared scheduling core also own wake-reason diagnostics, or only the turn/frame
-   counters and request coalescing?
+   counters, RAF queue, and bounded drain policy?
 2. Should desktop adopt the same frame-resource guard pattern as web, even if its immediate bug
    profile is lower?
 3. Should the desktop timer table and web DOM timers remain intentionally separate in v1, with only
@@ -472,8 +483,16 @@ These do not block the documentation phase, but they should be answered before l
 
 If we start coding after this documentation lands, the safest first batch is:
 
-1. add scheduling-unit-test scaffolding inside `fret-launch`,
-2. introduce a launch-internal turn/frame bookkeeping helper,
-3. refactor web `render_frame()` to restore state on all abort paths,
-4. move web `FrameId` commit to the post-present path,
-5. only then start thinning desktop/web duplicated scheduling code.
+Completed:
+
+1. scheduling-unit-test scaffolding inside `fret-launch`,
+2. a launch-internal turn/frame bookkeeping helper,
+3. web `render_frame()` restoration on all abort paths,
+4. web `FrameId` commit moved to the post-present path,
+5. shared RAF queue + shared bounded fixed-point helper.
+
+Recommended next code batch:
+
+1. audit diagnostics stores keyed by `TickId` / `FrameId`,
+2. decide whether any remaining backend-local redraw logic is acceptable sink wiring,
+3. only then thin large backend modules.
