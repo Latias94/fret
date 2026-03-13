@@ -96,6 +96,7 @@ impl ComboboxStyle {
 ///
 /// Upstream shadcn/ui v4 returns a DOM ref (`useComboboxAnchor()`) used to anchor the popup. In
 /// Fret, we model the same outcome by wrapping a child element and exposing a stable element ID.
+/// This intentionally stays raw because `PopoverAnchor::new(...)` stores a concrete landed child.
 pub fn use_combobox_anchor(child: AnyElement) -> PopoverAnchor {
     PopoverAnchor::new(child)
 }
@@ -2229,7 +2230,7 @@ fn combobox_with_patch<H: UiHost>(
         let listbox_id_for_diag = Rc::new(Cell::new(None));
         let listbox_id_for_diag_for_content = listbox_id_for_diag.clone();
 
-        let mut popover = Popover::new(open.clone())
+        let mut popover = Popover::from_open(open.clone())
             .auto_focus(true)
             .consume_outside_pointer_events(consume_outside_pointer_events)
             .motion_durations(

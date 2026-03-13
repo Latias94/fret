@@ -66,6 +66,13 @@ Guidelines:
 
 - Prefer `local_model_keyed(...)` as the default copyable authoring surface when the state is local
   to one element subtree but still needs to be a `Model<T>`.
+- For recipe-local binding sets (dropdown checkbox models, per-column visibility/pinning toggles,
+  faceted filter options, similar “one model per semantic id” surfaces), derive each binding with
+  `local_model_keyed((surface, semantic_id), ...)` instead of caching a `Vec<Model<_>>` inside
+  helper state.
+- Keep only small synchronization scratch in helper slots: previous-open edges, last-synced state
+  revisions, and other non-observable runtime metadata should live in `slot_state(...)` or an
+  explicit `state_for(keyed_slot_id(...), ...)` slot.
 - Reserve `with_state + App::models_mut().insert(...)` for low-level migration/compat work, not as
   the teaching surface for new code.
 - If a value affects rendering, make it observable (model or element state), otherwise view caching

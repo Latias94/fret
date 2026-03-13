@@ -302,7 +302,7 @@ impl ScrollAreaRoot {
             } = viewport;
 
             let handle = scroll_handle
-                .unwrap_or_else(|| cx.with_state(ScrollHandle::default, |h| h.clone()));
+                .unwrap_or_else(|| cx.slot_state(ScrollHandle::default, |h| h.clone()));
 
             let visible = show_scrollbar
                 && fret_ui_kit::primitives::scroll_area::scrollbar_visibility(

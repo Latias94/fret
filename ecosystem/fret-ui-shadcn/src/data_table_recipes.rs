@@ -1,5 +1,5 @@
 use std::cell::Cell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -103,6 +103,25 @@ fn sync_global_filter<H: UiHost>(app: &mut H, state: &Model<TableState>, value: 
     let _ = app.models_mut().update(state, |st| {
         let _ = apply_global_filter_change(st, value);
     });
+}
+
+fn global_filter_text(state: &TableState) -> String {
+    state
+        .global_filter
+        .as_ref()
+        .and_then(|v| v.as_str())
+        .unwrap_or_default()
+        .to_string()
+}
+
+fn column_filter_text(state: &TableState, column_id: &ColumnId) -> String {
+    state
+        .column_filters
+        .iter()
+        .find(|f| f.column.as_ref() == column_id.as_ref())
+        .and_then(|f| f.value.as_str())
+        .unwrap_or_default()
+        .to_string()
 }
 
 fn apply_column_visibility_change(
@@ -246,14 +265,36 @@ impl Clone for FacetedFilterItemBinding {
     }
 }
 
+fn selected_faceted_values(state: &TableState, column_id: &ColumnId) -> HashSet<Arc<str>> {
+    state
+        .column_filters
+        .iter()
+        .find(|f| f.column.as_ref() == column_id.as_ref())
+        .map(|f| f.value.clone())
+        .and_then(|v| match v {
+            Value::String(s) => Some(vec![Arc::<str>::from(s)]),
+            Value::Array(items) => Some(
+                items
+                    .into_iter()
+                    .filter_map(|it| it.as_str().map(|s| Arc::<str>::from(s)))
+                    .collect::<Vec<_>>(),
+            ),
+            _ => None,
+        })
+        .unwrap_or_default()
+        .into_iter()
+        .collect()
+}
+
 #[derive(Default)]
-struct DataTableToolbarState {
+struct DataTableToolbarRuntime {
     faceted_last_open: Option<bool>,
     faceted_column: Option<ColumnId>,
-    faceted_items: Vec<FacetedFilterItemBinding>,
-    column_visibility: Vec<ColumnVisibilityBinding>,
-    column_pinning: Vec<ColumnPinningBinding>,
-    last_synced_state_revision: Option<u64>,
+    last_global_filter: Option<String>,
+    last_column_filter: Option<(ColumnId, String)>,
+    last_visibility: HashMap<ColumnId, bool>,
+    last_pinning: HashMap<ColumnId, Option<ColumnPinPosition>>,
+    last_faceted_selected: Option<(ColumnId, HashSet<Arc<str>>)>,
 }
 
 /// shadcn/ui `DataTable` toolbar (recipe).
@@ -494,28 +535,16 @@ impl<TData> DataTableToolbar<TData> {
                     .layout()
                     .cloned()
                     .unwrap_or_default();
-                let state_revision = self.state.revision(&*cx.app).unwrap_or(0);
+                let toolbar_runtime_id = cx.keyed_slot_id("toolbar_runtime");
 
                 let filter_model = self.show_global_filter.then(|| {
-                    cx.local_model_keyed("filter_model", || {
-                        state_value
-                            .global_filter
-                            .as_ref()
-                            .and_then(|v| v.as_str())
-                            .unwrap_or_default()
-                            .to_string()
-                    })
+                    cx.local_model_keyed("filter_model", || global_filter_text(&state_value))
                 });
 
                 let column_filter_model = self.column_filter.as_ref().map(|column_id| {
-                    cx.local_model_keyed("column_filter_model", || {
-                        state_value
-                            .column_filters
-                            .iter()
-                            .find(|f| f.column.as_ref() == column_id.as_ref())
-                            .and_then(|f| f.value.as_str())
-                            .unwrap_or_default()
-                            .to_string()
+                    let column_id = column_id.clone();
+                    cx.local_model_keyed(("column_filter_model", column_id.clone()), || {
+                        column_filter_text(&state_value, &column_id)
                     })
                 });
 
@@ -534,158 +563,218 @@ impl<TData> DataTableToolbar<TData> {
 
                 if let (Some(open), Some(query)) = (faceted_open.as_ref(), faceted_query.as_ref()) {
                     let open_now = cx.watch_model(open).layout().copied().unwrap_or(false);
-                    let last_open =
-                        cx.with_state(DataTableToolbarState::default, |st| st.faceted_last_open);
-                    if last_open == Some(true) && !open_now {
+                    let should_clear_query_on_close =
+                        cx.state_for(toolbar_runtime_id, DataTableToolbarRuntime::default, |st| {
+                            let should_clear = st.faceted_last_open == Some(true) && !open_now;
+                            st.faceted_last_open = Some(open_now);
+                            should_clear
+                        });
+                    if should_clear_query_on_close {
                         let _ = cx.app.models_mut().update(query, |s| s.clear());
                     }
-                    cx.with_state(DataTableToolbarState::default, move |st| {
-                        st.faceted_last_open = Some(open_now);
+                } else {
+                    cx.state_for(toolbar_runtime_id, DataTableToolbarRuntime::default, |st| {
+                        st.faceted_last_open = None;
                     });
                 }
 
-                let mut bindings = cx.with_state(DataTableToolbarState::default, |st| {
-                    st.column_visibility.clone()
-                });
-                if bindings.is_empty() {
-                    bindings = self
-                        .columns
+                let bindings: Vec<ColumnVisibilityBinding> = self
+                    .columns
+                    .iter()
+                    .filter(|c| c.enable_hiding)
+                    .map(|c| ColumnVisibilityBinding {
+                        id: c.id.clone(),
+                        model: cx.local_model_keyed(("column_visibility", c.id.clone()), || {
+                            is_column_visible(&state_value, &c.id)
+                        }),
+                    })
+                    .collect();
+
+                let desired_visibility_from_state: HashMap<ColumnId, bool> = bindings
+                    .iter()
+                    .map(|binding| {
+                        (
+                            binding.id.clone(),
+                            is_column_visible(&state_value, &binding.id),
+                        )
+                    })
+                    .collect();
+
+                let pinning_bindings: Vec<ColumnPinningBinding> = self
+                    .columns
+                    .iter()
+                    .filter(|c| c.enable_pinning)
+                    .map(|c| ColumnPinningBinding {
+                        id: c.id.clone(),
+                        model: cx.local_model_keyed(("column_pinning", c.id.clone()), || {
+                            Some(pin_position_model_value(&state_value, &c.id))
+                        }),
+                    })
+                    .collect();
+
+                let desired_pinning_from_state: HashMap<ColumnId, Option<ColumnPinPosition>> =
+                    pinning_bindings
                         .iter()
-                        .filter(|c| c.enable_hiding)
-                        .map(|c| ColumnVisibilityBinding {
-                            id: c.id.clone(),
-                            model: cx
-                                .app
-                                .models_mut()
-                                .insert(is_column_visible(&state_value, &c.id)),
+                        .map(|binding| {
+                            (
+                                binding.id.clone(),
+                                column_pin_position(&state_value, &binding.id),
+                            )
                         })
                         .collect();
-                    let next = bindings.clone();
-                    cx.with_state(DataTableToolbarState::default, |st| {
-                        st.column_visibility = next
-                    });
-                }
 
-                let mut pinning_bindings = cx.with_state(DataTableToolbarState::default, |st| {
-                    st.column_pinning.clone()
-                });
-                if pinning_bindings.is_empty() {
-                    pinning_bindings = self
-                        .columns
-                        .iter()
-                        .filter(|c| c.enable_pinning)
-                        .map(|c| ColumnPinningBinding {
-                            id: c.id.clone(),
-                            model: cx
-                                .app
-                                .models_mut()
-                                .insert(Some(pin_position_model_value(&state_value, &c.id))),
-                        })
-                        .collect();
-                    let next = pinning_bindings.clone();
-                    cx.with_state(DataTableToolbarState::default, |st| {
-                        st.column_pinning = next
+                let faceted_column =
+                    cx.state_for(toolbar_runtime_id, DataTableToolbarRuntime::default, |st| {
+                        st.faceted_column.clone()
                     });
-                }
-
-                let mut faceted_items = cx.with_state(DataTableToolbarState::default, |st| {
-                    st.faceted_items.clone()
-                });
-                let faceted_column = cx.with_state(DataTableToolbarState::default, |st| {
-                    st.faceted_column.clone()
-                });
+                let mut faceted_items: Vec<FacetedFilterItemBinding> = Vec::new();
+                let mut selected_faceted_from_state: Option<(ColumnId, HashSet<Arc<str>>)> = None;
                 if let Some(cfg) = self.faceted_filter.as_ref() {
+                    let selected = selected_faceted_values(&state_value, &cfg.column_id);
+                    selected_faceted_from_state = Some((cfg.column_id.clone(), selected.clone()));
                     let column_changed = faceted_column
                         .as_ref()
                         .is_none_or(|id| id.as_ref() != cfg.column_id.as_ref());
-                    let should_rebuild = column_changed || faceted_items.len() != cfg.options.len();
-                    if should_rebuild {
-                        let selected: std::collections::HashSet<Arc<str>> = state_value
-                            .column_filters
-                            .iter()
-                            .find(|f| f.column.as_ref() == cfg.column_id.as_ref())
-                            .map(|f| f.value.clone())
-                            .and_then(|v| match v {
-                                Value::String(s) => Some(vec![Arc::<str>::from(s)]),
-                                Value::Array(items) => Some(
-                                    items
-                                        .into_iter()
-                                        .filter_map(|it| it.as_str().map(|s| Arc::<str>::from(s)))
-                                        .collect::<Vec<_>>(),
-                                ),
-                                _ => None,
-                            })
-                            .unwrap_or_default()
-                            .into_iter()
-                            .collect();
+                    faceted_items = cfg
+                        .options
+                        .iter()
+                        .map(|opt| FacetedFilterItemBinding {
+                            value: opt.value.clone(),
+                            label: opt.label.clone(),
+                            icon: opt.icon.clone(),
+                            model: cx.local_model_keyed(
+                                ("faceted_item", cfg.column_id.clone(), opt.value.clone()),
+                                || selected.contains(&opt.value),
+                            ),
+                        })
+                        .collect();
 
-                        faceted_items = cfg
-                            .options
-                            .iter()
-                            .map(|opt| FacetedFilterItemBinding {
-                                value: opt.value.clone(),
-                                label: opt.label.clone(),
-                                icon: opt.icon.clone(),
-                                model: cx.app.models_mut().insert(selected.contains(&opt.value)),
-                            })
-                            .collect();
-                        let next_items = faceted_items.clone();
-                        let next_column = cfg.column_id.clone();
-                        cx.with_state(DataTableToolbarState::default, move |st| {
-                            st.faceted_items = next_items;
-                            st.faceted_column = Some(next_column);
-                        });
+                    cx.state_for(toolbar_runtime_id, DataTableToolbarRuntime::default, |st| {
+                        st.faceted_column = Some(cfg.column_id.clone());
+                    });
 
-                        if column_changed {
-                            if let Some(model) = faceted_query.as_ref() {
-                                let _ = cx.app.models_mut().update(model, |s| s.clear());
-                            }
+                    if column_changed {
+                        if let Some(model) = faceted_query.as_ref() {
+                            let _ = cx.app.models_mut().update(model, |s| s.clear());
                         }
+                    }
+                } else {
+                    cx.state_for(toolbar_runtime_id, DataTableToolbarRuntime::default, |st| {
+                        st.faceted_column = None;
+                    });
+                }
+
+                if let Some(filter_model) = filter_model.as_ref() {
+                    let desired = global_filter_text(&state_value);
+                    let should_sync =
+                        cx.state_for(toolbar_runtime_id, DataTableToolbarRuntime::default, |st| {
+                            let changed = st.last_global_filter.as_ref() != Some(&desired);
+                            if changed {
+                                st.last_global_filter = Some(desired.clone());
+                            }
+                            changed
+                        });
+                    if should_sync {
+                        let _ = cx.app.models_mut().update(filter_model, |v| {
+                            if *v != desired {
+                                *v = desired.clone();
+                            }
+                        });
+                    }
+                } else {
+                    cx.state_for(toolbar_runtime_id, DataTableToolbarRuntime::default, |st| {
+                        st.last_global_filter = None;
+                    });
+                }
+
+                if let (Some(column_id), Some(model)) =
+                    (self.column_filter.as_ref(), column_filter_model.as_ref())
+                {
+                    let desired = column_filter_text(&state_value, column_id);
+                    let key = (column_id.clone(), desired.clone());
+                    let should_sync =
+                        cx.state_for(toolbar_runtime_id, DataTableToolbarRuntime::default, |st| {
+                            let changed = st.last_column_filter.as_ref() != Some(&key);
+                            if changed {
+                                st.last_column_filter = Some(key.clone());
+                            }
+                            changed
+                        });
+                    if should_sync {
+                        let _ = cx.app.models_mut().update(model, |v| {
+                            if *v != desired {
+                                *v = desired.clone();
+                            }
+                        });
+                    }
+                } else {
+                    cx.state_for(toolbar_runtime_id, DataTableToolbarRuntime::default, |st| {
+                        st.last_column_filter = None;
+                    });
+                }
+
+                let should_sync_visibility =
+                    cx.state_for(toolbar_runtime_id, DataTableToolbarRuntime::default, |st| {
+                        let changed = st.last_visibility != desired_visibility_from_state;
+                        if changed {
+                            st.last_visibility = desired_visibility_from_state.clone();
+                        }
+                        changed
+                    });
+                if should_sync_visibility {
+                    for binding in bindings.iter() {
+                        let desired = desired_visibility_from_state
+                            .get(&binding.id)
+                            .copied()
+                            .unwrap_or(true);
+                        let _ = cx.app.models_mut().update(&binding.model, |v| *v = desired);
                     }
                 }
 
-                let last_synced_state_revision = cx
-                    .with_state(DataTableToolbarState::default, |st| {
-                        st.last_synced_state_revision
+                let should_sync_pinning =
+                    cx.state_for(toolbar_runtime_id, DataTableToolbarRuntime::default, |st| {
+                        let changed = st.last_pinning != desired_pinning_from_state;
+                        if changed {
+                            st.last_pinning = desired_pinning_from_state.clone();
+                        }
+                        changed
                     });
-                if last_synced_state_revision != Some(state_revision) {
+                if should_sync_pinning {
                     for binding in pinning_bindings.iter() {
-                        let desired = Some(pin_position_model_value(&state_value, &binding.id));
+                        let desired = desired_pinning_from_state
+                            .get(&binding.id)
+                            .cloned()
+                            .unwrap_or(None);
+                        let desired = desired.map(|pos| match pos {
+                            ColumnPinPosition::Left => Arc::<str>::from("left"),
+                            ColumnPinPosition::Right => Arc::<str>::from("right"),
+                        });
+                        let desired = Some(desired.unwrap_or_else(|| Arc::<str>::from("none")));
                         let _ = cx
                             .app
                             .models_mut()
                             .update(&binding.model, |v| *v = desired.clone());
                     }
+                }
 
-                    if let Some(cfg) = self.faceted_filter.as_ref() {
-                        let selected: std::collections::HashSet<Arc<str>> = state_value
-                            .column_filters
-                            .iter()
-                            .find(|f| f.column.as_ref() == cfg.column_id.as_ref())
-                            .map(|f| f.value.clone())
-                            .and_then(|v| match v {
-                                Value::String(s) => Some(vec![Arc::<str>::from(s)]),
-                                Value::Array(items) => Some(
-                                    items
-                                        .into_iter()
-                                        .filter_map(|it| it.as_str().map(|s| Arc::<str>::from(s)))
-                                        .collect::<Vec<_>>(),
-                                ),
-                                _ => None,
-                            })
-                            .unwrap_or_default()
-                            .into_iter()
-                            .collect();
-
-                        for item in faceted_items.iter() {
-                            let desired = selected.contains(&item.value);
-                            let _ = cx.app.models_mut().update(&item.model, |v| *v = desired);
+                let should_sync_faceted =
+                    cx.state_for(toolbar_runtime_id, DataTableToolbarRuntime::default, |st| {
+                        let changed = st.last_faceted_selected != selected_faceted_from_state;
+                        if changed {
+                            st.last_faceted_selected = selected_faceted_from_state.clone();
                         }
-                    }
-
-                    cx.with_state(DataTableToolbarState::default, |st| {
-                        st.last_synced_state_revision = Some(state_revision);
+                        changed
                     });
+                if should_sync_faceted {
+                    let selected = selected_faceted_from_state
+                        .as_ref()
+                        .map(|(_, values)| values)
+                        .cloned()
+                        .unwrap_or_default();
+                    for item in faceted_items.iter() {
+                        let desired = selected.contains(&item.value);
+                        let _ = cx.app.models_mut().update(&item.model, |v| *v = desired);
+                    }
                 }
 
                 if let Some(filter_model) = filter_model.as_ref() {
@@ -955,11 +1044,11 @@ impl<TData> DataTableToolbar<TData> {
                 let counts_for_content = Arc::new(counts);
                 let input_id_cell_for_content = input_id_cell.clone();
 
-                Popover::new(open)
+                Popover::from_open(open)
                     .align(PopoverAlign::Start)
                     .auto_focus(true)
                     .initial_focus_from_cell(input_id_cell)
-                    .into_element(
+                    .into_element_with(
                         cx,
                         move |cx| {
                              PopoverTrigger::new(
@@ -1432,11 +1521,6 @@ impl<TData> DataTableToolbar<TData> {
     }
 }
 
-#[derive(Default)]
-struct DataTablePaginationState {
-    last_synced_page_size: Option<usize>,
-}
-
 /// shadcn/ui `DataTable` pagination (recipe).
 ///
 /// This is a v1 surface wired to `TableState.pagination`.
@@ -1484,6 +1568,7 @@ impl DataTablePagination {
 
         let page_size_open = cx.local_model_keyed("page_size_open", || false);
         let page_size_value = cx.local_model_keyed("page_size_value", || None::<Arc<str>>);
+        let pagination_runtime_id = cx.keyed_slot_id("pagination_runtime");
 
         let current_size = state_value.pagination.page_size;
         let current_size_str: Arc<str> = Arc::from(current_size.to_string());
@@ -1494,9 +1579,7 @@ impl DataTablePagination {
             .cloned()
             .unwrap_or(None);
 
-        let last_synced_page_size = cx.with_state(DataTablePaginationState::default, |st| {
-            st.last_synced_page_size
-        });
+        let last_synced_page_size = cx.state_for(pagination_runtime_id, || None::<usize>, |st| *st);
 
         // Treat `TableState.pagination.page_size` as the source of truth. The dropdown's internal
         // model must follow external updates (e.g. programmatic page size changes) and only drive
@@ -1508,9 +1591,13 @@ impl DataTablePagination {
                 .app
                 .models_mut()
                 .update(&page_size_value, |v| *v = Some(current_size_str.clone()));
-            cx.with_state(DataTablePaginationState::default, |st| {
-                st.last_synced_page_size = Some(current_size);
-            });
+            cx.state_for(
+                pagination_runtime_id,
+                || None::<usize>,
+                |st| {
+                    *st = Some(current_size);
+                },
+            );
         } else if let Some(sel) = selected_value {
             match sel.as_ref().parse::<usize>() {
                 Ok(next) if next != current_size => {
@@ -1519,9 +1606,13 @@ impl DataTablePagination {
                         st.pagination.page_size = next;
                         st.pagination.page_index = 0;
                     });
-                    cx.with_state(DataTablePaginationState::default, |st| {
-                        st.last_synced_page_size = Some(next);
-                    });
+                    cx.state_for(
+                        pagination_runtime_id,
+                        || None::<usize>,
+                        |st| {
+                            *st = Some(next);
+                        },
+                    );
                 }
                 Ok(_) => {}
                 Err(_) => {
@@ -1529,9 +1620,13 @@ impl DataTablePagination {
                         .app
                         .models_mut()
                         .update(&page_size_value, |v| *v = Some(current_size_str.clone()));
-                    cx.with_state(DataTablePaginationState::default, |st| {
-                        st.last_synced_page_size = Some(current_size);
-                    });
+                    cx.state_for(
+                        pagination_runtime_id,
+                        || None::<usize>,
+                        |st| {
+                            *st = Some(current_size);
+                        },
+                    );
                 }
             }
         }

@@ -184,8 +184,15 @@ Practical guidance:
 - Use `keyed` whenever the child set can reorder or be filtered.
 - Prefer `local_model` / `local_model_keyed` for authored local `Model<T>` state instead of
   hand-rolling `with_state + app.models_mut().insert(...)` shells.
+- For recipe-owned per-item/per-column bindings (for example table toolbar visibility toggles,
+  pinning radios, or faceted-filter option toggles), key the local model by a semantic id such as
+  `(surface, column_id)` or `(surface, option_value)` instead of caching `Vec<Model<_>>` shells in
+  helper state.
 - Use `root_state` for shared per-root runtime state, `slot_state` for helper internals such as
   uncontrolled models/hysteresis/memo caches, and `provide` for inherited provider values.
+- Keep helper-local sync metadata small: previous-open flags, last-synced revisions, and similar
+  scratch values belong in `slot_state(...)` or `state_for(keyed_slot_id(...), ...)`, not in
+  compatibility `with_state(...)` wrappers that also manufacture models.
 - Avoid capturing element IDs in long-lived app state unless you also control their lifetime and
   re-derivation strategy (IDs are stable but not global identifiers).
 
