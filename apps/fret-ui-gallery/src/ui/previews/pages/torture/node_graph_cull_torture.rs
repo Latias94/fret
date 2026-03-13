@@ -235,34 +235,11 @@ pub(in crate::ui) fn preview_node_graph_cull_torture(
         graph
     }
 
-    #[derive(Default)]
-    struct HarnessState {
-        graph: Option<Model<Graph>>,
-        view: Option<Model<NodeGraphViewState>>,
-    }
-
-    let existing = cx.with_state(HarnessState::default, |st| {
-        match (st.graph.clone(), st.view.clone()) {
-            (Some(graph), Some(view)) => Some((graph, view)),
-            _ => None,
-        }
-    });
-
-    let (graph, view) = if let Some((graph, view)) = existing {
-        (graph, view)
-    } else {
+    let graph = cx.local_model_keyed("graph", || {
         let graph_id = GraphId::from_u128(1);
-        let graph = build_stress_graph(graph_id, 8_000);
-        let graph = cx.app.models_mut().insert(graph);
-        let view = cx.app.models_mut().insert(NodeGraphViewState::default());
-
-        cx.with_state(HarnessState::default, |st| {
-            st.graph = Some(graph.clone());
-            st.view = Some(view.clone());
-        });
-
-        (graph, view)
-    };
+        build_stress_graph(graph_id, 8_000)
+    });
+    let view = cx.local_model_keyed("view", NodeGraphViewState::default);
 
     let surface =
         cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {

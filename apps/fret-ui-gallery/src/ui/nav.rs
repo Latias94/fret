@@ -149,8 +149,8 @@ pub(crate) fn sidebar_view(
 ) -> AnyElement {
     let bisect = ui_gallery_bisect_flags();
 
-    let nav_scroll_handle = cx.with_state(ScrollHandle::default, |h| h.clone());
-    let nav_query_changed = cx.with_state(String::new, |last_query| {
+    let nav_scroll_handle = cx.slot_state(ScrollHandle::default, |h| h.clone());
+    let nav_query_changed = cx.slot_state(String::new, |last_query| {
         if last_query.as_str() == query {
             false
         } else {

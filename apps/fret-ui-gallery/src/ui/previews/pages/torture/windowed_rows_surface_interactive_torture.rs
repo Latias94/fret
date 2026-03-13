@@ -29,7 +29,7 @@ pub(in crate::ui) fn preview_windowed_rows_surface_interactive_torture(
     let row_h = Px(22.0);
     let overscan = 16usize;
 
-    let scroll_handle = cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
+    let scroll_handle = cx.slot_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
 
     let surface =
         cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {

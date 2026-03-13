@@ -138,7 +138,7 @@ pub(in crate::ui) fn preview_view_cache(
             .gap(Space::N3).into_element(cx);
 
     let subtree_body = |cx: &mut UiCx<'_>| -> Vec<AnyElement> {
-        let render_count = cx.with_state(
+        let render_count = cx.slot_state(
             || 0u64,
             |v| {
                 *v = v.saturating_add(1);
@@ -146,8 +146,10 @@ pub(in crate::ui) fn preview_view_cache(
             },
         );
 
+        let lease_slot = cx.keyed_slot_id("continuous_frames_lease");
         let mut needs_lease = false;
-        cx.with_state(
+        cx.state_for(
+            lease_slot,
             || None::<ContinuousFrames>,
             |lease| {
                 if continuous {
@@ -161,7 +163,8 @@ pub(in crate::ui) fn preview_view_cache(
         );
         if needs_lease {
             let lease = cx.begin_continuous_frames();
-            cx.with_state(
+            cx.state_for(
+                lease_slot,
                 || None::<ContinuousFrames>,
                 |slot| {
                     *slot = Some(lease);

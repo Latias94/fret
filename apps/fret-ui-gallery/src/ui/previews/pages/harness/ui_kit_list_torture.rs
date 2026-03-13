@@ -3,28 +3,13 @@ use crate::ui::doc_layout::{self, DocSection};
 use fret::UiCx;
 use fret_ui::element::ContainerProps;
 
-#[derive(Default)]
-struct UiKitListTortureModels {
-    selection: Option<Model<Option<usize>>>,
-}
-
 pub(in crate::ui) fn preview_ui_kit_list_torture(
     cx: &mut UiCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
-    let selection = cx.with_state(UiKitListTortureModels::default, |st| st.selection.clone());
-    let selection = match selection {
-        Some(selection) => selection,
-        None => {
-            let selection = cx.app.models_mut().insert(Option::<usize>::None);
-            cx.with_state(UiKitListTortureModels::default, |st| {
-                st.selection = Some(selection.clone());
-            });
-            selection
-        }
-    };
+    let selection = cx.local_model_keyed("selection", || Option::<usize>::None);
 
-    let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+    let scroll_handle = cx.slot_state(VirtualListScrollHandle::new, |h| h.clone());
 
     let header = ui::v_flex(|cx| {
             vec![

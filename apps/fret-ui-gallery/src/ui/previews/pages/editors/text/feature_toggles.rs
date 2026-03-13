@@ -14,7 +14,7 @@ pub(in crate::ui) fn preview_text_feature_toggles(
         ss01: bool,
     }
 
-    let state = cx.with_state(
+    let state = cx.slot_state(
         || std::rc::Rc::new(std::cell::RefCell::new(FeatureTogglesState::default())),
         |st| st.clone(),
     );

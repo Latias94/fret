@@ -31,11 +31,6 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         Space,
     };
 
-    #[derive(Default)]
-    struct HarnessState {
-        binding: Option<NodeGraphSurfaceBinding>,
-        bounds: Option<Model<Option<fret_core::Rect>>>,
-    }
     fn build_demo_graph(graph_id: GraphId) -> Graph {
         let mut g = Graph::new(graph_id);
 
@@ -270,34 +265,38 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         }
     }
 
-    let existing = cx.with_state(HarnessState::default, |st| {
-        match (st.binding.clone(), st.bounds.clone()) {
-            (Some(binding), Some(bounds)) => Some((binding, bounds)),
-            _ => None,
+    let binding_slot = cx.keyed_slot_id("binding");
+    let bounds = cx.local_model_keyed("bounds", || None::<fret_core::Rect>);
+    let binding = cx.state_for(
+        binding_slot,
+        || None::<NodeGraphSurfaceBinding>,
+        |slot| slot.clone(),
+    );
+    let binding = match binding {
+        Some(binding) => binding,
+        None => {
+            let graph_value = build_demo_graph(GraphId::from_u128(42));
+            let graph = cx.app.models_mut().insert(graph_value.clone());
+            let view = cx.app.models_mut().insert(NodeGraphViewState::default());
+            let view_queue = cx.app.models_mut().insert(NodeGraphViewQueue::default());
+            let store = cx.app.models_mut().insert(NodeGraphStore::new(
+                graph_value,
+                NodeGraphViewState::default(),
+            ));
+            let controller = NodeGraphController::new(store).bind_view_queue_transport(view_queue);
+            let binding = NodeGraphSurfaceBinding::from_models(graph, view, controller);
+            cx.state_for(
+                binding_slot,
+                || None::<NodeGraphSurfaceBinding>,
+                |slot| {
+                    if slot.is_none() {
+                        *slot = Some(binding.clone());
+                    }
+                    slot.clone()
+                        .expect("workflow node graph binding slot must be initialized")
+                },
+            )
         }
-    });
-
-    let (binding, bounds) = if let Some(existing) = existing {
-        existing
-    } else {
-        let graph_value = build_demo_graph(GraphId::from_u128(42));
-        let graph = cx.app.models_mut().insert(graph_value.clone());
-        let view = cx.app.models_mut().insert(NodeGraphViewState::default());
-        let view_queue = cx.app.models_mut().insert(NodeGraphViewQueue::default());
-        let store = cx.app.models_mut().insert(NodeGraphStore::new(
-            graph_value,
-            NodeGraphViewState::default(),
-        ));
-        let controller = NodeGraphController::new(store).bind_view_queue_transport(view_queue);
-        let binding = NodeGraphSurfaceBinding::from_models(graph, view, controller);
-        let bounds = cx.app.models_mut().insert(None);
-
-        cx.with_state(HarnessState::default, |st| {
-            st.binding = Some(binding.clone());
-            st.bounds = Some(bounds.clone());
-        });
-
-        (binding, bounds)
     };
 
     let max_w = LayoutRefinement::default()

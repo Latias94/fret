@@ -25,7 +25,7 @@ pub(in crate::ui) fn preview_text_outline_stroke(
 
     const OUTLINE_WIDTHS: &[Px] = &[Px(1.0), Px(2.0), Px(3.0), Px(4.0), Px(6.0), Px(8.0)];
 
-    let state = cx.with_state(
+    let state = cx.slot_state(
         || std::rc::Rc::new(std::cell::RefCell::new(OutlineStrokeState::default())),
         |st| st.clone(),
     );

@@ -22,7 +22,7 @@ pub(in crate::ui) fn preview_web_ime_harness(
         last: String,
     }
 
-    let state = cx.with_state(
+    let state = cx.slot_state(
         || std::rc::Rc::new(std::cell::RefCell::new(ImeHarnessState::default())),
         |st| st.clone(),
     );

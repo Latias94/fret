@@ -163,8 +163,8 @@ pub(crate) fn content_view(
             // Provide an explicit per-page handle so scroll position cannot leak across navigation.
             // (We still key the subtree above to ensure the handle resets deterministically.)
             let scroll_handle =
-                cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
-            let should_reset_scroll = cx.with_state(
+                cx.slot_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
+            let should_reset_scroll = cx.slot_state(
                 || true,
                 |reset| {
                     let out = *reset;

@@ -64,7 +64,7 @@ pub(in crate::ui) fn preview_markdown_editor_source(
         .get_model_copied(&inlays, Invalidation::Layout)
         .unwrap_or(false);
 
-    let handle = cx.with_state(
+    let handle = cx.slot_state(
         || code_editor::CodeEditorHandle::new(markdown_editor_source_text().as_ref().to_string()),
         |h| h.clone(),
     );
@@ -81,7 +81,7 @@ pub(in crate::ui) fn preview_markdown_editor_source(
         },
     );
 
-    let last_folds = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    let last_folds = cx.slot_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
     if last_folds.get() != Some(folds_enabled) {
         if folds_enabled {
             let span = handle.with_buffer(|b| b.line_text(0)).and_then(|line| {
@@ -107,7 +107,7 @@ pub(in crate::ui) fn preview_markdown_editor_source(
         last_folds.set(Some(folds_enabled));
     }
 
-    let last_inlays = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    let last_inlays = cx.slot_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
     if last_inlays.get() != Some(inlays_enabled) {
         if inlays_enabled {
             let byte = handle
@@ -413,7 +413,7 @@ pub(in crate::ui) fn preview_markdown_editor_source(
         .viewport_test_id("ui-gallery-markdown-editor-viewport")
         .into_element(cx);
 
-    let preview_cache = cx.with_state(
+    let preview_cache = cx.slot_state(
         || Rc::new(RefCell::new((0u64, Arc::<str>::from("")))),
         |v| v.clone(),
     );
