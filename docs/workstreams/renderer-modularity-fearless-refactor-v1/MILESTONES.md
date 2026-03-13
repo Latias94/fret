@@ -397,6 +397,18 @@ Current snapshot (2026-03-13):
   - `cargo check -p fret-render-wgpu --tests`
   - `cargo nextest run -p fret-render-wgpu path_state_deduplicates_and_evicts_unreferenced_entries`
   - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
+- The eighth renderer owner-state split has landed:
+  - path intermediate / composite scratch state now lives under
+    `crates/fret-render-wgpu/src/renderer/path.rs`
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns path intermediate attachments,
+    path composite vertex storage, or path composite vertex capacity directly
+  - config/perf snapshots, plan sync, and path/effect pass recorders now query that owner state
+    instead of reaching into loose renderer fields
+- Renderer path scratch-state split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu path_state_deduplicates_and_evicts_unreferenced_entries`
+  - `cargo nextest run -p fret-render-wgpu render_plan_usage_detection_only_counts_path_msaa_batches`
+  - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

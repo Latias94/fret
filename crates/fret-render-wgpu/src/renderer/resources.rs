@@ -441,14 +441,6 @@ impl Renderer {
             vertex_usage,
         );
 
-        let path_composite_vertex_capacity = 64 * 6;
-        let path_composite_vertices = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("fret path composite vertices"),
-            size: (path_composite_vertex_capacity * std::mem::size_of::<ViewportVertex>()) as u64,
-            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
         let scale_param_size = std::mem::size_of::<ScaleParamsUniform>() as u64;
         let scale_param_stride = scale_param_size.div_ceil(256) * 256;
         let scale_param_capacity = 64usize;
@@ -567,11 +559,8 @@ impl Renderer {
             viewport_vertices,
             text_vertices,
             path_vertices,
-            path_intermediate: None,
-            path_composite_vertices,
-            path_composite_vertex_capacity,
             text_system,
-            path_state: PathState::default(),
+            path_state: PathState::new(device),
             svg_registry_state: svg::SvgRegistryState::new(),
             svg_raster_state: svg::SvgRasterState::default(),
             clip_path_mask_cache: ClipPathMaskCache::new((256 * 1024 * 1024) / 8),

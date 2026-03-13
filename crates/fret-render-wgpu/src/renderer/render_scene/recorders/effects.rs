@@ -1687,7 +1687,7 @@ pub(in super::super) fn record_composite_premul_pass(
         &uniform_offsets,
         &bind_group,
         &[],
-        &renderer.path_composite_vertices,
+        renderer.path_composite_vertices_ref(),
         base,
         len,
         pass.dst_scissor,

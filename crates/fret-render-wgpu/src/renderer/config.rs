@@ -39,18 +39,11 @@ impl Renderer {
         }
 
         let registry_est = self.gpu_resources.diagnostics_estimated_bytes();
-        let path_intermediate_msaa_bytes_estimate = self
-            .path_intermediate
-            .as_ref()
-            .map_or(0, PathIntermediate::estimated_msaa_bytes);
-        let path_intermediate_resolved_bytes_estimate = self
-            .path_intermediate
-            .as_ref()
-            .map_or(0, PathIntermediate::estimated_resolved_bytes);
-        let path_intermediate_bytes_estimate = self
-            .path_intermediate
-            .as_ref()
-            .map_or(0, PathIntermediate::estimated_bytes);
+        let path_intermediate_msaa_bytes_estimate =
+            self.path_state.intermediate_msaa_bytes_estimate();
+        let path_intermediate_resolved_bytes_estimate =
+            self.path_state.intermediate_resolved_bytes_estimate();
+        let path_intermediate_bytes_estimate = self.path_state.intermediate_bytes_estimate();
         let custom_effect_v3_pyramid_scratch_bytes_estimate =
             self.custom_effect_v3_pyramid.scratch_bytes_estimate();
         let perf = &self.diagnostics_state.perf;
@@ -354,7 +347,7 @@ impl Renderer {
         };
 
         if self.path_msaa_samples != next_samples {
-            self.path_intermediate = None;
+            self.path_state.clear_intermediate();
         }
         self.path_msaa_samples = next_samples;
     }

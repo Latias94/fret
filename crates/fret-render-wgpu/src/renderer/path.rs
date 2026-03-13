@@ -7,13 +7,19 @@ use lyon::tessellation::{
 use slotmap::SlotMap;
 use std::collections::HashMap;
 
-use super::{mix_f32, mix_u64};
+use super::{GpuGlobals, PathIntermediate, ViewportVertex, mix_f32, mix_u64};
+
+const DEFAULT_PATH_CACHE_CAPACITY: usize = 2048;
+const DEFAULT_PATH_COMPOSITE_VERTEX_CAPACITY: usize = 64 * 6;
 
 pub(super) struct PathState {
     paths: SlotMap<fret_core::PathId, PreparedPath>,
     path_cache: HashMap<PathCacheKey, CachedPathEntry>,
     path_cache_capacity: usize,
     path_cache_epoch: u64,
+    path_intermediate: Option<PathIntermediate>,
+    path_composite_vertices: Option<wgpu::Buffer>,
+    path_composite_vertex_capacity: usize,
 }
 
 impl Default for PathState {
@@ -21,15 +27,176 @@ impl Default for PathState {
         Self {
             paths: SlotMap::with_key(),
             path_cache: HashMap::new(),
-            path_cache_capacity: 2048,
+            path_cache_capacity: DEFAULT_PATH_CACHE_CAPACITY,
             path_cache_epoch: 0,
+            path_intermediate: None,
+            path_composite_vertices: None,
+            path_composite_vertex_capacity: 0,
         }
     }
 }
 
 impl PathState {
+    pub(super) fn new(device: &wgpu::Device) -> Self {
+        Self {
+            path_composite_vertices: Some(device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("fret path composite vertices"),
+                size: (DEFAULT_PATH_COMPOSITE_VERTEX_CAPACITY
+                    * std::mem::size_of::<ViewportVertex>()) as u64,
+                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            })),
+            path_composite_vertex_capacity: DEFAULT_PATH_COMPOSITE_VERTEX_CAPACITY,
+            ..Self::default()
+        }
+    }
+
     pub(super) fn prepared(&self, path: fret_core::PathId) -> Option<&PreparedPath> {
         self.paths.get(path)
+    }
+
+    pub(super) fn intermediate(&self) -> Option<&PathIntermediate> {
+        self.path_intermediate.as_ref()
+    }
+
+    pub(super) fn clear_intermediate(&mut self) {
+        self.path_intermediate = None;
+    }
+
+    pub(super) fn intermediate_msaa_bytes_estimate(&self) -> u64 {
+        self.path_intermediate
+            .as_ref()
+            .map_or(0, PathIntermediate::estimated_msaa_bytes)
+    }
+
+    pub(super) fn intermediate_resolved_bytes_estimate(&self) -> u64 {
+        self.path_intermediate
+            .as_ref()
+            .map_or(0, PathIntermediate::estimated_resolved_bytes)
+    }
+
+    pub(super) fn intermediate_bytes_estimate(&self) -> u64 {
+        self.path_intermediate
+            .as_ref()
+            .map_or(0, PathIntermediate::estimated_bytes)
+    }
+
+    pub(super) fn composite_vertices(&self) -> &wgpu::Buffer {
+        self.path_composite_vertices
+            .as_ref()
+            .expect("renderer path composite vertices not initialized")
+    }
+
+    pub(super) fn ensure_path_composite_vertex_buffer(
+        &mut self,
+        device: &wgpu::Device,
+        required_vertices: usize,
+    ) {
+        if required_vertices == 0 {
+            return;
+        }
+
+        if self.path_composite_vertex_capacity >= required_vertices
+            && self.path_composite_vertices.is_some()
+        {
+            return;
+        }
+
+        let next_capacity = required_vertices.next_power_of_two().max(
+            self.path_composite_vertex_capacity
+                .max(DEFAULT_PATH_COMPOSITE_VERTEX_CAPACITY),
+        );
+
+        self.path_composite_vertices = Some(device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret path composite vertices"),
+            size: (next_capacity * std::mem::size_of::<ViewportVertex>()) as u64,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        }));
+        self.path_composite_vertex_capacity = next_capacity;
+    }
+
+    pub(super) fn ensure_path_intermediate(
+        &mut self,
+        device: &wgpu::Device,
+        globals: &GpuGlobals,
+        viewport_size: (u32, u32),
+        format: wgpu::TextureFormat,
+        sample_count: u32,
+    ) {
+        let needs_rebuild = match &self.path_intermediate {
+            Some(cur) => {
+                cur.size != viewport_size
+                    || cur.format != format
+                    || cur.sample_count != sample_count
+            }
+            None => true,
+        };
+        if !needs_rebuild {
+            return;
+        }
+
+        let (msaa_texture, msaa_view) = if sample_count > 1 {
+            let msaa_texture = device.create_texture(&wgpu::TextureDescriptor {
+                label: Some("fret path intermediate msaa"),
+                size: wgpu::Extent3d {
+                    width: viewport_size.0,
+                    height: viewport_size.1,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count,
+                dimension: wgpu::TextureDimension::D2,
+                format,
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                view_formats: &[],
+            });
+            let msaa_view = msaa_texture.create_view(&wgpu::TextureViewDescriptor::default());
+            (Some(msaa_texture), Some(msaa_view))
+        } else {
+            (None, None)
+        };
+
+        let resolved_texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("fret path intermediate resolved"),
+            size: wgpu::Extent3d {
+                width: viewport_size.0,
+                height: viewport_size.1,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        });
+        let resolved_view = resolved_texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("fret path intermediate bind group"),
+            layout: &globals.viewport_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Sampler(&globals.viewport_sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&resolved_view),
+                },
+            ],
+        });
+
+        self.path_intermediate = Some(PathIntermediate {
+            size: viewport_size,
+            format,
+            sample_count,
+            _msaa_texture: msaa_texture,
+            msaa_view,
+            _resolved_texture: resolved_texture,
+            resolved_view,
+            bind_group,
+        });
     }
 
     pub(super) fn prepare_path(

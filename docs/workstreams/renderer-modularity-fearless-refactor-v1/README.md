@@ -233,6 +233,10 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/path.rs`, and
   `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns prepared path storage, path cache
   entries, path cache capacity, or path cache epoch directly.
+- Renderer path intermediate/composite scratch owner state now also lives under
+  `crates/fret-render-wgpu/src/renderer/path.rs`, and
+  `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns path intermediate attachments, path
+  composite vertex storage, or path composite vertex capacity directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

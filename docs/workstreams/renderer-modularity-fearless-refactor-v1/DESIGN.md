@@ -232,6 +232,10 @@ For `Renderer` state-shell tightening, the same principle applies:
 - path registry/cache state is the equivalent ownership seam for tessellated geometry: prepared
   path storage, cache entries, eviction policy, and epoch tracking should move behind one owner so
   path services and path encoding stop depending on four loose fields.
+- path intermediate/composite scratch state is the matching execution-time seam for path passes:
+  intermediate attachments, composite quad vertex storage, and byte-estimate helpers should move
+  behind the same path owner so config, plan sync, perf snapshots, and pass recorders stop
+  depending on loose `Renderer` fields.
 
 ### 5. Tighten public exports after evidence exists
 

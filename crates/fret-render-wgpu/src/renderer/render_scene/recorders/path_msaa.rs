@@ -45,7 +45,7 @@ pub(in super::super) fn record_path_msaa_batch_pass(
         return;
     }
 
-    let Some(intermediate) = &renderer.path_intermediate else {
+    let Some(intermediate) = renderer.path_intermediate_ref() else {
         return;
     };
     let Some(path_msaa_pipeline) = renderer.path_msaa_pipeline_ref() else {
@@ -180,7 +180,7 @@ pub(in super::super) fn record_path_msaa_batch_pass(
         &[uniform_offset, ctx.render_space_offset_u32],
         &intermediate.bind_group,
         &[],
-        &renderer.path_composite_vertices,
+        renderer.path_composite_vertices_ref(),
         base,
         len,
         union,
