@@ -80,10 +80,12 @@ Guidelines:
   internally, prefer `#[track_caller]` on the public helper entrypoint so slot identity follows the
   app callsite rather than collapsing onto the helper implementation line.
 - When a helper really wants **root-scoped shared runtime state**, spell that intent with
-  `root_state(...)` directly; keep `with_state(...)` as a compatibility/migration alias rather than
-  the default implementation surface for new framework/ecosystem code.
+  `root_state(...)` directly; keep `with_state(...)` only as a deprecated
+  compatibility/migration alias rather than the default implementation surface for new
+  framework/ecosystem code.
 - Likewise, use `state_for(...)` directly for explicit-identity slots in first-party code;
-  `with_state_for(...)` remains a compatibility alias rather than the preferred teaching surface.
+  `with_state_for(...)` remains a deprecated compatibility alias rather than the preferred teaching
+  surface.
 - A lightweight repository gate keeps that contract honest:
   `python3 tools/gate_no_first_party_with_state_alias_usage.py` forbids first-party Rust sources
   from calling `.with_state(...)` or `.with_state_for(...)`.

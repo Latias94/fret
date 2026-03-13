@@ -493,6 +493,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     ///
     /// Prefer [`Self::root_state`] in new first-party code. Keep this alias for migration and
     /// downstream compatibility only.
+    #[deprecated(note = "use root_state(...) for root-scoped shared element state")]
     pub fn with_state<S: Any, R>(
         &mut self,
         init: impl FnOnce() -> S,
@@ -605,6 +606,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     ///
     /// Prefer [`Self::state_for`] in new first-party code. Keep this alias for migration and
     /// downstream compatibility only.
+    #[deprecated(note = "use state_for(...) for explicit-identity element state")]
     pub fn with_state_for<S: Any, R>(
         &mut self,
         element: GlobalElementId,
