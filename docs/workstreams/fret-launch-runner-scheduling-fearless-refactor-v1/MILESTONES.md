@@ -29,7 +29,9 @@ Last updated: 2026-03-13
   - implementation-alignment evidence now reflects the shared turn/frame seam, shared RAF queue,
     shared bounded drain helper, and web recovery path,
   - diagnostics audit now explicitly records that `SurfaceBootstrap` startup writes are
-    mutually exclusive while redraw-request diagnostics remain app-owned current-frame snapshots.
+    mutually exclusive while redraw-request diagnostics remain app-owned current-frame snapshots,
+  - streaming-pending redraw diagnostics now use the same reason classification on desktop and web,
+  - aggregate runtime diagnostics are deterministic under same-millisecond multi-window updates.
 
 ## M0 — Workstream agreed
 

@@ -1949,32 +1949,32 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
             if self.streaming_uploads.has_pending() {
                 match self.streaming_uploads.pending_redraw_hint() {
                     Some(windows) if windows.is_empty() => {
+                        let reason =
+                            fret_runtime::RunnerFrameDriveReason::for_streaming_pending_hint(
+                                windows.len(),
+                            );
                         for (window, state) in self.windows.iter() {
                             state.window.request_redraw();
                             self.app.with_global_mut_untracked(
                                 fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
                                 |store, _app| {
-                                    store.record(
-                                        window,
-                                        self.frame_id,
-                                        fret_runtime::RunnerFrameDriveReason::StreamingPendingRedrawAll,
-                                    );
+                                    store.record(window, self.frame_id, reason);
                                 },
                             );
                         }
                     }
                     Some(windows) => {
+                        let reason =
+                            fret_runtime::RunnerFrameDriveReason::for_streaming_pending_hint(
+                                windows.len(),
+                            );
                         for window in windows {
                             if let Some(state) = self.windows.get(window) {
                                 state.window.request_redraw();
                                 self.app.with_global_mut_untracked(
                                     fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
                                     |store, _app| {
-                                        store.record(
-                                            window,
-                                            self.frame_id,
-                                            fret_runtime::RunnerFrameDriveReason::StreamingPendingRedrawWindow,
-                                        );
+                                        store.record(window, self.frame_id, reason);
                                     },
                                 );
                             }

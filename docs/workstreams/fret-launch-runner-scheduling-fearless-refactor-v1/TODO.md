@@ -79,6 +79,8 @@ Companion docs:
 - [x] Add at least one regression path covering web surface acquire failure recovery.
 - [x] Add evidence anchors for any touched diagnostics stores or frame-drive reasons.
 - [x] Update `docs/adr/IMPLEMENTATION_ALIGNMENT.md` if the final code path materially improves ADR 0034 alignment.
+- [x] Close the desktop/web parity gap for streaming-pending frame-drive diagnostics.
+- [x] Make aggregate runtime diagnostics deterministic when multiple windows update in the same millisecond.
 
 ## Validation gates
 

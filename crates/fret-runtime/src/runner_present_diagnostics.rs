@@ -56,8 +56,11 @@ impl RunnerPresentDiagnosticsStore {
             snapshot.max_present_count = snapshot
                 .max_present_count
                 .max(window_snapshot.present_count);
-            if window_snapshot.last_present_unix_ms.unwrap_or(0)
-                >= snapshot.last_present_unix_ms.unwrap_or(0)
+            let next_unix_ms = window_snapshot.last_present_unix_ms.unwrap_or(0);
+            let current_unix_ms = snapshot.last_present_unix_ms.unwrap_or(0);
+            if next_unix_ms > current_unix_ms
+                || (next_unix_ms == current_unix_ms
+                    && window_snapshot.last_present_frame_id >= snapshot.last_present_frame_id)
             {
                 snapshot.last_present_unix_ms = window_snapshot.last_present_unix_ms;
                 snapshot.last_present_frame_id = window_snapshot.last_present_frame_id;

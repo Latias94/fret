@@ -35,6 +35,14 @@ impl RunnerFrameDriveReason {
             Self::WebDiagKeepaliveRedraw => "web_diag_keepalive_redraw",
         }
     }
+
+    pub const fn for_streaming_pending_hint(window_hint_count: usize) -> Self {
+        if window_hint_count == 0 {
+            Self::StreamingPendingRedrawAll
+        } else {
+            Self::StreamingPendingRedrawWindow
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -122,8 +130,11 @@ impl RunnerFrameDriveDiagnosticsStore {
             snapshot.max_event_count = snapshot
                 .max_event_count
                 .max(window_snapshot.total_event_count);
-            if window_snapshot.last_event_unix_ms.unwrap_or(0)
-                >= snapshot.last_event_unix_ms.unwrap_or(0)
+            let next_unix_ms = window_snapshot.last_event_unix_ms.unwrap_or(0);
+            let current_unix_ms = snapshot.last_event_unix_ms.unwrap_or(0);
+            if next_unix_ms > current_unix_ms
+                || (next_unix_ms == current_unix_ms
+                    && window_snapshot.last_event_frame_id >= snapshot.last_event_frame_id)
             {
                 snapshot.last_event_unix_ms = window_snapshot.last_event_unix_ms;
                 snapshot.last_event_frame_id = window_snapshot.last_event_frame_id;
@@ -202,7 +213,7 @@ mod tests {
         assert_eq!(aggregate.window_count, 2);
         assert_eq!(aggregate.total_event_count, 3);
         assert_eq!(aggregate.max_event_count, 2);
-        assert!(matches!(aggregate.last_event_frame_id, 4 | 8));
+        assert_eq!(aggregate.last_event_frame_id, 8);
         assert!(aggregate.last_event_unix_ms.is_some());
         assert_eq!(aggregate.reason_counts.len(), 3);
     }
@@ -224,5 +235,21 @@ mod tests {
         assert_eq!(aggregate.max_event_count, 0);
         assert_eq!(aggregate.last_event_unix_ms, None);
         assert!(aggregate.reason_counts.is_empty());
+    }
+
+    #[test]
+    fn streaming_pending_hint_classifies_all_vs_window_scope() {
+        assert_eq!(
+            RunnerFrameDriveReason::for_streaming_pending_hint(0),
+            RunnerFrameDriveReason::StreamingPendingRedrawAll
+        );
+        assert_eq!(
+            RunnerFrameDriveReason::for_streaming_pending_hint(1),
+            RunnerFrameDriveReason::StreamingPendingRedrawWindow
+        );
+        assert_eq!(
+            RunnerFrameDriveReason::for_streaming_pending_hint(3),
+            RunnerFrameDriveReason::StreamingPendingRedrawWindow
+        );
     }
 }

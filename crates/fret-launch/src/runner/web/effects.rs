@@ -180,8 +180,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
         let had_effects = !effects.is_empty();
         if !had_effects {
-            if self.streaming_uploads.has_pending() {
+            if let Some(windows) = self.streaming_uploads.pending_redraw_hint() {
                 window.request_redraw();
+                let reason =
+                    fret_runtime::RunnerFrameDriveReason::for_streaming_pending_hint(windows.len());
+                self.app.with_global_mut_untracked(
+                    fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
+                    |store, _app| {
+                        store.record(self.app_window, self.frame_id, reason);
+                    },
+                );
             }
 
             let streaming_snapshot_enabled = self.config.streaming_perf_snapshot_enabled

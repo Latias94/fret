@@ -57,6 +57,17 @@ Implementation update (2026-03-13, batch 4):
     records the current committed `FrameId` at redraw-request issue time, so no runner-side change
     was required in this batch.
 
+Implementation update (2026-03-13, batch 5):
+
+- Streaming-upload redraw diagnostics now classify pending redraw hints through a shared
+  `RunnerFrameDriveReason` helper, so desktop and web use the same `StreamingPendingRedrawAll`
+  vs `StreamingPendingRedrawWindow` rule.
+- Web now records a frame-drive diagnostics event when pending streaming uploads request another
+  redraw turn, closing a backend-specific undercount that desktop did not have.
+- Aggregate runtime diagnostics that expose a `last_*_frame_id` now use deterministic
+  same-timestamp tie-breaking (`higher frame id wins`), so sample bundles no longer depend on
+  HashMap iteration order when multiple windows update within the same millisecond.
+
 ## Context
 
 Fret's architecture already places the scheduling and presentation responsibility in the correct
