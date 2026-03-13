@@ -119,10 +119,14 @@ Current checkpoint:
   pins in-window popup geometry, input-retained focus, active-row review state, and overlay
   placement tracing (`editor.text_assist`) on the promoted proof surface instead of relying on ad
   hoc screenshots,
+- the same `TextAssistField` seam now also has a second reusable consumer in
+  `InspectorPanel` search: panel headers can opt into input-owned search history/completion without
+  growing a second popup implementation, and the proof demo now exercises that path with anchored
+  overlay search history in the promoted inspector surface,
 - and the remaining foundation cleanup is now mostly about promoting specialized text policy above
-  that baseline: proving the new `fret-ui-kit` glue plus `TextAssistField` surface split on a
-  second consumer, deciding which popup/scroll/selection behavior should be promoted into shared
-  kit policy vs stay editor-local, richer password/history integrations, targeted
+  that baseline: deciding which popup/scroll/selection behavior should be promoted into shared
+  kit policy vs stay editor-local now that a second consumer exists, richer password/history
+  integrations, targeted
   `BlurBehavior::Cancel` / `PreserveDraft` adoption on real editor surfaces, and follow-up tuning
   for wide-inspector slack after the new lane grammar landed.
 

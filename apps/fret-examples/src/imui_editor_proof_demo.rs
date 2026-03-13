@@ -18,7 +18,8 @@ use fret_runtime::{
 use fret_ui::element::{LayoutStyle, Length, SizeStyle};
 use fret_ui_editor::composites::{
     GradientEditor, GradientEditorOptions, GradientStopBinding, InspectorPanel,
-    InspectorPanelOptions, PropertyGrid, PropertyGroup, PropertyRow, PropertyRowReset,
+    InspectorPanelOptions, InspectorPanelSearchAssistOptions, PropertyGrid, PropertyGroup,
+    PropertyRow, PropertyRowReset,
 };
 use fret_ui_editor::controls::{
     Checkbox, ColorEdit, ColorEditOptions, DragValue, EditorTextSelectionBehavior, EnumSelect,
@@ -147,6 +148,27 @@ fn editor_demo_name_assist_items(cx: &mut ElementContext<'_, KernelApp>) -> Arc<
                 TextAssistItem::new("curve-editor", "Curve Editor"),
                 TextAssistItem::new("directional-light", "Directional Light")
                     .aliases(vec![Arc::from("dir light")]),
+            ]
+            .into()
+        },
+    )
+}
+
+fn editor_demo_search_assist_items(
+    cx: &mut ElementContext<'_, KernelApp>,
+) -> Arc<[TextAssistItem]> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.state.search_assist_items",
+        |_cx| {
+            vec![
+                TextAssistItem::new("assist", "Assist"),
+                TextAssistItem::new("material", "Material"),
+                TextAssistItem::new("buffered", "Buffered"),
+                TextAssistItem::new("gradient", "Gradient"),
+                TextAssistItem::new("password", "Password"),
+                TextAssistItem::new("validation", "Validation")
+                    .aliases(vec![Arc::from("error"), Arc::from("invalid")]),
             ]
             .into()
         },
@@ -398,6 +420,9 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
     let editor_iterations_model = editor_demo_iterations_model(cx);
     let editor_exposure_model = editor_demo_exposure_model(cx);
     let editor_search_model = editor_demo_search_model(cx);
+    let editor_search_assist_dismissed_query_model =
+        editor_demo_search_assist_dismissed_query_model(cx);
+    let editor_search_assist_active_item_model = editor_demo_search_assist_active_item_model(cx);
     let editor_gradient_angle_model = editor_demo_gradient_angle_model(cx);
     let editor_gradient_stops_model = editor_demo_gradient_stops_model(cx);
     let editor_gradient_next_id_model = editor_demo_gradient_next_id_model(cx);
@@ -548,9 +573,10 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                     });
                     ui.separator();
 
-                    let editor_label =
-                        fret_ui_kit::ui::text("fret-ui-editor (M2): PropertyGroup + PropertyGrid + MiniSearchBox (filter)")
-                            .text_xs();
+                    let editor_label = fret_ui_kit::ui::text(
+                        "fret-ui-editor (M2): PropertyGroup + PropertyGrid + inspector search assist",
+                    )
+                    .text_xs();
                     ui.add_ui(editor_label);
                 }
                 ui.mount(|cx| {
@@ -587,6 +613,26 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                             search_clear_test_id: Some(Arc::from(
                                 "imui-editor-proof.editor.search.clear",
                             )),
+                            search_assist: Some(InspectorPanelSearchAssistOptions {
+                                dismissed_query_model: editor_search_assist_dismissed_query_model
+                                    .clone(),
+                                active_item_id_model: editor_search_assist_active_item_model
+                                    .clone(),
+                                items: editor_demo_search_assist_items(cx),
+                                list_label: Arc::from("Inspector search history"),
+                                empty_label: Arc::from("No search history matches"),
+                                key_options: Default::default(),
+                                list_test_id: Some(Arc::from(
+                                    "imui-editor-proof.editor.search.list",
+                                )),
+                                item_test_id_prefix: Some(Arc::from(
+                                    "imui-editor-proof.editor.search.list.item",
+                                )),
+                                empty_test_id: Some(Arc::from(
+                                    "imui-editor-proof.editor.search.no-matches",
+                                )),
+                                max_list_height: None,
+                            }),
                             content_test_id: Some(Arc::from(
                                 "imui-editor-proof.editor.inspector.content",
                             )),
@@ -2497,6 +2543,26 @@ fn editor_demo_search_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<
     named_demo_state(cx, "imui_editor_proof_demo.model.search", |cx| {
         cx.app.models_mut().insert(String::new())
     })
+}
+
+fn editor_demo_search_assist_dismissed_query_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<String> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.model.search_assist_dismissed_query",
+        |cx| cx.app.models_mut().insert(String::new()),
+    )
+}
+
+fn editor_demo_search_assist_active_item_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<Option<Arc<str>>> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.model.search_assist_active_item",
+        |cx| cx.app.models_mut().insert(None::<Arc<str>>),
+    )
 }
 
 fn editor_demo_name_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {

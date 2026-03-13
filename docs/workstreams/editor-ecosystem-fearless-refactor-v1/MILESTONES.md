@@ -134,10 +134,10 @@ Deliverables:
 
 - `DragValue` closure for real editor workflows,
 - richer text-input policy for editor surfaces beyond the shared buffered baseline
-  (validating the newly landed popup-capable `fret-ui-kit` text-assist glue plus
-  `TextAssistField` recipe on a second consumer, deciding where shared overlay/scroll/selection
-  policy should live, specialized blur ownership where needed, and deeper editor integrations above
-  the new password/outcome/assistive extension seam),
+  (deciding where shared overlay/scroll/selection policy should live now that the
+  popup-capable `fret-ui-kit` text-assist glue plus `TextAssistField` recipe have both object-name
+  and inspector-search consumers, specialized blur ownership where needed, and deeper editor
+  integrations above the new password/outcome/assistive extension seam),
 - a promoted starter set definition for controls and composites,
 - explicit conventions for `id_source`, response semantics, and `test_id`,
 - and a "no new promoted components without gates" landing rule.

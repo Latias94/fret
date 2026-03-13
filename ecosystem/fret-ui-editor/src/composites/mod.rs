@@ -11,7 +11,9 @@ pub use gradient_editor::{
     GradientEditor, GradientEditorOptions, GradientStopBinding, OnGradientAction,
     OnGradientStopAction,
 };
-pub use inspector_panel::{InspectorPanel, InspectorPanelCx, InspectorPanelOptions};
+pub use inspector_panel::{
+    InspectorPanel, InspectorPanelCx, InspectorPanelOptions, InspectorPanelSearchAssistOptions,
+};
 pub use property_grid::{PropertyGrid, PropertyGridOptions, PropertyGridRow, PropertyGridRowCx};
 pub use property_grid_virtualized::{PropertyGridVirtualized, PropertyGridVirtualizedOptions};
 pub use property_group::{OnPropertyGroupToggle, PropertyGroup, PropertyGroupOptions};

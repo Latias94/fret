@@ -135,10 +135,11 @@ Interaction contract:
       `percent_0_1_format(0)` as the sole `%` source, and the shared icon-button segment now
       centers trailing clear affordance icons so proof-surface text/numeric controls stop drifting
       on obvious visual seams.
-      Remaining work: prove the popup-capable seam on a second consumer, decide where shared
-      overlay/scroll/selection policy should live, decide where editor surfaces should opt into
-      `BlurBehavior::Cancel` / `PreserveDraft`, and keep tightening multiline/editor proof
-      coverage before new promoted components land.
+      The same seam now also has a second reusable consumer via `InspectorPanel` search history,
+      so the remaining work is deciding where shared overlay/scroll/selection policy should live,
+      deciding where editor surfaces should opt into `BlurBehavior::Cancel` /
+      `PreserveDraft`, and keeping multiline/editor proof coverage tight before new promoted
+      components land.
 - [ ] `EER-BASE-118` Do not promote new reusable editor components until `EER-BASE-110` through
       `EER-BASE-117` are in materially better shape.
 
@@ -169,10 +170,13 @@ Interaction contract:
       evidence via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-popup-screenshots.json`,
       which pins popup geometry, input-retained focus, active-row review state, and the
-      `editor.text_assist` overlay placement trace. The remaining work is now about validating the
-      seam with a second consumer, deciding where shared overlay/scroll/selection policy belongs,
-      deciding where specialized blur policies belong, and adding richer editor integrations above
-      the shared baseline rather than re-litigating commit/cancel semantics.
+      `editor.text_assist` overlay placement trace. The second reusable consumer now also exists in
+      `InspectorPanel` search history, and
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-inspector-search-assist-popup-screenshots.json`
+      is the intended focused gate for that panel-header surface. The remaining work is now about
+      deciding where shared overlay/scroll/selection policy belongs, deciding where specialized
+      blur policies belong, and adding richer editor integrations above the shared baseline rather
+      than re-litigating commit/cancel semantics.
 - [ ] `EER-EDITOR-123` Freeze the v1 reusable starter set:
       `TextField`, `Checkbox`, `DragValue`, `Slider`, `EnumSelect`, `ColorEdit`, `VecNEdit`,
       `TransformEdit`, `PropertyGrid`, and `InspectorPanel`.
@@ -231,9 +235,11 @@ Interaction contract:
       promoted proof now also defaults that recipe to its anchored-overlay surface, and
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-popup-screenshots.json`
       now locks popup geometry, input-retained focus, active-row review state, and overlay
-      placement tracing on that same proof surface.
-      Remaining work: add a second consumer before extracting more formal kit-level popup/list
-      glue.
+      placement tracing on that same proof surface. The same seam now also has a second reusable
+      consumer in `InspectorPanel` search history, with intended focused evidence via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-inspector-search-assist-popup-screenshots.json`.
+      Remaining work: decide whether shared popup/list policy now belongs in `fret-ui-kit`
+      primitives or should stay editor-local for another cycle.
 - [~] `EER-GATE-133` Keep screenshot coverage tied to actual baseline-review states, not just
       arbitrary captures.
       The neutral default baseline now has a screenshot proof via
