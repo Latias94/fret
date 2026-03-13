@@ -51,15 +51,15 @@ impl Renderer {
         trace_enabled: bool,
         frame_perf: &mut RenderPerfStats,
     ) {
-        if self.svg_perf_enabled {
-            self.svg_perf.frames = self.svg_perf.frames.saturating_add(1);
+        if self.svg_raster_state.perf_enabled {
+            self.svg_raster_state.perf.frames = self.svg_raster_state.perf.frames.saturating_add(1);
         }
         if self.intermediate_perf_enabled {
             self.intermediate_perf.frames = self.intermediate_perf.frames.saturating_add(1);
         }
         self.bump_svg_raster_epoch();
 
-        let svg_prepare_start = self.svg_perf_enabled.then(Instant::now);
+        let svg_prepare_start = self.svg_raster_state.perf_enabled.then(Instant::now);
         let perf_svg_prepare_start = perf_enabled.then(Instant::now);
         {
             let svg_prepare_span = if trace_enabled {
@@ -84,7 +84,7 @@ impl Renderer {
                 .saturating_add(counters.image_upload_bytes);
         }
         if let Some(svg_prepare_start) = svg_prepare_start {
-            self.svg_perf.prepare_svg_ops += svg_prepare_start.elapsed();
+            self.svg_raster_state.perf.prepare_svg_ops += svg_prepare_start.elapsed();
         }
         if let Some(perf_svg_prepare_start) = perf_svg_prepare_start {
             frame_perf.prepare_svg += perf_svg_prepare_start.elapsed();

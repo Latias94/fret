@@ -316,6 +316,22 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu custom_chain_budget_records_optional_mask_bytes`
   - `cargo nextest run -p fret-render-wgpu custom_v3_sources_plan_honors_group_pyramid_choice_and_group_roi`
   - `cargo nextest run -p fret-render-wgpu custom_v3_pyramid_budget_pressure_degrades_to_one_and_records_counters`
+- The second renderer owner-state split has landed:
+  - SVG raster cache / atlas / budget / perf state now lives under
+    `crates/fret-render-wgpu/src/renderer/svg/mod.rs`
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns SVG raster cache, atlas storage,
+    budget/epoch, or per-frame SVG cache counter fields directly
+  - config/perf/encode sites now query that owner state instead of reaching into loose renderer
+    fields
+- Renderer svg-raster-state split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu chain_applies_clip_only_on_final_step`
+  - `cargo nextest run -p fret-render-wgpu unpadded_chain_applies_clip_only_on_final_step`
+  - `cargo nextest run -p fret-render-wgpu unpadded_custom_v3_chain_reserves_distinct_raw_target_when_available`
+  - `cargo nextest run -p fret-render-wgpu padded_blur_then_custom_uses_work_buffer`
+  - `cargo nextest run -p fret-render-wgpu custom_chain_budget_records_optional_mask_bytes`
+  - `cargo nextest run -p fret-render-wgpu svg_draw_rect_centers_contained_raster`
+  - `cargo nextest run -p fret-render-wgpu svg_draw_rect_width_can_overflow_height`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

@@ -431,13 +431,13 @@ impl fret_core::SvgService for Renderer {
 
         // Drop any cached rasterizations for this SVG.
         let mut keys_to_remove: Vec<SvgRasterKey> = Vec::new();
-        for k in self.svg_rasters.keys() {
+        for k in self.svg_raster_state.rasters.keys() {
             if k.svg == svg {
                 keys_to_remove.push(*k);
             }
         }
         for k in keys_to_remove {
-            if let Some(entry) = self.svg_rasters.remove(&k) {
+            if let Some(entry) = self.svg_raster_state.rasters.remove(&k) {
                 self.drop_svg_raster_entry(entry);
             }
         }

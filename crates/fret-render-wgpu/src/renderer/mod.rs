@@ -128,27 +128,11 @@ pub struct Renderer {
     svg_renderer: SvgRenderer,
     svgs: SlotMap<fret_core::SvgId, SvgEntry>,
     svg_hash_index: HashMap<u64, Vec<fret_core::SvgId>>,
-    svg_rasters: HashMap<SvgRasterKey, SvgRasterEntry>,
-    svg_mask_atlas_pages: Vec<Option<SvgMaskAtlasPage>>,
-    svg_mask_atlas_free: Vec<usize>,
-    // Bytes used by standalone SVG rasters (not atlas-backed).
-    svg_raster_bytes: u64,
-    // Bytes reserved by SVG alpha-mask atlas pages.
-    svg_mask_atlas_bytes: u64,
-    svg_raster_budget_bytes: u64,
-    svg_raster_epoch: u64,
-    svg_perf_enabled: bool,
-    svg_perf: SvgPerfStats,
+    svg_raster_state: svg::SvgRasterState,
 
     clip_path_mask_cache: ClipPathMaskCache,
 
     perf_enabled: bool,
-    // Per-frame SVG cache stats (best-effort; populated only when `perf_enabled` is true).
-    perf_svg_raster_cache_hits: u64,
-    perf_svg_raster_cache_misses: u64,
-    perf_svg_raster_budget_evictions: u64,
-    perf_svg_mask_atlas_page_evictions: u64,
-    perf_svg_mask_atlas_entries_evicted: u64,
     perf_pending_render_target_updates_requested_by_ingest:
         [u64; RenderTargetIngestStrategy::COUNT],
     perf_pending_render_target_updates_by_ingest: [u64; RenderTargetIngestStrategy::COUNT],

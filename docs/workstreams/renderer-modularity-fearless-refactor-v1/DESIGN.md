@@ -213,6 +213,9 @@ For `Renderer` state-shell tightening, the same principle applies:
   methods in `renderer/mod.rs`.
 - the first such extractions should target high-cohesion islands with narrow call surfaces, so
   owner splits remain reversible and do not force broad service rewrites.
+- cache-heavy subsystems that combine memory budgets, reuse/eviction policy, and per-frame counters
+  are especially good early targets because they reduce `Renderer` field sprawl without forcing the
+  public service surface to move at the same time.
 
 ### 5. Tighten public exports after evidence exists
 

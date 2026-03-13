@@ -3,11 +3,7 @@ use super::super::*;
 impl Renderer {
     pub(super) fn begin_frame_perf_collection(&mut self, frame_perf: &mut RenderPerfStats) {
         frame_perf.frames = 1;
-        self.perf_svg_raster_cache_hits = 0;
-        self.perf_svg_raster_cache_misses = 0;
-        self.perf_svg_raster_budget_evictions = 0;
-        self.perf_svg_mask_atlas_page_evictions = 0;
-        self.perf_svg_mask_atlas_entries_evicted = 0;
+        self.svg_raster_state.reset_frame_perf_counters();
 
         let counters = crate::upload_counters::take_upload_counters();
         frame_perf.svg_uploads = frame_perf.svg_uploads.saturating_add(counters.svg_uploads);

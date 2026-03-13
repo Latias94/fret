@@ -529,11 +529,14 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/v3_pyramid.rs`
     - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns the pyramid scratch/cache/write-epoch
       fields or helper methods directly
+    - SVG raster/atlas/perf state owner moved into
+      `crates/fret-render-wgpu/src/renderer/svg/mod.rs`
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns SVG raster cache, atlas storage,
+      budget/epoch, or per-frame SVG cache counter fields directly
   - Current next hotspot:
-    - continue shrinking `Renderer` by pulling the next high-cohesion owner shell out of
-      `renderer/mod.rs`, with SVG raster/atlas+perf state the best current candidate
-    - avoid chasing remaining `render_plan_effects.rs` wrappers unless a real visibility or
-      ownership seam appears
+    - decide whether the remaining SVG registry/service shell (`svg_renderer`, `svgs`,
+      `svg_hash_index`) should move into its own owner or stay coupled to `services.rs` for now
+    - evaluate `intermediate_pool + intermediate perf/budget` as the next non-SVG owner-state cut
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG
@@ -543,6 +546,8 @@ ID format:
   - Landed so far:
     - custom-effect v3 pyramid scratch/cache/write-epoch state now lives under
       `crates/fret-render-wgpu/src/renderer/v3_pyramid.rs`
+    - SVG raster cache / atlas / budget / perf state now lives under
+      `crates/fret-render-wgpu/src/renderer/svg/mod.rs`
 - [ ] RMFR-renderer-042 Reduce cross-domain mutable coupling inside `Renderer`.
 - [ ] RMFR-renderer-043 Keep service trait implementations readable after extraction.
 
@@ -700,10 +705,10 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: custom-effect v3 pyramid owner state now lives under
-    `crates/fret-render-wgpu/src/renderer/v3_pyramid.rs`, and
-    `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns the pyramid scratch/cache/write-epoch
-    fields or helper methods directly.
+  - Latest landed slice: SVG raster/atlas/perf owner state now lives under
+    `crates/fret-render-wgpu/src/renderer/svg/mod.rs`, and
+    `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns SVG raster cache, atlas storage,
+    budget/epoch, or per-frame SVG cache counter fields directly.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

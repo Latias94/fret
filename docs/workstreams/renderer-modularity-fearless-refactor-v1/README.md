@@ -208,6 +208,10 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/v3_pyramid.rs`, and
   `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns the pyramid scratch/cache/write-epoch
   fields or helper methods directly.
+- Renderer SVG raster/atlas/perf owner state now also lives under
+  `crates/fret-render-wgpu/src/renderer/svg/mod.rs`, and
+  `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns SVG raster cache, atlas storage,
+  budget/epoch, or per-frame SVG cache counter fields directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:
