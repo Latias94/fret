@@ -1043,6 +1043,82 @@ fn drop_shadow_budget_pressure_degrades_to_hard_shadow() {
 }
 
 #[test]
+fn drop_shadow_masked_blurred_path_preserves_clip_coverage() {
+    let viewport_size = (128, 128);
+    let format = wgpu::TextureFormat::Rgba8Unorm;
+    let ctx = EffectCompileCtx {
+        viewport_size,
+        format,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 1.0,
+    };
+    let scissor = ScissorRect {
+        x: 10,
+        y: 12,
+        w: 36,
+        h: 28,
+    };
+
+    let shadow = fret_core::scene::DropShadowV1 {
+        offset_px: fret_core::Point::new(fret_core::Px(2.0), fret_core::Px(3.0)),
+        blur_radius_px: fret_core::Px(8.0),
+        downsample: 2,
+        color: fret_core::Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        },
+    };
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::FilterContent,
+        fret_core::EffectChain::from_steps(&[fret_core::EffectStep::DropShadowV1(shadow)]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        Some(13),
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    );
+
+    assert!(
+        passes
+            .iter()
+            .any(|pass| matches!(pass, RenderPlanPass::ClipMask(_))),
+        "masked drop shadow should allocate a clip mask pass when budget allows"
+    );
+    assert!(
+        passes
+            .iter()
+            .any(|pass| matches!(pass, RenderPlanPass::Blur(_))),
+        "blurred drop shadow path should still emit blur passes"
+    );
+    let pass = passes.iter().rev().find_map(|pass| match pass {
+        RenderPlanPass::DropShadow(pass) => Some(pass),
+        _ => None,
+    });
+    assert!(
+        pass.is_some_and(|pass| {
+            pass.dst_scissor == Some(LocalScissorRect(scissor))
+                && (pass.mask_uniform_index.is_some() || pass.mask.is_some())
+                && pass.offset_px == (2.0, 3.0)
+                && pass.color == shadow.color
+        }),
+        "DropShadow should preserve clip coverage and shadow params in the masked blurred path"
+    );
+}
+
+#[test]
 fn gaussian_blur_target_pressure_falls_back_to_single_scratch_blur() {
     let viewport_size = (256, 256);
     let format = wgpu::TextureFormat::Rgba8Unorm;
