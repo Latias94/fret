@@ -46,6 +46,7 @@ mod render_scene_config;
 mod render_text_dump;
 mod resources;
 mod scene_encoding_cache;
+mod scene_encoding_cache_diagnostics;
 mod services;
 mod shaders;
 mod svg;

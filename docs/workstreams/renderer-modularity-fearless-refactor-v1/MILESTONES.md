@@ -14,6 +14,11 @@ Current snapshot (2026-03-13):
 - The latest backend gates are green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 223/223 passed
   - `python3 tools/check_layering.py`: passed
+- The latest scene-encoding cache diagnostics split has landed:
+  - miss-reason diffing, trace display, and perf miss accounting now live under
+    `crates/fret-render-wgpu/src/renderer/scene_encoding_cache_diagnostics.rs`
+  - `crates/fret-render-wgpu/src/renderer/scene_encoding_cache.rs` now keeps the cache owner
+    flow plus delegation to that diagnostics companion module
 - v1 start decisions are now locked:
   - no new renderer crates in v1,
   - `fret-render` stays the stable default facade,
@@ -726,6 +731,13 @@ Current snapshot (2026-03-13):
     orchestration
   - the slice does not change effect semantics; it only narrows the parent recorder body down to
     orchestration
+- The thirtieth scene-encoding cache diagnostics split has landed:
+  - `crates/fret-render-wgpu/src/renderer/scene_encoding_cache_diagnostics.rs` now owns
+    scene-encoding miss-reason diffing, trace display, and perf miss accounting
+  - `crates/fret-render-wgpu/src/renderer/scene_encoding_cache.rs` now keeps only the cache owner
+    flow plus delegation to that diagnostics companion module
+  - the slice does not change cache-key semantics or reuse behavior; it only narrows the owner
+    module down to cache flow
 - Renderer custom-v3-dispatch split verification remains green:
   - `cargo check -p fret-render-wgpu --tests`
   - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
@@ -733,6 +745,11 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_backdrop_source_group_raw_snapshots_before_prior_backdrop_steps`
   - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_pyramid_level1_differs_from_raw_near_an_unaligned_edge`
   - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_rejects_non_filterable_user_image_formats_by_falling_back_and_counts_it`
+- Scene-encoding cache diagnostics split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu miss_reasons_include_material_registry_and_budgets`
+  - `cargo nextest run -p fret-render-wgpu record_scene_encoding_cache_frame_result_updates_perf_counters`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

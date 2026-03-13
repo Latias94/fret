@@ -246,6 +246,11 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns the scene-encoding cache shell
   directly; cache key construction, hit/miss bookkeeping, and cache storage now sit behind that
   owner.
+- Renderer scene-encoding cache miss-reason diffing, trace display, and perf miss accounting now
+  also live under
+  `crates/fret-render-wgpu/src/renderer/scene_encoding_cache_diagnostics.rs`, and
+  `crates/fret-render-wgpu/src/renderer/scene_encoding_cache.rs` now keeps the cache owner flow as
+  a thin shell around hit testing, diagnostics delegation, and frame-local encoding reuse.
 - Renderer frame scratch owner state now also lives under
   `crates/fret-render-wgpu/src/renderer/frame_scratch.rs`, and
   `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns viewport-uniform scratch,

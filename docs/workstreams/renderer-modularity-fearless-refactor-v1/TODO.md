@@ -567,6 +567,11 @@ ID format:
     - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns the scene-encoding cache shell
       directly; cache key construction, hit/miss bookkeeping, and cache storage now sit behind the
       owner
+    - scene-encoding cache miss-reason diffing, trace display, and perf miss accounting now also
+      live under
+      `crates/fret-render-wgpu/src/renderer/scene_encoding_cache_diagnostics.rs`
+    - `crates/fret-render-wgpu/src/renderer/scene_encoding_cache.rs` now keeps only cache owner
+      flow plus delegation to the diagnostics companion module
     - frame scratch owner moved into
       `crates/fret-render-wgpu/src/renderer/frame_scratch.rs`
     - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns viewport-uniform scratch,
@@ -652,10 +657,10 @@ ID format:
     - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
       v3 upload/dispatch body directly
   - Current next hotspot:
-    - decide whether scene-encoding invalidation/debug evidence should stay coupled to
-      `scene_encoding_cache.rs` or move closer to diagnostics state
     - decide whether the now-thin `CustomEffectV3` orchestration shell should move entirely out of
       `effects.rs`, or whether the remaining body is already the right long-term seam
+    - decide whether render-plan / scene-encoding diagnostics should converge further behind one
+      reporting seam, or whether adjacent owner-specific companion modules are the better v1 shape
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG

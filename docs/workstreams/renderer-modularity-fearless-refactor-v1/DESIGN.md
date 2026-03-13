@@ -244,6 +244,9 @@ For `Renderer` state-shell tightening, the same principle applies:
   cache key construction inputs, hit/miss bookkeeping, miss-reason reporting, and cache/scratch
   storage should move behind one owner so render-scene execution stops depending on a loose cache
   shell.
+  - When cache-local diagnostics/reporting grows beyond simple counters, the preferred boring
+    shape is an adjacent diagnostics companion module so the cache owner keeps reuse/storage flow
+    while miss-reason diffing, trace display, and perf accounting evolve independently.
 - frame scratch state is the matching per-frame upload/build seam:
   viewport-uniform scratch, render-space scratch, and plan-quad scratch should move behind one
   owner so render-scene upload helpers stop depending on loose renderer vectors.
