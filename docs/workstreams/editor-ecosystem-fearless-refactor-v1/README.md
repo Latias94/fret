@@ -2,7 +2,7 @@
 
 Status: **in progress**
 
-Last updated: **2026-03-12**
+Last updated: **2026-03-13**
 
 Goal: turn Fret's editor-facing crates into one coherent product line without collapsing crate
 boundaries, creating a second widget library, or coupling reusable editor surfaces to one design
@@ -18,6 +18,10 @@ system.
 - `ecosystem/fret-ui-headless` owns reusable query/filter/highlight math for searchable suggestion
   surfaces; `ecosystem/fret-ui-kit` re-exports that logic and owns focus/overlay/active-descendant
   glue above it.
+- `ecosystem/fret-ui-kit::primitives::combobox` owns shared trigger-owned popup/list policy
+  (close reasons, focus restore, query-clear timing) for select-like surfaces; input-owned assist
+  remains a separate seam built from `fret-ui-headless::text_assist` math plus
+  `fret-ui-kit::headless::text_assist` glue.
 - `ecosystem/fret-workspace` owns editor shell chrome and shell-level command/focus coordination.
 - `ecosystem/fret-docking` owns dock-graph-aware tabs, drop surfaces, split previews, and docking
   interaction policy.
@@ -78,6 +82,11 @@ Current checkpoint:
   callbacks for commit/cancel, assistive semantics placeholders for future completion/history
   popups, and a no-op session rule so focus/blur without an actual edit does not emit misleading
   outcome events,
+- `DragValue` and `AxisDragValue` now also expose explicit editor-layer outcome callbacks across
+  both scrub and typed-edit paths, and the promoted proof surface now carries a stable
+  `drag-value-demo.outcome` readout plus a focused diagnostics gate
+  (`tools/diag-scripts/ui-editor/imui/imui-editor-proof-drag-value-outcomes.json`) so numeric
+  editor sessions no longer need to infer commit/cancel indirectly from value drift alone,
 - editor preset replay is no longer proof-demo-local glue only: the editor theme helpers now expose
   a reusable "host theme sync, then editor preset replay" path for `WindowMetricsService`-driven
   resets, and the promoted proof demo uses that shared ordering,
@@ -92,20 +101,51 @@ Current checkpoint:
   and Escape cancel all have promoted evidence anchors,
 - repeated gradient-stop rows now also have a focused identity gate, so add/remove churn proves
   edited values stay attached to stable stop ids instead of drifting with row order,
-- the first dedicated headless landing zone for editor completion/history work now exists in
-  `fret-ui-headless::text_assist`, with `fret-ui-kit::headless` re-exporting the query/filter /
-  active-row math while leaving editor visuals and popup composition in `fret-ui-editor`,
+- the text-assist boundary is now split the way this workstream wanted it to be:
+  `fret-ui-headless::text_assist` owns query/filter/highlight/navigation math, while
+  `fret-ui-kit::headless::text_assist` now owns the first reusable input-owned glue layer above
+  that math (`expanded` policy, active-descendant / controls semantics, and outer
+  Arrow/Home/Page/Enter/Escape arbitration) without pulling popup visuals or editor recipes down
+  into the headless crate,
 - `imui_editor_proof_demo` now also promotes that seam into a minimal `Name assist`
   completion/history proof: the input keeps focus, the open popup is exposed as a controlled
   listbox relationship, the active row is surfaced through `active_descendant`, outer editor glue
-  owns Arrow/Home/Page navigation without growing `TextField`'s public API, and Enter accepts the
-  active suggestion,
-- and the remaining foundation cleanup is now mostly about promoting specialized text policy above
-  that baseline: lifting the proof into reusable `fret-ui-kit` focus/overlay/active-descendant
-  glue, choosing the formal popup/list-surface abstraction for editor completion/history, richer
-  password/history integrations, targeted `BlurBehavior::Cancel` / `PreserveDraft` adoption on
-  real editor surfaces, and follow-up tuning for wide-inspector slack after the new lane grammar
-  landed.
+  owns Arrow/Home/Page navigation without growing `TextField`'s public API, Enter accepts the
+  active suggestion, and the proof surface now consumes the shared `fret-ui-kit` helper instead of
+  keeping a private demo-local copy,
+- the first editor-owned recipe above that glue now also exists as
+  `fret-ui-editor::controls::TextAssistField`, and it now owns a shared field + listbox panel that
+  can render either inline or as an anchored overlay without pushing popup policy down into
+  `fret-ui` or back into the proof demo,
+- editor `TextField` now also exposes editor-layer `field_id_out` / `input_id_out` seams so
+  higher-level recipes can anchor assistive overlays to the real text entry node while still
+  treating the whole joined field chrome as one dismissable branch,
+- `imui_editor_proof_demo` now defaults that `Name assist` proof to the anchored-overlay surface,
+  so the promoted editor proof no longer relies on an inline-only fallback for completion/history
+  review,
+- the anchored-overlay `Name assist` proof now also has a focused popup evidence gate via
+  `tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-popup-screenshots.json`, which
+  pins in-window popup geometry, input-retained focus, active-row review state, and overlay
+  placement tracing (`editor.text_assist`) on the promoted proof surface instead of relying on ad
+  hoc screenshots,
+- the same `TextAssistField` seam now also has a second reusable consumer in
+  `InspectorPanel` search: panel headers can opt into input-owned search history/completion without
+  growing a second popup implementation, and the proof demo now exercises that path with anchored
+  overlay search history in the promoted inspector surface,
+- `EnumSelect` now also aligns its trigger-owned close-reason, close-autofocus, and clear-query
+  timing with `fret-ui-kit::primitives::combobox`, which confirms the intended boundary:
+  trigger-owned select/list policy belongs in shared `ui-kit` primitives, while input-owned assist
+  remains a separate editor-facing seam above `text_assist`,
+- editor `EnumSelect` now also reveals the selected row when the popup opens instead of reopening
+  long filtered lists at the top every time, reusing shared scroll-handle plus active-element
+  visibility helpers rather than keeping another editor-local "selected item reveal" path, and it
+  now anchors that visibility/repro surface to an explicit popup viewport wrapper instead of
+  relying on a scroll semantics node that can collapse to zero-height in diagnostics geometry,
+- and the remaining foundation cleanup is now mostly about promoting the next layer above that
+  baseline: only the popup/scroll/selection behaviors that gain real multi-consumer evidence should
+  move further into shared kit policy, alongside richer password/history integrations, targeted
+  `BlurBehavior::Cancel` / `PreserveDraft` adoption on real editor surfaces, and follow-up tuning
+  for wide-inspector slack after the new lane grammar landed.
 
 Until those are in better shape, new promoted reusable components should be treated as lower
 priority than baseline correction.

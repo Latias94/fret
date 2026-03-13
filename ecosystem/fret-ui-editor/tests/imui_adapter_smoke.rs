@@ -3,13 +3,14 @@
 use std::sync::Arc;
 
 use fret_authoring::UiWriter;
+use fret_core::Color;
 use fret_runtime::Model;
 use fret_ui::UiHost;
 
 use fret_ui_editor::controls::{
-    Checkbox, CheckboxOptions, DragValue, DragValueOptions, EnumSelect, EnumSelectItem,
-    EnumSelectOptions, NumericFormatFn, NumericParseFn, Slider, SliderOptions, TextField,
-    TextFieldOptions,
+    AxisDragValue, AxisDragValueOptions, AxisDragValueOutcome, Checkbox, CheckboxOptions,
+    DragValue, DragValueOptions, DragValueOutcome, EnumSelect, EnumSelectItem, EnumSelectOptions,
+    NumericFormatFn, NumericParseFn, Slider, SliderOptions, TextField, TextFieldOptions,
 };
 use fret_ui_editor::imui;
 
@@ -44,6 +45,37 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
             ..Default::default()
         }),
     );
+
+    let on_drag_outcome = Arc::new(
+        |_host: &mut dyn fret_ui::action::UiActionHost,
+         _action_cx: fret_ui::action::ActionCx,
+         _outcome: DragValueOutcome| {},
+    );
+    let on_axis_outcome = Arc::new(
+        |_host: &mut dyn fret_ui::action::UiActionHost,
+         _action_cx: fret_ui::action::ActionCx,
+         _outcome: AxisDragValueOutcome| {},
+    );
+
+    let _ = DragValue::new(value_model.clone(), fmt.clone(), parse.clone())
+        .on_outcome(Some(on_drag_outcome))
+        .options(DragValueOptions {
+            id_source: Some(Arc::from("tests.drag_value.outcome")),
+            ..Default::default()
+        });
+
+    let _ = AxisDragValue::new(
+        Arc::from("X"),
+        Color::from_srgb_hex_rgb(0xf2_59_59),
+        value_model.clone(),
+        fmt.clone(),
+        parse.clone(),
+    )
+    .on_outcome(Some(on_axis_outcome))
+    .options(AxisDragValueOptions {
+        id_source: Some(Arc::from("tests.axis_drag_value.outcome")),
+        ..Default::default()
+    });
 
     imui::slider(
         ui,

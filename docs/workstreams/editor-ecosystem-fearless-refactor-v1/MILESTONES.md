@@ -80,8 +80,21 @@ Deliverables:
   directly on the proof surface,
 - a first editor-grade extension seam on top of that baseline: password-mode rendering, explicit
   commit/cancel outcome hooks, assistive semantics hooks for future completion/history surfaces,
+- a reusable `fret-ui-kit::headless::text_assist` glue layer above
+  `fret-ui-headless::text_assist` for input-owned expanded/collapsed policy,
+  active-descendant / controls semantics, and outer keyboard arbitration,
+- a first editor-owned recipe above that seam (`fret-ui-editor::controls::TextAssistField`) with a
+  shared panel builder plus `Inline` / `AnchoredOverlay` surfaces so field + listbox composition,
+  popup anchoring, and row visuals stop living in proof-local code,
+- one first concrete trigger-owned reuse of shared popup/list policy by aligning editor
+  `EnumSelect` with `fret-ui-kit::primitives::combobox` for close reasons, focus restore, and
+  close-time query reset instead of keeping a second editor-local state machine,
 - one minimal promoted completion/history proof on top of that seam, keeping focus on the owning
-  input while exposing a controlled listbox relationship plus `active_descendant` state,
+  input while exposing a controlled listbox relationship plus `active_descendant` state and
+  consuming the shared kit helper rather than proof-local glue,
+- focused popup screenshot/diag evidence for the anchored-overlay assist surface so popup geometry,
+  in-window clamping, active-row review state, and overlay placement traces stay reviewable on the
+  promoted proof surface,
 - focused diag coverage for buffered blur commit, multiline explicit commit, and Escape cancel on
   the promoted proof surface,
 - and a boring close-out path for screenshot automation after typed-mode interactions and reruns.
@@ -101,7 +114,14 @@ Exit gates:
   cancel/revert without relying on manual inspection,
 - a promoted text-assist/history proof plus diag gate demonstrate input-owned assist semantics
   (`expanded`, controlled listbox relation, `active_descendant`) and Enter-accept behavior without
-  moving primary focus into the popup,
+  moving primary focus into the popup, and that proof is backed by shared `fret-ui-kit`
+  text-assist glue plus an editor-owned `TextAssistField` recipe rather than demo-local policy
+  code, with anchored overlay mode promoted on the proof surface instead of an inline-only fallback,
+- trigger-owned editor select surfaces reuse shared `fret-ui-kit::primitives::combobox` policy for
+  close reasons, focus restore, and query clearing instead of keeping a separate editor-local
+  popup/list lifecycle,
+- the anchored-overlay popup path is also backed by focused screenshot/bundle/layout evidence and
+  an overlay-placement trace instead of only the behavioral history script,
 - repeated-control identity coverage exists on a promoted loop-built surface rather than only in
   local reasoning or code comments,
 - and this workstream can point to clear proof/gate evidence for baseline correctness.
@@ -120,9 +140,10 @@ Deliverables:
 
 - `DragValue` closure for real editor workflows,
 - richer text-input policy for editor surfaces beyond the shared buffered baseline
-  (lifting the promoted proof into reusable `fret-ui-kit` text-assist glue, deciding the formal
-  popup/list abstraction, specialized blur ownership where needed, and deeper editor integrations
-  above the new password/outcome/assistive extension seam),
+  (deciding where shared overlay/scroll/selection policy should live now that the
+  popup-capable `fret-ui-kit` text-assist glue plus `TextAssistField` recipe have both object-name
+  and inspector-search consumers, specialized blur ownership where needed, and deeper editor
+  integrations above the new password/outcome/assistive extension seam),
 - a promoted starter set definition for controls and composites,
 - explicit conventions for `id_source`, response semantics, and `test_id`,
 - and a "no new promoted components without gates" landing rule.

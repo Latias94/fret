@@ -6,19 +6,21 @@
 //! - without depending on any design-system crate.
 
 use std::panic::Location;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use fret_core::text::{TextOverflow, TextWrap};
 use fret_core::{Axis, Corners, Edges, KeyCode, Px, TextAlign, TextStyle};
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, ActivateReason, OnActivate, OnCloseAutoFocus, OnKeyDown};
+use fret_ui::action::{ActionCx, ActivateReason, OnActivate, OnKeyDown};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
     PressableA11y, PressableProps, ScrollAxis, ScrollProps, SizeStyle, SpacingLength, TextProps,
 };
+use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
+use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::primitives::popper;
+use fret_ui_kit::primitives::{active_descendant as active_desc, combobox as kit_combobox, popper};
 use fret_ui_kit::typography;
 use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 
@@ -136,19 +138,22 @@ impl EnumSelect {
     fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let open = open_model(cx);
         let filter = filter_model(cx);
+        let open_change_reason = cx.local_model_keyed("open_change_reason", || {
+            None::<kit_combobox::ComboboxOpenChangeReason>
+        });
+        let focus_restore_target = cx.slot_state(
+            || Arc::new(Mutex::new(None::<GlobalElementId>)),
+            |cell| cell.clone(),
+        );
 
         let is_open = cx
             .get_model_copied(&open, Invalidation::Layout)
             .unwrap_or(false);
 
-        let should_clear_filter = cx.with_state(
-            || false,
-            |last_open| {
-                let should_clear = !*last_open && is_open;
-                *last_open = is_open;
-                should_clear
-            },
-        );
+        let should_clear_filter = cx
+            .slot_state(kit_combobox::ClearQueryOnCloseState::default, |state| {
+                kit_combobox::should_clear_query_on_close(state, is_open)
+            });
         if should_clear_filter {
             let _ = cx.app.models_mut().update(&filter, |s| s.clear());
         }
@@ -197,6 +202,7 @@ impl EnumSelect {
         let items_for_overlay = self.items.clone();
         let options_for_overlay = self.options.clone();
         let open_for_overlay = open.clone();
+        let open_change_reason_for_overlay = open_change_reason.clone();
         let enabled_for_paint = self.options.enabled;
 
         let trigger = cx.pressable(
@@ -221,6 +227,11 @@ impl EnumSelect {
                 ..Default::default()
             },
             move |cx, _st| {
+                cx.pressable_add_on_activate(kit_combobox::set_open_change_reason_on_activate(
+                    open_change_reason_for_overlay.clone(),
+                    kit_combobox::ComboboxOpenChangeReason::TriggerPress,
+                ));
+
                 let open = open_for_overlay.clone();
                 let on_activate: OnActivate =
                     Arc::new(move |host, action_cx: ActionCx, _reason: ActivateReason| {
@@ -335,10 +346,14 @@ impl EnumSelect {
         );
 
         let trigger_id = trigger.id;
+        *focus_restore_target
+            .lock()
+            .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
 
         let enabled_for_keys = self.options.enabled;
         let on_trigger_open_keys: OnKeyDown = Arc::new({
             let open = open.clone();
+            let open_change_reason = open_change_reason.clone();
             move |host, action_cx: ActionCx, down| {
                 if !enabled_for_keys {
                     return false;
@@ -347,14 +362,23 @@ impl EnumSelect {
                     down.key,
                     KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space | KeyCode::ArrowDown
                 ) {
+                    let _ = host.models_mut().update(&open_change_reason, |v| {
+                        *v = Some(kit_combobox::ComboboxOpenChangeReason::TriggerPress);
+                    });
                     let _ = host.models_mut().update(&open, |v| *v = true);
                     host.request_redraw(action_cx.window);
                     return true;
                 }
                 if down.key == KeyCode::Escape {
-                    let _ = host.models_mut().update(&open, |v| *v = false);
-                    host.request_redraw(action_cx.window);
-                    return true;
+                    let was_open = host.models_mut().get_copied(&open).unwrap_or(false);
+                    if was_open {
+                        let _ = host.models_mut().update(&open_change_reason, |v| {
+                            *v = Some(kit_combobox::ComboboxOpenChangeReason::EscapeKey);
+                        });
+                        let _ = host.models_mut().update(&open, |v| *v = false);
+                        host.request_redraw(action_cx.window);
+                        return true;
+                    }
                 }
                 false
             }
@@ -372,6 +396,8 @@ impl EnumSelect {
                 items_for_overlay,
                 open,
                 filter,
+                open_change_reason,
+                focus_restore_target,
                 options_for_overlay,
                 density,
                 bg,
@@ -386,6 +412,8 @@ impl EnumSelect {
                 items_for_overlay,
                 open,
                 filter,
+                open_change_reason,
+                focus_restore_target,
                 options_for_overlay,
                 density,
                 bg,
@@ -403,6 +431,8 @@ fn request_overlay<H: UiHost>(
     items: Arc<[EnumSelectItem]>,
     open: Model<bool>,
     filter: Model<String>,
+    open_change_reason: Model<Option<kit_combobox::ComboboxOpenChangeReason>>,
+    focus_restore_target: Arc<Mutex<Option<GlobalElementId>>>,
     options: EnumSelectOptions,
     density: EditorDensity,
     bg: fret_core::Color,
@@ -411,9 +441,17 @@ fn request_overlay<H: UiHost>(
     let model_for_list = model.clone();
     let open_for_list = open.clone();
     let open_for_dismiss = open.clone();
+    let query_for_list = filter.clone();
+    let open_change_reason_for_list = open_change_reason.clone();
+    let open_change_reason_for_dismiss = open_change_reason.clone();
     let list_test_id = options.list_test_id.clone();
+    let list_viewport_test_id = list_test_id
+        .as_ref()
+        .map(|test_id| enum_select_viewport_test_id(test_id.as_ref()));
     let item_test_id_prefix = list_test_id.clone();
     let search_test_id = options.search_test_id.clone();
+    let scroll_handle = cx.slot_state(ScrollHandle::default, |handle| handle.clone());
+    let pending_selected_reveal = cx.local_model_keyed("pending_selected_reveal", || false);
 
     let overlay_id = cx
         .named("enum_select.overlay", |cx| cx.spacer(Default::default()))
@@ -423,11 +461,11 @@ fn request_overlay<H: UiHost>(
         .get_model_copied(&open, Invalidation::Layout)
         .unwrap_or(false);
     let presence = OverlayPresence::instant(is_open);
-
-    let close_focus: OnCloseAutoFocus = Arc::new(move |host, _cx, req| {
-        req.prevent_default();
-        host.request_focus(trigger_id);
-    });
+    let close_focus = kit_combobox::on_close_auto_focus_with_reason(
+        open_change_reason.clone(),
+        focus_restore_target,
+        enum_select_close_auto_focus_policy(),
+    );
 
     let (max_h, shadow_color) = {
         let theme = Theme::global(&*cx.app);
@@ -451,6 +489,28 @@ fn request_overlay<H: UiHost>(
         .cloned()
         .collect::<Vec<_>>()
         .into();
+    let queue_selected_reveal = cx.slot_state(
+        || false,
+        |was_open| {
+            let queue = !*was_open && is_open;
+            *was_open = is_open;
+            queue
+        },
+    );
+    if queue_selected_reveal {
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&pending_selected_reveal, |pending| *pending = true);
+    } else if !is_open {
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&pending_selected_reveal, |pending| *pending = false);
+    }
+    let should_reveal_selected = cx
+        .get_model_copied(&pending_selected_reveal, Invalidation::Layout)
+        .unwrap_or(false);
 
     let placement = popper::PopperContentPlacement::new(
         popper::LayoutDirection::Ltr,
@@ -538,17 +598,23 @@ fn request_overlay<H: UiHost>(
                             }
                             out.push(search);
 
+                            let scroll_handle_for_list = scroll_handle.clone();
+                            let pending_selected_reveal_for_list = pending_selected_reveal.clone();
+                            let selected_row_element_out = Arc::new(Mutex::new(None));
+                            let selected_row_element_out_for_rows =
+                                selected_row_element_out.clone();
                             let scroll = cx.scroll(
                                 ScrollProps {
                                     layout: LayoutStyle {
                                         size: SizeStyle {
                                             width: Length::Fill,
-                                            height: Length::Px(max_h),
+                                            height: Length::Fill,
                                             ..Default::default()
                                         },
                                         ..Default::default()
                                     },
                                     axis: ScrollAxis::Y,
+                                    scroll_handle: Some(scroll_handle.clone()),
                                     ..Default::default()
                                 },
                                 move |cx| {
@@ -576,27 +642,88 @@ fn request_overlay<H: UiHost>(
                                             }
 
                                             let item_test_id_prefix = item_test_id_prefix.clone();
-                                            filtered
-                                                .iter()
-                                                .enumerate()
-                                                .map(|(idx, it)| {
-                                                    enum_select_row(
-                                                        cx,
-                                                        idx,
-                                                        filtered.len(),
-                                                        &model_for_list,
-                                                        &open_for_list,
-                                                        it.clone(),
-                                                        density,
-                                                        item_test_id_prefix.clone(),
-                                                    )
-                                                })
-                                                .collect::<Vec<_>>()
+                                            let mut rows = Vec::with_capacity(filtered.len());
+                                            for (idx, it) in filtered.iter().enumerate() {
+                                                let (row, row_id, row_selected) = enum_select_row(
+                                                    cx,
+                                                    idx,
+                                                    filtered.len(),
+                                                    model_for_list.clone(),
+                                                    open_for_list.clone(),
+                                                    query_for_list.clone(),
+                                                    open_change_reason_for_list.clone(),
+                                                    it.clone(),
+                                                    density,
+                                                    item_test_id_prefix.clone(),
+                                                );
+                                                if row_selected {
+                                                    *selected_row_element_out_for_rows
+                                                        .lock()
+                                                        .unwrap_or_else(|e| e.into_inner()) =
+                                                        Some(row_id);
+                                                }
+                                                rows.push(row);
+                                            }
+                                            rows
                                         },
                                     )]
                                 },
                             );
-                            out.push(scroll);
+                            let viewport = cx.container(
+                                ContainerProps {
+                                    layout: LayoutStyle {
+                                        size: SizeStyle {
+                                            width: Length::Fill,
+                                            height: Length::Px(max_h),
+                                            ..Default::default()
+                                        },
+                                        overflow: Overflow::Clip,
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                move |_cx| vec![scroll],
+                            );
+                            let viewport = if let Some(test_id) = list_viewport_test_id.as_ref() {
+                                viewport.test_id(test_id.clone())
+                            } else {
+                                viewport
+                            };
+                            let viewport_id = viewport.id;
+                            if should_reveal_selected {
+                                let selected_row_element = *selected_row_element_out
+                                    .lock()
+                                    .unwrap_or_else(|e| e.into_inner());
+                                if let Some(selected_row_element) = selected_row_element {
+                                    let did_reveal = active_desc::scroll_active_element_into_view_y(
+                                        cx,
+                                        &scroll_handle_for_list,
+                                        viewport_id,
+                                        selected_row_element,
+                                    );
+                                    let already_visible = element_visible_within_viewport_y(
+                                        cx,
+                                        viewport_id,
+                                        selected_row_element,
+                                    )
+                                    .unwrap_or(false);
+                                    if did_reveal || already_visible {
+                                        let _ =
+                                            cx.app.models_mut().update(
+                                                &pending_selected_reveal_for_list,
+                                                |pending| *pending = false,
+                                            );
+                                    }
+                                } else {
+                                    let _ = cx
+                                        .app
+                                        .models_mut()
+                                        .update(&pending_selected_reveal_for_list, |pending| {
+                                            *pending = false
+                                        });
+                                }
+                            }
+                            out.push(viewport);
                             out
                         },
                     )]
@@ -624,8 +751,11 @@ fn request_overlay<H: UiHost>(
     request.close_on_window_focus_lost = true;
     request.close_on_window_resize = true;
     request.on_close_auto_focus = Some(close_focus);
+    let set_reason_on_dismiss =
+        kit_combobox::set_open_change_reason_on_dismiss_request(open_change_reason_for_dismiss);
     request.dismissible_on_dismiss_request =
-        Some(Arc::new(move |host, action_cx: ActionCx, _req| {
+        Some(Arc::new(move |host, action_cx: ActionCx, req| {
+            set_reason_on_dismiss(host, action_cx, req);
             let _ = host.models_mut().update(&open_for_dismiss, |v| *v = false);
             host.request_redraw(action_cx.window);
         }));
@@ -637,14 +767,16 @@ fn enum_select_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     idx: usize,
     total: usize,
-    model: &Model<Option<Arc<str>>>,
-    open: &Model<bool>,
+    model: Model<Option<Arc<str>>>,
+    open: Model<bool>,
+    query: Model<String>,
+    open_change_reason: Model<Option<kit_combobox::ComboboxOpenChangeReason>>,
     item: EnumSelectItem,
     density: EditorDensity,
     item_test_id_prefix: Option<Arc<str>>,
-) -> AnyElement {
+) -> (AnyElement, GlobalElementId, bool) {
     let selected = cx
-        .get_model_cloned(model, Invalidation::Paint)
+        .get_model_cloned(&model, Invalidation::Paint)
         .unwrap_or(None)
         .as_deref()
         .is_some_and(|v| v == item.value.as_ref());
@@ -667,6 +799,8 @@ fn enum_select_row<H: UiHost>(
     let value_for_activate = item.value.clone();
     let model_for_activate = model.clone();
     let open_for_activate = open.clone();
+    let query_for_activate = query.clone();
+    let open_change_reason_for_activate = open_change_reason.clone();
 
     let mut el = cx.pressable(
         PressableProps {
@@ -692,15 +826,14 @@ fn enum_select_row<H: UiHost>(
             ..Default::default()
         },
         move |cx, st| {
-            let on_activate: OnActivate =
-                Arc::new(move |host, action_cx: ActionCx, _reason: ActivateReason| {
-                    let _ = host.models_mut().update(&model_for_activate, |v| {
-                        *v = Some(value_for_activate.clone());
-                    });
-                    let _ = host.models_mut().update(&open_for_activate, |v| *v = false);
-                    host.request_redraw(action_cx.window);
-                });
-            cx.pressable_add_on_activate(on_activate);
+            cx.pressable_add_on_activate(kit_combobox::commit_selection_on_activate(
+                enum_select_selection_commit_policy(),
+                model_for_activate.clone(),
+                open_for_activate.clone(),
+                query_for_activate.clone(),
+                open_change_reason_for_activate.clone(),
+                value_for_activate.clone(),
+            ));
 
             let hovered = st.hovered || st.hovered_raw;
             let bg = if hovered || selected {
@@ -756,7 +889,53 @@ fn enum_select_row<H: UiHost>(
         el = el.test_id(test_id.clone());
     }
 
-    el
+    let el_id = el.id;
+    (el, el_id, selected)
+}
+
+fn enum_select_selection_commit_policy() -> kit_combobox::SelectionCommitPolicy {
+    kit_combobox::SelectionCommitPolicy {
+        toggle_selected_to_none: false,
+        close_on_commit: true,
+        clear_query_on_commit: true,
+    }
+}
+
+fn enum_select_close_auto_focus_policy() -> kit_combobox::ComboboxCloseAutoFocusPolicy {
+    kit_combobox::ComboboxCloseAutoFocusPolicy::default()
+}
+
+fn enum_select_viewport_test_id(list_test_id: &str) -> Arc<str> {
+    Arc::from(format!("{list_test_id}.viewport"))
+}
+
+fn element_visible_within_viewport_y<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    viewport_element: GlobalElementId,
+    child_element: GlobalElementId,
+) -> Option<bool> {
+    let viewport = cx.last_bounds_for_element(viewport_element)?;
+    let child = cx.last_bounds_for_element(child_element)?;
+    Some(rect_visible_within_viewport_y(viewport, child))
+}
+
+fn rect_visible_within_viewport_y(viewport: fret_core::Rect, child: fret_core::Rect) -> bool {
+    let viewport_h = viewport.size.height.0.max(0.0);
+    if viewport_h <= 0.0 {
+        return false;
+    }
+
+    let view_top = viewport.origin.y.0;
+    let view_bottom = view_top + viewport_h;
+    let child_top = child.origin.y.0;
+    let child_h = child.size.height.0.max(0.0);
+    let child_bottom = child_top + child_h;
+
+    if child_h >= viewport_h - 0.01 {
+        child_top >= view_top - 0.01
+    } else {
+        child_top >= view_top - 0.01 && child_bottom <= view_bottom + 0.01
+    }
 }
 
 fn sanitize_test_id_segment(raw: &str) -> String {
@@ -809,7 +988,14 @@ fn open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
 
 #[cfg(test)]
 mod tests {
-    use super::sanitize_test_id_segment;
+    use super::{
+        enum_select_close_auto_focus_policy, enum_select_selection_commit_policy,
+        enum_select_viewport_test_id, rect_visible_within_viewport_y, sanitize_test_id_segment,
+    };
+    use fret_core::{Point, Px, Rect, Size};
+    use fret_ui_kit::primitives::combobox::{
+        ComboboxCloseAutoFocusDecision, ComboboxCloseAutoFocusPolicy,
+    };
 
     #[test]
     fn enum_select_item_test_id_segment_is_stable_ascii() {
@@ -819,6 +1005,71 @@ mod tests {
             "material-matcap"
         );
         assert_eq!(sanitize_test_id_segment("  "), "item");
+    }
+
+    #[test]
+    fn enum_select_commit_policy_does_not_toggle_selected_to_none() {
+        let policy = enum_select_selection_commit_policy();
+
+        assert!(!policy.toggle_selected_to_none);
+        assert!(policy.close_on_commit);
+        assert!(policy.clear_query_on_commit);
+    }
+
+    #[test]
+    fn enum_select_close_focus_policy_matches_trigger_owned_combobox() {
+        let policy: ComboboxCloseAutoFocusPolicy = enum_select_close_auto_focus_policy();
+
+        assert_eq!(
+            policy.on_item_press,
+            ComboboxCloseAutoFocusDecision::RestoreTrigger
+        );
+        assert_eq!(
+            policy.on_escape,
+            ComboboxCloseAutoFocusDecision::RestoreTrigger
+        );
+        assert_eq!(
+            policy.on_trigger_press,
+            ComboboxCloseAutoFocusDecision::RestoreTrigger
+        );
+        assert_eq!(
+            policy.on_outside_press,
+            ComboboxCloseAutoFocusDecision::RestoreTrigger
+        );
+        assert_eq!(
+            policy.on_focus_out,
+            ComboboxCloseAutoFocusDecision::PreventDefault
+        );
+    }
+
+    #[test]
+    fn enum_select_viewport_test_id_suffixes_list_test_id() {
+        assert_eq!(
+            enum_select_viewport_test_id("editor.enum.list").as_ref(),
+            "editor.enum.list.viewport"
+        );
+    }
+
+    #[test]
+    fn rect_visible_within_viewport_y_matches_nearest_visibility_contract() {
+        let viewport = Rect::new(Point::new(Px(0.0), Px(10.0)), Size::new(Px(40.0), Px(40.0)));
+
+        let fully_visible = Rect::new(Point::new(Px(0.0), Px(20.0)), Size::new(Px(40.0), Px(12.0)));
+        assert!(rect_visible_within_viewport_y(viewport, fully_visible));
+
+        let clipped_bottom =
+            Rect::new(Point::new(Px(0.0), Px(42.0)), Size::new(Px(40.0), Px(16.0)));
+        assert!(!rect_visible_within_viewport_y(viewport, clipped_bottom));
+
+        let tall_child = Rect::new(Point::new(Px(0.0), Px(10.0)), Size::new(Px(40.0), Px(60.0)));
+        assert!(rect_visible_within_viewport_y(viewport, tall_child));
+
+        let tall_child_top_hidden =
+            Rect::new(Point::new(Px(0.0), Px(4.0)), Size::new(Px(40.0), Px(60.0)));
+        assert!(!rect_visible_within_viewport_y(
+            viewport,
+            tall_child_top_hidden
+        ));
     }
 }
 

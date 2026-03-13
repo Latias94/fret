@@ -1,7 +1,8 @@
 //! Inspector panel recipe (search + toolbar + sections).
 //!
 //! This is a composition-only surface intended for editor apps:
-//! - it does not define data models beyond an optional search `Model<String>`,
+//! - it does not define data models beyond an optional search `Model<String>` and optional
+//!   search-assist state when apps opt into history/completion,
 //! - it stays renderer/platform agnostic,
 //! - it provides stable slots so apps can assemble an inspector without re-rolling layout.
 
@@ -14,10 +15,28 @@ use fret_ui::element::{
     SpacerProps, SpacingLength,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::headless::text_assist::{InputOwnedTextAssistKeyOptions, TextAssistItem};
 
-use crate::controls::{MiniSearchBox, MiniSearchBoxOptions};
+use crate::controls::{
+    EditorTextCancelBehavior, EditorTextSelectionBehavior, MiniSearchBox, MiniSearchBoxOptions,
+    TextAssistField, TextAssistFieldOptions, TextAssistFieldSurface, TextFieldOptions,
+};
 use crate::primitives::inspector_layout::InspectorLayoutMetrics;
 use crate::primitives::{EditorDensity, EditorTokenKeys};
+
+#[derive(Debug, Clone)]
+pub struct InspectorPanelSearchAssistOptions {
+    pub dismissed_query_model: Model<String>,
+    pub active_item_id_model: Model<Option<Arc<str>>>,
+    pub items: Arc<[TextAssistItem]>,
+    pub list_label: Arc<str>,
+    pub empty_label: Arc<str>,
+    pub key_options: InputOwnedTextAssistKeyOptions,
+    pub list_test_id: Option<Arc<str>>,
+    pub item_test_id_prefix: Option<Arc<str>>,
+    pub empty_test_id: Option<Arc<str>>,
+    pub max_list_height: Option<Px>,
+}
 
 #[derive(Debug, Clone)]
 pub struct InspectorPanelOptions {
@@ -32,6 +51,7 @@ pub struct InspectorPanelOptions {
     pub toolbar_test_id: Option<Arc<str>>,
     pub search_test_id: Option<Arc<str>>,
     pub search_clear_test_id: Option<Arc<str>>,
+    pub search_assist: Option<InspectorPanelSearchAssistOptions>,
     pub content_test_id: Option<Arc<str>>,
 }
 
@@ -56,6 +76,7 @@ impl Default for InspectorPanelOptions {
             toolbar_test_id: None,
             search_test_id: None,
             search_clear_test_id: None,
+            search_assist: None,
             content_test_id: None,
         }
     }
@@ -247,15 +268,14 @@ impl InspectorPanel {
                 }
 
                 if let Some(search) = self.search.clone() {
-                    let search_el = MiniSearchBox::new(search)
-                        .options(MiniSearchBoxOptions {
-                            enabled: self.options.enabled,
-                            focusable: self.options.enabled,
-                            test_id: self.options.search_test_id.clone(),
-                            clear_test_id: self.options.search_clear_test_id.clone(),
-                            ..Default::default()
-                        })
-                        .into_element(cx);
+                    let search_el = inspector_panel_search_element(
+                        cx,
+                        search,
+                        self.options.enabled,
+                        self.options.search_test_id.clone(),
+                        self.options.search_clear_test_id.clone(),
+                        self.options.search_assist.clone(),
+                    );
 
                     out.push(search_el);
                 }
@@ -381,4 +401,55 @@ impl InspectorPanel {
             root
         })
     }
+}
+
+fn inspector_panel_search_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    search: Model<String>,
+    enabled: bool,
+    search_test_id: Option<Arc<str>>,
+    search_clear_test_id: Option<Arc<str>>,
+    search_assist: Option<InspectorPanelSearchAssistOptions>,
+) -> AnyElement {
+    if let Some(search_assist) = search_assist {
+        return TextAssistField::new(
+            search,
+            search_assist.dismissed_query_model,
+            search_assist.active_item_id_model,
+            search_assist.items,
+        )
+        .options(TextAssistFieldOptions {
+            field: TextFieldOptions {
+                enabled,
+                focusable: enabled,
+                placeholder: Some(Arc::from("Search…")),
+                clear_button: true,
+                buffered: false,
+                selection_behavior: EditorTextSelectionBehavior::SelectAllOnFocus,
+                cancel_behavior: EditorTextCancelBehavior::Clear,
+                test_id: search_test_id,
+                clear_test_id: search_clear_test_id,
+                ..Default::default()
+            },
+            surface: TextAssistFieldSurface::AnchoredOverlay,
+            list_label: search_assist.list_label,
+            empty_label: search_assist.empty_label,
+            key_options: search_assist.key_options,
+            list_test_id: search_assist.list_test_id,
+            item_test_id_prefix: search_assist.item_test_id_prefix,
+            empty_test_id: search_assist.empty_test_id,
+            max_list_height: search_assist.max_list_height,
+        })
+        .into_element(cx);
+    }
+
+    MiniSearchBox::new(search)
+        .options(MiniSearchBoxOptions {
+            enabled,
+            focusable: enabled,
+            test_id: search_test_id,
+            clear_test_id: search_clear_test_id,
+            ..Default::default()
+        })
+        .into_element(cx)
 }

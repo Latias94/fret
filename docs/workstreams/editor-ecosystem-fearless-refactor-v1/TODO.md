@@ -98,6 +98,22 @@ Interaction contract:
       Decision: yes. The dense preset now has matching overview / typing / validation screenshot
       proof coverage via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-imgui-like-dense.json`.
+- [x] `EER-BASE-120` Align trigger-owned editor select popup/list policy with shared
+      `fret-ui-kit::primitives::combobox` helpers instead of keeping a second editor-local state
+      machine.
+      `EnumSelect` now records combobox-style close reasons, restores focus through the shared
+      close-autofocus policy, clears its search query on close instead of on open, and commits item
+      selection through the shared combobox helper with editor-specific "do not toggle back to
+      none" semantics. It also now reuses the shared scroll-handle + active-element visibility
+      helpers to reveal the selected row when reopening the popup, and the proof/demo surface now
+      exposes a dedicated viewport wrapper so diagnostics can target real popup geometry instead of
+      a zero-height scroll semantics node. A focused gate script now exists at
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-enum-select-selected-row-reveal.json`;
+      final packed evidence still needs a successful `fret-demo` proof binary link on Windows.
+      This confirms the intended boundary: shared trigger-owned popup/list policy belongs in
+      `fret-ui-kit`, while
+      input-owned assist remains a separate seam built on
+      `fret-ui-headless::text_assist` + `fret-ui-kit::headless::text_assist`.
 - [~] `EER-BASE-117` Close baseline editor text/numeric policy where visuals and interaction are
       coupled:
       Enter/Escape semantics, selection defaults, clear affordances, affix behavior, and error
@@ -121,15 +137,29 @@ Interaction contract:
       semantics, and no-op focus/blur cycles no longer emit misleading commit/cancel outcomes. The
       same control also exposes password-mode rendering, a commit/cancel outcome hook, and
       assistive semantics placeholders for future completion/history surfaces while keeping that
-      policy in the ecosystem layer. Authoring-parity percent sliders now also treat
+      policy in the ecosystem layer. The first reusable assist glue above that baseline now also
+      lives in `fret-ui-kit::headless::text_assist`: it preserves the existing
+      `fret-ui-headless::text_assist` math API while adding input-owned expanded/collapsed policy,
+      active-descendant / controls semantics wiring, and outer
+      Arrow/Home/Page/Enter/Escape handling without teaching `TextField` a popup policy. The proof
+      demo has already switched to those shared helpers instead of keeping demo-local glue, and
+      the first editor-owned recipe above that seam now exists as
+      `fret-ui-editor::controls::TextAssistField`, which now owns a shared listbox panel plus
+      `Inline` / `AnchoredOverlay` surfaces and uses editor-layer `TextField` id seams to anchor
+      popup mode to the real input while keeping the whole joined field in one dismissable branch.
+      Authoring-parity percent sliders now also treat
       `percent_0_1_format(0)` as the sole `%` source, and the shared icon-button segment now
       centers trailing clear affordance icons so proof-surface text/numeric controls stop drifting
       on obvious visual seams.
-      Remaining work: lift the new completion/history proof into reusable `fret-ui-kit`
-      focus/overlay/active-descendant glue, decide on the formal popup/list-surface abstraction
-      for editor completion/history, decide where editor surfaces should opt into
-      `BlurBehavior::Cancel` / `PreserveDraft`, and keep tightening multiline/editor proof coverage
-      before new promoted components land.
+      The same seam now also has a second reusable consumer via `InspectorPanel` search history,
+      and trigger-owned `EnumSelect` popup/list lifecycle now also reuses the shared
+      `fret-ui-kit::primitives::combobox` helpers for close reasons, focus restore, and
+      close-time query clearing rather than keeping a separate editor-local copy, while popup open
+      now also reveals the selected row instead of restarting long lists at the top. The remaining
+      work is to promote only the next shared layer that has real multi-consumer evidence beyond
+      this reveal baseline, decide where editor surfaces should opt into `BlurBehavior::Cancel` /
+      `PreserveDraft`, and keep multiline/editor proof coverage tight before new promoted
+      components land.
 - [ ] `EER-BASE-118` Do not promote new reusable editor components until `EER-BASE-110` through
       `EER-BASE-117` are in materially better shape.
 
@@ -137,8 +167,19 @@ Interaction contract:
 
 - [~] `EER-IMUI-120` Keep expanding `fret-ui-editor::imui` only as a thin facade over declarative
       controls; do not allow a second implementation tree to form.
-- [ ] `EER-EDITOR-121` Close `DragValue` for real editor workflows:
+- [~] `EER-EDITOR-121` Close `DragValue` for real editor workflows:
       prefix/suffix, clamp policy, step, decimals policy, unit helpers, and consistent commit/cancel.
+      Recent progress: `DragValue` and `AxisDragValue` now expose a shared editor-layer
+      commit/cancel outcome seam across both scrub and typed-edit paths, and the promoted proof
+      surface now carries a stable `drag-value-demo.outcome` readout plus a focused diagnostics
+      gate at
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-drag-value-outcomes.json`, which
+      currently proves scrub commit plus typed commit/cancel on the promoted proof surface.
+      Remaining work: clamp/step/decimals and unit-helper policy still need a real shared story,
+      composite propagation above the raw axis control (`VecEdit` / `TransformEdit`) still needs
+      an explicit follow-up decision instead of implicit behavior, and active-scrub Escape/cancel
+      still needs a more direct diagnostics route if we want that exact path gated without manual
+      repro.
 - [~] `EER-EDITOR-122` Close editor-grade text input policy beyond the baseline layer:
       password mode, completion/history hook placeholders, and richer editing hooks.
       Recent progress: buffered `TextField` now covers both single-line and multiline edit sessions
@@ -152,10 +193,21 @@ Interaction contract:
       minimal `Name assist` completion/history surface: the input keeps focus, a controlled
       listbox is exposed through assistive semantics, Arrow/Home/Page navigation is handled by
       outer editor policy glue, and Enter accepts the active suggestion on the promoted proof
-      surface. The remaining work is now about lifting that proof into reusable
-      `fret-ui-kit` focus/overlay/active-descendant glue, deciding the formal popup/list
-      abstraction, deciding where specialized blur policies belong, and adding richer editor
-      integrations above the shared baseline rather than re-litigating commit/cancel semantics.
+      surface. The proof-local glue is no longer private: the first reusable landing zone now
+      also exists in `fret-ui-kit::headless::text_assist`, and `imui_editor_proof_demo` consumes
+      that shared layer directly. The first editor-owned recipe above it now also exists as
+      `fret-ui-editor::controls::TextAssistField`, and that recipe already supports both inline
+      and anchored-overlay list surfaces. The anchored-overlay path now also has focused popup
+      evidence via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-popup-screenshots.json`,
+      which pins popup geometry, input-retained focus, active-row review state, and the
+      `editor.text_assist` overlay placement trace. The second reusable consumer now also exists in
+      `InspectorPanel` search history, and
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-inspector-search-assist-popup-screenshots.json`
+      is the intended focused gate for that panel-header surface. The remaining work is now about
+      promoting only the shared overlay/scroll/selection policy that has real reuse evidence,
+      deciding where specialized blur policies belong, and adding richer editor integrations above
+      the shared baseline rather than re-litigating popup ownership or commit/cancel semantics.
 - [ ] `EER-EDITOR-123` Freeze the v1 reusable starter set:
       `TextField`, `Checkbox`, `DragValue`, `Slider`, `EnumSelect`, `ColorEdit`, `VecNEdit`,
       `TransformEdit`, `PropertyGrid`, and `InspectorPanel`.
@@ -208,17 +260,30 @@ Interaction contract:
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-history.json` locks the
       expanded/collapsed state readouts, input-owned listbox semantics, keyboard navigation, and
       Enter-accept path on the same proof surface that already hosts buffered text-session
-      evidence. Remaining work: add a second consumer before extracting more formal kit-level
-      popup/focus glue.
+      evidence. The proof now also verifies the shared `fret-ui-kit::headless::text_assist` glue
+      instead of a private demo helper, and the mounted UI path now flows through
+      `fret-ui-editor::controls::TextAssistField` instead of demo-local listbox rendering. The
+      promoted proof now also defaults that recipe to its anchored-overlay surface, and
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-popup-screenshots.json`
+      now locks popup geometry, input-retained focus, active-row review state, and overlay
+      placement tracing on that same proof surface. The same seam now also has a second reusable
+      consumer in `InspectorPanel` search history, with intended focused evidence via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-inspector-search-assist-popup-screenshots.json`.
+      Trigger-owned `EnumSelect` policy now also aligns with
+      `fret-ui-kit::primitives::combobox`, so the remaining work is narrower: decide which
+      additional shared popup/list behaviors deserve promotion into `ui-kit` beyond the now-landed
+      reason/focus/query lifecycle helpers, and back those promotions with focused proof surfaces.
 - [~] `EER-GATE-133` Keep screenshot coverage tied to actual baseline-review states, not just
       arbitrary captures.
       The neutral default baseline now has a screenshot proof via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-default.json`;
       the full authoring parity surface now also has a focused screenshot proof via
-      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-authoring-affordances-screenshots-default.json`.
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-authoring-affordances-screenshots-default.json`;
+      the anchored-overlay assist path now also has a focused popup screenshot proof via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-popup-screenshots.json`.
       Their next job is to drive token/layout cleanup, not just exist, and to stay aligned with the
-      new shared inspector lane grammar plus the authoring proof surfaces where clear-affordance
-      and affix regressions tend to show up first.
+      new shared inspector lane grammar plus the authoring proof surfaces where clear-affordance,
+      affix, and popup-geometry regressions tend to show up first.
 - [x] `EER-GATE-136` Close the screenshot-runner finalization gap for editor typed-edit proof.
       The default baseline script now resets the proof search field up front so repeated runs do
       not strand the next session in a filtered state, the launched `diag run` command exits
