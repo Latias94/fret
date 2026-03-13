@@ -512,11 +512,15 @@ ID format:
     - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns unpadded
       raw-target reservation, final-step mask handoff, or masked step dispatch inside
       `apply_chain_in_place(...)` directly
+    - unmasked chain-step dispatch flow moved into
+      `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns
+      `apply_step_in_place_with_scratch_targets(...)` directly
   - Current next hotspot:
-    - remaining unmasked single-step dispatch helper
-      `apply_step_in_place_with_scratch_targets(...)`
-    - remaining masked/unmasked dispatch duplication across `render_plan_effects.rs` and
-      `render_plan_effects/chain.rs`
+    - remaining shared utility helpers in `render_plan_effects.rs`
+      (`available_scratch_targets`, `is_custom_effect_step`, `step_wants_custom_v3_raw`,
+      `backdrop_source_group_parts`)
+    - remaining thin wrapper/shim exports in `render_plan_effects.rs`
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG
@@ -680,11 +684,10 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: unpadded chain driver flow now lives under
+  - Latest landed slice: unmasked chain-step dispatch flow now lives under
     `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`, and
-    `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns unpadded
-    raw-target reservation, final-step mask handoff, or masked step dispatch inside
-    `apply_chain_in_place(...)` directly.
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns
+    `apply_step_in_place_with_scratch_targets(...)` directly.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

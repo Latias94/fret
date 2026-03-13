@@ -1,4 +1,7 @@
 use super::builtin::effect_blur_desired_downsample;
+use super::builtin::{
+    append_scissored_blur_in_place_single_scratch, append_scissored_blur_in_place_two_scratch,
+};
 use super::*;
 
 pub(super) fn padded_chain_step_scissors(

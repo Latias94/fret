@@ -197,6 +197,8 @@ For `render_plan_effects`, that means the long-term boring shape is:
   also live with chain orchestration rather than in the top-level driver body.
 - masked and unmasked multi-step chain dispatch should converge on explicit helper surfaces rather
   than leaving one path inline in the top-level module.
+- once chain dispatch is extracted, the top-level module should mostly retain shared budgeting /
+  utility helpers plus curated wrapper entrypoints.
 
 ### 5. Tighten public exports after evidence exists
 
