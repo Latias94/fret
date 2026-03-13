@@ -9,12 +9,14 @@ use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, value: Model<Arc<str>>) -> AnyElement {
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let drawer = material3::NavigationDrawer::uncontrolled(cx, "search");
+    let value = drawer.value_model();
     let current = cx
         .get_model_cloned(&value, Invalidation::Layout)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
-    let drawer = material3::NavigationDrawer::new(value)
+    let drawer = drawer
         .a11y_label("Material 3 Navigation Drawer")
         .test_id("ui-gallery-material3-navigation-drawer")
         .items(vec![

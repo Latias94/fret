@@ -294,19 +294,7 @@ struct UiGalleryWindowState {
     #[cfg(feature = "gallery-material3")]
     material3_radio_value: Model<Option<Arc<str>>>,
     #[cfg(feature = "gallery-material3")]
-    material3_tabs_value: Model<Arc<str>>,
-    #[cfg(feature = "gallery-material3")]
-    material3_list_value: Model<Arc<str>>,
-    #[cfg(feature = "gallery-material3")]
     material3_expressive: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    material3_navigation_bar_value: Model<Arc<str>>,
-    #[cfg(feature = "gallery-material3")]
-    material3_navigation_rail_value: Model<Arc<str>>,
-    #[cfg(feature = "gallery-material3")]
-    material3_navigation_drawer_value: Model<Arc<str>>,
-    #[cfg(feature = "gallery-material3")]
-    material3_text_field_value: Model<String>,
     #[cfg(feature = "gallery-material3")]
     material3_text_field_disabled: Model<bool>,
     #[cfg(feature = "gallery-material3")]
@@ -396,19 +384,7 @@ impl UiGalleryWindowState {
             #[cfg(feature = "gallery-material3")]
             material3_radio_value: self.material3_radio_value.clone(),
             #[cfg(feature = "gallery-material3")]
-            material3_tabs_value: self.material3_tabs_value.clone(),
-            #[cfg(feature = "gallery-material3")]
-            material3_list_value: self.material3_list_value.clone(),
-            #[cfg(feature = "gallery-material3")]
             material3_expressive: self.material3_expressive.clone(),
-            #[cfg(feature = "gallery-material3")]
-            material3_navigation_bar_value: self.material3_navigation_bar_value.clone(),
-            #[cfg(feature = "gallery-material3")]
-            material3_navigation_rail_value: self.material3_navigation_rail_value.clone(),
-            #[cfg(feature = "gallery-material3")]
-            material3_navigation_drawer_value: self.material3_navigation_drawer_value.clone(),
-            #[cfg(feature = "gallery-material3")]
-            material3_text_field_value: self.material3_text_field_value.clone(),
             #[cfg(feature = "gallery-material3")]
             material3_text_field_disabled: self.material3_text_field_disabled.clone(),
             #[cfg(feature = "gallery-material3")]

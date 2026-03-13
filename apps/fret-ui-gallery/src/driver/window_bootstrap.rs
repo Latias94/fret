@@ -310,19 +310,7 @@ impl UiGalleryDriver {
         #[cfg(feature = "gallery-material3")]
         let material3_radio_value = app.models_mut().insert(None::<Arc<str>>);
         #[cfg(feature = "gallery-material3")]
-        let material3_tabs_value = app.models_mut().insert(Arc::<str>::from("overview"));
-        #[cfg(feature = "gallery-material3")]
-        let material3_list_value = app.models_mut().insert(Arc::<str>::from("alpha"));
-        #[cfg(feature = "gallery-material3")]
         let material3_expressive = app.models_mut().insert(false);
-        #[cfg(feature = "gallery-material3")]
-        let material3_navigation_bar_value = app.models_mut().insert(Arc::<str>::from("search"));
-        #[cfg(feature = "gallery-material3")]
-        let material3_navigation_rail_value = app.models_mut().insert(Arc::<str>::from("search"));
-        #[cfg(feature = "gallery-material3")]
-        let material3_navigation_drawer_value = app.models_mut().insert(Arc::<str>::from("search"));
-        #[cfg(feature = "gallery-material3")]
-        let material3_text_field_value = app.models_mut().insert(String::new());
         #[cfg(feature = "gallery-material3")]
         let material3_text_field_disabled = app.models_mut().insert(false);
         #[cfg(feature = "gallery-material3")]
@@ -512,19 +500,7 @@ impl UiGalleryDriver {
             #[cfg(feature = "gallery-material3")]
             material3_radio_value,
             #[cfg(feature = "gallery-material3")]
-            material3_tabs_value,
-            #[cfg(feature = "gallery-material3")]
-            material3_list_value,
-            #[cfg(feature = "gallery-material3")]
             material3_expressive,
-            #[cfg(feature = "gallery-material3")]
-            material3_navigation_bar_value,
-            #[cfg(feature = "gallery-material3")]
-            material3_navigation_rail_value,
-            #[cfg(feature = "gallery-material3")]
-            material3_navigation_drawer_value,
-            #[cfg(feature = "gallery-material3")]
-            material3_text_field_value,
             #[cfg(feature = "gallery-material3")]
             material3_text_field_disabled,
             #[cfg(feature = "gallery-material3")]

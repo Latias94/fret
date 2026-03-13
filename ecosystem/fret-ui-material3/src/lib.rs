@@ -570,6 +570,56 @@ mod tests {
     }
 
     #[test]
+    fn material3_selection_roots_offer_uncontrolled_copyable_value_paths_while_keeping_controlled_new()
+     {
+        let sources = [
+            ("tabs.rs", include_str!("tabs.rs")),
+            ("navigation_bar.rs", include_str!("navigation_bar.rs")),
+            ("navigation_rail.rs", include_str!("navigation_rail.rs")),
+            ("navigation_drawer.rs", include_str!("navigation_drawer.rs")),
+            ("list.rs", include_str!("list.rs")),
+        ];
+
+        let required_markers = [
+            "pub fn new(model: Model<Arc<str>>) -> Self {",
+            "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, value: Option<Model<Arc<str>>>, default_value: impl Into<Arc<str>>, ) -> Self {",
+            "pub fn uncontrolled<H: UiHost>( cx: &mut ElementContext<'_, H>, default_value: impl Into<Arc<str>>, ) -> Self {",
+            "pub fn value_model(&self) -> Model<Arc<str>> {",
+        ];
+
+        for (file, src) in sources {
+            let normalized = normalize_ws(src);
+
+            for marker in required_markers {
+                let marker = normalize_ws(marker);
+                assert!(
+                    normalized.contains(&marker),
+                    "{file} should keep `new(model)` as the explicit controlled seam and expose `new_controllable(...)`, `uncontrolled(cx, default)`, and `value_model()` for copyable teaching surfaces"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn material3_text_field_offers_uncontrolled_copyable_value_path_while_keeping_controlled_new() {
+        let normalized = normalize_ws(include_str!("text_field.rs"));
+        let required_markers = [
+            "pub fn new(model: Model<String>) -> Self {",
+            "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, value: Option<Model<String>>, default_value: impl Into<String>, ) -> Self {",
+            "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {",
+            "pub fn value_model(&self) -> Model<String> {",
+        ];
+
+        for marker in required_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                normalized.contains(&marker),
+                "text_field.rs should keep `new(model)` as the explicit controlled seam and expose `new_controllable(...)`, `uncontrolled(cx)`, and `value_model()` for copyable teaching surfaces"
+            );
+        }
+    }
+
+    #[test]
     fn material3_date_picker_dialog_offers_uncontrolled_copyable_open_month_and_selected_paths() {
         let normalized = normalize_ws(include_str!("date_picker.rs"));
         let required_markers = [

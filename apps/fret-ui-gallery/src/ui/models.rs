@@ -68,19 +68,7 @@ pub(crate) struct UiGalleryModels {
     #[cfg(feature = "gallery-material3")]
     pub(crate) material3_radio_value: Model<Option<Arc<str>>>,
     #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_tabs_value: Model<Arc<str>>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_list_value: Model<Arc<str>>,
-    #[cfg(feature = "gallery-material3")]
     pub(crate) material3_expressive: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_navigation_bar_value: Model<Arc<str>>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_navigation_rail_value: Model<Arc<str>>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_navigation_drawer_value: Model<Arc<str>>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_text_field_value: Model<String>,
     #[cfg(feature = "gallery-material3")]
     pub(crate) material3_text_field_disabled: Model<bool>,
     #[cfg(feature = "gallery-material3")]

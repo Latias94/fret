@@ -7,10 +7,11 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    value: Model<String>,
     disabled: Model<bool>,
     error: Model<bool>,
 ) -> AnyElement {
+    let demo_field = material3::TextField::uncontrolled(cx);
+    let value = demo_field.value_model();
     let icons_value = cx.local_model_keyed("icons_value", String::new);
 
     let disabled_now = cx
@@ -44,7 +45,8 @@ pub fn render<H: UiHost>(
         "Supporting text"
     };
 
-    let outlined_field = material3::TextField::new(value.clone())
+    let outlined_field = demo_field
+        .clone()
         .variant(material3::TextFieldVariant::Outlined)
         .label("Name")
         .placeholder("Type here")

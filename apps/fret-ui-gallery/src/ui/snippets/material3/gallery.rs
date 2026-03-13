@@ -13,13 +13,18 @@ pub fn render<H: UiHost>(
     material3_checkbox: Model<bool>,
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
-    material3_tabs_value: Model<Arc<str>>,
-    material3_list_value: Model<Arc<str>>,
-    material3_navigation_bar_value: Model<Arc<str>>,
-    material3_text_field_value: Model<String>,
     material3_text_field_disabled: Model<bool>,
     material3_text_field_error: Model<bool>,
 ) -> AnyElement {
+    let tabs_root = material3::Tabs::uncontrolled(cx, "overview");
+    let material3_tabs_value = tabs_root.value_model();
+    let list_root = material3::List::uncontrolled(cx, "alpha");
+    let material3_list_value = list_root.value_model();
+    let navigation_bar_root = material3::NavigationBar::uncontrolled(cx, "search");
+    let material3_navigation_bar_value = navigation_bar_root.value_model();
+    let text_field_root = material3::TextField::uncontrolled(cx);
+    let material3_text_field_value = text_field_root.value_model();
+
     let disabled = cx
         .get_model_copied(&material3_text_field_disabled, Invalidation::Layout)
         .unwrap_or(false);

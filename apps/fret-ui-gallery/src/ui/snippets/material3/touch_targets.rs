@@ -14,9 +14,11 @@ pub fn render<H: UiHost>(
     material3_checkbox: Model<bool>,
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
-    material3_tabs_value: Model<Arc<str>>,
 ) -> AnyElement {
     use fret_icons::ids;
+
+    let tabs_root = material3::Tabs::uncontrolled(cx, "overview");
+    let material3_tabs_value = tabs_root.value_model();
 
     let min = cx.with_theme(|theme| {
         theme

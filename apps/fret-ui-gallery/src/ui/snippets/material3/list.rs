@@ -7,7 +7,9 @@ use fret_icons::ids;
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, value: Model<Arc<str>>) -> AnyElement {
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let list = material3::List::uncontrolled(cx, "alpha");
+    let value = list.value_model();
     let current = cx
         .get_model_cloned(&value, Invalidation::Layout)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));

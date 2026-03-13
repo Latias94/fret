@@ -326,19 +326,7 @@ fn page_preview(
     #[cfg(feature = "gallery-material3")]
     let material3_radio_value = models.material3_radio_value.clone();
     #[cfg(feature = "gallery-material3")]
-    let material3_tabs_value = models.material3_tabs_value.clone();
-    #[cfg(feature = "gallery-material3")]
-    let material3_list_value = models.material3_list_value.clone();
-    #[cfg(feature = "gallery-material3")]
     let material3_expressive = models.material3_expressive.clone();
-    #[cfg(feature = "gallery-material3")]
-    let material3_navigation_bar_value = models.material3_navigation_bar_value.clone();
-    #[cfg(feature = "gallery-material3")]
-    let material3_navigation_rail_value = models.material3_navigation_rail_value.clone();
-    #[cfg(feature = "gallery-material3")]
-    let material3_navigation_drawer_value = models.material3_navigation_drawer_value.clone();
-    #[cfg(feature = "gallery-material3")]
-    let material3_text_field_value = models.material3_text_field_value.clone();
     #[cfg(feature = "gallery-material3")]
     let material3_text_field_disabled = models.material3_text_field_disabled.clone();
     #[cfg(feature = "gallery-material3")]
@@ -631,10 +619,6 @@ fn page_preview(
                     material3_checkbox,
                     material3_switch,
                     material3_radio_value,
-                    material3_tabs_value,
-                    material3_list_value,
-                    material3_navigation_bar_value,
-                    material3_text_field_value,
                     material3_text_field_disabled,
                     material3_text_field_error,
                     last_action.clone(),
@@ -649,9 +633,6 @@ fn page_preview(
                     material3_checkbox,
                     material3_switch,
                     material3_radio_value,
-                    material3_tabs_value,
-                    material3_navigation_bar_value,
-                    material3_text_field_value,
                     material3_text_field_disabled,
                     material3_text_field_error,
                     material3_menu_open,
@@ -667,7 +648,6 @@ fn page_preview(
                     material3_checkbox,
                     material3_switch,
                     material3_radio_value,
-                    material3_tabs_value,
                 )
             })
         }
@@ -764,7 +744,6 @@ fn page_preview(
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 pages::material3::preview_material3_text_field(
                     cx,
-                    material3_text_field_value,
                     material3_text_field_disabled,
                     material3_text_field_error,
                 )
@@ -773,40 +752,31 @@ fn page_preview(
         #[cfg(feature = "gallery-material3")]
         PAGE_MATERIAL3_TABS => {
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-                pages::material3::preview_material3_tabs(cx, material3_tabs_value)
+                pages::material3::preview_material3_tabs(cx)
             })
         }
         #[cfg(feature = "gallery-material3")]
         PAGE_MATERIAL3_LIST => {
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-                pages::material3::preview_material3_list(cx, material3_list_value)
+                pages::material3::preview_material3_list(cx)
             })
         }
         #[cfg(feature = "gallery-material3")]
         PAGE_MATERIAL3_NAVIGATION_BAR => {
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-                pages::material3::preview_material3_navigation_bar(
-                    cx,
-                    material3_navigation_bar_value,
-                )
+                pages::material3::preview_material3_navigation_bar(cx)
             })
         }
         #[cfg(feature = "gallery-material3")]
         PAGE_MATERIAL3_NAVIGATION_RAIL => {
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-                pages::material3::preview_material3_navigation_rail(
-                    cx,
-                    material3_navigation_rail_value,
-                )
+                pages::material3::preview_material3_navigation_rail(cx)
             })
         }
         #[cfg(feature = "gallery-material3")]
         PAGE_MATERIAL3_NAVIGATION_DRAWER => {
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-                pages::material3::preview_material3_navigation_drawer(
-                    cx,
-                    material3_navigation_drawer_value,
-                )
+                pages::material3::preview_material3_navigation_drawer(cx)
             })
         }
         #[cfg(feature = "gallery-material3")]

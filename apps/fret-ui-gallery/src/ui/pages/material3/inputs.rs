@@ -55,11 +55,10 @@ pub(in crate::ui) fn preview_material3_autocomplete(
 
 pub(in crate::ui) fn preview_material3_text_field(
     cx: &mut UiCx<'_>,
-    value: Model<String>,
     disabled: Model<bool>,
     error: Model<bool>,
 ) -> Vec<AnyElement> {
-    let demo = snippets::material3::text_field::render(cx, value, disabled, error);
+    let demo = snippets::material3::text_field::render(cx, disabled, error);
 
     render_material3_demo_page(
         cx,

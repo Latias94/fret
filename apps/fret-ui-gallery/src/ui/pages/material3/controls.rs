@@ -10,14 +10,12 @@ pub(in crate::ui) fn preview_material3_touch_targets(
     material3_checkbox: Model<bool>,
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
-    material3_tabs_value: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::touch_targets::render(
         cx,
         material3_checkbox,
         material3_switch,
         material3_radio_value,
-        material3_tabs_value,
     );
 
     render_material3_demo_page(
