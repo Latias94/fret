@@ -39,6 +39,7 @@ mod pipelines;
 mod render_plan;
 mod render_plan_compiler;
 mod render_plan_dump;
+mod render_plan_dump_encode;
 mod render_plan_dump_summary;
 mod render_plan_effects;
 mod render_plan_reporting;

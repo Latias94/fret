@@ -691,10 +691,15 @@ ID format:
     - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps JSON schema/pass
       encoding plus env-triggered dump emission while custom-effect / target-usage / v3
       diagnostics summaries moved behind the companion summary module
+    - render-plan dump pass/postprocess/marker encoders now live under
+      `crates/fret-render-wgpu/src/renderer/render_plan_dump_encode.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps segment/count/
+      degradation assembly plus final dump emission while JSON encoding moved behind the companion
+      encode module
   - Current next hotspot:
     - decide whether `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` should keep
-      env-trigger and file-emission orchestration together with JSON pass/schema encoding, or
-      whether one more schema/emit split would make the diagnostics seam cleaner
+      env-trigger and file-emission orchestration together with segment/count/degradation
+      assembly, or whether one more assembly/emit split would make the diagnostics seam cleaner
     - decide whether the remaining fullscreen utility families in `effects.rs` should now split
       further by family, or whether the current post-helper-extraction surface is already the
       right long-term home for `AlphaThreshold`, `ColorAdjust`, `ColorMatrix`, `Dither`, `Noise`,

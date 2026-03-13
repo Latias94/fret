@@ -233,7 +233,7 @@ fn bump_usage(
 ) {
     let slot = &mut usage[plan_target_index(target)];
     let entry = slot.get_or_insert_with(|| JsonDumpTargetUsage {
-        target: super::render_plan_dump::plan_target_name(target),
+        target: super::render_plan_dump_encode::plan_target_name(target),
         max_size: [0, 0],
         src_uses: 0,
         dst_uses: 0,

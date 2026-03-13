@@ -241,7 +241,9 @@ For `Renderer` state-shell tightening, the same principle applies:
   one owner so render-scene diagnostics code stops depending on transient renderer bookkeeping
   fields. Once that state shell exists, dump-specific summaries such as custom-effect aggregates,
   target-usage rollups, and diagnostics-only v3 counters should prefer adjacent companion modules
-  instead of re-growing the owner into another monolith.
+  instead of re-growing the owner into another monolith. The same applies to JSON schema/pass
+  encoding helpers: pass/postprocess/effect-marker encoders should live in adjacent companions so
+  dump emission stays a thin assembly/orchestration layer.
 - scene-encoding cache state is the matching frame-reuse seam for encode-stage reuse:
   cache key construction inputs, hit/miss bookkeeping, miss-reason reporting, and cache/scratch
   storage should move behind one owner so render-scene execution stops depending on a loose cache

@@ -60,6 +60,11 @@ Current snapshot (2026-03-13):
     regression tests
   - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps JSON schema/pass
     encoding, env-triggered dump emission, and dump scratch orchestration
+- The latest render-plan-dump-encode split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump_encode.rs` now owns per-pass,
+    postprocess, and effect-marker JSON schema encoding plus focused encoding tests
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps segment/count/
+    degradation assembly and final dump emission orchestration
 - v1 start decisions are now locked:
   - no new renderer crates in v1,
   - `fret-render` stays the stable default facade,
@@ -837,6 +842,13 @@ Current snapshot (2026-03-13):
     orchestration
   - the slice does not change render-plan dump semantics; it only moves diagnostics-only summary
     ownership behind a companion module
+- The thirty-eighth render-plan-dump-encode split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump_encode.rs` now owns per-pass,
+    postprocess, and effect-marker JSON schema encoding plus the focused encoding regression test
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` no longer owns those encoders; it
+    now keeps segment/count/degradation assembly and final dump emission orchestration
+  - the slice does not change render-plan dump semantics; it only moves JSON encoding ownership
+    behind a companion module
 - Renderer custom-v3-dispatch split verification remains green:
   - `cargo check -p fret-render-wgpu --tests`
   - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
@@ -887,6 +899,9 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu custom_effect_summaries_include_abi_and_input_counts`
   - `cargo nextest run -p fret-render-wgpu custom_effect_v3_summary_tracks_pyramid_levels_min_max_sum`
   - `cargo nextest run -p fret-render-wgpu target_usage_tracks_max_size`
+- Render-plan-dump-encode split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu encode_custom_effect_v3_pass_keeps_distinct_source_targets`
 - Scene-encoding cache diagnostics split verification remains green:
   - `cargo check -p fret-render-wgpu --tests`
   - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`

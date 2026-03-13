@@ -381,6 +381,11 @@ As of 2026-03-13:
     tests.
   - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps JSON pass/schema
     encoding, env-triggered dump emission, and scratch orchestration.
+- Render-plan dump encoding ownership is now isolated as well:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump_encode.rs` now owns per-pass,
+    postprocess, and effect-marker JSON schema encoding plus focused encoding tests.
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps segment/count/degradation
+    assembly and final dump emission orchestration.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:
