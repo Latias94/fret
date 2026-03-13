@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 
 use fret_core::{AppWindowId, Point, PointerId, Rect};
-use fret_dnd::{PointerSensor, SensorEvent, compute_dnd_frame};
+use fret_dnd::{DndEngine, DndEngineUpdate, SensorEvent};
 use fret_runtime::{DragKindId, FrameId, ModelStore, TickId};
 
 use super::service::{DndServiceModel, read_dnd, update_dnd};
@@ -18,7 +18,7 @@ pub(crate) struct DndControllerService {
 
 #[derive(Default)]
 struct WindowController {
-    sensors_by_key: HashMap<DndControllerKey, PointerSensor>,
+    engines_by_key: HashMap<DndControllerKey, DndEngine>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -35,37 +35,30 @@ impl Hash for DndControllerKey {
 }
 
 impl DndControllerService {
-    fn sensor_mut(
+    fn engine_mut(
         &mut self,
         window: AppWindowId,
         kind: DragKindId,
         scope: DndScopeId,
         constraint: ActivationConstraint,
-    ) -> &mut PointerSensor {
+    ) -> &mut DndEngine {
         let window = self.windows.entry(window).or_default();
         let key = DndControllerKey { kind, scope };
-        let sensor = window
-            .sensors_by_key
+        let engine = window
+            .engines_by_key
             .entry(key)
-            .or_insert_with(|| PointerSensor::new(constraint));
-        sensor.set_constraint(constraint);
-        sensor
+            .or_insert_with(|| DndEngine::new(constraint));
+        engine.set_constraint(constraint);
+        engine
     }
 }
 
-fn update_from_frame_output(
-    snapshot: &fret_dnd::RegistrySnapshot,
-    pointer: Point,
-    collision_strategy: CollisionStrategy,
-    autoscroll: Option<(Rect, AutoScrollConfig)>,
-    sensor: fret_dnd::SensorOutput,
-) -> DndUpdate {
-    let frame = compute_dnd_frame(snapshot, pointer, collision_strategy, autoscroll);
+fn update_from_engine_output(update: DndEngineUpdate) -> DndUpdate {
     DndUpdate {
-        sensor,
-        collisions: frame.collisions,
-        over: frame.over,
-        autoscroll: frame.autoscroll,
+        sensor: update.sensor,
+        collisions: update.collisions,
+        over: update.over,
+        autoscroll: update.autoscroll,
     }
 }
 
@@ -82,10 +75,10 @@ pub fn clear_pointer_in_scope(
             return;
         };
         let key = DndControllerKey { kind, scope };
-        let Some(sensor) = window.sensors_by_key.get_mut(&key) else {
+        let Some(engine) = window.engines_by_key.get_mut(&key) else {
             return;
         };
-        sensor.clear_pointer(pointer_id);
+        engine.clear_pointer(pointer_id);
     });
 }
 
@@ -118,9 +111,9 @@ pub fn pointer_is_tracking_any_sensor(
     read_dnd(models, svc, |dnd| {
         dnd.controller.windows.get(&window).is_some_and(|window| {
             window
-                .sensors_by_key
+                .engines_by_key
                 .values()
-                .any(|sensor| sensor.is_tracking(pointer_id))
+                .any(|engine| engine.is_tracking(pointer_id))
         })
     })
     .unwrap_or(false)
@@ -140,18 +133,12 @@ fn update_from_sensor_event_in_scope(
     autoscroll: Option<(Rect, AutoScrollConfig)>,
 ) -> DndUpdate {
     update_dnd(models, svc, |dnd| {
-        let position = match sensor_event {
-            SensorEvent::Down { position, .. }
-            | SensorEvent::Move { position, .. }
-            | SensorEvent::Up { position, .. }
-            | SensorEvent::Cancel { position, .. } => position,
-        };
-
-        let sensor = dnd.controller.sensor_mut(window, kind, scope, constraint);
-        let sensor = sensor.handle(sensor_event);
-
-        let snapshot = dnd.registry.snapshot_for_frame(window, frame_id, scope);
-        update_from_frame_output(snapshot, position, collision_strategy, autoscroll, sensor)
+        let (controller, registry) = (&mut dnd.controller, &mut dnd.registry);
+        let snapshot = registry.snapshot_for_frame(window, frame_id, scope);
+        let update = controller
+            .engine_mut(window, kind, scope, constraint)
+            .handle(snapshot, sensor_event, collision_strategy, autoscroll);
+        update_from_engine_output(update)
     })
     .unwrap_or_else(DndUpdate::pending)
 }
@@ -306,23 +293,21 @@ pub fn handle_pointer_move_or_init_in_scope(
     autoscroll: Option<(Rect, AutoScrollConfig)>,
 ) -> DndUpdate {
     update_dnd(models, svc, |dnd| {
-        let sensor = dnd.controller.sensor_mut(window, kind, scope, constraint);
-        if !sensor.is_tracking(pointer_id) {
-            let _ = sensor.handle(SensorEvent::Down {
+        let (controller, registry) = (&mut dnd.controller, &mut dnd.registry);
+        let snapshot = registry.snapshot_for_frame(window, frame_id, scope);
+        let update = controller
+            .engine_mut(window, kind, scope, constraint)
+            .handle_move_or_init(
+                snapshot,
                 pointer_id,
-                position: start_position,
-                tick: start_tick.0,
-            });
-        }
-
-        let sensor = sensor.handle(SensorEvent::Move {
-            pointer_id,
-            position,
-            tick: tick_id.0,
-        });
-
-        let snapshot = dnd.registry.snapshot_for_frame(window, frame_id, scope);
-        update_from_frame_output(snapshot, position, collision_strategy, autoscroll, sensor)
+                start_tick.0,
+                start_position,
+                position,
+                tick_id.0,
+                collision_strategy,
+                autoscroll,
+            );
+        update_from_engine_output(update)
     })
     .unwrap_or_else(DndUpdate::pending)
 }
@@ -578,19 +563,15 @@ pub fn handle_sensor_move_or_init_in_scope(
     constraint: ActivationConstraint,
 ) -> fret_dnd::SensorOutput {
     update_dnd(models, svc, |dnd| {
-        let sensor = dnd.controller.sensor_mut(window, kind, scope, constraint);
-        if !sensor.is_tracking(pointer_id) {
-            let _ = sensor.handle(SensorEvent::Down {
+        dnd.controller
+            .engine_mut(window, kind, scope, constraint)
+            .handle_sensor_move_or_init(
                 pointer_id,
-                position: start_position,
-                tick: start_tick.0,
-            });
-        }
-        sensor.handle(SensorEvent::Move {
-            pointer_id,
-            position,
-            tick: tick_id.0,
-        })
+                start_tick.0,
+                start_position,
+                position,
+                tick_id.0,
+            )
     })
     .unwrap_or(fret_dnd::SensorOutput::Pending)
 }

@@ -24,20 +24,20 @@ This file tracks the execution checklist for `DESIGN.md`.
 
 ## M2 — Headless engine / operation extraction
 
-- [ ] Add a central data-only operation/engine model inside `ecosystem/fret-dnd`.
-- [ ] Decide the internal module split:
+- [x] Add a central data-only operation/engine model inside `ecosystem/fret-dnd`.
+- [x] Decide the internal module split:
   - `engine.rs` vs `operation.rs`
   - sensor modules
   - entity metadata placement
-- [ ] Move more drag truth into the headless engine:
+- [x] Move more drag truth into the headless engine:
   - active pointer/source
   - translation
   - collisions
   - `over`
   - cancel/end lifecycle
-- [ ] Keep `fret-dnd` free of `fret-ui`, runtime, and runner dependencies.
+- [x] Keep `fret-dnd` free of `fret-ui`, runtime, and runner dependencies.
   - Gate: `python tools/check_layering.py`
-- [ ] Add engine-level tests that cover:
+- [x] Add engine-level tests that cover:
   - multi-pointer independence
   - activation lifecycle
   - cancel/end cleanup
@@ -46,7 +46,7 @@ This file tracks the execution checklist for `DESIGN.md`.
 ## M3 — Thin UI-kit adapter and forwarder-first adoption
 
 - [ ] Split `ecosystem/fret-ui-kit/src/dnd/controller.rs` by responsibility.
-- [ ] Recenter the UI-kit controller around the headless engine output instead of hand-assembling
+- [x] Recenter the UI-kit controller around the headless engine output instead of hand-assembling
   partial `DndUpdate` values.
 - [ ] Make `DndPointerForwarders` the preferred path for new integrations.
 - [ ] Migrate at least one first-party production integration away from hand-written forwarding:
@@ -102,6 +102,6 @@ This file tracks the execution checklist for `DESIGN.md`.
 
 - [x] Known panic fixed and guarded.
 - [x] `DndUpdate` collision output made truthful.
-- [ ] Headless engine/operation introduced.
-- [ ] UI-kit controller reduced to a thinner adapter.
+- [x] Headless engine/operation introduced.
+- [x] UI-kit controller reduced to a thinner adapter.
 - [ ] At least one real first-party integration migrated to the preferred seam.

@@ -121,6 +121,23 @@ Cancel semantics:
 
 This aligns with editor-grade robustness requirements (pointer capture loss, window destroy, gesture cancel).
 
+### 4.1) Optional engine/operation seam for integration layers
+
+`fret-dnd` MAY expose a data-only `DndEngine` that composes:
+
+- per-pointer sensor tracking,
+- registry snapshot frame computation,
+- cached operation state (`phase`, `start`, `position`, `translation`, `collisions`, `over`,
+  `autoscroll`).
+
+Invariants:
+
+- operation state remains keyed by `PointerId`; the engine MUST NOT collapse multiple pointers into a
+  hidden global singleton,
+- engine outputs remain pure data; it MUST NOT mutate app state, layout, or scroll containers,
+- `Up` / `Cancel` MUST clean retained pointer operation state after producing the final update,
+- cross-window routing remains outside the engine and stays owned by runtime/runner mechanisms.
+
 ### 5) Collision strategies contract (stable outputs)
 
 The v1 toolbox includes at least:
@@ -189,6 +206,7 @@ operates **per window**:
 ## Implementation Notes (Evidence)
 
 - Headless toolbox modules: `ecosystem/fret-dnd/src/{activation.rs,collision.rs,modifier.rs,registry.rs,scroll.rs,sortable.rs}`.
+- Headless engine seam: `ecosystem/fret-dnd/src/engine.rs`.
 - Deterministic rect picking helper: `ecosystem/fret-dnd/src/rect_index.rs`.
 - Sortable insertion helpers: `ecosystem/fret-dnd/src/sortable.rs`.
 - Docking consumers: hover collisions and tab insertion index (`ecosystem/fret-docking/src/dock/space.rs`), end-to-end insert index assertion via `InternalDrag` (`ecosystem/fret-docking/src/dock/tests.rs`).
