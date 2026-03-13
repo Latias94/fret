@@ -18,7 +18,10 @@ struct BrowserMenuState {
     person: Option<Arc<str>>,
 }
 
-fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H> {
+fn trigger_surface<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    test_id: &'static str,
+) -> impl IntoUiElement<H> + use<H> {
     let theme = Theme::global(&*cx.app);
     let border = theme.color_token("border");
     let bg = theme.color_token("background");
@@ -46,8 +49,7 @@ fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElem
                 .bg(ColorRef::Color(bg)),
         )
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(300.0)))
-        .into_element(cx)
-        .test_id("ui-gallery-context-menu-demo-trigger")
+        .test_id(test_id)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -61,12 +63,16 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .layout()
         .cloned()
         .unwrap_or_default();
+    let trigger = shadcn::ContextMenuTrigger::build(trigger_surface(
+        cx,
+        "ui-gallery-context-menu-demo-trigger",
+    ));
 
-    shadcn::ContextMenu::new_controllable(cx, None, false)
+    shadcn::ContextMenu::uncontrolled(cx)
         .content_test_id("ui-gallery-context-menu-demo-content")
-        .into_element_parts(
+        .build_parts(
             cx,
-            |cx| shadcn::ContextMenuTrigger::new(trigger_surface(cx).into_element(cx)),
+            trigger,
             shadcn::ContextMenuContent::new()
                 .min_width(Px(208.0))
                 .submenu_min_width(Px(176.0)),

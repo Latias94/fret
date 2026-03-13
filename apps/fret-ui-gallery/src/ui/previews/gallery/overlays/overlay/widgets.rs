@@ -129,16 +129,13 @@ fn dropdown(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement {
 fn context_menu(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement {
     let context_menu_open = models.context_menu_open.clone();
 
-    shadcn::ContextMenu::new(context_menu_open)
+    shadcn::ContextMenu::from_open(context_menu_open)
         .content_test_id("ui-gallery-context-content")
-        .into_element(
+        .build(
             cx,
-            |cx| {
-                shadcn::Button::new("ContextMenu (right click)")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .test_id("ui-gallery-context-trigger")
-                    .into_element(cx)
-            },
+            shadcn::Button::new("ContextMenu (right click)")
+                .variant(shadcn::ButtonVariant::Outline)
+                .test_id("ui-gallery-context-trigger"),
             |_cx| {
                 vec![
                     shadcn::ContextMenuEntry::Item(
@@ -159,19 +156,16 @@ fn context_menu_edge(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement {
     let context_menu_edge_open = models.context_menu_edge_open.clone();
 
     // Keep this trigger near the window edge so the default `side=Right` placement is forced to flip.
-    shadcn::ContextMenu::new(context_menu_edge_open)
+    shadcn::ContextMenu::from_open(context_menu_edge_open)
         .content_test_id("ui-gallery-context-edge-content")
         .min_width(Px(240.0))
         .window_margin(Px(8.0))
-        .into_element(
+        .build(
             cx,
-            |cx| {
-                shadcn::Button::new("ContextMenu (edge)")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .refine_layout(LayoutRefinement::default().w_px(Px(200.0)))
-                    .test_id("ui-gallery-context-trigger-edge")
-                    .into_element(cx)
-            },
+            shadcn::Button::new("ContextMenu (edge)")
+                .variant(shadcn::ButtonVariant::Outline)
+                .refine_layout(LayoutRefinement::default().w_px(Px(200.0)))
+                .test_id("ui-gallery-context-trigger-edge"),
             |_cx| {
                 vec![
                     shadcn::ContextMenuEntry::Item(
@@ -198,10 +192,11 @@ fn underlay(cx: &mut UiCx<'_>) -> AnyElement {
 fn tooltip(cx: &mut UiCx<'_>) -> AnyElement {
     use std::time::Duration;
 
-    let tooltip_a_content = shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
-        cx,
-        "Tooltip: hover intent + placement",
-    )])
+    let tooltip_a_content = shadcn::TooltipContent::build(cx, |_cx| {
+        [shadcn::TooltipContent::text(
+            "Tooltip: hover intent + placement",
+        )]
+    })
     .test_id("ui-gallery-tooltip-content");
     let tooltip_a = shadcn::Tooltip::new(
         cx,
@@ -216,10 +211,11 @@ fn tooltip(cx: &mut UiCx<'_>) -> AnyElement {
     .side(shadcn::TooltipSide::Top)
     .into_element(cx);
 
-    let tooltip_b_content = shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
-        cx,
-        "Skip-delay window should open this immediately after closing A.",
-    )])
+    let tooltip_b_content = shadcn::TooltipContent::build(cx, |_cx| {
+        [shadcn::TooltipContent::text(
+            "Skip-delay window should open this immediately after closing A.",
+        )]
+    })
     .test_id("ui-gallery-tooltip-skip-content");
     let tooltip_b = shadcn::Tooltip::new(
         cx,

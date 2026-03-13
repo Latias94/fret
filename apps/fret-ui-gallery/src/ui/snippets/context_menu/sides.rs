@@ -14,6 +14,7 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 fn trigger_surface<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: &'static str,
+    test_id: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
     let theme = Theme::global(&*cx.app);
     let border = theme.color_token("border");
@@ -42,6 +43,7 @@ fn trigger_surface<H: UiHost>(
                 .bg(ColorRef::Color(bg)),
         )
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(240.0)))
+        .test_id(test_id)
 }
 
 fn side_menu<H: UiHost>(
@@ -51,17 +53,13 @@ fn side_menu<H: UiHost>(
     trigger_test_id: &'static str,
     content_test_id: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
-    shadcn::ContextMenu::new_controllable(cx, None, false)
+    let trigger = shadcn::ContextMenuTrigger::build(trigger_surface(cx, label, trigger_test_id));
+
+    shadcn::ContextMenu::uncontrolled(cx)
         .content_test_id(content_test_id)
-        .into_element_parts(
+        .build_parts(
             cx,
-            |cx| {
-                shadcn::ContextMenuTrigger::new(
-                    trigger_surface(cx, label)
-                        .into_element(cx)
-                        .test_id(trigger_test_id),
-                )
-            },
+            trigger,
             shadcn::ContextMenuContent::new().side(side),
             |_cx| {
                 vec![

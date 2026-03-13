@@ -64,20 +64,24 @@ Key upstream behaviors/surfaces:
 - Pass: On open, focus moves to the first focusable descendant in the menu (via overlay policy),
   enabling keyboard navigation.
 - Pass: Selecting an item dispatches the command (if any) and closes the menu.
-- Pass: Controlled/uncontrolled open state parity is available via
-  `ContextMenu::new_controllable(cx, open, default_open)` (Base UI / Radix `open` + `defaultOpen`).
+- Pass: The default copyable root path is now `ContextMenu::uncontrolled(cx)` for the common
+  uncontrolled case, while controlled/uncontrolled open state parity remains available via
+  `ContextMenu::from_open(open)` and `ContextMenu::new_controllable(cx, open, default_open)`
+  (Base UI / Radix `open` + `defaultOpen`).
 - Pass: Open lifecycle callbacks are available via `ContextMenu::on_open_change` and
   `ContextMenu::on_open_change_complete` (Base UI `onOpenChange` + `onOpenChangeComplete`).
 - Pass: `ContextMenu::modal(bool)` is supported (default `true`).
   - `modal=true`: blocks underlay pointer interaction while open (Radix `disableOutsidePointerEvents`).
   - `modal=false`: outside-press dismissal becomes click-through.
-- Pass: `ContextMenu::into_element_parts(...)` already acts as the recipe-level composition bridge,
+- Pass: `ContextMenu::build_parts(...)` is now the default recipe-level composition bridge,
   preserving shadcn-style `ContextMenuTrigger` / `ContextMenuContent` part authoring while keeping
   entry collection explicit in the closure passed to `entries`.
+- Pass: `ContextMenuTrigger::build(child)` keeps the trigger on the typed late-landing path for
+  first-party snippets and copyable examples.
 - Note: Fret intentionally does not add a separate generic `compose()` builder for `ContextMenu`
   today. The root already needs a trigger part plus an explicit `entries` closure for typed menu
   items, groups, separators, check/radio items, and submenus. A generic builder would mostly
-  duplicate `into_element_parts(...)` without clarifying the entry-model contract.
+  duplicate `build_parts(...)` / `into_element_parts(...)` without clarifying the entry-model contract.
 - Note: Fret exposes an explicit `close_on_select` policy per item; upstream Radix typically relies
   on `onSelect(e) { e.preventDefault() }` to keep menus open for toggles.
 
@@ -113,6 +117,7 @@ _None tracked at this time._
 
 - Contract test: `context_menu_items_have_collection_position_metadata_excluding_separators`
 - Contract test: `context_menu_new_controllable_uses_controlled_model_when_provided`
+- Contract test: `context_menu_uncontrolled_multiple_instances_do_not_share_open_model`
 - Contract test: `context_menu_new_controllable_applies_default_open`
 - Contract test: `context_menu_open_change_events_emit_change_and_complete_after_settle`
 - Contract test: `context_menu_open_change_events_complete_without_animation`
