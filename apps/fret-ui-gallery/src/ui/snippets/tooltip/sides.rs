@@ -11,12 +11,13 @@ fn make_tooltip<H: UiHost>(
     side: shadcn::TooltipSide,
     content: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
+    let tooltip_content =
+        shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(cx, content)]);
     shadcn::Tooltip::new(
+        cx,
         shadcn::Button::new(label)
-            .variant(shadcn::ButtonVariant::Outline)
-            .into_element(cx),
-        shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(cx, content)])
-            .into_element(cx),
+            .variant(shadcn::ButtonVariant::Outline),
+        tooltip_content,
     )
     .arrow(true)
     .side(side)

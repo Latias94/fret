@@ -10279,7 +10279,7 @@ fn assert_tooltip_demo_overlay_placement_matches(web_name: &str) {
                 )
                 .into_element(cx);
             content_id_out.set(Some(content.id));
-            let tooltip = fret_ui_shadcn::Tooltip::new(trigger, content).into_element(cx);
+            let tooltip = fret_ui_shadcn::Tooltip::new(cx, trigger, content).into_element(cx);
             vec![pad_root(cx, Px(0.0), tooltip)]
         },
     );
@@ -10320,7 +10320,7 @@ fn assert_tooltip_demo_overlay_placement_matches(web_name: &str) {
                     )
                     .into_element(cx);
                 content_id_out.set(Some(content.id));
-                let tooltip = fret_ui_shadcn::Tooltip::new(trigger, content).into_element(cx);
+                let tooltip = fret_ui_shadcn::Tooltip::new(cx, trigger, content).into_element(cx);
                 vec![pad_root(cx, Px(0.0), tooltip)]
             },
         );

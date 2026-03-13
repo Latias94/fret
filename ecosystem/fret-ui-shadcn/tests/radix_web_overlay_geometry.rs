@@ -519,7 +519,7 @@ fn render_tooltip_fixture(
                         )
                         .into_element(cx);
 
-                    let tooltip = fret_ui_shadcn::Tooltip::new(trigger, content)
+                    let tooltip = fret_ui_shadcn::Tooltip::new(cx, trigger, content)
                         .open_delay_frames(0)
                         .close_delay_frames(0)
                         .side(match side {

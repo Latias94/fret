@@ -34,14 +34,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .icon(IconId::new_static("lucide.info"))
                     .test_id("ui-gallery-input-group-label-help")
                     .into_element(cx);
+                let content = shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
+                    cx,
+                    "We'll use this to send you notifications",
+                )]);
 
                 shadcn::Tooltip::new(
+                    cx,
                     button,
-                    shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
-                        cx,
-                        "We'll use this to send you notifications",
-                    )])
-                    .into_element(cx),
+                    content,
                 )
                 .arrow(true)
                 .side(shadcn::TooltipSide::Top)

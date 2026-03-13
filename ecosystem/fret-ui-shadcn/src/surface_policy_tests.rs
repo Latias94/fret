@@ -505,6 +505,31 @@ fn hover_card_root_promotes_typed_new_and_keeps_raw_root_seams_explicit() {
 }
 
 #[test]
+fn tooltip_root_promotes_typed_new_and_keeps_raw_root_seams_explicit() {
+    let normalized = normalize_ws(TOOLTIP_RS);
+    let required_markers = [
+        "pub fn new<H: UiHost>( cx: &mut ElementContext<'_, H>, trigger: impl IntoUiElement<H>, content: impl Into<TooltipContentArg>, ) -> Self {",
+        "pub fn new_raw(trigger: AnyElement, content: impl Into<TooltipContentArg>) -> Self {",
+    ];
+    let forbidden_markers = ["pub fn build<H: UiHost>("];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "tooltip.rs should promote `new(...)` as the typed root constructor and keep the raw root seam explicit"
+        );
+    }
+    for marker in forbidden_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            !normalized.contains(&marker),
+            "tooltip.rs reintroduced legacy `build(...)` after promoting the typed `new(...)` surface"
+        );
+    }
+}
+
+#[test]
 fn card_helpers_prefer_typed_wrapper_outputs_when_no_raw_slot_storage_is_required() {
     let normalized = normalize_ws(CARD_RS);
     let required_markers = [

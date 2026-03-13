@@ -15,7 +15,7 @@ pub(super) fn preview_tooltip(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl_row = snippets::rtl::render(cx);
 
     let notes = doc_layout::notes_block([
-        "Tooltip already exposes shadcn-style part names (`TooltipTrigger`, `TooltipContent`, `TooltipProvider`), and `Tooltip::new(trigger, content)` is the recipe-level composition entry point.",
+        "Tooltip already exposes shadcn-style part names (`TooltipTrigger`, `TooltipContent`, `TooltipProvider`), and `Tooltip::new(cx, trigger, content)` is the recipe-level composition entry point.",
         "Gallery sections mirror shadcn docs first; `Long Content` and `Keyboard Focus` are Fret-specific parity sections appended afterward.",
         "Wrap related tooltips in one `TooltipProvider` to get consistent delay-group behavior.",
         "Use concise content in tooltip panels; longer explanations should move to Popover or Dialog.",

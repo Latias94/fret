@@ -198,17 +198,17 @@ fn underlay(cx: &mut UiCx<'_>) -> AnyElement {
 fn tooltip(cx: &mut UiCx<'_>) -> AnyElement {
     use std::time::Duration;
 
+    let tooltip_a_content = shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
+        cx,
+        "Tooltip: hover intent + placement",
+    )])
+    .test_id("ui-gallery-tooltip-content");
     let tooltip_a = shadcn::Tooltip::new(
+        cx,
         shadcn::Button::new("Tooltip A (delay)")
             .variant(shadcn::ButtonVariant::Outline)
-            .test_id("ui-gallery-tooltip-trigger")
-            .into_element(cx),
-        shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
-            cx,
-            "Tooltip: hover intent + placement",
-        )])
-        .into_element(cx)
-        .test_id("ui-gallery-tooltip-content"),
+            .test_id("ui-gallery-tooltip-trigger"),
+        tooltip_a_content,
     )
     .arrow(true)
     .arrow_test_id("ui-gallery-tooltip-arrow")
@@ -216,17 +216,17 @@ fn tooltip(cx: &mut UiCx<'_>) -> AnyElement {
     .side(shadcn::TooltipSide::Top)
     .into_element(cx);
 
+    let tooltip_b_content = shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
+        cx,
+        "Skip-delay window should open this immediately after closing A.",
+    )])
+    .test_id("ui-gallery-tooltip-skip-content");
     let tooltip_b = shadcn::Tooltip::new(
+        cx,
         shadcn::Button::new("Tooltip B (skip delay)")
             .variant(shadcn::ButtonVariant::Outline)
-            .test_id("ui-gallery-tooltip-skip-trigger")
-            .into_element(cx),
-        shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
-            cx,
-            "Skip-delay window should open this immediately after closing A.",
-        )])
-        .into_element(cx)
-        .test_id("ui-gallery-tooltip-skip-content"),
+            .test_id("ui-gallery-tooltip-skip-trigger"),
+        tooltip_b_content,
     )
     .arrow(true)
     .arrow_test_id("ui-gallery-tooltip-skip-arrow")

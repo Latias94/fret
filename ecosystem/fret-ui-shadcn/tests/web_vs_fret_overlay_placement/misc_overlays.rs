@@ -95,7 +95,7 @@ fn fret_tooltip_tracks_trigger_when_underlay_scrolls() {
                                     "Tooltip content",
                                 )])
                                 .into_element(cx);
-                                let tooltip = Tooltip::new(trigger, content)
+                                let tooltip = Tooltip::new(cx, trigger, content)
                                     .open_delay_frames(0)
                                     .close_delay_frames(0);
 

@@ -3855,7 +3855,7 @@ impl SidebarMenuButton {
         )
         .into_element(cx);
 
-        Tooltip::new(button, content)
+        Tooltip::new(cx, button, content)
             .side(TooltipSide::Right)
             .align(TooltipAlign::Center)
             .side_offset(Px(8.0))

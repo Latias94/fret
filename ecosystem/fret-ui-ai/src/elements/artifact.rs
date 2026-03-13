@@ -558,7 +558,7 @@ impl ArtifactAction {
             let trigger = TooltipTrigger::new(btn).into_element(cx);
             let content = TooltipContent::new(vec![TooltipContent::text(cx, tooltip_text.clone())])
                 .into_element(cx);
-            vec![Tooltip::new(trigger, content).into_element(cx)]
+            vec![Tooltip::new(cx, trigger, content).into_element(cx)]
         });
 
         out.pop().unwrap_or_else(|| cx.text(""))

@@ -349,7 +349,7 @@ impl MessageAction {
             let content = TooltipContent::new(vec![TooltipContent::text(cx, tooltip_text.clone())])
                 .into_element(cx);
 
-            let mut tip = Tooltip::new(trigger, content);
+            let mut tip = Tooltip::new(cx, trigger, content);
             if let Some(panel_test_id) = panel_test_id.clone() {
                 tip = tip.panel_test_id(panel_test_id);
             }

@@ -1966,7 +1966,7 @@ fn radix_web_tooltip_hover_show_hide_matches_fret() {
     let build = |cx: &mut ElementContext<'_, App>| {
         let trigger = fret_ui_shadcn::Button::new("Hover").into_element(cx);
         let content = fret_ui_shadcn::TooltipContent::new(vec![cx.text("Tip")]).into_element(cx);
-        fret_ui_shadcn::Tooltip::new(trigger, content)
+        fret_ui_shadcn::Tooltip::new(cx, trigger, content)
             .open_delay_frames(0)
             .close_delay_frames(0)
             .into_element(cx)

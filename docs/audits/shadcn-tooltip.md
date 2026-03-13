@@ -32,7 +32,7 @@ Radix semantics, and Base UI `Tooltip.Root` lifecycle behavior.
 - Pass: Supports open on hover and keyboard focus.
 - Pass: Supports provider close delay aliases (`close_delay_duration_ms`, `close_delay_duration_frames`).
 - Pass: Supports Base UI cursor tracking via `Tooltip::track_cursor_axis(...)`.
-- Pass: `Tooltip::new(trigger, content)` already acts as the recipe-level composition entry point,
+- Pass: `Tooltip::new(cx, trigger, content)` already acts as the recipe-level composition entry point,
   with `TooltipTrigger` / `TooltipContent` preserving shadcn-style part naming at call sites.
 - Note: Fret intentionally does not add a separate generic `compose()` builder for `Tooltip`
   today. Unlike modal overlays that need explicit portal/overlay/content slot assembly, tooltip

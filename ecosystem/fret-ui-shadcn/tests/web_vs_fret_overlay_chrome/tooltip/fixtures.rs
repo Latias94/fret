@@ -60,7 +60,7 @@ fn build_tooltip_demo(
         )])
         .into_element(cx);
 
-    fret_ui_shadcn::Tooltip::new(trigger_el, content_el)
+    fret_ui_shadcn::Tooltip::new(cx, trigger_el, content_el)
         .open_delay_frames(0)
         .close_delay_frames(0)
         .into_element(cx)

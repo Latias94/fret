@@ -1038,17 +1038,18 @@ impl ComponentsGalleryDriver {
                                                 wrap: true,
                                             },
                                             |cx| {
-                                                let tooltip = shadcn::Tooltip::new(
-                                                    shadcn::Button::new("Tooltip (hover)")
-                                                        .variant(shadcn::ButtonVariant::Outline)
-                                                        .into_element(cx),
+                                                let tooltip_content =
                                                     shadcn::TooltipContent::new(vec![
                                                         shadcn::TooltipContent::text(
                                                             cx,
                                                             "Tooltip: hover intent + placement",
                                                         ),
-                                                    ])
-                                                    .into_element(cx),
+                                                    ]);
+                                                let tooltip = shadcn::Tooltip::new(
+                                                    cx,
+                                                    shadcn::Button::new("Tooltip (hover)")
+                                                        .variant(shadcn::ButtonVariant::Outline),
+                                                    tooltip_content,
                                                 )
                                                 .arrow(true)
                                                 .open_delay_frames(10)

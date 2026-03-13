@@ -92,7 +92,7 @@ impl ShadcnResolver {
                 .into_element(cx)
         };
 
-        fret_ui_shadcn::Tooltip::new(trigger, content_el).into_element(cx)
+        fret_ui_shadcn::Tooltip::new(cx, trigger, content_el).into_element(cx)
     }
 
     pub(super) fn render_popover<H: UiHost>(
