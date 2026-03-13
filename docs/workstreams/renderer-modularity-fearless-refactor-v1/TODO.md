@@ -507,11 +507,16 @@ ID format:
     - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns custom-chain
       budget initialization, scratch-target inventory, forced quarter-blur mask-tier choice, or
       clip-mask budget charging directly
+    - unpadded chain driver flow moved into
+      `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns unpadded
+      raw-target reservation, final-step mask handoff, or masked step dispatch inside
+      `apply_chain_in_place(...)` directly
   - Current next hotspot:
-    - remaining unpadded chain raw-target reservation + scratch-slice choice in
-      `apply_chain_in_place(...)`
-    - remaining unpadded chain dispatch / final-step mask handoff in
-      `apply_chain_in_place(...)`
+    - remaining unmasked single-step dispatch helper
+      `apply_step_in_place_with_scratch_targets(...)`
+    - remaining masked/unmasked dispatch duplication across `render_plan_effects.rs` and
+      `render_plan_effects/chain.rs`
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG
@@ -675,11 +680,11 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: chain-start preparation flow now lives under
+  - Latest landed slice: unpadded chain driver flow now lives under
     `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`, and
-    `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns custom-chain
-    budget initialization, scratch-target inventory, forced quarter-blur mask-tier choice, or
-    clip-mask budget charging directly.
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns unpadded
+    raw-target reservation, final-step mask handoff, or masked step dispatch inside
+    `apply_chain_in_place(...)` directly.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

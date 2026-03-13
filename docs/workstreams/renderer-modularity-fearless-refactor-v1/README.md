@@ -186,6 +186,11 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns custom-chain budget
   initialization, scratch-target inventory, forced quarter-blur mask-tier choice, or clip-mask
   budget charging directly.
+- Renderer unpadded chain driver flow now also lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns unpadded raw-target
+  reservation, final-step mask handoff, or masked step dispatch inside `apply_chain_in_place(...)`
+  directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

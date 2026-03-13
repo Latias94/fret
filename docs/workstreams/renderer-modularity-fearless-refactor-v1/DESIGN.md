@@ -195,6 +195,8 @@ For `render_plan_effects`, that means the long-term boring shape is:
   explicit chain-level helpers instead of staying inline in `apply_chain_in_place(...)`.
 - chain-start resource preparation (budget evidence, scratch inventory, clip-mask charging) should
   also live with chain orchestration rather than in the top-level driver body.
+- masked and unmasked multi-step chain dispatch should converge on explicit helper surfaces rather
+  than leaving one path inline in the top-level module.
 
 ### 5. Tighten public exports after evidence exists
 

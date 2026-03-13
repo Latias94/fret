@@ -63,6 +63,75 @@ fn chain_applies_clip_only_on_final_step() {
 }
 
 #[test]
+fn unpadded_chain_applies_clip_only_on_final_step() {
+    let ctx = EffectCompileCtx {
+        viewport_size: (64, 64),
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 1.0,
+    };
+    let scissor = ScissorRect::full(64, 64);
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::FilterContent,
+        fret_core::EffectChain::from_steps(&[
+            fret_core::EffectStep::ColorAdjust {
+                saturation: 1.2,
+                brightness: 0.1,
+                contrast: 0.9,
+            },
+            fret_core::EffectStep::CustomV1 {
+                id: fret_core::EffectId::default(),
+                params: fret_core::scene::EffectParamsV1 {
+                    vec4s: [[0.0; 4]; 4],
+                },
+                max_sample_offset_px: fret_core::Px(0.0),
+            },
+        ]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        Some(17),
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    );
+
+    let color_adjust = passes.iter().find_map(|pass| match pass {
+        RenderPlanPass::ColorAdjust(pass)
+            if pass.saturation == 1.2 && pass.brightness == 0.1 && pass.contrast == 0.9 =>
+        {
+            Some(pass)
+        }
+        _ => None,
+    });
+    assert!(
+        color_adjust
+            .is_some_and(|pass| { pass.mask_uniform_index.is_none() && pass.mask.is_none() }),
+        "intermediate unpadded steps must not apply clip coverage"
+    );
+
+    let custom = passes.iter().find_map(|pass| match pass {
+        RenderPlanPass::CustomEffect(pass) => Some(pass),
+        _ => None,
+    });
+    assert!(
+        custom.is_some_and(|pass| {
+            pass.common.mask_uniform_index.is_some() || pass.common.mask.is_some()
+        }),
+        "the final unpadded step must apply clip coverage"
+    );
+}
+
+#[test]
 fn padded_blur_then_custom_uses_work_buffer() {
     let ctx = EffectCompileCtx {
         viewport_size: (64, 64),
@@ -137,6 +206,82 @@ fn padded_blur_then_custom_uses_work_buffer() {
         }),
         "final CustomEffect should read from the work buffer and apply clip coverage once"
     );
+}
+
+#[test]
+fn unpadded_custom_v3_chain_reserves_distinct_raw_target_when_available() {
+    let ctx = EffectCompileCtx {
+        viewport_size: (64, 64),
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 1.0,
+    };
+    let scissor = ScissorRect::full(64, 64);
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    let evidence = apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::FilterContent,
+        fret_core::EffectChain::from_steps(&[
+            fret_core::EffectStep::ColorAdjust {
+                saturation: 1.0,
+                brightness: 1.0,
+                contrast: 1.0,
+            },
+            fret_core::EffectStep::CustomV3 {
+                id: fret_core::EffectId::default(),
+                params: fret_core::scene::EffectParamsV1 {
+                    vec4s: [[0.0; 4]; 4],
+                },
+                max_sample_offset_px: fret_core::Px(0.0),
+                user0: None,
+                user1: None,
+                sources: fret_core::scene::CustomEffectSourcesV3 {
+                    want_raw: true,
+                    pyramid: None,
+                },
+            },
+        ]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        None,
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    )
+    .expect("custom-v3 chains should report budget evidence");
+
+    assert!(
+        passes.iter().any(|pass| {
+            matches!(
+                pass,
+                RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+                    src: PlanTarget::Intermediate0,
+                    dst: PlanTarget::Intermediate1,
+                    ..
+                })
+            )
+        }),
+        "unpadded custom-v3 chains that want raw should reserve a distinct raw target when available"
+    );
+    let custom_v3 = passes.iter().find_map(|pass| match pass {
+        RenderPlanPass::CustomEffectV3(pass) => Some(pass),
+        _ => None,
+    });
+    assert!(
+        custom_v3.is_some_and(|pass| pass.src_raw == PlanTarget::Intermediate1),
+        "the final custom-v3 pass should read raw input from the reserved chain target"
+    );
+    assert_eq!(degradations.custom_effect_v3_sources.raw_requested, 1);
+    assert_eq!(degradations.custom_effect_v3_sources.raw_distinct, 1);
+    assert_eq!(evidence.base_required_full_targets, 3);
 }
 
 #[test]

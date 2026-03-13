@@ -1,6 +1,16 @@
 use super::blur::padded_chain_step_scissors;
+use super::blur::{compile_drop_shadow_in_place_masked, compile_gaussian_blur_in_place_masked};
+use super::builtin::{
+    apply_alpha_threshold_step_masked, apply_backdrop_warp_v1_step_masked,
+    apply_backdrop_warp_v2_step_masked, apply_color_adjust_step_masked,
+    apply_color_matrix_step_masked, apply_dither_step_masked, apply_noise_step_masked,
+    apply_pixelate_step_masked,
+};
 use super::builtin::{choose_clip_mask_target_capped, effect_blur_desired_downsample};
-use super::custom::append_padded_chain_final_custom_step;
+use super::custom::{
+    append_padded_chain_final_custom_step, apply_custom_v1_step_masked,
+    apply_custom_v2_step_masked, apply_custom_v3_step_masked,
+};
 use super::*;
 
 #[derive(Clone, Copy, Debug)]
@@ -15,6 +25,14 @@ pub(super) struct PreparedChainStart {
     pub(super) scratch_targets: Vec<PlanTarget>,
     pub(super) coverage: ChainCoverage,
     pub(super) custom_chain_budget: Option<CustomEffectChainBudgetEvidence>,
+}
+
+fn scaled_effect_px(px: fret_core::Px, scale_factor: f32) -> f32 {
+    if px.0.is_finite() {
+        (px.0 * scale_factor).max(0.0)
+    } else {
+        0.0
+    }
 }
 
 fn initial_custom_chain_budget(
@@ -164,6 +182,362 @@ pub(super) fn prepare_chain_start(
         coverage,
         custom_chain_budget,
     }
+}
+
+fn reserve_unpadded_chain_raw_target(
+    passes: &mut Vec<RenderPlanPass>,
+    steps: &[fret_core::EffectStep],
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    group_raw: Option<PlanTarget>,
+    budget_bytes: &mut u64,
+    custom_chain_budget: &mut Option<CustomEffectChainBudgetEvidence>,
+    ctx: EffectCompileCtx,
+) -> (Option<PlanTarget>, usize) {
+    let chain_wants_raw = group_raw.is_none()
+        && steps.len() >= 2
+        && steps.iter().any(super::step_wants_custom_v3_raw);
+    let full_target_bytes = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
+
+    if !chain_wants_raw
+        || scratch_targets.len() < 2
+        || *budget_bytes < base_required_bytes_for_srcdst_and_single_scratch(full_target_bytes)
+    {
+        return (None, 0);
+    }
+
+    let chain_raw = scratch_targets[0];
+    passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+        src: srcdst,
+        dst: chain_raw,
+        src_size: ctx.viewport_size,
+        dst_size: ctx.viewport_size,
+        dst_scissor: None,
+        encode_output_srgb: false,
+        load: wgpu::LoadOp::Clear(ctx.clear),
+    }));
+    *budget_bytes = budget_excluding_full_size_targets(*budget_bytes, full_target_bytes, 1);
+    if let Some(evidence) = custom_chain_budget.as_mut() {
+        evidence.base_required_full_targets = evidence.base_required_full_targets.max(3);
+        evidence.base_required_bytes = required_bytes_for_full_size_targets(full_target_bytes, 3);
+    }
+
+    (Some(chain_raw), 1)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn apply_unpadded_chain_step_masked(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    mode: fret_core::EffectMode,
+    step: fret_core::EffectStep,
+    quality: fret_core::EffectQuality,
+    scissor: ScissorRect,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    effect_blur_quality: &mut super::super::BlurQualitySnapshot,
+    ctx: EffectCompileCtx,
+    chain_raw: Option<PlanTarget>,
+    backdrop_source_group: Option<BackdropSourceGroupCtx>,
+    custom_chain_budget: &mut Option<CustomEffectChainBudgetEvidence>,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+) {
+    match step {
+        fret_core::EffectStep::GaussianBlur {
+            radius_px,
+            downsample,
+        } => {
+            compile_gaussian_blur_in_place_masked(
+                passes,
+                scratch_targets,
+                srcdst,
+                quality,
+                scissor,
+                downsample,
+                scaled_effect_px(radius_px, ctx.scale_factor),
+                ctx,
+                budget_bytes,
+                effect_degradations,
+                effect_blur_quality,
+                mask_uniform_index,
+                mask,
+            );
+        }
+        fret_core::EffectStep::BackdropWarpV1(w) => {
+            apply_backdrop_warp_v1_step_masked(
+                passes,
+                scratch_targets,
+                srcdst,
+                mode,
+                scissor,
+                w,
+                ctx,
+                budget_bytes,
+                effect_degradations,
+                mask_uniform_index,
+                mask,
+            );
+        }
+        fret_core::EffectStep::BackdropWarpV2(w) => {
+            apply_backdrop_warp_v2_step_masked(
+                passes,
+                scratch_targets,
+                srcdst,
+                mode,
+                scissor,
+                w,
+                ctx,
+                budget_bytes,
+                effect_degradations,
+                mask_uniform_index,
+                mask,
+            );
+        }
+        fret_core::EffectStep::DropShadowV1(s) => {
+            compile_drop_shadow_in_place_masked(
+                passes,
+                scratch_targets,
+                srcdst,
+                mode,
+                quality,
+                scissor,
+                s,
+                ctx,
+                budget_bytes,
+                effect_degradations,
+                effect_blur_quality,
+                mask_uniform_index,
+                mask,
+            );
+        }
+        fret_core::EffectStep::ColorAdjust {
+            saturation,
+            brightness,
+            contrast,
+        } => {
+            apply_color_adjust_step_masked(
+                passes,
+                scratch_targets,
+                srcdst,
+                scissor,
+                saturation,
+                brightness,
+                contrast,
+                ctx,
+                budget_bytes,
+                effect_degradations,
+                mask_uniform_index,
+                mask,
+            );
+        }
+        fret_core::EffectStep::ColorMatrix { m } => {
+            apply_color_matrix_step_masked(
+                passes,
+                scratch_targets,
+                srcdst,
+                scissor,
+                m,
+                ctx,
+                budget_bytes,
+                effect_degradations,
+                mask_uniform_index,
+                mask,
+            );
+        }
+        fret_core::EffectStep::AlphaThreshold { cutoff, soft } => {
+            apply_alpha_threshold_step_masked(
+                passes,
+                scratch_targets,
+                srcdst,
+                scissor,
+                cutoff,
+                soft,
+                ctx,
+                budget_bytes,
+                effect_degradations,
+                mask_uniform_index,
+                mask,
+            );
+        }
+        fret_core::EffectStep::Pixelate { scale } => {
+            if scale <= 1 {
+                return;
+            }
+            apply_pixelate_step_masked(
+                passes,
+                scratch_targets,
+                srcdst,
+                scissor,
+                scale,
+                ctx,
+                budget_bytes,
+                effect_degradations,
+                mask_uniform_index,
+                mask,
+            );
+        }
+        fret_core::EffectStep::Dither { mode } => {
+            apply_dither_step_masked(
+                passes,
+                scratch_targets,
+                srcdst,
+                scissor,
+                mode,
+                ctx,
+                budget_bytes,
+                effect_degradations,
+                mask_uniform_index,
+                mask,
+            );
+        }
+        fret_core::EffectStep::NoiseV1(n) => {
+            let n = n.sanitize();
+            if n.strength <= 0.0 {
+                return;
+            }
+            apply_noise_step_masked(
+                passes,
+                scratch_targets,
+                srcdst,
+                scissor,
+                n,
+                ctx,
+                budget_bytes,
+                effect_degradations,
+                mask_uniform_index,
+                mask,
+            );
+        }
+        fret_core::EffectStep::CustomV1 {
+            id,
+            params,
+            max_sample_offset_px: _,
+        } => {
+            apply_custom_v1_step_masked(
+                passes,
+                scratch_targets,
+                srcdst,
+                scissor,
+                id,
+                params,
+                ctx,
+                budget_bytes,
+                effect_degradations,
+                mask_uniform_index,
+                mask,
+            );
+        }
+        fret_core::EffectStep::CustomV2 {
+            id,
+            params,
+            max_sample_offset_px: _,
+            input_image,
+        } => {
+            apply_custom_v2_step_masked(
+                passes,
+                scratch_targets,
+                srcdst,
+                scissor,
+                id,
+                params,
+                input_image,
+                ctx,
+                budget_bytes,
+                effect_degradations,
+                mask_uniform_index,
+                mask,
+            );
+        }
+        fret_core::EffectStep::CustomV3 {
+            id,
+            params,
+            max_sample_offset_px: _,
+            user0,
+            user1,
+            sources,
+        } => {
+            apply_custom_v3_step_masked(
+                passes,
+                scratch_targets,
+                srcdst,
+                scissor,
+                id,
+                params,
+                user0,
+                user1,
+                sources,
+                ctx,
+                budget_bytes,
+                effect_degradations,
+                chain_raw,
+                backdrop_source_group,
+                custom_chain_budget,
+                mask_uniform_index,
+                mask,
+            );
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(super) fn apply_unpadded_chain_in_place(
+    passes: &mut Vec<RenderPlanPass>,
+    steps: &[fret_core::EffectStep],
+    srcdst: PlanTarget,
+    mode: fret_core::EffectMode,
+    quality: fret_core::EffectQuality,
+    scissor: ScissorRect,
+    group_raw: Option<PlanTarget>,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    effect_blur_quality: &mut super::super::BlurQualitySnapshot,
+    ctx: EffectCompileCtx,
+    backdrop_source_group: Option<BackdropSourceGroupCtx>,
+    chain_start: &mut PreparedChainStart,
+) -> Option<CustomEffectChainBudgetEvidence> {
+    let scratch_targets_all = chain_start.scratch_targets.as_slice();
+    let coverage = chain_start.coverage;
+    let budget_bytes = &mut chain_start.budget_bytes;
+    let custom_chain_budget = &mut chain_start.custom_chain_budget;
+    let (chain_raw, scratch_start) = reserve_unpadded_chain_raw_target(
+        passes,
+        steps,
+        scratch_targets_all,
+        srcdst,
+        group_raw,
+        budget_bytes,
+        custom_chain_budget,
+        ctx,
+    );
+    let scratch_targets = &scratch_targets_all[scratch_start..];
+
+    for (step_index, step) in steps.iter().copied().enumerate() {
+        let apply_mask = step_index + 1 == steps.len();
+        let mask_uniform_index = apply_mask.then_some(coverage.mask_uniform_index).flatten();
+        let mask = apply_mask.then_some(coverage.mask).flatten();
+
+        apply_unpadded_chain_step_masked(
+            passes,
+            scratch_targets,
+            srcdst,
+            mode,
+            step,
+            quality,
+            scissor,
+            budget_bytes,
+            effect_degradations,
+            effect_blur_quality,
+            ctx,
+            chain_raw,
+            backdrop_source_group,
+            custom_chain_budget,
+            mask_uniform_index,
+            mask,
+        );
+    }
+
+    *custom_chain_budget
 }
 
 fn push_padded_chain_commit_pass(
