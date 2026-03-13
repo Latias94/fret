@@ -298,7 +298,10 @@ For `Renderer` state-shell tightening, the same principle applies:
   body becomes pure orchestration. If the remaining orchestration then only does
   availability/fallback checks plus prepared-input sequencing, the family entrypoint itself should
   move into that effect-local module as well so `recorders/effects.rs` stops acting as a pass
-  family index for code it no longer owns.
+  family index for code it no longer owns. Small shared helpers such as parameter packing may
+  still remain in `recorders/effects.rs` temporarily without blocking that ownership closure, as
+  long as the family entrypoint and its effect-specific fallback/upload/dispatch logic move
+  together.
 - render-text dump state is the matching diagnostics/export seam for text debugging:
   dump collection scratch and serialization scratch should move behind one owner so render-scene
   execution keeps only a thin bridge to `TextSystem`.

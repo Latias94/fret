@@ -342,6 +342,13 @@ As of 2026-03-13:
   - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
     `CustomEffectV3` path at all; `recorders/mod.rs` now re-exports that recorder directly from
     the family-local module.
+- The same family-local closure now also covers `CustomEffectV2`:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_custom_v2.rs` now owns
+    the full `CustomEffectV2` recorder entrypoint, including availability/fallback checks, param
+    and input-meta upload, filterable user-image fallback resolution, and masked/unmasked dispatch.
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+    `CustomEffectV2` path; `recorders/mod.rs` now re-exports that recorder from the family-local
+    module while shared parameter packing still stays in `effects.rs`.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:
