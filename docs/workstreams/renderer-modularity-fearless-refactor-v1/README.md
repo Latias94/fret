@@ -323,6 +323,12 @@ As of 2026-03-13:
   - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now receives prepared
     source views and focuses on user-image fallback selection, destination routing, and pass
     execution.
+- The executor seam now also owns `CustomEffectV3` user-image preparation:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs` now resolves
+    `user0` / `user1` fallback views, sampling-mode samplers, and incompatible-image perf
+    accounting.
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now consumes prepared
+    user-image inputs and keeps `CustomEffectV3` focused on destination routing and pass execution.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

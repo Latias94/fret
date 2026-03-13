@@ -37,6 +37,59 @@ pub(super) struct CustomEffectV3PreparedSourceViews {
     pub(super) src_pyramid_view: wgpu::TextureView,
 }
 
+pub(super) struct CustomEffectPreparedUserImage {
+    pub(super) view: wgpu::TextureView,
+    pub(super) sampler: wgpu::Sampler,
+}
+
+pub(super) struct CustomEffectV3PreparedUserImages {
+    pub(super) user0: CustomEffectPreparedUserImage,
+    pub(super) user1: CustomEffectPreparedUserImage,
+}
+
+fn resolve_custom_effect_filterable_user_image_view_owned(
+    renderer: &Renderer,
+    device_features: wgpu::Features,
+    image: Option<fret_core::ImageId>,
+    incompatible: &mut bool,
+) -> wgpu::TextureView {
+    let Some(id) = image else {
+        return renderer.globals.custom_effect_input_fallback_view.clone();
+    };
+    let Some(view) = renderer.gpu_resources.image_view(id) else {
+        return renderer.globals.custom_effect_input_fallback_view.clone();
+    };
+    let Some(format) = renderer.gpu_resources.image_format(id) else {
+        return renderer.globals.custom_effect_input_fallback_view.clone();
+    };
+
+    let f = renderer.adapter.get_texture_format_features(format);
+    let ok_usage = f
+        .allowed_usages
+        .contains(wgpu::TextureUsages::TEXTURE_BINDING);
+    let ok_sample_type = format.sample_type(None, Some(device_features))
+        == Some(wgpu::TextureSampleType::Float { filterable: true });
+
+    if ok_usage && ok_sample_type {
+        view.clone()
+    } else {
+        *incompatible = true;
+        renderer.globals.custom_effect_input_fallback_view.clone()
+    }
+}
+
+fn custom_effect_user_image_sampler(
+    renderer: &Renderer,
+    sampling: fret_core::scene::ImageSamplingHint,
+) -> wgpu::Sampler {
+    match sampling {
+        fret_core::scene::ImageSamplingHint::Nearest => {
+            renderer.globals.image_sampler_nearest.clone()
+        }
+        _ => renderer.globals.viewport_sampler.clone(),
+    }
+}
+
 impl<'a> RenderSceneExecutor<'a> {
     pub(super) fn require_color_src_view(
         &self,
@@ -327,6 +380,52 @@ impl<'a> RenderSceneExecutor<'a> {
             src_raw_view,
             src_pyramid_view,
         })
+    }
+
+    pub(super) fn prepare_custom_effect_v3_user_images(
+        &mut self,
+        pass: &CustomEffectV3Pass,
+    ) -> CustomEffectV3PreparedUserImages {
+        let mut user0_incompatible = false;
+        let user0_view = resolve_custom_effect_filterable_user_image_view_owned(
+            &self.renderer,
+            self.device.features(),
+            pass.user0_image,
+            &mut user0_incompatible,
+        );
+        if self.perf_enabled && user0_incompatible {
+            self.frame_perf
+                .custom_effect_v3_user0_image_incompatible_fallbacks = self
+                .frame_perf
+                .custom_effect_v3_user0_image_incompatible_fallbacks
+                .saturating_add(1);
+        }
+
+        let mut user1_incompatible = false;
+        let user1_view = resolve_custom_effect_filterable_user_image_view_owned(
+            &self.renderer,
+            self.device.features(),
+            pass.user1_image,
+            &mut user1_incompatible,
+        );
+        if self.perf_enabled && user1_incompatible {
+            self.frame_perf
+                .custom_effect_v3_user1_image_incompatible_fallbacks = self
+                .frame_perf
+                .custom_effect_v3_user1_image_incompatible_fallbacks
+                .saturating_add(1);
+        }
+
+        CustomEffectV3PreparedUserImages {
+            user0: CustomEffectPreparedUserImage {
+                view: user0_view,
+                sampler: custom_effect_user_image_sampler(&self.renderer, pass.user0_sampling),
+            },
+            user1: CustomEffectPreparedUserImage {
+                view: user1_view,
+                sampler: custom_effect_user_image_sampler(&self.renderer, pass.user1_sampling),
+            },
+        }
     }
 
     pub(super) fn set_custom_effect_v3_pyramid_cache(

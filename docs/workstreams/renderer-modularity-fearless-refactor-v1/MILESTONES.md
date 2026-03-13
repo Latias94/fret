@@ -702,6 +702,22 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_backdrop_source_group_raw_snapshots_before_prior_backdrop_steps`
   - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_pyramid_level1_differs_from_raw_near_an_unaligned_edge`
   - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_rejects_non_filterable_user_image_formats_by_falling_back_and_counts_it`
+- The twenty-eighth renderer custom-v3-user-image-prep split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs` now also owns
+    `CustomEffectV3` user-image fallback resolution, sampling-mode sampler choice, and
+    incompatible-image perf accounting
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now consumes prepared
+    `user0` / `user1` inputs and keeps the v3 path focused on destination routing and pass
+    execution
+  - the slice does not change fallback behavior; it only moves execution-time preparation behind
+    the existing executor helper seam
+- Renderer custom-v3-user-image-prep split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_src_raw_is_chain_root_and_differs_from_src_after_prior_step`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_backdrop_source_group_raw_snapshots_before_prior_backdrop_steps`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_pyramid_level1_differs_from_raw_near_an_unaligned_edge`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_rejects_non_filterable_user_image_formats_by_falling_back_and_counts_it`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

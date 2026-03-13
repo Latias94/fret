@@ -642,11 +642,16 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs`
     - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
       `src` / `src_raw` / final `src_pyramid` preparation graph directly
+    - `CustomEffectV3` user-image fallback resolution, sampler choice, and incompatible-image perf
+      accounting now also live under
+      `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+      `user0` / `user1` preparation flow directly
   - Current next hotspot:
     - decide whether scene-encoding invalidation/debug evidence should stay coupled to
       `scene_encoding_cache.rs` or move closer to diagnostics state
-    - decide whether `CustomEffectV3` user-image fallback selection and sampler choice should move
-      behind a dedicated helper now that source-view preparation has already left `effects.rs`
+    - decide whether `CustomEffectV3` uniform/meta upload and destination binding assembly should
+      split again so `effects.rs` keeps only final branch dispatch for the v3 path
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG

@@ -288,6 +288,9 @@ For `Renderer` state-shell tightening, the same principle applies:
   once the surrounding orchestration has become thin enough. After that, source-view preparation
   itself can collapse behind the same executor seam so recorder bodies stop owning the
   `src`/`src_raw`/`src_pyramid` choice graph and only consume prepared effect-local inputs.
+  User-image fallback selection, sampler choice, and feature-local perf accounting are the next
+  natural closure on the same path because they are execution-time preparation concerns rather than
+  recorder-local draw semantics.
 - render-text dump state is the matching diagnostics/export seam for text debugging:
   dump collection scratch and serialization scratch should move behind one owner so render-scene
   execution keeps only a thin bridge to `TextSystem`.

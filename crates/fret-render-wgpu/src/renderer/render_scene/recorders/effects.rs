@@ -1123,48 +1123,7 @@ pub(in super::super) fn record_custom_effect_v3_pass(
         exec.ensure_color_dst_view_owned(common.dst, common.dst_size, "CustomEffectV3");
     let dst_view = dst_view_owned.as_ref().unwrap_or(exec.target_view);
 
-    let mut user0_incompatible = false;
-    let user0_view = resolve_custom_effect_filterable_user_image_view(
-        &exec.renderer,
-        exec.device.features(),
-        pass.user0_image,
-        &mut user0_incompatible,
-    );
-    if exec.perf_enabled && user0_incompatible {
-        exec.frame_perf
-            .custom_effect_v3_user0_image_incompatible_fallbacks = exec
-            .frame_perf
-            .custom_effect_v3_user0_image_incompatible_fallbacks
-            .saturating_add(1);
-    }
-
-    let mut user1_incompatible = false;
-    let user1_view = resolve_custom_effect_filterable_user_image_view(
-        &exec.renderer,
-        exec.device.features(),
-        pass.user1_image,
-        &mut user1_incompatible,
-    );
-    if exec.perf_enabled && user1_incompatible {
-        exec.frame_perf
-            .custom_effect_v3_user1_image_incompatible_fallbacks = exec
-            .frame_perf
-            .custom_effect_v3_user1_image_incompatible_fallbacks
-            .saturating_add(1);
-    }
-
-    let user0_sampler = match pass.user0_sampling {
-        fret_core::scene::ImageSamplingHint::Nearest => {
-            &exec.renderer.globals.image_sampler_nearest
-        }
-        _ => &exec.renderer.globals.viewport_sampler,
-    };
-    let user1_sampler = match pass.user1_sampling {
-        fret_core::scene::ImageSamplingHint::Nearest => {
-            &exec.renderer.globals.image_sampler_nearest
-        }
-        _ => &exec.renderer.globals.viewport_sampler,
-    };
+    let prepared_user_images = exec.prepare_custom_effect_v3_user_images(pass);
 
     let param_buffer = &exec.renderer.effect_params.custom_effect_param_buffer;
     let meta_buffer = &exec.renderer.effect_params.custom_effect_v3_meta_buffer;
@@ -1174,10 +1133,10 @@ pub(in super::super) fn record_custom_effect_v3_pass(
         src_pyramid_view: &src_pyramid_view,
         param_buffer,
         meta_buffer,
-        user0_view,
-        user0_sampler,
-        user1_view,
-        user1_sampler,
+        user0_view: &prepared_user_images.user0.view,
+        user0_sampler: &prepared_user_images.user0.sampler,
+        user1_view: &prepared_user_images.user1.view,
+        user1_sampler: &prepared_user_images.user1.sampler,
     };
 
     let uniform_stride = exec.renderer.uniform_stride();
