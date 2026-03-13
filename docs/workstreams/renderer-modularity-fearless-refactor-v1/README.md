@@ -110,6 +110,8 @@ As of 2026-03-13:
   private `prepare_with_key(...)` glue now lives under
   `crates/fret-render-wgpu/src/text/prepare.rs`, and `text/mod.rs` now keeps only the text state
   shell plus module wiring.
+- Per-frame text perf state now lives under `crates/fret-render-wgpu/src/text/frame_perf.rs`, and
+  `text/mod.rs` no longer owns the per-frame text perf counter fields directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:
@@ -364,6 +366,10 @@ As of 2026-03-13:
   - prepared-glyph bin-offset image render dispatch now lives behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `render_prepared_glyph_image(...)` no longer owns bin-offset derivation plus scaler render call directly
+- The latest internal text state-shell tightening slice has landed:
+  - per-frame text perf state now lives under
+    `crates/fret-render-wgpu/src/text/frame_perf.rs`
+  - `text/mod.rs` no longer owns the per-frame text perf counter fields directly
 - The sixty-second internal text split has landed:
   - prepared-glyph scaler size clamp now lives behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`

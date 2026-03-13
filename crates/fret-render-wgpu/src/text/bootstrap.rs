@@ -1,5 +1,6 @@
 use super::TextSystem;
 use super::atlas::{GlyphAtlas, TEXT_ATLAS_MAX_PAGES};
+use super::frame_perf::TextFramePerfState;
 use super::quality::{TextQualitySettings, TextQualityState};
 use fret_render_text::fallback_policy::TextFallbackPolicyV1;
 use fret_render_text::font_stack::GenericFamilyInjectionState;
@@ -92,15 +93,7 @@ pub(super) fn build_text_system(device: &wgpu::Device) -> TextSystem {
         font_instance_coords_by_face: HashMap::new(),
         font_face_family_name_cache: HashMap::new(),
 
-        perf_frame_cache_resets: 0,
-        perf_frame_blob_cache_hits: 0,
-        perf_frame_blob_cache_misses: 0,
-        perf_frame_blobs_created: 0,
-        perf_frame_shape_cache_hits: 0,
-        perf_frame_shape_cache_misses: 0,
-        perf_frame_shapes_created: 0,
-        perf_frame_missing_glyphs: 0,
-        perf_frame_texts_with_missing_glyphs: 0,
+        frame_perf: TextFramePerfState::default(),
 
         glyph_atlas_epoch: 1,
 

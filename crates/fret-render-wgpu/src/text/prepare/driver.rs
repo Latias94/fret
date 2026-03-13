@@ -21,7 +21,7 @@ impl TextSystem {
         if let Some(hit) = self.try_reuse_cached_blob(&key, text.as_ref(), style, constraints) {
             return hit;
         }
-        self.perf_frame_blob_cache_misses = self.perf_frame_blob_cache_misses.saturating_add(1);
+        self.frame_perf.blob_cache_misses = self.frame_perf.blob_cache_misses.saturating_add(1);
 
         let resolved_spans = spans.and_then(|spans| resolve_spans_for_text(text.as_ref(), spans));
         let paint_palette = prepare_paint_palette(resolved_spans.as_deref());
@@ -63,7 +63,7 @@ impl TextSystem {
         if let Some(shape) = self.try_reuse_cached_shape(shape_key) {
             return shape;
         }
-        self.perf_frame_shape_cache_misses = self.perf_frame_shape_cache_misses.saturating_add(1);
+        self.frame_perf.shape_cache_misses = self.frame_perf.shape_cache_misses.saturating_add(1);
         let shape = self.build_prepared_shape(
             text,
             style,

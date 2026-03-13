@@ -43,15 +43,7 @@ impl TextSystem {
     pub fn begin_frame_diagnostics(&mut self) {
         self.font_trace.begin_frame();
 
-        self.perf_frame_cache_resets = 0;
-        self.perf_frame_blob_cache_hits = 0;
-        self.perf_frame_blob_cache_misses = 0;
-        self.perf_frame_blobs_created = 0;
-        self.perf_frame_shape_cache_hits = 0;
-        self.perf_frame_shape_cache_misses = 0;
-        self.perf_frame_shapes_created = 0;
-        self.perf_frame_missing_glyphs = 0;
-        self.perf_frame_texts_with_missing_glyphs = 0;
+        self.frame_perf.clear();
         self.mask_atlas.begin_frame_diagnostics();
         self.color_atlas.begin_frame_diagnostics();
         self.subpixel_atlas.begin_frame_diagnostics();
@@ -121,8 +113,8 @@ impl TextSystem {
             font_stack_key: self.font_stack_key,
             font_db_revision: self.font_db_revision,
             fallback_policy_key: self.fallback_policy.fallback_policy_key,
-            frame_missing_glyphs: self.perf_frame_missing_glyphs,
-            frame_texts_with_missing_glyphs: self.perf_frame_texts_with_missing_glyphs,
+            frame_missing_glyphs: self.frame_perf.missing_glyphs,
+            frame_texts_with_missing_glyphs: self.frame_perf.texts_with_missing_glyphs,
             blobs_live: self.blobs.len() as u64,
             blob_cache_entries: self.blob_cache.len() as u64,
             shape_cache_entries: self.shape_cache.len() as u64,
@@ -134,13 +126,13 @@ impl TextSystem {
             frame_unwrapped_layout_cache_hits: 0,
             frame_unwrapped_layout_cache_misses: 0,
             frame_unwrapped_layouts_created: 0,
-            frame_cache_resets: self.perf_frame_cache_resets,
-            frame_blob_cache_hits: self.perf_frame_blob_cache_hits,
-            frame_blob_cache_misses: self.perf_frame_blob_cache_misses,
-            frame_blobs_created: self.perf_frame_blobs_created,
-            frame_shape_cache_hits: self.perf_frame_shape_cache_hits,
-            frame_shape_cache_misses: self.perf_frame_shape_cache_misses,
-            frame_shapes_created: self.perf_frame_shapes_created,
+            frame_cache_resets: self.frame_perf.cache_resets,
+            frame_blob_cache_hits: self.frame_perf.blob_cache_hits,
+            frame_blob_cache_misses: self.frame_perf.blob_cache_misses,
+            frame_blobs_created: self.frame_perf.blobs_created,
+            frame_shape_cache_hits: self.frame_perf.shape_cache_hits,
+            frame_shape_cache_misses: self.frame_perf.shape_cache_misses,
+            frame_shapes_created: self.frame_perf.shapes_created,
             mask_atlas: self.mask_atlas.diagnostics_snapshot(),
             color_atlas: self.color_atlas.diagnostics_snapshot(),
             subpixel_atlas: self.subpixel_atlas.diagnostics_snapshot(),

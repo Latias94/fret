@@ -16,7 +16,7 @@ impl TextSystem {
 
         let mut hit: Option<(TextMetrics, u32, Arc<TextShape>, bool)> = None;
         if let Some(blob) = self.blobs.get_mut(id) {
-            self.perf_frame_blob_cache_hits = self.perf_frame_blob_cache_hits.saturating_add(1);
+            self.frame_perf.blob_cache_hits = self.frame_perf.blob_cache_hits.saturating_add(1);
             let was_released = blob.ref_count == 0;
             blob.ref_count = blob.ref_count.saturating_add(1);
             hit = Some((
@@ -70,7 +70,7 @@ impl TextSystem {
         shape_key: &TextShapeKey,
     ) -> Option<Arc<TextShape>> {
         let shape = self.shape_cache.get(shape_key)?.clone();
-        self.perf_frame_shape_cache_hits = self.perf_frame_shape_cache_hits.saturating_add(1);
+        self.frame_perf.shape_cache_hits = self.frame_perf.shape_cache_hits.saturating_add(1);
         Some(shape)
     }
 
@@ -79,7 +79,7 @@ impl TextSystem {
         shape_key: TextShapeKey,
         shape: Arc<TextShape>,
     ) -> Arc<TextShape> {
-        self.perf_frame_shapes_created = self.perf_frame_shapes_created.saturating_add(1);
+        self.frame_perf.shapes_created = self.frame_perf.shapes_created.saturating_add(1);
         self.shape_cache.insert(shape_key, shape.clone());
         shape
     }
@@ -107,13 +107,7 @@ impl TextSystem {
     }
 
     fn record_shape_prepare_metrics(&mut self, missing_glyphs: u32) {
-        if missing_glyphs > 0 {
-            self.perf_frame_missing_glyphs = self
-                .perf_frame_missing_glyphs
-                .saturating_add(u64::from(missing_glyphs));
-            self.perf_frame_texts_with_missing_glyphs =
-                self.perf_frame_texts_with_missing_glyphs.saturating_add(1);
-        }
+        self.frame_perf.record_missing_glyphs(missing_glyphs);
     }
 
     fn insert_prepared_blob(
@@ -128,7 +122,7 @@ impl TextSystem {
             decorations: Arc::from(decorations),
             ref_count: 1,
         });
-        self.perf_frame_blobs_created = self.perf_frame_blobs_created.saturating_add(1);
+        self.frame_perf.blobs_created = self.frame_perf.blobs_created.saturating_add(1);
         id
     }
 }

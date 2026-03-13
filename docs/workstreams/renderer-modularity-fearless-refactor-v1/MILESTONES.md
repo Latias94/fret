@@ -54,6 +54,10 @@ Current snapshot (2026-03-13):
   - private `prepare_with_key(...)` glue now lives under
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `text/mod.rs` now keeps only the text state shell plus module wiring
+- The latest `text/mod.rs` state-shell tightening slice has landed:
+  - per-frame text perf state now lives under
+    `crates/fret-render-wgpu/src/text/frame_perf.rs`
+  - `text/mod.rs` no longer owns the per-frame text perf counter fields directly
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals
@@ -302,6 +306,10 @@ Current snapshot (2026-03-13):
   - prepared-glyph bin-offset image render dispatch now lives behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `render_prepared_glyph_image(...)` no longer owns bin-offset derivation plus scaler render call directly
+- The latest `text/mod.rs` state-shell tightening slice has landed:
+  - per-frame text perf state now lives under
+    `crates/fret-render-wgpu/src/text/frame_perf.rs`
+  - `text/mod.rs` no longer owns the per-frame text perf counter fields directly
 - The sixty-second internal `text/mod.rs` split has landed:
   - prepared-glyph scaler size clamp now lives behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`

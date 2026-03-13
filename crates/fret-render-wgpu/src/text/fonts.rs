@@ -110,7 +110,7 @@ impl TextSystem {
     }
 
     fn reset_caches_for_font_change(&mut self) {
-        self.perf_frame_cache_resets = self.perf_frame_cache_resets.saturating_add(1);
+        self.frame_perf.cache_resets = self.frame_perf.cache_resets.saturating_add(1);
         self.blobs.clear();
         self.blob_cache.clear();
         self.blob_key_by_id.clear();

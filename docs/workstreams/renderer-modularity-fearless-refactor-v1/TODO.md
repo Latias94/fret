@@ -313,6 +313,9 @@ ID format:
     - private `prepare_with_key(...)` glue now lives in
       `crates/fret-render-wgpu/src/text/prepare.rs`
     - `text/mod.rs` now keeps only the text state shell plus module wiring
+    - per-frame text perf state now lives in
+      `crates/fret-render-wgpu/src/text/frame_perf.rs`
+    - `text/mod.rs` no longer owns the per-frame text perf counter fields directly
     - prepared-glyph font-data cache writes now live behind a dedicated helper in
       `crates/fret-render-wgpu/src/text/prepare.rs`
     - `cache_prepared_glyph_face_data(...)` no longer owns font-data entry writes directly

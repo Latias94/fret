@@ -25,6 +25,7 @@ mod blobs;
 mod bootstrap;
 mod diagnostics;
 mod fonts;
+mod frame_perf;
 mod measure;
 mod prepare;
 mod quality;
@@ -32,6 +33,7 @@ mod queries;
 mod types;
 
 use self::atlas::{GlyphAtlas, GlyphKey};
+use self::frame_perf::TextFramePerfState;
 pub use self::quality::TextQualitySettings;
 use self::quality::TextQualityState;
 #[cfg(test)]
@@ -78,15 +80,7 @@ pub struct TextSystem {
     font_instance_coords_by_face: HashMap<FontFaceKey, Arc<[i16]>>,
     font_face_family_name_cache: HashMap<(u64, u32), String>,
 
-    perf_frame_cache_resets: u64,
-    perf_frame_blob_cache_hits: u64,
-    perf_frame_blob_cache_misses: u64,
-    perf_frame_blobs_created: u64,
-    perf_frame_shape_cache_hits: u64,
-    perf_frame_shape_cache_misses: u64,
-    perf_frame_shapes_created: u64,
-    perf_frame_missing_glyphs: u64,
-    perf_frame_texts_with_missing_glyphs: u64,
+    frame_perf: TextFramePerfState,
 
     glyph_atlas_epoch: u64,
 
