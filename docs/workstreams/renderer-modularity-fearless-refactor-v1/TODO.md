@@ -623,12 +623,17 @@ ID format:
       `CustomEffectV2`, `CompositePremul`, `ClipMask`, and the `CustomEffectV3` source-pyramid
       fallback through the same executor helper surface for color/mask view lookup and
       color/mask target allocation
+    - effect-family bind-group builder flow for `CustomEffectV2` and `CompositePremul` now lives
+      under
+      `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_bindings.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+      `BindGroupDescriptor` assembly branches for those two recorder paths directly
   - Current next hotspot:
     - decide whether scene-encoding invalidation/debug evidence should stay coupled to
       `scene_encoding_cache.rs` or move closer to diagnostics state
-    - decide whether `recorders/effects.rs` should split bind-group / pipeline assembly further by
-      effect family now that current view/target access is uniformly routed through the executor
-      facade
+    - continue the same bind-group / pipeline thinning for `CustomEffectV3`, whose recorder path
+      still owns the largest remaining descriptor and pipeline-selection branches in
+      `recorders/effects.rs`
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG

@@ -277,7 +277,10 @@ For `Renderer` state-shell tightening, the same principle applies:
   methods that were only depending on recorder args for target allocation. Bespoke effect recorders
   should follow the same closure path: composite/writeback flows and mask-only clip-target flows
   should consume the same executor accessors instead of keeping ad hoc frame-target helper calls in
-  `recorders/effects.rs`.
+  `recorders/effects.rs`. Once recorder access is uniformly routed through the executor facade,
+  effect-family bind-group builders become the next thinning seam: move descriptor-heavy binding
+  assembly into narrow helper modules first, and only then decide whether pipeline/mode selection
+  should split further by family.
 - render-text dump state is the matching diagnostics/export seam for text debugging:
   dump collection scratch and serialization scratch should move behind one owner so render-scene
   execution keeps only a thin bridge to `TextSystem`.

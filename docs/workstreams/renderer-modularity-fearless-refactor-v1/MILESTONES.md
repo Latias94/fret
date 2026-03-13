@@ -638,6 +638,23 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite`
   - `cargo nextest run -p fret-render-wgpu gpu_filter_content_blur_respects_rounded_clip_stack_on_composite`
   - `cargo nextest run -p fret-render-wgpu gpu_backdrop_pixelate_respects_rounded_clip_stack_on_writeback`
+- The twenty-fourth renderer effects-binding split has landed:
+  - effect-family bind-group builders for `CustomEffectV2` and `CompositePremul` now live under
+    `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_bindings.rs`
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now reuses those
+    helpers instead of keeping the descriptor-heavy bind-group assembly inline for those paths
+  - pass-mode control flow, uniform bind-group selection, and draw execution stay in
+    `recorders/effects.rs`, so the slice only narrows assembly ownership without changing effect
+    semantics
+- Renderer effects-binding split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_can_sample_user_image_and_respects_sampling_hint`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_with_no_input_image_uses_fallback_texture_and_is_deterministic`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_compiles_and_runs_in_masked_path`
+  - `cargo nextest run -p fret-render-wgpu gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite`
+  - `cargo nextest run -p fret-render-wgpu gpu_filter_content_blur_respects_rounded_clip_stack_on_composite`
+  - `cargo nextest run -p fret-render-wgpu gpu_backdrop_pixelate_respects_rounded_clip_stack_on_writeback`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

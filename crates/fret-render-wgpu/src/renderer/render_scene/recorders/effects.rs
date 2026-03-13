@@ -2,6 +2,10 @@ use super::super::super::*;
 use super::super::executor::{RecordPassCtx, RenderSceneExecutor};
 use super::super::helpers::run_composite_premul_quad_pass;
 use super::blit::record_fullscreen_blit_pass;
+use super::effects_bindings::{
+    CustomEffectV2BindGroupResources, create_composite_premul_pipeline_and_bind_group,
+    create_custom_effect_v2_bind_group,
+};
 
 struct FullscreenEffectLabels {
     bind_group: &'static str,
@@ -904,6 +908,13 @@ pub(in super::super) fn record_custom_effect_v2_pass(
         .renderer
         .effect_params
         .custom_effect_v2_input_meta_buffer;
+    let binding_resources = CustomEffectV2BindGroupResources {
+        src_view: &src_view,
+        param_buffer,
+        input_view,
+        input_sampler,
+        input_meta_buffer,
+    };
 
     let uniform_stride = exec.renderer.uniform_stride();
 
@@ -917,36 +928,13 @@ pub(in super::super) fn record_custom_effect_v2_pass(
             return;
         };
 
-        let bind_group = exec.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("fret custom-effect v2 mask bind group"),
-            layout: layout_mask,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&src_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: param_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::TextureView(input_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: wgpu::BindingResource::Sampler(input_sampler),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: input_meta_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: wgpu::BindingResource::TextureView(&mask_view),
-                },
-            ],
-        });
+        let bind_group = create_custom_effect_v2_bind_group(
+            exec.device,
+            "fret custom-effect v2 mask bind group",
+            layout_mask,
+            binding_resources,
+            Some(&mask_view),
+        );
 
         let pipeline = exec.renderer.custom_effect_v2_mask_pipeline_ref(effect);
         run_fullscreen_triangle_pass_uniform_texture(
@@ -972,32 +960,13 @@ pub(in super::super) fn record_custom_effect_v2_pass(
         return;
     }
 
-    let bind_group = exec.device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("fret custom-effect v2 bind group"),
-        layout: layout_unmasked,
-        entries: &[
-            wgpu::BindGroupEntry {
-                binding: 0,
-                resource: wgpu::BindingResource::TextureView(&src_view),
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
-                resource: param_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 2,
-                resource: wgpu::BindingResource::TextureView(input_view),
-            },
-            wgpu::BindGroupEntry {
-                binding: 3,
-                resource: wgpu::BindingResource::Sampler(input_sampler),
-            },
-            wgpu::BindGroupEntry {
-                binding: 4,
-                resource: input_meta_buffer.as_entire_binding(),
-            },
-        ],
-    });
+    let bind_group = create_custom_effect_v2_bind_group(
+        exec.device,
+        "fret custom-effect v2 bind group",
+        layout_unmasked,
+        binding_resources,
+        None,
+    );
 
     if let Some(mask_uniform_index) = common.mask_uniform_index {
         let uniform_offset = (u64::from(mask_uniform_index) * uniform_stride) as u32;
@@ -1525,51 +1494,16 @@ pub(in super::super) fn record_composite_premul_pass(
     let quad_vertex_bases = exec.quad_vertex_bases;
     let quad_vertex_size = exec.quad_vertex_size;
 
-    let renderer = &mut *exec.renderer;
+    let renderer = &*exec.renderer;
     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
-    let (composite_pipeline, bind_group) = if let Some(mask_view) = mask_view.as_ref() {
-        let layout = renderer.composite_mask_bind_group_layout_ref();
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("fret composite premul mask bind group"),
-            layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Sampler(&renderer.globals.viewport_sampler),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(&src_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::TextureView(&mask_view),
-                },
-            ],
-        });
-
-        (
-            renderer.composite_mask_pipeline_ref(pass.blend_mode),
-            bind_group,
-        )
-    } else {
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("fret composite premul bind group"),
-            layout: &renderer.globals.viewport_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Sampler(&renderer.globals.viewport_sampler),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(&src_view),
-                },
-            ],
-        });
-        (renderer.composite_pipeline_ref(pass.blend_mode), bind_group)
-    };
+    let (composite_pipeline, bind_group) = create_composite_premul_pipeline_and_bind_group(
+        device,
+        renderer,
+        &src_view,
+        mask_view.as_ref(),
+        pass.blend_mode,
+    );
     let Some(base) = quad_vertex_bases.get(ctx.pass_index).and_then(|v| *v) else {
         return;
     };

@@ -299,6 +299,12 @@ As of 2026-03-13:
     `RenderSceneExecutor` helpers.
   - `recorders/effects.rs` no longer keeps any direct frame-target helper calls for current effect
     recorder paths.
+- The next `effects.rs` thinning slice has also landed:
+  - effect-family bind-group builders for `CustomEffectV2` and `CompositePremul` now live under
+    `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_bindings.rs`.
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now keeps those
+    paths focused on mode selection, uniform binding choice, and pass execution instead of
+    inlining every `BindGroupDescriptor` branch.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

@@ -2,6 +2,7 @@ mod backdrop_warp;
 mod blit;
 mod blur;
 mod effects;
+mod effects_bindings;
 mod path_clip_mask;
 mod path_msaa;
 mod scale_nearest;
