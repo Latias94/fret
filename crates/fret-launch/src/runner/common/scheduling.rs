@@ -12,6 +12,16 @@ pub(crate) fn commit_presented_frame(frame_id: &mut FrameId) -> FrameId {
     *frame_id
 }
 
+/// Commit a successfully presented frame and run follow-up bookkeeping with the committed id.
+pub(crate) fn commit_presented_frame_and_then(
+    frame_id: &mut FrameId,
+    after_commit: impl FnOnce(FrameId),
+) -> FrameId {
+    let committed = commit_presented_frame(frame_id);
+    after_commit(committed);
+    committed
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -35,6 +45,24 @@ mod tests {
         assert_eq!(frame_id, FrameId(1));
 
         assert_eq!(commit_presented_frame(&mut frame_id), FrameId(2));
+        assert_eq!(frame_id, FrameId(2));
+    }
+
+    #[test]
+    fn commit_presented_frame_and_then_observes_committed_frame() {
+        let mut frame_id = FrameId::default();
+        let mut observed = Vec::new();
+
+        assert_eq!(
+            commit_presented_frame_and_then(&mut frame_id, |committed| observed.push(committed.0)),
+            FrameId(1)
+        );
+        assert_eq!(
+            commit_presented_frame_and_then(&mut frame_id, |committed| observed.push(committed.0)),
+            FrameId(2)
+        );
+
+        assert_eq!(observed, vec![1, 2]);
         assert_eq!(frame_id, FrameId(2));
     }
 

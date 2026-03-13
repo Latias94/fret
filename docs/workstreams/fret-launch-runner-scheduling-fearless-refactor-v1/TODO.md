@@ -42,6 +42,11 @@ Companion docs:
 - [x] Keep `about_to_wait()` as the owner of native `ControlFlow` decisions.
 - [x] Verify native timer wakeups still participate in the same fixed-point drain semantics.
 - [ ] Audit diagnostics writes so their meaning matches the shared turn/frame contract.
+  - [x] Fix `RunnerPresentDiagnosticsStore` so present diagnostics observe the committed frame id.
+  - [x] Confirm `SurfaceBootstrap` frame-drive writes are emitted from mutually exclusive surface
+    creation paths.
+  - [x] Confirm redraw-request diagnostics remain intentionally app-owned in `fret-app` and use the
+    current committed frame id at request time.
 - [ ] Thin `app_handler.rs` only after behavior remains unchanged.
 
 ## Web runner adoption

@@ -16,6 +16,7 @@ Last updated: 2026-03-13
 - M2: Partial
   - desktop `TickId` turn advancement and `FrameId` present commitment now use the shared helper,
   - native timer participation in the bounded drain has now been audited,
+  - present diagnostics now observe the committed frame id through the shared seam,
   - broader diagnostics auditing is still pending.
 - M3: Partial
   - web `TickId` turn advancement moved out of render entry,
@@ -26,7 +27,9 @@ Last updated: 2026-03-13
 - M4: Partial
   - ADR 0034 wording was confirmed stable for v1,
   - implementation-alignment evidence now reflects the shared turn/frame seam, shared RAF queue,
-    shared bounded drain helper, and web recovery path.
+    shared bounded drain helper, and web recovery path,
+  - diagnostics audit now explicitly records that `SurfaceBootstrap` startup writes are
+    mutually exclusive while redraw-request diagnostics remain app-owned current-frame snapshots.
 
 ## M0 — Workstream agreed
 

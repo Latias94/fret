@@ -2142,10 +2142,17 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                         context.queue.submit(cmd_buffers);
                         frame.present();
-                        self.app.with_global_mut_untracked(
-                            fret_runtime::RunnerPresentDiagnosticsStore::default,
-                            |store, _app| {
-                                store.record_present(app_window, self.frame_id);
+                        let app = &mut self.app;
+                        scheduling::commit_presented_frame_and_then(
+                            &mut self.frame_id,
+                            |committed_frame_id| {
+                                app.set_frame_id(committed_frame_id);
+                                app.with_global_mut_untracked(
+                                    fret_runtime::RunnerPresentDiagnosticsStore::default,
+                                    |store, _app| {
+                                        store.record_present(app_window, committed_frame_id);
+                                    },
+                                );
                             },
                         );
                         drop(engine_keepalive);
@@ -2285,9 +2292,6 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             ));
                         }
                     }
-
-                    self.frame_id = scheduling::commit_presented_frame(&mut self.frame_id);
-                    self.app.set_frame_id(self.frame_id);
                 }
 
                 #[cfg(target_os = "android")]

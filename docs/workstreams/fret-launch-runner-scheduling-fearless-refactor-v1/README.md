@@ -42,6 +42,21 @@ Implementation update (2026-03-13, batch 3):
 - One-shot redraw coalescing remains intentionally app-owned in `crates/fret-app`; this batch does
   not move that responsibility into `fret-launch`.
 
+Implementation update (2026-03-13, batch 4):
+
+- `RunnerPresentDiagnosticsStore` is now recorded after `FrameId` commit on both desktop and web,
+  so `last_present_frame_id` reflects the frame that just successfully presented instead of the
+  previous committed frame.
+- The post-present `FrameId` commit + diagnostics write now flows through the shared scheduling
+  seam, so desktop and web cannot silently diverge on commit ordering again.
+- Diagnostics audit result:
+  - `SurfaceBootstrap` frame-drive writes come from mutually exclusive creation paths (`insert_window`
+    with an attached surface vs deferred `try_create_missing_surfaces()` recovery), so no startup
+    double-count fix was required.
+  - `WindowRedrawRequestDiagnosticsStore` remains intentionally app-owned in `crates/fret-app` and
+    records the current committed `FrameId` at redraw-request issue time, so no runner-side change
+    was required in this batch.
+
 ## Context
 
 Fret's architecture already places the scheduling and presentation responsibility in the correct
