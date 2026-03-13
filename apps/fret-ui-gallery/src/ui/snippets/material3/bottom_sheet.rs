@@ -7,7 +7,10 @@ use fret_ui::action::OnActivate;
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, open: Model<bool>) -> AnyElement {
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let sheet =
+        material3::ModalBottomSheet::uncontrolled(cx).test_id("ui-gallery-material3-bottom-sheet");
+    let open = sheet.open_model();
     let open_sheet: OnActivate = {
         let open = open.clone();
         Arc::new(move |host, action_cx, _reason| {
@@ -65,24 +68,22 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, open: Model<bool>) -> A
         .into_element(cx)
     };
 
-    material3::ModalBottomSheet::new(open)
-        .test_id("ui-gallery-material3-bottom-sheet")
-        .into_element(cx, underlay, move |cx| {
-            vec![
-                ui::v_stack(move |cx| {
-                    vec![
-                        cx.text("Modal bottom sheet content."),
-                        material3::Button::new("Close")
-                            .variant(material3::ButtonVariant::Filled)
-                            .on_activate(close_sheet.clone())
-                            .test_id("ui-gallery-material3-bottom-sheet-close")
-                            .into_element(cx),
-                    ]
-                })
-                .gap(Space::N4)
-                .into_element(cx),
-            ]
-        })
+    sheet.into_element(cx, underlay, move |cx| {
+        vec![
+            ui::v_stack(move |cx| {
+                vec![
+                    cx.text("Modal bottom sheet content."),
+                    material3::Button::new("Close")
+                        .variant(material3::ButtonVariant::Filled)
+                        .on_activate(close_sheet.clone())
+                        .test_id("ui-gallery-material3-bottom-sheet-close")
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N4)
+            .into_element(cx),
+        ]
+    })
 }
 
 // endregion: example

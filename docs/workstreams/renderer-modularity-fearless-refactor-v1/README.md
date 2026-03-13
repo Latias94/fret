@@ -1,6 +1,6 @@
 # Renderer Modularity (Fearless Refactor v1)
 
-Status: Draft
+Status: Closed for v1
 
 Last updated: 2026-03-13
 
@@ -9,6 +9,7 @@ Related:
 - Design: `docs/workstreams/renderer-modularity-fearless-refactor-v1/DESIGN.md`
 - TODO: `docs/workstreams/renderer-modularity-fearless-refactor-v1/TODO.md`
 - Milestones: `docs/workstreams/renderer-modularity-fearless-refactor-v1/MILESTONES.md`
+- Closeout audit: `docs/workstreams/renderer-modularity-fearless-refactor-v1/CLOSEOUT_AUDIT.md`
 - Finishing audit: `docs/workstreams/renderer-modularity-fearless-refactor-v1/FINISHING_AUDIT.md`
 - Shaders audit: `docs/workstreams/renderer-modularity-fearless-refactor-v1/SHADERS_AUDIT.md`
 
@@ -74,6 +75,19 @@ This workstream exists to make renderer refactors boring, staged, and reversible
 ## Current Snapshot
 
 As of 2026-03-13:
+
+- This workstream is now closed for v1.
+- The remaining closeout decisions for text extraction, export tightening, docs follow-up, gate
+  verification, and cleanup now live in
+  `docs/workstreams/renderer-modularity-fearless-refactor-v1/CLOSEOUT_AUDIT.md`.
+- `crates/fret-render-wgpu/src/text/mod.rs` is now an 84-line state shell plus explicit module
+  wiring, so the original `text/mod.rs` breakup goal is considered complete for v1.
+- The closeout gate bundle is green:
+  - `python3 tools/check_layering.py`
+  - `CARGO_TARGET_DIR=target-codex-render cargo check -p fret-render-wgpu --tests`
+  - `CARGO_TARGET_DIR=target-codex-render cargo nextest run -p fret-render-wgpu -E 'test(requested_and_emitted_custom_effect_counters_track_all_versions) | test(degradation_counters_track_reason_and_kind_totals) | test(diff_segment_reports_tracks_shape_changes_and_pass_growth) | test(render_plan_dump_assembly_tracks_segment_passes_and_counts) | test(custom_effect_summaries_include_abi_and_input_counts) | test(target_usage_tracks_max_size) | test(encode_custom_effect_v3_pass_keeps_distinct_source_targets)'`
+  - `CARGO_TARGET_DIR=target-codex-render cargo nextest run -p fret-render-wgpu -E 'test(text_locale_changes_font_stack_key) | test(emoji_sequences_use_color_quads_when_color_font_is_available) | test(cjk_glyphs_populate_mask_or_subpixel_atlas_when_cjk_lite_font_is_available) | test(text_measure_matches_prepare_across_fractional_scale_factors)'`
+  - `CARGO_TARGET_DIR=target-codex-render cargo nextest run -p fret-render -p fret-render-wgpu -E 'test(facade_surface_snapshot_matches_v1_contract_buckets) | test(renderer_accepts_host_provided_gpu_topology)'`
 
 - `crates/fret-render/src/lib.rs` now uses an explicit curated re-export list instead of a
   wildcard backend dump.

@@ -1,6 +1,6 @@
 # Renderer Modularity (Fearless Refactor v1) — Surface Inventory
 
-Status: In progress
+Status: Closed for v1
 
 Last updated: 2026-03-13
 

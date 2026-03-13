@@ -11,9 +11,10 @@ use fret_ui_shadcn::prelude::*;
 
 pub fn render<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    open: Model<bool>,
     last_action: Model<Arc<str>>,
 ) -> AnyElement {
+    let default_dialog = material3::Dialog::uncontrolled(cx);
+    let open = default_dialog.open_model();
     let override_open = cx.local_model_keyed("override_open", || false);
     let selected = cx.local_model_keyed("selected", || None::<Arc<str>>);
 
@@ -103,14 +104,14 @@ pub fn render<H: UiHost>(
     };
 
     let build_dialog = |cx: &mut ElementContext<'_, H>,
-                        open_model: Model<bool>,
+                        mut dialog: material3::Dialog,
                         style: Option<material3::DialogStyle>,
                         id_prefix: &'static str,
                         open_action: OnActivate,
                         close_action: OnActivate,
                         confirm_action: OnActivate|
      -> AnyElement {
-        let mut dialog = material3::Dialog::new(open_model.clone())
+        dialog = dialog
             .headline("Discard draft?")
             .supporting_text("This action cannot be undone.")
             .actions(vec![
@@ -195,7 +196,7 @@ pub fn render<H: UiHost>(
 
     let default_dialog = build_dialog(
         cx,
-        open.clone(),
+        default_dialog,
         None,
         "ui-gallery-material3-dialog",
         open_dialog.clone(),
@@ -204,7 +205,7 @@ pub fn render<H: UiHost>(
     );
     let override_dialog = build_dialog(
         cx,
-        override_open.clone(),
+        material3::Dialog::new(override_open.clone()),
         Some(override_style),
         "ui-gallery-material3-dialog-override",
         open_dialog_override.clone(),

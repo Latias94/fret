@@ -1,6 +1,6 @@
 # Renderer Modularity (Fearless Refactor v1) — Milestones
 
-Status: In progress
+Status: Closed for v1
 
 Related:
 
@@ -10,6 +10,19 @@ Related:
 
 Current snapshot (2026-03-13):
 
+- The workstream is now closed for v1; all tracker items in `TODO.md` are resolved.
+- The latest closeout audit has landed:
+  - `docs/workstreams/renderer-modularity-fearless-refactor-v1/CLOSEOUT_AUDIT.md` closes the
+    remaining text, renderer-owner, export-tightening, gate, docs, and cleanup tracker items
+  - no new ADR was required for closeout because the relevant process/topology contracts already
+    remain covered by `docs/architecture.md` and
+    `docs/adr/0201-renderer-internals-modularization-and-gates-v1.md`
+- The latest closeout verification remains green:
+  - `python3 tools/check_layering.py`: passed
+  - `CARGO_TARGET_DIR=target-codex-render cargo check -p fret-render-wgpu --tests`: passed
+  - `CARGO_TARGET_DIR=target-codex-render cargo nextest run -p fret-render-wgpu -E 'test(requested_and_emitted_custom_effect_counters_track_all_versions) | test(degradation_counters_track_reason_and_kind_totals) | test(diff_segment_reports_tracks_shape_changes_and_pass_growth) | test(render_plan_dump_assembly_tracks_segment_passes_and_counts) | test(custom_effect_summaries_include_abi_and_input_counts) | test(target_usage_tracks_max_size) | test(encode_custom_effect_v3_pass_keeps_distinct_source_targets)'`: 7/7 passed
+  - `CARGO_TARGET_DIR=target-codex-render cargo nextest run -p fret-render-wgpu -E 'test(text_locale_changes_font_stack_key) | test(emoji_sequences_use_color_quads_when_color_font_is_available) | test(cjk_glyphs_populate_mask_or_subpixel_atlas_when_cjk_lite_font_is_available) | test(text_measure_matches_prepare_across_fractional_scale_factors)'`: 4/4 passed
+  - `CARGO_TARGET_DIR=target-codex-render cargo nextest run -p fret-render -p fret-render-wgpu -E 'test(facade_surface_snapshot_matches_v1_contract_buckets) | test(renderer_accepts_host_provided_gpu_topology)'`: 2/2 passed
 - The renderer stack is not a rewrite candidate; it is a staged modularization candidate.
 - The latest backend gates are green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 223/223 passed

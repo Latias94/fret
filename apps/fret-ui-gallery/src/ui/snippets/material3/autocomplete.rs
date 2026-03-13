@@ -11,11 +11,13 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    value: Model<String>,
     disabled: Model<bool>,
     error: Model<bool>,
-    dialog_open: Model<bool>,
 ) -> AnyElement {
+    let outlined_autocomplete = material3::Autocomplete::uncontrolled(cx);
+    let value = outlined_autocomplete.query_model();
+    let dialog = material3::Dialog::uncontrolled(cx);
+    let dialog_open = dialog.open_model();
     let disabled_now = cx
         .get_model_copied(&disabled, Invalidation::Layout)
         .unwrap_or(false);
@@ -23,9 +25,15 @@ pub fn render<H: UiHost>(
         .get_model_copied(&error, Invalidation::Layout)
         .unwrap_or(false);
     let selected_value = cx.local_model_keyed("selected_value", || None::<Arc<str>>);
-    let exposed_selected_value =
-        cx.local_model_keyed("exposed_selected_value", || Some(Arc::<str>::from("beta")));
-    let exposed_query = cx.local_model_keyed("exposed_query", String::new);
+    let exposed_dropdown = material3::ExposedDropdown::new_controllable(
+        cx,
+        None,
+        Some(Arc::<str>::from("beta")),
+        None,
+        String::new(),
+    );
+    let exposed_selected_value = exposed_dropdown.selected_value_model();
+    let exposed_query = exposed_dropdown.query_model();
 
     let query_now = cx
         .get_model_cloned(&value, Invalidation::Layout)
@@ -73,7 +81,7 @@ pub fn render<H: UiHost>(
         "Supporting text"
     };
 
-    let outlined = material3::Autocomplete::new(value.clone())
+    let outlined = outlined_autocomplete
         .selected_value(selected_value.clone())
         .variant(material3::AutocompleteVariant::Outlined)
         .label("Search")
@@ -137,8 +145,7 @@ pub fn render<H: UiHost>(
     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx);
 
-    let exposed = material3::ExposedDropdown::new(exposed_selected_value.clone())
-        .query(exposed_query.clone())
+    let exposed = exposed_dropdown
         .variant(material3::AutocompleteVariant::Outlined)
         .label("Searchable select")
         .placeholder("Type to filter")
@@ -186,7 +193,7 @@ pub fn render<H: UiHost>(
         })
     };
 
-    let dialog = material3::Dialog::new(dialog_open.clone())
+    let dialog = dialog
         .headline("Autocomplete (Dialog probe)")
         .supporting_text("Overlay should anchor correctly inside a modal dialog without clipping.")
         .actions(vec![material3::DialogAction::new("Close").on_activate(close_action)])

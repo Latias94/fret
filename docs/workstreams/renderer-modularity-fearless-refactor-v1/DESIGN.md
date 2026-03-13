@@ -1,6 +1,6 @@
 # Renderer Modularity (Fearless Refactor v1) — Design
 
-Status: Draft
+Status: Closed for v1
 
 ## Context
 
@@ -33,6 +33,19 @@ This design aims to improve modularity without destabilizing render semantics.
 
 - Render-plan semantics guardrails:
   - `docs/workstreams/renderer-render-plan-semantics-audit-v1/renderer-render-plan-semantics-audit-v1.md`
+
+## Closeout note
+
+V1 reached the intended shape without adding new renderer crates or a new renderer-facade ADR.
+
+Closeout decisions are recorded in:
+
+- `docs/workstreams/renderer-modularity-fearless-refactor-v1/FINISHING_AUDIT.md`
+- `docs/workstreams/renderer-modularity-fearless-refactor-v1/SHADERS_AUDIT.md`
+- `docs/workstreams/renderer-modularity-fearless-refactor-v1/CLOSEOUT_AUDIT.md`
+
+The stable topology guidance continues to be owned by `docs/architecture.md`, while the accepted
+modularization/gate process contract remains `docs/adr/0201-renderer-internals-modularization-and-gates-v1.md`.
 
 ## Problem Statement
 

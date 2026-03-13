@@ -49,12 +49,10 @@ pub(in crate::ui) fn preview_material3_select(cx: &mut UiCx<'_>) -> Vec<AnyEleme
 
 pub(in crate::ui) fn preview_material3_autocomplete(
     cx: &mut UiCx<'_>,
-    value: Model<String>,
     disabled: Model<bool>,
     error: Model<bool>,
-    dialog_open: Model<bool>,
 ) -> Vec<AnyElement> {
-    let demo = snippets::material3::autocomplete::render(cx, value, disabled, error, dialog_open);
+    let demo = snippets::material3::autocomplete::render(cx, disabled, error);
 
     render_material3_demo_page(
         cx,

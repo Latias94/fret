@@ -139,6 +139,10 @@ mod tests {
 
     use crate::tokens::v30::{ColorSchemeOptions, TypographyOptions, theme_config_with_colors};
 
+    fn normalize_ws(source: &str) -> String {
+        source.split_whitespace().collect()
+    }
+
     fn assert_material_only_tokens(source: &str) {
         let forbidden_literals = [
             "color_required(\"card\")",
@@ -450,6 +454,114 @@ mod tests {
 
         for (file, src) in sources {
             assert_minimum_touch_target_policy(file, src);
+        }
+    }
+
+    #[test]
+    fn material3_overlay_roots_offer_uncontrolled_copyable_paths_while_keeping_controlled_new() {
+        let sources = [
+            ("dropdown_menu.rs", include_str!("dropdown_menu.rs")),
+            ("dialog.rs", include_str!("dialog.rs")),
+            ("bottom_sheet.rs", include_str!("bottom_sheet.rs")),
+        ];
+
+        let required_markers = [
+            "pub fn new(open: Model<bool>) -> Self {",
+            "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self {",
+            "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {",
+            "pub fn open_model(&self) -> Model<bool> {",
+        ];
+
+        for (file, src) in sources {
+            let normalized = normalize_ws(src);
+
+            for marker in required_markers {
+                let marker = normalize_ws(marker);
+                assert!(
+                    normalized.contains(&marker),
+                    "{file} should keep `new(open)` as the explicit controlled seam and expose `new_controllable(...)`, `uncontrolled(cx)`, and `open_model()` for copyable teaching surfaces"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn material3_search_view_offers_uncontrolled_copyable_path_while_keeping_controlled_new() {
+        let normalized = normalize_ws(include_str!("search_view.rs"));
+        let required_markers = [
+            "pub fn new(open: Model<bool>, query: Model<String>) -> Self {",
+            "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, query: Option<Model<String>>, default_query: impl Into<String>, ) -> Self {",
+            "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {",
+            "pub fn open_model(&self) -> Model<bool> {",
+            "pub fn query_model(&self) -> Model<String> {",
+        ];
+
+        for marker in required_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                normalized.contains(&marker),
+                "search_view.rs should keep `new(open, query)` as the explicit controlled seam and expose `new_controllable(...)`, `uncontrolled(cx)`, `open_model()`, and `query_model()` for copyable teaching surfaces"
+            );
+        }
+    }
+
+    #[test]
+    fn material3_autocomplete_offers_uncontrolled_copyable_query_path_while_keeping_controlled_new()
+    {
+        let normalized = normalize_ws(include_str!("autocomplete.rs"));
+        let required_markers = [
+            "pub fn new(query: Model<String>) -> Self {",
+            "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, query: Option<Model<String>>, default_query: impl Into<String>, ) -> Self {",
+            "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {",
+            "pub fn query_model(&self) -> Model<String> {",
+        ];
+
+        for marker in required_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                normalized.contains(&marker),
+                "autocomplete.rs should keep `new(query)` as the explicit controlled seam and expose `new_controllable(...)`, `uncontrolled(cx)`, and `query_model()` for copyable teaching surfaces"
+            );
+        }
+    }
+
+    #[test]
+    fn material3_exposed_dropdown_offers_uncontrolled_copyable_selected_and_query_paths() {
+        let normalized = normalize_ws(include_str!("exposed_dropdown.rs"));
+        let required_markers = [
+            "pub fn new(selected_value: Model<Option<Arc<str>>>) -> Self {",
+            "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, selected_value: Option<Model<Option<Arc<str>>>>, default_selected_value: Option<Arc<str>>, query: Option<Model<String>>, default_query: impl Into<String>, ) -> Self {",
+            "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {",
+            "pub fn selected_value_model(&self) -> Model<Option<Arc<str>>> {",
+            "pub fn query_model(&self) -> Model<String> {",
+            "pub fn query(mut self, query: Model<String>) -> Self {",
+        ];
+
+        for marker in required_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                normalized.contains(&marker),
+                "exposed_dropdown.rs should keep `new(selected_value)` + `.query(...)` as the explicit controlled seams and expose `new_controllable(...)`, `uncontrolled(cx)`, `selected_value_model()`, and `query_model()` for copyable teaching surfaces"
+            );
+        }
+    }
+
+    #[test]
+    fn material3_select_offers_uncontrolled_copyable_value_path_while_keeping_controlled_new() {
+        let normalized = normalize_ws(include_str!("select.rs"));
+        let required_markers = [
+            "pub fn new(selected_value: Model<Option<Arc<str>>>) -> Self {",
+            "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, selected_value: Option<Model<Option<Arc<str>>>>, default_selected_value: Option<Arc<str>>, ) -> Self {",
+            "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {",
+            "pub fn value_model(&self) -> Model<Option<Arc<str>>> {",
+        ];
+
+        for marker in required_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                normalized.contains(&marker),
+                "select.rs should keep `new(selected_value)` as the explicit controlled seam and expose `new_controllable(...)`, `uncontrolled(cx)`, and `value_model()` for copyable teaching surfaces"
+            );
         }
     }
 }

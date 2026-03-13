@@ -25,6 +25,7 @@ use fret_ui::element::{
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{Invalidation, Theme, UiHost};
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
@@ -268,9 +269,9 @@ impl std::fmt::Debug for Select {
 }
 
 impl Select {
-    pub fn new(model: Model<Option<Arc<str>>>) -> Self {
+    pub fn new(selected_value: Model<Option<Arc<str>>>) -> Self {
         Self {
-            model,
+            model: selected_value,
             items: Arc::from([]),
             variant: SelectVariant::default(),
             menu_align: SelectMenuAlign::default(),
@@ -287,6 +288,33 @@ impl Select {
             test_id: None,
             style: SelectStyle::default(),
         }
+    }
+
+    /// Creates a select with a controlled/uncontrolled committed value model.
+    ///
+    /// When `selected_value` is `None`, the value model is stored at the root call site and
+    /// initialized from `default_selected_value`.
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        selected_value: Option<Model<Option<Arc<str>>>>,
+        default_selected_value: Option<Arc<str>>,
+    ) -> Self {
+        let selected_value = controllable_state::use_controllable_model(cx, selected_value, || {
+            default_selected_value.clone()
+        })
+        .model();
+        Self::new(selected_value)
+    }
+
+    /// Default teaching-surface constructor for a select that owns its committed value model.
+    pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {
+        Self::new_controllable(cx, None, None)
+    }
+
+    /// Returns the resolved committed value model, including the internally owned model for
+    /// uncontrolled use.
+    pub fn value_model(&self) -> Model<Option<Arc<str>>> {
+        self.model.clone()
     }
 
     pub fn items(mut self, items: impl Into<Arc<[SelectItem]>>) -> Self {
@@ -1773,6 +1801,80 @@ mod item_text_tests {
         assert_eq!(trailing.layout.size.width, Length::Auto);
         assert_eq!(trailing.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(trailing.layout.flex.shrink, 1.0);
+    }
+}
+
+#[cfg(test)]
+mod controllable_state_tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::elements::with_element_cx;
+    use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        )
+    }
+
+    #[test]
+    fn select_new_controllable_uses_controlled_value_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let controlled_selected = app.models_mut().insert(Some(Arc::<str>::from("beta")));
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-select-controlled",
+            |cx| {
+                let select = Select::new_controllable(cx, Some(controlled_selected.clone()), None);
+                assert_eq!(select.value_model(), controlled_selected);
+            },
+        );
+    }
+
+    #[test]
+    fn select_new_controllable_applies_default_selected_value() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-select-default-selected-value",
+            |cx| {
+                let select = Select::new_controllable(cx, None, Some(Arc::<str>::from("beta")));
+                let selected = cx
+                    .watch_model(&select.value_model())
+                    .layout()
+                    .cloned()
+                    .unwrap_or(None);
+                assert_eq!(selected.as_deref(), Some("beta"));
+            },
+        );
+    }
+
+    #[test]
+    fn select_uncontrolled_multiple_instances_do_not_share_value_models() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-select-uncontrolled-scope",
+            |cx| {
+                let a = Select::uncontrolled(cx);
+                let b = Select::uncontrolled(cx);
+                assert_ne!(a.value_model(), b.value_model());
+            },
+        );
     }
 }
 

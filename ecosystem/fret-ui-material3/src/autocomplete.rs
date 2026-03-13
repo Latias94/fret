@@ -25,6 +25,7 @@ use fret_ui::element::{
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{Invalidation, Theme, UiHost};
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::primitives::active_descendant::{
     active_descendant_for_index, active_option_for_index,
 };
@@ -177,6 +178,30 @@ impl Autocomplete {
             a11y_label: None,
             test_id: None,
         }
+    }
+
+    /// Creates an autocomplete with a controlled/uncontrolled query model.
+    ///
+    /// When `query` is `None`, the query model is stored at the root call site and initialized
+    /// from `default_query`.
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        query: Option<Model<String>>,
+        default_query: impl Into<String>,
+    ) -> Self {
+        let default_query = default_query.into();
+        let query = controllable_state::use_controllable_model(cx, query, || default_query).model();
+        Self::new(query)
+    }
+
+    /// Default teaching-surface constructor for an autocomplete that owns its query model.
+    pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {
+        Self::new_controllable(cx, None, String::new())
+    }
+
+    /// Returns the resolved query model, including the internally owned model for uncontrolled use.
+    pub fn query_model(&self) -> Model<String> {
+        self.query.clone()
     }
 
     pub fn items(mut self, items: impl Into<Arc<[AutocompleteItem]>>) -> Self {
@@ -1365,5 +1390,81 @@ impl TextFieldExt for TextField {
             Some(v) => self.test_id(v),
             None => self,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::elements::with_element_cx;
+    use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+
+    use super::*;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        )
+    }
+
+    #[test]
+    fn autocomplete_new_controllable_uses_controlled_query_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let controlled_query = app.models_mut().insert(String::from("alpha"));
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-autocomplete-controlled",
+            |cx| {
+                let autocomplete =
+                    Autocomplete::new_controllable(cx, Some(controlled_query.clone()), "");
+                assert_eq!(autocomplete.query_model(), controlled_query);
+            },
+        );
+    }
+
+    #[test]
+    fn autocomplete_new_controllable_applies_default_query() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-autocomplete-default-query",
+            |cx| {
+                let autocomplete = Autocomplete::new_controllable(cx, None, String::from("hello"));
+                let query = cx
+                    .watch_model(&autocomplete.query_model())
+                    .layout()
+                    .cloned()
+                    .unwrap_or_default();
+                assert_eq!(query, "hello");
+            },
+        );
+    }
+
+    #[test]
+    fn autocomplete_uncontrolled_multiple_instances_do_not_share_query_models() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-autocomplete-uncontrolled-scope",
+            |cx| {
+                let a = Autocomplete::uncontrolled(cx);
+                let b = Autocomplete::uncontrolled(cx);
+                assert_ne!(a.query_model(), b.query_model());
+            },
+        );
     }
 }

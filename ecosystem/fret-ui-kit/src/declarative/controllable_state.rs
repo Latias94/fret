@@ -240,20 +240,14 @@ mod tests {
         let window = AppWindowId::default();
         let mut app = App::new();
 
-        let first = fret_ui::elements::with_element_cx(
-            &mut app,
-            window,
-            bounds(),
-            "slot-state",
-            |cx| two_callsite_scoped_counters(cx),
-        );
-        let second = fret_ui::elements::with_element_cx(
-            &mut app,
-            window,
-            bounds(),
-            "slot-state",
-            |cx| two_callsite_scoped_counters(cx),
-        );
+        let first =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "slot-state", |cx| {
+                two_callsite_scoped_counters(cx)
+            });
+        let second =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "slot-state", |cx| {
+                two_callsite_scoped_counters(cx)
+            });
 
         assert_eq!(first, (1, 1));
         assert_eq!(second, (2, 2));

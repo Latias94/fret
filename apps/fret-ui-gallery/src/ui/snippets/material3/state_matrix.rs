@@ -529,8 +529,6 @@ fn render_fab<H: UiHost>(
 }
 
 fn render_search_view<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Vec<AnyElement> {
-    let open = cx.local_model_keyed("open", || false);
-    let query = cx.local_model_keyed("query", String::new);
     let selected = cx.local_model_keyed("selected", || Arc::<str>::from("alpha"));
 
     let suggestions = material3::List::new(selected)
@@ -549,7 +547,7 @@ fn render_search_view<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Vec<AnyEleme
         ])
         .into_element(cx);
 
-    let view = material3::SearchView::new(open, query)
+    let view = material3::SearchView::uncontrolled(cx)
         .leading_icon(ids::ui::SEARCH)
         .trailing_icon(ids::ui::CLOSE)
         .placeholder("Search")
