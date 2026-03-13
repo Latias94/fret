@@ -1,6 +1,7 @@
 use super::TextSystem;
 use super::atlas::{GlyphAtlas, TEXT_ATLAS_MAX_PAGES};
 use super::atlas_epoch::TextAtlasEpochState;
+use super::atlas_runtime_state::TextAtlasRuntimeState;
 use super::blob_state::TextBlobState;
 use super::face_cache::TextFaceCacheState;
 use super::frame_perf::TextFramePerfState;
@@ -80,10 +81,12 @@ pub(super) fn build_text_system(device: &wgpu::Device) -> TextSystem {
         shape_cache: HashMap::new(),
         measure: TextMeasureCaches::new(),
 
-        mask_atlas: bootstrap.mask_atlas,
-        color_atlas: bootstrap.color_atlas,
-        subpixel_atlas: bootstrap.subpixel_atlas,
-        atlas_bind_group_layout: bootstrap.atlas_bind_group_layout,
+        atlas_runtime: TextAtlasRuntimeState::new(
+            bootstrap.mask_atlas,
+            bootstrap.color_atlas,
+            bootstrap.subpixel_atlas,
+            bootstrap.atlas_bind_group_layout,
+        ),
 
         pin_state: TextPinState::with_ring_len(3),
         face_cache: TextFaceCacheState::default(),

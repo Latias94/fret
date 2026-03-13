@@ -328,6 +328,9 @@ ID format:
     - text atlas epoch state now lives in
       `crates/fret-render-wgpu/src/text/atlas_epoch.rs`
     - `text/mod.rs` no longer owns the raw glyph-atlas epoch field directly
+    - text atlas runtime state now lives in
+      `crates/fret-render-wgpu/src/text/atlas_runtime_state.rs`
+    - `text/mod.rs` no longer owns atlas textures/bind-group-layout fields directly
     - prepared-glyph font-data cache writes now live behind a dedicated helper in
       `crates/fret-render-wgpu/src/text/prepare.rs`
     - `cache_prepared_glyph_face_data(...)` no longer owns font-data entry writes directly

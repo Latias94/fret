@@ -730,25 +730,25 @@ impl GlyphAtlas {
 
 impl TextSystem {
     pub fn atlas_bind_group_layout(&self) -> &wgpu::BindGroupLayout {
-        &self.atlas_bind_group_layout
+        &self.atlas_runtime.atlas_bind_group_layout
     }
 
     pub fn mask_atlas_bind_group(&self, page: u16) -> &wgpu::BindGroup {
-        self.mask_atlas.bind_group(page)
+        self.atlas_runtime.mask_atlas.bind_group(page)
     }
 
     pub fn color_atlas_bind_group(&self, page: u16) -> &wgpu::BindGroup {
-        self.color_atlas.bind_group(page)
+        self.atlas_runtime.color_atlas.bind_group(page)
     }
 
     pub fn subpixel_atlas_bind_group(&self, page: u16) -> &wgpu::BindGroup {
-        self.subpixel_atlas.bind_group(page)
+        self.atlas_runtime.subpixel_atlas.bind_group(page)
     }
 
     pub fn flush_uploads(&mut self, queue: &wgpu::Queue) {
-        self.mask_atlas.flush_uploads(queue);
-        self.color_atlas.flush_uploads(queue);
-        self.subpixel_atlas.flush_uploads(queue);
+        self.atlas_runtime.mask_atlas.flush_uploads(queue);
+        self.atlas_runtime.color_atlas.flush_uploads(queue);
+        self.atlas_runtime.subpixel_atlas.flush_uploads(queue);
     }
 
     pub fn prepare_for_scene(&mut self, scene: &Scene, frame_index: u64) {
@@ -759,9 +759,11 @@ impl TextSystem {
         let bucket = (frame_index as usize) % ring_len;
 
         let (old_mask, old_color, old_subpixel) = self.pin_state.take_bucket(bucket);
-        self.mask_atlas.dec_live_refs(&old_mask);
-        self.color_atlas.dec_live_refs(&old_color);
-        self.subpixel_atlas.dec_live_refs(&old_subpixel);
+        self.atlas_runtime.mask_atlas.dec_live_refs(&old_mask);
+        self.atlas_runtime.color_atlas.dec_live_refs(&old_color);
+        self.atlas_runtime
+            .subpixel_atlas
+            .dec_live_refs(&old_subpixel);
 
         let mut mask_keys: HashSet<GlyphKey> = HashSet::new();
         let mut color_keys: HashSet<GlyphKey> = HashSet::new();
@@ -804,9 +806,11 @@ impl TextSystem {
             self.ensure_glyph_in_atlas(key, epoch);
         }
 
-        self.mask_atlas.inc_live_refs(&new_mask);
-        self.color_atlas.inc_live_refs(&new_color);
-        self.subpixel_atlas.inc_live_refs(&new_subpixel);
+        self.atlas_runtime.mask_atlas.inc_live_refs(&new_mask);
+        self.atlas_runtime.color_atlas.inc_live_refs(&new_color);
+        self.atlas_runtime
+            .subpixel_atlas
+            .inc_live_refs(&new_subpixel);
 
         self.pin_state
             .append_bucket(bucket, new_mask, new_color, new_subpixel);
@@ -814,9 +818,9 @@ impl TextSystem {
 
     pub(super) fn ensure_glyph_in_atlas(&mut self, key: GlyphKey, epoch: u64) {
         let already_present = match key.kind {
-            GlyphQuadKind::Mask => self.mask_atlas.get(key, epoch).is_some(),
-            GlyphQuadKind::Color => self.color_atlas.get(key, epoch).is_some(),
-            GlyphQuadKind::Subpixel => self.subpixel_atlas.get(key, epoch).is_some(),
+            GlyphQuadKind::Mask => self.atlas_runtime.mask_atlas.get(key, epoch).is_some(),
+            GlyphQuadKind::Color => self.atlas_runtime.color_atlas.get(key, epoch).is_some(),
+            GlyphQuadKind::Subpixel => self.atlas_runtime.subpixel_atlas.get(key, epoch).is_some(),
         };
         if already_present {
             return;
@@ -897,7 +901,7 @@ impl TextSystem {
 
         match key.kind {
             GlyphQuadKind::Mask => {
-                let _ = self.mask_atlas.get_or_insert(
+                let _ = self.atlas_runtime.mask_atlas.get_or_insert(
                     key,
                     image.placement.width,
                     image.placement.height,
@@ -909,7 +913,7 @@ impl TextSystem {
                 );
             }
             GlyphQuadKind::Color => {
-                let _ = self.color_atlas.get_or_insert(
+                let _ = self.atlas_runtime.color_atlas.get_or_insert(
                     key,
                     image.placement.width,
                     image.placement.height,
@@ -921,7 +925,7 @@ impl TextSystem {
                 );
             }
             GlyphQuadKind::Subpixel => {
-                let _ = self.subpixel_atlas.get_or_insert(
+                let _ = self.atlas_runtime.subpixel_atlas.get_or_insert(
                     key,
                     image.placement.width,
                     image.placement.height,

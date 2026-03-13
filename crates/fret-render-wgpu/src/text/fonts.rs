@@ -114,9 +114,7 @@ impl TextSystem {
         self.blob_state.clear();
         self.shape_cache.clear();
         self.measure.clear();
-        self.mask_atlas.reset();
-        self.color_atlas.reset();
-        self.subpixel_atlas.reset();
+        self.atlas_runtime.reset();
         self.pin_state.clear();
         self.face_cache.clear();
     }

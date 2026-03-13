@@ -20,6 +20,7 @@ pub use fret_render_text::{
 
 mod atlas;
 mod atlas_epoch;
+mod atlas_runtime_state;
 mod blob_state;
 mod blobs;
 mod bootstrap;
@@ -34,10 +35,10 @@ mod quality;
 mod queries;
 mod types;
 
-use self::atlas::GlyphAtlas;
 #[cfg(test)]
 use self::atlas::GlyphKey;
 use self::atlas_epoch::TextAtlasEpochState;
+use self::atlas_runtime_state::TextAtlasRuntimeState;
 use self::blob_state::TextBlobState;
 use self::face_cache::TextFaceCacheState;
 use self::frame_perf::TextFramePerfState;
@@ -72,10 +73,7 @@ pub struct TextSystem {
     shape_cache: HashMap<TextShapeKey, Arc<TextShape>>,
     measure: TextMeasureCaches,
 
-    mask_atlas: GlyphAtlas,
-    color_atlas: GlyphAtlas,
-    subpixel_atlas: GlyphAtlas,
-    atlas_bind_group_layout: wgpu::BindGroupLayout,
+    atlas_runtime: TextAtlasRuntimeState,
 
     pin_state: TextPinState,
     face_cache: TextFaceCacheState,

@@ -44,9 +44,7 @@ impl TextSystem {
         self.font_trace.begin_frame();
 
         self.frame_perf.clear();
-        self.mask_atlas.begin_frame_diagnostics();
-        self.color_atlas.begin_frame_diagnostics();
-        self.subpixel_atlas.begin_frame_diagnostics();
+        self.atlas_runtime.begin_frame_diagnostics();
     }
 
     pub fn font_trace_snapshot(
@@ -133,9 +131,9 @@ impl TextSystem {
             frame_shape_cache_hits: self.frame_perf.shape_cache_hits,
             frame_shape_cache_misses: self.frame_perf.shape_cache_misses,
             frame_shapes_created: self.frame_perf.shapes_created,
-            mask_atlas: self.mask_atlas.diagnostics_snapshot(),
-            color_atlas: self.color_atlas.diagnostics_snapshot(),
-            subpixel_atlas: self.subpixel_atlas.diagnostics_snapshot(),
+            mask_atlas: self.atlas_runtime.mask_atlas.diagnostics_snapshot(),
+            color_atlas: self.atlas_runtime.color_atlas.diagnostics_snapshot(),
+            subpixel_atlas: self.atlas_runtime.subpixel_atlas.diagnostics_snapshot(),
             registered_font_blobs_count: font_db.registered_font_blobs_count,
             registered_font_blobs_total_bytes: font_db.registered_font_blobs_total_bytes,
             family_id_cache_entries: font_db.family_id_cache_entries,
@@ -168,9 +166,9 @@ impl TextSystem {
     }
 
     pub(crate) fn take_atlas_perf_snapshot(&mut self) -> super::TextAtlasPerfSnapshot {
-        let mask = self.mask_atlas.take_perf_snapshot();
-        let color = self.color_atlas.take_perf_snapshot();
-        let subpixel = self.subpixel_atlas.take_perf_snapshot();
+        let mask = self.atlas_runtime.mask_atlas.take_perf_snapshot();
+        let color = self.atlas_runtime.color_atlas.take_perf_snapshot();
+        let subpixel = self.atlas_runtime.subpixel_atlas.take_perf_snapshot();
 
         super::TextAtlasPerfSnapshot {
             uploads: mask.uploads + color.uploads + subpixel.uploads,
@@ -185,19 +183,16 @@ impl TextSystem {
     }
 
     pub(crate) fn atlas_revision(&self) -> u64 {
-        self.mask_atlas
+        self.atlas_runtime
+            .mask_atlas
             .revision()
             .wrapping_mul(0x9E37_79B9_7F4A_7C15)
-            ^ self.color_atlas.revision().rotate_left(1)
-            ^ self.subpixel_atlas.revision().rotate_left(2)
+            ^ self.atlas_runtime.color_atlas.revision().rotate_left(1)
+            ^ self.atlas_runtime.subpixel_atlas.revision().rotate_left(2)
     }
 
     pub(crate) fn glyph_uv_for_instance(&self, glyph: &GlyphInstance) -> Option<(u16, [f32; 4])> {
-        let atlas = match glyph.kind() {
-            GlyphQuadKind::Mask => &self.mask_atlas,
-            GlyphQuadKind::Color => &self.color_atlas,
-            GlyphQuadKind::Subpixel => &self.subpixel_atlas,
-        };
+        let atlas = self.atlas_runtime.atlas(glyph.kind());
 
         let entry = atlas.entry(glyph.key)?;
         let (w, h) = atlas.dimensions();
@@ -214,11 +209,7 @@ impl TextSystem {
     }
 
     pub(crate) fn debug_atlas_dims(&self, kind: GlyphQuadKind) -> (u32, u32) {
-        match kind {
-            GlyphQuadKind::Mask => self.mask_atlas.dimensions(),
-            GlyphQuadKind::Color => self.color_atlas.dimensions(),
-            GlyphQuadKind::Subpixel => self.subpixel_atlas.dimensions(),
-        }
+        self.atlas_runtime.atlas(kind).dimensions()
     }
 
     pub(crate) fn debug_lookup_glyph_atlas_entry(
@@ -230,11 +221,7 @@ impl TextSystem {
         w: u32,
         h: u32,
     ) -> Option<DebugGlyphAtlasLookup> {
-        let atlas = match kind {
-            GlyphQuadKind::Mask => &self.mask_atlas,
-            GlyphQuadKind::Color => &self.color_atlas,
-            GlyphQuadKind::Subpixel => &self.subpixel_atlas,
-        };
+        let atlas = self.atlas_runtime.atlas(kind);
 
         let k = atlas.find_key_for_bounds(page, x, y, w, h)?;
 
