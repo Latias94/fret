@@ -65,7 +65,7 @@ This workstream exists to make renderer refactors boring, staged, and reversible
 
 ## Current Snapshot
 
-As of 2026-03-12:
+As of 2026-03-13:
 
 - `crates/fret-render/src/lib.rs` is effectively a wildcard re-export facade.
 - `crates/fret-render-wgpu/src/lib.rs` re-exports a broad mix of:
@@ -77,8 +77,11 @@ As of 2026-03-12:
 - `crates/fret-render-wgpu/src/text/mod.rs` and `crates/fret-render-wgpu/src/renderer/shaders.rs`
   are the most obvious oversized internal modules.
 - `Renderer::new(adapter, device)` and `render_scene(device, queue, ...)` already make
-  host-provided GPU objects possible, but some convenience/diagnostics surfaces still privilege
-  `WgpuContext`.
+  host-provided GPU objects possible, and
+  `crates/fret-render-wgpu/tests/host_provided_gpu_topology_smoke.rs` now locks that engine-hosted
+  seam with a direct smoke path.
+- Some convenience/diagnostics surfaces and docs still privilege `WgpuContext`, so topology
+  teaching closure is not finished yet.
 - The first code slice has landed:
   - `crates/fret-render` now uses an explicit facade export list instead of wildcard re-export.
   - `RendererCapabilities::from_adapter_device(...)` now exists and is used by first-party runner

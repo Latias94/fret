@@ -87,10 +87,18 @@ ID format:
 
 - [x] RMFR-topology-020 Add capability helpers that work from adapter/device inputs directly rather
   than requiring `WgpuContext`.
-- [~] RMFR-topology-021 Review surface/bootstrap helpers and confirm they stay usable for
+- [x] RMFR-topology-021 Review surface/bootstrap helpers and confirm they stay usable for
   engine-hosted integration.
-- [ ] RMFR-topology-022 Add or update at least one smoke path that exercises the host-provided GPU
+  - `crates/fret-render-wgpu/src/surface.rs` still accepts host-provided
+    `adapter/device/surface` through `SurfaceState::new(...)`.
+  - `RendererCapabilities::from_adapter_device(...)` and `Renderer::new(...)` remain usable
+    without `WgpuContext`.
+- [x] RMFR-topology-022 Add or update at least one smoke path that exercises the host-provided GPU
   topology explicitly.
+  - `crates/fret-render-wgpu/tests/host_provided_gpu_topology_smoke.rs` now requests
+    `wgpu::Instance/Adapter/Device/Queue` directly, derives capabilities via
+    `RendererCapabilities::from_adapter_device(...)`, builds `Renderer::new(...)`, and renders an
+    offscreen scene without `WgpuContext`.
 - [ ] RMFR-topology-023 Update docs/examples so both topology entrypoints are visible:
   - editor-hosted convenience path,
   - engine-hosted path.
@@ -513,7 +521,8 @@ ID format:
 - [x] RMFR-gates-070 Establish backend baseline gates before refactor work.
 - [~] RMFR-gates-071 Add a surface snapshot note or test proving the intended `fret-render` export
   set after facade curation.
-- [ ] RMFR-gates-072 Add targeted smoke coverage for host-provided GPU topology if absent.
+- [x] RMFR-gates-072 Add targeted smoke coverage for host-provided GPU topology if absent.
+  - Targeted gate: `cargo nextest run -p fret-render-wgpu renderer_accepts_host_provided_gpu_topology`
 - [ ] RMFR-gates-073 Keep render-plan semantics guardrails green for any planning/execution change.
 - [ ] RMFR-gates-074 If facade docs/examples change, leave evidence anchors in the workstream docs.
 

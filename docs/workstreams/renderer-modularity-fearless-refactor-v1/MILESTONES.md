@@ -11,8 +11,8 @@ Related:
 Current snapshot (2026-03-13):
 
 - The renderer stack is not a rewrite candidate; it is a staged modularization candidate.
-- `fret-render-wgpu` baseline gates are green:
-  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+- The latest backend gates are green:
+  - `cargo nextest run -p fret-render -p fret-render-wgpu`: 222/222 passed
   - `python3 tools/check_layering.py`: passed
 - v1 start decisions are now locked:
   - no new renderer crates in v1,
@@ -589,11 +589,21 @@ Current snapshot (2026-03-13):
   - `cargo check -p fret-launch -p fret-examples`: passed
   - `python3 tools/check_layering.py`: passed
   - `fret-render-wgpu` no longer emits dead-code warnings for the retired `svg_cache.rs` path
+- Host-provided GPU topology smoke verification is green after adding an explicit engine-hosted
+  render path:
+  - `cargo nextest run -p fret-render-wgpu renderer_accepts_host_provided_gpu_topology`: passed
+  - `cargo nextest run -p fret-render -p fret-render-wgpu`: 222/222 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+  - `crates/fret-render-wgpu/tests/host_provided_gpu_topology_smoke.rs` now requests
+    `wgpu::Instance/Adapter/Device/Queue` directly and proves
+    `RendererCapabilities::from_adapter_device(...)` + `Renderer::new(...)` + offscreen
+    `render_scene(...)` work without `WgpuContext`
 - The strongest current risks are:
   - wildcard facade exports,
   - oversized backend public surface,
   - a large multi-domain `Renderer` state owner,
-  - and incomplete ergonomic closure for engine-hosted topology helpers.
+  - and incomplete docs/example closure for engine-hosted topology entrypoints.
 
 ---
 
