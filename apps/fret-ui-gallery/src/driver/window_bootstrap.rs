@@ -64,7 +64,6 @@ fn config_paint_cache_policy(env_name: &str, query_name: &str) -> PaintCachePoli
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn register_harness_model_ids(app: &mut App, window: AppWindowId, state: &UiGalleryWindowState) {
     app.with_global_mut(UiGalleryHarnessDiagnosticsStore::default, |store, _app| {
         store.per_window.insert(
@@ -626,7 +625,6 @@ impl UiGalleryDriver {
             );
         }
 
-        #[cfg(not(target_arch = "wasm32"))]
         register_harness_model_ids(app, window, &state);
 
         Self::sync_menu_bar_after_state_change(app, window);
