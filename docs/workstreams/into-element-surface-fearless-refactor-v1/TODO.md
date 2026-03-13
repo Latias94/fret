@@ -138,8 +138,35 @@ Implementation note on 2026-03-12:
   `separator.rs::separator<H>()`, `input_group.rs::input_group<H>(...)`,
   `input_otp.rs::input_otp<H>(...)`, `command.rs::command<H, I, F, T>(...)`,
   `checkbox.rs::{checkbox<H>(...), checkbox_opt<H>(...)}`,
+  `input.rs::input(...)`,
+  `textarea.rs::textarea(...)`,
+  `slider.rs::slider(...)`,
   `progress.rs::progress<H>(...)`,
   `switch.rs::{switch<H>(...), switch_opt<H>(...)}`, and
+  `toggle.rs::{toggle(...), toggle_uncontrolled(...)}`,
+  now keep the helper itself on a typed surface as well, with toggle preserving the concrete
+  `Toggle` builder while also accepting typed child inputs before the internal child-list seam.
+  `tabs.rs::{tabs(...), tabs_uncontrolled(...)}` now also preserves the concrete `Tabs` builder
+  instead of eagerly landing the root helper. Meanwhile,
+  `accordion.rs::{accordion_single(...), accordion_single_uncontrolled(...), accordion_multiple(...), accordion_multiple_uncontrolled(...)}`
+  now likewise preserves the concrete `Accordion` builder so root-level
+  `.collapsible(...)` / `.orientation(...)` / `.loop_navigation(...)` steps stay available before
+  the explicit landing seam. Meanwhile,
+  `toggle_group.rs::{toggle_group_single(...), toggle_group_single_uncontrolled(...), toggle_group_multiple(...), toggle_group_multiple_uncontrolled(...)}`
+  now likewise preserves the concrete `ToggleGroup` builder so root-level
+  `.variant(...)` / `.size(...)` / `.orientation(...)` / `.roving_focus(...)` steps stay available
+  before the explicit landing seam. Meanwhile,
+  `resizable.rs::resizable_panel_group(...)` now likewise preserves the concrete
+  `ResizablePanelGroup` builder so root-level `.axis(...)` / `.style(...)` /
+  `.test_id_prefix(...)` steps stay available before the explicit landing seam. Meanwhile,
+  `navigation_menu.rs::{navigation_menu(...), navigation_menu_uncontrolled(...)}` now likewise
+  preserves the concrete `NavigationMenu` builder so root-level `.viewport(...)` /
+  `.indicator(...)` / `.md_breakpoint_query(...)` / `.delay_ms(...)` steps stay available before
+  the explicit landing seam. Meanwhile,
+  `radio_group.rs::{radio_group(...), radio_group_uncontrolled(...)}` now expose typed
+  constructor/wrapper outputs, with the radio-group helpers returning the concrete `RadioGroup`
+  value so fluent `.a11y_label(...)` / `.disabled(...)` / `.style(...)` steps remain available
+  before the explicit landing seam, while
   `card.rs::{card<H, I, F, T>(...), card_sized<H, I, F, T>(...), card_header<H, I, F, T>(...), card_action<H, I, F, T>(...), card_title<H, T>(...), card_description<H, T>(...), card_description_children<H, I, F, T>(...), card_content<H, I, F, T>(...), card_footer<H, I, F, T>(...)}`
   now expose typed constructor/wrapper outputs, while
   `kbd.rs::kbd_icon<H>(...)` and `combobox.rs::use_combobox_anchor(...)` remain explicit raw
@@ -193,6 +220,49 @@ Implementation note on 2026-03-12:
   AI attachment hover-card examples) no longer re-teach eager helper landing just to attach
   decoration or diagnostics hooks. Validation for the production surface: `cargo check -p
   fret-ui-shadcn --lib`.
+- Verification update on 2026-03-13:
+  `radio_group.rs::{radio_group(...), radio_group_uncontrolled(...)}` now also leaves the default
+  authoring surface on a typed lane by returning `RadioGroup` instead of eagerly landing
+  `AnyElement`, with the crate-level source gate updated to forbid the old `(cx, ...) ->
+  AnyElement` helper shape for this wrapper pair as well.
+- Verification update on 2026-03-13:
+  `input.rs::input(...)` and `textarea.rs::textarea(...)` now also expose the obvious builder
+  values (`Input` / `Textarea`) instead of public `(cx, ...) -> AnyElement` render functions, so
+  simple text-field authoring can stay on fluent component values before the explicit landing
+  seam. The same crate-level thin-helper source gate now forbids the old raw helper signatures.
+- Verification update on 2026-03-13:
+  `slider.rs::slider(...)` now also returns the concrete `Slider` builder instead of exposing the
+  old parameter-heavy `(cx, ...) -> AnyElement` render function on the public surface, keeping
+  ordinary slider authoring aligned with the same builder-preserving rule as `input`,
+  `textarea`, and `radio_group`.
+- Verification update on 2026-03-13:
+  `toggle.rs::{toggle(...), toggle_uncontrolled(...)}` now also returns the concrete `Toggle`
+  builder instead of eagerly landing the helper output, and the closure inputs now accept typed
+  child values (`IntoUiElement<H>`) instead of forcing `AnyElement` before the helper-owned
+  internal child-list seam.
+- Verification update on 2026-03-13:
+  `tabs.rs::{tabs(...), tabs_uncontrolled(...)}` now also returns the concrete `Tabs` builder
+  instead of eagerly landing the root helper, aligning the helper posture with the same
+  builder-preserving story already used by `slider`, `toggle`, and `radio_group`.
+- Verification update on 2026-03-13:
+  `accordion.rs::{accordion_single(...), accordion_single_uncontrolled(...), accordion_multiple(...), accordion_multiple_uncontrolled(...)}`
+  now also returns the concrete `Accordion` builder instead of eagerly landing the root helper,
+  keeping common accordion configuration on the same builder-preserving lane as `tabs` while the
+  explicit `.into_element(cx)` seam remains the only place where the root lands.
+- Verification update on 2026-03-13:
+  `toggle_group.rs::{toggle_group_single(...), toggle_group_single_uncontrolled(...), toggle_group_multiple(...), toggle_group_multiple_uncontrolled(...)}`
+  now also returns the concrete `ToggleGroup` builder instead of eagerly landing the root helper,
+  keeping grouped toggle configuration on the same builder-preserving lane as `accordion` and
+  `tabs` while the explicit `.into_element(cx)` seam remains the only root landing point.
+- Verification update on 2026-03-13:
+  `resizable.rs::resizable_panel_group(...)` now also returns the concrete
+  `ResizablePanelGroup` builder instead of eagerly landing the root helper, so common resizable
+  root configuration can stay fluent until the explicit `.into_element(cx)` seam.
+- Verification update on 2026-03-13:
+  `navigation_menu.rs::{navigation_menu(...), navigation_menu_uncontrolled(...)}` now also
+  returns the concrete `NavigationMenu` builder instead of eagerly landing the root helper, so
+  common navigation-menu root configuration can stay fluent until the explicit
+  `.into_element(cx)` seam.
 - first-party docs/tests no longer need to mention the old scaffold name for ordinary authoring:
   `docs/first-hour.md` now teaches `IntoUiElement<H>`, and `fret-ui-ai` builder smoke tests
   (`elements/message.rs`, `elements/workflow/panel.rs`) now assert against the public

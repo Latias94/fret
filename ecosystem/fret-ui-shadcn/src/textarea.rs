@@ -185,7 +185,7 @@ impl Textarea {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        textarea(
+        textarea_element(
             cx,
             self.model,
             self.a11y_label,
@@ -206,7 +206,12 @@ impl Textarea {
     }
 }
 
-pub fn textarea<H: UiHost>(
+/// Builder-preserving helper for the common textarea authoring path.
+pub fn textarea(model: impl IntoTextValueModel) -> Textarea {
+    Textarea::new(model)
+}
+
+fn textarea_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     model: impl IntoTextValueModel,
     a11y_label: Option<Arc<str>>,

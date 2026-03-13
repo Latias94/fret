@@ -20,13 +20,21 @@
 //! rather than the default app-facing namespace.
 //!
 //! Most thin public helper constructors now stay on the typed `IntoUiElement<H>` lane (for
-//! example `badge`, `checkbox`, `progress`, `switch`, `separator`, `input_group`, `input_otp`,
-//! `command`, the `card(...)` / `card_header(...)` / `card_content(...)` wrapper family, and the
+//! example `badge`, `checkbox`, `input`, `textarea`, `slider`, `progress`, `switch`, `toggle`,
+//! `tabs`, `accordion_single(...)`, `accordion_single_uncontrolled(...)`,
+//! `accordion_multiple(...)`, `accordion_multiple_uncontrolled(...)`, `separator`,
+//! `toggle_group_single(...)`, `toggle_group_single_uncontrolled(...)`,
+//! `toggle_group_multiple(...)`, `toggle_group_multiple_uncontrolled(...)`, `input_group`,
+//! `input_otp`, `resizable_panel_group(...)`, `navigation_menu(...)`,
+//! `navigation_menu_uncontrolled(...)`, `command`, the `card(...)` /
+//! `card_header(...)` / `card_content(...)` wrapper family, and the
 //! `table(...)` / `table_header(...)` / `table_body(...)` / `table_row(...)` helper family,
 //! `field_set(...)` / `field_group(...)` for grouped form authoring, and the
 //! `empty(...)` / `empty_header(...)` / `empty_media(...)` / `empty_content(...)` wrapper family,
 //! plus the `pagination(...)` / `pagination_content(...)` / `pagination_item(...)` /
-//! `pagination_link(...)` wrappers).
+//! `pagination_link(...)` wrappers, along with `radio_group(...)` /
+//! `radio_group_uncontrolled(...)` returning a typed `RadioGroup` so fluent configuration stays
+//! open until the explicit landing seam).
 //! Remaining raw escape hatches are intentionally rare and explicitly documented where the
 //! underlying storage still owns a concrete landed child (for example `kbd_icon(...)` and
 //! `use_combobox_anchor(...)`).

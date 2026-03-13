@@ -177,6 +177,54 @@ Exit criteria:
   `motion_presets/fluid_tabs_demo.rs::panel(...)` now teach
   `shadcn::alert(|cx| ui::children![cx; ...])` instead of `Alert::new(...)`, and
   `selected_alert_snippets_prefer_alert_wrapper_family` now locks that source policy.
+- the thin helper typed-lane trial now also covers `radio_group(...)` /
+  `radio_group_uncontrolled(...)`:
+  both helpers now return the concrete `RadioGroup` value instead of eagerly landing
+  `AnyElement`, preserving fluent configuration steps such as `.a11y_label(...)`,
+  `.disabled(...)`, and `.style(...)` before the explicit landing seam; the
+  `public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_raw_seam_is_required`
+  source gate now records and protects that rule.
+- the simple form-control lane now also drops its last misleading raw helper names:
+  `input(...)` and `textarea(...)` now return `Input` / `Textarea` instead of exposing
+  multi-argument `(cx, ...) -> AnyElement` render functions on the public surface, aligning text
+  fields with the same builder-preserving authoring story as `checkbox`, `switch`, and
+  `radio_group`.
+- the same builder-preserving cleanup now also covers `slider(...)`:
+  the public helper now returns `Slider` instead of exposing the old full-parameter
+  `(cx, ...) -> AnyElement` render function, so default slider authoring stays on fluent
+  component values while the raw render path remains private implementation detail.
+- the same thin-helper cleanup now also covers `toggle(...)` / `toggle_uncontrolled(...)`:
+  both helpers now return the concrete `Toggle` builder instead of eagerly landing
+  `AnyElement`, and their closure inputs now accept typed child values so callers do not need to
+  pre-land child content before the helper-owned internal child-list seam.
+- the same builder-preserving cleanup now also covers `tabs(...)` / `tabs_uncontrolled(...)`:
+  both helpers now return the concrete `Tabs` builder instead of eagerly landing the root helper,
+  so ordinary tabs authoring can keep fluent root configuration open until the explicit landing
+  seam.
+- the same builder-preserving cleanup now also covers
+  `accordion_single(...)` / `accordion_single_uncontrolled(...)` /
+  `accordion_multiple(...)` / `accordion_multiple_uncontrolled(...)`:
+  all four helpers now return the concrete `Accordion` builder instead of eagerly landing the
+  root helper, so ordinary accordion authoring can still attach root-level
+  `.collapsible(...)`, `.orientation(...)`, or `.loop_navigation(...)` before the explicit
+  landing seam.
+- the same builder-preserving cleanup now also covers
+  `toggle_group_single(...)` / `toggle_group_single_uncontrolled(...)` /
+  `toggle_group_multiple(...)` / `toggle_group_multiple_uncontrolled(...)`:
+  all four helpers now return the concrete `ToggleGroup` builder instead of eagerly landing the
+  root helper, so ordinary grouped-toggle authoring can still attach root-level
+  `.variant(...)`, `.size(...)`, `.orientation(...)`, or `.roving_focus(...)` before the
+  explicit landing seam.
+- the same builder-preserving cleanup now also covers `resizable_panel_group(...)`:
+  the helper now returns the concrete `ResizablePanelGroup` builder instead of eagerly landing the
+  root helper, so ordinary resizable authoring can still attach root-level `.axis(...)`,
+  `.style(...)`, or `.test_id_prefix(...)` before the explicit landing seam.
+- the same builder-preserving cleanup now also covers
+  `navigation_menu(...)` / `navigation_menu_uncontrolled(...)`:
+  both helpers now return the concrete `NavigationMenu` builder instead of eagerly landing the
+  root helper, so ordinary navigation-menu authoring can still attach root-level
+  `.viewport(...)`, `.indicator(...)`, `.md_breakpoint_query(...)`, or `.delay_ms(...)` before
+  the explicit landing seam.
 - the first-party card teaching lane is now tightened beyond the docs page:
   `card/{size,card_content,image,compositions}.rs` now teach `card(...)` plus the slot helper
   family instead of eager `Card::new(...)` / `CardHeader::new(...)` / `CardContent::new(...)` /

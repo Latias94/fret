@@ -303,7 +303,7 @@ impl Slider {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        slider(
+        slider_element(
             cx,
             self.model,
             self.orientation,
@@ -325,7 +325,12 @@ impl Slider {
     }
 }
 
-pub fn slider<H: UiHost>(
+/// Builder-preserving helper for the common slider authoring path.
+pub fn slider(model: Model<Vec<f32>>) -> Slider {
+    Slider::new(model)
+}
+
+fn slider_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Vec<f32>>,
     orientation: radix_slider::SliderOrientation,

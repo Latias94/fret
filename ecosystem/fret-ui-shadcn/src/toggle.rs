@@ -5,6 +5,7 @@ use fret_icons::IconId;
 use fret_runtime::{ActionId, CommandId, Model};
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, Length, MainAlign, PressableProps};
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
@@ -106,6 +107,20 @@ pub fn toggle_variants(
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
+}
+
+fn collect_toggle_children<H: UiHost, I, T>(
+    cx: &mut ElementContext<'_, H>,
+    children: I,
+) -> Vec<AnyElement>
+where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    children
+        .into_iter()
+        .map(|child| child.into_element(cx))
+        .collect()
 }
 
 fn toggle_bg_hover(theme: &Theme) -> Color {
@@ -874,28 +889,32 @@ impl Toggle {
     }
 }
 
-pub fn toggle<H: UiHost, I>(
+/// Builder-preserving controlled helper for the common toggle authoring path.
+pub fn toggle<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     model: Model<bool>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+) -> Toggle
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
-    Toggle::new(model).children(f(cx)).into_element(cx)
+    let children = f(cx);
+    Toggle::new(model).children(collect_toggle_children(cx, children))
 }
 
-pub fn toggle_uncontrolled<H: UiHost, I>(
+/// Builder-preserving uncontrolled helper for the common `defaultPressed` authoring path.
+pub fn toggle_uncontrolled<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     default_pressed: bool,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+) -> Toggle
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
-    Toggle::uncontrolled(default_pressed)
-        .children(f(cx))
-        .into_element(cx)
+    let children = f(cx);
+    Toggle::uncontrolled(default_pressed).children(collect_toggle_children(cx, children))
 }
 
 #[cfg(test)]

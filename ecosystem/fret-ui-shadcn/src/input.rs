@@ -289,7 +289,7 @@ impl Input {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        input_with_style_and_submit(
+        input_element(
             cx,
             self.model,
             self.a11y_label,
@@ -317,47 +317,14 @@ impl Input {
     }
 }
 
-pub fn input<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    model: impl IntoTextValueModel,
-    a11y_label: Option<Arc<str>>,
-    a11y_role: Option<SemanticsRole>,
-    placeholder: Option<Arc<str>>,
-    active_descendant: Option<NodeId>,
-    expanded: Option<bool>,
-    submit_command: Option<CommandId>,
-    cancel_command: Option<CommandId>,
-) -> AnyElement {
-    input_with_style_and_submit(
-        cx,
-        model.into_text_value_model(),
-        a11y_label,
-        a11y_role,
-        None,
-        placeholder,
-        false,
-        false,
-        false,
-        false,
-        active_descendant,
-        expanded,
-        submit_command,
-        cancel_command,
-        None,
-        Size::default(),
-        InputStyle::default(),
-        ChromeRefinement::default(),
-        LayoutRefinement::default(),
-        None,
-        None,
-        BorderWidthOverride::default(),
-        None,
-    )
+/// Builder-preserving helper for the common text-input authoring path.
+pub fn input(model: impl IntoTextValueModel) -> Input {
+    Input::new(model)
 }
 
 pub type OnInputSubmit = Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx) + 'static>;
 
-fn input_with_style_and_submit<H: UiHost>(
+fn input_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     model: Model<String>,
     a11y_label: Option<Arc<str>>,

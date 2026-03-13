@@ -1022,54 +1022,54 @@ impl ToggleGroup {
     }
 }
 
+/// Builder-preserving controlled helper for the common single-select toggle-group path.
 pub fn toggle_group_single<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+) -> ToggleGroup
 where
     I: IntoIterator<Item = ToggleGroupItem>,
 {
-    ToggleGroup::single(model).items(f(cx)).into_element(cx)
+    ToggleGroup::single(model).items(f(cx))
 }
 
+/// Builder-preserving uncontrolled helper for the common single-select `defaultValue` path.
 pub fn toggle_group_single_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>(
     cx: &mut ElementContext<'_, H>,
     default_value: Option<T>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+) -> ToggleGroup
 where
     I: IntoIterator<Item = ToggleGroupItem>,
 {
-    ToggleGroup::single_uncontrolled(default_value)
-        .items(f(cx))
-        .into_element(cx)
+    ToggleGroup::single_uncontrolled(default_value).items(f(cx))
 }
 
+/// Builder-preserving controlled helper for the common multi-select toggle-group path.
 pub fn toggle_group_multiple<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Vec<Arc<str>>>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+) -> ToggleGroup
 where
     I: IntoIterator<Item = ToggleGroupItem>,
 {
-    ToggleGroup::multiple(model).items(f(cx)).into_element(cx)
+    ToggleGroup::multiple(model).items(f(cx))
 }
 
+/// Builder-preserving uncontrolled helper for the common multi-select `defaultValue` path.
 pub fn toggle_group_multiple_uncontrolled<H: UiHost, V, I>(
     cx: &mut ElementContext<'_, H>,
     default_value: V,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+) -> ToggleGroup
 where
     V: IntoIterator,
     V::Item: Into<Arc<str>>,
     I: IntoIterator<Item = ToggleGroupItem>,
 {
-    ToggleGroup::multiple_uncontrolled(default_value)
-        .items(f(cx))
-        .into_element(cx)
+    ToggleGroup::multiple_uncontrolled(default_value).items(f(cx))
 }
 
 #[cfg(test)]

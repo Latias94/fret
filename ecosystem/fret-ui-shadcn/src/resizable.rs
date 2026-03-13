@@ -407,17 +407,16 @@ fn resizable_panel_group_with_entries<H: UiHost>(
     cx.resizable_panel_group(props, |_cx| children)
 }
 
+/// Builder-preserving helper for the common resizable-panel-group authoring path.
 pub fn resizable_panel_group<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Vec<f32>>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+) -> ResizablePanelGroup
 where
     I: IntoIterator<Item = ResizableEntry>,
 {
-    ResizablePanelGroup::new(model)
-        .entries(f(cx))
-        .into_element(cx)
+    ResizablePanelGroup::new(model).entries(f(cx))
 }
 
 #[cfg(test)]

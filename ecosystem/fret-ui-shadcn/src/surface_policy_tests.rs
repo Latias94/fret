@@ -2,6 +2,7 @@ const LIB_RS: &str = include_str!("lib.rs");
 const APP_RS: &str = include_str!("app.rs");
 const ADVANCED_RS: &str = include_str!("advanced.rs");
 const README: &str = include_str!("../README.md");
+const ACCORDION_RS: &str = include_str!("accordion.rs");
 const ALERT_RS: &str = include_str!("alert.rs");
 const BADGE_RS: &str = include_str!("badge.rs");
 const BREADCRUMB_RS: &str = include_str!("breadcrumb.rs");
@@ -18,21 +19,30 @@ const DIALOG_RS: &str = include_str!("dialog.rs");
 const DRAWER_RS: &str = include_str!("drawer.rs");
 const DROPDOWN_MENU_RS: &str = include_str!("dropdown_menu.rs");
 const HOVER_CARD_RS: &str = include_str!("hover_card.rs");
+const INPUT_RS: &str = include_str!("input.rs");
 const INPUT_GROUP_RS: &str = include_str!("input_group.rs");
 const INPUT_OTP_RS: &str = include_str!("input_otp.rs");
 const KBD_RS: &str = include_str!("kbd.rs");
 const MENUBAR_RS: &str = include_str!("menubar.rs");
+const NAVIGATION_MENU_RS: &str = include_str!("navigation_menu.rs");
 const PAGINATION_RS: &str = include_str!("pagination.rs");
 const POPOVER_RS: &str = include_str!("popover.rs");
 const SEPARATOR_RS: &str = include_str!("separator.rs");
 const SHEET_RS: &str = include_str!("sheet.rs");
+const SLIDER_RS: &str = include_str!("slider.rs");
 const TABLE_RS: &str = include_str!("table.rs");
+const TEXTAREA_RS: &str = include_str!("textarea.rs");
+const TOGGLE_RS: &str = include_str!("toggle.rs");
+const TOGGLE_GROUP_RS: &str = include_str!("toggle_group.rs");
 const TOOLTIP_RS: &str = include_str!("tooltip.rs");
 const TYPOGRAPHY_RS: &str = include_str!("typography.rs");
 const CHECKBOX_RS: &str = include_str!("checkbox.rs");
 const COMBOBOX_RS: &str = include_str!("combobox.rs");
 const PROGRESS_RS: &str = include_str!("progress.rs");
+const RADIO_GROUP_RS: &str = include_str!("radio_group.rs");
+const RESIZABLE_RS: &str = include_str!("resizable.rs");
 const SWITCH_RS: &str = include_str!("switch.rs");
+const TABS_RS: &str = include_str!("tabs.rs");
 const UI_BUILDER_EXT_BREADCRUMB_RS: &str = include_str!("ui_builder_ext/breadcrumb.rs");
 const UI_BUILDER_EXT_COLLAPSIBLE_RS: &str = include_str!("ui_builder_ext/collapsible.rs");
 const UI_BUILDER_EXT_COMMAND_DIALOG_RS: &str = include_str!("ui_builder_ext/command_dialog.rs");
@@ -348,6 +358,22 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
  {
     for (label, source, required_markers, forbidden_markers) in [
         (
+            "accordion.rs",
+            ACCORDION_RS,
+            &[
+                "pub fn accordion_single<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Accordion where I: IntoIterator<Item = AccordionItem>,",
+                "pub fn accordion_single_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Accordion where I: IntoIterator<Item = AccordionItem>,",
+                "pub fn accordion_multiple<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Vec<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Accordion where I: IntoIterator<Item = AccordionItem>,",
+                "pub fn accordion_multiple_uncontrolled<H: UiHost, V, I>( cx: &mut ElementContext<'_, H>, default_value: V, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Accordion where V: IntoIterator, V::Item: Into<Arc<str>>, I: IntoIterator<Item = AccordionItem>,",
+            ][..],
+            &[
+                "pub fn accordion_single<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = AccordionItem>,",
+                "pub fn accordion_single_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = AccordionItem>,",
+                "pub fn accordion_multiple<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Vec<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = AccordionItem>,",
+                "pub fn accordion_multiple_uncontrolled<H: UiHost, V, I>( cx: &mut ElementContext<'_, H>, default_value: V, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where V: IntoIterator, V::Item: Into<Arc<str>>, I: IntoIterator<Item = AccordionItem>,",
+            ][..],
+        ),
+        (
             "badge.rs",
             BADGE_RS,
             &[
@@ -390,11 +416,31 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             ][..],
         ),
         (
+            "input.rs",
+            INPUT_RS,
+            &["pub fn input(model: impl IntoTextValueModel) -> Input {"][..],
+            &[
+                "pub fn input<H: UiHost>( cx: &mut ElementContext<'_, H>, model: impl IntoTextValueModel, a11y_label: Option<Arc<str>>, a11y_role: Option<SemanticsRole>, placeholder: Option<Arc<str>>, active_descendant: Option<NodeId>, expanded: Option<bool>, submit_command: Option<CommandId>, cancel_command: Option<CommandId>, ) -> AnyElement",
+            ][..],
+        ),
+        (
             "input_otp.rs",
             INPUT_OTP_RS,
             &["pub fn input_otp<H: UiHost>(otp: InputOtp) -> impl IntoUiElement<H> + use<H> {"][..],
             &[
                 "pub fn input_otp<H: UiHost>(cx: &mut ElementContext<'_, H>, otp: InputOtp) -> AnyElement",
+            ][..],
+        ),
+        (
+            "navigation_menu.rs",
+            NAVIGATION_MENU_RS,
+            &[
+                "pub fn navigation_menu<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> NavigationMenu where I: IntoIterator<Item = NavigationMenuItem>,",
+                "pub fn navigation_menu_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> NavigationMenu where I: IntoIterator<Item = NavigationMenuItem>,",
+            ][..],
+            &[
+                "pub fn navigation_menu<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = NavigationMenuItem>,",
+                "pub fn navigation_menu_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = NavigationMenuItem>,",
             ][..],
         ),
         (
@@ -416,10 +462,40 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             ][..],
         ),
         (
+            "radio_group.rs",
+            RADIO_GROUP_RS,
+            &[
+                "pub fn radio_group(model: Model<Option<Arc<str>>>, items: Vec<RadioGroupItem>) -> RadioGroup {",
+                "pub fn radio_group_uncontrolled<T: Into<Arc<str>>>( default_value: Option<T>, items: Vec<RadioGroupItem>, ) -> RadioGroup {",
+            ][..],
+            &[
+                "pub fn radio_group<H: UiHost>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, items: Vec<RadioGroupItem>, ) -> AnyElement",
+                "pub fn radio_group_uncontrolled<H: UiHost, T: Into<Arc<str>>>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, items: Vec<RadioGroupItem>, ) -> AnyElement",
+            ][..],
+        ),
+        (
+            "resizable.rs",
+            RESIZABLE_RS,
+            &[
+                "pub fn resizable_panel_group<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Vec<f32>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ResizablePanelGroup where I: IntoIterator<Item = ResizableEntry>,",
+            ][..],
+            &[
+                "pub fn resizable_panel_group<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Vec<f32>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = ResizableEntry>,",
+            ][..],
+        ),
+        (
             "separator.rs",
             SEPARATOR_RS,
             &["pub fn separator<H: UiHost>() -> impl IntoUiElement<H> + use<H> {"][..],
             &["pub fn separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"][..],
+        ),
+        (
+            "slider.rs",
+            SLIDER_RS,
+            &["pub fn slider(model: Model<Vec<f32>>) -> Slider {"][..],
+            &[
+                "pub fn slider<H: UiHost>( cx: &mut ElementContext<'_, H>, model: Model<Vec<f32>>, orientation: radix_slider::SliderOrientation, dir: Option<radix_direction::LayoutDirection>, inverted: bool, min: f32, max: f32, step: f32, min_steps_between_thumbs: u32, disabled: bool, control_id: Option<ControlId>, a11y_label: Option<Arc<str>>, test_id: Option<Arc<str>>, on_value_commit: Option<OnValueCommit>, chrome: ChromeRefinement, layout: LayoutRefinement, style: SliderStyle, ) -> AnyElement",
+            ][..],
         ),
         (
             "switch.rs",
@@ -431,6 +507,54 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             &[
                 "pub fn switch<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<bool>) -> AnyElement",
                 "pub fn switch_opt<H: UiHost>( cx: &mut ElementContext<'_, H>, model: Model<Option<bool>>, ) -> AnyElement",
+            ][..],
+        ),
+        (
+            "toggle.rs",
+            TOGGLE_RS,
+            &[
+                "pub fn toggle<H: UiHost, I, T>( cx: &mut ElementContext<'_, H>, model: Model<bool>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Toggle where I: IntoIterator<Item = T>, T: IntoUiElement<H>,",
+                "pub fn toggle_uncontrolled<H: UiHost, I, T>( cx: &mut ElementContext<'_, H>, default_pressed: bool, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Toggle where I: IntoIterator<Item = T>, T: IntoUiElement<H>,",
+            ][..],
+            &[
+                "pub fn toggle<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<bool>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+                "pub fn toggle_uncontrolled<H: UiHost, I>( cx: &mut ElementContext<'_, H>, default_pressed: bool, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+            ][..],
+        ),
+        (
+            "toggle_group.rs",
+            TOGGLE_GROUP_RS,
+            &[
+                "pub fn toggle_group_single<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ToggleGroup where I: IntoIterator<Item = ToggleGroupItem>,",
+                "pub fn toggle_group_single_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ToggleGroup where I: IntoIterator<Item = ToggleGroupItem>,",
+                "pub fn toggle_group_multiple<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Vec<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ToggleGroup where I: IntoIterator<Item = ToggleGroupItem>,",
+                "pub fn toggle_group_multiple_uncontrolled<H: UiHost, V, I>( cx: &mut ElementContext<'_, H>, default_value: V, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ToggleGroup where V: IntoIterator, V::Item: Into<Arc<str>>, I: IntoIterator<Item = ToggleGroupItem>,",
+            ][..],
+            &[
+                "pub fn toggle_group_single<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = ToggleGroupItem>,",
+                "pub fn toggle_group_single_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = ToggleGroupItem>,",
+                "pub fn toggle_group_multiple<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Vec<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = ToggleGroupItem>,",
+                "pub fn toggle_group_multiple_uncontrolled<H: UiHost, V, I>( cx: &mut ElementContext<'_, H>, default_value: V, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where V: IntoIterator, V::Item: Into<Arc<str>>, I: IntoIterator<Item = ToggleGroupItem>,",
+            ][..],
+        ),
+        (
+            "textarea.rs",
+            TEXTAREA_RS,
+            &["pub fn textarea(model: impl IntoTextValueModel) -> Textarea {"][..],
+            &[
+                "pub fn textarea<H: UiHost>( cx: &mut ElementContext<'_, H>, model: impl IntoTextValueModel, a11y_label: Option<Arc<str>>, labelled_by_element: Option<GlobalElementId>, control_id: Option<ControlId>, test_id: Option<Arc<str>>, placeholder: Option<Arc<str>>, aria_invalid: bool, aria_required: bool, disabled: bool, min_height: Px, resizable: bool, stable_line_boxes: bool, size: ComponentSize, chrome: ChromeRefinement, layout: LayoutRefinement, ) -> AnyElement",
+            ][..],
+        ),
+        (
+            "tabs.rs",
+            TABS_RS,
+            &[
+                "pub fn tabs<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Tabs where I: IntoIterator<Item = TabsItem>,",
+                "pub fn tabs_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Tabs where I: IntoIterator<Item = TabsItem>,",
+            ][..],
+            &[
+                "pub fn tabs<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = TabsItem>,",
+                "pub fn tabs_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = TabsItem>,",
             ][..],
         ),
     ] {
