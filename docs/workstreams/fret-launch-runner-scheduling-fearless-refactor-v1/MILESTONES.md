@@ -24,7 +24,8 @@ Last updated: 2026-03-13
   - web `FrameId` commitment moved to the post-present path,
   - web frame-state restoration on surface acquire failure is now in place,
   - wake-path audit is now documented,
-  - web RAF scheduling now flushes from `about_to_wait()` through the shared helper.
+  - web RAF scheduling now flushes from `about_to_wait()` through the shared helper,
+  - web-local scheduling/diagnostics helper extraction is now in place.
 - M4: Partial
   - ADR 0034 wording was confirmed stable for v1,
   - implementation-alignment evidence now reflects the shared turn/frame seam, shared RAF queue,

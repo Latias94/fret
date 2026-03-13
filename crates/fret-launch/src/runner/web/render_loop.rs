@@ -682,31 +682,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         submit.push(cmd);
         gfx.ctx.queue.submit(submit);
         frame.present();
-        let app_window = self.app_window;
-        let app = &mut self.app;
-        scheduling::commit_presented_frame_and_then(&mut self.frame_id, |committed_frame_id| {
-            app.set_frame_id(committed_frame_id);
-            app.with_global_mut_untracked(
-                fret_runtime::RunnerPresentDiagnosticsStore::default,
-                |store, _app| {
-                    store.record_present(app_window, committed_frame_id);
-                },
-            );
-        });
+        super::scheduling_diagnostics::commit_presented_frame_for_window(
+            &mut self.app,
+            &mut self.frame_id,
+            self.app_window,
+        );
         drop(keepalive);
 
         self.drain_turns(event_loop, window, gfx, state);
         if gfx.diag_keepalive_redraw {
-            window.request_redraw();
-            self.app.with_global_mut_untracked(
-                fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
-                |store, _app| {
-                    store.record(
-                        self.app_window,
-                        self.frame_id,
-                        fret_runtime::RunnerFrameDriveReason::WebDiagKeepaliveRedraw,
-                    );
-                },
+            self.request_redraw_with_reason(
+                window,
+                fret_runtime::RunnerFrameDriveReason::WebDiagKeepaliveRedraw,
             );
         }
     }

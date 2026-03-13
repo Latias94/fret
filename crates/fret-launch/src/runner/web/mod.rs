@@ -21,6 +21,7 @@ mod effects;
 mod gfx_init;
 mod ime_mount;
 mod render_loop;
+mod scheduling_diagnostics;
 mod streaming_images;
 
 use fret_app::App;

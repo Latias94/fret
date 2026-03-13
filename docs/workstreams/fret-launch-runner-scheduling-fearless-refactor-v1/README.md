@@ -81,6 +81,18 @@ Implementation update (2026-03-13, batch 6):
 - This batch is intentionally structural only: it does not widen public crate surfaces or change
   the already-audited scheduling contract.
 
+Implementation update (2026-03-13, batch 7):
+
+- Web runner-owned scheduling/diagnostics helpers now live in
+  `crates/fret-launch/src/runner/web/scheduling_diagnostics.rs`.
+- `app_handler.rs`, `effects.rs`, and `render_loop.rs` now route runner-owned web wake paths
+  through shared web-local helpers for:
+  - frame-drive diagnostics writes,
+  - redraw+diagnostics pairs for RAF/streaming/keepalive wake paths,
+  - post-present frame commit + present diagnostics.
+- This batch keeps the existing single-window web behavior intact; it is a backend-local structural
+  consolidation, not a scheduling contract change.
+
 ## Context
 
 Fret's architecture already places the scheduling and presentation responsibility in the correct

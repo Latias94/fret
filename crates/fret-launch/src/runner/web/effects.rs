@@ -180,17 +180,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
         let had_effects = !effects.is_empty();
         if !had_effects {
-            if let Some(windows) = self.streaming_uploads.pending_redraw_hint() {
-                window.request_redraw();
-                let reason =
-                    fret_runtime::RunnerFrameDriveReason::for_streaming_pending_hint(windows.len());
-                self.app.with_global_mut_untracked(
-                    fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
-                    |store, _app| {
-                        store.record(self.app_window, self.frame_id, reason);
-                    },
-                );
-            }
+            self.request_streaming_pending_redraw(window);
 
             let streaming_snapshot_enabled = self.config.streaming_perf_snapshot_enabled
                 || std::env::var_os("FRET_STREAMING_DEBUG").is_some_and(|v| !v.is_empty());
@@ -1168,31 +1158,17 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 },
                 Effect::Redraw(target) => {
                     if target == self.app_window {
-                        window.request_redraw();
-                        self.app.with_global_mut_untracked(
-                            fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
-                            |store, _app| {
-                                store.record(
-                                    self.app_window,
-                                    self.frame_id,
-                                    fret_runtime::RunnerFrameDriveReason::EffectRedraw,
-                                );
-                            },
+                        self.request_redraw_with_reason(
+                            window,
+                            fret_runtime::RunnerFrameDriveReason::EffectRedraw,
                         );
                     }
                 }
                 Effect::RequestAnimationFrame(target) => {
                     if target == self.app_window {
                         self.raf_windows.request(target);
-                        self.app.with_global_mut_untracked(
-                            fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
-                            |store, _app| {
-                                store.record(
-                                    self.app_window,
-                                    self.frame_id,
-                                    fret_runtime::RunnerFrameDriveReason::EffectRequestAnimationFrame,
-                                );
-                            },
+                        self.record_frame_drive_reason(
+                            fret_runtime::RunnerFrameDriveReason::EffectRequestAnimationFrame,
                         );
                     }
                 }

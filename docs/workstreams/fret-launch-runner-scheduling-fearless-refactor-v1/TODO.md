@@ -63,6 +63,8 @@ Companion docs:
   - [x] pending async events
   - [x] clipboard/file-dialog completions
   - [x] devtools/configured keepalive redraws
+- [x] Extract web runner-owned scheduling/diagnostics helpers into
+  `runner/web/scheduling_diagnostics.rs`.
 
 ## Timer posture
 

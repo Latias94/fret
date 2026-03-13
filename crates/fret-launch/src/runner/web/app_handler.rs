@@ -399,22 +399,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         if let Some(window) = self.window.as_ref()
             && self.raf_windows.has_pending()
         {
-            for app_window in self.raf_windows.drain() {
-                if app_window != self.app_window {
-                    continue;
-                }
-                window.request_redraw();
-                self.app.with_global_mut_untracked(
-                    fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
-                    |store, _app| {
-                        store.record(
-                            app_window,
-                            self.frame_id,
-                            fret_runtime::RunnerFrameDriveReason::AboutToWaitRaf,
-                        );
-                    },
-                );
-            }
+            self.flush_raf_redraw_requests(window.as_ref());
         }
         event_loop.set_control_flow(ControlFlow::Wait);
     }
