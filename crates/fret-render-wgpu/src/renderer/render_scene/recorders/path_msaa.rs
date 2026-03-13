@@ -29,7 +29,7 @@ pub(in super::super) fn record_path_msaa_batch_pass(
     let target_size = path_pass.target_size;
     let pass_target_view_owned = ensure_color_dst_view_owned(
         frame_targets,
-        &mut renderer.intermediate_pool,
+        &mut renderer.intermediate_state.pool,
         device,
         path_pass.target,
         target_size,

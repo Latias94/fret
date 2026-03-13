@@ -216,6 +216,9 @@ For `Renderer` state-shell tightening, the same principle applies:
 - cache-heavy subsystems that combine memory budgets, reuse/eviction policy, and per-frame counters
   are especially good early targets because they reduce `Renderer` field sprawl without forcing the
   public service surface to move at the same time.
+- intermediate reuse pools are a model example of that pattern: budget knobs, reuse/eviction
+  policy, and perf counters should move behind one owner shell so config, planning, and execution
+  sites can share a single seam without changing degradation semantics.
 
 ### 5. Tighten public exports after evidence exists
 

@@ -7,7 +7,7 @@ impl Renderer {
         frame_perf.clip_path_mask_cache_bytes_live = self.clip_path_mask_cache.bytes_live();
         frame_perf.clip_path_mask_cache_entries_live = self.clip_path_mask_cache.entries_live();
 
-        let pool_perf = self.intermediate_pool.take_perf_snapshot();
+        let pool_perf = self.intermediate_state.pool.take_perf_snapshot();
         frame_perf.intermediate_pool_allocations = pool_perf.allocations;
         frame_perf.intermediate_pool_reuses = pool_perf.reuses;
         frame_perf.intermediate_pool_releases = pool_perf.releases;

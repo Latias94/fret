@@ -596,10 +596,7 @@ impl Renderer {
             debug_pixelate_scale: 0,
             debug_blur_radius: 0,
             debug_blur_scissor: None,
-            intermediate_budget_bytes: 256 * 1024 * 1024,
-            intermediate_perf_enabled: false,
-            intermediate_perf: IntermediatePerfStats::default(),
-            intermediate_pool: IntermediatePool::default(),
+            intermediate_state: IntermediateState::default(),
             gpu_resources: super::gpu_resources::GpuResources::default(),
             scene_encoding_cache: super::scene_encoding_cache::SceneEncodingCache::default(),
 

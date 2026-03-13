@@ -140,13 +140,12 @@ impl Renderer {
             }
         }
 
-        if self.intermediate_perf_enabled {
-            self.intermediate_perf.last_frame_release_targets = plan
-                .passes
+        self.intermediate_state.record_release_targets(
+            plan.passes
                 .iter()
                 .filter(|p| matches!(p, RenderPlanPass::ReleaseTarget(_)))
-                .count() as u64;
-        }
+                .count() as u64,
+        );
 
         let scale_pass_count = plan
             .passes

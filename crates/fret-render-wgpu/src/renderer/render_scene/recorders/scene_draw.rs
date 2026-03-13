@@ -95,7 +95,7 @@ impl Renderer {
         let load = scene_pass.load;
         let pass_target_view_owned = ensure_color_dst_view_owned(
             frame_targets,
-            &mut self.intermediate_pool,
+            &mut self.intermediate_state.pool,
             device,
             scene_pass.target,
             target_size,

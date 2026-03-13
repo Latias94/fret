@@ -212,6 +212,10 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/svg/mod.rs`, and
   `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns SVG raster cache, atlas storage,
   budget/epoch, or per-frame SVG cache counter fields directly.
+- Renderer intermediate budget/perf/pool owner state now also lives under
+  `crates/fret-render-wgpu/src/renderer/intermediate_pool.rs`, and
+  `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns intermediate budget/perf/pool
+  fields directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

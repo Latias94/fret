@@ -125,7 +125,7 @@ fn record_fullscreen_param_effect_pass<
 
     let dst_view_owned = ensure_color_dst_view_owned(
         frame_targets,
-        &mut renderer.intermediate_pool,
+        &mut renderer.intermediate_state.pool,
         device,
         dst,
         dst_size,
@@ -330,7 +330,7 @@ fn record_fullscreen_texture_effect_pass<
 
     let dst_view_owned = ensure_color_dst_view_owned(
         frame_targets,
-        &mut renderer.intermediate_pool,
+        &mut renderer.intermediate_state.pool,
         device,
         dst,
         dst_size,
@@ -869,7 +869,7 @@ pub(in super::super) fn record_custom_effect_v2_pass(
 
     let dst_view_owned = ensure_color_dst_view_owned(
         &mut *exec.frame_targets,
-        &mut exec.renderer.intermediate_pool,
+        &mut exec.renderer.intermediate_state.pool,
         exec.device,
         common.dst,
         common.dst_size,
@@ -1309,7 +1309,7 @@ pub(in super::super) fn record_custom_effect_v3_pass(
 
     let dst_view_owned = ensure_color_dst_view_owned(
         &mut *exec.frame_targets,
-        &mut exec.renderer.intermediate_pool,
+        &mut exec.renderer.intermediate_state.pool,
         exec.device,
         common.dst,
         common.dst_size,
@@ -1569,7 +1569,7 @@ pub(in super::super) fn record_composite_premul_pass(
 
     let dst_view_owned = ensure_color_dst_view_owned(
         frame_targets,
-        &mut renderer.intermediate_pool,
+        &mut renderer.intermediate_state.pool,
         device,
         pass.dst,
         pass.dst_size,
@@ -1709,7 +1709,7 @@ pub(in super::super) fn record_clip_mask_pass(
     }
     let Some(dst_view) = ensure_mask_dst_view(
         frame_targets,
-        &mut renderer.intermediate_pool,
+        &mut renderer.intermediate_state.pool,
         device,
         pass.dst,
         pass.dst_size,

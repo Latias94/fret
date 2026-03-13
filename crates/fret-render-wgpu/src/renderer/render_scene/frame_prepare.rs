@@ -32,7 +32,7 @@ impl Renderer {
             frame_perf.text_atlas_evicted_pages = atlas_perf.evicted_pages;
             frame_perf.text_atlas_evicted_page_glyphs = atlas_perf.evicted_page_glyphs;
             frame_perf.text_atlas_resets = atlas_perf.resets;
-            frame_perf.intermediate_budget_bytes = self.intermediate_budget_bytes;
+            frame_perf.intermediate_budget_bytes = self.intermediate_state.budget_bytes;
         }
         if let Some(text_prepare_start) = text_prepare_start {
             frame_perf.prepare_text += text_prepare_start.elapsed();
@@ -54,9 +54,7 @@ impl Renderer {
         if self.svg_raster_state.perf_enabled {
             self.svg_raster_state.perf.frames = self.svg_raster_state.perf.frames.saturating_add(1);
         }
-        if self.intermediate_perf_enabled {
-            self.intermediate_perf.frames = self.intermediate_perf.frames.saturating_add(1);
-        }
+        self.intermediate_state.record_frame();
         self.bump_svg_raster_epoch();
 
         let svg_prepare_start = self.svg_raster_state.perf_enabled.then(Instant::now);

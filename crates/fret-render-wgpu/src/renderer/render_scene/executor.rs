@@ -206,7 +206,7 @@ impl<'a> RenderSceneExecutor<'a> {
                     .custom_effect_v3_pyramid
                     .bump_plan_target_write_epoch(*target);
                 self.frame_targets
-                    .release_target(&mut self.renderer.intermediate_pool, *target);
+                    .release_target(&mut self.renderer.intermediate_state.pool, *target);
             }
         }
     }

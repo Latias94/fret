@@ -127,10 +127,10 @@ impl Renderer {
             frame_perf.encoder_finish += finish_elapsed;
         }
 
-        if self.intermediate_perf_enabled {
-            self.intermediate_perf.last_frame_in_use_bytes = frame_targets.in_use_bytes();
-            self.intermediate_perf.last_frame_peak_in_use_bytes = frame_targets.peak_in_use_bytes();
-        }
+        self.intermediate_state.record_in_use_bytes(
+            frame_targets.in_use_bytes(),
+            frame_targets.peak_in_use_bytes(),
+        );
         if perf_enabled {
             frame_perf.intermediate_in_use_bytes = frame_targets.in_use_bytes();
             frame_perf.intermediate_peak_in_use_bytes = frame_targets.peak_in_use_bytes();
@@ -140,14 +140,17 @@ impl Renderer {
                 .filter(|p| matches!(p, RenderPlanPass::ReleaseTarget(_)))
                 .count() as u64;
         }
-        if self.intermediate_perf_enabled {
-            self.intermediate_perf.last_frame_release_targets = plan
-                .passes
-                .iter()
-                .filter(|p| matches!(p, RenderPlanPass::ReleaseTarget(_)))
-                .count() as u64;
-        }
-        frame_targets.release_all(&mut self.intermediate_pool, self.intermediate_budget_bytes);
+        let release_targets = plan
+            .passes
+            .iter()
+            .filter(|p| matches!(p, RenderPlanPass::ReleaseTarget(_)))
+            .count() as u64;
+        self.intermediate_state
+            .record_release_targets(release_targets);
+        frame_targets.release_all(
+            &mut self.intermediate_state.pool,
+            self.intermediate_state.budget_bytes,
+        );
 
         cmd
     }

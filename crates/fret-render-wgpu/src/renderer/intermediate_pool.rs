@@ -1,4 +1,99 @@
+use super::types::{IntermediatePerfSnapshot, IntermediatePerfStats};
 use std::collections::HashMap;
+
+pub(super) const DEFAULT_INTERMEDIATE_BUDGET_BYTES: u64 = 256 * 1024 * 1024;
+
+pub(super) struct IntermediateState {
+    pub(super) budget_bytes: u64,
+    pub(super) perf_enabled: bool,
+    pub(super) perf: IntermediatePerfStats,
+    pub(super) pool: IntermediatePool,
+}
+
+impl Default for IntermediateState {
+    fn default() -> Self {
+        Self {
+            budget_bytes: DEFAULT_INTERMEDIATE_BUDGET_BYTES,
+            perf_enabled: false,
+            perf: IntermediatePerfStats::default(),
+            pool: IntermediatePool::default(),
+        }
+    }
+}
+
+impl IntermediateState {
+    pub(super) fn budget_bytes(&self) -> u64 {
+        self.budget_bytes
+    }
+
+    pub(super) fn set_budget_bytes(&mut self, bytes: u64) {
+        self.budget_bytes = bytes;
+    }
+
+    pub(super) fn set_perf_enabled(&mut self, enabled: bool) {
+        self.perf_enabled = enabled;
+        self.perf = IntermediatePerfStats::default();
+        let _ = self.pool.take_perf_snapshot();
+    }
+
+    pub(super) fn record_frame(&mut self) {
+        if self.perf_enabled {
+            self.perf.frames = self.perf.frames.saturating_add(1);
+        }
+    }
+
+    pub(super) fn record_in_use_bytes(&mut self, in_use_bytes: u64, peak_in_use_bytes: u64) {
+        if self.perf_enabled {
+            self.perf.last_frame_in_use_bytes = in_use_bytes;
+            self.perf.last_frame_peak_in_use_bytes = peak_in_use_bytes;
+        }
+    }
+
+    pub(super) fn record_release_targets(&mut self, release_targets: u64) {
+        if self.perf_enabled {
+            self.perf.last_frame_release_targets = release_targets;
+        }
+    }
+
+    pub(super) fn record_blur_degraded_to_quarter(&mut self) {
+        if self.perf_enabled {
+            self.perf.blur_degraded_to_quarter =
+                self.perf.blur_degraded_to_quarter.saturating_add(1);
+        }
+    }
+
+    pub(super) fn record_blur_disabled_due_to_budget(&mut self) {
+        if self.perf_enabled {
+            self.perf.blur_disabled_due_to_budget =
+                self.perf.blur_disabled_due_to_budget.saturating_add(1);
+        }
+    }
+
+    pub(super) fn take_perf_snapshot(&mut self) -> Option<IntermediatePerfSnapshot> {
+        if !self.perf_enabled {
+            return None;
+        }
+
+        let pool = self.pool.take_perf_snapshot();
+        let snap = IntermediatePerfSnapshot {
+            frames: self.perf.frames,
+            budget_bytes: self.budget_bytes,
+            last_frame_in_use_bytes: self.perf.last_frame_in_use_bytes,
+            last_frame_peak_in_use_bytes: self.perf.last_frame_peak_in_use_bytes,
+            last_frame_release_targets: self.perf.last_frame_release_targets,
+            blur_degraded_to_quarter: self.perf.blur_degraded_to_quarter,
+            blur_disabled_due_to_budget: self.perf.blur_disabled_due_to_budget,
+            pool_free_bytes: pool.free_bytes,
+            pool_free_textures: pool.free_textures,
+            pool_allocations: pool.allocations,
+            pool_reuses: pool.reuses,
+            pool_releases: pool.releases,
+            pool_evictions: pool.evictions,
+        };
+        self.perf = IntermediatePerfStats::default();
+        Some(snap)
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct PoolKey {

@@ -148,10 +148,7 @@ pub struct Renderer {
     debug_pixelate_scale: u32,
     debug_blur_radius: u32,
     debug_blur_scissor: Option<ScissorRect>,
-    intermediate_budget_bytes: u64,
-    intermediate_perf_enabled: bool,
-    intermediate_perf: IntermediatePerfStats,
-    intermediate_pool: IntermediatePool,
+    intermediate_state: IntermediateState,
 
     gpu_resources: GpuResources,
 
