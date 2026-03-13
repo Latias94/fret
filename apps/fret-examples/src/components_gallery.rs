@@ -1094,10 +1094,7 @@ impl ComponentsGalleryDriver {
                                                                     wrap: false,
                                                                 },
                                                                 |cx| {
-                                                                    vec![shadcn::HoverCard::new(
-                                                                        shadcn::Button::new("HoverCard (hover, not clipped)")
-                                                                            .variant(shadcn::ButtonVariant::Outline)
-                                                                            .into_element(cx),
+                                                                    let hover_card_content =
                                                                         shadcn::HoverCardContent::new(vec![cx.flex(
                                                                             FlexProps {
                                                                                 layout: LayoutStyle::default(),
@@ -1114,8 +1111,12 @@ impl ComponentsGalleryDriver {
                                                                                     cx.text("Move pointer from trigger to content."),
                                                                                 ]
                                                                             },
-                                                                        )])
-                                                                        .into_element(cx),
+                                                                        )]);
+                                                                    vec![shadcn::HoverCard::new(
+                                                                        cx,
+                                                                        shadcn::Button::new("HoverCard (hover, not clipped)")
+                                                                            .variant(shadcn::ButtonVariant::Outline),
+                                                                        hover_card_content,
                                                                     )
                                                                     .close_delay_frames(10)
                                                                     .into_element(cx)]

@@ -254,15 +254,14 @@ fn hover_card(cx: &mut UiCx<'_>) -> AnyElement {
     use std::time::Duration;
 
     shadcn::HoverCard::new(
+        cx,
         shadcn::Button::new("HoverCard (hover)")
             .variant(shadcn::ButtonVariant::Outline)
-            .test_id("ui-gallery-hovercard-trigger")
-            .into_element(cx),
+            .test_id("ui-gallery-hovercard-trigger"),
         shadcn::HoverCardContent::new(vec![
             cx.text("HoverCard content (overlay-root)"),
             cx.text("Move pointer from trigger to content."),
         ])
-        .into_element(cx)
         .test_id("ui-gallery-hovercard-content"),
     )
     .open_delay(Duration::from_millis(700))

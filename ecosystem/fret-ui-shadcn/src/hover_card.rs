@@ -267,7 +267,17 @@ impl std::fmt::Debug for HoverCard {
 }
 
 impl HoverCard {
-    pub fn new(trigger: AnyElement, content: impl Into<HoverCardContentArg>) -> Self {
+    /// Default typed root constructor that late-lands the trigger at the overlay boundary.
+    pub fn new<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl IntoUiElement<H>,
+        content: impl Into<HoverCardContentArg>,
+    ) -> Self {
+        Self::new_raw(trigger.into_element(cx), content)
+    }
+
+    /// Explicit raw seam for already-landed trigger elements.
+    pub fn new_raw(trigger: AnyElement, content: impl Into<HoverCardContentArg>) -> Self {
         Self {
             open: None,
             default_open: false,
@@ -291,17 +301,11 @@ impl HoverCard {
         }
     }
 
-    /// Host-bound builder-first constructor that late-lands the trigger/content at the call site.
-    pub fn build<H: UiHost>(
-        cx: &mut ElementContext<'_, H>,
-        trigger: impl IntoUiElement<H>,
-        content: impl Into<HoverCardContentArg>,
-    ) -> Self {
-        Self::new(trigger.into_element(cx), content)
-    }
-
-    /// Host-bound builder-first constructor for the controlled/uncontrolled root variant.
-    pub fn build_controllable<H: UiHost>(
+    /// Creates a hover card with a controlled/uncontrolled open model (Radix `open` / `defaultOpen`).
+    ///
+    /// Note: If `open` is `None`, the internal model is stored in element state at the call site.
+    /// Call this from a stable subtree (key the parent node if needed).
+    pub fn new_controllable<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
         open: Option<Model<bool>>,
         default_open: bool,
@@ -309,14 +313,11 @@ impl HoverCard {
         content: impl Into<HoverCardContentArg>,
     ) -> Self {
         let trigger = trigger.into_element(cx);
-        Self::new_controllable(cx, open, default_open, trigger, content)
+        Self::new_controllable_raw(cx, open, default_open, trigger, content)
     }
 
-    /// Creates a hover card with a controlled/uncontrolled open model (Radix `open` / `defaultOpen`).
-    ///
-    /// Note: If `open` is `None`, the internal model is stored in element state at the call site.
-    /// Call this from a stable subtree (key the parent node if needed).
-    pub fn new_controllable<H: UiHost>(
+    /// Explicit raw seam for already-landed controlled/uncontrolled root authoring.
+    pub fn new_controllable_raw<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
         open: Option<Model<bool>>,
         default_open: bool,
@@ -327,7 +328,7 @@ impl HoverCard {
             .open(open)
             .default_open(default_open)
             .open_model(cx);
-        Self::new(trigger, content).open(Some(open))
+        Self::new_raw(trigger, content).open(Some(open))
     }
 
     /// Sets the controlled `open` model (`Some`) or selects uncontrolled mode (`None`).
@@ -1048,7 +1049,7 @@ impl HoverCard {
 /// shadcn/ui `HoverCardTrigger` (v4).
 ///
 /// In the DOM this is a context-aware wrapper that does not impose layout. In Fret's declarative
-/// authoring, the trigger is expressed as the first child passed to `HoverCard::new(...)`.
+/// authoring, the trigger is expressed as the first child passed to `HoverCard::new(cx, ...)`.
 #[derive(Debug)]
 pub struct HoverCardTrigger {
     child: AnyElement,
@@ -1345,7 +1346,7 @@ mod tests {
     }
 
     #[test]
-    fn hover_card_build_into_element_accepts_late_landed_trigger_and_content() {
+    fn hover_card_new_into_element_accepts_late_landed_trigger_and_content() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let bounds = Rect::new(
@@ -1356,14 +1357,14 @@ mod tests {
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let content = HoverCardContent::new(vec![ui::raw_text("tip").into_element(cx)]);
             let root =
-                HoverCard::build(cx, crate::Card::build(|_cx, _out| {}), content).into_element(cx);
+                HoverCard::new(cx, crate::Card::build(|_cx, _out| {}), content).into_element(cx);
 
             assert!(matches!(root.kind, ElementKind::HoverRegion(_)));
         });
     }
 
     #[test]
-    fn hover_card_build_controllable_into_element_accepts_late_landed_children() {
+    fn hover_card_new_controllable_into_element_accepts_late_landed_children() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let open = app.models_mut().insert(false);
@@ -1374,7 +1375,7 @@ mod tests {
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let content = HoverCardContent::new(vec![ui::raw_text("tip").into_element(cx)]);
-            let root = HoverCard::build_controllable(
+            let root = HoverCard::new_controllable(
                 cx,
                 Some(open.clone()),
                 false,
@@ -1688,7 +1689,7 @@ mod tests {
 
                 vec![
                     anchor,
-                    HoverCard::new(trigger, content)
+                    HoverCard::new(cx, trigger, content)
                         .anchor_element(anchor_id)
                         .align(HoverCardAlign::Start)
                         .open_delay_frames(0)
@@ -1894,7 +1895,7 @@ mod tests {
                 );
 
                 vec![
-                    HoverCard::new(trigger, content)
+                    HoverCard::new(cx, trigger, content)
                         .open_delay_frames(0)
                         .close_delay_frames(0)
                         .into_element(cx),
@@ -1975,7 +1976,7 @@ mod tests {
                     content_id_out.set(Some(content.id));
 
                     vec![
-                        HoverCard::new(trigger, content)
+                        HoverCard::new(cx, trigger, content)
                             .default_open(true)
                             .open_delay_frames(0)
                             .close_delay_frames(0)
@@ -2206,7 +2207,7 @@ mod tests {
                     content_id_out.set(Some(content.id));
 
                     vec![
-                        HoverCard::new(trigger, content)
+                        HoverCard::new(cx, trigger, content)
                             .open(Some(open))
                             .open_delay_frames(0)
                             .close_delay_frames(0)
@@ -2464,7 +2465,7 @@ mod tests {
                     content_id_out.set(Some(content.id));
 
                     vec![
-                        HoverCard::new(trigger, content)
+                        HoverCard::new(cx, trigger, content)
                             .open(Some(open))
                             .open_delay_frames(0)
                             .close_delay_frames(0)
@@ -2759,7 +2760,7 @@ mod tests {
 
                             vec![
                                 underlay,
-                                HoverCard::new(trigger, content)
+                                HoverCard::new(cx, trigger, content)
                                     .open(Some(open))
                                     .open_delay_frames(0)
                                     .close_delay_frames(0)
@@ -3038,7 +3039,7 @@ mod tests {
 
                             vec![
                                 underlay,
-                                HoverCard::new(trigger, content)
+                                HoverCard::new(cx, trigger, content)
                                     .open(Some(open))
                                     .open_delay_frames(0)
                                     .close_delay_frames(0)
@@ -3252,7 +3253,7 @@ mod tests {
                         content_probe_id.set(Some(content.id));
 
                         vec![
-                            HoverCard::new(trigger, content)
+                            HoverCard::new(cx, trigger, content)
                                 .open(Some(open.clone()))
                                 .open_delay_frames(0)
                                 .close_delay_frames(0)

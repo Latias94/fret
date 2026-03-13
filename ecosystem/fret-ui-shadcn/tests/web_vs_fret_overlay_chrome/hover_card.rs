@@ -65,7 +65,7 @@ fn build_shadcn_hover_card_demo_page(
         .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
         .into_element(cx);
 
-    HoverCard::new(trigger_el, content_el)
+    HoverCard::new(cx, trigger_el, content_el)
         .open(Some(open.clone()))
         .into_element(cx)
 }

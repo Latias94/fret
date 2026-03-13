@@ -38,20 +38,29 @@ fn side_content<H: UiHost>(
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
     let muted_fg = theme.color_token("muted-foreground");
+    let top_start_content = side_content(
+        cx,
+        muted_fg,
+        "top (align=start)",
+        "ui-gallery-hover-card-pos-top-start-content",
+        shadcn::HoverCardSide::Top,
+        shadcn::HoverCardAlign::Start,
+    );
+    let right_end_content = side_content(
+        cx,
+        muted_fg,
+        "right (align=end)",
+        "ui-gallery-hover-card-pos-right-end-content",
+        shadcn::HoverCardSide::Right,
+        shadcn::HoverCardAlign::End,
+    );
 
     let top_start = shadcn::HoverCard::new(
+        cx,
         shadcn::Button::new("Top / Start")
             .variant(shadcn::ButtonVariant::Outline)
-            .test_id("ui-gallery-hover-card-pos-top-start-trigger")
-            .into_element(cx),
-        side_content(
-            cx,
-            muted_fg,
-            "top (align=start)",
-            "ui-gallery-hover-card-pos-top-start-content",
-            shadcn::HoverCardSide::Top,
-            shadcn::HoverCardAlign::Start,
-        ),
+            .test_id("ui-gallery-hover-card-pos-top-start-trigger"),
+        top_start_content,
     )
     .open_delay_frames(8)
     .close_delay_frames(8)
@@ -59,18 +68,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .test_id("ui-gallery-hover-card-pos-top-start");
 
     let right_end = shadcn::HoverCard::new(
+        cx,
         shadcn::Button::new("Right / End")
             .variant(shadcn::ButtonVariant::Outline)
-            .test_id("ui-gallery-hover-card-pos-right-end-trigger")
-            .into_element(cx),
-        side_content(
-            cx,
-            muted_fg,
-            "right (align=end)",
-            "ui-gallery-hover-card-pos-right-end-content",
-            shadcn::HoverCardSide::Right,
-            shadcn::HoverCardAlign::End,
-        ),
+            .test_id("ui-gallery-hover-card-pos-right-end-trigger"),
+        right_end_content,
     )
     .open_delay_frames(8)
     .close_delay_frames(8)

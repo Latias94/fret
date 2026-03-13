@@ -2104,7 +2104,7 @@ fn radix_web_hover_card_hover_matches_fret() {
             },
         );
 
-        fret_ui_shadcn::HoverCard::new(trigger, content)
+        fret_ui_shadcn::HoverCard::new(cx, trigger, content)
             .open(Some(open.clone()))
             .open_delay_frames(0)
             .close_delay_frames(0)

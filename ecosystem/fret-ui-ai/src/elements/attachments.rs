@@ -1266,7 +1266,7 @@ impl AttachmentHoverCard {
             AttachmentHoverCardContentArg::Builder(content) => content.into_element(cx),
         };
 
-        let mut hover = shadcn::HoverCard::new(self.trigger, content)
+        let mut hover = shadcn::HoverCard::new(cx, self.trigger, content)
             .open_delay_frames(self.open_delay_frames)
             .close_delay_frames(self.close_delay_frames);
 

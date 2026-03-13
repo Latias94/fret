@@ -622,7 +622,7 @@ fn render_hover_card_fixture(
                 },
             );
 
-            let hover_card = fret_ui_shadcn::HoverCard::new(trigger, content)
+            let hover_card = fret_ui_shadcn::HoverCard::new(cx, trigger, content)
                 .open_delay_frames(0)
                 .close_delay_frames(0)
                 .side(match side {

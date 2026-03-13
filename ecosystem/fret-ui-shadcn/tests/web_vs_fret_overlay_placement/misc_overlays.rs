@@ -603,7 +603,7 @@ fn fret_hover_card_tracks_trigger_when_underlay_scrolls() {
                         );
 
                         vec![
-                            HoverCard::new(trigger, content)
+                            HoverCard::new(cx, trigger, content)
                                 .open_delay_frames(0)
                                 .close_delay_frames(0)
                                 .side(HoverCardSide::Bottom)

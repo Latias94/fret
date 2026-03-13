@@ -66,7 +66,7 @@ pub fn render<H: UiHost>(
         .into_element(cx)
         .test_id("ui-gallery-hover-card-demo-content");
 
-    shadcn::HoverCard::new(trigger, content)
+    shadcn::HoverCard::new(cx, trigger, content)
         .into_element(cx)
         .test_id("ui-gallery-hover-card-demo")
 }

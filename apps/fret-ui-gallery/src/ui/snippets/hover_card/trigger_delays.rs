@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("trigger_delays.rs");
 
 // region: example
-use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 use std::time::Duration;
@@ -12,7 +11,7 @@ fn demo_content<H: UiHost>(
     desc: &'static str,
     joined: &'static str,
     test_id: &'static str,
-) -> impl IntoUiElement<H> + use<H> {
+) -> shadcn::HoverCardContent {
     let theme = Theme::global(&*cx.app).snapshot();
     let muted_fg = theme.color_token("muted-foreground");
 
@@ -43,25 +42,31 @@ fn demo_content<H: UiHost>(
     .items_stretch()
     .into_element(cx);
 
-    shadcn::HoverCardContent::new(vec![body])
-        .into_element(cx)
-        .test_id(test_id)
+    shadcn::HoverCardContent::new(vec![body]).test_id(test_id)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let instant_content = demo_content(
+        cx,
+        "Instant",
+        "openDelay=0",
+        "closeDelay=0",
+        "ui-gallery-hover-card-delay-instant-content",
+    );
+    let delayed_content = demo_content(
+        cx,
+        "Delayed",
+        "openDelay=700ms",
+        "closeDelay=300ms",
+        "ui-gallery-hover-card-delay-delayed-content",
+    );
+
     let instant = shadcn::HoverCard::new(
+        cx,
         shadcn::Button::new("Instant")
             .variant(shadcn::ButtonVariant::Outline)
-            .test_id("ui-gallery-hover-card-delay-instant-trigger")
-            .into_element(cx),
-        demo_content(
-            cx,
-            "Instant",
-            "openDelay=0",
-            "closeDelay=0",
-            "ui-gallery-hover-card-delay-instant-content",
-        )
-        .into_element(cx),
+            .test_id("ui-gallery-hover-card-delay-instant-trigger"),
+        instant_content,
     )
     .open_delay_frames(0)
     .close_delay_frames(0)
@@ -69,18 +74,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .test_id("ui-gallery-hover-card-delay-instant");
 
     let delayed = shadcn::HoverCard::new(
+        cx,
         shadcn::Button::new("Delayed")
             .variant(shadcn::ButtonVariant::Outline)
-            .test_id("ui-gallery-hover-card-delay-delayed-trigger")
-            .into_element(cx),
-        demo_content(
-            cx,
-            "Delayed",
-            "openDelay=700ms",
-            "closeDelay=300ms",
-            "ui-gallery-hover-card-delay-delayed-content",
-        )
-        .into_element(cx),
+            .test_id("ui-gallery-hover-card-delay-delayed-trigger"),
+        delayed_content,
     )
     .open_delay(Duration::from_millis(700))
     .close_delay(Duration::from_millis(300))

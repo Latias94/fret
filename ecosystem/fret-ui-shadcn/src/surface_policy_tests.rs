@@ -475,6 +475,36 @@ fn breadcrumb_link_and_page_keep_raw_children_as_an_explicit_escape_hatch() {
 }
 
 #[test]
+fn hover_card_root_promotes_typed_new_and_keeps_raw_root_seams_explicit() {
+    let normalized = normalize_ws(HOVER_CARD_RS);
+    let required_markers = [
+        "pub fn new<H: UiHost>( cx: &mut ElementContext<'_, H>, trigger: impl IntoUiElement<H>, content: impl Into<HoverCardContentArg>, ) -> Self {",
+        "pub fn new_raw(trigger: AnyElement, content: impl Into<HoverCardContentArg>) -> Self {",
+        "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, trigger: impl IntoUiElement<H>, content: impl Into<HoverCardContentArg>, ) -> Self {",
+        "pub fn new_controllable_raw<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, trigger: AnyElement, content: impl Into<HoverCardContentArg>, ) -> Self {",
+    ];
+    let forbidden_markers = [
+        "pub fn build<H: UiHost>(",
+        "pub fn build_controllable<H: UiHost>(",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "hover_card.rs should promote `new(...)` / `new_controllable(...)` as the typed root constructors and keep raw root seams explicit"
+        );
+    }
+    for marker in forbidden_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            !normalized.contains(&marker),
+            "hover_card.rs reintroduced legacy `build(...)` root constructors after promoting the typed `new(...)` surface"
+        );
+    }
+}
+
+#[test]
 fn card_helpers_prefer_typed_wrapper_outputs_when_no_raw_slot_storage_is_required() {
     let normalized = normalize_ws(CARD_RS);
     let required_markers = [

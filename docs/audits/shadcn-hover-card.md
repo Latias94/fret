@@ -33,7 +33,7 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
   ancestor `overflow: Clip`.
 - Pass: Supports an optional custom placement anchor via `HoverCardAnchor` +
   `HoverCard::anchor_element(...)` (anchor can be separate from the trigger).
-- Pass: `HoverCard::new(trigger, content)` already acts as the recipe-level composition entry point,
+- Pass: `HoverCard::new(cx, trigger, content)` already acts as the recipe-level composition entry point,
   with `HoverCardTrigger` / `HoverCardContent` preserving shadcn-style part naming at call sites.
 - Note: Fret intentionally does not add a separate generic `compose()` builder for `HoverCard`
   today. Unlike modal overlays that need explicit portal/overlay/content slot assembly, hover card

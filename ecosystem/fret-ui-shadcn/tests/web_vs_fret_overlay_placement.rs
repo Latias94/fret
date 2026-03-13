@@ -10447,7 +10447,7 @@ fn assert_hover_card_demo_overlay_placement_matches(web_name: &str) {
                 .into_element(cx);
             content_id_out.set(Some(content.id));
 
-            let hover_card = fret_ui_shadcn::HoverCard::new(trigger, content)
+            let hover_card = fret_ui_shadcn::HoverCard::new(cx, trigger, content)
                 .open_delay_frames(0)
                 .close_delay_frames(0)
                 .into_element(cx);
@@ -10504,7 +10504,7 @@ fn assert_hover_card_demo_overlay_placement_matches(web_name: &str) {
                     .into_element(cx);
                 content_id_out.set(Some(content.id));
 
-                let hover_card = fret_ui_shadcn::HoverCard::new(trigger, content)
+                let hover_card = fret_ui_shadcn::HoverCard::new(cx, trigger, content)
                     .open_delay_frames(0)
                     .close_delay_frames(0)
                     .into_element(cx);
