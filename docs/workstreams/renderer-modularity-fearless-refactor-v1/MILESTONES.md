@@ -138,6 +138,20 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu backdrop_warp_v2_image_field_compiles_to_backdrop_warp_pass`
   - `cargo nextest run -p fret-render-wgpu chain_applies_clip_only_on_final_step`
   - `cargo nextest run -p fret-render-wgpu custom_v3_pyramid_budget_pressure_degrades_to_one_and_records_counters`
+- The fifth renderer effect-planning split has landed:
+  - simple built-in step-apply flow now lives under
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects/builtin.rs`
+  - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns
+    `NoiseV1`, `ColorAdjust`, `ColorMatrix`, `AlphaThreshold`, `Pixelate`, or `Dither`
+    step-apply branch handling directly
+- Renderer simple-builtins split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu dither_compiles_to_pass`
+  - `cargo nextest run -p fret-render-wgpu noise_compiles_to_pass`
+  - `cargo nextest run -p fret-render-wgpu color_adjust_missing_scratch_increments_effect_degradations`
+  - `cargo nextest run -p fret-render-wgpu color_matrix_compiles_to_pass`
+  - `cargo nextest run -p fret-render-wgpu pixelate_scissored_step_compiles_to_scale_nearest_pair`
+  - `cargo nextest run -p fret-render-wgpu backdrop_warp_v2_image_field_compiles_to_backdrop_warp_pass`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

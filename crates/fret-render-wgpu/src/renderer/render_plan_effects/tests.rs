@@ -532,6 +532,49 @@ fn noise_compiles_to_pass() {
 }
 
 #[test]
+fn color_matrix_compiles_to_pass() {
+    let ctx = EffectCompileCtx {
+        viewport_size: (64, 64),
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 1.0,
+    };
+    let scissor = ScissorRect::full(64, 64);
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::FilterContent,
+        fret_core::EffectChain::from_steps(&[fret_core::EffectStep::ColorMatrix {
+            m: [
+                1.0, 0.0, 0.0, 0.0, 0.1, 0.0, 1.0, 0.0, 0.0, 0.2, 0.0, 0.0, 1.0, 0.0, 0.3, 0.0,
+                0.0, 0.0, 1.0, 0.0,
+            ],
+        }]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        None,
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    );
+
+    assert!(
+        passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::ColorMatrix(_))),
+        "color-matrix step should compile to a ColorMatrix pass"
+    );
+}
+
+#[test]
 fn backdrop_warp_v2_image_field_compiles_to_backdrop_warp_pass() {
     let ctx = EffectCompileCtx {
         viewport_size: (64, 64),
@@ -605,6 +648,66 @@ fn backdrop_warp_v2_image_field_compiles_to_backdrop_warp_pass() {
         }),
         "BackdropWarpV2 should preserve image-field settings when compiling the pass"
     );
+}
+
+#[test]
+fn pixelate_scissored_step_compiles_to_scale_nearest_pair() {
+    let ctx = EffectCompileCtx {
+        viewport_size: (64, 64),
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 1.0,
+    };
+    let scissor = ScissorRect {
+        x: 6,
+        y: 10,
+        w: 24,
+        h: 18,
+    };
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::FilterContent,
+        fret_core::EffectChain::from_steps(&[fret_core::EffectStep::Pixelate { scale: 4 }]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        None,
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    );
+
+    let scale_passes = passes
+        .iter()
+        .filter_map(|pass| match pass {
+            RenderPlanPass::ScaleNearest(pass) => Some(pass),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        scale_passes.len(),
+        2,
+        "pixelate should compile to two scale-nearest passes"
+    );
+    assert_eq!(scale_passes[0].mode, ScaleMode::Downsample);
+    assert_eq!(scale_passes[0].scale, 4);
+    assert_eq!(scale_passes[0].src_origin, (scissor.x, scissor.y));
+    assert_eq!(
+        scale_passes[0].dst_size,
+        downsampled_size((scissor.w, scissor.h), 4)
+    );
+    assert_eq!(scale_passes[1].mode, ScaleMode::Upscale);
+    assert_eq!(scale_passes[1].scale, 4);
+    assert_eq!(scale_passes[1].dst_origin, (scissor.x, scissor.y));
+    assert_eq!(scale_passes[1].dst_scissor, Some(LocalScissorRect(scissor)));
 }
 
 #[test]

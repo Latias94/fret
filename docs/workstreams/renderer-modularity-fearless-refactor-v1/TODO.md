@@ -471,6 +471,11 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/render_plan_effects/builtin.rs`
     - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns
       `BackdropWarpV1`/`BackdropWarpV2` step-apply branch handling directly
+    - simple built-in step-apply flow moved into
+      `crates/fret-render-wgpu/src/renderer/render_plan_effects/builtin.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns
+      `NoiseV1`, `ColorAdjust`, `ColorMatrix`, `AlphaThreshold`, `Pixelate`, or `Dither`
+      step-apply branch handling directly
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG
@@ -634,10 +639,11 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: backdrop step-apply flow now lives under
+  - Latest landed slice: simple built-in step-apply flow now lives under
     `crates/fret-render-wgpu/src/renderer/render_plan_effects/builtin.rs`, and
     `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns
-    `BackdropWarpV1`/`BackdropWarpV2` step-apply branch handling directly.
+    `NoiseV1`, `ColorAdjust`, `ColorMatrix`, `AlphaThreshold`, `Pixelate`, or `Dither`
+    step-apply branch handling directly.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

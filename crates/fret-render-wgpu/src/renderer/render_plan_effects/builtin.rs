@@ -86,6 +86,31 @@ pub(super) fn pixelate_enabled(
     full.saturating_add(down) <= budget_bytes
 }
 
+fn prepare_effect_single_scratch(
+    scratch_targets: &[PlanTarget],
+    counters: &mut super::super::EffectDegradationCounters,
+    budget_bytes: u64,
+    enabled: bool,
+) -> Option<PlanTarget> {
+    counters.requested = counters.requested.saturating_add(1);
+    if !enabled {
+        if budget_bytes == 0 {
+            counters.degraded_budget_zero = counters.degraded_budget_zero.saturating_add(1);
+        } else {
+            counters.degraded_budget_insufficient =
+                counters.degraded_budget_insufficient.saturating_add(1);
+        }
+        return None;
+    }
+
+    let Some(&scratch) = scratch_targets.first() else {
+        counters.degraded_target_exhausted = counters.degraded_target_exhausted.saturating_add(1);
+        return None;
+    };
+    counters.applied = counters.applied.saturating_add(1);
+    Some(scratch)
+}
+
 pub(super) fn choose_clip_mask_target_capped(
     _viewport_size: (u32, u32),
     viewport_rect: ScissorRect,
@@ -548,36 +573,12 @@ fn prepare_backdrop_warp_single_scratch(
         return None;
     }
 
-    effect_degradations.backdrop_warp.requested = effect_degradations
-        .backdrop_warp
-        .requested
-        .saturating_add(1);
-    if !backdrop_warp_enabled(viewport_size, format, budget_bytes) {
-        if budget_bytes == 0 {
-            effect_degradations.backdrop_warp.degraded_budget_zero = effect_degradations
-                .backdrop_warp
-                .degraded_budget_zero
-                .saturating_add(1);
-        } else {
-            effect_degradations
-                .backdrop_warp
-                .degraded_budget_insufficient = effect_degradations
-                .backdrop_warp
-                .degraded_budget_insufficient
-                .saturating_add(1);
-        }
-        return None;
-    }
-    let Some(&scratch) = scratch_targets.first() else {
-        effect_degradations.backdrop_warp.degraded_target_exhausted = effect_degradations
-            .backdrop_warp
-            .degraded_target_exhausted
-            .saturating_add(1);
-        return None;
-    };
-    effect_degradations.backdrop_warp.applied =
-        effect_degradations.backdrop_warp.applied.saturating_add(1);
-    Some(scratch)
+    prepare_effect_single_scratch(
+        scratch_targets,
+        &mut effect_degradations.backdrop_warp,
+        budget_bytes,
+        backdrop_warp_enabled(viewport_size, format, budget_bytes),
+    )
 }
 
 pub(super) fn apply_backdrop_warp_v1_step(
@@ -685,6 +686,212 @@ pub(super) fn apply_backdrop_warp_v2_step(
         warp_encoding,
         load: wgpu::LoadOp::Load,
     }));
+}
+
+pub(super) fn apply_noise_step(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    noise: fret_core::scene::NoiseV1,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+) {
+    let Some(scratch) = prepare_effect_single_scratch(
+        scratch_targets,
+        &mut effect_degradations.noise,
+        *budget_bytes,
+        noise_enabled(ctx.viewport_size, ctx.format, *budget_bytes),
+    ) else {
+        return;
+    };
+
+    append_noise_in_place_single_scratch(
+        passes,
+        srcdst,
+        scratch,
+        ctx.viewport_size,
+        Some(scissor),
+        noise.strength,
+        (noise.scale_px.0 * ctx.scale_factor).max(1.0),
+        noise.phase,
+        ctx.clear,
+        None,
+        None,
+    );
+}
+
+pub(super) fn apply_color_adjust_step(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    saturation: f32,
+    brightness: f32,
+    contrast: f32,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+) {
+    let Some(scratch) = prepare_effect_single_scratch(
+        scratch_targets,
+        &mut effect_degradations.color_adjust,
+        *budget_bytes,
+        color_adjust_enabled(ctx.viewport_size, ctx.format, *budget_bytes),
+    ) else {
+        return;
+    };
+
+    append_color_adjust_in_place_single_scratch(
+        passes,
+        srcdst,
+        scratch,
+        ctx.viewport_size,
+        Some(scissor),
+        saturation,
+        brightness,
+        contrast,
+        ctx.clear,
+        None,
+        None,
+    );
+}
+
+pub(super) fn apply_color_matrix_step(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    matrix: [f32; 20],
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+) {
+    let Some(scratch) = prepare_effect_single_scratch(
+        scratch_targets,
+        &mut effect_degradations.color_matrix,
+        *budget_bytes,
+        color_adjust_enabled(ctx.viewport_size, ctx.format, *budget_bytes),
+    ) else {
+        return;
+    };
+
+    append_color_matrix_in_place_single_scratch(
+        passes,
+        srcdst,
+        scratch,
+        ctx.viewport_size,
+        Some(scissor),
+        matrix,
+        ctx.clear,
+        None,
+        None,
+    );
+}
+
+pub(super) fn apply_alpha_threshold_step(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    cutoff: f32,
+    soft: f32,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+) {
+    let Some(scratch) = prepare_effect_single_scratch(
+        scratch_targets,
+        &mut effect_degradations.alpha_threshold,
+        *budget_bytes,
+        color_adjust_enabled(ctx.viewport_size, ctx.format, *budget_bytes),
+    ) else {
+        return;
+    };
+
+    append_alpha_threshold_in_place_single_scratch(
+        passes,
+        srcdst,
+        scratch,
+        ctx.viewport_size,
+        Some(scissor),
+        cutoff,
+        soft,
+        ctx.clear,
+        None,
+        None,
+    );
+}
+
+pub(super) fn apply_pixelate_step(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    scale: u32,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+) {
+    let Some(scratch) = prepare_effect_single_scratch(
+        scratch_targets,
+        &mut effect_degradations.pixelate,
+        *budget_bytes,
+        pixelate_enabled(
+            ctx.viewport_size,
+            Some(scissor),
+            ctx.format,
+            *budget_bytes,
+            scale,
+        ),
+    ) else {
+        return;
+    };
+
+    append_pixelate_in_place_single_scratch(
+        passes,
+        srcdst,
+        scratch,
+        ctx.viewport_size,
+        Some(scissor),
+        scale,
+        ctx.clear,
+        None,
+        None,
+    );
+}
+
+pub(super) fn apply_dither_step(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    mode: fret_core::DitherMode,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+) {
+    let Some(scratch) = prepare_effect_single_scratch(
+        scratch_targets,
+        &mut effect_degradations.dither,
+        *budget_bytes,
+        dither_enabled(ctx.viewport_size, ctx.format, *budget_bytes),
+    ) else {
+        return;
+    };
+
+    append_dither_in_place_single_scratch(
+        passes,
+        srcdst,
+        scratch,
+        ctx.viewport_size,
+        Some(scissor),
+        mode,
+        ctx.clear,
+        None,
+        None,
+    );
 }
 
 #[allow(dead_code)]
