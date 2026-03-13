@@ -10,12 +10,15 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    material3_checkbox: Model<bool>,
-    material3_switch: Model<bool>,
-    material3_radio_value: Model<Option<Arc<str>>>,
     material3_text_field_disabled: Model<bool>,
     material3_text_field_error: Model<bool>,
 ) -> AnyElement {
+    let checkbox_root = material3::Checkbox::uncontrolled(cx, false);
+    let material3_checkbox = checkbox_root.checked_model();
+    let switch_root = material3::Switch::uncontrolled(cx, false);
+    let material3_switch = switch_root.selected_model();
+    let radio_group_root = material3::RadioGroup::uncontrolled(cx, None::<Arc<str>>);
+    let material3_radio_value = radio_group_root.value_model();
     let tabs_root = material3::Tabs::uncontrolled(cx, "overview");
     let material3_tabs_value = tabs_root.value_model();
     let list_root = material3::List::uncontrolled(cx, "alpha");
@@ -157,16 +160,15 @@ pub fn render<H: UiHost>(
                 );
 
             vec![
-                material3::Checkbox::new(material3_checkbox.clone())
+                checkbox_root
+                    .clone()
                     .a11y_label("Checkbox")
                     .into_element(cx),
                 material3::Checkbox::new(material3_checkbox.clone())
                     .a11y_label("Checkbox Override")
                     .style(hover_style)
                     .into_element(cx),
-                material3::Switch::new(material3_switch.clone())
-                    .a11y_label("Switch")
-                    .into_element(cx),
+                switch_root.clone().a11y_label("Switch").into_element(cx),
                 material3::Switch::new(material3_switch.clone())
                     .a11y_label("Switch Override")
                     .style({
@@ -215,7 +217,8 @@ pub fn render<H: UiHost>(
 
                     vec![
                         cx.text("Radio Group"),
-                        material3::RadioGroup::new(material3_radio_value.clone())
+                        radio_group_root
+                            .clone()
                             .a11y_label("Radio Group")
                             .items(items.clone())
                             .into_element(cx),

@@ -620,6 +620,71 @@ mod tests {
     }
 
     #[test]
+    fn material3_checkbox_offers_uncontrolled_copyable_checked_paths() {
+        let normalized = normalize_ws(include_str!("checkbox.rs"));
+        let required_markers = [
+            "pub fn new(checked: Model<bool>) -> Self {",
+            "pub fn new_optional(checked: Model<Option<bool>>) -> Self {",
+            "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, checked: Option<Model<bool>>, default_checked: bool, ) -> Self {",
+            "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>, default_checked: bool) -> Self {",
+            "pub fn checked_model(&self) -> Model<bool> {",
+            "pub fn new_optional_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, checked: Option<Model<Option<bool>>>, default_checked: Option<bool>, ) -> Self {",
+            "pub fn uncontrolled_optional<H: UiHost>( cx: &mut ElementContext<'_, H>, default_checked: Option<bool>, ) -> Self {",
+            "pub fn optional_checked_model(&self) -> Model<Option<bool>> {",
+        ];
+
+        for marker in required_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                normalized.contains(&marker),
+                "checkbox.rs should keep `new(checked)` / `new_optional(checked)` as explicit controlled seams and expose controllable/uncontrolled helpers plus model accessors for copyable teaching surfaces"
+            );
+        }
+    }
+
+    #[test]
+    fn material3_switch_offers_uncontrolled_copyable_selected_path_while_keeping_controlled_new() {
+        let normalized = normalize_ws(include_str!("switch.rs"));
+        let required_markers = [
+            "pub fn new(selected: Model<bool>) -> Self {",
+            "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, selected: Option<Model<bool>>, default_selected: bool, ) -> Self {",
+            "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>, default_selected: bool) -> Self {",
+            "pub fn selected_model(&self) -> Model<bool> {",
+        ];
+
+        for marker in required_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                normalized.contains(&marker),
+                "switch.rs should keep `new(selected)` as the explicit controlled seam and expose `new_controllable(...)`, `uncontrolled(cx, default)`, and `selected_model()` for copyable teaching surfaces"
+            );
+        }
+    }
+
+    #[test]
+    fn material3_radio_offers_uncontrolled_copyable_group_and_standalone_paths() {
+        let normalized = normalize_ws(include_str!("radio.rs"));
+        let required_markers = [
+            "pub fn new(model: Model<Option<Arc<str>>>) -> Self {",
+            "pub fn new_controllable<H: UiHost, T: Into<Arc<str>>>( cx: &mut ElementContext<'_, H>, value: Option<Model<Option<Arc<str>>>>, default_value: Option<T>, ) -> Self {",
+            "pub fn uncontrolled<H: UiHost, T: Into<Arc<str>>>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, ) -> Self {",
+            "pub fn value_model(&self) -> Model<Option<Arc<str>>> {",
+            "pub fn new(selected: Model<bool>) -> Self {",
+            "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, selected: Option<Model<bool>>, default_selected: bool, ) -> Self {",
+            "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>, default_selected: bool) -> Self {",
+            "pub fn selected_model(&self) -> Model<bool> {",
+        ];
+
+        for marker in required_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                normalized.contains(&marker),
+                "radio.rs should keep controlled `RadioGroup::new(model)` / `Radio::new(selected)` seams and expose controllable/uncontrolled helpers plus model accessors for copyable teaching surfaces"
+            );
+        }
+    }
+
+    #[test]
     fn material3_date_picker_dialog_offers_uncontrolled_copyable_open_month_and_selected_paths() {
         let normalized = normalize_ws(include_str!("date_picker.rs"));
         let required_markers = [

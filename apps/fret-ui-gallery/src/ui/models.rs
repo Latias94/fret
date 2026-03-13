@@ -60,13 +60,7 @@ pub(crate) struct UiGalleryModels {
     pub(crate) switch: Model<bool>,
 
     #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_checkbox: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_switch: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
     pub(crate) material3_slider_value: Model<f32>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_radio_value: Model<Option<Arc<str>>>,
     #[cfg(feature = "gallery-material3")]
     pub(crate) material3_expressive: Model<bool>,
     #[cfg(feature = "gallery-material3")]

@@ -302,13 +302,7 @@ impl UiGalleryDriver {
         #[cfg(feature = "gallery-dev")]
         let markdown_link_gate_last_activation = app.models_mut().insert(None::<Arc<str>>);
         #[cfg(feature = "gallery-material3")]
-        let material3_checkbox = app.models_mut().insert(false);
-        #[cfg(feature = "gallery-material3")]
-        let material3_switch = app.models_mut().insert(false);
-        #[cfg(feature = "gallery-material3")]
         let material3_slider_value = app.models_mut().insert(0.3f32);
-        #[cfg(feature = "gallery-material3")]
-        let material3_radio_value = app.models_mut().insert(None::<Arc<str>>);
         #[cfg(feature = "gallery-material3")]
         let material3_expressive = app.models_mut().insert(false);
         #[cfg(feature = "gallery-material3")]
@@ -492,13 +486,7 @@ impl UiGalleryDriver {
             #[cfg(feature = "gallery-dev")]
             markdown_link_gate_last_activation,
             #[cfg(feature = "gallery-material3")]
-            material3_checkbox,
-            #[cfg(feature = "gallery-material3")]
-            material3_switch,
-            #[cfg(feature = "gallery-material3")]
             material3_slider_value,
-            #[cfg(feature = "gallery-material3")]
-            material3_radio_value,
             #[cfg(feature = "gallery-material3")]
             material3_expressive,
             #[cfg(feature = "gallery-material3")]

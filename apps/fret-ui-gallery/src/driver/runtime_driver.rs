@@ -286,13 +286,7 @@ struct UiGalleryWindowState {
     #[cfg(feature = "gallery-dev")]
     markdown_link_gate_last_activation: Model<Option<Arc<str>>>,
     #[cfg(feature = "gallery-material3")]
-    material3_checkbox: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    material3_switch: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
     material3_slider_value: Model<f32>,
-    #[cfg(feature = "gallery-material3")]
-    material3_radio_value: Model<Option<Arc<str>>>,
     #[cfg(feature = "gallery-material3")]
     material3_expressive: Model<bool>,
     #[cfg(feature = "gallery-material3")]
@@ -376,13 +370,7 @@ impl UiGalleryWindowState {
             #[cfg(feature = "gallery-dev")]
             switch: self.switch.clone(),
             #[cfg(feature = "gallery-material3")]
-            material3_checkbox: self.material3_checkbox.clone(),
-            #[cfg(feature = "gallery-material3")]
-            material3_switch: self.material3_switch.clone(),
-            #[cfg(feature = "gallery-material3")]
             material3_slider_value: self.material3_slider_value.clone(),
-            #[cfg(feature = "gallery-material3")]
-            material3_radio_value: self.material3_radio_value.clone(),
             #[cfg(feature = "gallery-material3")]
             material3_expressive: self.material3_expressive.clone(),
             #[cfg(feature = "gallery-material3")]

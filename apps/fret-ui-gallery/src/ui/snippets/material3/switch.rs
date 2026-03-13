@@ -5,9 +5,13 @@ use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, selected: Model<bool>) -> AnyElement {
-    let icons_both = cx.local_model_keyed("icons_both", || false);
-    let icons_selected_only = cx.local_model_keyed("icons_selected_only", || false);
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let default_switch = material3::Switch::uncontrolled(cx, false);
+    let selected = default_switch.selected_model();
+    let icons_both_root = material3::Switch::uncontrolled(cx, false);
+    let icons_both = icons_both_root.selected_model();
+    let icons_selected_only_root = material3::Switch::uncontrolled(cx, false);
+    let icons_selected_only = icons_selected_only_root.selected_model();
 
     let value = cx
         .get_model_copied(&selected, Invalidation::Layout)
@@ -26,7 +30,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, selected: Model<bool>) 
                     .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_accent))),
             );
         vec![
-            material3::Switch::new(selected.clone())
+            default_switch
+                .clone()
                 .a11y_label("Material 3 Switch")
                 .test_id("ui-gallery-material3-switch")
                 .into_element(cx),
@@ -55,7 +60,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, selected: Model<bool>) 
             .get_model_copied(&icons_selected_only, Invalidation::Layout)
             .unwrap_or(false);
         vec![
-            material3::Switch::new(icons_both.clone())
+            icons_both_root
+                .clone()
                 .icons(true)
                 .a11y_label("Material 3 Switch (icons)")
                 .test_id("ui-gallery-material3-switch-icons-both")
@@ -67,7 +73,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, selected: Model<bool>) 
                 .a11y_label("Disabled Material 3 Switch (icons)")
                 .test_id("ui-gallery-material3-switch-icons-both-disabled")
                 .into_element(cx),
-            material3::Switch::new(icons_selected_only.clone())
+            icons_selected_only_root
+                .clone()
                 .show_only_selected_icon(true)
                 .a11y_label("Material 3 Switch (selected icon only)")
                 .test_id("ui-gallery-material3-switch-icons-selected-only")

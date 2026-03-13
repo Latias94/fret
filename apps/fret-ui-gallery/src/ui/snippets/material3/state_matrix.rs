@@ -616,14 +616,17 @@ fn render_menu<H: UiHost>(
 
 pub fn render<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    material3_checkbox: Model<bool>,
-    material3_switch: Model<bool>,
-    material3_radio_value: Model<Option<Arc<str>>>,
     material3_text_field_disabled: Model<bool>,
     material3_text_field_error: Model<bool>,
     material3_menu_open: Model<bool>,
     last_action: Model<Arc<str>>,
 ) -> AnyElement {
+    let checkbox_root = material3::Checkbox::uncontrolled(cx, false);
+    let material3_checkbox = checkbox_root.checked_model();
+    let switch_root = material3::Switch::uncontrolled(cx, false);
+    let material3_switch = switch_root.selected_model();
+    let radio_group_root = material3::RadioGroup::uncontrolled(cx, None::<Arc<str>>);
+    let material3_radio_value = radio_group_root.value_model();
     let tabs_root = material3::Tabs::uncontrolled(cx, "overview");
     let material3_tabs_value = tabs_root.value_model();
     let navigation_bar_root = material3::NavigationBar::uncontrolled(cx, "search");
@@ -682,7 +685,8 @@ pub fn render<H: UiHost>(
     .items_center()
     .into_element(cx);
 
-    let radio_group = material3::RadioGroup::new(material3_radio_value.clone())
+    let radio_group = radio_group_root
+        .clone()
         .a11y_label("Material 3 RadioGroup")
         .orientation(material3::RadioGroupOrientation::Horizontal)
         .gap(fret_core::Px(8.0))
@@ -771,18 +775,10 @@ pub fn render<H: UiHost>(
     out.extend(render_fab(cx, last_action.clone()));
 
     out.push(cx.text("— Checkbox —"));
-    out.push(
-        material3::Checkbox::new(material3_checkbox)
-            .a11y_label("Checkbox")
-            .into_element(cx),
-    );
+    out.push(checkbox_root.a11y_label("Checkbox").into_element(cx));
 
     out.push(cx.text("— Switch —"));
-    out.push(
-        material3::Switch::new(material3_switch)
-            .a11y_label("Switch")
-            .into_element(cx),
-    );
+    out.push(switch_root.a11y_label("Switch").into_element(cx));
 
     out.push(cx.text("— Radio —"));
     out.push(radio_group);

@@ -4245,6 +4245,51 @@ fn material3_date_and_time_picker_snippets_prefer_uncontrolled_dialog_roots() {
 #[test]
 fn material3_selection_and_field_snippets_prefer_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
+        "src/ui/snippets/material3/checkbox.rs",
+        &[
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "let checkbox = material3::Checkbox::uncontrolled(cx, false);",
+            "let checked = checkbox.checked_model();",
+            "let tristate = material3::Checkbox::uncontrolled_optional(cx, None);",
+            "let tristate_model = tristate.optional_checked_model();",
+        ],
+        &[
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, checked: Model<bool>) -> AnyElement {",
+            "let tristate = cx.local_model_keyed(\"tristate\", || None::<bool>);",
+        ],
+    );
+
+    assert_material3_snippet_prefers_copyable_root(
+        "src/ui/snippets/material3/switch.rs",
+        &[
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "let default_switch = material3::Switch::uncontrolled(cx, false);",
+            "let selected = default_switch.selected_model();",
+            "let icons_both_root = material3::Switch::uncontrolled(cx, false);",
+            "let icons_selected_only_root = material3::Switch::uncontrolled(cx, false);",
+        ],
+        &[
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, selected: Model<bool>) -> AnyElement {",
+            "let icons_both = cx.local_model_keyed(\"icons_both\", || false);",
+            "let icons_selected_only = cx.local_model_keyed(\"icons_selected_only\", || false);",
+        ],
+    );
+
+    assert_material3_snippet_prefers_copyable_root(
+        "src/ui/snippets/material3/radio.rs",
+        &[
+            "let group = material3::RadioGroup::uncontrolled(cx, None::<Arc<str>>);",
+            "let group_value = group.value_model();",
+            "let standalone = material3::Radio::uncontrolled(cx, false);",
+            "let standalone_selected = standalone.selected_model();",
+        ],
+        &[
+            "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, group_value: Model<Option<Arc<str>>>, ) -> AnyElement {",
+            "let standalone_selected = cx.local_model_keyed(\"standalone_selected\", || false);",
+        ],
+    );
+
+    assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/tabs.rs",
         &[
             "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
@@ -4322,21 +4367,41 @@ fn material3_composite_snippets_prefer_local_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/touch_targets.rs",
         &[
+            "let checkbox_root = material3::Checkbox::uncontrolled(cx, false);",
+            "let material3_checkbox = checkbox_root.checked_model();",
+            "let switch_root = material3::Switch::uncontrolled(cx, false);",
+            "let material3_switch = switch_root.selected_model();",
+            "let radio_group_root = material3::RadioGroup::uncontrolled(cx, None::<Arc<str>>);",
+            "let material3_radio_value = radio_group_root.value_model();",
             "let tabs_root = material3::Tabs::uncontrolled(cx, \"overview\");",
             "let material3_tabs_value = tabs_root.value_model();",
         ],
-        &["material3_tabs_value: Model<Arc<str>>,"],
+        &[
+            "material3_checkbox: Model<bool>,",
+            "material3_switch: Model<bool>,",
+            "material3_radio_value: Model<Option<Arc<str>>>,",
+            "material3_tabs_value: Model<Arc<str>>,",
+        ],
     );
 
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/gallery.rs",
         &[
+            "let checkbox_root = material3::Checkbox::uncontrolled(cx, false);",
+            "let material3_checkbox = checkbox_root.checked_model();",
+            "let switch_root = material3::Switch::uncontrolled(cx, false);",
+            "let material3_switch = switch_root.selected_model();",
+            "let radio_group_root = material3::RadioGroup::uncontrolled(cx, None::<Arc<str>>);",
+            "let material3_radio_value = radio_group_root.value_model();",
             "let tabs_root = material3::Tabs::uncontrolled(cx, \"overview\");",
             "let list_root = material3::List::uncontrolled(cx, \"alpha\");",
             "let navigation_bar_root = material3::NavigationBar::uncontrolled(cx, \"search\");",
             "let text_field_root = material3::TextField::uncontrolled(cx);",
         ],
         &[
+            "material3_checkbox: Model<bool>,",
+            "material3_switch: Model<bool>,",
+            "material3_radio_value: Model<Option<Arc<str>>>,",
             "material3_tabs_value: Model<Arc<str>>,",
             "material3_list_value: Model<Arc<str>>,",
             "material3_navigation_bar_value: Model<Arc<str>>,",
@@ -4347,16 +4412,131 @@ fn material3_composite_snippets_prefer_local_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/state_matrix.rs",
         &[
+            "let checkbox_root = material3::Checkbox::uncontrolled(cx, false);",
+            "let material3_checkbox = checkbox_root.checked_model();",
+            "let switch_root = material3::Switch::uncontrolled(cx, false);",
+            "let material3_switch = switch_root.selected_model();",
+            "let radio_group_root = material3::RadioGroup::uncontrolled(cx, None::<Arc<str>>);",
+            "let material3_radio_value = radio_group_root.value_model();",
             "let tabs_root = material3::Tabs::uncontrolled(cx, \"overview\");",
             "let navigation_bar_root = material3::NavigationBar::uncontrolled(cx, \"search\");",
             "let text_field_root = material3::TextField::uncontrolled(cx);",
         ],
         &[
+            "material3_checkbox: Model<bool>,",
+            "material3_switch: Model<bool>,",
+            "material3_radio_value: Model<Option<Arc<str>>>,",
             "material3_tabs_value: Model<Arc<str>>,",
             "material3_navigation_bar_value: Model<Arc<str>>,",
             "material3_text_field_value: Model<String>,",
         ],
     );
+}
+
+#[test]
+fn material3_choice_control_pages_do_not_route_demo_only_runtime_models() {
+    for (relative_path, required_markers, forbidden_markers) in [
+        (
+            "src/ui/pages/material3/controls.rs",
+            vec![
+                "pub(in crate::ui) fn preview_material3_touch_targets(cx: &mut UiCx<'_>) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_checkbox(cx: &mut UiCx<'_>) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_switch(cx: &mut UiCx<'_>) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_radio(cx: &mut UiCx<'_>) -> Vec<AnyElement> {",
+            ],
+            vec![
+                "pub(in crate::ui) fn preview_material3_touch_targets( cx: &mut UiCx<'_>, material3_checkbox: Model<bool>, material3_switch: Model<bool>, material3_radio_value: Model<Option<Arc<str>>>, ) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_checkbox( cx: &mut UiCx<'_>, checked: Model<bool>, ) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_switch( cx: &mut UiCx<'_>, selected: Model<bool>, ) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_radio( cx: &mut UiCx<'_>, group_value: Model<Option<Arc<str>>>, ) -> Vec<AnyElement> {",
+            ],
+        ),
+        (
+            "src/ui/pages/material3/gallery.rs",
+            vec![
+                "pub(in crate::ui) fn preview_material3_gallery( cx: &mut UiCx<'_>, material3_text_field_disabled: Model<bool>, material3_text_field_error: Model<bool>, last_action: Model<Arc<str>>, ) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_state_matrix( cx: &mut UiCx<'_>, material3_text_field_disabled: Model<bool>, material3_text_field_error: Model<bool>, material3_menu_open: Model<bool>, last_action: Model<Arc<str>>, ) -> Vec<AnyElement> {",
+            ],
+            vec![
+                "material3_checkbox: Model<bool>,",
+                "material3_switch: Model<bool>,",
+                "material3_radio_value: Model<Option<Arc<str>>>,",
+            ],
+        ),
+        (
+            "src/ui/content.rs",
+            vec![
+                "pages::material3::preview_material3_gallery( cx, material3_text_field_disabled, material3_text_field_error, last_action.clone(), )",
+                "pages::material3::preview_material3_state_matrix( cx, material3_text_field_disabled, material3_text_field_error, material3_menu_open, last_action.clone(), )",
+                "pages::material3::preview_material3_touch_targets(cx)",
+                "pages::material3::preview_material3_checkbox(cx)",
+                "pages::material3::preview_material3_switch(cx)",
+                "pages::material3::preview_material3_radio(cx)",
+            ],
+            vec![
+                "let material3_checkbox = models.material3_checkbox.clone();",
+                "let material3_switch = models.material3_switch.clone();",
+                "let material3_radio_value = models.material3_radio_value.clone();",
+                "pages::material3::preview_material3_checkbox(cx, material3_checkbox)",
+                "pages::material3::preview_material3_switch(cx, material3_switch)",
+                "pages::material3::preview_material3_radio(cx, material3_radio_value)",
+            ],
+        ),
+        (
+            "src/ui/models.rs",
+            vec![],
+            vec![
+                "pub(crate) material3_checkbox: Model<bool>,",
+                "pub(crate) material3_switch: Model<bool>,",
+                "pub(crate) material3_radio_value: Model<Option<Arc<str>>>,",
+            ],
+        ),
+        (
+            "src/driver/runtime_driver.rs",
+            vec![],
+            vec![
+                "material3_checkbox: Model<bool>,",
+                "material3_switch: Model<bool>,",
+                "material3_radio_value: Model<Option<Arc<str>>>,",
+                "material3_checkbox: self.material3_checkbox.clone(),",
+                "material3_switch: self.material3_switch.clone(),",
+                "material3_radio_value: self.material3_radio_value.clone(),",
+            ],
+        ),
+        (
+            "src/driver/window_bootstrap.rs",
+            vec![],
+            vec![
+                "let material3_checkbox = app.models_mut().insert(false);",
+                "let material3_switch = app.models_mut().insert(false);",
+                "let material3_radio_value = app.models_mut().insert(None::<Arc<str>>);",
+            ],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing Material 3 choice-control authoring marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+
+        for marker in forbidden_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "{} reintroduced demo-only Material 3 choice-control state marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
 }
 
 #[test]

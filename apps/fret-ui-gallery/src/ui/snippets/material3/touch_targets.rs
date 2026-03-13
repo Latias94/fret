@@ -9,14 +9,15 @@ use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    material3_checkbox: Model<bool>,
-    material3_switch: Model<bool>,
-    material3_radio_value: Model<Option<Arc<str>>>,
-) -> AnyElement {
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     use fret_icons::ids;
 
+    let checkbox_root = material3::Checkbox::uncontrolled(cx, false);
+    let material3_checkbox = checkbox_root.checked_model();
+    let switch_root = material3::Switch::uncontrolled(cx, false);
+    let material3_switch = switch_root.selected_model();
+    let radio_group_root = material3::RadioGroup::uncontrolled(cx, None::<Arc<str>>);
+    let material3_radio_value = radio_group_root.value_model();
     let tabs_root = material3::Tabs::uncontrolled(cx, "overview");
     let material3_tabs_value = tabs_root.value_model();
 
@@ -177,7 +178,8 @@ pub fn render<H: UiHost>(
         props.justify = fret_ui::element::MainAlign::Start;
 
         cx.flex(props, move |cx| {
-            let checkbox = material3::Checkbox::new(material3_checkbox.clone())
+            let checkbox = checkbox_root
+                .clone()
                 .a11y_label("Material3 checkbox")
                 .test_id("ui-gallery-material3-touch-target-checkbox")
                 .into_element(cx);
@@ -185,7 +187,8 @@ pub fn render<H: UiHost>(
                 .a11y_label("Material3 radio")
                 .test_id("ui-gallery-material3-touch-target-radio")
                 .into_element(cx);
-            let switch = material3::Switch::new(material3_switch.clone())
+            let switch = switch_root
+                .clone()
                 .a11y_label("Material3 switch")
                 .test_id("ui-gallery-material3-touch-target-switch")
                 .into_element(cx);

@@ -2,7 +2,7 @@
 
 This tracker scopes the **Material 3** portion of UI Gallery.
 
-Status (2026-03-13):
+Status (2026-03-14):
 
 - shadcn + AI Elements pages are snippet-backed (Preview ≡ Code).
 - Material 3 pages are snippet-backed (Preview ≡ Code) and routed through
@@ -34,9 +34,16 @@ Status (2026-03-13):
 - `TextField` now follows the same value split: keep `new(model)` as the explicit controlled seam,
   and use `new_controllable(...)` / `uncontrolled(cx)` plus `value_model()` on the copyable demo
   path.
+- `Checkbox`, `Switch`, `RadioGroup`, and standalone `Radio` now follow the same choice-state
+  split: keep controlled `new(...)` / `new_optional(...)` as the explicit seams, and use
+  `new_controllable(...)` / `uncontrolled(...)` plus `checked_model()` /
+  `optional_checked_model()` / `selected_model()` / `value_model()` on the copyable demo path.
 - UI Gallery no longer routes demo-only runtime/page models for Material 3 tabs, list,
   navigation-bar/rail/drawer, or text-field value state; those defaults now live beside the
   snippets that users copy.
+- UI Gallery no longer routes demo-only runtime/page models for Material 3 checkbox, switch, or
+  radio state. Those defaults now live beside the copyable snippets, and the composite
+  `gallery`/`state_matrix`/`touch_targets` surfaces construct their own local uncontrolled roots.
 - `ModalNavigationDrawer` now follows the same open-state split: keep `new(open)` as the explicit
   controlled seam, and use `new_controllable(...)` / `uncontrolled(cx)` plus `open_model()` on the
   copyable demo path.
@@ -111,13 +118,13 @@ Legend:
 
 | Page id | Preview fn | Current impl | Snippet-backed | Target page | Target snippet | Notes |
 |---|---|---|---:|---|---|---|
-| `material3_gallery` | `preview_material3_gallery` | `apps/fret-ui-gallery/src/ui/pages/material3/gallery.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_gallery.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/gallery.rs` | Likely becomes an index page linking to the individual component pages; keep the Standard/Expressive toggle visible. |
+| `material3_gallery` | `preview_material3_gallery` | `apps/fret-ui-gallery/src/ui/pages/material3/gallery.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_gallery.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/gallery.rs` | Likely becomes an index page linking to the individual component pages; keep the Standard/Expressive toggle visible. Composite choice controls now use snippet-local uncontrolled roots instead of page-owned checkbox/switch/radio models. |
 | `material3_button` | `preview_material3_button` | `apps/fret-ui-gallery/src/ui/pages/material3/controls.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_button.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/button.rs` | Live routed page already depends only on snippet + shared scaffold. |
 | `material3_icon_button` | `preview_material3_icon_button` | `apps/fret-ui-gallery/src/ui/pages/material3/controls.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_icon_button.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/icon_button.rs` | Keep `ui-gallery-material3-icon-button-centered` stable for existing diag scripts. |
-| `material3_checkbox` | `preview_material3_checkbox` | `apps/fret-ui-gallery/src/ui/pages/material3/controls.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_checkbox.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/checkbox.rs` | Keep `ui-gallery-material3-checkbox-tristate` stable for existing diag scripts. |
-| `material3_switch` | `preview_material3_switch` | `apps/fret-ui-gallery/src/ui/pages/material3/controls.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_switch.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/switch.rs` | Keep `ui-gallery-material3-switch-*` test ids stable for existing diag scripts. |
+| `material3_checkbox` | `preview_material3_checkbox` | `apps/fret-ui-gallery/src/ui/pages/material3/controls.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_checkbox.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/checkbox.rs` | Keep `ui-gallery-material3-checkbox-tristate` stable for existing diag scripts. Default snippet now uses `Checkbox::uncontrolled(cx, false)` / `Checkbox::uncontrolled_optional(cx, None)` plus `checked_model()` / `optional_checked_model()`, while `new(checked)` / `new_optional(checked)` stay as the explicit controlled seams. |
+| `material3_switch` | `preview_material3_switch` | `apps/fret-ui-gallery/src/ui/pages/material3/controls.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_switch.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/switch.rs` | Keep `ui-gallery-material3-switch-*` test ids stable for existing diag scripts. Default snippet now uses `Switch::uncontrolled(cx, false)` plus `selected_model()`, while `new(selected)` stays as the explicit controlled seam. |
 | `material3_slider` | `preview_material3_slider` | `apps/fret-ui-gallery/src/ui/pages/material3/controls.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_slider.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/slider.rs` | Keep `ui-gallery-material3-slider-*` test ids stable for existing diag scripts. |
-| `material3_radio` | `preview_material3_radio` | `apps/fret-ui-gallery/src/ui/pages/material3/controls.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_radio.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/radio.rs` | Keep `ui-gallery-material3-radio-*` test ids stable for existing diag scripts. |
+| `material3_radio` | `preview_material3_radio` | `apps/fret-ui-gallery/src/ui/pages/material3/controls.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_radio.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/radio.rs` | Keep `ui-gallery-material3-radio-*` test ids stable for existing diag scripts. Default snippet now uses `RadioGroup::uncontrolled(cx, None)` + `value_model()` and `Radio::uncontrolled(cx, false)` + `selected_model()`, while `RadioGroup::new(model)` / `Radio::new(selected)` stay as the explicit controlled seams. |
 | `material3_badge` | `preview_material3_badge` | `apps/fret-ui-gallery/src/ui/pages/material3/controls.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_badge.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/badge.rs` | Validate placement with navigation bar/rail examples. |
 | `material3_segmented_button` | `preview_material3_segmented_button` | `apps/fret-ui-gallery/src/ui/pages/material3/controls.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_segmented_button.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/segmented_button.rs` | Selection model + disabled items. |
 | `material3_top_app_bar` | `preview_material3_top_app_bar` | `apps/fret-ui-gallery/src/ui/pages/material3/navigation.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_top_app_bar.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/top_app_bar.rs` | Track scroll/condense behavior if implemented. |
@@ -137,5 +144,5 @@ Legend:
 | `material3_list` | `preview_material3_list` | `apps/fret-ui-gallery/src/ui/pages/material3/navigation.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_list.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/list.rs` | Roving focus; list item density. Default snippet now uses `List::uncontrolled(cx, "alpha")` + `value_model()`, while `new(model)` stays as the explicit app-owned seam. |
 | `material3_snackbar` | `preview_material3_snackbar` | `apps/fret-ui-gallery/src/ui/pages/material3/overlays.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_snackbar.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/snackbar.rs` | Queue/stack policy is app-level; show a minimal example. |
 | `material3_tooltip` | `preview_material3_tooltip` | `apps/fret-ui-gallery/src/ui/pages/material3/overlays.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_tooltip.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/tooltip.rs` | Hover + keyboard focus + delay policy. |
-| `material3_state_matrix` | `preview_material3_state_matrix` | `apps/fret-ui-gallery/src/ui/pages/material3/gallery.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_state_matrix.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/state_matrix.rs` | Useful for regression screenshots across tokens. Keep `ui-gallery-material3-search-view*` test ids stable for diag scripts. |
-| `material3_touch_targets` | `preview_material3_touch_targets` | `apps/fret-ui-gallery/src/ui/pages/material3/controls.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_touch_targets.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/touch_targets.rs` | Keep as a “mechanism pressure test” for min touch target contracts. Tabs now use `Tabs::uncontrolled(cx, "overview")` locally instead of page-owned selection plumbing. |
+| `material3_state_matrix` | `preview_material3_state_matrix` | `apps/fret-ui-gallery/src/ui/pages/material3/gallery.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_state_matrix.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/state_matrix.rs` | Useful for regression screenshots across tokens. Keep `ui-gallery-material3-search-view*` test ids stable for diag scripts. Checkbox/switch/radio probes now use snippet-local uncontrolled roots instead of page-owned runtime models. |
+| `material3_touch_targets` | `preview_material3_touch_targets` | `apps/fret-ui-gallery/src/ui/pages/material3/controls.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_touch_targets.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/touch_targets.rs` | Keep as a “mechanism pressure test” for min touch target contracts. Checkbox/switch/radio/tabs now use local uncontrolled roots instead of page-owned selection plumbing. |

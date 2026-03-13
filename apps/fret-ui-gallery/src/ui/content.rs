@@ -318,13 +318,7 @@ fn page_preview(
     #[cfg(feature = "gallery-dev")]
     let switch = models.switch.clone();
     #[cfg(feature = "gallery-material3")]
-    let material3_checkbox = models.material3_checkbox.clone();
-    #[cfg(feature = "gallery-material3")]
-    let material3_switch = models.material3_switch.clone();
-    #[cfg(feature = "gallery-material3")]
     let material3_slider_value = models.material3_slider_value.clone();
-    #[cfg(feature = "gallery-material3")]
-    let material3_radio_value = models.material3_radio_value.clone();
     #[cfg(feature = "gallery-material3")]
     let material3_expressive = models.material3_expressive.clone();
     #[cfg(feature = "gallery-material3")]
@@ -616,9 +610,6 @@ fn page_preview(
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 pages::material3::preview_material3_gallery(
                     cx,
-                    material3_checkbox,
-                    material3_switch,
-                    material3_radio_value,
                     material3_text_field_disabled,
                     material3_text_field_error,
                     last_action.clone(),
@@ -630,9 +621,6 @@ fn page_preview(
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 pages::material3::preview_material3_state_matrix(
                     cx,
-                    material3_checkbox,
-                    material3_switch,
-                    material3_radio_value,
                     material3_text_field_disabled,
                     material3_text_field_error,
                     material3_menu_open,
@@ -643,12 +631,7 @@ fn page_preview(
         #[cfg(feature = "gallery-material3")]
         PAGE_MATERIAL3_TOUCH_TARGETS => {
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-                pages::material3::preview_material3_touch_targets(
-                    cx,
-                    material3_checkbox,
-                    material3_switch,
-                    material3_radio_value,
-                )
+                pages::material3::preview_material3_touch_targets(cx)
             })
         }
         #[cfg(feature = "gallery-material3")]
@@ -666,13 +649,13 @@ fn page_preview(
         #[cfg(feature = "gallery-material3")]
         PAGE_MATERIAL3_CHECKBOX => {
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-                pages::material3::preview_material3_checkbox(cx, material3_checkbox)
+                pages::material3::preview_material3_checkbox(cx)
             })
         }
         #[cfg(feature = "gallery-material3")]
         PAGE_MATERIAL3_SWITCH => {
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-                pages::material3::preview_material3_switch(cx, material3_switch)
+                pages::material3::preview_material3_switch(cx)
             })
         }
         #[cfg(feature = "gallery-material3")]
@@ -684,7 +667,7 @@ fn page_preview(
         #[cfg(feature = "gallery-material3")]
         PAGE_MATERIAL3_RADIO => {
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-                pages::material3::preview_material3_radio(cx, material3_radio_value)
+                pages::material3::preview_material3_radio(cx)
             })
         }
         #[cfg(feature = "gallery-material3")]

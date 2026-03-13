@@ -16,6 +16,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::primitives::checkbox::{
     CheckedState, checked_state_from_optional_bool, toggle_optional_bool,
 };
@@ -124,6 +125,29 @@ impl Checkbox {
         }
     }
 
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        checked: Option<Model<bool>>,
+        default_checked: bool,
+    ) -> Self {
+        let checked =
+            controllable_state::use_controllable_model(cx, checked, || default_checked).model();
+        Self::new(checked)
+    }
+
+    pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>, default_checked: bool) -> Self {
+        Self::new_controllable(cx, None, default_checked)
+    }
+
+    pub fn checked_model(&self) -> Model<bool> {
+        match &self.model {
+            CheckboxModel::Bool(model) => model.clone(),
+            CheckboxModel::OptionalBool(_) => {
+                panic!("Checkbox checked_model() is only available for bool-backed checkboxes")
+            }
+        }
+    }
+
     /// Creates a checkbox bound to an optional boolean model.
     ///
     /// This maps `None` to the indeterminate/mixed outcome, matching Radix and Compose's
@@ -136,6 +160,34 @@ impl Checkbox {
             test_id: None,
             on_activate: None,
             style: CheckboxStyle::default(),
+        }
+    }
+
+    pub fn new_optional_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        checked: Option<Model<Option<bool>>>,
+        default_checked: Option<bool>,
+    ) -> Self {
+        let checked =
+            controllable_state::use_controllable_model(cx, checked, || default_checked).model();
+        Self::new_optional(checked)
+    }
+
+    pub fn uncontrolled_optional<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        default_checked: Option<bool>,
+    ) -> Self {
+        Self::new_optional_controllable(cx, None, default_checked)
+    }
+
+    pub fn optional_checked_model(&self) -> Model<Option<bool>> {
+        match &self.model {
+            CheckboxModel::Bool(_) => {
+                panic!(
+                    "Checkbox optional_checked_model() is only available for optional-backed checkboxes"
+                )
+            }
+            CheckboxModel::OptionalBool(model) => model.clone(),
         }
     }
 
@@ -489,4 +541,88 @@ fn material_icon<H: UiHost>(
 
 fn consume_enter_key_handler() -> fret_ui::action::OnKeyDown {
     Arc::new(|_host, _cx, down| matches!(down.key, KeyCode::Enter | KeyCode::NumpadEnter))
+}
+
+#[cfg(test)]
+mod controllable_state_tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::elements::with_element_cx;
+    use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        )
+    }
+
+    #[test]
+    fn checkbox_new_controllable_uses_controlled_checked_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let controlled = app.models_mut().insert(true);
+
+        with_element_cx(&mut app, window, bounds(), "m3-checkbox-controlled", |cx| {
+            let checkbox = Checkbox::new_controllable(cx, Some(controlled.clone()), false);
+            assert_eq!(checkbox.checked_model(), controlled);
+        });
+    }
+
+    #[test]
+    fn checkbox_new_controllable_applies_default_checked() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(&mut app, window, bounds(), "m3-checkbox-default", |cx| {
+            let checkbox = Checkbox::new_controllable(cx, None, true);
+            let checked = cx
+                .watch_model(&checkbox.checked_model())
+                .layout()
+                .copied()
+                .unwrap_or(false);
+            assert!(checked);
+        });
+    }
+
+    #[test]
+    fn checkbox_uncontrolled_multiple_instances_do_not_share_checked_models() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-checkbox-uncontrolled",
+            |cx| {
+                let a = Checkbox::uncontrolled(cx, false);
+                let b = Checkbox::uncontrolled(cx, true);
+                assert_ne!(a.checked_model(), b.checked_model());
+            },
+        );
+    }
+
+    #[test]
+    fn checkbox_new_optional_controllable_applies_default_checked() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-checkbox-optional-default",
+            |cx| {
+                let checkbox = Checkbox::new_optional_controllable(cx, None, None);
+                let checked = cx
+                    .watch_model(&checkbox.optional_checked_model())
+                    .layout()
+                    .cloned()
+                    .unwrap_or(Some(true));
+                assert_eq!(checked, None);
+            },
+        );
+    }
 }
