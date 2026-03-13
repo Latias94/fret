@@ -65,11 +65,13 @@ Current snapshot (2026-03-13):
     postprocess, and effect-marker JSON schema encoding plus focused encoding tests
   - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps segment/count/
     degradation assembly and final dump emission orchestration
-- The latest render-plan-dump-emit split has landed:
-  - `crates/fret-render-wgpu/src/renderer/render_plan_dump_emit.rs` now owns the
+- The latest render-plan-dump diagnostics split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump_emit.rs` owns the
     `FRET_RENDERPLAN_DUMP*` env gate plus final file emission
-  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps scratch rebuild, JSON
-    assembly, serialization, and a thin gate/assemble/emit orchestration shell
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump_assemble.rs` owns segment/count/
+    degradation scratch rebuild plus render-plan JSON assembly
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` keeps serialization and a thin
+    gate/assemble/emit orchestration shell
 - The latest render-plan-reporting-perf split has landed:
   - `crates/fret-render-wgpu/src/renderer/render_plan_reporting_perf.rs` now owns custom-effect
     requested/emitted counter collection, render-plan degradation perf accumulation, and focused
@@ -925,7 +927,6 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu custom_effect_v3_summary_tracks_pyramid_levels_min_max_sum`
   - `cargo nextest run -p fret-render-wgpu target_usage_tracks_max_size`
   - `cargo nextest run -p fret-render-wgpu encode_custom_effect_v3_pass_keeps_distinct_source_targets`
-  - `cargo nextest run -p fret-render-wgpu diff_segment_reports_tracks_shape_changes_and_pass_growth`
 - The forty-second render-plan-reporting-perf split has landed:
   - `crates/fret-render-wgpu/src/renderer/render_plan_reporting_perf.rs` now owns custom-effect
     requested/emitted counter collection, render-plan degradation perf accumulation, and focused
@@ -937,6 +938,17 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu requested_and_emitted_custom_effect_counters_track_all_versions`
   - `cargo nextest run -p fret-render-wgpu degradation_counters_track_reason_and_kind_totals`
   - `cargo nextest run -p fret-render-wgpu diff_segment_reports_tracks_shape_changes_and_pass_growth`
+- The forty-third render-plan-dump-assembly split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump_assemble.rs` now owns segment/count/
+    degradation scratch rebuild, render-plan JSON assembly, and a focused assembly regression test
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps serialization and a thin
+    gate/assemble/emit orchestration shell
+- Renderer render-plan-dump-assembly split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu render_plan_dump_assembly_tracks_segment_passes_and_counts`
+  - `cargo nextest run -p fret-render-wgpu custom_effect_summaries_include_abi_and_input_counts`
+  - `cargo nextest run -p fret-render-wgpu target_usage_tracks_max_size`
+  - `cargo nextest run -p fret-render-wgpu encode_custom_effect_v3_pass_keeps_distinct_source_targets`
 - Renderer custom-v3-dispatch split verification remains green:
   - `cargo check -p fret-render-wgpu --tests`
   - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`

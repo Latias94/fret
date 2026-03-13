@@ -252,8 +252,11 @@ As of 2026-03-13:
 - Renderer render-plan dump emit/orchestration is now also split along diagnostics seams:
   - `crates/fret-render-wgpu/src/renderer/render_plan_dump_emit.rs` now owns the
     `FRET_RENDERPLAN_DUMP*` env gating and final file emission.
-  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps scratch rebuild,
-    render-plan JSON assembly, serialization, and a thin gate/assemble/emit orchestration shell.
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump_assemble.rs` now owns segment/count/
+    degradation scratch rebuild plus render-plan JSON assembly and a focused assembly regression
+    test.
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps serialization and a thin
+    gate/assemble/emit orchestration shell.
 - Renderer render-plan reporting perf mapping is now also split along diagnostics seams:
   - `crates/fret-render-wgpu/src/renderer/render_plan_reporting_perf.rs` now owns custom-effect
     requested/emitted counter collection, render-plan degradation perf accumulation, and focused

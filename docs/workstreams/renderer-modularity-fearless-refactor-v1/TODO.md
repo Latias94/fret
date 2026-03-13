@@ -693,17 +693,17 @@ ID format:
       diagnostics summaries moved behind the companion summary module
     - render-plan dump pass/postprocess/marker encoders now live under
       `crates/fret-render-wgpu/src/renderer/render_plan_dump_encode.rs`
-    - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps segment/count/
-      degradation assembly plus final dump emission while JSON encoding moved behind the companion
-      encode module
+    - render-plan dump segment/count/degradation assembly now routes through
+      `crates/fret-render-wgpu/src/renderer/render_plan_dump_assemble.rs` while JSON encoding
+      stays behind the companion encode module and final dump emission stays in
+      `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs`
     - render-plan dump env gating and file emission now live under
       `crates/fret-render-wgpu/src/renderer/render_plan_dump_emit.rs`
-    - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps scratch rebuild,
-      JSON assembly, serialization, and only a thin gate/assemble/emit orchestration shell
+    - render-plan dump segment/count/degradation scratch rebuild plus JSON assembly now live under
+      `crates/fret-render-wgpu/src/renderer/render_plan_dump_assemble.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps serialization and only
+      a thin gate/assemble/emit orchestration shell
   - Current next hotspot:
-    - decide whether `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` should keep
-      segment/count/degradation assembly together with serialization now that env-trigger and
-      file-emission ownership have moved into `render_plan_dump_emit.rs`
     - decide whether the remaining fullscreen utility families in `effects.rs` should now split
       further by family, or whether the current post-helper-extraction surface is already the
       right long-term home for `AlphaThreshold`, `ColorAdjust`, `ColorMatrix`, `Dither`, `Noise`,
@@ -930,10 +930,12 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: render-plan dump emit ownership now routes through a dedicated companion
-    module: `crates/fret-render-wgpu/src/renderer/render_plan_dump_emit.rs` now owns env gating
-    and file emission, while `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps
-    scratch rebuild, JSON assembly, serialization, and thin orchestration only.
+  - Latest landed slice: render-plan dump assembly/emit ownership now routes through dedicated
+    companion modules: `crates/fret-render-wgpu/src/renderer/render_plan_dump_emit.rs` now owns
+    env gating and file emission, `crates/fret-render-wgpu/src/renderer/render_plan_dump_assemble.rs`
+    now owns scratch rebuild plus JSON assembly, and
+    `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps serialization and thin
+    orchestration only.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:
