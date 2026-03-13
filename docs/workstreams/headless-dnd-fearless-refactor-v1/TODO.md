@@ -89,7 +89,18 @@ This file tracks the execution checklist for `DESIGN.md`.
     - `ecosystem/fret-ui-shadcn/src/extras/kanban.rs`
     - `ecosystem/fret-workspace/src/tab_strip/mod.rs`
     - `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/pending.rs`
-- [ ] Add a small monitor/event surface only if at least two consumers need it.
+- [x] Decide whether to extract a small monitor/event surface now:
+  - Decision: defer from v1 for now; keep observation product-local through `on_update(...)`
+  - Reason: current first-party consumers are local recipe/product observers, not two shared
+    cross-cutting monitor consumers
+  - Follow-up trigger: revisit once at least two shared observers need the same contract
+    (diagnostics, optimistic sorting, accessibility, auto-scroll integration)
+  - Evidence anchors:
+    - `docs/workstreams/headless-dnd-fearless-refactor-v1/MONITOR_SURFACE_DECISION.md`
+    - `ecosystem/fret-ui-kit/src/recipes/sortable_dnd.rs`
+    - `ecosystem/fret-ui-shadcn/src/extras/kanban.rs`
+    - `ecosystem/fret-workspace/src/tab_strip/mod.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/pending.rs`
 - [ ] Preserve the rule that modifiers and auto-scroll core remain pure/data-only.
 
 ## M5 — Follow-on parity targets (do not block the main refactor)

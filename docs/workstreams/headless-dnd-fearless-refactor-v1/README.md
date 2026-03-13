@@ -23,6 +23,7 @@ This directory contains:
 - `CRATE_AUDIT.md`: boundary snapshot, current parity gaps, and landable follow-on steps
 - `DROPPABLE_METADATA_DECISION.md`: v1 decision note for `type` / `accept` / collision-hook
   metadata
+- `MONITOR_SURFACE_DECISION.md`: v1 decision note for shared monitor/event-surface extraction
 
 Primary contract references:
 
@@ -34,3 +35,10 @@ Primary contract references:
 Primary upstream reference:
 
 - `repo-ref/dnd-kit/`
+
+Current v1 scope decisions:
+
+- droppable metadata widening is deferred until at least two real consumers need the same shared
+  contract
+- monitor/event-surface extraction is deferred until at least two cross-cutting observers need the
+  same shared contract

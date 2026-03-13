@@ -108,11 +108,12 @@ There is no small monitor-style event stream yet for:
 - over/collision transitions
 - cancel/end observation by product policy
 
-That is acceptable for v1, but it remains the next likely parity seam once two consumers need the
-same observer contract.
+That is acceptable for v1, and this workstream now explicitly defers that extraction until two
+shared consumers need the same observer contract.
 
 Evidence anchors:
 
+- `docs/workstreams/headless-dnd-fearless-refactor-v1/MONITOR_SURFACE_DECISION.md`
 - `ecosystem/fret-dnd/src/engine.rs`
 - `ecosystem/fret-ui-kit/src/dnd/controller/`
 - `repo-ref/dnd-kit/packages/dom/src/core/manager/manager.ts`
@@ -153,8 +154,8 @@ Evidence anchors:
 3. Evaluate lightweight droppable metadata only when at least two consumers need the same shared
    contract:
    - likely candidates: node graph typed drop zones and workspace/docking target filtering
-4. Add a small monitor/event surface only after two consumers can demonstrate the same observer
-   need.
+4. Revisit a small monitor/event surface only after two consumers can demonstrate the same observer
+   need, as documented in `MONITOR_SURFACE_DECISION.md`.
 5. Keep keyboard sensor work as a design-note-first follow-on, not an opportunistic API widening.
 
 ## Gates run for this audit checkpoint
