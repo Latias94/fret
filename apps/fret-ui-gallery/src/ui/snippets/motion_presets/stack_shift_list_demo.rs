@@ -174,7 +174,7 @@ pub fn render(cx: &mut UiCx<'_>, theme: &Theme) -> AnyElement {
         }
 
         let (shift_active, generation, deltas_y) =
-            cx.with_state(StackShiftListShiftState::default, |st| {
+            cx.slot_state(StackShiftListShiftState::default, |st| {
                 let mut changed = st.last_targets_y.len() != targets_y.len();
                 if !changed {
                     for (id, curr) in &targets_y {
@@ -248,7 +248,7 @@ pub fn render(cx: &mut UiCx<'_>, theme: &Theme) -> AnyElement {
             out_y.clone_from(&targets_y);
         }
 
-        cx.with_state(StackShiftListShiftState::default, |st| {
+        cx.slot_state(StackShiftListShiftState::default, |st| {
             st.last_visual_y.clone_from(&out_y);
 
             if shift_active && !shift.animating && (shift.progress - 1.0).abs() <= f32::EPSILON {
