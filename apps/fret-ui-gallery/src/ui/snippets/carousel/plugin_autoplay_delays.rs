@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("plugin_autoplay_delays.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
@@ -56,7 +56,7 @@ fn slide_card(
     shadcn::card(|cx| ui::children![cx; shadcn::card_content(|cx| ui::children![cx; content])])
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let max_w_xs = Px(320.0);
 
     let autoplay_api = cx.local_model_keyed("autoplay_api", || None::<shadcn::CarouselAutoplayApi>);

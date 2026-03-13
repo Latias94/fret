@@ -239,6 +239,14 @@ Execution note on 2026-03-13:
   `DocSection::build(cx, ...)`; the old `-> AnyElement` teaching pattern is now forbidden for that
   family by
   `ui_authoring_surface_default_app::{combobox_snippets_prefer_ui_cx_on_the_default_app_surface,combobox_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the next top-level snippet-family
+  move on the carousel lane:
+  `apps/fret-ui-gallery/src/ui/snippets/carousel/{demo,usage,parts,basic,sizes_thirds,sizes,spacing,spacing_responsive,orientation_vertical,options,api,events,plugin_autoplay,plugin_autoplay_controlled,plugin_autoplay_stop_on_focus,plugin_autoplay_stop_on_last_snap,plugin_autoplay_delays,plugin_wheel_gestures,rtl,loop_carousel,loop_downgrade_cannot_loop,focus_watch,duration_embla,expandable}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/carousel.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `pub fn render(...) -> AnyElement` teaching pattern is now
+  forbidden for that family by
+  `ui_authoring_surface_default_app::{carousel_snippets_prefer_ui_cx_on_the_default_app_surface,carousel_page_uses_typed_doc_sections_for_app_facing_snippets}`.
 - the cookbook advanced-example source gate now also records
   `apps/fret-cookbook/examples/customv1_basics.rs`,
   where `panel_shell(...)` and `preview_content(...)` now use `IntoUiElement<KernelApp>`-based

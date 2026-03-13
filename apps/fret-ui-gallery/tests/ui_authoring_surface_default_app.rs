@@ -234,10 +234,7 @@ fn combobox_snippets_prefer_ui_cx_on_the_default_app_surface() {
         "app-facing snippet surface",
     );
 
-    assert_sources_absent(
-        "src/ui/snippets/combobox",
-        &["-> AnyElement"],
-    );
+    assert_sources_absent("src/ui/snippets/combobox", &["-> AnyElement"]);
 }
 
 #[test]
@@ -533,10 +530,77 @@ fn carousel_snippets_prefer_ui_cx_on_the_default_app_surface() {
         assert_default_app_surface(
             &path,
             &source,
-            &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+            &[
+                "use fret::{UiChild, UiCx};",
+                "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            ],
             "app-facing snippet surface",
         );
     }
+
+    assert_sources_absent(
+        "src/ui/snippets/carousel",
+        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn carousel_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/carousel.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Parts\", parts)",
+            "DocSection::build(cx, \"Basic\", basic)",
+            "DocSection::build(cx, \"Sizes (1/3)\", sizes_thirds)",
+            "DocSection::build(cx, \"Sizes\", sizes)",
+            "DocSection::build(cx, \"Spacing\", spacing)",
+            "DocSection::build(cx, \"Spacing (Responsive)\", spacing_responsive)",
+            "DocSection::build(cx, \"Orientation (Vertical)\", orientation_vertical)",
+            "DocSection::build(cx, \"Options\", options)",
+            "DocSection::build(cx, \"API\", api)",
+            "DocSection::build(cx, \"Events\", events)",
+            "DocSection::build(cx, \"Plugin (Autoplay)\", plugin)",
+            "DocSection::build(cx, \"Plugin (Autoplay, Controlled)\", plugin_controlled)",
+            "DocSection::build(cx, \"Plugin (Autoplay, stopOnInteraction via focus)\", plugin_stop_on_focus)",
+            "DocSection::build(cx, \"Plugin (Autoplay, stopOnLastSnap)\", plugin_stop_on_last_snap)",
+            "DocSection::build(cx, \"Plugin (Autoplay, per-snap delays)\", plugin_delays)",
+            "DocSection::build(cx, \"Plugin (Wheel gestures)\", plugin_wheel)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Loop\", loop_carousel)",
+            "DocSection::build(cx, \"Loop downgrade (cannotLoop)\", loop_downgrade_cannot_loop)",
+            "DocSection::build(cx, \"Focus\", focus)",
+            "DocSection::build(cx, \"Duration (Embla)\", duration)",
+            "DocSection::build(cx, \"Expandable\", expandable)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Parts\", parts)",
+            "DocSection::new(\"Basic\", basic)",
+            "DocSection::new(\"Sizes (1/3)\", sizes_thirds)",
+            "DocSection::new(\"Sizes\", sizes)",
+            "DocSection::new(\"Spacing\", spacing)",
+            "DocSection::new(\"Spacing (Responsive)\", spacing_responsive)",
+            "DocSection::new(\"Orientation (Vertical)\", orientation_vertical)",
+            "DocSection::new(\"Options\", options)",
+            "DocSection::new(\"API\", api)",
+            "DocSection::new(\"Events\", events)",
+            "DocSection::new(\"Plugin (Autoplay)\", plugin)",
+            "DocSection::new(\"Plugin (Autoplay, Controlled)\", plugin_controlled)",
+            "DocSection::new(\"Plugin (Autoplay, stopOnInteraction via focus)\", plugin_stop_on_focus)",
+            "DocSection::new(\"Plugin (Autoplay, stopOnLastSnap)\", plugin_stop_on_last_snap)",
+            "DocSection::new(\"Plugin (Autoplay, per-snap delays)\", plugin_delays)",
+            "DocSection::new(\"Plugin (Wheel gestures)\", plugin_wheel)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Loop\", loop_carousel)",
+            "DocSection::new(\"Loop downgrade (cannotLoop)\", loop_downgrade_cannot_loop)",
+            "DocSection::new(\"Focus\", focus)",
+            "DocSection::new(\"Duration (Embla)\", duration)",
+            "DocSection::new(\"Expandable\", expandable)",
+        ],
+    );
 }
 
 #[test]
@@ -4125,6 +4189,123 @@ fn material3_date_and_time_picker_snippets_prefer_uncontrolled_dialog_roots() {
         &[
             "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Model<bool>, selected: Model<time::Time>, ) -> AnyElement {",
             "material3::TimePickerDialog::new(open, selected.clone())",
+        ],
+    );
+}
+
+#[test]
+fn material3_selection_and_field_snippets_prefer_uncontrolled_value_roots() {
+    assert_material3_snippet_prefers_copyable_root(
+        "src/ui/snippets/material3/tabs.rs",
+        &[
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "let tabs = material3::Tabs::uncontrolled(cx, \"overview\");",
+            "let value = tabs.value_model();",
+        ],
+        &[
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, value: Model<Arc<str>>) -> AnyElement {",
+        ],
+    );
+
+    assert_material3_snippet_prefers_copyable_root(
+        "src/ui/snippets/material3/list.rs",
+        &[
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "let list = material3::List::uncontrolled(cx, \"alpha\");",
+            "let value = list.value_model();",
+        ],
+        &[
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, value: Model<Arc<str>>) -> AnyElement {",
+        ],
+    );
+
+    assert_material3_snippet_prefers_copyable_root(
+        "src/ui/snippets/material3/navigation_bar.rs",
+        &[
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "let bar = material3::NavigationBar::uncontrolled(cx, \"search\");",
+            "let value = bar.value_model();",
+        ],
+        &[
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, value: Model<Arc<str>>) -> AnyElement {",
+        ],
+    );
+
+    assert_material3_snippet_prefers_copyable_root(
+        "src/ui/snippets/material3/navigation_rail.rs",
+        &[
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "let rail = material3::NavigationRail::uncontrolled(cx, \"search\");",
+            "let value = rail.value_model();",
+        ],
+        &[
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, value: Model<Arc<str>>) -> AnyElement {",
+        ],
+    );
+
+    assert_material3_snippet_prefers_copyable_root(
+        "src/ui/snippets/material3/navigation_drawer.rs",
+        &[
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "let drawer = material3::NavigationDrawer::uncontrolled(cx, \"search\");",
+            "let value = drawer.value_model();",
+        ],
+        &[
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, value: Model<Arc<str>>) -> AnyElement {",
+        ],
+    );
+
+    assert_material3_snippet_prefers_copyable_root(
+        "src/ui/snippets/material3/text_field.rs",
+        &[
+            "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, disabled: Model<bool>, error: Model<bool>, ) -> AnyElement {",
+            "let demo_field = material3::TextField::uncontrolled(cx);",
+            "let value = demo_field.value_model();",
+        ],
+        &[
+            "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, value: Model<String>, disabled: Model<bool>, error: Model<bool>, ) -> AnyElement {",
+        ],
+    );
+}
+
+#[test]
+fn material3_composite_snippets_prefer_local_uncontrolled_value_roots() {
+    assert_material3_snippet_prefers_copyable_root(
+        "src/ui/snippets/material3/touch_targets.rs",
+        &[
+            "let tabs_root = material3::Tabs::uncontrolled(cx, \"overview\");",
+            "let material3_tabs_value = tabs_root.value_model();",
+        ],
+        &["material3_tabs_value: Model<Arc<str>>,"],
+    );
+
+    assert_material3_snippet_prefers_copyable_root(
+        "src/ui/snippets/material3/gallery.rs",
+        &[
+            "let tabs_root = material3::Tabs::uncontrolled(cx, \"overview\");",
+            "let list_root = material3::List::uncontrolled(cx, \"alpha\");",
+            "let navigation_bar_root = material3::NavigationBar::uncontrolled(cx, \"search\");",
+            "let text_field_root = material3::TextField::uncontrolled(cx);",
+        ],
+        &[
+            "material3_tabs_value: Model<Arc<str>>,",
+            "material3_list_value: Model<Arc<str>>,",
+            "material3_navigation_bar_value: Model<Arc<str>>,",
+            "material3_text_field_value: Model<String>,",
+        ],
+    );
+
+    assert_material3_snippet_prefers_copyable_root(
+        "src/ui/snippets/material3/state_matrix.rs",
+        &[
+            "let tabs_root = material3::Tabs::uncontrolled(cx, \"overview\");",
+            "let navigation_bar_root = material3::NavigationBar::uncontrolled(cx, \"search\");",
+            "let text_field_root = material3::TextField::uncontrolled(cx);",
+        ],
+        &[
+            "material3_tabs_value: Model<Arc<str>>,",
+            "material3_navigation_bar_value: Model<Arc<str>>,",
+            "material3_text_field_value: Model<String>,",
         ],
     );
 }

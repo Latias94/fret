@@ -390,6 +390,14 @@ Exit criteria:
   `DocSection::build(cx, ...)`; the old `-> AnyElement` teaching pattern is now forbidden for that
   family by
   `ui_authoring_surface_default_app::{combobox_snippets_prefer_ui_cx_on_the_default_app_surface,combobox_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app top-level snippet cleanup now also records the
+  `carousel` family:
+  `apps/fret-ui-gallery/src/ui/snippets/carousel/{demo,usage,parts,basic,sizes_thirds,sizes,spacing,spacing_responsive,orientation_vertical,options,api,events,plugin_autoplay,plugin_autoplay_controlled,plugin_autoplay_stop_on_focus,plugin_autoplay_stop_on_last_snap,plugin_autoplay_delays,plugin_wheel_gestures,rtl,loop_carousel,loop_downgrade_cannot_loop,focus_watch,duration_embla,expandable}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/carousel.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `pub fn render(...) -> AnyElement` teaching pattern is now
+  forbidden for that family by
+  `ui_authoring_surface_default_app::{carousel_snippets_prefer_ui_cx_on_the_default_app_surface,carousel_page_uses_typed_doc_sections_for_app_facing_snippets}`.
 - the same first-party teaching sweep now also closes the remaining default-root drift on the
   `tabs` / `toggle` / `accordion` lane:
   `tabs/{usage,demo,disabled,extras,icons,line,list,rtl,vertical,vertical_line}.rs`,
@@ -410,7 +418,7 @@ Exit criteria:
   `apps/fret-cookbook/examples/simple_todo_v2_target.rs`, and the scaffold `simple-todo` / `todo`
   templates now all use that helper, and the scaffold README/tests teach it as the default
   first-party keyed-list story.
-- the next UI Gallery app-facing snippet batch is now `carousel`:
+- the next UI Gallery app-facing snippet batch is now `item`:
   it is the clearest remaining full first-party page-local family still teaching top-level
   `UiCx -> AnyElement` returns across a broad default-app surface.
 - M6 raw-seam inventory now has executable source gates in `surface_policy_tests.rs`:

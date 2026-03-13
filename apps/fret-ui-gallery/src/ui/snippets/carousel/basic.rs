@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("basic.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
@@ -57,7 +57,7 @@ fn slide(
     ui::container(move |_cx| vec![card]).w_full().p_1()
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let max_w_xs = Px(320.0);
 
     let basic_visual = SlideVisual {

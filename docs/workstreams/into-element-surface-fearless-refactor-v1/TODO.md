@@ -135,6 +135,7 @@ Validation snapshot on 2026-03-13:
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app progress_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app chart_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app combobox_ -- --nocapture`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app carousel_ -- --nocapture`
 
 Implementation note on 2026-03-13:
 
@@ -233,10 +234,16 @@ Implementation note on 2026-03-13:
   now expose typed app-facing `render(...)` signatures, and
   `apps/fret-ui-gallery/src/ui/pages/combobox.rs` now routes those previews through
   `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the same UI Gallery top-level snippet cleanup now also covers the carousel family:
+  `apps/fret-ui-gallery/src/ui/snippets/carousel/{demo,usage,parts,basic,sizes_thirds,sizes,spacing,spacing_responsive,orientation_vertical,options,api,events,plugin_autoplay,plugin_autoplay_controlled,plugin_autoplay_stop_on_focus,plugin_autoplay_stop_on_last_snap,plugin_autoplay_delays,plugin_wheel_gestures,rtl,loop_carousel,loop_downgrade_cannot_loop,focus_watch,duration_embla,expandable}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and
+  `apps/fret-ui-gallery/src/ui/pages/carousel.rs` now routes those previews through
+  `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
 - after `accordion` / `tabs` / `toggle` / `radio_group` / `slider` / `native_select` /
-  `resizable` / `navigation_menu` / `scroll_area` / `progress` / `chart` / `combobox`, the next
-  default-app UI Gallery app-facing queue should move to `carousel`, which is now the clearest
-  remaining full page-local family still teaching top-level `UiCx -> AnyElement` returns.
+  `resizable` / `navigation_menu` / `scroll_area` / `progress` / `chart` / `combobox` /
+  `carousel`, the next default-app UI Gallery app-facing queue should move to `item`, which is now
+  the clearest remaining full page-local family still teaching top-level `UiCx -> AnyElement`
+  returns.
 - `apps/fret-cookbook/examples/customv1_basics.rs` now keeps both advanced reusable helpers
   `panel_shell(...)` and `preview_content(...)` on `IntoUiElement<KernelApp>`-based signatures
   instead of returning raw `AnyElement` for non-raw composition.
