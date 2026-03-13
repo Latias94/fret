@@ -52,8 +52,7 @@ pub(in super::super) fn record_blur_pass(
         let mask_uniform_index = pass
             .mask_uniform_index
             .expect("mask blur needs uniform index");
-        let uniform_offset =
-            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
+        let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride()) as u32;
 
         let Some(mask_view) = require_mask_view(frame_targets, mask.target, mask.size, "Blur")
         else {
@@ -110,8 +109,7 @@ pub(in super::super) fn record_blur_pass(
             BlurAxis::Horizontal => "fret blur-h masked pass",
             BlurAxis::Vertical => "fret blur-v masked pass",
         };
-        let uniform_offset =
-            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
+        let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride()) as u32;
 
         run_fullscreen_triangle_pass_uniform_texture(
             encoder,

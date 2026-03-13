@@ -28,6 +28,7 @@ mod util;
 mod buffers;
 mod config;
 mod diagnostics;
+mod frame_binding_state;
 mod frame_scratch;
 mod frame_targets;
 mod fullscreen;
@@ -55,6 +56,7 @@ mod v3_pyramid;
 
 use clip_path_mask_cache::*;
 use diagnostics::*;
+use frame_binding_state::*;
 use frame_scratch::*;
 use fullscreen::*;
 use geometry_upload::*;
@@ -95,8 +97,7 @@ impl Default for ClearColor {
 
 pub struct Renderer {
     adapter: wgpu::Adapter,
-    uniform_bind_group: wgpu::BindGroup,
-    uniforms: UniformResources,
+    frame_binding_state: FrameBindingState,
     frame_scratch_state: FrameScratchState,
     render_plan_reporting_state: RenderPlanReportingState,
     render_scene_config_state: RenderSceneConfigState,

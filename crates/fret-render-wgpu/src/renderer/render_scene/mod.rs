@@ -1,4 +1,3 @@
-mod bind_groups;
 mod debug_postprocess;
 mod dispatch;
 mod effect_pipelines;
@@ -10,7 +9,7 @@ mod frame_bindings;
 mod frame_perf_init;
 mod frame_pipelines;
 mod frame_prepare;
-mod helpers;
+pub(super) mod helpers;
 mod perf_finalize;
 mod plan_compile;
 mod plan_reporting;

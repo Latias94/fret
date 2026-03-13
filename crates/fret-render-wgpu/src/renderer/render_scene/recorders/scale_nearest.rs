@@ -88,8 +88,7 @@ pub(in super::super) fn record_scale_nearest_pass(
         let mask_uniform_index = pass
             .mask_uniform_index
             .expect("mask pass needs uniform index");
-        let uniform_offset =
-            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
+        let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride()) as u32;
 
         let Some(mask_view) =
             require_mask_view(frame_targets, mask.target, mask.size, "ScaleNearest")
@@ -140,8 +139,7 @@ pub(in super::super) fn record_scale_nearest_pass(
     } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
         debug_assert!(matches!(pass.mode, ScaleMode::Upscale));
         let pipeline = renderer.upscale_masked_pipeline_ref();
-        let uniform_offset =
-            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
+        let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride()) as u32;
 
         let layout = renderer.scale_bind_group_layout_ref();
         let bind_group = create_texture_uniform_bind_group(

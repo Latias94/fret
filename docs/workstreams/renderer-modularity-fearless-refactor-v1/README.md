@@ -262,6 +262,10 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/geometry_upload.rs`, and
   `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns quad instance/path paint/text
   paint ring buffers or viewport/text/path vertex upload rings directly.
+- Renderer frame-binding owner state now also lives under
+  `crates/fret-render-wgpu/src/renderer/frame_binding_state.rs`, and
+  `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns `uniform_bind_group` or
+  `UniformResources` directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

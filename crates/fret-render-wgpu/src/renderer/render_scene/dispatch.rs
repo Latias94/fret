@@ -43,8 +43,8 @@ impl Renderer {
             trace_enabled,
             || tracing::trace_span!("fret.renderer.record_passes", frame_index),
             || {
-                let render_space_capacity = self.uniforms.render_space_capacity;
-                let render_space_stride = self.uniforms.render_space_stride;
+                let render_space_capacity = self.render_space_capacity();
+                let render_space_stride = self.render_space_stride();
                 let mut executor = RenderSceneExecutor::new(
                     self,
                     device,

@@ -583,11 +583,15 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/geometry_upload.rs`
     - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns quad instance/path paint/text
       paint ring buffers or viewport/text/path vertex upload rings directly
+    - frame-binding owner moved into
+      `crates/fret-render-wgpu/src/renderer/frame_binding_state.rs`
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns `uniform_bind_group` or
+      `UniformResources` directly
   - Current next hotspot:
     - decide whether scene-encoding invalidation/debug evidence should stay coupled to
       `scene_encoding_cache.rs` or move closer to diagnostics state
-    - evaluate whether the remaining render-scene execution/binding helper surfaces should move
-      behind a shared execution owner after geometry/upload closure
+    - evaluate whether the remaining render-scene dispatch/executor glue should move behind a
+      shared execution owner after frame-binding closure
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG
@@ -623,6 +627,8 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/render_scene_config.rs`
     - geometry/upload state now lives under
       `crates/fret-render-wgpu/src/renderer/geometry_upload.rs`
+    - frame-binding state now lives under
+      `crates/fret-render-wgpu/src/renderer/frame_binding_state.rs`
 - [ ] RMFR-renderer-042 Reduce cross-domain mutable coupling inside `Renderer`.
 - [ ] RMFR-renderer-043 Keep service trait implementations readable after extraction.
 
@@ -780,10 +786,10 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: geometry/upload owner state now lives under
-    `crates/fret-render-wgpu/src/renderer/geometry_upload.rs`, and
-    `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns quad instance/path paint/text
-    paint ring buffers or viewport/text/path vertex upload rings directly.
+  - Latest landed slice: frame-binding owner state now lives under
+    `crates/fret-render-wgpu/src/renderer/frame_binding_state.rs`, and
+    `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns `uniform_bind_group` or
+    `UniformResources` directly.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

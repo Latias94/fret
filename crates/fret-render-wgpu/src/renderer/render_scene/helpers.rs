@@ -20,17 +20,8 @@ impl Renderer {
         &self,
         mask_image: Option<UniformMaskImageSelection>,
     ) -> &wgpu::BindGroup {
-        let Some(sel) = mask_image else {
-            return &self.uniform_bind_group;
-        };
-        let Some(groups) = self
-            .gpu_resources
-            .caches()
-            .get_uniform_mask_image_bind_groups(sel.image)
-        else {
-            return &self.uniform_bind_group;
-        };
-        groups.pick(sel.sampling)
+        self.frame_binding_state
+            .pick_uniform_bind_group_for_mask_image(&self.gpu_resources, mask_image)
     }
 }
 
@@ -545,7 +536,7 @@ pub(super) fn render_plan_trace_fingerprint(passes: &[RenderPlanPass]) -> u64 {
     hash
 }
 
-pub(super) fn render_plan_pass_render_space(
+pub(in crate::renderer) fn render_plan_pass_render_space(
     pass: &RenderPlanPass,
 ) -> Option<((u32, u32), (u32, u32))> {
     match pass {

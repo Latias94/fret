@@ -13,33 +13,20 @@ impl Renderer {
         perf_enabled: bool,
         frame_perf: &mut RenderPerfStats,
     ) {
-        self.ensure_uniform_capacity(device, uniforms.len());
-        let viewport_uniform_bytes_scratch = self.frame_scratch_state.viewport_uniform_bytes_mut();
-        let uniform_bytes_written = self.uniforms.write_viewport_uniforms_into(
-            queue,
-            uniforms,
-            viewport_uniform_bytes_scratch,
-        ) as u64;
-        if perf_enabled {
-            frame_perf.uniform_bytes = frame_perf
-                .uniform_bytes
-                .saturating_add(uniform_bytes_written);
-        }
-
-        self.ensure_clip_capacity(device, clips.len().max(1));
-        let clip_bytes_written = self.uniforms.write_clips(queue, clips) as u64;
-        if perf_enabled {
-            frame_perf.uniform_bytes = frame_perf.uniform_bytes.saturating_add(clip_bytes_written);
-        }
-
-        self.ensure_mask_capacity(device, masks.len().max(1));
-        let mask_bytes_written = self.uniforms.write_masks(queue, masks) as u64;
-        if perf_enabled {
-            frame_perf.uniform_bytes = frame_perf.uniform_bytes.saturating_add(mask_bytes_written);
-        }
-
-        self.prepare_viewport_bind_groups(device, ordered_draws);
-        self.prepare_image_bind_groups(device, ordered_draws);
-        self.prepare_uniform_mask_image_bind_groups(device, uniform_mask_images);
+        self.frame_binding_state
+            .upload_frame_uniforms_and_prepare_bind_groups(
+                device,
+                queue,
+                &self.globals,
+                &mut self.gpu_resources,
+                &mut self.frame_scratch_state,
+                uniforms,
+                clips,
+                masks,
+                ordered_draws,
+                uniform_mask_images,
+                perf_enabled,
+                frame_perf,
+            );
     }
 }

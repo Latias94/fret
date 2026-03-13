@@ -118,8 +118,7 @@ pub(in super::super) fn record_path_msaa_batch_pass(
                 }
                 active_scissor = Some(draw.scissor);
             }
-            let uniform_offset =
-                (u64::from(draw.uniform_index) * renderer.uniforms.uniform_stride) as u32;
+            let uniform_offset = (u64::from(draw.uniform_index) * renderer.uniform_stride()) as u32;
             let mask_image = encoding
                 .uniform_mask_images
                 .get(draw.uniform_index as usize)
@@ -161,7 +160,7 @@ pub(in super::super) fn record_path_msaa_batch_pass(
         return;
     };
     let uniform_offset =
-        (u64::from(path_pass.batch_uniform_index) * renderer.uniforms.uniform_stride) as u32;
+        (u64::from(path_pass.batch_uniform_index) * renderer.uniform_stride()) as u32;
     let mask_image = encoding
         .uniform_mask_images
         .get(path_pass.batch_uniform_index as usize)

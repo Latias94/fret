@@ -135,7 +135,7 @@ fn record_fullscreen_param_effect_pass<
     );
     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
-    let uniform_stride = renderer.uniforms.uniform_stride;
+    let uniform_stride = renderer.uniform_stride();
 
     if let Some(mask) = mask {
         debug_assert!(matches!(
@@ -340,7 +340,7 @@ fn record_fullscreen_texture_effect_pass<
     );
     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
-    let uniform_stride = renderer.uniforms.uniform_stride;
+    let uniform_stride = renderer.uniform_stride();
 
     if let Some(mask) = mask {
         debug_assert!(matches!(
@@ -921,7 +921,7 @@ pub(in super::super) fn record_custom_effect_v2_pass(
         .effect_params
         .custom_effect_v2_input_meta_buffer;
 
-    let uniform_stride = exec.renderer.uniforms.uniform_stride;
+    let uniform_stride = exec.renderer.uniform_stride();
 
     if let Some(mask) = common.mask {
         let mask_uniform_index = common
@@ -1384,7 +1384,7 @@ pub(in super::super) fn record_custom_effect_v3_pass(
     let param_buffer = &exec.renderer.effect_params.custom_effect_param_buffer;
     let meta_buffer = &exec.renderer.effect_params.custom_effect_v3_meta_buffer;
 
-    let uniform_stride = exec.renderer.uniforms.uniform_stride;
+    let uniform_stride = exec.renderer.uniform_stride();
 
     if let Some(mask) = common.mask {
         let mask_uniform_index = common
@@ -1657,8 +1657,7 @@ pub(in super::super) fn record_composite_premul_pass(
 
     let (uniform_bind_group, uniform_offsets) =
         if let Some(mask_uniform_index) = pass.mask_uniform_index {
-            let uniform_offset =
-                (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
+            let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride()) as u32;
             let mask_image = encoding
                 .uniform_mask_images
                 .get(mask_uniform_index as usize)
@@ -1670,7 +1669,7 @@ pub(in super::super) fn record_composite_premul_pass(
             )
         } else {
             (
-                &renderer.uniform_bind_group,
+                renderer.base_uniform_bind_group(),
                 [0, ctx.render_space_offset_u32],
             )
         };
@@ -1736,7 +1735,7 @@ pub(in super::super) fn record_clip_mask_pass(
     };
 
     let pipeline = renderer.clip_mask_pipeline_ref();
-    let uniform_offset = (u64::from(pass.uniform_index) * renderer.uniforms.uniform_stride) as u32;
+    let uniform_offset = (u64::from(pass.uniform_index) * renderer.uniform_stride()) as u32;
 
     run_clip_mask_triangle_pass(
         encoder,

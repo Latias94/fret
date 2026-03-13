@@ -251,6 +251,10 @@ For `Renderer` state-shell tightening, the same principle applies:
   quad instance/path paint/text paint rings plus viewport/text/path vertex upload rings and their
   bind-group layouts should move behind one owner so pipeline creation and render-scene uploads
   stop depending on six loose `Renderer` fields.
+- frame binding state is the matching uniform/bind-group seam:
+  the base uniform bind group, uniform/clip/mask/render-space buffer ownership, resize/rebuild
+  policy, and per-frame upload helpers should move behind one owner so render-scene binding/upload
+  paths stop depending on loose `Renderer` fields.
 - render-text dump state is the matching diagnostics/export seam for text debugging:
   dump collection scratch and serialization scratch should move behind one owner so render-scene
   execution keeps only a thin bridge to `TextSystem`.

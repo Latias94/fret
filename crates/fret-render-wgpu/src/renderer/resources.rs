@@ -438,8 +438,7 @@ impl Renderer {
 
         Self {
             adapter: adapter.clone(),
-            uniform_bind_group,
-            uniforms,
+            frame_binding_state: FrameBindingState::new(uniform_bind_group, uniforms),
             frame_scratch_state: FrameScratchState::default(),
             render_plan_reporting_state: RenderPlanReportingState::default(),
             render_scene_config_state: RenderSceneConfigState::new(),
