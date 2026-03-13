@@ -270,6 +270,10 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/render_scene/dispatch_state.rs`, and
   `crates/fret-render-wgpu/src/renderer/render_scene/dispatch.rs` now keeps only a thin wrapper
   around transient execution-state assembly and finalization.
+- Renderer render-scene executor lifecycle glue now also lives under
+  `crates/fret-render-wgpu/src/renderer/render_scene/executor_lifecycle.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_scene/executor.rs` no longer owns target write-epoch
+  bumps or `ReleaseTarget` pool-release glue inline.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

@@ -259,6 +259,10 @@ For `Renderer` state-shell tightening, the same principle applies:
   command encoder ownership, frame-target lifetime, scale-param cursor state, quad-vertex sizing,
   and pass-loop orchestration should move behind one owner so `dispatch.rs` stops owning
   short-lived execution plumbing inline.
+- render-scene executor lifecycle glue is the matching post-pass execution seam:
+  target write-epoch updates and `ReleaseTarget` pool-release behavior should move behind one
+  helper surface so `executor.rs` keeps only pass recording dispatch instead of inline lifecycle
+  bookkeeping.
 - render-text dump state is the matching diagnostics/export seam for text debugging:
   dump collection scratch and serialization scratch should move behind one owner so render-scene
   execution keeps only a thin bridge to `TextSystem`.

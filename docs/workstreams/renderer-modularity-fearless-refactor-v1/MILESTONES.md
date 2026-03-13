@@ -516,6 +516,21 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu path_material_paint_renders_and_is_not_degraded`
   - `cargo nextest run -p fret-render-wgpu gpu_linear_gradient_smoke_conformance`
   - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v1_can_read_render_space_in_fragment`
+- The seventeenth renderer execution-flow split has landed:
+  - render-scene executor lifecycle glue now lives under
+    `crates/fret-render-wgpu/src/renderer/render_scene/executor_lifecycle.rs`
+  - `crates/fret-render-wgpu/src/renderer/render_scene/executor.rs` now keeps only pass-record
+    dispatch while target write-epoch and `ReleaseTarget` glue route through helper methods
+  - write-epoch bumps and release-target pool handoff now share one helper seam instead of
+    repeating inline across every pass arm
+- Renderer render-scene-executor-lifecycle split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
+  - `cargo nextest run -p fret-render-wgpu gpu_text_linear_gradient_paint_varies_across_x`
+  - `cargo nextest run -p fret-render-wgpu path_material_paint_renders_and_is_not_degraded`
+  - `cargo nextest run -p fret-render-wgpu gpu_linear_gradient_smoke_conformance`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v1_can_read_render_space_in_fragment`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals
