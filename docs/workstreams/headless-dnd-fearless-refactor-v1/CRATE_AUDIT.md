@@ -159,6 +159,18 @@ Evidence anchors:
 - `repo-ref/dnd-kit/packages/dom/src/core/sensors/keyboard/KeyboardSensor.ts`
 - `repo-ref/dnd-kit/packages/dom/src/core/plugins/scrolling/AutoScroller.ts`
 
+Sortable group semantics are in a similar state:
+
+- the core sortable helper remains intentionally minimal,
+- Kanban proves one strong cross-group consumer,
+- but there is not yet a second shared consumer that justifies widening the common contract.
+
+Additional evidence anchors:
+
+- `docs/workstreams/headless-dnd-fearless-refactor-v1/SORTABLE_GROUP_SEMANTICS_DECISION.md`
+- `ecosystem/fret-dnd/src/sortable.rs`
+- `ecosystem/fret-ui-shadcn/src/extras/kanban.rs`
+
 ## Recommended next steps
 
 1. Keep the current crate split. Do not move DnD policy into `crates/fret-ui` and do not widen
@@ -172,6 +184,8 @@ Evidence anchors:
    need, as documented in `MONITOR_SURFACE_DECISION.md`.
 5. Implement keyboard sensor and any shared continuous auto-scroll driver from the design notes,
    not as opportunistic API widening.
+6. Revisit sortable group semantics only when at least two consumers need the same shared layer,
+   as documented in `SORTABLE_GROUP_SEMANTICS_DECISION.md`.
 
 ## Gates run for this audit checkpoint
 

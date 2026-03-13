@@ -28,6 +28,8 @@ This directory contains:
 - `AUTO_SCROLL_DRIVER_DESIGN_NOTE.md`: follow-on ownership and extraction note for continuous
   drag auto-scroll drivers
 - `MULTI_RECT_DROPPABLES_DECISION.md`: v1 decision note for one-droppable-many-rects support
+- `SORTABLE_GROUP_SEMANTICS_DECISION.md`: v1 decision note for sortable group/index transfer
+  semantics
 
 Primary contract references:
 
@@ -50,3 +52,5 @@ Current v1 scope decisions:
   product/integration code
 - multi-rect droppables are deferred until at least two registry-driven consumers need the same
   shared contract
+- sortable group semantics beyond the minimal insertion helper are deferred until at least two real
+  consumers need the same shared contract

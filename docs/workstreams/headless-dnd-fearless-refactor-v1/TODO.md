@@ -149,7 +149,21 @@ This file tracks the execution checklist for `DESIGN.md`.
     - `ecosystem/fret-ui-shadcn/src/extras/kanban.rs`
     - `ecosystem/fret-workspace/src/tab_strip/mod.rs`
     - `ecosystem/fret-docking/src/dock/space.rs`
-- [ ] Sortable group semantics beyond the current minimal insertion helpers.
+- [x] Decide whether to extract shared sortable group semantics now:
+  - Decision: defer from v1 for now; keep shared sortable support at the current minimal insertion
+    helper layer
+  - Reason: Kanban is one strong consumer, but there is not yet a second first-party consumer that
+    proves a stable shared contract for group/index transfer, empty-container handling, and
+    optimistic preview
+  - Follow-up trigger: revisit once at least two real consumers need the same shared sortable group
+    semantics
+  - Evidence anchors:
+    - `docs/workstreams/headless-dnd-fearless-refactor-v1/SORTABLE_GROUP_SEMANTICS_DECISION.md`
+    - `ecosystem/fret-dnd/src/sortable.rs`
+    - `ecosystem/fret-ui-kit/src/recipes/sortable_dnd.rs`
+    - `ecosystem/fret-ui-shadcn/src/extras/kanban.rs`
+    - `repo-ref/dnd-kit/apps/docs/react/guides/multiple-sortable-lists.mdx`
+    - `repo-ref/dnd-kit/packages/dom/src/sortable/plugins/OptimisticSortingPlugin.ts`
 
 ## Product adoption and gates
 
