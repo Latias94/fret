@@ -535,8 +535,14 @@ ID format:
     `RenderPerfSnapshot`, `IntermediatePerfSnapshot`, `SvgPerfSnapshot`,
     `BlurQualitySnapshot`, `EffectDegradationSnapshot`, and
     `WgpuInitDiagnosticsSnapshot`.
-- [ ] RMFR-exports-062 Confirm whether `WgpuContext` remains a stable convenience surface or should
+- [x] RMFR-exports-062 Confirm whether `WgpuContext` remains a stable convenience surface or should
   be demoted in guidance.
+  - Consumer scan confirmed broad first-party usage across runners, bootstrap hooks, demos,
+    stress apps, and cookbook examples.
+  - Decision: keep `WgpuContext` on the stable default facade as the supported convenience
+    bootstrap path for Fret-owned GPU initialization.
+  - Guidance remains explicit that engine-hosted adapter/device flows are equally first-class and
+    do not route through `WgpuContext`.
 - [x] RMFR-exports-063 Update first-party callers after any facade shrink.
   - No first-party caller updates were required for the nested-detail shrink landed on 2026-03-13.
 
@@ -558,6 +564,7 @@ ID format:
     - `crates/fret-render/src/lib.rs`
     - `crates/fret-render-wgpu/src/lib.rs`
     - `docs/crate-usage-guide.md`
+    - `crates/fret-render/tests/facade_surface_snapshot.rs`
 
 ---
 

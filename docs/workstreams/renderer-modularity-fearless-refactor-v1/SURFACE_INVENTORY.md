@@ -50,6 +50,14 @@ Primary consumers:
 - `apps/fret-examples`
 - stress/demo apps under `apps/`
 
+`WgpuContext` closure for v1:
+
+- broad first-party usage still exists across `crates/fret-launch`, `ecosystem/fret-bootstrap`,
+  demos, stress apps, and cookbook examples
+- keep `WgpuContext` as a stable convenience/bootstrap surface on `crates/fret-render`
+- do not treat it as the sole first-class topology; engine-hosted adapter/device flows remain
+  equally supported
+
 ### B. Capability / diagnostics surface
 
 These are actively used by first-party runners, demos, or diagnostics flows.

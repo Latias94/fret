@@ -96,6 +96,9 @@ As of 2026-03-13:
 - The portable-value ownership audit is also closed for v1:
   - render-target metadata already lives in `fret-render-core`
   - no additional backend-owned value type move improved ownership clarity after audit
+- `WgpuContext` remains on the stable default facade as the supported convenience/bootstrap path
+  for Fret-owned GPU initialization, but the docs and gates now make clear that engine-hosted
+  adapter/device flows are equally first-class.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

@@ -15,6 +15,10 @@
 //!   then call [`Renderer::new`], [`SurfaceState::new`], and [`Renderer::render_scene`] directly
 //!   without routing through [`WgpuContext`].
 //!
+//! `WgpuContext` intentionally remains part of the stable default facade as Fret's convenience
+//! bootstrap surface for first-party runners, demos, and tools that want Fret to own GPU
+//! initialization. It is supported, but it is not the only first-class integration path.
+//!
 //! Stable v1 facade buckets:
 //!
 //! - Core runtime/bootstrap entrypoints:
@@ -81,5 +85,7 @@ mod tests {
         let _ = std::mem::size_of::<RenderTargetColorSpace>();
         let _ = std::mem::size_of::<WgpuContext>();
         let _ = std::mem::size_of::<WgpuAdapterSelectionSnapshot>();
+        let _ = WgpuContext::new;
+        let _ = WgpuContext::new_with_backends;
     }
 }

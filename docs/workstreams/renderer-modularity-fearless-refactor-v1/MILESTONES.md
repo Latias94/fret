@@ -37,6 +37,11 @@ Current snapshot (2026-03-13):
   - cross-backend render-target metadata remains the canonical `fret-render-core` surface
   - remaining value-ish exports are either `wgpu`-coupled or already aliased from their real owner
     crates
+- `WgpuContext` guidance is now closed for v1:
+  - broad first-party runner/bootstrap/demo usage means it stays on the stable default facade
+  - facade snapshot coverage locks `new` and `new_with_backends`
+  - docs now state explicitly that `WgpuContext` is a supported convenience path, not the only
+    first-class topology
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

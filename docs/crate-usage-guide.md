@@ -275,6 +275,10 @@ per-attempt init records.
   `RendererCapabilities::from_adapter_device(...)`, then call `Renderer::new(...)`,
   `SurfaceState::new(...)`, and `render_scene(...)` directly.
 
+`WgpuContext` remains a stable convenience surface for first-party runner/bootstrap stacks, demos,
+and tools that want Fret to own GPU initialization. If your engine already owns the GPU topology,
+skip it and use the direct path instead.
+
 **Reach for `fret-render-wgpu` directly when:** you need backend-specific diagnostics/report stores
 or helper surfaces that are intentionally not curated by the `fret-render` facade.
 
