@@ -369,6 +369,12 @@ As of 2026-03-13:
   - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now keeps only the
     remaining recorder family entrypoints for `CustomEffectV1`, `AlphaThreshold`, `ColorAdjust`,
     `ColorMatrix`, `Dither`, `Noise`, and `DropShadow`.
+- `CustomEffectV1` is now family-local as well:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_custom_v1.rs` now owns
+    the `CustomEffectV1` recorder entrypoint, including availability / fallback blit checks,
+    custom pipeline preparation, parameter packing, and final fullscreen dispatch.
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+    `CustomEffectV1` path; `recorders/mod.rs` now re-exports it from the family-local module.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

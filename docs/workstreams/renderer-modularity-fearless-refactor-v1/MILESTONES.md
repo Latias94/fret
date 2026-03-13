@@ -48,6 +48,12 @@ Current snapshot (2026-03-13):
     shared fullscreen parameter/texture helper flow plus `pack_effect_params_v1(...)`
   - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now keeps only the
     remaining recorder family entrypoints
+- The latest `CustomEffectV1` family-entrypoint split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_custom_v1.rs` now owns
+    the `CustomEffectV1` recorder entrypoint, including availability/fallback checks, pipeline
+    preparation, parameter packing, and final fullscreen dispatch
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+    `CustomEffectV1` recorder path at all
 - v1 start decisions are now locked:
   - no new renderer crates in v1,
   - `fret-render` stays the stable default facade,
@@ -807,6 +813,15 @@ Current snapshot (2026-03-13):
     shared parameter packing helper from the dedicated module
   - the slice does not change effect semantics; it only removes the last shared-helper bucket from
     the parent recorder-family module
+- The thirty-sixth renderer custom-v1-entrypoint split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_custom_v1.rs` now owns
+    the `CustomEffectV1` recorder entrypoint, including availability/fallback blit checks,
+    custom pipeline preparation, shared parameter packing, and masked/unmasked dispatch
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+    `CustomEffectV1` recorder path at all, and `recorders/mod.rs` now re-exports that entrypoint
+    directly from the family-local module
+  - the slice does not change effect semantics; it only finishes the custom-effect family-local
+    ownership closure for v1/v2/v3 entrypoints
 - Renderer custom-v3-dispatch split verification remains green:
   - `cargo check -p fret-render-wgpu --tests`
   - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
@@ -849,6 +864,9 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v1_can_read_render_space_in_fragment`
   - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_can_sample_user_image_and_respects_sampling_hint`
   - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_src_raw_is_chain_root_and_differs_from_src_after_prior_step`
+- Renderer custom-v1-entrypoint split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v1_can_read_render_space_in_fragment`
 - Scene-encoding cache diagnostics split verification remains green:
   - `cargo check -p fret-render-wgpu --tests`
   - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
