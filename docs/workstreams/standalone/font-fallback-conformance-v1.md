@@ -71,15 +71,18 @@ Expected:
 
 - The script starts on `text_mixed_script_fallback`, captures a BEFORE bundle, triggers
   `app.locale.switch_next` via the default `primary+alt+l` shortcut, then captures an AFTER
-  bundle.
+  bundle. On Windows, the script opts out of the UI Gallery's curated common-fallback override so
+  the run stays on the true `platform_default -> prefer_system_fallback` path.
 - The gate asserts:
   - `system_fonts_enabled` is `true` in both captures.
+  - `common_fallback_injection` stays `platform_default`, `prefer_common_fallback` stays `false`,
+    and `common_fallback_candidates` stays empty in both captures.
   - `locale_bcp47` is `en-US` in the BEFORE capture and `zh-CN` in the AFTER capture.
   - The mixed-script sample traces (`m`, `你`, `😀`, `m你😀`) appear in both captures.
   - Those sample trace locales settle to `["en-US"]` in the BEFORE capture and `["zh-CN"]` in
     the AFTER capture.
-  - The mixed-script trace preserves `latin -> cjk -> emoji` family order, and the CJK / emoji
-    sample families stay within `common_fallback_candidates`.
+  - The mixed-script trace preserves `latin -> cjk -> emoji` family order while the CJK / emoji
+    sample families resolve outside the curated `common_fallback_candidates` lane.
   - `frame_missing_glyphs` is `0` in both captures.
   - `fallback_policy_key` differs between the two labeled captures.
 

@@ -36,6 +36,8 @@ struct LocaleChangeConformanceEvidence {
     fallback_policy_key: u64,
     locale_bcp47: Option<String>,
     system_fonts_enabled: bool,
+    prefer_common_fallback: bool,
+    common_fallback_injection: Option<String>,
     missing_glyphs: u64,
     font_trace_entry_count: usize,
     font_trace_locales: Vec<String>,
@@ -309,6 +311,11 @@ fn bundle_last_text_locale_change_evidence(
             .and_then(|v| v.as_str())
             .map(|s| s.to_string()),
         system_fonts_enabled: policy.get("system_fonts_enabled")?.as_bool()?,
+        prefer_common_fallback: policy.get("prefer_common_fallback")?.as_bool()?,
+        common_fallback_injection: policy
+            .get("common_fallback_injection")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
         missing_glyphs: render_text.get("frame_missing_glyphs")?.as_u64()?,
         font_trace_entry_count,
         font_trace_locales,
@@ -984,10 +991,9 @@ mod tests {
                             "fallback_policy_key": key,
                             "locale_bcp47": locale,
                             "system_fonts_enabled": true,
-                            "common_fallback_candidates": [
-                                "Noto Sans CJK SC",
-                                "Segoe UI Emoji"
-                            ]
+                            "prefer_common_fallback": false,
+                            "common_fallback_injection": "platform_default",
+                            "common_fallback_candidates": []
                         },
                         "render_text_font_trace": {
                             "entries": [
@@ -996,7 +1002,7 @@ mod tests {
                                     "locale_bcp47": locale,
                                     "families": [{
                                         "family": "Inter",
-                                        "class": "requested",
+                                        "class": "unknown",
                                         "glyphs": 1,
                                         "missing_glyphs": 0
                                     }]
@@ -1006,7 +1012,7 @@ mod tests {
                                     "locale_bcp47": locale,
                                     "families": [{
                                         "family": "Noto Sans CJK SC",
-                                        "class": "common_fallback",
+                                        "class": "unknown",
                                         "glyphs": 1,
                                         "missing_glyphs": 0
                                     }]
@@ -1016,7 +1022,7 @@ mod tests {
                                     "locale_bcp47": locale,
                                     "families": [{
                                         "family": "Segoe UI Emoji",
-                                        "class": "common_fallback",
+                                        "class": "unknown",
                                         "glyphs": 1,
                                         "missing_glyphs": 0
                                     }]
@@ -1027,19 +1033,19 @@ mod tests {
                                     "families": [
                                         {
                                             "family": "Inter",
-                                            "class": "requested",
+                                            "class": "unknown",
                                             "glyphs": 1,
                                             "missing_glyphs": 0
                                         },
                                         {
                                             "family": "Noto Sans CJK SC",
-                                            "class": "common_fallback",
+                                            "class": "unknown",
                                             "glyphs": 1,
                                             "missing_glyphs": 0
                                         },
                                         {
                                             "family": "Segoe UI Emoji",
-                                            "class": "common_fallback",
+                                            "class": "unknown",
                                             "glyphs": 1,
                                             "missing_glyphs": 0
                                         }
@@ -1145,6 +1151,36 @@ mod tests {
             "{err}"
         );
     }
+
+    #[test]
+    fn locale_change_gate_rejects_curated_common_fallback_lane() {
+        let out_dir = unique_tmp_dir("fail_locale_curated_lane");
+        write_labeled_bundle(
+            &out_dir,
+            "ui-gallery-text-fallback-policy-locale-before",
+            &locale_change_bundle("en-US", 10),
+        );
+        let mut after = locale_change_bundle("zh-CN", 11);
+        after["windows"][0]["snapshots"][0]["resource_caches"]["render_text_fallback_policy"]["prefer_common_fallback"] =
+            serde_json::json!(true);
+        after["windows"][0]["snapshots"][0]["resource_caches"]["render_text_fallback_policy"]["common_fallback_injection"] =
+            serde_json::json!("common_fallback");
+        after["windows"][0]["snapshots"][0]["resource_caches"]["render_text_fallback_policy"]["common_fallback_candidates"] =
+            serde_json::json!(["Noto Sans CJK SC", "Segoe UI Emoji"]);
+        write_labeled_bundle(
+            &out_dir,
+            "ui-gallery-text-fallback-policy-locale-after",
+            &after,
+        );
+
+        let err =
+            check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_locale_change(&out_dir)
+                .expect_err("gate should reject the curated common fallback lane");
+        assert!(
+            err.contains("expected common_fallback_injection=platform_default in both captures"),
+            "{err}"
+        );
+    }
 }
 
 pub(crate) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_locale_change(
@@ -1201,6 +1237,9 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_loc
             "fallback_policy_key": before.fallback_policy_key,
             "locale_bcp47": before.locale_bcp47,
             "system_fonts_enabled": before.system_fonts_enabled,
+            "prefer_common_fallback": before.prefer_common_fallback,
+            "common_fallback_injection": before.common_fallback_injection,
+            "common_fallback_candidates": before.common_fallback_candidates,
             "frame_missing_glyphs": before.missing_glyphs,
             "font_trace_entry_count": before.font_trace_entry_count,
             "font_trace_locales": before.font_trace_locales,
@@ -1215,6 +1254,9 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_loc
             "fallback_policy_key": after.fallback_policy_key,
             "locale_bcp47": after.locale_bcp47,
             "system_fonts_enabled": after.system_fonts_enabled,
+            "prefer_common_fallback": after.prefer_common_fallback,
+            "common_fallback_injection": after.common_fallback_injection,
+            "common_fallback_candidates": after.common_fallback_candidates,
             "frame_missing_glyphs": after.missing_glyphs,
             "font_trace_entry_count": after.font_trace_entry_count,
             "font_trace_locales": after.font_trace_locales,
@@ -1233,6 +1275,33 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_loc
             "ui-gallery text fallback policy locale gate failed: expected system_fonts_enabled=true in both captures for the native system-font baseline\n  before: {}\n  after: {}\n  evidence: {}",
             before.system_fonts_enabled,
             after.system_fonts_enabled,
+            evidence_path.display()
+        ));
+    }
+    if before.common_fallback_injection.as_deref() != Some("platform_default")
+        || after.common_fallback_injection.as_deref() != Some("platform_default")
+    {
+        return Err(format!(
+            "ui-gallery text fallback policy locale gate failed: expected common_fallback_injection=platform_default in both captures so the script exercises the native system-fallback lane\n  before: {:?}\n  after: {:?}\n  evidence: {}",
+            before.common_fallback_injection,
+            after.common_fallback_injection,
+            evidence_path.display()
+        ));
+    }
+    if before.prefer_common_fallback || after.prefer_common_fallback {
+        return Err(format!(
+            "ui-gallery text fallback policy locale gate failed: expected prefer_common_fallback=false in both captures for the native platform-default/system-fallback baseline\n  before: {}\n  after: {}\n  evidence: {}",
+            before.prefer_common_fallback,
+            after.prefer_common_fallback,
+            evidence_path.display()
+        ));
+    }
+    if !before.common_fallback_candidates.is_empty() || !after.common_fallback_candidates.is_empty()
+    {
+        return Err(format!(
+            "ui-gallery text fallback policy locale gate failed: expected common_fallback_candidates=[] in both captures so the mixed-script sample stays outside the curated common-fallback lane\n  before: {:?}\n  after: {:?}\n  evidence: {}",
+            before.common_fallback_candidates,
+            after.common_fallback_candidates,
             evidence_path.display()
         ));
     }
@@ -1302,11 +1371,11 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_loc
                 )
             })?;
 
-        if !contains_case_insensitive(&evidence.common_fallback_candidates, cjk)
-            || !contains_case_insensitive(&evidence.common_fallback_candidates, emoji)
+        if contains_case_insensitive(&evidence.common_fallback_candidates, cjk)
+            || contains_case_insensitive(&evidence.common_fallback_candidates, emoji)
         {
             return Err(format!(
-                "ui-gallery text fallback policy locale gate failed: expected cjk/emoji sample families in the {label} capture to stay within common_fallback_candidates\n  cjk: {:?}\n  emoji: {:?}\n  candidates: {:?}\n  evidence: {}",
+                "ui-gallery text fallback policy locale gate failed: expected cjk/emoji sample families in the {label} capture to resolve outside common_fallback_candidates on the system-fallback lane\n  cjk: {:?}\n  emoji: {:?}\n  candidates: {:?}\n  evidence: {}",
                 evidence.cjk_families,
                 evidence.emoji_families,
                 evidence.common_fallback_candidates,

@@ -116,7 +116,8 @@ Regression gates:
 - [x] Add at least one scripted diagnostics repro for bundled-only fallback behavior after the
   reset.
 - [x] Add a native system-font mixed-script locale-switch conformance gate that proves
-  `fallback_policy_key`, traced `locale_bcp47`, and zero-missing-glyph evidence move together.
+  `fallback_policy_key`, traced `locale_bcp47`, and zero-missing-glyph evidence move together on
+  the platform-default/system-fallback lane rather than the curated common-fallback lane.
 
 ## Exit criteria for calling the workstream "closed enough"
 
