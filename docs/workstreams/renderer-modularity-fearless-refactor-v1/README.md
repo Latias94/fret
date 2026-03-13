@@ -507,6 +507,14 @@ As of 2026-03-12:
   - the existing WGSL parse/WebGPU validation coverage in
     `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover `TEXT_COLOR_SHADER`
     without test-surface changes
+- The ninety-eighth renderer shader split has landed:
+  - the `TEXT_SUBPIXEL_SHADER` WGSL source now lives under
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/text_subpixel.wgsl`
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts `TEXT_SUBPIXEL_SHADER`
+    inline
+  - the existing WGSL parse/WebGPU validation coverage in
+    `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover `TEXT_SUBPIXEL_SHADER`
+    without test-surface changes
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
@@ -702,6 +710,15 @@ As of 2026-03-12:
   - `python3 tools/check_layering.py`: passed
   - `python3 tools/report_largest_files.py --top 30 --min-lines 800`: `renderer/shaders.rs`
     dropped from 2685 lines to 2205 lines while staying out of the top-30 oversized file report
+- Renderer shader split verification remains green after the `TEXT_SUBPIXEL_SHADER`
+  externalization:
+  - `cargo nextest run -p fret-render-wgpu`: 220 passed (1 leaky), exit code 0
+  - `cargo nextest run -p fret-render-wgpu renderer::render_plan::tests::blur_scissor_is_mapped_per_pass_dst_size`:
+    passed on targeted rerun
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+  - `python3 tools/report_largest_files.py --top 30 --min-lines 800`: `renderer/shaders.rs`
+    dropped from 2205 lines to 1592 lines while staying out of the top-30 oversized file report
 - Baseline gates passed during the pre-workstream audit:
   - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
   - `python3 tools/check_layering.py`: passed
