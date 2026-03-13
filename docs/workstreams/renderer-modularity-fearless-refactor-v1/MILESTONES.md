@@ -362,6 +362,10 @@ Current snapshot (2026-03-12):
   - prepared-glyph materialization helpers now live in
     `crates/fret-render-wgpu/src/text/prepare/glyph_materialize.rs`
   - `crates/fret-render-wgpu/src/text/prepare.rs` no longer hosts the prepared-glyph materialize and atlas-commit chain inline
+- The eighty-fourth internal `text/mod.rs` split has landed:
+  - prepare-shape build helpers now live in
+    `crates/fret-render-wgpu/src/text/prepare/shape_build.rs`
+  - `crates/fret-render-wgpu/src/text/prepare.rs` no longer hosts the prepare-shape begin/finish chain inline
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
