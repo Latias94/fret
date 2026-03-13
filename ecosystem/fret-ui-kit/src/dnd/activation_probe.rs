@@ -2,8 +2,8 @@ use fret_core::{AppWindowId, Point, PointerId};
 use fret_runtime::{DragKindId, ModelStore, TickId};
 
 use super::{
-    clear_pointer_in_scope, handle_sensor_move_or_init_in_scope, ActivationConstraint, DndScopeId,
-    DndServiceModel, DND_SCOPE_DEFAULT,
+    ActivationConstraint, DND_SCOPE_DEFAULT, DndScopeId, DndServiceModel, clear_pointer_in_scope,
+    handle_sensor_move_or_init_in_scope,
 };
 
 #[derive(Clone)]

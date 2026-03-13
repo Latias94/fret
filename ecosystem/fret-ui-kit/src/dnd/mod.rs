@@ -25,18 +25,20 @@ pub use controller::{
     handle_pointer_up_in_scope, handle_sensor_move_or_init_in_scope,
     pointer_is_tracking_any_sensor,
 };
-pub use forwarders::{DndPointerForwarders, DndPointerForwardersConfig};
+pub use forwarders::{
+    DndPointerActivationConstraints, DndPointerForwarders, DndPointerForwardersConfig,
+};
 pub use registry::{
     droppable_rect_in_scope, register_draggable_rect, register_draggable_rect_default_scope,
     register_draggable_rect_in_scope, register_droppable_rect,
     register_droppable_rect_default_scope, register_droppable_rect_in_scope,
 };
-pub use service::{dnd_service_model, dnd_service_model_global, DndServiceModel};
-pub use types::{DndScopeId, DndUpdate, DND_SCOPE_DEFAULT};
+pub use service::{DndServiceModel, dnd_service_model, dnd_service_model_global};
+pub use types::{DND_SCOPE_DEFAULT, DndScopeId, DndUpdate};
 
 pub use fret_dnd::{
-    insertion_side_for_pointer, ActivationConstraint, AutoScrollConfig, AutoScrollRequest, Axis,
-    CollisionStrategy, DndCollision, DndItemId, InsertionSide, SensorOutput,
+    ActivationConstraint, AutoScrollConfig, AutoScrollRequest, Axis, CollisionStrategy,
+    DndCollision, DndItemId, InsertionSide, SensorOutput, insertion_side_for_pointer,
 };
 
 #[cfg(test)]

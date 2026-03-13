@@ -70,10 +70,13 @@ This file tracks the execution checklist for `DESIGN.md`.
   - Gates:
     - `ecosystem/fret-ui-kit/src/dnd/tests.rs`
     - `ecosystem/fret-workspace/tests/tab_strip_drag_activation_threshold.rs`
-- [ ] Add richer pointer sensor configuration without introducing DOM assumptions:
-  - activator/handle-oriented configuration
-  - prevent-activation policy hook
-  - pointer-kind-aware defaults if needed
+- [x] Add richer pointer sensor configuration without introducing DOM assumptions:
+  - pointer-type-aware activation constraints for forwarder-backed integrations
+  - prevent-activation policy hook for consumer-owned arbitration
+  - pressable/text-input guards that support container-vs-handle authoring without DOM selectors
+  - Evidence anchors:
+    - `ecosystem/fret-ui-kit/src/dnd/forwarders.rs`
+    - `ecosystem/fret-ui-kit/src/dnd/tests.rs`
 - [ ] Decide whether to add lightweight draggable/droppable metadata now:
   - `type`
   - `accept`
@@ -98,8 +101,7 @@ This file tracks the execution checklist for `DESIGN.md`.
 - [x] Docking tab hover/insert path verified against the new engine/controller shape.
 - [x] Carousel-vs-DnD arbitration gate remains green after adapter changes.
 - [x] Workspace tab-strip activation gate covers the activation-only seam.
-- [ ] Node retained-canvas activation gates should be rerun once `compat-retained-canvas` builds
-  again.
+- [x] Node retained-canvas activation gates rerun after `compat-retained-canvas` build recovery.
 
 ## Docs and contract follow-up
 

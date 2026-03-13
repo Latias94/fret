@@ -20,6 +20,7 @@ This directory contains:
 - `DESIGN.md`: ownership, boundaries, current hazards, target architecture, parity plan
 - `TODO.md`: execution checklist
 - `MILESTONES.md`: staged acceptance criteria and gates
+- `CRATE_AUDIT.md`: boundary snapshot, current parity gaps, and landable follow-on steps
 
 Primary contract references:
 
