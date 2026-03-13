@@ -655,25 +655,16 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 renderer
                     .set_intermediate_budget_bytes(self.config.renderer_intermediate_budget_bytes);
                 renderer.set_path_msaa_samples(self.config.path_msaa_samples);
-                let _ = renderer.set_text_font_families(&self.config.text_font_families);
-                let locale = self
-                    .app
-                    .global::<fret_runtime::fret_i18n::I18nService>()
-                    .and_then(|service| service.preferred_locales().first())
-                    .map(|locale| locale.to_string());
-                let _ = renderer.set_text_locale(locale.as_deref());
                 self.app.set_global::<fret_core::TextFontFamilyConfig>(
                     self.config.text_font_families.clone(),
-                );
-                self.app.set_global::<fret_runtime::TextFontStackKey>(
-                    fret_runtime::TextFontStackKey(renderer.text_font_stack_key()),
                 );
 
                 let startup_async = Self::system_font_rescan_async_enabled()
                     && Self::system_font_catalog_startup_async_enabled();
                 if startup_async {
-                    let _ = fret_runtime::apply_font_catalog_update_with_metadata(
+                    let _ = super::super::super::font_catalog::publish_renderer_font_environment(
                         &mut self.app,
+                        &mut renderer,
                         Vec::new(),
                         fret_runtime::FontFamilyDefaultsPolicy::None,
                     );
@@ -882,28 +873,18 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             renderer.set_svg_raster_budget_bytes(self.config.svg_raster_budget_bytes);
             renderer.set_intermediate_budget_bytes(self.config.renderer_intermediate_budget_bytes);
             renderer.set_path_msaa_samples(self.config.path_msaa_samples);
-            let _ = renderer.set_text_font_families(&self.config.text_font_families);
-            let locale = self
-                .app
-                .global::<fret_runtime::fret_i18n::I18nService>()
-                .and_then(|service| service.preferred_locales().first())
-                .map(|locale| locale.to_string());
-            let _ = renderer.set_text_locale(locale.as_deref());
             self.app.set_global::<fret_core::TextFontFamilyConfig>(
                 self.config.text_font_families.clone(),
             );
-            self.app
-                .set_global::<fret_runtime::TextFontStackKey>(fret_runtime::TextFontStackKey(
-                    renderer.text_font_stack_key(),
-                ));
 
             let startup_async = Self::system_font_rescan_async_enabled()
                 && Self::system_font_catalog_startup_async_enabled();
             if startup_async {
                 // Avoid enumerating the full system font catalog on the UI thread at startup. Seed an
                 // empty picker snapshot and populate it asynchronously via the rescan pipeline.
-                let _ = fret_runtime::apply_font_catalog_update_with_metadata(
+                let _ = super::super::super::font_catalog::publish_renderer_font_environment(
                     &mut self.app,
+                    &mut renderer,
                     Vec::new(),
                     fret_runtime::FontFamilyDefaultsPolicy::None,
                 );

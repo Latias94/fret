@@ -24,9 +24,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         self.app
             .set_global::<fret_core::TextFontFamilyConfig>(self.config.text_font_families.clone());
-        let _ = gfx
-            .renderer
-            .set_text_font_families(&self.config.text_font_families);
 
         // Web/WASM cannot access system fonts. Load our bundled defaults as soon as the renderer
         // becomes available, then seed `TextFontFamilyConfig` deterministically.
@@ -42,12 +39,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             &mut gfx.renderer,
             fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
         );
-        let locale = self
-            .app
-            .global::<fret_runtime::fret_i18n::I18nService>()
-            .and_then(|service| service.preferred_locales().first())
-            .map(|locale| locale.to_string());
-        let _ = gfx.renderer.set_text_locale(locale.as_deref());
 
         self.gfx = Some(gfx);
     }

@@ -30,20 +30,22 @@ Background inputs:
 
 ## M1 — Reset runner publication to one canonical operation
 
-- [ ] Introduce one shared runner helper for publishing the settled renderer font environment.
-- [ ] Remove startup/update call sequences that publish `TextFontStackKey` before locale/config are
+- [x] Introduce one shared runner helper for publishing the settled renderer font environment.
+- [x] Remove startup/update call sequences that publish `TextFontStackKey` before locale/config are
   fully applied.
-- [ ] Make desktop and web use the same publication ordering contract.
+- [x] Make desktop and web use the same publication ordering contract.
 - [ ] Ensure the shared helper publishes:
-  - [ ] `FontCatalog`
-  - [ ] `FontCatalogMetadata`
-  - [ ] `FontCatalogCache`
-  - [ ] `TextFontStackKey`
+  - [x] `FontCatalog`
+  - [x] `FontCatalogMetadata`
+  - [x] `FontCatalogCache`
+  - [x] `TextFontStackKey`
   - [ ] rescan-status globals where relevant
 - [ ] Delete obsolete helper paths once the canonical flow exists.
 
 Regression gates:
 
+- [x] Add helper-level regression tests for publication ordering and empty-entry startup
+  preservation.
 - [ ] Add a targeted web startup test that fails if the published `TextFontStackKey` is stale
   relative to the renderer's current locale/configured environment.
 - [ ] Add a desktop-side regression test for the same invariant on startup/update flows.

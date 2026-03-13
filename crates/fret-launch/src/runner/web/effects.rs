@@ -277,20 +277,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         })
                         .collect::<Vec<_>>();
                     // Font catalog refresh trigger (ADR 0258): `Effect::TextAddFonts`.
-                    let update = fret_runtime::apply_font_catalog_update_with_metadata(
+                    let _update = super::super::font_catalog::publish_renderer_font_environment(
                         &mut self.app,
+                        &mut gfx.renderer,
                         entries,
                         fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
-                    );
-                    let _ = gfx.renderer.set_text_font_families(&update.config);
-                    let locale = self
-                        .app
-                        .global::<fret_runtime::fret_i18n::I18nService>()
-                        .and_then(|service| service.preferred_locales().first())
-                        .map(|locale| locale.to_string());
-                    let _ = gfx.renderer.set_text_locale(locale.as_deref());
-                    self.app.set_global::<fret_runtime::TextFontStackKey>(
-                        fret_runtime::TextFontStackKey(gfx.renderer.text_font_stack_key()),
                     );
                     self.request_sink_redraw(window);
                 }
