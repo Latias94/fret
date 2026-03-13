@@ -496,6 +496,10 @@ ID format:
     - no first-party runner/demo/facade call sites needed migration for that slice
     - that slice also surfaced `crates/fret-render-wgpu/src/svg_cache.rs` as a detached legacy
       helper path with no active first-party consumers
+    - `crates/fret-render-wgpu/src/svg_cache.rs` has now been retired from the backend compile
+      path
+    - `crates/fret-render-wgpu/src/svg.rs` now keeps only the internal fit-mode SVG raster
+      entrypoints that active renderer code still uses
 - [ ] RMFR-exports-061 Decide whether backend-only diagnostics stores belong in the stable default
   facade or under a more explicit backend namespace.
 - [ ] RMFR-exports-062 Confirm whether `WgpuContext` remains a stable convenience surface or should
@@ -520,11 +524,9 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: `crates/fret-render-wgpu/src/lib.rs` no longer re-exports
-    `ImageRegistry`, `RenderTargetRegistry`, `CachedSvgImage`, `SvgImageCache`,
-    `SvgRasterKind`, `SvgRenderer`, or `SMOOTH_SVG_SCALE_FACTOR` at the crate root, no
-    first-party call sites needed migration, and `svg_cache.rs` was exposed as a detached legacy
-    follow-up.
+  - Latest landed slice: `crates/fret-render-wgpu/src/svg_cache.rs` has been retired from the
+    backend compile path, and `crates/fret-render-wgpu/src/svg.rs` now keeps only the internal
+    fit-mode SVG raster entrypoints still used by active renderer code.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

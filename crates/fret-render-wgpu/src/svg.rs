@@ -5,7 +5,7 @@ use resvg::tiny_skia::{Pixmap, Transform};
 
 use crate::upload_counters::record_svg_upload;
 
-pub const SMOOTH_SVG_SCALE_FACTOR: f32 = 2.0;
+pub(crate) const SMOOTH_SVG_SCALE_FACTOR: f32 = 2.0;
 
 #[derive(Debug, Clone)]
 pub struct SvgAlphaMask {
@@ -33,7 +33,7 @@ pub struct UploadedRgbaImage {
 }
 
 #[derive(Clone)]
-pub struct SvgRenderer {
+pub(crate) struct SvgRenderer {
     usvg_options: Arc<usvg::Options<'static>>,
 }
 
@@ -83,7 +83,7 @@ fn render_scale(
 }
 
 impl SvgRenderer {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         static FONT_DB: LazyLock<Arc<usvg::fontdb::Database>> = LazyLock::new(|| {
             let mut db = usvg::fontdb::Database::new();
             db.load_system_fonts();
@@ -110,16 +110,7 @@ impl SvgRenderer {
         }
     }
 
-    pub fn render_alpha_mask_fit(
-        &self,
-        bytes: &[u8],
-        target_box_px: (u32, u32),
-        smooth_scale_factor: f32,
-    ) -> Result<SvgAlphaMask, usvg::Error> {
-        self.render_alpha_mask_fit_mode(bytes, target_box_px, smooth_scale_factor, SvgFit::Contain)
-    }
-
-    pub fn render_alpha_mask_fit_mode(
+    pub(crate) fn render_alpha_mask_fit_mode(
         &self,
         bytes: &[u8],
         target_box_px: (u32, u32),
@@ -146,24 +137,7 @@ impl SvgRenderer {
         })
     }
 
-    pub fn render_alpha_mask(
-        &self,
-        bytes: &[u8],
-        target_box_px: (u32, u32),
-    ) -> Result<SvgAlphaMask, usvg::Error> {
-        self.render_alpha_mask_fit(bytes, target_box_px, SMOOTH_SVG_SCALE_FACTOR)
-    }
-
-    pub fn render_rgba_fit(
-        &self,
-        bytes: &[u8],
-        target_box_px: (u32, u32),
-        smooth_scale_factor: f32,
-    ) -> Result<SvgRgbaImage, usvg::Error> {
-        self.render_rgba_fit_mode(bytes, target_box_px, smooth_scale_factor, SvgFit::Contain)
-    }
-
-    pub fn render_rgba_fit_mode(
+    pub(crate) fn render_rgba_fit_mode(
         &self,
         bytes: &[u8],
         target_box_px: (u32, u32),
@@ -202,14 +176,6 @@ impl SvgRenderer {
             size_px: (out_w, out_h),
             rgba,
         })
-    }
-
-    pub fn render_rgba(
-        &self,
-        bytes: &[u8],
-        target_box_px: (u32, u32),
-    ) -> Result<SvgRgbaImage, usvg::Error> {
-        self.render_rgba_fit(bytes, target_box_px, SMOOTH_SVG_SCALE_FACTOR)
     }
 }
 
@@ -372,7 +338,12 @@ mod tests {
 "#;
         let renderer = SvgRenderer::new();
         let mask = renderer
-            .render_alpha_mask(svg.as_bytes(), (32, 32))
+            .render_alpha_mask_fit_mode(
+                svg.as_bytes(),
+                (32, 32),
+                SMOOTH_SVG_SCALE_FACTOR,
+                SvgFit::Contain,
+            )
             .expect("render alpha mask");
 
         let (w, h) = mask.size_px;
@@ -392,7 +363,12 @@ mod tests {
 "##;
         let renderer = SvgRenderer::new();
         let img = renderer
-            .render_rgba(svg.as_bytes(), (32, 32))
+            .render_rgba_fit_mode(
+                svg.as_bytes(),
+                (32, 32),
+                SMOOTH_SVG_SCALE_FACTOR,
+                SvgFit::Contain,
+            )
             .expect("render rgba");
 
         let (w, h) = img.size_px;

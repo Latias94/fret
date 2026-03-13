@@ -484,6 +484,12 @@ Current snapshot (2026-03-13):
     those names were consumed outside `crates/fret-render-wgpu`
   - this slice also exposed `crates/fret-render-wgpu/src/svg_cache.rs` as a detached legacy path:
     it currently has no active first-party consumers and only surfaces as dead-code follow-up
+- The legacy SVG cache retirement slice has landed:
+  - `crates/fret-render-wgpu/src/svg_cache.rs` is no longer part of the backend compile path
+  - `crates/fret-render-wgpu/src/svg.rs` now keeps only the internal fit-mode renderer entrypoints
+    still used by active SVG raster flow
+  - the detached app-owned `SvgImageCache` path is now explicitly retired instead of silently
+    surviving as dead code
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
@@ -577,6 +583,12 @@ Current snapshot (2026-03-13):
   - `python3 tools/check_layering.py`: passed
   - residual note: `fret-render-wgpu` now reports dead-code warnings around the legacy
     `svg_cache.rs` helper path, confirming it is no longer on an active first-party route
+- Legacy SVG cache retirement verification is green after removing `svg_cache.rs` from the compile
+  path:
+  - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+  - `fret-render-wgpu` no longer emits dead-code warnings for the retired `svg_cache.rs` path
 - The strongest current risks are:
   - wildcard facade exports,
   - oversized backend public surface,

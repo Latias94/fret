@@ -46,8 +46,10 @@ Evidence anchors:
   - Files: `crates/fret-render-wgpu/src/renderer/*`
 - `text/` — shaping + wrapping + fallback policy and glyph/cache management
   - Files: `crates/fret-render-wgpu/src/text/mod.rs`, `crates/fret-render-text/src/wrapper.rs`, `crates/fret-render-text/src/parley_shaper.rs`
-- `svg*` — SVG rasterization and caches
-  - Files: `crates/fret-render-wgpu/src/svg.rs`, `crates/fret-render-wgpu/src/svg_cache.rs`, `crates/fret-render-wgpu/src/svg_cache/*` (if present)
+- `svg*` — SVG rasterization and renderer-owned raster flow
+  - Files: `crates/fret-render-wgpu/src/svg.rs`, `crates/fret-render-wgpu/src/renderer/svg/*`
+  - Note: the detached legacy helper `crates/fret-render-wgpu/src/svg_cache.rs` was retired on
+    2026-03-13 after its backend-root exports and compile-path usage both dropped to zero.
 - `surface/targets/images` — surface/config, render targets, image upload/storage
   - Files: `crates/fret-render-wgpu/src/surface.rs`, `crates/fret-render-wgpu/src/targets.rs`, `crates/fret-render-wgpu/src/images.rs`
 

@@ -15,7 +15,6 @@ mod perf_store;
 mod renderer;
 mod surface;
 mod svg;
-mod svg_cache;
 mod targets;
 mod text;
 mod upload_counters;
