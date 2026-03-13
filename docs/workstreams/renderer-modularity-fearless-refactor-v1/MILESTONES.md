@@ -396,6 +396,14 @@ Current snapshot (2026-03-13):
     shader family inline
   - `crates/fret-render-wgpu/src/renderer/tests.rs` now validates the `backdrop_warp_image`
     shader variants explicitly during WGSL parse and WebGPU validation coverage
+- The ninety-first renderer shader split has landed:
+  - the `COMPOSITE_PREMUL` WGSL sources now live under
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/{composite_premul,composite_premul_mask}.wgsl`
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts the `COMPOSITE_PREMUL`
+    shader pair inline
+  - the existing WGSL parse/WebGPU validation coverage in
+    `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover that shader pair without
+    test-surface changes
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
@@ -412,6 +420,12 @@ Current snapshot (2026-03-13):
   - `python3 tools/report_largest_files.py --top 30 --min-lines 800`: `renderer/shaders.rs`
     dropped from 5986 lines to 4934 lines and no longer appears in the top-30 oversized file
     report
+- Renderer shader split verification is green after the `COMPOSITE_PREMUL` externalization:
+  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+  - `python3 tools/report_largest_files.py --top 30 --min-lines 800`: `renderer/shaders.rs`
+    dropped from 4934 lines to 4350 lines while staying out of the top-30 oversized file report
 - The strongest current risks are:
   - wildcard facade exports,
   - oversized backend public surface,
