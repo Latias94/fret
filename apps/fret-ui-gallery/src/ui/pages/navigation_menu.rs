@@ -12,7 +12,7 @@ pub(super) fn preview_navigation_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
 
     let notes = doc_layout::notes_block([
-        "Navigation Menu already exposes a shadcn-friendly builder surface, so the remaining drift is mainly public-surface/docs parity rather than mechanism coverage.",
+        "`navigation_menu(cx, model, |cx| ..)` is now the default first-party root helper, while `NavigationMenu::new(model)` remains available when callers want the explicit root builder seam.",
         "Top-level docs-style links now map to a contentless `NavigationMenuItem` with `href` / `target` / `rel`; trigger chrome stays recipe-owned instead of leaking page-level classes into the component default.",
         "`navigation_menu_trigger_style()` intentionally stays a typed layout helper; hover/open chrome remains recipe-owned, while `w-full` / `min-w-0` / width negotiation remain caller-owned.",
         "Container query toggle is a Fret-specific extra used to audit viewport-vs-container breakpoint behavior.",
@@ -31,7 +31,7 @@ pub(super) fn preview_navigation_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .code_rust_from_file_region(snippets::docs_demo::SOURCE, "example"),
             DocSection::new("Usage", usage)
                 .title_test_id("ui-gallery-section-usage-title")
-                .description("Copyable shadcn-style builder usage for Navigation Menu.")
+                .description("Copyable `navigation_menu(...)` usage for Navigation Menu.")
                 .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Link Component", link_component)
                 .description(

@@ -1,28 +1,26 @@
 pub const SOURCE: &str = include_str!("size.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     ui::h_row(|cx| {
         vec![
-            shadcn::Toggle::uncontrolled(false)
+            shadcn::toggle_uncontrolled(cx, false, |cx| ui::children![cx; ui::text("Small")])
                 .variant(shadcn::ToggleVariant::Outline)
                 .size(shadcn::ToggleSize::Sm)
                 .a11y_label("Toggle small")
-                .label("Small")
                 .into_element(cx),
-            shadcn::Toggle::uncontrolled(false)
+            shadcn::toggle_uncontrolled(cx, false, |cx| ui::children![cx; ui::text("Default")])
                 .variant(shadcn::ToggleVariant::Outline)
                 .size(shadcn::ToggleSize::Default)
                 .a11y_label("Toggle default")
-                .label("Default")
                 .into_element(cx),
-            shadcn::Toggle::uncontrolled(false)
+            shadcn::toggle_uncontrolled(cx, false, |cx| ui::children![cx; ui::text("Large")])
                 .variant(shadcn::ToggleVariant::Outline)
                 .size(shadcn::ToggleSize::Lg)
                 .a11y_label("Toggle large")
-                .label("Large")
                 .into_element(cx),
         ]
     })

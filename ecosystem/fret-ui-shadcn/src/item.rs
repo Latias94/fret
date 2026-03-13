@@ -46,14 +46,14 @@ pub fn item_sized<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     size: ItemSize,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+) -> Item
 where
     I: IntoIterator<Item = AnyElement>,
 {
     let children = with_item_size_provider(cx, size, |cx| {
         f(cx).into_iter().collect::<Vec<AnyElement>>()
     });
-    Item::new(children).size(size).into_element(cx)
+    Item::new(children).size(size)
 }
 
 #[derive(Debug, Clone)]
@@ -250,8 +250,8 @@ impl ItemGroup {
 pub fn item_group<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
-    ItemGroup::new(f(cx)).into_element(cx)
+) -> ItemGroup {
+    ItemGroup::new(f(cx))
 }
 
 #[derive(Debug, Clone)]
@@ -1297,6 +1297,7 @@ mod tests {
                     .test_id("content");
                 [media, content]
             })
+            .into_element(cx)
         });
 
         let media = find_element_by_test_id(&element, "media").expect("media element");

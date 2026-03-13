@@ -674,7 +674,8 @@ impl WebPreviewNavigationButton {
         );
 
         let trigger = TooltipTrigger::new(button).into_element(cx);
-        let content = TooltipContent::new([TooltipContent::text(cx, tooltip)]).into_element(cx);
+        let content =
+            TooltipContent::build(cx, |_cx| [TooltipContent::text(tooltip)]).into_element(cx);
         Tooltip::new(cx, trigger, content).into_element(cx)
     }
 }

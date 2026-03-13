@@ -15,8 +15,8 @@ pub(super) fn preview_toggle(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let label = snippets::label::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "`Toggle::uncontrolled(false)` mirrors the upstream `<Toggle />` quick-start path; `variant(...)`, `size(...)`, `disabled(...)`, and `a11y_label(...)` cover the documented control surface.",
-        "`children([...])` is the source-aligned Fret equivalent of upstream child content, while `label(...)` remains the ergonomic shortcut for the common icon-plus-text case.",
+        "`toggle_uncontrolled(cx, false, |cx| ..)` and `toggle(cx, model, |cx| ..)` are the default first-party entry points; `variant(...)`, `size(...)`, `disabled(...)`, and `a11y_label(...)` cover the documented control surface.",
+        "`children([...])` is the source-aligned Fret equivalent of upstream child content, while `leading_icon(...)` and `label(...)` remain compact shortcuts when you do not want to spell the child row manually.",
         "Toggle chrome, size presets, horizontal padding, and pressed-state colors remain recipe-owned because the upstream component source defines those defaults on the component itself.",
         "Surrounding toolbar layout, wrapping behavior, and label-to-control wiring remain caller-owned composition choices.",
         "No extra generic `asChild` / `compose()` surface is needed here: `children([...])` already covers the composable content story without widening the primitive contract.",
@@ -25,6 +25,42 @@ pub(super) fn preview_toggle(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .no_shell()
         .test_id_prefix("ui-gallery-toggle-api-reference")
         .description("Public surface summary and ownership notes.");
+    let demo = DocSection::build(cx, "Demo", demo)
+        .description("Default demo matching the upstream top-of-page preview.")
+        .test_id_prefix("ui-gallery-toggle-demo")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .description(
+            "Copyable minimal usage for `Toggle` using the builder-preserving helper family.",
+        )
+        .test_id_prefix("ui-gallery-toggle-usage")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let outline = DocSection::build(cx, "Outline", outline)
+        .description("Use `variant = outline` for stronger boundaries in dense toolbars.")
+        .test_id_prefix("ui-gallery-toggle-outline")
+        .code_rust_from_file_region(snippets::outline::SOURCE, "example");
+    let with_text = DocSection::build(cx, "With Text", with_text)
+        .description("Default variant with icon + text content.")
+        .test_id_prefix("ui-gallery-toggle-with-text")
+        .code_rust_from_file_region(snippets::with_text::SOURCE, "example");
+    let size = DocSection::build(cx, "Size", size)
+        .description("Size presets: `sm`, `default`, and `lg`.")
+        .test_id_prefix("ui-gallery-toggle-size")
+        .code_rust_from_file_region(snippets::size::SOURCE, "example");
+    let disabled = DocSection::build(cx, "Disabled", disabled)
+        .description("Disabled toggles stay readable while blocking interaction.")
+        .test_id_prefix("ui-gallery-toggle-disabled")
+        .code_rust_from_file_region(snippets::disabled::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .description("Toggle content order and alignment under RTL.")
+        .test_id_prefix("ui-gallery-toggle-rtl")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+    let label = DocSection::build(cx, "Label Association", label)
+        .description(
+            "Use `FieldLabel::for_control` plus `Toggle::control_id` when you want an explicit Fret label-click example outside the upstream docs path.",
+        )
+        .test_id_prefix("ui-gallery-toggle-label")
+        .code_rust_from_file_region(snippets::label::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -32,40 +68,14 @@ pub(super) fn preview_toggle(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             "Preview mirrors the shadcn Toggle docs path first: Demo, Usage, Outline, With Text, Size, Disabled, RTL, then keeps `Label Association` and `API Reference` as focused Fret follow-ups.",
         ),
         vec![
-            DocSection::new("Demo", demo)
-                .description("Default demo matching the upstream top-of-page preview.")
-                .test_id_prefix("ui-gallery-toggle-demo")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .description("Copyable minimal usage for `Toggle` using child content.")
-                .test_id_prefix("ui-gallery-toggle-usage")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Outline", outline)
-                .description("Use `variant = outline` for stronger boundaries in dense toolbars.")
-                .test_id_prefix("ui-gallery-toggle-outline")
-                .code_rust_from_file_region(snippets::outline::SOURCE, "example"),
-            DocSection::new("With Text", with_text)
-                .description("Default variant with icon + text content.")
-                .test_id_prefix("ui-gallery-toggle-with-text")
-                .code_rust_from_file_region(snippets::with_text::SOURCE, "example"),
-            DocSection::new("Size", size)
-                .description("Size presets: `sm`, `default`, and `lg`.")
-                .test_id_prefix("ui-gallery-toggle-size")
-                .code_rust_from_file_region(snippets::size::SOURCE, "example"),
-            DocSection::new("Disabled", disabled)
-                .description("Disabled toggles stay readable while blocking interaction.")
-                .test_id_prefix("ui-gallery-toggle-disabled")
-                .code_rust_from_file_region(snippets::disabled::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .description("Toggle content order and alignment under RTL.")
-                .test_id_prefix("ui-gallery-toggle-rtl")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Label Association", label)
-                .description(
-                    "Use `FieldLabel::for_control` plus `Toggle::control_id` when you want an explicit Fret label-click example outside the upstream docs path.",
-                )
-                .test_id_prefix("ui-gallery-toggle-label")
-                .code_rust_from_file_region(snippets::label::SOURCE, "example"),
+            demo,
+            usage,
+            outline,
+            with_text,
+            size,
+            disabled,
+            rtl,
+            label,
             api_reference,
         ],
     );

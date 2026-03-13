@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    shadcn::Toggle::uncontrolled(false)
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    shadcn::toggle_uncontrolled(cx, false, |cx| ui::children![cx; ui::text("Toggle")])
         .a11y_label("Toggle formatting")
-        .children([ui::text("Toggle").into_element(cx)])
         .into_element(cx)
         .test_id("ui-gallery-toggle-usage")
 }

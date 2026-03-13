@@ -29,10 +29,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .children([info_icon(cx)])
                     .test_id("ui-gallery-input-group-tooltip-password-info")
                     .into_element(cx);
-                let content = shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
-                    cx,
-                    "Password must be at least 8 characters",
-                )]);
+                let content = shadcn::TooltipContent::build(cx, |_cx| {
+                    [shadcn::TooltipContent::text(
+                        "Password must be at least 8 characters",
+                    )]
+                });
 
                 shadcn::Tooltip::new(cx, button, content)
                     .arrow(true)
@@ -51,10 +52,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     )])
                     .test_id("ui-gallery-input-group-tooltip-email-help")
                     .into_element(cx);
-                let content = shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
-                    cx,
-                    "We'll use this to send you notifications",
-                )]);
+                let content = shadcn::TooltipContent::build(cx, |_cx| {
+                    [shadcn::TooltipContent::text(
+                        "We'll use this to send you notifications",
+                    )]
+                });
 
                 shadcn::Tooltip::new(cx, button, content)
                     .arrow(true)
@@ -73,10 +75,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     )])
                     .test_id("ui-gallery-input-group-tooltip-api-key-help")
                     .into_element(cx);
-                let content = shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
-                    cx,
-                    "Click for help with API keys",
-                )]);
+                let content = shadcn::TooltipContent::build(cx, |_cx| {
+                    [shadcn::TooltipContent::text("Click for help with API keys")]
+                });
 
                 shadcn::Tooltip::new(cx, button, content)
                     .arrow(true)

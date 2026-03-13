@@ -1,19 +1,13 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    shadcn::Accordion::single_uncontrolled(Some("item-1"))
-        .collapsible(true)
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .min_w_0()
-                .max_w(Px(640.0)),
-        )
-        .items([
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    shadcn::accordion_single_uncontrolled(cx, Some("item-1"), |cx| {
+        [
             shadcn::AccordionItem::new(
                 "item-1",
                 shadcn::AccordionTrigger::new(vec![cx.text("Product Information")]),
@@ -62,7 +56,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .test_id("ui-gallery-accordion-demo-returns-content"),
             )
             .test_id("ui-gallery-accordion-demo-returns-item"),
-        ])
+        ]
+    })
+        .collapsible(true)
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .min_w_0()
+                .max_w(Px(640.0)),
+        )
         .into_element(cx)
         .test_id("ui-gallery-accordion-demo")
 }

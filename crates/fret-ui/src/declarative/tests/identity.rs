@@ -18,9 +18,7 @@ fn bump_callsite_scoped_counter<H: crate::UiHost>(cx: &mut crate::ElementContext
     })
 }
 
-fn two_root_scoped_counters<H: crate::UiHost>(
-    cx: &mut crate::ElementContext<'_, H>,
-) -> (u32, u32) {
+fn two_root_scoped_counters<H: crate::UiHost>(cx: &mut crate::ElementContext<'_, H>) -> (u32, u32) {
     let a = bump_root_scoped_counter(cx);
     let b = bump_root_scoped_counter(cx);
     (a, b)

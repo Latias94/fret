@@ -205,32 +205,31 @@ impl Marquee {
 
                         let frame = cx.frame_id.0;
                         let dt = motion::effective_frame_delta_for_cx(cx);
-                        let phase =
-                            cx.state_for(marquee_id, MarqueePhaseState::default, |st| {
-                                if st.last_frame == 0 {
-                                    st.last_frame = frame;
-                                    if animating {
-                                        st.phase_px += dt.as_secs_f32() * speed_px_per_sec;
-                                    }
-                                    return st.phase_px;
-                                }
-                                if st.last_frame == frame {
-                                    return st.phase_px;
-                                }
+                        let phase = cx.state_for(marquee_id, MarqueePhaseState::default, |st| {
+                            if st.last_frame == 0 {
                                 st.last_frame = frame;
-
-                                if speed_px_per_sec.abs() <= 0.0 {
-                                    st.phase_px = 0.0;
-                                    return st.phase_px;
+                                if animating {
+                                    st.phase_px += dt.as_secs_f32() * speed_px_per_sec;
                                 }
+                                return st.phase_px;
+                            }
+                            if st.last_frame == frame {
+                                return st.phase_px;
+                            }
+                            st.last_frame = frame;
 
-                                if paused {
-                                    return st.phase_px;
-                                }
+                            if speed_px_per_sec.abs() <= 0.0 {
+                                st.phase_px = 0.0;
+                                return st.phase_px;
+                            }
 
-                                st.phase_px += dt.as_secs_f32() * speed_px_per_sec;
-                                st.phase_px
-                            });
+                            if paused {
+                                return st.phase_px;
+                            }
+
+                            st.phase_px += dt.as_secs_f32() * speed_px_per_sec;
+                            st.phase_px
+                        });
 
                         let translate_x = if speed_px_per_sec.abs() > 0.0 {
                             let cycle = base_cycle_width_px.0.max(0.0) + track_gap_px.0.max(0.0);

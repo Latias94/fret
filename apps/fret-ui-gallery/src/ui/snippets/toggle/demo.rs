@@ -1,19 +1,24 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     ui::h_row(|cx| {
         vec![
-            shadcn::Toggle::uncontrolled(false)
-                .variant(shadcn::ToggleVariant::Outline)
-                .size(shadcn::ToggleSize::Sm)
-                .a11y_label("Toggle bookmark")
-                .leading_icon(IconId::new_static("lucide.bookmark"))
-                .label("Bookmark")
-                .into_element(cx)
-                .test_id("ui-gallery-toggle-demo-bookmark"),
+            shadcn::toggle_uncontrolled(cx, false, |cx| {
+                ui::children![
+                    cx;
+                    shadcn::raw::icon::icon(cx, IconId::new_static("lucide.bookmark")),
+                    ui::text("Bookmark")
+                ]
+            })
+            .variant(shadcn::ToggleVariant::Outline)
+            .size(shadcn::ToggleSize::Sm)
+            .a11y_label("Toggle bookmark")
+            .into_element(cx)
+            .test_id("ui-gallery-toggle-demo-bookmark"),
         ]
     })
     .gap(Space::N2)

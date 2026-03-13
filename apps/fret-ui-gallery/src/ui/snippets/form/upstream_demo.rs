@@ -295,16 +295,17 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let notify_field = shadcn::FormField::new(
         form_state.clone(),
         "type",
-        [shadcn::RadioGroup::new(notify_type.clone())
-            .a11y_label("Notify type")
-            .refine_layout(LayoutRefinement::default().w_full().min_w_0())
-            .item(shadcn::RadioGroupItem::new("all", "All new messages"))
-            .item(shadcn::RadioGroupItem::new(
-                "mentions",
-                "Direct messages and mentions",
-            ))
-            .item(shadcn::RadioGroupItem::new("none", "Nothing"))
-            .into_element(cx)],
+        [shadcn::radio_group(
+            notify_type.clone(),
+            vec![
+                shadcn::RadioGroupItem::new("all", "All new messages"),
+                shadcn::RadioGroupItem::new("mentions", "Direct messages and mentions"),
+                shadcn::RadioGroupItem::new("none", "Nothing"),
+            ],
+        )
+        .a11y_label("Notify type")
+        .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx)],
     )
     .label("Notify me about...")
     .into_element(cx)

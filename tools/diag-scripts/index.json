@@ -5295,9 +5295,7 @@
       "path": "tools/diag-scripts/ui-gallery/dropdown/ui-gallery-dropdown-open-select.json",
       "required_capabilities": [],
       "suite_memberships": [
-        "perf-ui-gallery",
-        "ui-gallery",
-        "ui-gallery-shadcn-conformance"
+        "perf-ui-gallery"
       ],
       "tags": [],
       "target_hints": []
@@ -5309,17 +5307,6 @@
       "suite_memberships": [
         "perf-ui-gallery-steady",
         "ui-gallery-overlay-steady"
-      ],
-      "tags": [],
-      "target_hints": []
-    },
-    {
-      "id": "ui-gallery-dropdown-submenu-underlay-dismiss",
-      "path": "tools/diag-scripts/ui-gallery/dropdown/ui-gallery-dropdown-submenu-underlay-dismiss.json",
-      "required_capabilities": [],
-      "suite_memberships": [
-        "ui-gallery",
-        "ui-gallery-shadcn-conformance"
       ],
       "tags": [],
       "target_hints": []

@@ -53,12 +53,10 @@ fn build_tooltip_demo(
         .into_element(cx);
     trigger.set(Some(trigger_el.id));
 
-    let content_el =
-        fret_ui_shadcn::TooltipContent::new(vec![fret_ui_shadcn::TooltipContent::text(
-            cx,
-            "Add to library",
-        )])
-        .into_element(cx);
+    let content_el = fret_ui_shadcn::TooltipContent::build(cx, |_cx| {
+        [fret_ui_shadcn::TooltipContent::text("Add to library")]
+    })
+    .into_element(cx);
 
     fret_ui_shadcn::Tooltip::new(cx, trigger_el, content_el)
         .open_delay_frames(0)

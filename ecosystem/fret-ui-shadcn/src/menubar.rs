@@ -4253,16 +4253,6 @@ impl MenubarMenuEntries {
     }
 }
 
-pub fn menubar<H: UiHost, I>(
-    cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
-where
-    I: IntoIterator<Item = MenubarMenuEntries>,
-{
-    Menubar::new(f(cx)).into_element(cx)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -4767,21 +4757,20 @@ mod tests {
 
                 vec![
                     underlay,
-                    menubar(cx, |_cx| {
-                        vec![
-                            MenubarMenu::new("File").entries(vec![
-                                MenubarEntry::Item(MenubarItem::new("New")),
-                                MenubarEntry::Separator,
-                                MenubarEntry::Item(MenubarItem::new("Open")),
-                                MenubarEntry::Item(MenubarItem::new("Exit")),
-                            ]),
-                            MenubarMenu::new("Edit").entries(vec![
-                                MenubarEntry::Item(MenubarItem::new("Undo")),
-                                MenubarEntry::Separator,
-                                MenubarEntry::Item(MenubarItem::new("Redo")),
-                            ]),
-                        ]
-                    }),
+                    Menubar::new(vec![
+                        MenubarMenu::new("File").entries(vec![
+                            MenubarEntry::Item(MenubarItem::new("New")),
+                            MenubarEntry::Separator,
+                            MenubarEntry::Item(MenubarItem::new("Open")),
+                            MenubarEntry::Item(MenubarItem::new("Exit")),
+                        ]),
+                        MenubarMenu::new("Edit").entries(vec![
+                            MenubarEntry::Item(MenubarItem::new("Undo")),
+                            MenubarEntry::Separator,
+                            MenubarEntry::Item(MenubarItem::new("Redo")),
+                        ]),
+                    ])
+                    .into_element(cx),
                 ]
             },
         );
@@ -4877,8 +4866,8 @@ mod tests {
             bounds,
             "menubar-submenu",
             |cx| {
-                vec![menubar(cx, |_cx| {
-                    vec![
+                vec![
+                    Menubar::new(vec![
                         MenubarMenu::new("File").entries(vec![
                             MenubarEntry::Item(MenubarItem::new("New")),
                             MenubarEntry::Submenu(MenubarItem::new("More").submenu(vec![
@@ -4889,8 +4878,9 @@ mod tests {
                         ]),
                         MenubarMenu::new("Edit")
                             .entries(vec![MenubarEntry::Item(MenubarItem::new("Undo"))]),
-                    ]
-                })]
+                    ])
+                    .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -4943,20 +4933,19 @@ mod tests {
 
                 vec![
                     underlay,
-                    menubar(cx, |_cx| {
-                        vec![
-                            MenubarMenu::new("File").entries(vec![
-                                MenubarEntry::Item(MenubarItem::new("New")),
-                                MenubarEntry::Submenu(MenubarItem::new("More").submenu(vec![
-                                    MenubarEntry::Item(MenubarItem::new("Sub Alpha")),
-                                    MenubarEntry::Item(MenubarItem::new("Sub Beta")),
-                                ])),
-                                MenubarEntry::Item(MenubarItem::new("Exit")),
-                            ]),
-                            MenubarMenu::new("Edit")
-                                .entries(vec![MenubarEntry::Item(MenubarItem::new("Undo"))]),
-                        ]
-                    }),
+                    Menubar::new(vec![
+                        MenubarMenu::new("File").entries(vec![
+                            MenubarEntry::Item(MenubarItem::new("New")),
+                            MenubarEntry::Submenu(MenubarItem::new("More").submenu(vec![
+                                MenubarEntry::Item(MenubarItem::new("Sub Alpha")),
+                                MenubarEntry::Item(MenubarItem::new("Sub Beta")),
+                            ])),
+                            MenubarEntry::Item(MenubarItem::new("Exit")),
+                        ]),
+                        MenubarMenu::new("Edit")
+                            .entries(vec![MenubarEntry::Item(MenubarItem::new("Undo"))]),
+                    ])
+                    .into_element(cx),
                 ]
             },
         );

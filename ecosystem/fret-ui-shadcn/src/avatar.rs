@@ -80,12 +80,12 @@ pub fn avatar_sized<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     size: AvatarSize,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+) -> Avatar
 where
     I: IntoIterator<Item = AnyElement>,
 {
     let children = with_avatar_size_provider(cx, size, |cx| f(cx).into_iter().collect::<Vec<_>>());
-    Avatar::new(children).size(size).into_element(cx)
+    Avatar::new(children).size(size)
 }
 
 /// shadcn/ui `Avatar` root.

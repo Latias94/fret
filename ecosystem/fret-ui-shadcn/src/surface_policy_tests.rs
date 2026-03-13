@@ -860,7 +860,7 @@ fn tooltip_root_promotes_typed_new_and_keeps_raw_root_seams_explicit() {
 fn tooltip_content_helpers_prefer_typed_build_and_text_outputs_when_slot_scope_is_required() {
     let normalized = normalize_ws(TOOLTIP_RS);
     let required_markers = [
-        "pub fn build<H: UiHost, I, F, T>( cx: &mut ElementContext<'_, H>, f: F, ) -> Self where F: FnOnce(&mut ElementContext<'_, H>) -> I, I: IntoIterator<Item = T>, T: IntoUiElement<H>,",
+        "pub fn build<H: UiHost, I, F, T>( cx: &mut ElementContext<'_, H>, f: F ) -> Self where F: FnOnce(&mut ElementContext<'_, H>) -> I, I: IntoIterator<Item = T>, T: IntoUiElement<H>,",
         "pub fn text<H: UiHost, T>(text: T) -> impl IntoUiElement<H> + use<H, T> where T: Into<Arc<str>>,",
     ];
     let forbidden_markers = [
@@ -1153,34 +1153,31 @@ fn kbd_icon_stays_an_explicit_raw_helper_for_kbd_child_lists() {
 }
 
 #[test]
-fn combobox_anchor_stays_an_explicit_raw_wrapper_until_anchor_storage_is_typed() {
+fn combobox_surface_uses_generic_popover_anchor_builder_not_combobox_specific_raw_alias() {
+    let combobox_normalized = normalize_ws(COMBOBOX_RS);
+    let popover_normalized = normalize_ws(POPOVER_RS);
+    let alias_marker =
+        normalize_ws("pub fn use_combobox_anchor(child: AnyElement) -> PopoverAnchor");
+
     assert!(
-        COMBOBOX_RS.contains(
-            "This intentionally stays raw because `PopoverAnchor::new(...)` stores a concrete landed child."
-        ),
-        "combobox.rs should keep the raw `use_combobox_anchor(...)` seam explicitly documented"
+        !combobox_normalized.contains(&alias_marker),
+        "combobox.rs should not reintroduce a combobox-specific raw anchor alias now that `PopoverAnchor::build(...)` exists"
+    );
+    assert!(
+        !LIB_RS.contains("use_combobox_anchor"),
+        "lib.rs should not re-export the removed combobox-specific anchor alias"
     );
 
-    let normalized = normalize_ws(COMBOBOX_RS);
-    let required_markers = ["pub fn use_combobox_anchor(child: AnyElement) -> PopoverAnchor"];
-    let forbidden_markers = [
-        "pub fn use_combobox_anchor<H: UiHost>(cx: &mut ElementContext<'_, H>, child: impl IntoUiElement<H>) -> PopoverAnchor",
-        "pub fn use_combobox_anchor<H: UiHost, T>(cx: &mut ElementContext<'_, H>, child: T) -> PopoverAnchor where T: IntoUiElement<H>",
-        "pub fn use_combobox_anchor(child: impl IntoUiElement<_>) -> PopoverAnchor",
+    let required_markers = [
+        "pub fn build<H: UiHost, T>(child: T) -> PopoverAnchorBuild<H, T> where T: IntoUiElement<H>",
+        "pub fn into_anchor(self, cx: &mut ElementContext<'_, H>) -> PopoverAnchor",
     ];
 
     for marker in required_markers {
         let marker = normalize_ws(marker);
         assert!(
-            normalized.contains(&marker),
-            "combobox.rs should keep the raw `use_combobox_anchor(...)` signature explicit"
-        );
-    }
-    for marker in forbidden_markers {
-        let marker = normalize_ws(marker);
-        assert!(
-            !normalized.contains(&marker),
-            "combobox.rs should not pretend the anchor wrapper is typed while `PopoverAnchor::new(...)` still owns a raw landed child"
+            popover_normalized.contains(&marker),
+            "popover.rs should keep the generic builder-first anchor path available for combobox-style anchor overrides"
         );
     }
 }
@@ -1222,6 +1219,13 @@ fn explicit_raw_or_bridge_public_anyelement_helpers_stay_small_and_reviewable() 
 
 #[test]
 fn text_edit_context_menu_helpers_keep_landing_seam_explicit_but_accept_typed_triggers() {
+    assert!(
+        TEXT_EDIT_CONTEXT_MENU_RS.contains(
+            "This intentionally stays `-> AnyElement` because `ContextMenu::build(...)` is itself the final"
+        ),
+        "text_edit_context_menu.rs should explicitly document that the family keeps `-> AnyElement` as a deliberate final wrapper seam"
+    );
+
     let normalized = normalize_ws(TEXT_EDIT_CONTEXT_MENU_RS);
     let required_markers = [
         "pub fn text_edit_context_menu<H: UiHost, TTrigger>( cx: &mut ElementContext<'_, H>, open: Model<bool>, trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger, ) -> AnyElement where TTrigger: IntoUiElement<H>,",

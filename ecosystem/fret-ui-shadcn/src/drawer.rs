@@ -1701,15 +1701,6 @@ impl DrawerClose {
     }
 }
 
-pub fn drawer<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    open: Model<bool>,
-    trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
-    content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
-) -> AnyElement {
-    Drawer::new(open).into_element(cx, trigger, content)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

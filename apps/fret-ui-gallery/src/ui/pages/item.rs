@@ -26,7 +26,7 @@ pub(super) fn preview_item(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     );
 
     let api_reference = doc_layout::notes_block([
-        "`Item::new([...])` plus `ItemMedia`, `ItemContent`, `ItemTitle`, `ItemDescription`, `ItemActions`, `ItemGroup`, and `ItemHeader` matches the upstream slot model directly.",
+        "`Item::new([...])` plus `ItemMedia`, `ItemContent`, `ItemTitle`, `ItemDescription`, `ItemActions`, `ItemGroup`, and `ItemHeader` matches the upstream slot model directly, while `item_sized(...)` and `item_group(...)` are the preferred thin helpers on first-party teaching surfaces.",
         "`ItemRender::Link` is the Fret equivalent of the upstream `render={<a ... />}` pattern and keeps link semantics on the pressable root rather than burying them in a nested child.",
         "Intrinsic item chrome, slot spacing, and size presets remain recipe-owned because the upstream component source defines those defaults on the item itself.",
         "Caller-owned layout stays explicit for `max-w-*`, grid placement, page columns, and broader list composition. The recipe should not absorb those negotiation rules.",
@@ -61,7 +61,7 @@ pub(super) fn preview_item(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .no_shell()
                 .code_rust_from_file_region(snippets::variants::SOURCE, "example"),
             DocSection::new("Size", size)
-                .description("`default`, `sm`, and `xs` item sizing.")
+                .description("`default`, `sm`, and `xs` item sizing; the size-scoped gallery lane uses `item_sized(...)`.")
                 .no_shell()
                 .code_rust_from_file_region(snippets::size::SOURCE, "example"),
             DocSection::new("Icon", icon)
@@ -74,6 +74,7 @@ pub(super) fn preview_item(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .no_shell()
                 .code_rust_from_file_region(snippets::image::SOURCE, "example"),
             DocSection::new("Group", group)
+                .description("Grouped item rows using the thin `item_group(...)` helper.")
                 .no_shell()
                 .code_rust_from_file_region(snippets::group::SOURCE, "example"),
             DocSection::new("Header", header)

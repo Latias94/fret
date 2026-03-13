@@ -11,7 +11,8 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{
-    ColorFallback, ColorRef, LayoutRefinement, MetricRef, Space, WidgetStateProperty, WidgetStates,
+    ColorFallback, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, Space,
+    WidgetStateProperty, WidgetStates,
 };
 
 use fret_ui_shadcn::button::ButtonStyle;
@@ -2004,8 +2005,8 @@ impl PromptInputButton {
             return trigger;
         };
 
-        let content = TooltipContent::with(cx, |cx| {
-            let text = TooltipContent::text(cx, tooltip.content.clone());
+        let content = TooltipContent::build(cx, |cx| {
+            let text = TooltipContent::text(tooltip.content.clone()).into_element(cx);
             if let Some(shortcut) = tooltip.shortcut.clone() {
                 let kbd = Kbd::new(shortcut).into_element(cx);
                 vec![

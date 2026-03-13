@@ -25,8 +25,9 @@
 //! `accordion_multiple(...)`, `accordion_multiple_uncontrolled(...)`, `separator`,
 //! `toggle_group_single(...)`, `toggle_group_single_uncontrolled(...)`,
 //! `toggle_group_multiple(...)`, `toggle_group_multiple_uncontrolled(...)`, `input_group`,
-//! `input_otp`, `resizable_panel_group(...)`, `navigation_menu(...)`,
-//! `navigation_menu_uncontrolled(...)`, `command`, the `card(...)` /
+//! `input_otp`, `avatar_sized(...)`, `item_sized(...)`, `item_group(...)`,
+//! `scroll_area(...)`, `resizable_panel_group(...)`, `navigation_menu(...)`,
+//! `navigation_menu_uncontrolled(...)`, `native_select(...)`, `command`, the `card(...)` /
 //! `card_header(...)` / `card_content(...)` wrapper family, and the
 //! `table(...)` / `table_header(...)` / `table_body(...)` / `table_row(...)` helper family,
 //! `field_set(...)` / `field_group(...)` for grouped form authoring, and the
@@ -36,8 +37,9 @@
 //! `radio_group_uncontrolled(...)` returning a typed `RadioGroup` so fluent configuration stays
 //! open until the explicit landing seam).
 //! Remaining raw escape hatches are intentionally rare and explicitly documented where the
-//! underlying storage still owns a concrete landed child (for example `kbd_icon(...)` and
-//! `use_combobox_anchor(...)`).
+//! underlying storage still owns a concrete landed child (for example `kbd_icon(...)`), while
+//! overlay/controller helpers keep their final landing seams explicit only where wrapper assembly
+//! truly requires it (for example `text_edit_context_menu(...)`).
 //!
 //! ## Feature flags
 //!
@@ -214,7 +216,7 @@ pub use combobox::{
     Combobox, ComboboxChip, ComboboxChipsInput, ComboboxCollection, ComboboxContent,
     ComboboxContentPart, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel,
     ComboboxList, ComboboxPart, ComboboxSeparator, ComboboxTrigger, ComboboxTriggerVariant,
-    ComboboxValue, use_combobox_anchor,
+    ComboboxValue,
 };
 pub use combobox_chips::{ComboboxChips, ComboboxChipsPart};
 pub use command::{
@@ -264,7 +266,7 @@ pub use direction::{DirectionProvider, LayoutDirection, use_direction, with_dire
 pub use drawer::{
     Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerDirection, DrawerFooter,
     DrawerHeader, DrawerOverlay, DrawerPortal, DrawerSide, DrawerSnapPoint, DrawerTitle,
-    DrawerTrigger, drawer,
+    DrawerTrigger,
 };
 pub use dropdown_menu::{
     DropdownMenu, DropdownMenuAlign, DropdownMenuCheckboxItem, DropdownMenuContent,
@@ -303,6 +305,7 @@ pub use input_otp::{
 pub use item::{
     Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemHeader, ItemMedia,
     ItemMediaVariant, ItemRender, ItemSeparator, ItemSize, ItemTitle, ItemVariant, item_group,
+    item_sized,
 };
 pub use kbd::{Kbd, KbdGroup};
 pub use label::Label;
@@ -310,7 +313,7 @@ pub use menubar::{
     Menubar, MenubarCheckboxItem, MenubarContent, MenubarEntry, MenubarGroup, MenubarItem,
     MenubarLabel, MenubarMenu, MenubarMenuEntries, MenubarPortal, MenubarRadioGroup,
     MenubarRadioItem, MenubarRadioItemSpec, MenubarSeparator, MenubarShortcut, MenubarSub,
-    MenubarSubContent, MenubarSubTrigger, MenubarTrigger, menubar,
+    MenubarSubContent, MenubarSubTrigger, MenubarTrigger,
 };
 pub use native_select::{
     NativeSelect, NativeSelectOptGroup, NativeSelectOption, NativeSelectSize, native_select,
@@ -464,7 +467,7 @@ pub mod facade {
         Combobox, ComboboxChip, ComboboxChipsInput, ComboboxCollection, ComboboxContent,
         ComboboxContentPart, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem,
         ComboboxLabel, ComboboxList, ComboboxPart, ComboboxSeparator, ComboboxTrigger,
-        ComboboxTriggerVariant, ComboboxValue, use_combobox_anchor,
+        ComboboxTriggerVariant, ComboboxValue,
     };
     pub use crate::combobox_chips::{ComboboxChips, ComboboxChipsPart};
     pub use crate::command::{
@@ -502,7 +505,7 @@ pub mod facade {
     pub use crate::drawer::{
         Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerDirection, DrawerFooter,
         DrawerHeader, DrawerOverlay, DrawerPortal, DrawerSide, DrawerSnapPoint, DrawerTitle,
-        DrawerTrigger, drawer,
+        DrawerTrigger,
     };
     pub use crate::dropdown_menu::{
         DropdownMenu, DropdownMenuAlign, DropdownMenuCheckboxItem, DropdownMenuContent,
@@ -542,7 +545,7 @@ pub mod facade {
     pub use crate::item::{
         Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemHeader,
         ItemMedia, ItemMediaVariant, ItemRender, ItemSeparator, ItemSize, ItemTitle, ItemVariant,
-        item_group,
+        item_group, item_sized,
     };
     pub use crate::kbd::{Kbd, KbdGroup};
     pub use crate::label::Label;
@@ -551,7 +554,7 @@ pub mod facade {
         Menubar, MenubarCheckboxItem, MenubarContent, MenubarEntry, MenubarGroup, MenubarItem,
         MenubarLabel, MenubarMenu, MenubarMenuEntries, MenubarPortal, MenubarRadioGroup,
         MenubarRadioItem, MenubarRadioItemSpec, MenubarSeparator, MenubarShortcut, MenubarSub,
-        MenubarSubContent, MenubarSubTrigger, MenubarTrigger, menubar,
+        MenubarSubContent, MenubarSubTrigger, MenubarTrigger,
     };
     pub use crate::native_select::{
         NativeSelect, NativeSelectOptGroup, NativeSelectOption, NativeSelectSize, native_select,

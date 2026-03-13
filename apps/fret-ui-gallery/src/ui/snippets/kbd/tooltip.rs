@@ -9,18 +9,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .delay_duration_frames(10)
         .skip_delay_duration_frames(5)
         .with(cx, |cx| {
-            let save_content = shadcn::TooltipContent::with(cx, |cx| {
-                vec![
-                    ui::h_row(|cx| {
-                        vec![
-                            ui::text("Shortcut:").text_sm().into_element(cx),
-                            shadcn::Kbd::new("S").into_element(cx),
-                        ]
-                    })
-                    .gap(Space::N2)
-                    .items_center()
-                    .into_element(cx),
-                ]
+            let save_content = shadcn::TooltipContent::build(cx, |_cx| {
+                [ui::h_row(|cx| {
+                    vec![
+                        ui::text("Shortcut:").text_sm().into_element(cx),
+                        shadcn::Kbd::new("S").into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .items_center()]
             });
             let save_trigger = shadcn::Button::new("Save")
                 .variant(shadcn::ButtonVariant::Outline)
@@ -31,22 +28,19 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .close_delay_frames(10)
                 .into_element(cx);
 
-            let print_content = shadcn::TooltipContent::with(cx, |cx| {
-                vec![
-                    ui::h_row(|cx| {
-                        vec![
-                            ui::text("Shortcut:").text_sm().into_element(cx),
-                            shadcn::KbdGroup::new([
-                                shadcn::Kbd::new("Ctrl").into_element(cx),
-                                shadcn::Kbd::new("P").into_element(cx),
-                            ])
-                            .into_element(cx),
-                        ]
-                    })
-                    .gap(Space::N2)
-                    .items_center()
-                    .into_element(cx),
-                ]
+            let print_content = shadcn::TooltipContent::build(cx, |_cx| {
+                [ui::h_row(|cx| {
+                    vec![
+                        ui::text("Shortcut:").text_sm().into_element(cx),
+                        shadcn::KbdGroup::new([
+                            shadcn::Kbd::new("Ctrl").into_element(cx),
+                            shadcn::Kbd::new("P").into_element(cx),
+                        ])
+                        .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .items_center()]
             });
             let print_trigger = shadcn::Button::new("Print")
                 .variant(shadcn::ButtonVariant::Outline)

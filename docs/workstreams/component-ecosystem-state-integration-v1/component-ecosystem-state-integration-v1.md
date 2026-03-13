@@ -307,8 +307,8 @@ Feature naming adoption (v1 convention):
 Recipe-layer adapter sample (optional, feature-gated):
 
 - `ecosystem/fret-ui-shadcn/src/state.rs`
-  - selector helper: `use_selector_badge(...)`
-  - query helpers: `query_status_badge(...)`, `query_error_alert(...)`
+  - selector helper: `use_selector_badge(...) -> Badge`
+  - query helpers: `query_status_badge(...) -> Badge`, `query_error_alert(...) -> Option<Alert>`
 - `ecosystem/fret-ui-shadcn/src/lib.rs`
   - gated exports through `prelude` under `state-selector` / `state-query`
 

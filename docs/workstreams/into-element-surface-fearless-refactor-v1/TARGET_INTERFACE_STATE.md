@@ -1,7 +1,7 @@
 # Into-Element Surface — Target Interface State
 
 Status: target state for the pre-release conversion-surface reset
-Last updated: 2026-03-12
+Last updated: 2026-03-13
 
 This document records the intended end state for the authoring conversion surface.
 
@@ -366,6 +366,12 @@ Intentional exception:
 - `ecosystem/fret-ui-shadcn/src/kbd.rs::kbd_icon<H>(...)` remains `-> AnyElement` because
   `Kbd::from_children(...)` still owns a concrete `Vec<AnyElement>` slot for icon-first keycap
   composition.
+- `ecosystem/fret-ui-shadcn/src/text_edit_context_menu.rs::{text_edit_context_menu,
+  text_selection_context_menu, text_edit_context_menu_controllable,
+  text_selection_context_menu_controllable}` remain `-> AnyElement` because
+  `ContextMenu::build(...)` / `ContextMenu::new_controllable(...).build(...)` are themselves the
+  final wrapper landing seams: the helper evaluates a typed trigger and injects a fixed entry set
+  in one root overlay call.
 
 Implementation fallback rule:
 
@@ -407,3 +413,10 @@ These raw names are **not** delete targets:
 - `Elements`
 
 They remain explicit raw tools, not default teaching terms.
+
+Current first-party deliberate raw helper contracts on the shadcn lane are therefore limited to:
+
+- `ecosystem/fret-ui-shadcn/src/kbd.rs::kbd_icon<H>(...)`
+- `ecosystem/fret-ui-shadcn/src/text_edit_context_menu.rs::{text_edit_context_menu,
+  text_selection_context_menu, text_edit_context_menu_controllable,
+  text_selection_context_menu_controllable}`

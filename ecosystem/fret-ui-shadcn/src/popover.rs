@@ -709,10 +709,8 @@ impl Popover {
 
                     let open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
                     let frame_tick = cx.app.frame_id().0;
-                    let update = cx.state_for(
-                        popover_id,
-                        PopoverHoverIntentDriverState::default,
-                        |st| {
+                    let update =
+                        cx.state_for(popover_id, PopoverHoverIntentDriverState::default, |st| {
                             match st.last_frame_tick {
                                 None => {
                                     st.last_frame_tick = Some(frame_tick);
@@ -732,8 +730,7 @@ impl Popover {
                             }
 
                             st.intent.update(hovered, st.tick, cfg)
-                        },
-                    );
+                        });
 
                     scheduling::set_continuous_frames(cx, update.wants_continuous_ticks);
                     if update.open != open_now {
@@ -851,15 +848,11 @@ impl Popover {
                         let anchor_fallback = overlay::anchor_bounds_for_element(cx, anchor_id);
                         if anchor_fallback.is_none() {
                             if open_on_hover {
-                                cx.state_for(
-                                    popover_id,
-                                    PopoverHoverSharedState::default,
-                                    |st| {
-                                        st.overlay_hovered = false;
-                                        st.anchor_bounds = None;
-                                        st.floating_bounds = None;
-                                    },
-                                );
+                                cx.state_for(popover_id, PopoverHoverSharedState::default, |st| {
+                                    st.overlay_hovered = false;
+                                    st.anchor_bounds = None;
+                                    st.floating_bounds = None;
+                                });
                             }
                             if modal {
                                 return [
@@ -1130,13 +1123,9 @@ impl Popover {
 
                         let overlay_content = if open_on_hover {
                             cx.hover_region(HoverRegionProps::default(), move |cx, hovered| {
-                                cx.state_for(
-                                    popover_id,
-                                    PopoverHoverSharedState::default,
-                                    |st| {
-                                        st.overlay_hovered = hovered;
-                                    },
-                                );
+                                cx.state_for(popover_id, PopoverHoverSharedState::default, |st| {
+                                    st.overlay_hovered = hovered;
+                                });
                                 vec![overlay_content]
                             })
                         } else {

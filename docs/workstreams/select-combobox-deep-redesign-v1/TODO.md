@@ -62,7 +62,7 @@ mean roughly the same thing.
 | `ComboboxChips` | same | `ComboboxChips` | same | Part exists in Fret as an adapter; chips rendering is recipe-owned today. |
 | `ComboboxChip` | same | `ComboboxChip` | same | Part exists; removal affordance is recipe-owned today. |
 | `ComboboxChipsInput` | same | `ComboboxChipsInput` | same | Part exists. |
-| `useComboboxAnchor` | same | `use_combobox_anchor` | same | Upstream returns a DOM ref; Fret returns a layout-only `PopoverAnchor` wrapper exposing a stable element id. |
+| `useComboboxAnchor` | same | `PopoverAnchor::build(...).into_anchor(cx)` | `ecosystem/fret-ui-shadcn/src/popover.rs` | Upstream returns a DOM ref; Fret uses the generic overlay anchor builder and stable element id surface instead of a combobox-specific helper. |
 
 #### Fret-only helper exports (migration ergonomics)
 
@@ -157,7 +157,7 @@ These anchors are intended to make audits and future refactors cheaper (searchab
 - Current shadcn recipes/adapters:
   - `ecosystem/fret-ui-shadcn/src/select.rs:1268` (`Select`)
   - `ecosystem/fret-ui-shadcn/src/select.rs:1484` (`Select::into_element_parts`)
-- `ecosystem/fret-ui-shadcn/src/combobox.rs:108` (`use_combobox_anchor`)
+- `ecosystem/fret-ui-shadcn/src/popover.rs:1368` (`PopoverAnchor::build`)
   - `ecosystem/fret-ui-shadcn/src/combobox.rs:793` (`Combobox`)
   - `ecosystem/fret-ui-shadcn/src/combobox.rs:888` (`Combobox::into_element_parts`)
 - Gates:

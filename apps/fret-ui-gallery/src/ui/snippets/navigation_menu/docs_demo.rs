@@ -307,16 +307,12 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         .trigger_test_id("ui-gallery-navigation-menu-docs-demo-trigger-docs")
         .action(CMD_APP_OPEN);
 
-    shadcn::NavigationMenu::new(demo_value.clone())
-        .md_breakpoint_query(NavigationMenuMdBreakpointQuery::Viewport)
-        .list(shadcn::NavigationMenuList::new(vec![
-            getting_started,
-            components,
-            with_icon,
-            docs,
-        ]))
-        .viewport_test_id("ui-gallery-navigation-menu-docs-demo-viewport")
-        .into_element(cx)
-        .test_id("ui-gallery-navigation-menu-docs-demo")
+    shadcn::navigation_menu(cx, demo_value.clone(), |_cx| {
+        vec![getting_started, components, with_icon, docs]
+    })
+    .md_breakpoint_query(NavigationMenuMdBreakpointQuery::Viewport)
+    .viewport_test_id("ui-gallery-navigation-menu-docs-demo-viewport")
+    .into_element(cx)
+    .test_id("ui-gallery-navigation-menu-docs-demo")
 }
 // endregion: example

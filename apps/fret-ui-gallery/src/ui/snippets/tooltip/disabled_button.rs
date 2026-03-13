@@ -19,10 +19,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             })
             .items_center()
             .into_element(cx);
-            let tooltip_content = shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
-                cx,
-                "This feature is currently unavailable",
-            )]);
+            let tooltip_content = shadcn::TooltipContent::build(cx, |_cx| {
+                [shadcn::TooltipContent::text(
+                    "This feature is currently unavailable",
+                )]
+            });
 
             vec![
                 shadcn::Tooltip::new(cx, disabled_trigger, tooltip_content)

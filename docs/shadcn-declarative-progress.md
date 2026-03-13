@@ -188,8 +188,12 @@ This tracker follows the repo-wide authoring reset and the focused conversion-su
   internals, or low-level helper plumbing.
 - Current inventoried raw/bridge helpers on the shadcn lane are intentionally small:
   `kbd.rs::kbd_icon(...)`,
-  `text_edit_context_menu.rs::{text_edit_context_menu,text_selection_context_menu,text_edit_context_menu_controllable,text_selection_context_menu_controllable}`,
-  and the raw anchor wrapper `combobox.rs::use_combobox_anchor(...)`.
+  `text_edit_context_menu.rs::{text_edit_context_menu,text_selection_context_menu,text_edit_context_menu_controllable,text_selection_context_menu_controllable}`.
+- Those text-edit context-menu helpers are a deliberate final wrapper seam, not a pending typed
+  promotion: they accept typed triggers, but the helper itself owns the root `ContextMenu::build`
+  landing call plus the fixed command entry set.
+- Combobox anchor overrides now reuse the generic overlay builder path
+  `PopoverAnchor::build(...).into_anchor(cx)` instead of keeping a combobox-specific raw alias.
 - `tooltip.rs::TooltipContent::{build,text}(...)` now stay on the typed lane: `build(...)`
   returns `TooltipContent`, `text(...)` returns `impl IntoUiElement<H>`, and first-party tooltip
   snippets/gallery previews now teach that builder path instead of eager `AnyElement` helpers.

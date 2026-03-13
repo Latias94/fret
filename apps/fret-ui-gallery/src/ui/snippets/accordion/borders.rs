@@ -1,21 +1,15 @@
 pub const SOURCE: &str = include_str!("borders.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let accordion = shadcn::Accordion::single_uncontrolled(Some("item-1"))
-        .collapsible(true)
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .max_w(Px(384.0))
-                .min_w_0(),
-        )
-        .items([shadcn::AccordionItem::new(
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let accordion = shadcn::accordion_single_uncontrolled(cx, Some("item-1"), |cx| {
+        [shadcn::AccordionItem::new(
             "item-1",
             shadcn::AccordionTrigger::new(vec![cx.text("Borders")]),
             shadcn::AccordionContent::new(ui::children![
@@ -24,8 +18,16 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     "Use an outer chrome wrapper when you want a bordered surface.",
                 )
             ]),
-        )])
-        .into_element(cx);
+        )]
+    })
+    .collapsible(true)
+    .refine_layout(
+        LayoutRefinement::default()
+            .w_full()
+            .max_w(Px(384.0))
+            .min_w_0(),
+    )
+    .into_element(cx);
 
     let props = cx.with_theme(|theme| {
         decl_style::container_props(
