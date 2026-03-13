@@ -282,9 +282,11 @@ As of 2026-03-13:
   `scale_nearest` path in
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scale_nearest.rs`, and the
   `path_clip_mask` path in
-  `crates/fret-render-wgpu/src/renderer/render_scene/recorders/path_clip_mask.rs` no longer reach
-  through `Renderer` for pyramid reuse/scratch/cache, source/mask view lookup, clip-path cache
-  copy/store, or intermediate target allocation inline.
+  `crates/fret-render-wgpu/src/renderer/render_scene/recorders/path_clip_mask.rs`, plus the
+  `backdrop_warp` and `path_msaa` paths in
+  `crates/fret-render-wgpu/src/renderer/render_scene/recorders/backdrop_warp.rs` and
+  `path_msaa.rs`, no longer reach through `Renderer` for pyramid reuse/scratch/cache,
+  source/mask view lookup, clip-path cache copy/store, or intermediate target allocation inline.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

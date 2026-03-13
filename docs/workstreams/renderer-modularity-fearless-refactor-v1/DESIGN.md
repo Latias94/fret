@@ -270,7 +270,9 @@ For `Renderer` state-shell tightening, the same principle applies:
   shared fullscreen-style recorders and feature-local hotspots, where the helper surface can
   tighten access without changing pass algorithms. Cache-backed mask-target flows follow the same
   rule: target acquisition and cache copy/store glue should move first, while the draw algorithm
-  stays in the recorder.
+  stays in the recorder. Path/backdrop recorders follow the same staging: move target and
+  view-selection access first, then revisit heavier service-local state only if it still blocks
+  modularity after the target-allocation seam is closed.
 - render-text dump state is the matching diagnostics/export seam for text debugging:
   dump collection scratch and serialization scratch should move behind one owner so render-scene
   execution keeps only a thin bridge to `TextSystem`.

@@ -582,6 +582,22 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu gpu_backdrop_pixelate_is_scissored_and_preserves_ordering`
   - `cargo nextest run -p fret-render-wgpu gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite`
   - `cargo nextest run -p fret-render-wgpu gpu_backdrop_pixelate_respects_rounded_clip_stack_on_writeback`
+- The twenty-first renderer recorder-facade split has landed:
+  - the existing render-scene recorder execution facade now also fronts the `backdrop_warp` and
+    `path_msaa` recorders
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/backdrop_warp.rs` no longer
+    reaches directly into frame-target helpers or `intermediate_state.pool` for source/mask view
+    lookup or destination color-target allocation
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/path_msaa.rs` no longer reaches
+    directly into frame-target helpers or `intermediate_state.pool` for pass target allocation;
+    the MSAA intermediate/composite draw flow stays local
+- Renderer backdrop-and-path-msaa-recorder-facade split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu gpu_backdrop_warp_is_scissored_and_preserves_ordering`
+  - `cargo nextest run -p fret-render-wgpu gpu_backdrop_warp_v2_image_map_is_scissored_and_preserves_ordering`
+  - `cargo nextest run -p fret-render-wgpu gpu_path_msaa_composite_vulkan_smoke`
+  - `cargo nextest run -p fret-render-wgpu vulkan_path_msaa_pipeline_is_visible_by_default`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals
