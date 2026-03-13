@@ -11,7 +11,7 @@ Related docs:
 
 Status: Active design note (workstream contract, not an ADR)
 
-Last updated: 2026-03-12
+Last updated: 2026-03-13
 
 ## Purpose
 
@@ -185,6 +185,14 @@ For editor numeric controls with prefix/suffix chrome:
   affixes manually,
 - and joined numeric editors should prefer a compact trailing invalid affordance over layout-growing
   inline error text unless the control is explicitly acting as a standalone form field.
+
+Recommended first-party authoring pattern:
+
+- use `NumericPresentation<T>` when one surface needs to carry text formatting/parsing plus control
+  chrome affixes as one reusable bundle,
+- keep editable unit text inside the formatter/parser pair rather than in chrome affixes,
+- and treat `presentation.parts()` as the preferred glue when wiring the same numeric story into
+  `DragValue`, `NumericInput`, `Slider`, or higher-level editor composites.
 
 ### Modifier defaults
 

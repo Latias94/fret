@@ -11,7 +11,7 @@ Related docs:
 
 Status: Active design note (workstream contract, not an ADR)
 
-Last updated: 2026-03-12
+Last updated: 2026-03-13
 
 ## Purpose
 
@@ -195,6 +195,16 @@ Default direction:
 - typed-edit mode must still visually belong to the same control family,
 - and affixed numeric variants should keep prefix/suffix chrome outside the editable draft so
   typed replacement stays fast in dense inspector workflows.
+
+Recommended authoring rule:
+
+- when a first-party editor surface needs a reusable numeric text story plus optional control
+  chrome affixes, prefer `NumericPresentation<T>` over open-coded `(format, parse, prefix, suffix)`
+  bundles,
+- keep unit-bearing text that is part of the editable representation inside the formatter/parser
+  pair (for example `90°`),
+- and reserve control chrome affixes for joined non-editable segments such as currency or timing
+  labels.
 
 #### 4) Composite/editor sections
 

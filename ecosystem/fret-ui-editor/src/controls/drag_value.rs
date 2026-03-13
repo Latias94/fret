@@ -23,7 +23,10 @@ use crate::primitives::numeric_text_entry::{
 };
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
-use crate::primitives::{DragValueCore, DragValueCoreOptions, EditSessionOutcome};
+use crate::primitives::{
+    DragValueCore, DragValueCoreOptions, EditSessionOutcome, NumericValueConstraints,
+    constrain_numeric_value,
+};
 use fret_core::text::{TextOverflow, TextWrap};
 use fret_core::{Corners, Edges, Px, TextAlign, TextStyle};
 use fret_runtime::Model;
@@ -63,6 +66,8 @@ pub struct DragValueOptions {
     pub layout: LayoutStyle,
     pub prefix: Option<Arc<str>>,
     pub suffix: Option<Arc<str>>,
+    /// Shared numeric edit constraints applied to scrub and typed commit paths.
+    pub constraints: NumericValueConstraints,
     pub selection_behavior: NumericInputSelectionBehavior,
     /// Explicit identity source for internal state (scrub/typing focus restore).
     ///
@@ -91,6 +96,7 @@ impl Default for DragValueOptions {
             },
             prefix: None,
             suffix: None,
+            constraints: NumericValueConstraints::default(),
             selection_behavior: NumericInputSelectionBehavior::ReplaceAllOnFocus,
             id_source: None,
             test_id: None,
@@ -211,6 +217,7 @@ where
         };
         scrub_opts.enabled = mode == DragValueMode::Scrub;
         scrub_opts.scrub_on_double_click = false;
+        scrub_opts.constraints = self.options.constraints;
 
         let state_for_scrub = state.clone();
         let focus_handoff_for_scrub = focus_handoff.clone();
@@ -395,7 +402,12 @@ where
         let on_outcome_for_input = on_outcome.clone();
         let input_focus_target: Arc<Mutex<Option<fret_ui::GlobalElementId>>> =
             Arc::new(Mutex::new(None));
-        let input = NumericInput::new(self.model.clone(), self.format.clone(), self.parse.clone())
+        let constraints = self.options.constraints;
+        let parse = self.parse.clone();
+        let constrained_parse: NumericParseFn<T> = Arc::new(move |text| {
+            parse(text).map(|value| constrain_numeric_value(constraints, value))
+        });
+        let input = NumericInput::new(self.model.clone(), self.format.clone(), constrained_parse)
             .validate(self.validate.clone())
             .focus_target(input_focus_target.clone())
             .options(NumericInputOptions {

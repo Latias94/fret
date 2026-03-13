@@ -174,12 +174,34 @@ Interaction contract:
       surface now carries a stable `drag-value-demo.outcome` readout plus a focused diagnostics
       gate at
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-drag-value-outcomes.json`, which
-      currently proves scrub commit plus typed commit/cancel on the promoted proof surface.
-      Remaining work: clamp/step/decimals and unit-helper policy still need a real shared story,
-      composite propagation above the raw axis control (`VecEdit` / `TransformEdit`) still needs
-      an explicit follow-up decision instead of implicit behavior, and active-scrub Escape/cancel
-      still needs a more direct diagnostics route if we want that exact path gated without manual
-      repro.
+      now proves scrub commit, active-scrub Escape cancel, typed cancel, plus shared scrub-clamp
+      and typed step/clamp behavior on the promoted proof surface. The same editor seam now also
+      has a reusable numeric-constraint
+      contract (`NumericValueConstraints`: `min` / `max` / `clamp` / `step`) shared by
+      `DragValueCore`, `DragValue`, and `AxisDragValue`, and the common fixed-decimal /
+      plain-number helpers now live in `fret-ui-editor::primitives` instead of remaining demo-local
+      closures. `DragValueCore` now also claims focus on scrub start and snapshots the latest
+      displayed value per scrub session, so repeated scrub commit/cancel cycles restore the
+      correct pre-edit value instead of replaying a stale capture. The shared formatting layer now
+      also includes affix-aware helpers (`NumericTextAffixes`, `affixed_number_format`,
+      `affixed_number_parse`, `degrees_format`, `degrees_parse`), and `GradientEditor` angle
+      editing now consumes that shared `°` story instead of keeping another ad-hoc closure pair.
+      A first lightweight higher-level authoring bundle now also exists as
+      `NumericPresentation<T>`, which groups `format` / `parse` with control-chrome affixes
+      without widening the public control API, and the promoted proof/demo surface now reuses it
+      for fixed-decimal numeric examples plus the currency-like `DragValue` / percent `Slider`
+      teaching surfaces. `GradientEditor` now also consumes the same bundle for angle and
+      stop-position editing, so the abstraction already has a non-proof first-party composite
+      consumer inside `fret-ui-editor`.
+      `VecEdit` now also exposes `(axis, outcome)` and `TransformEdit` now exposes
+      `(section, axis, outcome)` at the same editor-layer seam, with promoted proof readouts at
+      `imui-editor-proof.editor.advanced.position.outcome` and
+      `imui-editor-proof.editor.advanced.transform.outcome`, plus a focused gate at
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-advanced-axis-outcomes.json`.
+      Remaining work: decide whether `NumericPresentation<T>` should become the recommended editor
+      authoring path for more first-party controls/composites, and only widen the composite outcome
+      payload beyond section/axis/session when a second consumer proves richer metadata is actually
+      needed.
 - [~] `EER-EDITOR-122` Close editor-grade text input policy beyond the baseline layer:
       password mode, completion/history hook placeholders, and richer editing hooks.
       Recent progress: buffered `TextField` now covers both single-line and multiline edit sessions
@@ -247,7 +269,13 @@ Interaction contract:
       text-session coverage now also exists via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-text-field-multiline-session-policy.json`,
       which proves blur commit, explicit `Ctrl/Cmd+Enter` commit, and Escape cancel against the
-      promoted proof readouts.
+      promoted proof readouts. Composite numeric coverage now also exists via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-advanced-axis-outcomes.json`, which
+      proves `VecEdit` / `TransformEdit` axis-level typed commit/cancel against the promoted
+      advanced proof readouts instead of inferring those sessions from raw value drift.
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-drag-value-outcomes.json` now also
+      locks the shared `DragValue` clamp/step policy itself by proving scrub clamp and typed
+      quantization/clamp on the promoted proof surface rather than only checking outcome labels.
 - [x] `EER-GATE-131` Add state-identity regression coverage for loop-built or repeated controls.
       Repeated gradient-stop rows now have focused identity coverage via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-identity.json`, which

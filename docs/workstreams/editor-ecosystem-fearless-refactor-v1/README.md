@@ -86,7 +86,34 @@ Current checkpoint:
   both scrub and typed-edit paths, and the promoted proof surface now carries a stable
   `drag-value-demo.outcome` readout plus a focused diagnostics gate
   (`tools/diag-scripts/ui-editor/imui/imui-editor-proof-drag-value-outcomes.json`) so numeric
-  editor sessions no longer need to infer commit/cancel indirectly from value drift alone,
+  editor sessions no longer need to infer commit/cancel indirectly from value drift alone. That
+  gate now also covers Escape cancel while an active scrub session is still captured, instead of
+  only proving typed-edit cancel. `DragValueCore` now also takes focus when scrub begins and
+  snapshots the latest presented value for each new scrub session, so consecutive scrub
+  commit/cancel flows no longer replay a stale pre-edit value.
+  The same seam now also shares one explicit numeric-constraint policy across scrub and typed
+  commit paths: `DragValueCore`, `DragValue`, and `AxisDragValue` all understand
+  `NumericValueConstraints` (`min` / `max` / `clamp` / `step`), the drag-value proof now locks
+  scrub clamp plus typed step/clamp directly, and editor demos can reuse `fixed_decimals_format`
+  / `plain_number_parse` instead of growing more ad-hoc float formatting closures,
+- the same numeric policy layer now also has reusable affix-aware text helpers for unit-bearing
+  numeric labels: `NumericTextAffixes`, `affixed_number_format`, `affixed_number_parse`,
+  `degrees_format`, and `degrees_parse` now live in `fret-ui-editor::primitives`, and
+  `GradientEditor` angle editing no longer keeps a private `°` formatter/parser pair,
+- the same numeric authoring surface now also has a first lightweight bundling layer above raw
+  `format` / `parse` closures: `NumericPresentation<T>` groups text formatting/parsing with
+  control-chrome affixes, the promoted proof/demo surface now reuses that bundle for
+  fixed-decimal numeric examples, currency-like `DragValue`, and percent `Slider` authoring
+  instead of wiring those pieces through ad-hoc formatter/parser pairs, and `GradientEditor` now
+  also consumes the same bundle for angle/stop-position authoring instead of keeping another pair
+  of raw formatter/parser closures,
+- the same numeric edit-session seam now also propagates through composite editor controls:
+  `VecEdit` exposes `(axis, outcome)`, `TransformEdit` exposes `(section, axis, outcome)`, the
+  promoted proof surface now carries stable
+  `imui-editor-proof.editor.advanced.position.outcome` /
+  `imui-editor-proof.editor.advanced.transform.outcome` readouts, and the focused diagnostics gate
+  `tools/diag-scripts/ui-editor/imui/imui-editor-proof-advanced-axis-outcomes.json` proves typed
+  commit/cancel on those composite surfaces directly,
 - editor preset replay is no longer proof-demo-local glue only: the editor theme helpers now expose
   a reusable "host theme sync, then editor preset replay" path for `WindowMetricsService`-driven
   resets, and the promoted proof demo uses that shared ordering,

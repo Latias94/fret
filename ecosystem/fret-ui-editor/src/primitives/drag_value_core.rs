@@ -15,7 +15,9 @@ use fret_ui::action::{
 use fret_ui::element::{AnyElement, LayoutStyle, Length, PressableA11y, PressableProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 
-use super::{EditSession, EditorDensity, EditorTokenKeys};
+use super::{
+    EditSession, EditorDensity, EditorTokenKeys, NumericValueConstraints, constrain_numeric_value,
+};
 
 pub trait DragValueScalar: Copy + 'static {
     fn to_f64(self) -> f64;
@@ -61,6 +63,7 @@ pub struct DragValueCoreOptions {
     pub scrub_speed: f64,
     pub slow_multiplier: f64,
     pub fast_multiplier: f64,
+    pub constraints: NumericValueConstraints,
 }
 
 impl Default for DragValueCoreOptions {
@@ -80,6 +83,7 @@ impl Default for DragValueCoreOptions {
             scrub_speed: 0.02,
             slow_multiplier: 0.1,
             fast_multiplier: 10.0,
+            constraints: NumericValueConstraints::default(),
         }
     }
 }
@@ -96,6 +100,7 @@ pub struct DragValueCoreResponse {
 
 #[derive(Debug)]
 struct DragState<T> {
+    current_value: T,
     session: EditSession<T>,
     armed: bool,
     dragging: bool,
@@ -108,6 +113,7 @@ struct DragState<T> {
 impl<T: Copy + Default> Default for DragState<T> {
     fn default() -> Self {
         Self {
+            current_value: T::default(),
             session: EditSession::default(),
             armed: false,
             dragging: false,
@@ -220,8 +226,13 @@ where
                 ..Default::default()
             },
             move |cx, pressable| {
+                {
+                    let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
+                    st.current_value = value;
+                }
+                let pressable_id = cx.root_id();
                 let state_for_down = state.clone();
-                cx.pressable_add_on_pointer_down(Arc::new(move |_host, _action_cx, down| {
+                cx.pressable_add_on_pointer_down(Arc::new(move |host, _action_cx, down| {
                     if down.button != MouseButton::Left {
                         return PressablePointerDownResult::Continue;
                     }
@@ -230,14 +241,19 @@ where
                         return PressablePointerDownResult::SkipDefaultAndStopPropagation;
                     }
 
+                    // Own focus for the active scrub session so Escape cancel routes to this
+                    // control even when the gesture started from a pointer-only interaction.
+                    host.request_focus(pressable_id);
+
                     let mut st = state_for_down.lock().unwrap_or_else(|e| e.into_inner());
-                    st.session.begin(value);
+                    let current_value = st.current_value;
+                    st.session.begin(current_value);
                     st.armed = true;
                     st.dragging = false;
                     st.pointer_id = Some(down.pointer_id);
                     st.down_pos = down.position_local;
                     st.start_x = down.position_local.x.0 as f64;
-                    st.start_value = value;
+                    st.start_value = current_value;
                     PressablePointerDownResult::Continue
                 }));
 
@@ -301,7 +317,10 @@ where
                                 opts.fast_multiplier,
                             );
                             let delta = delta_x * opts.scrub_speed * multiplier;
-                            let next = T::from_f64(st.start_value.to_f64() + delta);
+                            let next = constrain_numeric_value(
+                                opts.constraints,
+                                T::from_f64(st.start_value.to_f64() + delta),
+                            );
                             MoveAction::Live(next)
                         }
                     };

@@ -27,10 +27,10 @@ use super::property_row::PropertyRowOptions;
 use super::{PropertyGrid, PropertyGroup, PropertyRow};
 use crate::controls::{
     ColorEdit, ColorEditOptions, DragValue, DragValueOptions, IconButton, IconButtonOptions,
-    NumericFormatFn, NumericParseFn, OnIconButtonActivate,
+    OnIconButtonActivate,
 };
 use crate::primitives::input_group::derived_test_id;
-use crate::primitives::{EditorDensity, percent_0_1_format, percent_0_1_parse};
+use crate::primitives::{EditorDensity, NumericPresentation};
 
 pub type OnGradientStopAction =
     Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, fret_ui::ItemKey) + 'static>;
@@ -217,11 +217,7 @@ impl GradientEditor {
             .then_some(angle_degrees.clone())
             .flatten()
             .map(|m| {
-                let fmt: NumericFormatFn<f64> = Arc::new(|v| Arc::from(format!("{v:.0}°")));
-                let parse: NumericParseFn<f64> = Arc::new(|s| {
-                    let s = s.trim().trim_end_matches('°').trim();
-                    s.parse::<f64>().ok()
-                });
+                let (angle_format, angle_parse, _) = NumericPresentation::<f64>::degrees(0).parts();
                 PropertyRow::new()
                     .options(PropertyRowOptions {
                         reset_slot_width: Some(Px(0.0)),
@@ -232,7 +228,7 @@ impl GradientEditor {
                         cx,
                         |cx| cx.text("Angle"),
                         |cx| {
-                            DragValue::new(m, fmt, parse)
+                            DragValue::new(m, angle_format, angle_parse)
                                 .options(DragValueOptions {
                                     test_id: angle_test_id.clone(),
                                     ..Default::default()
@@ -331,8 +327,8 @@ fn stop_row<H: UiHost>(
     stop: GradientStopBinding,
     row_options: PropertyRowOptions,
 ) -> AnyElement {
-    let fmt = percent_0_1_format(0);
-    let parse = percent_0_1_parse();
+    let (stop_position_format, stop_position_parse, _) =
+        NumericPresentation::<f64>::percent_0_1(0).parts();
 
     let remove = stop.remove.clone();
     let stop_id = stop.id;
@@ -370,12 +366,16 @@ fn stop_row<H: UiHost>(
                     wrap: false,
                 },
                 move |cx| {
-                    let pos = DragValue::new(stop.position.clone(), fmt.clone(), parse.clone())
-                        .options(DragValueOptions {
-                            test_id: position_test_id.clone(),
-                            ..Default::default()
-                        })
-                        .into_element(cx);
+                    let pos = DragValue::new(
+                        stop.position.clone(),
+                        stop_position_format.clone(),
+                        stop_position_parse.clone(),
+                    )
+                    .options(DragValueOptions {
+                        test_id: position_test_id.clone(),
+                        ..Default::default()
+                    })
+                    .into_element(cx);
                     let color = ColorEdit::new(stop.color.clone())
                         .options(ColorEditOptions {
                             test_id: color_test_id.clone(),

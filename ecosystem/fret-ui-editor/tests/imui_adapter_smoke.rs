@@ -10,7 +10,8 @@ use fret_ui::UiHost;
 use fret_ui_editor::controls::{
     AxisDragValue, AxisDragValueOptions, AxisDragValueOutcome, Checkbox, CheckboxOptions,
     DragValue, DragValueOptions, DragValueOutcome, EnumSelect, EnumSelectItem, EnumSelectOptions,
-    NumericFormatFn, NumericParseFn, Slider, SliderOptions, TextField, TextFieldOptions,
+    NumericFormatFn, NumericParseFn, NumericValueConstraints, Slider, SliderOptions, TextField,
+    TextFieldOptions, TransformEdit, TransformEditAxisOutcome, Vec3Edit, VecEditAxisOutcome,
 };
 use fret_ui_editor::imui;
 
@@ -56,11 +57,27 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
          _action_cx: fret_ui::action::ActionCx,
          _outcome: AxisDragValueOutcome| {},
     );
+    let on_vec_axis_outcome = Arc::new(
+        |_host: &mut dyn fret_ui::action::UiActionHost,
+         _action_cx: fret_ui::action::ActionCx,
+         _outcome: VecEditAxisOutcome| {},
+    );
+    let on_transform_axis_outcome = Arc::new(
+        |_host: &mut dyn fret_ui::action::UiActionHost,
+         _action_cx: fret_ui::action::ActionCx,
+         _outcome: TransformEditAxisOutcome| {},
+    );
 
     let _ = DragValue::new(value_model.clone(), fmt.clone(), parse.clone())
         .on_outcome(Some(on_drag_outcome))
         .options(DragValueOptions {
             id_source: Some(Arc::from("tests.drag_value.outcome")),
+            constraints: NumericValueConstraints {
+                min: Some(0.0),
+                max: Some(1.0),
+                clamp: true,
+                step: Some(0.125),
+            },
             ..Default::default()
         });
 
@@ -74,8 +91,46 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
     .on_outcome(Some(on_axis_outcome))
     .options(AxisDragValueOptions {
         id_source: Some(Arc::from("tests.axis_drag_value.outcome")),
+        constraints: NumericValueConstraints {
+            min: Some(-1.0),
+            max: Some(1.0),
+            clamp: true,
+            step: Some(0.25),
+        },
         ..Default::default()
     });
+
+    let _ = Vec3Edit::new(
+        value_model.clone(),
+        value_model.clone(),
+        value_model.clone(),
+        fmt.clone(),
+        parse.clone(),
+    )
+    .on_axis_outcome(Some(on_vec_axis_outcome))
+    .options(Default::default());
+
+    let _ = TransformEdit::new(
+        (
+            value_model.clone(),
+            value_model.clone(),
+            value_model.clone(),
+        ),
+        (
+            value_model.clone(),
+            value_model.clone(),
+            value_model.clone(),
+        ),
+        (
+            value_model.clone(),
+            value_model.clone(),
+            value_model.clone(),
+        ),
+        fmt.clone(),
+        parse.clone(),
+    )
+    .on_axis_outcome(Some(on_transform_axis_outcome))
+    .options(Default::default());
 
     imui::slider(
         ui,
