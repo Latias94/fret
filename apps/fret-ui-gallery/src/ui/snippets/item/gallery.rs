@@ -1,5 +1,5 @@
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_ui::Theme;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::style as decl_style;
@@ -182,7 +182,7 @@ fn item_team(
         .test_id(test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app).snapshot();
 
     let download_progress = cx.local_model_keyed("download_progress", || 50.0);

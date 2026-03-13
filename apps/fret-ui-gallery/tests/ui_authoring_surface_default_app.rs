@@ -614,10 +614,59 @@ fn item_snippets_prefer_ui_cx_on_the_default_app_surface() {
         assert_default_app_surface(
             &path,
             &source,
-            &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+            &[
+                "use fret::{UiChild, UiCx};",
+                "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            ],
             "app-facing snippet surface",
         );
     }
+
+    assert_sources_absent(
+        "src/ui/snippets/item",
+        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn item_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/item.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Item vs Field\", item_vs_field)",
+            "DocSection::build(cx, \"Variant\", variants)",
+            "DocSection::build(cx, \"Size\", size)",
+            "DocSection::build(cx, \"Icon\", icon)",
+            "DocSection::build(cx, \"Avatar\", avatar)",
+            "DocSection::build(cx, \"Image\", image)",
+            "DocSection::build(cx, \"Group\", group)",
+            "DocSection::build(cx, \"Header\", header)",
+            "DocSection::build(cx, \"Link\", link)",
+            "DocSection::build(cx, \"Dropdown\", dropdown)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Gallery\", gallery)",
+            "DocSection::build(cx, \"Link (render)\", link_render)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Item vs Field\", item_vs_field)",
+            "DocSection::new(\"Variant\", variants)",
+            "DocSection::new(\"Size\", size)",
+            "DocSection::new(\"Icon\", icon)",
+            "DocSection::new(\"Avatar\", avatar)",
+            "DocSection::new(\"Image\", image)",
+            "DocSection::new(\"Group\", group)",
+            "DocSection::new(\"Header\", header)",
+            "DocSection::new(\"Link\", link)",
+            "DocSection::new(\"Dropdown\", dropdown)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Gallery\", gallery)",
+            "DocSection::new(\"Link (render)\", link_render)",
+        ],
+    );
 }
 
 #[test]

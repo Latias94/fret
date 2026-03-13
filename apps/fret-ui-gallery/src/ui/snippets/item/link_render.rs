@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("link_render.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
@@ -12,7 +12,7 @@ fn icon(cx: &mut UiCx<'_>, id: &'static str) -> impl IntoUiElement<fret_app::App
     fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let media = shadcn::ItemMedia::new([icon(cx, "lucide.house").into_element(cx)])
         .variant(shadcn::ItemMediaVariant::Icon)
         .into_element(cx);

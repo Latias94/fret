@@ -136,6 +136,7 @@ Validation snapshot on 2026-03-13:
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app chart_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app combobox_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app carousel_ -- --nocapture`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app item_ -- --nocapture`
 
 Implementation note on 2026-03-13:
 
@@ -239,11 +240,16 @@ Implementation note on 2026-03-13:
   now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and
   `apps/fret-ui-gallery/src/ui/pages/carousel.rs` now routes those previews through
   `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the same UI Gallery top-level snippet cleanup now also covers the item family:
+  `apps/fret-ui-gallery/src/ui/snippets/item/{demo,usage,variants,size,icon,avatar,image,group,header,link,dropdown,extras_rtl,gallery,link_render}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and
+  `apps/fret-ui-gallery/src/ui/pages/item.rs` now routes those previews through
+  `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
 - after `accordion` / `tabs` / `toggle` / `radio_group` / `slider` / `native_select` /
   `resizable` / `navigation_menu` / `scroll_area` / `progress` / `chart` / `combobox` /
-  `carousel`, the next default-app UI Gallery app-facing queue should move to `item`, which is now
-  the clearest remaining full page-local family still teaching top-level `UiCx -> AnyElement`
-  returns.
+  `carousel` / `item`, the next default-app UI Gallery app-facing queue should move to `table`,
+  which is now the smallest remaining full page-local family still teaching top-level
+  `UiCx -> AnyElement` returns.
 - `apps/fret-cookbook/examples/customv1_basics.rs` now keeps both advanced reusable helpers
   `panel_shell(...)` and `preview_content(...)` on `IntoUiElement<KernelApp>`-based signatures
   instead of returning raw `AnyElement` for non-raw composition.
