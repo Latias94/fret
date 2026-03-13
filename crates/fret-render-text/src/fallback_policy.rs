@@ -718,6 +718,26 @@ mod tests {
     }
 
     #[test]
+    fn fallback_policy_key_changes_when_system_font_availability_changes() {
+        let config = fret_core::TextFontFamilyConfig {
+            common_fallback_injection: fret_core::TextCommonFallbackInjection::PlatformDefault,
+            common_fallback: vec!["Noto Sans CJK SC".to_string()],
+            ..Default::default()
+        };
+
+        let mut system_shaper = ParleyShaper::default();
+        let system_policy = build_policy(&mut system_shaper, config.clone(), Some("en-US"));
+
+        let mut bundled_only_shaper = ParleyShaper::new_without_system_fonts();
+        let bundled_only_policy = build_policy(&mut bundled_only_shaper, config, Some("en-US"));
+
+        assert_ne!(
+            system_policy.fallback_policy_key, bundled_only_policy.fallback_policy_key,
+            "expected system-font availability changes to participate in the fallback policy fingerprint"
+        );
+    }
+
+    #[test]
     fn diagnostics_snapshot_reports_profile_contract_and_defaults_in_bundled_only_mode() {
         let mut shaper = ParleyShaper::new_without_system_fonts();
         let config = fret_core::TextFontFamilyConfig {
