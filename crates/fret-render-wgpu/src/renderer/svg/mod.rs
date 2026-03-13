@@ -140,6 +140,22 @@ impl Default for SvgRasterState {
 }
 
 impl SvgRasterState {
+    pub(super) fn take_rasters_for_svg(&mut self, svg: fret_core::SvgId) -> Vec<SvgRasterEntry> {
+        let keys_to_remove: Vec<_> = self
+            .rasters
+            .keys()
+            .copied()
+            .filter(|key| key.svg == svg)
+            .collect();
+        let mut entries = Vec::with_capacity(keys_to_remove.len());
+        for key in keys_to_remove {
+            if let Some(entry) = self.rasters.remove(&key) {
+                entries.push(entry);
+            }
+        }
+        entries
+    }
+
     pub(super) fn reset_frame_perf_counters(&mut self) {
         self.frame_perf = SvgFramePerfCounters::default();
     }

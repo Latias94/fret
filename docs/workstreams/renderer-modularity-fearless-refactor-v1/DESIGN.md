@@ -234,6 +234,10 @@ For `Renderer` state-shell tightening, the same principle applies:
   should move into companion service modules that talk to the registry and pipeline owners through
   narrow helper methods instead of mutating hash indexes and cache maps inline from
   `services.rs`.
+- the same rule applies to adjacent SVG/material services: sampled-material capability gating,
+  material register/unregister refcounting, and SVG unregister raster cleanup should route through
+  owner helpers and companion service modules instead of keeping registry/raster map mutation
+  inline in `services.rs`.
 - path registry/cache state is the equivalent ownership seam for tessellated geometry: prepared
   path storage, cache entries, eviction policy, and epoch tracking should move behind one owner so
   path services and path encoding stop depending on four loose fields.

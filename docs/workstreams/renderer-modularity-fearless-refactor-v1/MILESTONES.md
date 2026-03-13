@@ -74,6 +74,15 @@ Current snapshot (2026-03-13):
     eviction via one explicit helper
   - `crates/fret-render-wgpu/src/renderer/services.rs` now keeps text/path/SVG/material service
     impls only
+- The latest SVG/material service split has landed:
+  - `crates/fret-render-wgpu/src/renderer/services_assets.rs` now owns `SvgService`,
+    `MaterialService`, sampled-material capability gating, and the focused material service test
+  - `crates/fret-render-wgpu/src/renderer/material_effects.rs` now owns material
+    register/unregister refcount/index mutation helpers plus a focused registry test
+  - `crates/fret-render-wgpu/src/renderer/svg/mod.rs` now owns raster-entry draining for one SVG,
+    and `crates/fret-render-wgpu/src/renderer/svg/cache.rs` now exposes
+    `unregister_svg_rasters(...)` for service-local cleanup
+  - `crates/fret-render-wgpu/src/renderer/services.rs` now keeps text/path service impls only
 - v1 start decisions are now locked:
   - no new renderer crates in v1,
   - `fret-render` stays the stable default facade,
@@ -877,6 +886,22 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu custom_effect_v2_wgsl_minimal_program_validates`
   - `cargo nextest run -p fret-render-wgpu custom_effect_v3_wgsl_minimal_program_validates`
   - `cargo nextest run -p fret-render-wgpu unregister_custom_effect_evicts_custom_effect_pipelines`
+- The fortieth SVG-material-service split has landed:
+  - `crates/fret-render-wgpu/src/renderer/services_assets.rs` now owns `SvgService`,
+    `MaterialService`, sampled-material capability gating, and the focused material service test
+  - `crates/fret-render-wgpu/src/renderer/material_effects.rs` now owns material
+    register/unregister refcount/index mutation helpers plus a focused registry test
+  - `crates/fret-render-wgpu/src/renderer/svg/mod.rs` now owns raster-entry draining for one SVG,
+    and `crates/fret-render-wgpu/src/renderer/svg/cache.rs` now exposes
+    `unregister_svg_rasters(...)` for service-local cleanup
+  - `crates/fret-render-wgpu/src/renderer/services.rs` now keeps text/path service impls only
+- Renderer svg-material-service split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu sampled_material_registration_is_capability_gated`
+  - `cargo nextest run -p fret-render-wgpu material_registry_deduplicates_and_tracks_refcounts`
+  - `cargo nextest run -p fret-render-wgpu registry_deduplicates_svg_bytes_and_tracks_refcounts`
+  - `cargo nextest run -p fret-render-wgpu gpu_dot_grid_material_smoke_conformance`
+  - `cargo nextest run -p fret-render-wgpu sampled_noise_material_uses_catalog_texture_layer`
 - Renderer custom-v3-dispatch split verification remains green:
   - `cargo check -p fret-render-wgpu --tests`
   - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`

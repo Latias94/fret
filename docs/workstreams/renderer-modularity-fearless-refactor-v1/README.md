@@ -239,6 +239,16 @@ As of 2026-03-13:
     eviction as one explicit helper.
   - `crates/fret-render-wgpu/src/renderer/services.rs` no longer owns custom-effect service impls
     or cross-owner registry/pipeline mutation inline.
+- Renderer SVG/material service orchestration is now also split along owner seams:
+  - `crates/fret-render-wgpu/src/renderer/services_assets.rs` now owns `SvgService`,
+    `MaterialService`, capability gating for sampled catalog-texture materials, and the focused
+    material service regression test.
+  - `crates/fret-render-wgpu/src/renderer/material_effects.rs` now owns material
+    register/unregister refcount/index mutation helpers plus a focused registry test.
+  - `crates/fret-render-wgpu/src/renderer/svg/mod.rs` now owns raster-entry draining for one SVG,
+    and `crates/fret-render-wgpu/src/renderer/svg/cache.rs` now exposes a narrow
+    `unregister_svg_rasters(...)` helper for service-local cleanup.
+  - `crates/fret-render-wgpu/src/renderer/services.rs` now keeps text/path service impls only.
 - Renderer path registry/cache owner state now also lives under
   `crates/fret-render-wgpu/src/renderer/path.rs`, and
   `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns prepared path storage, path cache

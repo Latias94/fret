@@ -1,4 +1,5 @@
 use super::*;
+use std::collections::hash_map::Entry;
 
 pub(super) struct MaterialEffectState {
     pub(super) materials: SlotMap<fret_core::MaterialId, MaterialEntry>,
@@ -33,6 +34,48 @@ impl Default for MaterialEffectState {
 }
 
 impl MaterialEffectState {
+    pub(super) fn register_material(
+        &mut self,
+        desc: fret_core::MaterialDescriptor,
+    ) -> fret_core::MaterialId {
+        match self.materials_by_desc.entry(desc) {
+            Entry::Occupied(entry) => {
+                let id = *entry.get();
+                if let Some(material) = self.materials.get_mut(id) {
+                    material.refs = material.refs.saturating_add(1);
+                }
+                id
+            }
+            Entry::Vacant(entry) => {
+                let id = self.materials.insert(MaterialEntry { desc, refs: 1 });
+                entry.insert(id);
+                self.materials_generation = self.materials_generation.wrapping_add(1);
+                id
+            }
+        }
+    }
+
+    pub(super) fn unregister_material(&mut self, id: fret_core::MaterialId) -> bool {
+        let Some(refs) = self.materials.get(id).map(|entry| entry.refs) else {
+            return false;
+        };
+
+        if refs > 1 {
+            if let Some(entry) = self.materials.get_mut(id) {
+                entry.refs = entry.refs.saturating_sub(1);
+            }
+            return true;
+        }
+
+        let Some(entry) = self.materials.remove(id) else {
+            return false;
+        };
+
+        self.materials_by_desc.remove(&entry.desc);
+        self.materials_generation = self.materials_generation.wrapping_add(1);
+        true
+    }
+
     pub(super) fn find_custom_effect(
         &self,
         abi: CustomEffectAbi,
@@ -131,5 +174,34 @@ fn custom_effect_hash_salt(abi: CustomEffectAbi) -> u64 {
         CustomEffectAbi::V1 => 1,
         CustomEffectAbi::V2 => 2,
         CustomEffectAbi::V3 => 3,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn material_registry_deduplicates_and_tracks_refcounts() {
+        let mut state = MaterialEffectState::default();
+        let desc = fret_core::MaterialDescriptor::new(fret_core::MaterialKind::DotGrid);
+
+        let first = state.register_material(desc);
+        let second = state.register_material(desc);
+
+        assert_eq!(first, second);
+        assert_eq!(state.materials_generation, 1);
+        assert!(state.materials.contains_key(first));
+
+        assert!(state.unregister_material(first));
+        assert_eq!(state.materials_generation, 1);
+        assert!(state.materials.contains_key(first));
+
+        assert!(state.unregister_material(first));
+        assert_eq!(state.materials_generation, 2);
+        assert!(!state.materials.contains_key(first));
+        assert!(state.materials_by_desc.is_empty());
+
+        assert!(!state.unregister_material(first));
     }
 }

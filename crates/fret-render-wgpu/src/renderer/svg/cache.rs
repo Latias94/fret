@@ -1,6 +1,13 @@
 use super::super::*;
 
 impl Renderer {
+    pub(in crate::renderer) fn unregister_svg_rasters(&mut self, svg: fret_core::SvgId) {
+        let entries = self.svg_raster_state.take_rasters_for_svg(svg);
+        for entry in entries {
+            self.drop_svg_raster_entry(entry);
+        }
+    }
+
     pub(in crate::renderer) fn bump_svg_raster_epoch(&mut self) -> u64 {
         self.svg_raster_state.bump_raster_epoch()
     }
