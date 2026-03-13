@@ -137,6 +137,8 @@ Validation snapshot on 2026-03-13:
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app combobox_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app carousel_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app item_ -- --nocapture`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app table_ -- --nocapture`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app remaining_app_facing_tail -- --nocapture`
 
 Implementation note on 2026-03-13:
 
@@ -245,11 +247,24 @@ Implementation note on 2026-03-13:
   now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and
   `apps/fret-ui-gallery/src/ui/pages/item.rs` now routes those previews through
   `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the same UI Gallery top-level snippet cleanup now also covers the table family:
+  `apps/fret-ui-gallery/src/ui/snippets/table/{demo,usage,footer,actions,rtl}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and
+  `apps/fret-ui-gallery/src/ui/pages/table.rs` now routes those previews through
+  `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the remaining curated default-app tail snippets are now also closed on the same typed lane:
+  `apps/fret-ui-gallery/src/ui/snippets/breadcrumb/responsive.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/date_picker/dropdowns.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/form/notes.rs`, and
+  `apps/fret-ui-gallery/src/ui/snippets/sidebar/rtl.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`; the corresponding page
+  sections on `pages/breadcrumb.rs`, `pages/date_picker.rs`, `pages/form.rs`, and
+  `pages/sidebar.rs` now keep those snippet-owned app-facing sections on `DocSection::build(cx, ...)`.
 - after `accordion` / `tabs` / `toggle` / `radio_group` / `slider` / `native_select` /
   `resizable` / `navigation_menu` / `scroll_area` / `progress` / `chart` / `combobox` /
-  `carousel` / `item`, the next default-app UI Gallery app-facing queue should move to `table`,
-  which is now the smallest remaining full page-local family still teaching top-level
-  `UiCx -> AnyElement` returns.
+  `carousel` / `item` / `table` plus the remaining curated tail snippets, the next default-app UI
+  Gallery app-facing queue should move to the first full legacy page-family sweep:
+  `badge`, followed by `aspect_ratio` and `context_menu`.
 - `apps/fret-cookbook/examples/customv1_basics.rs` now keeps both advanced reusable helpers
   `panel_shell(...)` and `preview_content(...)` on `IntoUiElement<KernelApp>`-based signatures
   instead of returning raw `AnyElement` for non-raw composition.

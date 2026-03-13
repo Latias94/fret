@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("dropdowns.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_ui::Invalidation;
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -20,7 +20,7 @@ fn parse_iso_date_ymd(raw: &str) -> Option<Date> {
     Date::from_calendar_date(year, month, day).ok()
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let today = std::env::var("FRET_UI_GALLERY_FIXED_TODAY")
         .ok()
         .and_then(|raw| parse_iso_date_ymd(&raw))

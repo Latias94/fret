@@ -158,6 +158,13 @@ pub(super) fn preview_date_picker(
         .description("Guidelines and parity notes for date picker recipes.")
         .max_w(Px(980.0))
         .code_rust_from_file_region(snippets::notes::SOURCE, "example");
+    let dropdowns = DocSection::build(cx, "Extras: With Dropdowns", dropdowns)
+        .description(
+            "Gallery-only: desktop uses a Popover; mobile uses a Drawer. Calendar caption uses dropdown month/year selection.",
+        )
+        .code_rust_from_file_region(snippets::dropdowns::SOURCE, "example")
+        .max_w(Px(980.0))
+        .no_shell();
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -244,16 +251,7 @@ pub(super) fn preview_date_picker(
                 )
                 .max_w(Px(980.0))
                 .no_shell(),
-            DocSection::new("Extras: With Dropdowns", dropdowns)
-                .description(
-                    "Gallery-only: desktop uses a Popover; mobile uses a Drawer. Calendar caption uses dropdown month/year selection.",
-                )
-                .code_rust_from_file_region(
-                    snippets::dropdowns::SOURCE,
-                    "example",
-                )
-                .max_w(Px(980.0))
-                .no_shell(),
+            dropdowns,
             notes_stack,
         ],
     );

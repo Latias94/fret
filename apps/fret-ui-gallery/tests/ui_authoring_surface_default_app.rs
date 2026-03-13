@@ -889,29 +889,106 @@ fn data_table_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
 
 #[test]
 fn table_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
-    assert_curated_default_app_paths(
+    for path in rust_sources("src/ui/snippets/table") {
+        if path.file_name().is_some_and(|name| name == "mod.rs") {
+            continue;
+        }
+
+        let source = read_path(&path);
+        assert_default_app_surface(
+            &path,
+            &source,
+            &[
+                "use fret::{UiChild, UiCx};",
+                "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            ],
+            "app-facing snippet surface",
+        );
+    }
+
+    assert_sources_absent(
+        "src/ui/snippets/table",
         &[
-            "src/ui/snippets/table/actions.rs",
-            "src/ui/snippets/table/demo.rs",
-            "src/ui/snippets/table/footer.rs",
-            "src/ui/snippets/table/rtl.rs",
+            "pub fn render(cx: &mut UiCx<'_>) -> AnyElement",
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement",
         ],
-        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
-        "app-facing snippet surface",
+    );
+}
+
+#[test]
+fn table_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/table.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Footer\", footer)",
+            "DocSection::build(cx, \"Actions\", actions)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Footer\", footer)",
+            "DocSection::new(\"Actions\", actions)",
+            "DocSection::new(\"RTL\", rtl)",
+        ],
     );
 }
 
 #[test]
 fn remaining_app_facing_tail_snippets_prefer_ui_cx_on_the_default_app_surface() {
-    assert_curated_default_app_paths(
-        &[
-            "src/ui/snippets/breadcrumb/responsive.rs",
-            "src/ui/snippets/date_picker/dropdowns.rs",
-            "src/ui/snippets/form/notes.rs",
-            "src/ui/snippets/sidebar/rtl.rs",
-        ],
-        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
-        "app-facing snippet surface",
+    for relative_path in [
+        "src/ui/snippets/breadcrumb/responsive.rs",
+        "src/ui/snippets/date_picker/dropdowns.rs",
+        "src/ui/snippets/form/notes.rs",
+        "src/ui/snippets/sidebar/rtl.rs",
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        assert_default_app_surface(
+            &path,
+            &source,
+            &[
+                "use fret::{UiChild, UiCx};",
+                "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            ],
+            "app-facing snippet surface",
+        );
+
+        let normalized = source.split_whitespace().collect::<String>();
+        assert!(
+            !normalized.contains("pubfnrender(cx:&mutUiCx<'_>)->AnyElement"),
+            "{} reintroduced `UiCx -> AnyElement` on the default app surface",
+            path.display()
+        );
+    }
+}
+
+#[test]
+fn remaining_app_facing_tail_pages_use_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/breadcrumb.rs",
+        &["DocSection::build(cx, \"Responsive\", responsive)"],
+        &["DocSection::new(\"Responsive\", responsive)"],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/date_picker.rs",
+        &["DocSection::build(cx, \"Extras: With Dropdowns\", dropdowns)"],
+        &["DocSection::new(\"Extras: With Dropdowns\", dropdowns)"],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/form.rs",
+        &["DocSection::build(cx, \"Notes\", notes)"],
+        &["DocSection::new(\"Notes\", notes)"],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/sidebar.rs",
+        &["DocSection::build(cx, \"Extras: RTL\", rtl)"],
+        &["DocSection::new(\"Extras: RTL\", rtl)"],
     );
 }
 

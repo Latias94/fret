@@ -38,6 +38,10 @@ pub(super) fn preview_breadcrumb(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let notes = DocSection::build(cx, "Notes", notes)
         .title_test_id("ui-gallery-breadcrumb-section-title-notes")
         .description("Implementation notes and regression guidelines.");
+    let responsive = DocSection::build(cx, "Responsive", responsive)
+        .title_test_id("ui-gallery-breadcrumb-section-title-responsive")
+        .description("Fret-specific responsive breadcrumb: dropdown on desktop, drawer on mobile.")
+        .code_rust_from_file_region(snippets::responsive::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -80,10 +84,7 @@ pub(super) fn preview_breadcrumb(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .description("Breadcrumb layout should follow right-to-left direction context.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             api_reference,
-            DocSection::new("Responsive", responsive)
-                .title_test_id("ui-gallery-breadcrumb-section-title-responsive")
-                .description("Fret-specific responsive breadcrumb: dropdown on desktop, drawer on mobile.")
-                .code_rust_from_file_region(snippets::responsive::SOURCE, "example"),
+            responsive,
             notes,
         ],
     )

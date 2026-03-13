@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_kit::IntoUiElement;
@@ -45,7 +45,7 @@ fn menu_button(
         .test_id(test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let selected_model = cx.local_model_keyed("selected", || Arc::<str>::from("playground"));
     let selected_value = resolve_selected(cx, &selected_model, "playground");
 

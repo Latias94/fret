@@ -1,7 +1,7 @@
 # Into-Element Surface — Migration Matrix
 
 Status: execution tracker
-Last updated: 2026-03-13
+Last updated: 2026-03-14
 
 This matrix tracks how the current conversion surface should move toward the target state.
 
@@ -255,6 +255,25 @@ Execution note on 2026-03-13:
   `DocSection::build(cx, ...)`; the old `pub fn render(...) -> AnyElement` teaching pattern is now
   forbidden for that family by
   `ui_authoring_surface_default_app::{item_snippets_prefer_ui_cx_on_the_default_app_surface,item_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the next top-level snippet-family
+  move on the table lane:
+  `apps/fret-ui-gallery/src/ui/snippets/table/{demo,usage,footer,actions,rtl}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/table.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `pub fn render(...) -> AnyElement` teaching pattern is now
+  forbidden for that family by
+  `ui_authoring_surface_default_app::{table_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface,table_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the remaining curated tail
+  snippets:
+  `apps/fret-ui-gallery/src/ui/snippets/breadcrumb/responsive.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/date_picker/dropdowns.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/form/notes.rs`, and
+  `apps/fret-ui-gallery/src/ui/snippets/sidebar/rtl.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while the corresponding
+  app-facing sections on `apps/fret-ui-gallery/src/ui/pages/{breadcrumb,date_picker,form,sidebar}.rs`
+  now stay on `DocSection::build(cx, ...)`; the old `UiCx -> AnyElement` teaching pattern is now
+  forbidden there by
+  `ui_authoring_surface_default_app::{remaining_app_facing_tail_snippets_prefer_ui_cx_on_the_default_app_surface,remaining_app_facing_tail_pages_use_typed_doc_sections_for_app_facing_snippets}`.
 - the cookbook advanced-example source gate now also records
   `apps/fret-cookbook/examples/customv1_basics.rs`,
   where `panel_shell(...)` and `preview_content(...)` now use `IntoUiElement<KernelApp>`-based

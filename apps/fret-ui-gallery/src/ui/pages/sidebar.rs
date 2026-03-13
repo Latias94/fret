@@ -20,6 +20,12 @@ pub(super) fn preview_sidebar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let notes = DocSection::build(cx, "Notes", notes)
         .no_shell()
         .test_id_prefix("ui-gallery-sidebar-notes");
+    let rtl = DocSection::build(cx, "Extras: RTL", rtl)
+        .description("RTL composition retained as a gallery extension for parity spot-checks.")
+        .max_w(Px(980.0))
+        .test_id_prefix("ui-gallery-sidebar-rtl")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example")
+        .no_shell();
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -57,12 +63,7 @@ pub(super) fn preview_sidebar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .test_id_prefix("ui-gallery-sidebar-mobile")
                 .code_rust_from_file_region(snippets::mobile::SOURCE, "example")
                 .no_shell(),
-            DocSection::new("Extras: RTL", rtl)
-                .description("RTL composition retained as a gallery extension for parity spot-checks.")
-                .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-sidebar-rtl")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example")
-                .no_shell(),
+            rtl,
             notes,
         ],
     );
