@@ -102,6 +102,29 @@ Guidelines:
   will reuse stale output.
 - Prefer granular models (split state) over “one giant model” to keep invalidation cheap.
 
+#### Compatibility alias removal plan
+
+Current repository state:
+
+- first-party Rust usage of `.with_state(...)` and `.with_state_for(...)` is zero
+- first-party code is guarded by
+  `python3 tools/gate_no_first_party_with_state_alias_usage.py`
+- active guides now teach `root_state(...)` / `state_for(...)`
+- `ElementContext::{with_state, with_state_for}` remain available but deprecated
+
+Recommended removal sequence for the eventual breaking release:
+
+1. Ship at least one release with the deprecation warnings in place so downstream crates get a
+   clear migration signal.
+2. Keep the repository gate active during that period so first-party examples/docs cannot regress.
+3. Publish a concise migration note:
+   - `with_state(...)` -> `root_state(...)`
+   - `with_state_for(...)` -> `state_for(...)`
+4. Audit any maintained downstream templates/examples/companion repos that still teach the old
+   aliases and update them before the breaking release lands.
+5. In the breaking release, delete the alias methods from `ElementContext`, keep the gate, and
+   keep the root/slot semantics tests so the replacement surfaces remain contract-locked.
+
 ### 2) Derived state (now exists; selectors/computed)
 
 Goal: compute read-only values from models/globals with **memoization** and **dependency tracking**,
