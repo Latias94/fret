@@ -1,4 +1,4 @@
-use crate::fallback_policy::TextFallbackPolicyV1;
+use crate::{fallback_policy, fallback_policy::TextFallbackPolicyV1, parley_shaper::ParleyShaper};
 use std::{
     collections::{HashSet, VecDeque},
     sync::OnceLock,
@@ -39,6 +39,7 @@ impl FontTraceState {
         style: &fret_core::TextStyle,
         constraints: fret_core::TextConstraints,
         fallback_policy: &TextFallbackPolicyV1,
+        shaper: &ParleyShaper,
         missing_glyphs: u32,
         families: Vec<FontTraceFamilyResolved>,
     ) {
@@ -65,11 +66,18 @@ impl FontTraceState {
                 common_fallback_lower.insert(f.trim().to_ascii_lowercase());
             }
         }
+        let requested_generic_lower =
+            requested_generic_lower_families(&style.font, fallback_policy, shaper);
 
         let mut usages: Vec<fret_core::RendererTextFontTraceFamilyUsage> =
             Vec::with_capacity(families.len().max(1));
         for family in families {
-            let class = classify_trace_family(&style.font, &family.family, &common_fallback_lower);
+            let class = classify_trace_family(
+                &style.font,
+                &family.family,
+                &requested_generic_lower,
+                &common_fallback_lower,
+            );
             usages.push(fret_core::RendererTextFontTraceFamilyUsage {
                 family: family.family,
                 glyphs: family.glyphs,
@@ -147,9 +155,16 @@ fn truncate_text_preview(text: &str, max_bytes: usize) -> String {
 fn classify_trace_family(
     requested: &fret_core::FontId,
     family: &str,
+    requested_generic_lower: &HashSet<String>,
     common_fallback_lower: &HashSet<String>,
 ) -> fret_core::RendererTextFontTraceFamilyClass {
-    let is_common = common_fallback_lower.contains(&family.trim().to_ascii_lowercase());
+    let family_lower = family.trim().to_ascii_lowercase();
+    if family_lower.is_empty() {
+        return fret_core::RendererTextFontTraceFamilyClass::Unknown;
+    }
+
+    let is_requested_generic = requested_generic_lower.contains(&family_lower);
+    let is_common = common_fallback_lower.contains(&family_lower);
     match requested {
         fret_core::FontId::Family(name) => {
             if name.eq_ignore_ascii_case(family) {
@@ -161,11 +176,107 @@ fn classify_trace_family(
             }
         }
         _ => {
-            if is_common {
+            if is_requested_generic {
+                fret_core::RendererTextFontTraceFamilyClass::Requested
+            } else if is_common {
                 fret_core::RendererTextFontTraceFamilyClass::CommonFallback
             } else {
-                fret_core::RendererTextFontTraceFamilyClass::Unknown
+                fret_core::RendererTextFontTraceFamilyClass::SystemFallback
             }
         }
+    }
+}
+
+fn requested_generic_lower_families(
+    requested: &fret_core::FontId,
+    fallback_policy: &TextFallbackPolicyV1,
+    shaper: &ParleyShaper,
+) -> HashSet<String> {
+    let (configured, defaults): (&[String], &[&str]) = match requested {
+        fret_core::FontId::Ui => (
+            &fallback_policy.font_family_config.ui_sans,
+            fallback_policy::default_sans_candidates(shaper),
+        ),
+        fret_core::FontId::Serif => (
+            &fallback_policy.font_family_config.ui_serif,
+            fallback_policy::default_serif_candidates(shaper),
+        ),
+        fret_core::FontId::Monospace => (
+            &fallback_policy.font_family_config.ui_mono,
+            fallback_policy::default_monospace_candidates(shaper),
+        ),
+        fret_core::FontId::Family(_) => return HashSet::new(),
+    };
+
+    let mut families = HashSet::new();
+    for family in configured {
+        let family = family.trim().to_ascii_lowercase();
+        if !family.is_empty() {
+            families.insert(family);
+        }
+    }
+    for family in defaults {
+        let family = family.trim().to_ascii_lowercase();
+        if !family.is_empty() {
+            families.insert(family);
+        }
+    }
+    families
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn generic_requested_lane_includes_configured_and_default_candidates() {
+        let shaper = ParleyShaper::new_without_system_fonts();
+        let mut policy = TextFallbackPolicyV1::new(&shaper);
+        policy.font_family_config.ui_sans = vec!["Custom UI".to_string()];
+
+        let families = requested_generic_lower_families(&fret_core::FontId::Ui, &policy, &shaper);
+        assert!(families.contains("custom ui"));
+        for family in fret_fonts::default_profile().ui_sans_families {
+            assert!(
+                families.contains(&family.to_ascii_lowercase()),
+                "expected requested generic lane to include bundled default sans family {family:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn generic_requested_class_beats_common_fallback_overlap() {
+        let requested_generic_lower = HashSet::from([String::from("inter")]);
+        let common_fallback_lower = HashSet::from([String::from("inter")]);
+
+        let class = classify_trace_family(
+            &fret_core::FontId::Ui,
+            "Inter",
+            &requested_generic_lower,
+            &common_fallback_lower,
+        );
+
+        assert_eq!(
+            class,
+            fret_core::RendererTextFontTraceFamilyClass::Requested
+        );
+    }
+
+    #[test]
+    fn generic_nonrequested_noncommon_family_is_system_fallback() {
+        let requested_generic_lower = HashSet::from([String::from("inter")]);
+        let common_fallback_lower = HashSet::from([String::from("noto sans cjk sc")]);
+
+        let class = classify_trace_family(
+            &fret_core::FontId::Ui,
+            "Segoe UI Emoji",
+            &requested_generic_lower,
+            &common_fallback_lower,
+        );
+
+        assert_eq!(
+            class,
+            fret_core::RendererTextFontTraceFamilyClass::SystemFallback
+        );
     }
 }

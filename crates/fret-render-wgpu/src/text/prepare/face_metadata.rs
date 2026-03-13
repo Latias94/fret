@@ -35,6 +35,7 @@ impl TextSystem {
             style,
             constraints,
             &self.font_runtime.fallback_policy,
+            &self.parley_shaper,
             shape.missing_glyphs,
             families,
         );
