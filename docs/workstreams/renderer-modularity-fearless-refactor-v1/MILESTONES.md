@@ -50,6 +50,10 @@ Current snapshot (2026-03-13):
   - `TextSystem::new(...)` now delegates initial state assembly through that bootstrap module
   - initial font-policy bootstrap finalization now lives under
     `crates/fret-render-wgpu/src/text/fonts.rs`
+  - public `TextSystem::new(...)` now lives under `crates/fret-render-wgpu/src/text/bootstrap.rs`
+  - private `prepare_with_key(...)` glue now lives under
+    `crates/fret-render-wgpu/src/text/prepare.rs`
+  - `text/mod.rs` now keeps only the text state shell plus module wiring
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

@@ -1,4 +1,4 @@
-use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextSpan, TextStyle};
+use fret_core::TextBlobId;
 use slotmap::SlotMap;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
@@ -32,7 +32,6 @@ mod queries;
 mod types;
 
 use self::atlas::{GlyphAtlas, GlyphKey};
-use self::bootstrap::build_text_system;
 pub use self::quality::TextQualitySettings;
 use self::quality::TextQualityState;
 #[cfg(test)]
@@ -93,22 +92,5 @@ pub struct TextSystem {
 
     font_trace: FontTraceState,
 }
-
-impl TextSystem {
-    pub fn new(device: &wgpu::Device) -> Self {
-        build_text_system(device)
-    }
-
-    fn prepare_with_key(
-        &mut self,
-        key: TextBlobKey,
-        style: &TextStyle,
-        spans: Option<&[TextSpan]>,
-        constraints: TextConstraints,
-    ) -> (TextBlobId, TextMetrics) {
-        self.prepare_with_key_driver(key, style, spans, constraints)
-    }
-}
-
 #[cfg(test)]
 mod tests;

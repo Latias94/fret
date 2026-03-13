@@ -308,6 +308,11 @@ ID format:
     - initial font-policy bootstrap finalization now lives in
       `crates/fret-render-wgpu/src/text/fonts.rs`
     - `TextSystem::new(...)` no longer owns fallback-policy/font-stack finalization directly
+    - public `TextSystem::new(...)` now lives in
+      `crates/fret-render-wgpu/src/text/bootstrap.rs`
+    - private `prepare_with_key(...)` glue now lives in
+      `crates/fret-render-wgpu/src/text/prepare.rs`
+    - `text/mod.rs` now keeps only the text state shell plus module wiring
     - prepared-glyph font-data cache writes now live behind a dedicated helper in
       `crates/fret-render-wgpu/src/text/prepare.rs`
     - `cache_prepared_glyph_face_data(...)` no longer owns font-data entry writes directly

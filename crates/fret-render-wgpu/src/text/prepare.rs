@@ -25,6 +25,16 @@ pub(super) struct PrepareShapeBuildContext {
 }
 
 impl TextSystem {
+    fn prepare_with_key(
+        &mut self,
+        key: fret_render_text::cache_keys::TextBlobKey,
+        style: &TextStyle,
+        spans: Option<&[fret_core::TextSpan]>,
+        constraints: TextConstraints,
+    ) -> (TextBlobId, TextMetrics) {
+        self.prepare_with_key_driver(key, style, spans, constraints)
+    }
+
     #[allow(dead_code)]
     pub fn prepare_input(
         &mut self,

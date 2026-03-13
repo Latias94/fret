@@ -106,6 +106,10 @@ As of 2026-03-13:
 - Initial font-policy bootstrap finalization now lives under
   `crates/fret-render-wgpu/src/text/fonts.rs`, and `TextSystem::new(...)` no longer owns
   fallback-policy/font-stack finalization directly.
+- Public `TextSystem::new(...)` now lives under `crates/fret-render-wgpu/src/text/bootstrap.rs`,
+  private `prepare_with_key(...)` glue now lives under
+  `crates/fret-render-wgpu/src/text/prepare.rs`, and `text/mod.rs` now keeps only the text state
+  shell plus module wiring.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

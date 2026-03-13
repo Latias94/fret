@@ -111,6 +111,12 @@ pub(super) fn build_text_system(device: &wgpu::Device) -> TextSystem {
     out
 }
 
+impl TextSystem {
+    pub fn new(device: &wgpu::Device) -> Self {
+        build_text_system(device)
+    }
+}
+
 fn create_atlas_sampler(device: &wgpu::Device) -> wgpu::Sampler {
     device.create_sampler(&wgpu::SamplerDescriptor {
         label: Some("fret glyph atlas sampler"),
