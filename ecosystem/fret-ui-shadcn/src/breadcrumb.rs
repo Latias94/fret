@@ -15,7 +15,9 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::motion::drive_tween_color_for_element;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, Space, ui,
+};
 
 use crate::{overlay_motion, rtl, use_direction};
 
@@ -520,6 +522,20 @@ pub mod primitives {
 
     use fret_ui::element::{ContainerProps, LayoutStyle, SizeStyle};
 
+    fn collect_landed_children<H: UiHost, I, T>(
+        cx: &mut ElementContext<'_, H>,
+        children: I,
+    ) -> Vec<AnyElement>
+    where
+        I: IntoIterator<Item = T>,
+        T: IntoUiElement<H>,
+    {
+        children
+            .into_iter()
+            .map(|child| child.into_element(cx))
+            .collect()
+    }
+
     fn text_style(theme: &Theme) -> TextStyle {
         let text_px = theme
             .metric_by_key("component.breadcrumb.text_px")
@@ -563,24 +579,28 @@ pub mod primitives {
         }
 
         #[track_caller]
-        pub fn into_element<H: UiHost, I>(
+        pub fn into_element<H: UiHost, I, TChild>(
             self,
             cx: &mut ElementContext<'_, H>,
             children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
         ) -> AnyElement
         where
-            I: IntoIterator<Item = AnyElement>,
+            I: IntoIterator<Item = TChild>,
+            TChild: IntoUiElement<H>,
         {
             let props = {
                 let theme = Theme::global(&*cx.app);
                 decl_style::container_props(theme, self.chrome, self.layout)
             };
-            cx.container(props, move |cx| children(cx))
-                .attach_semantics(
-                    SemanticsDecoration::default()
-                        .role(SemanticsRole::Region)
-                        .label("breadcrumb"),
-                )
+            cx.container(props, move |cx| {
+                let built_children = children(cx);
+                collect_landed_children(cx, built_children)
+            })
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::Region)
+                    .label("breadcrumb"),
+            )
         }
     }
 
@@ -606,13 +626,14 @@ pub mod primitives {
         }
 
         #[track_caller]
-        pub fn into_element<H: UiHost, I>(
+        pub fn into_element<H: UiHost, I, TChild>(
             self,
             cx: &mut ElementContext<'_, H>,
             children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
         ) -> AnyElement
         where
-            I: IntoIterator<Item = AnyElement>,
+            I: IntoIterator<Item = TChild>,
+            TChild: IntoUiElement<H>,
         {
             let (muted, style, gap, props) = {
                 let theme = Theme::global(&*cx.app);
@@ -642,7 +663,8 @@ pub mod primitives {
                         move |cx| {
                             // Apply the list-level muted foreground by default; individual children
                             // (BreadcrumbLink/Page) can override it.
-                            let mut out: Vec<AnyElement> = children(cx).into_iter().collect();
+                            let built_children = children(cx);
+                            let mut out = collect_landed_children(cx, built_children);
                             for el in &mut out {
                                 // Best-effort: only text nodes support local color overrides.
                                 if let fret_ui::element::ElementKind::Text(props) = &mut el.kind {
@@ -685,13 +707,14 @@ pub mod primitives {
         }
 
         #[track_caller]
-        pub fn into_element<H: UiHost, I>(
+        pub fn into_element<H: UiHost, I, TChild>(
             self,
             cx: &mut ElementContext<'_, H>,
             children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
         ) -> AnyElement
         where
-            I: IntoIterator<Item = AnyElement>,
+            I: IntoIterator<Item = TChild>,
+            TChild: IntoUiElement<H>,
         {
             let (item_gap, props) = {
                 let theme = Theme::global(&*cx.app);
@@ -713,7 +736,10 @@ pub mod primitives {
                         align: CrossAlign::Center,
                         wrap: false,
                     },
-                    move |cx| children(cx),
+                    move |cx| {
+                        let built_children = children(cx);
+                        collect_landed_children(cx, built_children)
+                    },
                 )]
             })
             .attach_semantics(SemanticsDecoration::default().role(SemanticsRole::ListItem))

@@ -4,6 +4,7 @@ const ADVANCED_RS: &str = include_str!("advanced.rs");
 const README: &str = include_str!("../README.md");
 const ALERT_RS: &str = include_str!("alert.rs");
 const BADGE_RS: &str = include_str!("badge.rs");
+const BREADCRUMB_RS: &str = include_str!("breadcrumb.rs");
 const COLLAPSIBLE_RS: &str = include_str!("collapsible.rs");
 const CARD_RS: &str = include_str!("card.rs");
 const EMPTY_RS: &str = include_str!("empty.rs");
@@ -411,6 +412,33 @@ fn collapsible_helpers_prefer_typed_build_outputs_when_no_raw_slot_storage_is_re
         assert!(
             !normalized.contains(&marker),
             "collapsible.rs reintroduced pre-landed AnyElement helper signatures on the public surface"
+        );
+    }
+}
+
+
+#[test]
+fn breadcrumb_primitives_prefer_typed_child_conversion_before_the_landing_seam() {
+    let normalized = normalize_ws(BREADCRUMB_RS);
+    let required_markers = [
+        "pub fn into_element<H: UiHost, I, TChild>( self, cx: &mut ElementContext<'_, H>, children: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = TChild>, TChild: IntoUiElement<H>,",
+    ];
+    let forbidden_markers = [
+        "pub fn into_element<H: UiHost, I>( self, cx: &mut ElementContext<'_, H>, children: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "breadcrumb.rs should accept typed child conversion on primitive breadcrumb containers"
+        );
+    }
+    for marker in forbidden_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            !normalized.contains(&marker),
+            "breadcrumb.rs reintroduced primitive breadcrumb container closures that land children as AnyElement too early"
         );
     }
 }
