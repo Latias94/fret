@@ -89,6 +89,9 @@ Deliverables:
 - one minimal promoted completion/history proof on top of that seam, keeping focus on the owning
   input while exposing a controlled listbox relationship plus `active_descendant` state and
   consuming the shared kit helper rather than proof-local glue,
+- focused popup screenshot/diag evidence for the anchored-overlay assist surface so popup geometry,
+  in-window clamping, active-row review state, and overlay placement traces stay reviewable on the
+  promoted proof surface,
 - focused diag coverage for buffered blur commit, multiline explicit commit, and Escape cancel on
   the promoted proof surface,
 - and a boring close-out path for screenshot automation after typed-mode interactions and reruns.
@@ -111,6 +114,8 @@ Exit gates:
   moving primary focus into the popup, and that proof is backed by shared `fret-ui-kit`
   text-assist glue plus an editor-owned `TextAssistField` recipe rather than demo-local policy
   code, with anchored overlay mode promoted on the proof surface instead of an inline-only fallback,
+- the anchored-overlay popup path is also backed by focused screenshot/bundle/layout evidence and
+  an overlay-placement trace instead of only the behavioral history script,
 - repeated-control identity coverage exists on a promoted loop-built surface rather than only in
   local reasoning or code comments,
 - and this workstream can point to clear proof/gate evidence for baseline correctness.
@@ -130,9 +135,9 @@ Deliverables:
 - `DragValue` closure for real editor workflows,
 - richer text-input policy for editor surfaces beyond the shared buffered baseline
   (validating the newly landed popup-capable `fret-ui-kit` text-assist glue plus
-  `TextAssistField` recipe on a second consumer, deciding where overlay-specific policy should
-  live, specialized blur ownership where needed, and deeper editor integrations above the new
-  password/outcome/assistive extension seam),
+  `TextAssistField` recipe on a second consumer, deciding where shared overlay/scroll/selection
+  policy should live, specialized blur ownership where needed, and deeper editor integrations above
+  the new password/outcome/assistive extension seam),
 - a promoted starter set definition for controls and composites,
 - explicit conventions for `id_source`, response semantics, and `test_id`,
 - and a "no new promoted components without gates" landing rule.

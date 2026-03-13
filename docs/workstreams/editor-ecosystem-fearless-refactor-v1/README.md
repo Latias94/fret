@@ -114,11 +114,15 @@ Current checkpoint:
 - `imui_editor_proof_demo` now defaults that `Name assist` proof to the anchored-overlay surface,
   so the promoted editor proof no longer relies on an inline-only fallback for completion/history
   review,
+- the anchored-overlay `Name assist` proof now also has a focused popup evidence gate via
+  `tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-popup-screenshots.json`, which
+  pins in-window popup geometry, input-retained focus, active-row review state, and overlay
+  placement tracing (`editor.text_assist`) on the promoted proof surface instead of relying on ad
+  hoc screenshots,
 - and the remaining foundation cleanup is now mostly about promoting specialized text policy above
   that baseline: proving the new `fret-ui-kit` glue plus `TextAssistField` surface split on a
   second consumer, deciding which popup/scroll/selection behavior should be promoted into shared
-  kit policy vs stay editor-local, adding focused screenshot/diag coverage for popup geometry and
-  active-row state, richer password/history integrations, targeted
+  kit policy vs stay editor-local, richer password/history integrations, targeted
   `BlurBehavior::Cancel` / `PreserveDraft` adoption on real editor surfaces, and follow-up tuning
   for wide-inspector slack after the new lane grammar landed.
 

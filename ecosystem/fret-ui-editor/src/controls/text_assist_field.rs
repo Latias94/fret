@@ -662,6 +662,15 @@ fn request_text_assist_overlay<H: UiHost>(
     .with_collision_padding(Edges::all(TEXT_ASSIST_POPUP_WINDOW_MARGIN));
     let desired = Size::new(anchor.size.width, surface_height);
     let layout = popper::popper_content_layout_sized(outer, anchor, desired, placement);
+    cx.diagnostics_record_overlay_placement_placed_rect(
+        Some("editor.text_assist"),
+        Some(input_id),
+        Some(panel.id),
+        outer,
+        anchor,
+        layout.rect,
+        Some(layout.side),
+    );
     let overlay_panel = popper_content::popper_wrapper_panel_at(
         cx,
         layout.rect,

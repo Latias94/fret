@@ -135,8 +135,7 @@ Interaction contract:
       `percent_0_1_format(0)` as the sole `%` source, and the shared icon-button segment now
       centers trailing clear affordance icons so proof-surface text/numeric controls stop drifting
       on obvious visual seams.
-      Remaining work: prove the popup-capable seam on a second consumer, add focused
-      screenshot/diag coverage for popup geometry and active-row state, decide where shared
+      Remaining work: prove the popup-capable seam on a second consumer, decide where shared
       overlay/scroll/selection policy should live, decide where editor surfaces should opt into
       `BlurBehavior::Cancel` / `PreserveDraft`, and keep tightening multiline/editor proof
       coverage before new promoted components land.
@@ -166,10 +165,14 @@ Interaction contract:
       also exists in `fret-ui-kit::headless::text_assist`, and `imui_editor_proof_demo` consumes
       that shared layer directly. The first editor-owned recipe above it now also exists as
       `fret-ui-editor::controls::TextAssistField`, and that recipe already supports both inline
-      and anchored-overlay list surfaces. The remaining work is now about validating the seam with
-      a second consumer, deciding where overlay-specific policy belongs, deciding where
-      specialized blur policies belong, and adding richer editor integrations above the shared
-      baseline rather than re-litigating commit/cancel semantics.
+      and anchored-overlay list surfaces. The anchored-overlay path now also has focused popup
+      evidence via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-popup-screenshots.json`,
+      which pins popup geometry, input-retained focus, active-row review state, and the
+      `editor.text_assist` overlay placement trace. The remaining work is now about validating the
+      seam with a second consumer, deciding where shared overlay/scroll/selection policy belongs,
+      deciding where specialized blur policies belong, and adding richer editor integrations above
+      the shared baseline rather than re-litigating commit/cancel semantics.
 - [ ] `EER-EDITOR-123` Freeze the v1 reusable starter set:
       `TextField`, `Checkbox`, `DragValue`, `Slider`, `EnumSelect`, `ColorEdit`, `VecNEdit`,
       `TransformEdit`, `PropertyGrid`, and `InspectorPanel`.
@@ -225,18 +228,23 @@ Interaction contract:
       evidence. The proof now also verifies the shared `fret-ui-kit::headless::text_assist` glue
       instead of a private demo helper, and the mounted UI path now flows through
       `fret-ui-editor::controls::TextAssistField` instead of demo-local listbox rendering. The
-      promoted proof now also defaults that recipe to its anchored-overlay surface.
-      Remaining work: add a second consumer and a focused popup screenshot/diag gate before
-      extracting more formal kit-level popup/list glue.
+      promoted proof now also defaults that recipe to its anchored-overlay surface, and
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-popup-screenshots.json`
+      now locks popup geometry, input-retained focus, active-row review state, and overlay
+      placement tracing on that same proof surface.
+      Remaining work: add a second consumer before extracting more formal kit-level popup/list
+      glue.
 - [~] `EER-GATE-133` Keep screenshot coverage tied to actual baseline-review states, not just
       arbitrary captures.
       The neutral default baseline now has a screenshot proof via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-default.json`;
       the full authoring parity surface now also has a focused screenshot proof via
-      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-authoring-affordances-screenshots-default.json`.
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-authoring-affordances-screenshots-default.json`;
+      the anchored-overlay assist path now also has a focused popup screenshot proof via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-popup-screenshots.json`.
       Their next job is to drive token/layout cleanup, not just exist, and to stay aligned with the
-      new shared inspector lane grammar plus the authoring proof surfaces where clear-affordance
-      and affix regressions tend to show up first.
+      new shared inspector lane grammar plus the authoring proof surfaces where clear-affordance,
+      affix, and popup-geometry regressions tend to show up first.
 - [x] `EER-GATE-136` Close the screenshot-runner finalization gap for editor typed-edit proof.
       The default baseline script now resets the proof search field up front so repeated runs do
       not strand the next session in a filtered state, the launched `diag run` command exits
