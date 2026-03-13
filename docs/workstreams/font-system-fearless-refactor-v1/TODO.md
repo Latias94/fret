@@ -21,7 +21,7 @@ Background inputs:
 - [x] Cross-link the workstream from `docs/README.md`.
 - [x] Decide which existing standalone font docs remain background/audit-only after this workstream
   becomes the execution lane.
-- [ ] Identify the ADR rows and alignment notes that must be updated when code lands:
+- [x] Identify the ADR rows and alignment notes that must be updated when code lands:
   - [x] ADR 0147
   - [x] ADR 0257
   - [x] ADR 0258
@@ -39,7 +39,7 @@ Background inputs:
   - [x] `FontCatalogMetadata`
   - [x] `FontCatalogCache`
   - [x] `TextFontStackKey`
-  - [ ] rescan-status globals where relevant
+  - [x] rescan-status globals where relevant
 - [x] Delete obsolete helper paths once the canonical flow exists.
 
 Regression gates:
@@ -118,7 +118,7 @@ Regression gates:
 
 ## Exit criteria for calling the workstream "closed enough"
 
-- [ ] There is one canonical runner publication path for font state.
+- [x] There is one canonical runner publication path for font state.
 - [x] Bundled font roles and profile guarantees live in one manifest-backed surface.
 - [x] No-op rescan apply does not churn renderer caches or published keys.
 - [x] Bundled-only determinism is explicit rather than inferred from scattered family-name lists.

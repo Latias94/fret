@@ -59,11 +59,10 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
     }
 
     pub(super) fn publish_system_font_rescan_state(&mut self) {
-        self.app.set_global::<fret_runtime::SystemFontRescanState>(
-            fret_runtime::SystemFontRescanState {
-                in_flight: self.system_font_rescan_in_flight,
-                pending: self.system_font_rescan_pending,
-            },
+        let _ = crate::runner::font_catalog::publish_system_font_rescan_state(
+            &mut self.app,
+            self.system_font_rescan_in_flight,
+            self.system_font_rescan_pending,
         );
     }
 

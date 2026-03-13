@@ -116,6 +116,22 @@ pub fn publish_renderer_text_stack_key_if_changed(
 }
 
 #[doc(hidden)]
+pub fn publish_system_font_rescan_state(
+    app: &mut impl GlobalsHost,
+    in_flight: bool,
+    pending: bool,
+) -> bool {
+    let new_state = fret_runtime::SystemFontRescanState { in_flight, pending };
+    let old_state = app.global::<fret_runtime::SystemFontRescanState>().copied();
+    if old_state != Some(new_state) {
+        app.set_global::<fret_runtime::SystemFontRescanState>(new_state);
+        true
+    } else {
+        false
+    }
+}
+
+#[doc(hidden)]
 pub fn sync_renderer_font_families_from_globals(
     app: &mut impl GlobalsHost,
     renderer: &mut impl RendererFontEnvironmentHost,
@@ -465,6 +481,48 @@ mod tests {
                 .0,
             42,
             "expected locale sync to publish the renderer's current stack key"
+        );
+    }
+
+    #[test]
+    fn publish_system_font_rescan_state_updates_runtime_global() {
+        let mut app = TestApp::default();
+
+        let changed = publish_system_font_rescan_state(&mut app, true, false);
+
+        assert!(changed);
+        assert_eq!(
+            app.global::<fret_runtime::SystemFontRescanState>()
+                .copied()
+                .expect("rescan state"),
+            fret_runtime::SystemFontRescanState {
+                in_flight: true,
+                pending: false,
+            }
+        );
+    }
+
+    #[test]
+    fn publish_system_font_rescan_state_is_noop_when_unchanged() {
+        let mut app = TestApp::default();
+        app.set_global::<fret_runtime::SystemFontRescanState>(
+            fret_runtime::SystemFontRescanState {
+                in_flight: false,
+                pending: true,
+            },
+        );
+
+        let changed = publish_system_font_rescan_state(&mut app, false, true);
+
+        assert!(!changed);
+        assert_eq!(
+            app.global::<fret_runtime::SystemFontRescanState>()
+                .copied()
+                .expect("rescan state"),
+            fret_runtime::SystemFontRescanState {
+                in_flight: false,
+                pending: true,
+            }
         );
     }
 }
