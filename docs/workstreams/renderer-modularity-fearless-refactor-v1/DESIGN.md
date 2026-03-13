@@ -244,6 +244,9 @@ For `Renderer` state-shell tightening, the same principle applies:
   cache key construction inputs, hit/miss bookkeeping, miss-reason reporting, and cache/scratch
   storage should move behind one owner so render-scene execution stops depending on a loose cache
   shell.
+- frame scratch state is the matching per-frame upload/build seam:
+  viewport-uniform scratch, render-space scratch, and plan-quad scratch should move behind one
+  owner so render-scene upload helpers stop depending on loose renderer vectors.
 
 ### 5. Tighten public exports after evidence exists
 

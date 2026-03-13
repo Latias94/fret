@@ -14,10 +14,11 @@ impl Renderer {
         frame_perf: &mut RenderPerfStats,
     ) {
         self.ensure_uniform_capacity(device, uniforms.len());
+        let viewport_uniform_bytes_scratch = self.frame_scratch_state.viewport_uniform_bytes_mut();
         let uniform_bytes_written = self.uniforms.write_viewport_uniforms_into(
             queue,
             uniforms,
-            &mut self.viewport_uniform_bytes_scratch,
+            viewport_uniform_bytes_scratch,
         ) as u64;
         if perf_enabled {
             frame_perf.uniform_bytes = frame_perf

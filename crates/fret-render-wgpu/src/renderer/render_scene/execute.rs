@@ -263,7 +263,8 @@ impl Renderer {
             self.finalize_frame_perf_after_dispatch(&mut frame_perf);
         }
 
-        self.plan_quad_vertex_bases_scratch = quad_vertex_bases;
+        self.frame_scratch_state
+            .store_plan_quad_bases(quad_vertex_bases);
 
         self.scene_encoding_state
             .store_after_frame(key, cache_hit, encoding);

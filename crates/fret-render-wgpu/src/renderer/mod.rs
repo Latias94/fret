@@ -28,6 +28,7 @@ mod util;
 mod buffers;
 mod config;
 mod diagnostics;
+mod frame_scratch;
 mod frame_targets;
 mod fullscreen;
 mod intermediate_pool;
@@ -52,6 +53,7 @@ mod v3_pyramid;
 
 use clip_path_mask_cache::*;
 use diagnostics::*;
+use frame_scratch::*;
 use fullscreen::*;
 use gpu_effect_params::GpuEffectParams;
 use gpu_globals::GpuGlobals;
@@ -91,10 +93,7 @@ pub struct Renderer {
     adapter: wgpu::Adapter,
     uniform_bind_group: wgpu::BindGroup,
     uniforms: UniformResources,
-    viewport_uniform_bytes_scratch: Vec<u8>,
-    render_space_bytes_scratch: Vec<u8>,
-    plan_quad_vertices_scratch: Vec<ViewportVertex>,
-    plan_quad_vertex_bases_scratch: Vec<Option<u32>>,
+    frame_scratch_state: FrameScratchState,
     render_plan_reporting_state: RenderPlanReportingState,
     render_plan_strict_output_clear: bool,
     globals: GpuGlobals,

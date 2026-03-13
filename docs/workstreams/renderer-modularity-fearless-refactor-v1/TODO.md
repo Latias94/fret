@@ -567,11 +567,15 @@ ID format:
     - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns the scene-encoding cache shell
       directly; cache key construction, hit/miss bookkeeping, and cache storage now sit behind the
       owner
+    - frame scratch owner moved into
+      `crates/fret-render-wgpu/src/renderer/frame_scratch.rs`
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns viewport-uniform scratch,
+      render-space scratch, plan-quad vertex scratch, or plan-quad base scratch directly
   - Current next hotspot:
     - decide whether scene-encoding invalidation/debug evidence should stay coupled to
       `scene_encoding_cache.rs` or move closer to diagnostics state
-    - evaluate whether render-scene encode-stage scratch/text-dump surfaces are the next
-      owner-state cuts after scene-encoding cache shell closure
+    - evaluate whether render-text dump state and remaining render-scene encode/upload helper
+      surfaces are the next owner-state cuts after frame scratch closure
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG
@@ -599,6 +603,8 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/render_plan_reporting.rs`
     - scene-encoding cache state now lives under
       `crates/fret-render-wgpu/src/renderer/scene_encoding_cache.rs`
+    - frame scratch state now lives under
+      `crates/fret-render-wgpu/src/renderer/frame_scratch.rs`
 - [ ] RMFR-renderer-042 Reduce cross-domain mutable coupling inside `Renderer`.
 - [ ] RMFR-renderer-043 Keep service trait implementations readable after extraction.
 
@@ -756,11 +762,10 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: scene-encoding cache owner state now lives under
-    `crates/fret-render-wgpu/src/renderer/scene_encoding_cache.rs`, and
-    `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns the scene-encoding cache shell
-    directly; cache key construction, hit/miss bookkeeping, and cache storage now sit behind the
-    owner.
+  - Latest landed slice: frame scratch owner state now lives under
+    `crates/fret-render-wgpu/src/renderer/frame_scratch.rs`, and
+    `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns viewport-uniform scratch,
+    render-space scratch, plan-quad vertex scratch, or plan-quad base scratch directly.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

@@ -246,6 +246,10 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns the scene-encoding cache shell
   directly; cache key construction, hit/miss bookkeeping, and cache storage now sit behind that
   owner.
+- Renderer frame scratch owner state now also lives under
+  `crates/fret-render-wgpu/src/renderer/frame_scratch.rs`, and
+  `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns viewport-uniform scratch,
+  render-space scratch, plan-quad vertex scratch, or plan-quad base scratch directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:
