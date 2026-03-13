@@ -195,6 +195,11 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`, and
   `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns
   `apply_step_in_place_with_scratch_targets(...)` directly.
+- Renderer shared chain helper flow now also lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns scratch-target
+  inventory, custom-step/raw-source detection, or backdrop-source-group decomposition helpers
+  directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

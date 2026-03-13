@@ -609,7 +609,7 @@ fn apply_custom_v3_step_inner(
     let (user0_image, user0_uv, user0_sampling) = resolve_custom_effect_image_input(user0);
     let (user1_image, user1_uv, user1_sampling) = resolve_custom_effect_image_input(user1);
     let (group_raw, group_pyramid, group_pyramid_roi) =
-        super::backdrop_source_group_parts(backdrop_source_group);
+        super::chain::backdrop_source_group_parts(backdrop_source_group);
 
     let v3_chain_raw = group_raw.or(custom_v3_chain_raw);
     let v3_sources_plan = plan_custom_v3_sources_and_charge_budget(
@@ -747,7 +747,7 @@ pub(super) fn append_padded_chain_final_custom_step(
             let (user0_image, user0_uv, user0_sampling) = resolve_custom_effect_image_input(user0);
             let (user1_image, user1_uv, user1_sampling) = resolve_custom_effect_image_input(user1);
             let (group_raw, group_pyramid, group_pyramid_roi) =
-                super::backdrop_source_group_parts(backdrop_source_group);
+                super::chain::backdrop_source_group_parts(backdrop_source_group);
 
             let v3_chain_raw = group_raw.or(chain_raw);
             let v3_sources_plan = plan_custom_v3_sources_and_charge_budget(

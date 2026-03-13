@@ -91,7 +91,8 @@ mod custom;
 mod scissor;
 
 use self::chain::{
-    apply_unpadded_chain_in_place, prepare_chain_start, try_apply_padded_chain_in_place,
+    apply_unpadded_chain_in_place, backdrop_source_group_parts, prepare_chain_start,
+    try_apply_padded_chain_in_place,
 };
 
 #[cfg(test)]
@@ -195,58 +196,6 @@ pub(super) fn map_scissor_downsample_nearest(
     dst_size: (u32, u32),
 ) -> Option<ScissorRect> {
     scissor::map_scissor_downsample_nearest(scissor, scale, dst_size)
-}
-
-pub(super) fn available_scratch_targets(
-    in_use_targets: &[PlanTarget],
-    srcdst: PlanTarget,
-) -> Vec<PlanTarget> {
-    let mut out: Vec<PlanTarget> = Vec::new();
-    for t in [
-        PlanTarget::Intermediate0,
-        PlanTarget::Intermediate1,
-        PlanTarget::Intermediate2,
-        PlanTarget::Intermediate3,
-    ] {
-        if t == srcdst {
-            continue;
-        }
-        if in_use_targets.contains(&t) {
-            continue;
-        }
-        out.push(t);
-    }
-    out
-}
-
-fn is_custom_effect_step(step: &fret_core::EffectStep) -> bool {
-    matches!(
-        *step,
-        fret_core::EffectStep::CustomV1 { .. }
-            | fret_core::EffectStep::CustomV2 { .. }
-            | fret_core::EffectStep::CustomV3 { .. }
-    )
-}
-
-fn step_wants_custom_v3_raw(step: &fret_core::EffectStep) -> bool {
-    matches!(
-        *step,
-        fret_core::EffectStep::CustomV3 { sources, .. } if sources.want_raw
-    )
-}
-
-fn backdrop_source_group_parts(
-    backdrop_source_group: Option<BackdropSourceGroupCtx>,
-) -> (
-    Option<PlanTarget>,
-    Option<CustomV3PyramidChoice>,
-    Option<(ScissorRect, u32)>,
-) {
-    let group_raw = backdrop_source_group.map(|g| g.raw_target);
-    let group_pyramid = backdrop_source_group.and_then(|g| g.pyramid);
-    let group_pyramid_roi =
-        backdrop_source_group.and_then(|g| g.pyramid.map(|_| (g.scissor, g.pyramid_pad_px)));
-    (group_raw, group_pyramid, group_pyramid_roi)
 }
 
 pub(super) fn apply_chain_in_place(

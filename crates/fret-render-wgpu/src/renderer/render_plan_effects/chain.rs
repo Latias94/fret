@@ -33,6 +33,55 @@ pub(super) struct PreparedChainStart {
     pub(super) custom_chain_budget: Option<CustomEffectChainBudgetEvidence>,
 }
 
+fn available_scratch_targets(in_use_targets: &[PlanTarget], srcdst: PlanTarget) -> Vec<PlanTarget> {
+    let mut out: Vec<PlanTarget> = Vec::new();
+    for t in [
+        PlanTarget::Intermediate0,
+        PlanTarget::Intermediate1,
+        PlanTarget::Intermediate2,
+        PlanTarget::Intermediate3,
+    ] {
+        if t == srcdst {
+            continue;
+        }
+        if in_use_targets.contains(&t) {
+            continue;
+        }
+        out.push(t);
+    }
+    out
+}
+
+fn is_custom_effect_step(step: &fret_core::EffectStep) -> bool {
+    matches!(
+        *step,
+        fret_core::EffectStep::CustomV1 { .. }
+            | fret_core::EffectStep::CustomV2 { .. }
+            | fret_core::EffectStep::CustomV3 { .. }
+    )
+}
+
+fn step_wants_custom_v3_raw(step: &fret_core::EffectStep) -> bool {
+    matches!(
+        *step,
+        fret_core::EffectStep::CustomV3 { sources, .. } if sources.want_raw
+    )
+}
+
+pub(super) fn backdrop_source_group_parts(
+    backdrop_source_group: Option<BackdropSourceGroupCtx>,
+) -> (
+    Option<PlanTarget>,
+    Option<CustomV3PyramidChoice>,
+    Option<(ScissorRect, u32)>,
+) {
+    let group_raw = backdrop_source_group.map(|g| g.raw_target);
+    let group_pyramid = backdrop_source_group.and_then(|g| g.pyramid);
+    let group_pyramid_roi =
+        backdrop_source_group.and_then(|g| g.pyramid.map(|_| (g.scissor, g.pyramid_pad_px)));
+    (group_raw, group_pyramid, group_pyramid_roi)
+}
+
 fn scaled_effect_px(px: fret_core::Px, scale_factor: f32) -> f32 {
     if px.0.is_finite() {
         (px.0 * scale_factor).max(0.0)
@@ -48,7 +97,7 @@ fn initial_custom_chain_budget(
     let full_target_bytes = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
     steps
         .iter()
-        .any(super::is_custom_effect_step)
+        .any(is_custom_effect_step)
         .then_some(CustomEffectChainBudgetEvidence {
             effective_budget_bytes: ctx.intermediate_budget_bytes,
             base_required_bytes: base_required_bytes_for_srcdst_and_single_scratch(
@@ -167,7 +216,7 @@ pub(super) fn prepare_chain_start(
     ctx: EffectCompileCtx,
 ) -> PreparedChainStart {
     let mut budget_bytes = ctx.intermediate_budget_bytes;
-    let scratch_targets = super::available_scratch_targets(in_use_targets, srcdst);
+    let scratch_targets = available_scratch_targets(in_use_targets, srcdst);
     let mut custom_chain_budget = initial_custom_chain_budget(steps, ctx);
     let coverage = prepare_chain_coverage(
         passes,
@@ -200,9 +249,8 @@ fn reserve_unpadded_chain_raw_target(
     custom_chain_budget: &mut Option<CustomEffectChainBudgetEvidence>,
     ctx: EffectCompileCtx,
 ) -> (Option<PlanTarget>, usize) {
-    let chain_wants_raw = group_raw.is_none()
-        && steps.len() >= 2
-        && steps.iter().any(super::step_wants_custom_v3_raw);
+    let chain_wants_raw =
+        group_raw.is_none() && steps.len() >= 2 && steps.iter().any(step_wants_custom_v3_raw);
     let full_target_bytes = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
 
     if !chain_wants_raw
@@ -823,7 +871,7 @@ pub(super) fn try_apply_padded_chain_in_place(
     let min_budget_for_work = base_required_bytes_for_srcdst_and_two_scratch(full_target_bytes);
     let has_work = scratch_targets.len() >= 2;
     let has_mask = coverage.mask_uniform_index.is_some() || coverage.mask.is_some();
-    let last_step_is_custom = steps.last().is_some_and(super::is_custom_effect_step);
+    let last_step_is_custom = steps.last().is_some_and(is_custom_effect_step);
     let can_commit_with_mask = !has_mask
         || last_step_is_custom
         || color_adjust_enabled(ctx.viewport_size, ctx.format, budget_bytes);
@@ -838,7 +886,7 @@ pub(super) fn try_apply_padded_chain_in_place(
     }
 
     let work = scratch_targets[0];
-    let chain_wants_raw = steps.iter().any(super::step_wants_custom_v3_raw);
+    let chain_wants_raw = steps.iter().any(step_wants_custom_v3_raw);
     let chain_raw = (chain_wants_raw
         && backdrop_source_group.is_none()
         && scratch_targets.len() >= 3
