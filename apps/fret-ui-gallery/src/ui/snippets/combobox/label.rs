@@ -34,20 +34,24 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
             ]
         });
 
-    shadcn::FieldGroup::new([shadcn::Field::new([
-        shadcn::FieldContent::new([
-            shadcn::FieldLabel::new("Framework")
-                .for_control(control_id.clone())
-                .test_id("ui-gallery-combobox-label-label")
+    shadcn::field_group(|cx| {
+        ui::children![
+            cx;
+            shadcn::Field::new([
+                shadcn::FieldContent::new([
+                    shadcn::FieldLabel::new("Framework")
+                        .for_control(control_id.clone())
+                        .test_id("ui-gallery-combobox-label-label")
+                        .into_element(cx),
+                    shadcn::FieldDescription::new("Click the label to focus the combobox trigger.")
+                        .for_control(control_id.clone())
+                        .into_element(cx),
+                ])
                 .into_element(cx),
-            shadcn::FieldDescription::new("Click the label to focus the combobox trigger.")
-                .for_control(control_id.clone())
-                .into_element(cx),
-        ])
-        .into_element(cx),
-        combobox,
-    ])
-    .into_element(cx)])
+                combobox,
+            ]),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
     .into_element(cx)
     .test_id("ui-gallery-combobox-label")

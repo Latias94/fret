@@ -21,7 +21,7 @@ pub(super) fn preview_popover(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/popover.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/radix/popover.mdx` and Radix Popover docs.",
         "Preview mirrors the shadcn Popover docs path after `Installation`: `Demo`, `Usage`, `Basic`, `Align`, `With Form`, `RTL`, and `API Reference`.",
-        "Popover keeps an anchor-aware content path (`into_element_with_anchor(...)`), so Fret intentionally keeps closure-based authoring as the primary API instead of forcing a generic compose builder.",
+        "Default recipe-level root authoring now uses `Popover::new(cx, trigger, content)`, while anchor-aware sizing and detached-trigger cases still use the explicit advanced seams (`from_open(...).into_element_with(...)` / `into_element_with_anchor(...)`).",
         "Keep content width explicit (for example `w-72` / 288px in default content, or 320px in the form demo) for predictable layout.",
         "For dense input rows, prefer `Field` / `FieldGroup` recipes to keep spacing consistent with other form surfaces.",
     ]);

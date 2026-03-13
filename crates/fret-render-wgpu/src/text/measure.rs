@@ -8,12 +8,12 @@ impl TextSystem {
         style: &TextStyle,
         constraints: TextConstraints,
     ) -> TextMetrics {
-        return self.measure.measure_plain(
+        return self.layout_cache.measure.measure_plain(
             &mut self.parley_shaper,
             text,
             style,
             constraints,
-            self.font_stack_key,
+            self.font_runtime.font_stack_key,
         );
 
         #[cfg(any())]
@@ -216,12 +216,12 @@ impl TextSystem {
         base_style: &TextStyle,
         constraints: TextConstraints,
     ) -> TextMetrics {
-        return self.measure.measure_attributed(
+        return self.layout_cache.measure.measure_attributed(
             &mut self.parley_shaper,
             rich,
             base_style,
             constraints,
-            self.font_stack_key,
+            self.font_runtime.font_stack_key,
         );
 
         #[cfg(any())]

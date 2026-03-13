@@ -921,6 +921,97 @@ fn pressable_on_activate_hook_runs_on_keyboard_activation() {
 }
 
 #[test]
+fn pressable_pointer_up_does_not_steal_focus_from_text_input_descendant() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pressable-text-input-descendant-focus",
+        |cx| {
+            let mut pressable_props = crate::element::PressableProps::default();
+            pressable_props.layout.size.width = crate::element::Length::Fill;
+            pressable_props.layout.size.height = crate::element::Length::Fill;
+            pressable_props.focusable = true;
+
+            let mut region_props = crate::element::TextInputRegionProps::default();
+            region_props.layout.size.width = crate::element::Length::Fill;
+            region_props.layout.size.height = crate::element::Length::Fill;
+            region_props.a11y_label = Some(Arc::from("Editor"));
+
+            vec![cx.pressable(pressable_props, move |cx, _state| {
+                vec![cx.text_input_region(region_props, |_cx| Vec::<AnyElement>::new())]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let pressable_node = ui.children(root)[0];
+    let region_node = ui.children(pressable_node)[0];
+    let region_bounds = ui.debug_node_bounds(region_node).expect("region bounds");
+    let position = Point::new(
+        Px(region_bounds.origin.x.0 + 4.0),
+        Px(region_bounds.origin.y.0 + 4.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(
+        ui.focus(),
+        Some(region_node),
+        "expected text input descendant to take focus on pointer down"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(
+        ui.focus(),
+        Some(region_node),
+        "expected ancestor pressable not to steal focus on pointer up"
+    );
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    let snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("window text input snapshot");
+    assert!(snapshot.focus_is_text_input);
+}
+
+#[test]
 fn pressable_semantics_checked_is_exposed() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

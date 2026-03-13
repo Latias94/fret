@@ -121,23 +121,24 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .refine_layout(LayoutRefinement::default().h_full())
                 .into_element(cx);
 
-            let main = shadcn::Card::new(vec![
-                shadcn::CardHeader::new(vec![
-                    shadcn::CardTitle::new("Mobile Sheet").into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::CardContent::new(vec![
-                    cx.text(
-                        "Open the sidebar via SidebarTrigger. Escape should close and restore focus.",
-                    ),
-                    shadcn::Button::new("Focus")
-                        .variant(shadcn::ButtonVariant::Ghost)
-                        .size(shadcn::ButtonSize::Sm)
-                        .test_id("ui-gallery-sidebar-mobile-focus")
-                        .into_element(cx),
-                ])
-                .into_element(cx),
-            ])
+            let main = shadcn::card(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_header(|cx| ui::children![cx; shadcn::card_title("Mobile Sheet")]),
+                    shadcn::card_content(|cx| {
+                        vec![
+                            cx.text(
+                                "Open the sidebar via SidebarTrigger. Escape should close and restore focus.",
+                            ),
+                            shadcn::Button::new("Focus")
+                                .variant(shadcn::ButtonVariant::Ghost)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-sidebar-mobile-focus")
+                                .into_element(cx),
+                        ]
+                    }),
+                ]
+            })
             .refine_layout(LayoutRefinement::default().w_full().min_w_0())
             .into_element(cx)
             .attach_semantics(

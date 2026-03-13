@@ -263,21 +263,8 @@ impl ComponentsGalleryDriver {
         let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
             .render_root("components-gallery", |cx| {
                 if std::env::var_os("FRET_COMPONENTS_GALLERY_TABLE_TORTURE").is_some() {
-                    #[derive(Default)]
-                    struct TableTortureModels {
-                        data: Option<Arc<[u64]>>,
-                        columns: Option<Arc<[ColumnDef<u64>]>>,
-                        state: Option<Model<TableState>>,
-                    }
-
-                    let (data, columns, table_state) =
-                        cx.with_state(TableTortureModels::default, |st| {
-                            (st.data.clone(), st.columns.clone(), st.state.clone())
-                        });
-
-                    let (data, columns, table_state) = match (data, columns, table_state) {
-                        (Some(data), Some(columns), Some(state)) => (data, columns, state),
-                        _ => {
+                    let (data, columns) = cx.slot_state(
+                        || {
                             let n: u64 =
                                 std::env::var("FRET_COMPONENTS_GALLERY_TABLE_TORTURE_N")
                                     .ok()
@@ -302,17 +289,11 @@ impl ComponentsGalleryDriver {
                             ];
                             let columns: Arc<[ColumnDef<u64>]> = Arc::from(cols);
 
-                            let state = cx.app.models_mut().insert(TableState::default());
-
-                            cx.with_state(TableTortureModels::default, |st| {
-                                st.data = Some(data.clone());
-                                st.columns = Some(columns.clone());
-                                st.state = Some(state.clone());
-                            });
-
-                            (data, columns, state)
-                        }
-                    };
+                            (data, columns)
+                        },
+                        |(data, columns)| (data.clone(), columns.clone()),
+                    );
+                    let table_state = cx.local_model_keyed("table_torture.state", TableState::default);
 
                     let theme = cx.theme_snapshot();
                     let padding = theme.metric_token("metric.padding.md");
@@ -338,7 +319,7 @@ impl ComponentsGalleryDriver {
                                 },
                                 |cx| {
                                     let scroll_handle =
-                                        cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+                                        cx.slot_state(VirtualListScrollHandle::new, |h| h.clone());
 
                                     let state_revision =
                                         cx.app.models().revision(&table_state).unwrap_or(0);
@@ -1038,17 +1019,18 @@ impl ComponentsGalleryDriver {
                                                 wrap: true,
                                             },
                                             |cx| {
-                                                let tooltip = shadcn::Tooltip::new(
-                                                    shadcn::Button::new("Tooltip (hover)")
-                                                        .variant(shadcn::ButtonVariant::Outline)
-                                                        .into_element(cx),
+                                                let tooltip_content =
                                                     shadcn::TooltipContent::new(vec![
                                                         shadcn::TooltipContent::text(
                                                             cx,
                                                             "Tooltip: hover intent + placement",
                                                         ),
-                                                    ])
-                                                    .into_element(cx),
+                                                    ]);
+                                                let tooltip = shadcn::Tooltip::new(
+                                                    cx,
+                                                    shadcn::Button::new("Tooltip (hover)")
+                                                        .variant(shadcn::ButtonVariant::Outline),
+                                                    tooltip_content,
                                                 )
                                                 .arrow(true)
                                                 .open_delay_frames(10)
@@ -1094,10 +1076,7 @@ impl ComponentsGalleryDriver {
                                                                     wrap: false,
                                                                 },
                                                                 |cx| {
-                                                                    vec![shadcn::HoverCard::new(
-                                                                        shadcn::Button::new("HoverCard (hover, not clipped)")
-                                                                            .variant(shadcn::ButtonVariant::Outline)
-                                                                            .into_element(cx),
+                                                                    let hover_card_content =
                                                                         shadcn::HoverCardContent::new(vec![cx.flex(
                                                                             FlexProps {
                                                                                 layout: LayoutStyle::default(),
@@ -1114,8 +1093,12 @@ impl ComponentsGalleryDriver {
                                                                                     cx.text("Move pointer from trigger to content."),
                                                                                 ]
                                                                             },
-                                                                        )])
-                                                                        .into_element(cx),
+                                                                        )]);
+                                                                    vec![shadcn::HoverCard::new(
+                                                                        cx,
+                                                                        shadcn::Button::new("HoverCard (hover, not clipped)")
+                                                                            .variant(shadcn::ButtonVariant::Outline),
+                                                                        hover_card_content,
                                                                     )
                                                                     .close_delay_frames(10)
                                                                     .into_element(cx)]
@@ -1189,9 +1172,9 @@ impl ComponentsGalleryDriver {
                                                         );
 
                                                 let popover =
-                                                    shadcn::Popover::new(popover_open.clone())
+                                                    shadcn::Popover::from_open(popover_open.clone())
                                                     .auto_focus(true)
-                                                    .into_element(
+                                                    .into_element_with(
                                                         cx,
                                                         |cx| {
                                                             shadcn::Button::new("Popover")

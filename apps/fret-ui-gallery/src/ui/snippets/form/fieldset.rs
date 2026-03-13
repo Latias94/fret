@@ -12,38 +12,39 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .min_w_0()
         .max_w(Px(520.0));
 
-    shadcn::FieldSet::new([
-        shadcn::FieldLegend::new("Profile").into_element(cx),
-        shadcn::FieldDescription::new("Group related fields to keep structure explicit.")
-            .into_element(cx),
-        shadcn::FieldGroup::new([
-            shadcn::Field::new([
-                shadcn::FieldLabel::new("Display name").into_element(cx),
-                shadcn::Input::new(text_input.clone())
-                    .placeholder("Evil Rabbit")
-                    .a11y_label("Display name")
-                    .into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::Field::new([
-                shadcn::FieldLabel::new("Bio").into_element(cx),
-                shadcn::Textarea::new(text_area.clone())
-                    .a11y_label("Bio")
-                    .refine_layout(LayoutRefinement::default().h_px(Px(88.0)))
-                    .into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::Field::new([
-                shadcn::Button::new("Submit").into_element(cx),
-                shadcn::Button::new("Cancel")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .into_element(cx),
-            ])
-            .orientation(shadcn::FieldOrientation::Horizontal)
-            .into_element(cx),
-        ])
-        .into_element(cx),
-    ])
+    shadcn::field_set(|cx| {
+        ui::children![
+            cx;
+            shadcn::FieldLegend::new("Profile"),
+            shadcn::FieldDescription::new("Group related fields to keep structure explicit."),
+            shadcn::field_group(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::Field::new(ui::children![
+                        cx;
+                        shadcn::FieldLabel::new("Display name"),
+                        shadcn::Input::new(text_input.clone())
+                            .placeholder("Evil Rabbit")
+                            .a11y_label("Display name"),
+                    ]),
+                    shadcn::Field::new(ui::children![
+                        cx;
+                        shadcn::FieldLabel::new("Bio"),
+                        shadcn::Textarea::new(text_area.clone())
+                            .a11y_label("Bio")
+                            .refine_layout(LayoutRefinement::default().h_px(Px(88.0))),
+                    ]),
+                    shadcn::Field::new(ui::children![
+                        cx;
+                        shadcn::Button::new("Submit"),
+                        shadcn::Button::new("Cancel")
+                            .variant(shadcn::ButtonVariant::Outline),
+                    ])
+                    .orientation(shadcn::FieldOrientation::Horizontal),
+                ]
+            }),
+        ]
+    })
     .refine_layout(max_w_md)
     .into_element(cx)
     .test_id("ui-gallery-form-fieldset")

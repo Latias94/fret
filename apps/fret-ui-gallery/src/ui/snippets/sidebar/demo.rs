@@ -201,15 +201,18 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .test_id("ui-gallery-sidebar-demo-sidebar"),
         );
 
-        let content = shadcn::Card::new(vec![
-            shadcn::CardHeader::new(vec![shadcn::CardTitle::new("Content").into_element(cx)])
-                .into_element(cx),
-            shadcn::CardContent::new(vec![
-                cx.text("A sidebar that collapses to icon mode."),
-                cx.text("Select any menu item to verify active and hover states."),
-            ])
-            .into_element(cx),
-        ])
+        let content = shadcn::card(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_header(|cx| ui::children![cx; shadcn::card_title("Content")]),
+                shadcn::card_content(|cx| {
+                    vec![
+                        cx.text("A sidebar that collapses to icon mode."),
+                        cx.text("Select any menu item to verify active and hover states."),
+                    ]
+                }),
+            ]
+        })
         .refine_layout(LayoutRefinement::default().w_full().h_full().min_w_0())
         .into_element(cx);
 

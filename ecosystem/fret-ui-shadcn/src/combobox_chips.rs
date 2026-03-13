@@ -88,14 +88,6 @@ fn combobox_value_label_map(
     out
 }
 
-#[derive(Default)]
-struct ComboboxChipsState {
-    query: Option<Model<String>>,
-    open_change_reason: Option<Model<Option<ComboboxOpenChangeReason>>>,
-    clear_query_on_close: kit_combobox::ClearQueryOnCloseState,
-    focus_restore_target: Option<Arc<Mutex<Option<GlobalElementId>>>>,
-}
-
 pub struct ComboboxChips {
     values: Model<Vec<Arc<str>>>,
     open: Model<bool>,
@@ -452,34 +444,12 @@ fn combobox_chips_with_patch<H: UiHost>(
 ) -> AnyElement {
     cx.scope(|cx| {
         let theme = Theme::global(&*cx.app).snapshot();
-        let open_change_reason_model = {
-            let existing = cx.with_state(ComboboxChipsState::default, |st| {
-                st.open_change_reason.clone()
-            });
-            if let Some(model) = existing {
-                model
-            } else {
-                let model = cx.app.models_mut().insert(None::<ComboboxOpenChangeReason>);
-                cx.with_state(ComboboxChipsState::default, |st| {
-                    st.open_change_reason = Some(model.clone())
-                });
-                model
-            }
-        };
-        let focus_restore_target = {
-            let existing = cx.with_state(ComboboxChipsState::default, |st| {
-                st.focus_restore_target.clone()
-            });
-            if let Some(cell) = existing {
-                cell
-            } else {
-                let cell: Arc<Mutex<Option<GlobalElementId>>> = Arc::new(Mutex::new(None));
-                cx.with_state(ComboboxChipsState::default, |st| {
-                    st.focus_restore_target = Some(cell.clone());
-                });
-                cell
-            }
-        };
+        let open_change_reason_model =
+            cx.local_model_keyed("open_change_reason", || None::<ComboboxOpenChangeReason>);
+        let focus_restore_target = cx.slot_state(
+            || Arc::new(Mutex::new(None::<GlobalElementId>)),
+            |cell| cell.clone(),
+        );
         let close_auto_focus = kit_combobox::on_close_auto_focus_with_reason(
             open_change_reason_model.clone(),
             focus_restore_target.clone(),
@@ -489,22 +459,10 @@ fn combobox_chips_with_patch<H: UiHost>(
         let _selected_values = cx.watch_model(&values).cloned().unwrap_or_default();
         let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
 
-        let query_model = if let Some(q) = query {
-            cx.with_state(ComboboxChipsState::default, |st| st.query = Some(q.clone()));
-            q
-        } else {
-            let existing = cx.with_state(ComboboxChipsState::default, |st| st.query.clone());
-            if let Some(m) = existing {
-                m
-            } else {
-                let m = cx.app.models_mut().insert(String::new());
-                cx.with_state(ComboboxChipsState::default, |st| st.query = Some(m.clone()));
-                m
-            }
-        };
+        let query_model = query.unwrap_or_else(|| cx.local_model_keyed("query", String::new));
 
-        let should_clear_query = cx.with_state(ComboboxChipsState::default, |st| {
-            kit_combobox::should_clear_query_on_close(&mut st.clear_query_on_close, is_open)
+        let should_clear_query = cx.slot_state(kit_combobox::ClearQueryOnCloseState::default, |state| {
+            kit_combobox::should_clear_query_on_close(state, is_open)
         });
         if should_clear_query {
             let _ = cx.app.models_mut().update(&query_model, |v| v.clear());
@@ -515,7 +473,7 @@ fn combobox_chips_with_patch<H: UiHost>(
         let groups_for_content = groups;
 
         let search_input_id = Rc::new(Cell::new(None));
-        let popover = Popover::new(open.clone())
+        let popover = Popover::from_open(open.clone())
             .auto_focus(true)
             .consume_outside_pointer_events(consume_outside_pointer_events)
             .on_dismiss_request(Some(

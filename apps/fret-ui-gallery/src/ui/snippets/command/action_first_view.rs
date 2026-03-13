@@ -74,31 +74,29 @@ impl View for ActionFirstViewRuntimeDemo {
 #[cfg(not(target_arch = "wasm32"))]
 pub fn render(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> AnyElement {
     cx.named("ui-gallery.command.action_first.view_runtime", |cx| {
-        struct ViewSlot {
-            state: Option<Rc<RefCell<fret::view::ViewWindowState<ActionFirstViewRuntimeDemo>>>>,
-        }
-
-        impl Default for ViewSlot {
-            fn default() -> Self {
-                Self { state: None }
-            }
-        }
-
-        let existing = cx.with_state(ViewSlot::default, |slot| slot.state.clone());
-        let view_state = match existing {
+        let view_state_slot = cx.slot_id();
+        let view_state = cx.state_for(
+            view_state_slot,
+            || None::<Rc<RefCell<fret::view::ViewWindowState<ActionFirstViewRuntimeDemo>>>>,
+            |slot| slot.clone(),
+        );
+        let view_state = match view_state {
             Some(state) => state,
             None => {
                 let state = Rc::new(RefCell::new(fret::view::view_init_window::<
                     ActionFirstViewRuntimeDemo,
                 >(&mut *cx.app, cx.window)));
-                cx.with_state(ViewSlot::default, |slot| {
-                    if slot.state.is_none() {
-                        slot.state = Some(state.clone());
-                    }
-                    slot.state
-                        .clone()
-                        .expect("slot must contain view state after init")
-                })
+                cx.state_for(
+                    view_state_slot,
+                    || None::<Rc<RefCell<fret::view::ViewWindowState<ActionFirstViewRuntimeDemo>>>>,
+                    |slot| {
+                        if slot.is_none() {
+                            *slot = Some(state.clone());
+                        }
+                        slot.clone()
+                            .expect("view runtime slot must contain state after init")
+                    },
+                )
             }
         };
 

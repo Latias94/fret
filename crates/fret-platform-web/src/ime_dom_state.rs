@@ -20,6 +20,22 @@
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DomControlIntent {
+    DeleteBackward,
+    DeleteForward,
+    Enter,
+}
+
+pub fn control_intent_for_beforeinput_type(input_type: &str) -> Option<DomControlIntent> {
+    match input_type {
+        "deleteContentBackward" => Some(DomControlIntent::DeleteBackward),
+        "deleteContentForward" => Some(DomControlIntent::DeleteForward),
+        "insertLineBreak" | "insertParagraph" => Some(DomControlIntent::Enter),
+        _ => None,
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DomInputDisposition {
     IgnoreComposing,
     IgnoreSuppressed,
@@ -31,6 +47,7 @@ pub struct WebImeDomState {
     composing: bool,
     suppress_next_input: bool,
     ignore_next_input: bool,
+    pending_control_intent: Option<DomControlIntent>,
 }
 
 impl fmt::Debug for WebImeDomState {
@@ -39,6 +56,7 @@ impl fmt::Debug for WebImeDomState {
             .field("composing", &self.composing)
             .field("suppress_next_input", &self.suppress_next_input)
             .field("ignore_next_input", &self.ignore_next_input)
+            .field("pending_control_intent", &self.pending_control_intent)
             .finish()
     }
 }
@@ -73,10 +91,30 @@ impl WebImeDomState {
         self.ignore_next_input = true;
     }
 
+    pub fn on_control_keydown(&mut self, intent: DomControlIntent) {
+        self.pending_control_intent = Some(intent);
+    }
+
+    pub fn on_control_keyup(&mut self, intent: DomControlIntent) {
+        if self.pending_control_intent == Some(intent) {
+            self.pending_control_intent = None;
+        }
+    }
+
+    pub fn suppress_matching_control_beforeinput(&mut self, intent: DomControlIntent) -> bool {
+        if self.pending_control_intent == Some(intent) {
+            self.pending_control_intent = None;
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn on_ime_disabled(&mut self) {
         self.composing = false;
         self.suppress_next_input = false;
         self.ignore_next_input = false;
+        self.pending_control_intent = None;
     }
 
     pub fn beforeinput_disposition(&mut self, dom_is_composing: bool) -> DomInputDisposition {
@@ -292,5 +330,50 @@ mod tests {
             st.beforeinput_disposition(false),
             DomInputDisposition::Process
         );
+    }
+
+    #[test]
+    fn matching_control_beforeinput_is_suppressed_once_after_keydown() {
+        let mut st = WebImeDomState::default();
+        st.on_control_keydown(DomControlIntent::DeleteBackward);
+        assert!(st.suppress_matching_control_beforeinput(DomControlIntent::DeleteBackward));
+        assert!(!st.suppress_matching_control_beforeinput(DomControlIntent::DeleteBackward));
+    }
+
+    #[test]
+    fn control_keyup_clears_pending_control_intent() {
+        let mut st = WebImeDomState::default();
+        st.on_control_keydown(DomControlIntent::DeleteForward);
+        st.on_control_keyup(DomControlIntent::DeleteForward);
+        assert!(!st.suppress_matching_control_beforeinput(DomControlIntent::DeleteForward));
+    }
+
+    #[test]
+    fn enter_beforeinput_is_suppressed_once_after_keydown() {
+        let mut st = WebImeDomState::default();
+        st.on_control_keydown(DomControlIntent::Enter);
+        assert!(st.suppress_matching_control_beforeinput(DomControlIntent::Enter));
+        assert!(!st.suppress_matching_control_beforeinput(DomControlIntent::Enter));
+    }
+
+    #[test]
+    fn beforeinput_control_intent_mapping_covers_delete_and_enter_types() {
+        assert_eq!(
+            control_intent_for_beforeinput_type("deleteContentBackward"),
+            Some(DomControlIntent::DeleteBackward)
+        );
+        assert_eq!(
+            control_intent_for_beforeinput_type("deleteContentForward"),
+            Some(DomControlIntent::DeleteForward)
+        );
+        assert_eq!(
+            control_intent_for_beforeinput_type("insertLineBreak"),
+            Some(DomControlIntent::Enter)
+        );
+        assert_eq!(
+            control_intent_for_beforeinput_type("insertParagraph"),
+            Some(DomControlIntent::Enter)
+        );
+        assert_eq!(control_intent_for_beforeinput_type("insertText"), None);
     }
 }

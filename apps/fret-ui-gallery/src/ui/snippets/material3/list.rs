@@ -34,25 +34,29 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, value: Model<Arc<str>>)
             .into_element(cx)
     };
 
-    let standard = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![shadcn::CardTitle::new("Standard").into_element(cx)])
-            .into_element(cx),
-        shadcn::CardContent::new(vec![build_list(cx, "ui-gallery-material3-standard")])
-            .into_element(cx),
-    ])
+    let standard = shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| ui::children![cx; shadcn::card_title("Standard")]),
+            shadcn::card_content(|cx| vec![build_list(cx, "ui-gallery-material3-standard")]),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
     .into_element(cx);
 
-    let expressive = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![shadcn::CardTitle::new("Expressive").into_element(cx)])
-            .into_element(cx),
-        shadcn::CardContent::new(vec![material3::context::with_material_design_variant(
-            cx,
-            material3::MaterialDesignVariant::Expressive,
-            |cx| build_list(cx, "ui-gallery-material3-expressive"),
-        )])
-        .into_element(cx),
-    ])
+    let expressive = shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| ui::children![cx; shadcn::card_title("Expressive")]),
+            shadcn::card_content(|cx| {
+                vec![material3::context::with_material_design_variant(
+                    cx,
+                    material3::MaterialDesignVariant::Expressive,
+                    |cx| build_list(cx, "ui-gallery-material3-expressive"),
+                )]
+            }),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
     .into_element(cx);
 

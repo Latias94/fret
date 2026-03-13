@@ -28,10 +28,10 @@ fn build_combobox_popover_overlay(
         Button, ButtonVariant, Popover, PopoverAlign, PopoverContent, PopoverSide,
     };
 
-    Popover::new(open.clone())
+    Popover::from_open(open.clone())
         .side(PopoverSide::Right)
         .align(PopoverAlign::Start)
-        .into_element(
+        .into_element_with(
             cx,
             |cx| {
                 Button::new("Open")

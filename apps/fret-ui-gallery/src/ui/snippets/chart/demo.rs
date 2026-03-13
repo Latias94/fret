@@ -286,7 +286,9 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         })
     };
 
-    let trending_footer = |cx: &mut UiCx<'_>, secondary: &'static str| {
+    let trending_footer = |cx: &mut UiCx<'_>,
+                           secondary: &'static str|
+     -> impl IntoUiElement<fret_app::App> + use<> {
         let icon =
             fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.trending-up"));
         ui::v_flex(|cx| {
@@ -308,7 +310,6 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         .gap(Space::N2)
         .items_start()
         .layout(LayoutRefinement::default().w_full().min_w_0())
-        .into_element(cx)
     };
 
     let chart_card = |cx: &mut UiCx<'_>,
@@ -316,25 +317,31 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                       description: &'static str,
                       kind: DemoChartKind,
                       footer_secondary: &'static str,
-                      test_id: &'static str| {
+                      test_id: &'static str|
+     -> impl IntoUiElement<fret_app::App> + use<> {
         let canvas = chart_canvas(cx, kind, Arc::<str>::from(format!("{test_id}-canvas")));
 
-        shadcn::Card::new(vec![
-            shadcn::CardHeader::new(vec![
-                shadcn::CardTitle::new(title).into_element(cx),
-                shadcn::CardDescription::new(description).into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new(vec![canvas]).into_element(cx),
-            shadcn::CardFooter::new(vec![trending_footer(cx, footer_secondary)]).into_element(cx),
-        ])
+        shadcn::card(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_header(|cx| {
+                    ui::children![
+                        cx;
+                        shadcn::card_title(title),
+                        shadcn::card_description(description),
+                    ]
+                }),
+                shadcn::card_content(|cx| ui::children![cx; canvas]),
+                shadcn::card_footer(|cx| ui::children![cx; trending_footer(cx, footer_secondary)]),
+            ]
+        })
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()
                 .min_w_0()
                 .max_w(Px(520.0)),
         )
-        .into_element(cx)
+        .ui()
         .test_id(test_id)
     };
 
@@ -371,12 +378,19 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         "ui-gallery-chart-demo-line",
     );
 
-    fret_ui_kit::ui::h_flex(|_cx| vec![area, bar, mixed, line])
-        .gap(Space::N4)
-        .wrap()
-        .w_full()
-        .items_start()
-        .into_element(cx)
-        .test_id("ui-gallery-chart-demo")
+    fret_ui_kit::ui::h_flex(|cx| {
+        vec![
+            area.into_element(cx),
+            bar.into_element(cx),
+            mixed.into_element(cx),
+            line.into_element(cx),
+        ]
+    })
+    .gap(Space::N4)
+    .wrap()
+    .w_full()
+    .items_start()
+    .into_element(cx)
+    .test_id("ui-gallery-chart-demo")
 }
 // endregion: example

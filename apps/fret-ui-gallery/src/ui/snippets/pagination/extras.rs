@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("extras.rs");
 
 // region: example
 use fret_core::Px;
+use fret_ui_kit::{IntoUiElement, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -12,49 +13,44 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let rows_per_page = cx.local_model_keyed("rows_per_page", || Some(Arc::<str>::from("25")));
     let rows_per_page_open = cx.local_model_keyed("rows_per_page_open", || false);
 
-    let page_number = |cx: &mut ElementContext<'_, H>, label: &'static str| {
-        fret_ui_kit::ui::text(label).tabular_nums().into_element(cx)
-    };
+    fn page_number<H: UiHost>(label: &'static str) -> impl IntoUiElement<H> + use<H> {
+        ui::text(label).tabular_nums()
+    }
 
     let simple = {
-        let content = shadcn::PaginationContent::new([
-            shadcn::PaginationItem::new(
-                shadcn::PaginationLink::new([page_number(cx, "1")])
-                    .on_click(CMD_APP_OPEN)
-                    .into_element(cx),
-            )
-            .into_element(cx),
-            shadcn::PaginationItem::new(
-                shadcn::PaginationLink::new([page_number(cx, "2")])
-                    .on_click(CMD_APP_SAVE)
-                    .active(true)
-                    .into_element(cx),
-            )
-            .into_element(cx),
-            shadcn::PaginationItem::new(
-                shadcn::PaginationLink::new([page_number(cx, "3")])
-                    .on_click(CMD_APP_SAVE)
-                    .into_element(cx),
-            )
-            .into_element(cx),
-            shadcn::PaginationItem::new(
-                shadcn::PaginationLink::new([page_number(cx, "4")])
-                    .on_click(CMD_APP_SAVE)
-                    .into_element(cx),
-            )
-            .into_element(cx),
-            shadcn::PaginationItem::new(
-                shadcn::PaginationLink::new([page_number(cx, "5")])
-                    .on_click(CMD_APP_SAVE)
-                    .into_element(cx),
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx);
-
-        shadcn::Pagination::new([content])
-            .into_element(cx)
-            .test_id("ui-gallery-pagination-simple")
+        shadcn::pagination(|cx| {
+            ui::children![
+                cx;
+                shadcn::pagination_content(|cx| {
+                    ui::children![
+                        cx;
+                        shadcn::pagination_item(
+                            shadcn::pagination_link(|cx| ui::children![cx; page_number("1")])
+                                .on_click(CMD_APP_OPEN),
+                        ),
+                        shadcn::pagination_item(
+                            shadcn::pagination_link(|cx| ui::children![cx; page_number("2")])
+                                .on_click(CMD_APP_SAVE)
+                                .active(true),
+                        ),
+                        shadcn::pagination_item(
+                            shadcn::pagination_link(|cx| ui::children![cx; page_number("3")])
+                                .on_click(CMD_APP_SAVE),
+                        ),
+                        shadcn::pagination_item(
+                            shadcn::pagination_link(|cx| ui::children![cx; page_number("4")])
+                                .on_click(CMD_APP_SAVE),
+                        ),
+                        shadcn::pagination_item(
+                            shadcn::pagination_link(|cx| ui::children![cx; page_number("5")])
+                                .on_click(CMD_APP_SAVE),
+                        ),
+                    ]
+                }),
+            ]
+        })
+        .into_element(cx)
+        .test_id("ui-gallery-pagination-simple")
     };
 
     let icons_only = {
@@ -78,25 +74,24 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .refine_layout(LayoutRefinement::default().w(fret_ui_kit::LengthRefinement::Auto))
         .into_element(cx);
 
-        let content = shadcn::PaginationContent::new([
-            shadcn::PaginationItem::new(
-                shadcn::PaginationPrevious::new()
-                    .on_click(CMD_APP_OPEN)
-                    .into_element(cx),
-            )
-            .into_element(cx),
-            shadcn::PaginationItem::new(
-                shadcn::PaginationNext::new()
-                    .on_click(CMD_APP_SAVE)
-                    .into_element(cx),
-            )
-            .into_element(cx),
-        ])
+        let pagination = shadcn::pagination(|cx| {
+            ui::children![
+                cx;
+                shadcn::pagination_content(|cx| {
+                    ui::children![
+                        cx;
+                        shadcn::pagination_item(
+                            shadcn::PaginationPrevious::new().on_click(CMD_APP_OPEN),
+                        ),
+                        shadcn::pagination_item(
+                            shadcn::PaginationNext::new().on_click(CMD_APP_SAVE),
+                        ),
+                    ]
+                }),
+            ]
+        })
+        .refine_layout(LayoutRefinement::default().w(fret_ui_kit::LengthRefinement::Auto))
         .into_element(cx);
-
-        let pagination = shadcn::Pagination::new([content])
-            .refine_layout(LayoutRefinement::default().w(fret_ui_kit::LengthRefinement::Auto))
-            .into_element(cx);
 
         ui::h_flex(move |_cx| [rows_field, pagination])
             .layout(LayoutRefinement::default().w_full())
@@ -108,17 +103,19 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     };
 
     ui::v_flex(|cx| {
-            vec![
-                shadcn::raw::typography::muted(
-                    "Extras are Fret-specific recipes and regression gates (not part of upstream shadcn PaginationDemo).",
-                ).into_element(cx),
-                simple,
-                icons_only,
-            ]
-        })
-            .gap(Space::N4)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()).into_element(cx)
+        ui::children![
+            cx;
+            shadcn::raw::typography::muted(
+                "Extras are Fret-specific recipes and regression gates (not part of upstream shadcn PaginationDemo).",
+            ),
+            simple,
+            icons_only,
+        ]
+    })
+    .gap(Space::N4)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx)
     .test_id("ui-gallery-pagination-extras")
 }
 

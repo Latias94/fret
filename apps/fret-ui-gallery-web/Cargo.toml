@@ -20,8 +20,14 @@ default = ["cjk-lite-fonts", "devtools-ws"]
 emoji-fonts = ["fret-launch/wasm-emoji-fonts"]
 cjk-lite-fonts = ["fret-launch/wasm-cjk-lite-fonts"]
 devtools-ws = ["fret-ui-gallery/devtools-ws"]
+gallery-web-ime-harness = ["fret-ui-gallery/gallery-web-ime-harness"]
+gallery-dev = ["fret-ui-gallery/gallery-dev"]
+gallery-material3 = ["fret-ui-gallery/gallery-material3"]
+gallery-full = ["fret-ui-gallery/gallery-full"]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+fret-app = { path = "../../crates/fret-app" }
+fret-bootstrap = { path = "../../ecosystem/fret-bootstrap" }
 fret-launch = { path = "../../crates/fret-launch" }
 fret-ui-gallery = { path = "../fret-ui-gallery", features = ["devtools-ws"] }
 wasm-bindgen = "0.2"

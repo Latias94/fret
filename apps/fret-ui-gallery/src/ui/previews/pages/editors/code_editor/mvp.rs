@@ -50,9 +50,9 @@ pub(in crate::ui) fn preview_code_editor_mvp(
         applied.set(applied_flags);
     }
 
-    let word_fixture_loaded = cx.with_state(|| Rc::new(Cell::new(true)), |v| v.clone());
-    let word_idx = cx.with_state(|| Rc::new(Cell::new(0usize)), |v| v.clone());
-    let word_debug = cx.with_state(
+    let word_fixture_loaded = cx.slot_state(|| Rc::new(Cell::new(true)), |v| v.clone());
+    let word_idx = cx.slot_state(|| Rc::new(Cell::new(0usize)), |v| v.clone());
+    let word_debug = cx.slot_state(
         || Rc::new(std::cell::RefCell::new(String::new())),
         |v| v.clone(),
     );

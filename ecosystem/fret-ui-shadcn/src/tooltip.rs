@@ -559,7 +559,17 @@ impl std::fmt::Debug for Tooltip {
 }
 
 impl Tooltip {
-    pub fn new(trigger: AnyElement, content: impl Into<TooltipContentArg>) -> Self {
+    /// Default typed root constructor that late-lands the trigger at the overlay boundary.
+    pub fn new<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl IntoUiElement<H>,
+        content: impl Into<TooltipContentArg>,
+    ) -> Self {
+        Self::new_raw(trigger.into_element(cx), content)
+    }
+
+    /// Explicit raw seam for already-landed trigger elements.
+    pub fn new_raw(trigger: AnyElement, content: impl Into<TooltipContentArg>) -> Self {
         Self {
             trigger,
             content: content.into(),
@@ -585,15 +595,6 @@ impl Tooltip {
             on_open_change_with_reason: None,
             on_open_change_complete: None,
         }
-    }
-
-    /// Host-bound builder-first constructor that late-lands the trigger/content at the call site.
-    pub fn build<H: UiHost>(
-        cx: &mut ElementContext<'_, H>,
-        trigger: impl IntoUiElement<H>,
-        content: impl Into<TooltipContentArg>,
-    ) -> Self {
-        Self::new(trigger.into_element(cx), content)
     }
 
     pub fn align(mut self, align: TooltipAlign) -> Self {
@@ -1677,7 +1678,7 @@ mod tests {
     }
 
     #[test]
-    fn tooltip_build_into_element_accepts_late_landed_trigger_and_content() {
+    fn tooltip_new_into_element_accepts_late_landed_trigger_and_content() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let bounds = Rect::new(
@@ -1688,7 +1689,7 @@ mod tests {
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let content = TooltipContent::new(vec![ui::raw_text("tip").into_element(cx)]);
             let root =
-                Tooltip::build(cx, crate::Card::build(|_cx, _out| {}), content).into_element(cx);
+                Tooltip::new(cx, crate::Card::build(|_cx, _out| {}), content).into_element(cx);
 
             assert!(matches!(root.kind, ElementKind::HoverRegion(_)));
         });
@@ -1704,11 +1705,9 @@ mod tests {
         );
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            let root = Tooltip::new(
-                cx.container(ContainerProps::default(), |_cx| Vec::new()),
-                TooltipContent::new(vec![ui::raw_text("tip").into_element(cx)]),
-            )
-            .into_element(cx);
+            let trigger = cx.container(ContainerProps::default(), |_cx| Vec::new());
+            let content = TooltipContent::new(vec![ui::raw_text("tip").into_element(cx)]);
+            let root = Tooltip::new(cx, trigger, content).into_element(cx);
 
             assert!(matches!(root.kind, ElementKind::HoverRegion(_)));
         });
@@ -1980,7 +1979,7 @@ mod tests {
             Vec::new(),
         );
 
-        let tooltip = Tooltip::new(trigger, content)
+        let tooltip = Tooltip::new_raw(trigger, content)
             .open_delay_frames(120)
             .close_delay_frames(80)
             .disable_hoverable_popup(true);
@@ -2020,7 +2019,7 @@ mod tests {
             Vec::new(),
         );
 
-        let tooltip = Tooltip::new(trigger, content)
+        let tooltip = Tooltip::new_raw(trigger, content)
             .open_delay(Duration::from_millis(123))
             .close_delay(Duration::from_millis(45));
         assert_eq!(tooltip.open_delay_frames_override, None);
@@ -2065,7 +2064,7 @@ mod tests {
             Vec::new(),
         );
 
-        let tooltip = Tooltip::new(trigger, content)
+        let tooltip = Tooltip::new_raw(trigger, content)
             .on_open_change(Some(Arc::new(|_open| {})))
             .on_open_change_with_reason(Some(Arc::new(|_open, _reason| {})))
             .on_open_change_complete(Some(Arc::new(|_open| {})));
@@ -2194,7 +2193,7 @@ mod tests {
                 content_id_out.set(Some(content.id));
 
                 vec![
-                    Tooltip::new(trigger, content)
+                    Tooltip::new(cx, trigger, content)
                         .open_delay_frames(30)
                         .close_delay_frames(30)
                         .into_element(cx),
@@ -2355,7 +2354,7 @@ mod tests {
                             content_id_out.set(Some(content.id));
 
                             vec![
-                                Tooltip::new(trigger, content)
+                                Tooltip::new(cx, trigger, content)
                                     .close_delay_frames(2)
                                     .into_element(cx),
                             ]
@@ -2660,7 +2659,7 @@ mod tests {
                     content_id_out.set(Some(content.id));
 
                     vec![
-                        Tooltip::new(trigger, content)
+                        Tooltip::new(cx, trigger, content)
                             .open_delay_frames(0)
                             .close_delay_frames(0)
                             .arrow(true)
@@ -2869,7 +2868,7 @@ mod tests {
                     content_id_out.set(Some(content.id));
 
                     vec![
-                        Tooltip::new(trigger, content)
+                        Tooltip::new(cx, trigger, content)
                             .open_delay_frames(0)
                             .close_delay_frames(0)
                             .disable_hoverable_content(false)
@@ -3194,8 +3193,8 @@ mod tests {
                                     content_2_id_out.set(Some(content_2.id));
 
                                     vec![
-                                        Tooltip::new(trigger_1, content_1).into_element(cx),
-                                        Tooltip::new(trigger_2, content_2).into_element(cx),
+                                        Tooltip::new(cx, trigger_1, content_1).into_element(cx),
+                                        Tooltip::new(cx, trigger_2, content_2).into_element(cx),
                                     ]
                                 })]
                             })
@@ -3413,12 +3412,12 @@ mod tests {
                                     content_2_id_out.set(Some(content_2.id));
 
                                     vec![
-                                        Tooltip::new(trigger_1, content_1)
+                                        Tooltip::new(cx, trigger_1, content_1)
                                             .open_delay_frames(0)
                                             .close_delay_frames(100)
                                             .disable_hoverable_content(false)
                                             .into_element(cx),
-                                        Tooltip::new(trigger_2, content_2)
+                                        Tooltip::new(cx, trigger_2, content_2)
                                             .open_delay_frames(0)
                                             .close_delay_frames(0)
                                             .disable_hoverable_content(false)
@@ -3652,7 +3651,7 @@ mod tests {
                             content_id_out.set(Some(content.id));
 
                             vec![
-                                Tooltip::new(trigger, content)
+                                Tooltip::new(cx, trigger, content)
                                     .open_delay_frames(0)
                                     .close_delay_frames(0)
                                     .disable_hoverable_content(false)
@@ -3842,7 +3841,7 @@ mod tests {
                             content_id_out.set(Some(content.id));
 
                             vec![
-                                Tooltip::new(trigger, content)
+                                Tooltip::new(cx, trigger, content)
                                     .open_delay_frames(0)
                                     .close_delay_frames(0)
                                     .disable_hoverable_content(false)
@@ -4059,7 +4058,7 @@ mod tests {
                                         |cx| {
                                             let mut out: Vec<AnyElement> = Vec::new();
                                             out.push(
-                                                Tooltip::new(trigger, content)
+                                                Tooltip::new(cx, trigger, content)
                                                     .open_delay_frames(0)
                                                     .close_delay_frames(0)
                                                     .disable_hoverable_content(false)
@@ -4305,7 +4304,7 @@ mod tests {
                                                 |cx| {
                                                     let mut out: Vec<AnyElement> = Vec::new();
                                                     out.push(
-                                                        Tooltip::new(trigger, content)
+                                                        Tooltip::new(cx, trigger, content)
                                                             .open_delay_frames(0)
                                                             .close_delay_frames(0)
                                                             .disable_hoverable_content(false)
@@ -4548,7 +4547,7 @@ mod tests {
                             content_id_out.set(Some(content.id));
 
                             vec![
-                                Tooltip::new(trigger, content)
+                                Tooltip::new(cx, trigger, content)
                                     .open_delay_frames(0)
                                     .close_delay_frames(0)
                                     .disable_hoverable_content(false)
@@ -4759,14 +4758,14 @@ mod tests {
                                     content_2_id_out.set(Some(content_2.id));
 
                                     vec![
-                                        Tooltip::new(trigger_1, content_1)
+                                        Tooltip::new(cx, trigger_1, content_1)
                                             .open_delay_frames(0)
                                             .close_delay_frames(0)
                                             .disable_hoverable_content(false)
                                             .side(TooltipSide::Right)
                                             .side_offset(Px(120.0))
                                             .into_element(cx),
-                                        Tooltip::new(trigger_2, content_2)
+                                        Tooltip::new(cx, trigger_2, content_2)
                                             .open_delay_frames(0)
                                             .close_delay_frames(0)
                                             .disable_hoverable_content(false)
@@ -4961,7 +4960,7 @@ mod tests {
                             content_id_out.set(Some(content.id));
 
                             vec![
-                                Tooltip::new(trigger, content)
+                                Tooltip::new(cx, trigger, content)
                                     .open_delay_frames(0)
                                     .close_delay_frames(0)
                                     .side(TooltipSide::Top)
@@ -5204,7 +5203,7 @@ mod tests {
 
                     vec![
                         anchor,
-                        Tooltip::new(trigger, content)
+                        Tooltip::new(cx, trigger, content)
                             .anchor_element(anchor_id)
                             .side(TooltipSide::Bottom)
                             .align(TooltipAlign::Start)

@@ -62,9 +62,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(cx)
         .test_id("ui-gallery.calendar.time.calendar");
 
-    let popover = shadcn::Popover::new(open.clone())
+    let popover = shadcn::Popover::from_open(open.clone())
         .align(shadcn::PopoverAlign::Start)
-        .into_element(
+        .into_element_with(
             cx,
             move |cx| {
                 let trigger = shadcn::Button::new(button_text.clone())

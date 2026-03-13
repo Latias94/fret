@@ -103,11 +103,7 @@ impl TextSystem {
     }
 
     pub(super) fn prepared_glyph_atlas_mut(&mut self, kind: GlyphQuadKind) -> &mut GlyphAtlas {
-        match kind {
-            GlyphQuadKind::Mask => &mut self.mask_atlas,
-            GlyphQuadKind::Color => &mut self.color_atlas,
-            GlyphQuadKind::Subpixel => &mut self.subpixel_atlas,
-        }
+        self.atlas_runtime.atlas_mut(kind)
     }
 }
 

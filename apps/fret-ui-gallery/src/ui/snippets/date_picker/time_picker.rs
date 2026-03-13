@@ -25,12 +25,13 @@ pub fn render<H: UiHost>(
         .into_element(cx)
         .test_id("ui-gallery-date-picker-time-input");
 
-    shadcn::FieldGroup::new([
-        shadcn::Field::new([shadcn::FieldLabel::new("Date").into_element(cx), date])
-            .into_element(cx),
-        shadcn::Field::new([shadcn::FieldLabel::new("Time").into_element(cx), time])
-            .into_element(cx),
-    ])
+    shadcn::field_group(|cx| {
+        ui::children![
+            cx;
+            shadcn::Field::new([shadcn::FieldLabel::new("Date").into_element(cx), date]),
+            shadcn::Field::new([shadcn::FieldLabel::new("Time").into_element(cx), time]),
+        ]
+    })
     .into_element(cx)
     .test_id("ui-gallery-date-picker-time")
 }

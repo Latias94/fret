@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("input_group.rs");
 
 // region: example
+use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -13,22 +14,27 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .test_id("ui-gallery-empty-input-group-search")
         .into_element(cx);
 
-    shadcn::Empty::new([
-        fret_ui_shadcn::empty::EmptyHeader::new([
-            fret_ui_shadcn::empty::EmptyTitle::new("404 - Not Found").into_element(cx),
-            fret_ui_shadcn::empty::EmptyDescription::new(
-                "The page you are looking for doesn't exist. Try searching below.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        fret_ui_shadcn::empty::EmptyContent::new([
-            search,
-            fret_ui_shadcn::empty::EmptyDescription::new("Need help? Contact support.")
-                .into_element(cx),
-        ])
-        .into_element(cx),
-    ])
+    shadcn::empty(|cx| {
+        ui::children![
+            cx;
+            shadcn::empty_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::empty_title("404 - Not Found"),
+                    shadcn::empty_description(
+                        "The page you are looking for doesn't exist. Try searching below.",
+                    ),
+                ]
+            }),
+            shadcn::empty_content(|cx| {
+                ui::children![
+                    cx;
+                    search,
+                    shadcn::empty_description("Need help? Contact support."),
+                ]
+            }),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
     .into_element(cx)
     .test_id("ui-gallery-empty-input-group")

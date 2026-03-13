@@ -275,7 +275,7 @@ pub(super) fn preview_card(
             "Card root width is caller-owned; express upstream `w-full max-w-sm` at the call site with `refine_layout(...)`.",
             "Grid/flex demo pages should put `w_full`, `min_w_0`, and `max_w(...)` on the page cell rather than baking them into the Card recipe.",
             "`CardFooter` now owns a fill-width + `min-w-0` inner row/column budget so footer-only text wraps against the card width instead of collapsing into one word per line.",
-            "If you prefer builder-style composition, use `Card::build(...)` or `card(cx, ...)`; slot types also expose `build(...)` variants.",
+            "Default first-party teaching should prefer `card(...)` plus the slot helper family; `Card::build(...)` remains a lower-level builder option when call sites need explicit late child collection.",
             "MediaImage demos use `ImageSourceElementContextExt` to resolve local/URL image sources into `ImageId`.",
         ]);
         sections.push(

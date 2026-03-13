@@ -30,107 +30,87 @@ impl Renderer {
     }
 
     pub fn set_perf_enabled(&mut self, enabled: bool) {
-        self.perf_enabled = enabled;
-        self.perf = RenderPerfStats::default();
+        self.diagnostics_state.set_perf_enabled(enabled);
     }
 
     pub fn take_perf_snapshot(&mut self) -> Option<RenderPerfSnapshot> {
-        if !self.perf_enabled {
+        if !self.diagnostics_state.perf_enabled() {
             return None;
         }
 
         let registry_est = self.gpu_resources.diagnostics_estimated_bytes();
-        let path_intermediate_msaa_bytes_estimate = self
-            .path_intermediate
-            .as_ref()
-            .map_or(0, PathIntermediate::estimated_msaa_bytes);
-        let path_intermediate_resolved_bytes_estimate = self
-            .path_intermediate
-            .as_ref()
-            .map_or(0, PathIntermediate::estimated_resolved_bytes);
-        let path_intermediate_bytes_estimate = self
-            .path_intermediate
-            .as_ref()
-            .map_or(0, PathIntermediate::estimated_bytes);
-        let custom_effect_v3_pyramid_scratch_bytes_estimate = self
-            .custom_effect_v3_pyramid_scratch
-            .as_ref()
-            .map_or(0, v3_pyramid::CustomEffectV3PyramidScratch::estimated_bytes);
+        let path_intermediate_msaa_bytes_estimate =
+            self.path_state.intermediate_msaa_bytes_estimate();
+        let path_intermediate_resolved_bytes_estimate =
+            self.path_state.intermediate_resolved_bytes_estimate();
+        let path_intermediate_bytes_estimate = self.path_state.intermediate_bytes_estimate();
+        let custom_effect_v3_pyramid_scratch_bytes_estimate =
+            self.custom_effect_v3_pyramid.scratch_bytes_estimate();
+        let perf = &self.diagnostics_state.perf;
 
         let snap = RenderPerfSnapshot {
-            frames: self.perf.frames,
-            encode_scene_us: self.perf.encode_scene.as_micros() as u64,
-            ensure_pipelines_us: self.perf.ensure_pipelines.as_micros() as u64,
-            plan_compile_us: self.perf.plan_compile.as_micros() as u64,
-            upload_us: self.perf.upload.as_micros() as u64,
-            record_passes_us: self.perf.record_passes.as_micros() as u64,
-            encoder_finish_us: self.perf.encoder_finish.as_micros() as u64,
-            prepare_svg_us: self.perf.prepare_svg.as_micros() as u64,
-            prepare_text_us: self.perf.prepare_text.as_micros() as u64,
-            svg_uploads: self.perf.svg_uploads,
-            svg_upload_bytes: self.perf.svg_upload_bytes,
-            image_uploads: self.perf.image_uploads,
-            image_upload_bytes: self.perf.image_upload_bytes,
-            render_target_updates_ingest_unknown: self.perf.render_target_updates_ingest_unknown,
-            render_target_updates_ingest_owned: self.perf.render_target_updates_ingest_owned,
-            render_target_updates_ingest_external_zero_copy: self
-                .perf
+            frames: perf.frames,
+            encode_scene_us: perf.encode_scene.as_micros() as u64,
+            ensure_pipelines_us: perf.ensure_pipelines.as_micros() as u64,
+            plan_compile_us: perf.plan_compile.as_micros() as u64,
+            upload_us: perf.upload.as_micros() as u64,
+            record_passes_us: perf.record_passes.as_micros() as u64,
+            encoder_finish_us: perf.encoder_finish.as_micros() as u64,
+            prepare_svg_us: perf.prepare_svg.as_micros() as u64,
+            prepare_text_us: perf.prepare_text.as_micros() as u64,
+            svg_uploads: perf.svg_uploads,
+            svg_upload_bytes: perf.svg_upload_bytes,
+            image_uploads: perf.image_uploads,
+            image_upload_bytes: perf.image_upload_bytes,
+            render_target_updates_ingest_unknown: perf.render_target_updates_ingest_unknown,
+            render_target_updates_ingest_owned: perf.render_target_updates_ingest_owned,
+            render_target_updates_ingest_external_zero_copy: perf
                 .render_target_updates_ingest_external_zero_copy,
-            render_target_updates_ingest_gpu_copy: self.perf.render_target_updates_ingest_gpu_copy,
-            render_target_updates_ingest_cpu_upload: self
-                .perf
-                .render_target_updates_ingest_cpu_upload,
-            render_target_updates_requested_ingest_unknown: self
-                .perf
+            render_target_updates_ingest_gpu_copy: perf.render_target_updates_ingest_gpu_copy,
+            render_target_updates_ingest_cpu_upload: perf.render_target_updates_ingest_cpu_upload,
+            render_target_updates_requested_ingest_unknown: perf
                 .render_target_updates_requested_ingest_unknown,
-            render_target_updates_requested_ingest_owned: self
-                .perf
+            render_target_updates_requested_ingest_owned: perf
                 .render_target_updates_requested_ingest_owned,
-            render_target_updates_requested_ingest_external_zero_copy: self
-                .perf
+            render_target_updates_requested_ingest_external_zero_copy: perf
                 .render_target_updates_requested_ingest_external_zero_copy,
-            render_target_updates_requested_ingest_gpu_copy: self
-                .perf
+            render_target_updates_requested_ingest_gpu_copy: perf
                 .render_target_updates_requested_ingest_gpu_copy,
-            render_target_updates_requested_ingest_cpu_upload: self
-                .perf
+            render_target_updates_requested_ingest_cpu_upload: perf
                 .render_target_updates_requested_ingest_cpu_upload,
-            render_target_updates_ingest_fallbacks: self
-                .perf
-                .render_target_updates_ingest_fallbacks,
-            render_target_metadata_degradations_color_encoding_dropped: self
-                .perf
+            render_target_updates_ingest_fallbacks: perf.render_target_updates_ingest_fallbacks,
+            render_target_metadata_degradations_color_encoding_dropped: perf
                 .render_target_metadata_degradations_color_encoding_dropped,
-            svg_raster_budget_bytes: self.perf.svg_raster_budget_bytes,
-            svg_rasters_live: self.perf.svg_rasters_live,
-            svg_standalone_bytes_live: self.perf.svg_standalone_bytes_live,
-            svg_mask_atlas_pages_live: self.perf.svg_mask_atlas_pages_live,
-            svg_mask_atlas_bytes_live: self.perf.svg_mask_atlas_bytes_live,
-            svg_mask_atlas_used_px: self.perf.svg_mask_atlas_used_px,
-            svg_mask_atlas_capacity_px: self.perf.svg_mask_atlas_capacity_px,
-            svg_raster_cache_hits: self.perf.svg_raster_cache_hits,
-            svg_raster_cache_misses: self.perf.svg_raster_cache_misses,
-            svg_raster_budget_evictions: self.perf.svg_raster_budget_evictions,
-            svg_mask_atlas_page_evictions: self.perf.svg_mask_atlas_page_evictions,
-            svg_mask_atlas_entries_evicted: self.perf.svg_mask_atlas_entries_evicted,
-            text_atlas_revision: self.perf.text_atlas_revision,
-            text_atlas_uploads: self.perf.text_atlas_uploads,
-            text_atlas_upload_bytes: self.perf.text_atlas_upload_bytes,
-            text_atlas_evicted_glyphs: self.perf.text_atlas_evicted_glyphs,
-            text_atlas_evicted_pages: self.perf.text_atlas_evicted_pages,
-            text_atlas_evicted_page_glyphs: self.perf.text_atlas_evicted_page_glyphs,
-            text_atlas_resets: self.perf.text_atlas_resets,
-            intermediate_budget_bytes: self.perf.intermediate_budget_bytes,
-            intermediate_full_target_bytes: self.perf.intermediate_full_target_bytes,
-            intermediate_in_use_bytes: self.perf.intermediate_in_use_bytes,
-            intermediate_peak_in_use_bytes: self.perf.intermediate_peak_in_use_bytes,
-            intermediate_release_targets: self.perf.intermediate_release_targets,
-            intermediate_pool_allocations: self.perf.intermediate_pool_allocations,
-            intermediate_pool_reuses: self.perf.intermediate_pool_reuses,
-            intermediate_pool_releases: self.perf.intermediate_pool_releases,
-            intermediate_pool_evictions: self.perf.intermediate_pool_evictions,
-            intermediate_pool_free_bytes: self.perf.intermediate_pool_free_bytes,
-            intermediate_pool_free_textures: self.perf.intermediate_pool_free_textures,
+            svg_raster_budget_bytes: perf.svg_raster_budget_bytes,
+            svg_rasters_live: perf.svg_rasters_live,
+            svg_standalone_bytes_live: perf.svg_standalone_bytes_live,
+            svg_mask_atlas_pages_live: perf.svg_mask_atlas_pages_live,
+            svg_mask_atlas_bytes_live: perf.svg_mask_atlas_bytes_live,
+            svg_mask_atlas_used_px: perf.svg_mask_atlas_used_px,
+            svg_mask_atlas_capacity_px: perf.svg_mask_atlas_capacity_px,
+            svg_raster_cache_hits: perf.svg_raster_cache_hits,
+            svg_raster_cache_misses: perf.svg_raster_cache_misses,
+            svg_raster_budget_evictions: perf.svg_raster_budget_evictions,
+            svg_mask_atlas_page_evictions: perf.svg_mask_atlas_page_evictions,
+            svg_mask_atlas_entries_evicted: perf.svg_mask_atlas_entries_evicted,
+            text_atlas_revision: perf.text_atlas_revision,
+            text_atlas_uploads: perf.text_atlas_uploads,
+            text_atlas_upload_bytes: perf.text_atlas_upload_bytes,
+            text_atlas_evicted_glyphs: perf.text_atlas_evicted_glyphs,
+            text_atlas_evicted_pages: perf.text_atlas_evicted_pages,
+            text_atlas_evicted_page_glyphs: perf.text_atlas_evicted_page_glyphs,
+            text_atlas_resets: perf.text_atlas_resets,
+            intermediate_budget_bytes: perf.intermediate_budget_bytes,
+            intermediate_full_target_bytes: perf.intermediate_full_target_bytes,
+            intermediate_in_use_bytes: perf.intermediate_in_use_bytes,
+            intermediate_peak_in_use_bytes: perf.intermediate_peak_in_use_bytes,
+            intermediate_release_targets: perf.intermediate_release_targets,
+            intermediate_pool_allocations: perf.intermediate_pool_allocations,
+            intermediate_pool_reuses: perf.intermediate_pool_reuses,
+            intermediate_pool_releases: perf.intermediate_pool_releases,
+            intermediate_pool_evictions: perf.intermediate_pool_evictions,
+            intermediate_pool_free_bytes: perf.intermediate_pool_free_bytes,
+            intermediate_pool_free_textures: perf.intermediate_pool_free_textures,
             path_intermediate_bytes_estimate,
             path_intermediate_msaa_bytes_estimate,
             path_intermediate_resolved_bytes_estimate,
@@ -141,163 +121,129 @@ impl Renderer {
             gpu_render_targets_live: registry_est.render_targets_live,
             gpu_render_targets_bytes_estimate: registry_est.render_targets_bytes_estimate,
             gpu_render_targets_max_bytes_estimate: registry_est.render_targets_max_bytes_estimate,
-            render_plan_estimated_peak_intermediate_bytes: self
-                .perf
+            render_plan_estimated_peak_intermediate_bytes: perf
                 .render_plan_estimated_peak_intermediate_bytes,
-            render_plan_segments: self.perf.render_plan_segments,
-            render_plan_segments_changed: self.perf.render_plan_segments_changed,
-            render_plan_segments_passes_increased: self.perf.render_plan_segments_passes_increased,
-            render_plan_degradations: self.perf.render_plan_degradations,
-            render_plan_effect_chain_budget_samples: self
-                .perf
-                .render_plan_effect_chain_budget_samples,
-            render_plan_effect_chain_effective_budget_min_bytes: self
-                .perf
+            render_plan_segments: perf.render_plan_segments,
+            render_plan_segments_changed: perf.render_plan_segments_changed,
+            render_plan_segments_passes_increased: perf.render_plan_segments_passes_increased,
+            render_plan_degradations: perf.render_plan_degradations,
+            render_plan_effect_chain_budget_samples: perf.render_plan_effect_chain_budget_samples,
+            render_plan_effect_chain_effective_budget_min_bytes: perf
                 .render_plan_effect_chain_effective_budget_min_bytes,
-            render_plan_effect_chain_effective_budget_max_bytes: self
-                .perf
+            render_plan_effect_chain_effective_budget_max_bytes: perf
                 .render_plan_effect_chain_effective_budget_max_bytes,
-            render_plan_effect_chain_other_live_max_bytes: self
-                .perf
+            render_plan_effect_chain_other_live_max_bytes: perf
                 .render_plan_effect_chain_other_live_max_bytes,
-            render_plan_custom_effect_chain_budget_samples: self
-                .perf
+            render_plan_custom_effect_chain_budget_samples: perf
                 .render_plan_custom_effect_chain_budget_samples,
-            render_plan_custom_effect_chain_effective_budget_min_bytes: self
-                .perf
+            render_plan_custom_effect_chain_effective_budget_min_bytes: perf
                 .render_plan_custom_effect_chain_effective_budget_min_bytes,
-            render_plan_custom_effect_chain_effective_budget_max_bytes: self
-                .perf
+            render_plan_custom_effect_chain_effective_budget_max_bytes: perf
                 .render_plan_custom_effect_chain_effective_budget_max_bytes,
-            render_plan_custom_effect_chain_other_live_max_bytes: self
-                .perf
+            render_plan_custom_effect_chain_other_live_max_bytes: perf
                 .render_plan_custom_effect_chain_other_live_max_bytes,
-            render_plan_custom_effect_chain_base_required_max_bytes: self
-                .perf
+            render_plan_custom_effect_chain_base_required_max_bytes: perf
                 .render_plan_custom_effect_chain_base_required_max_bytes,
-            render_plan_custom_effect_chain_optional_required_max_bytes: self
-                .perf
+            render_plan_custom_effect_chain_optional_required_max_bytes: perf
                 .render_plan_custom_effect_chain_optional_required_max_bytes,
-            render_plan_custom_effect_chain_base_required_full_targets_max: self
-                .perf
+            render_plan_custom_effect_chain_base_required_full_targets_max: perf
                 .render_plan_custom_effect_chain_base_required_full_targets_max,
-            render_plan_custom_effect_chain_optional_mask_max_bytes: self
-                .perf
+            render_plan_custom_effect_chain_optional_mask_max_bytes: perf
                 .render_plan_custom_effect_chain_optional_mask_max_bytes,
-            render_plan_custom_effect_chain_optional_pyramid_max_bytes: self
-                .perf
+            render_plan_custom_effect_chain_optional_pyramid_max_bytes: perf
                 .render_plan_custom_effect_chain_optional_pyramid_max_bytes,
-            render_plan_degradations_budget_zero: self.perf.render_plan_degradations_budget_zero,
-            render_plan_degradations_budget_insufficient: self
-                .perf
+            render_plan_degradations_budget_zero: perf.render_plan_degradations_budget_zero,
+            render_plan_degradations_budget_insufficient: perf
                 .render_plan_degradations_budget_insufficient,
-            render_plan_degradations_target_exhausted: self
-                .perf
+            render_plan_degradations_target_exhausted: perf
                 .render_plan_degradations_target_exhausted,
-            render_plan_degradations_backdrop_noop: self
-                .perf
-                .render_plan_degradations_backdrop_noop,
-            render_plan_degradations_filter_content_disabled: self
-                .perf
+            render_plan_degradations_backdrop_noop: perf.render_plan_degradations_backdrop_noop,
+            render_plan_degradations_filter_content_disabled: perf
                 .render_plan_degradations_filter_content_disabled,
-            render_plan_degradations_clip_path_disabled: self
-                .perf
+            render_plan_degradations_clip_path_disabled: perf
                 .render_plan_degradations_clip_path_disabled,
-            render_plan_degradations_composite_group_blend_to_over: self
-                .perf
+            render_plan_degradations_composite_group_blend_to_over: perf
                 .render_plan_degradations_composite_group_blend_to_over,
-            effect_degradations: self.perf.effect_degradations,
-            effect_blur_quality: self.perf.effect_blur_quality,
-            custom_effect_v1_steps_requested: self.perf.custom_effect_v1_steps_requested,
-            custom_effect_v1_passes_emitted: self.perf.custom_effect_v1_passes_emitted,
-            custom_effect_v2_steps_requested: self.perf.custom_effect_v2_steps_requested,
-            custom_effect_v2_passes_emitted: self.perf.custom_effect_v2_passes_emitted,
-            custom_effect_v2_user_image_incompatible_fallbacks: self
-                .perf
+            effect_degradations: perf.effect_degradations,
+            effect_blur_quality: perf.effect_blur_quality,
+            custom_effect_v1_steps_requested: perf.custom_effect_v1_steps_requested,
+            custom_effect_v1_passes_emitted: perf.custom_effect_v1_passes_emitted,
+            custom_effect_v2_steps_requested: perf.custom_effect_v2_steps_requested,
+            custom_effect_v2_passes_emitted: perf.custom_effect_v2_passes_emitted,
+            custom_effect_v2_user_image_incompatible_fallbacks: perf
                 .custom_effect_v2_user_image_incompatible_fallbacks,
-            custom_effect_v3_steps_requested: self.perf.custom_effect_v3_steps_requested,
-            custom_effect_v3_passes_emitted: self.perf.custom_effect_v3_passes_emitted,
-            custom_effect_v3_user0_image_incompatible_fallbacks: self
-                .perf
+            custom_effect_v3_steps_requested: perf.custom_effect_v3_steps_requested,
+            custom_effect_v3_passes_emitted: perf.custom_effect_v3_passes_emitted,
+            custom_effect_v3_user0_image_incompatible_fallbacks: perf
                 .custom_effect_v3_user0_image_incompatible_fallbacks,
-            custom_effect_v3_user1_image_incompatible_fallbacks: self
-                .perf
+            custom_effect_v3_user1_image_incompatible_fallbacks: perf
                 .custom_effect_v3_user1_image_incompatible_fallbacks,
-            custom_effect_v3_pyramid_cache_hits: self.perf.custom_effect_v3_pyramid_cache_hits,
-            custom_effect_v3_pyramid_cache_misses: self.perf.custom_effect_v3_pyramid_cache_misses,
-            clip_path_mask_cache_bytes_live: self.perf.clip_path_mask_cache_bytes_live,
-            clip_path_mask_cache_entries_live: self.perf.clip_path_mask_cache_entries_live,
-            clip_path_mask_cache_hits: self.perf.clip_path_mask_cache_hits,
-            clip_path_mask_cache_misses: self.perf.clip_path_mask_cache_misses,
-            draw_calls: self.perf.draw_calls,
-            quad_draw_calls: self.perf.quad_draw_calls,
-            viewport_draw_calls: self.perf.viewport_draw_calls,
-            viewport_draw_calls_ingest_unknown: self.perf.viewport_draw_calls_ingest_unknown,
-            viewport_draw_calls_ingest_owned: self.perf.viewport_draw_calls_ingest_owned,
-            viewport_draw_calls_ingest_external_zero_copy: self
-                .perf
+            custom_effect_v3_pyramid_cache_hits: perf.custom_effect_v3_pyramid_cache_hits,
+            custom_effect_v3_pyramid_cache_misses: perf.custom_effect_v3_pyramid_cache_misses,
+            clip_path_mask_cache_bytes_live: perf.clip_path_mask_cache_bytes_live,
+            clip_path_mask_cache_entries_live: perf.clip_path_mask_cache_entries_live,
+            clip_path_mask_cache_hits: perf.clip_path_mask_cache_hits,
+            clip_path_mask_cache_misses: perf.clip_path_mask_cache_misses,
+            draw_calls: perf.draw_calls,
+            quad_draw_calls: perf.quad_draw_calls,
+            viewport_draw_calls: perf.viewport_draw_calls,
+            viewport_draw_calls_ingest_unknown: perf.viewport_draw_calls_ingest_unknown,
+            viewport_draw_calls_ingest_owned: perf.viewport_draw_calls_ingest_owned,
+            viewport_draw_calls_ingest_external_zero_copy: perf
                 .viewport_draw_calls_ingest_external_zero_copy,
-            viewport_draw_calls_ingest_gpu_copy: self.perf.viewport_draw_calls_ingest_gpu_copy,
-            viewport_draw_calls_ingest_cpu_upload: self.perf.viewport_draw_calls_ingest_cpu_upload,
-            image_draw_calls: self.perf.image_draw_calls,
-            text_draw_calls: self.perf.text_draw_calls,
-            path_draw_calls: self.perf.path_draw_calls,
-            mask_draw_calls: self.perf.mask_draw_calls,
-            fullscreen_draw_calls: self.perf.fullscreen_draw_calls,
-            clip_mask_draw_calls: self.perf.clip_mask_draw_calls,
-            pipeline_switches: self.perf.pipeline_switches,
-            pipeline_switches_quad: self.perf.pipeline_switches_quad,
-            pipeline_switches_viewport: self.perf.pipeline_switches_viewport,
-            pipeline_switches_mask: self.perf.pipeline_switches_mask,
-            pipeline_switches_text_mask: self.perf.pipeline_switches_text_mask,
-            pipeline_switches_text_color: self.perf.pipeline_switches_text_color,
-            pipeline_switches_text_subpixel: self.perf.pipeline_switches_text_subpixel,
-            pipeline_switches_path: self.perf.pipeline_switches_path,
-            pipeline_switches_path_msaa: self.perf.pipeline_switches_path_msaa,
-            pipeline_switches_composite: self.perf.pipeline_switches_composite,
-            pipeline_switches_fullscreen: self.perf.pipeline_switches_fullscreen,
-            pipeline_switches_clip_mask: self.perf.pipeline_switches_clip_mask,
-            bind_group_switches: self.perf.bind_group_switches,
-            uniform_bind_group_switches: self.perf.uniform_bind_group_switches,
-            texture_bind_group_switches: self.perf.texture_bind_group_switches,
-            scissor_sets: self.perf.scissor_sets,
-            path_msaa_samples_requested: self.perf.path_msaa_samples_requested,
-            path_msaa_samples_effective: self.perf.path_msaa_samples_effective,
-            path_msaa_vulkan_safety_valve_degradations: self
-                .perf
+            viewport_draw_calls_ingest_gpu_copy: perf.viewport_draw_calls_ingest_gpu_copy,
+            viewport_draw_calls_ingest_cpu_upload: perf.viewport_draw_calls_ingest_cpu_upload,
+            image_draw_calls: perf.image_draw_calls,
+            text_draw_calls: perf.text_draw_calls,
+            path_draw_calls: perf.path_draw_calls,
+            mask_draw_calls: perf.mask_draw_calls,
+            fullscreen_draw_calls: perf.fullscreen_draw_calls,
+            clip_mask_draw_calls: perf.clip_mask_draw_calls,
+            pipeline_switches: perf.pipeline_switches,
+            pipeline_switches_quad: perf.pipeline_switches_quad,
+            pipeline_switches_viewport: perf.pipeline_switches_viewport,
+            pipeline_switches_mask: perf.pipeline_switches_mask,
+            pipeline_switches_text_mask: perf.pipeline_switches_text_mask,
+            pipeline_switches_text_color: perf.pipeline_switches_text_color,
+            pipeline_switches_text_subpixel: perf.pipeline_switches_text_subpixel,
+            pipeline_switches_path: perf.pipeline_switches_path,
+            pipeline_switches_path_msaa: perf.pipeline_switches_path_msaa,
+            pipeline_switches_composite: perf.pipeline_switches_composite,
+            pipeline_switches_fullscreen: perf.pipeline_switches_fullscreen,
+            pipeline_switches_clip_mask: perf.pipeline_switches_clip_mask,
+            bind_group_switches: perf.bind_group_switches,
+            uniform_bind_group_switches: perf.uniform_bind_group_switches,
+            texture_bind_group_switches: perf.texture_bind_group_switches,
+            scissor_sets: perf.scissor_sets,
+            path_msaa_samples_requested: perf.path_msaa_samples_requested,
+            path_msaa_samples_effective: perf.path_msaa_samples_effective,
+            path_msaa_vulkan_safety_valve_degradations: perf
                 .path_msaa_vulkan_safety_valve_degradations,
-            uniform_bytes: self.perf.uniform_bytes,
-            instance_bytes: self.perf.instance_bytes,
-            vertex_bytes: self.perf.vertex_bytes,
-            scene_encoding_cache_hits: self.perf.scene_encoding_cache_hits,
-            scene_encoding_cache_misses: self.perf.scene_encoding_cache_misses,
-            scene_encoding_cache_last_miss_reasons: self
-                .perf
-                .scene_encoding_cache_last_miss_reasons,
-            material_quad_ops: self.perf.material_quad_ops,
-            material_sampled_quad_ops: self.perf.material_sampled_quad_ops,
-            material_distinct: self.perf.material_distinct,
-            material_unknown_ids: self.perf.material_unknown_ids,
-            material_degraded_due_to_budget: self.perf.material_degraded_due_to_budget,
-            path_material_paints_degraded_to_solid_base: self
-                .perf
+            uniform_bytes: perf.uniform_bytes,
+            instance_bytes: perf.instance_bytes,
+            vertex_bytes: perf.vertex_bytes,
+            scene_encoding_cache_hits: perf.scene_encoding_cache_hits,
+            scene_encoding_cache_misses: perf.scene_encoding_cache_misses,
+            scene_encoding_cache_last_miss_reasons: perf.scene_encoding_cache_last_miss_reasons,
+            material_quad_ops: perf.material_quad_ops,
+            material_sampled_quad_ops: perf.material_sampled_quad_ops,
+            material_distinct: perf.material_distinct,
+            material_unknown_ids: perf.material_unknown_ids,
+            material_degraded_due_to_budget: perf.material_degraded_due_to_budget,
+            path_material_paints_degraded_to_solid_base: perf
                 .path_material_paints_degraded_to_solid_base,
         };
 
-        self.perf = RenderPerfStats::default();
+        self.diagnostics_state.perf = RenderPerfStats::default();
         Some(snap)
     }
 
     pub fn take_last_frame_perf_snapshot(&mut self) -> Option<RenderPerfSnapshot> {
-        if !self.perf_enabled {
-            return None;
-        }
-        self.last_frame_perf.take()
+        self.diagnostics_state.take_last_frame_perf_snapshot()
     }
 
     pub fn set_svg_perf_enabled(&mut self, enabled: bool) {
-        self.svg_perf_enabled = enabled;
-        self.svg_perf = SvgPerfStats::default();
+        self.svg_raster_state.set_perf_enabled(enabled);
     }
 
     /// Drop all cached SVG rasterizations (standalone rasters and alpha-mask atlas pages) while
@@ -306,20 +252,20 @@ impl Renderer {
     /// This is the GPUI-style explicit lifecycle knob: apps can decide when to reclaim memory and
     /// accept the cost of re-rasterizing later.
     pub fn clear_svg_raster_cache(&mut self) {
-        let rasters = std::mem::take(&mut self.svg_rasters);
+        let rasters = std::mem::take(&mut self.svg_raster_state.rasters);
         for (_, entry) in rasters {
             if matches!(entry.storage, SvgRasterStorage::Standalone { .. }) {
                 let _ = self.unregister_image(entry.image);
             }
         }
-        self.svg_raster_bytes = 0;
+        self.svg_raster_state.raster_bytes = 0;
 
-        for idx in 0..self.svg_mask_atlas_pages.len() {
+        for idx in 0..self.svg_raster_state.mask_atlas_pages.len() {
             self.evict_svg_mask_atlas_page(idx);
         }
-        self.svg_mask_atlas_pages.clear();
-        self.svg_mask_atlas_free.clear();
-        self.svg_mask_atlas_bytes = 0;
+        self.svg_raster_state.mask_atlas_pages.clear();
+        self.svg_raster_state.mask_atlas_free.clear();
+        self.svg_raster_state.mask_atlas_bytes = 0;
     }
 
     /// Drop only the SVG alpha-mask atlas pages and their cached entries.
@@ -327,90 +273,28 @@ impl Renderer {
     /// This is a cheap explicit “defragment/rebuild” knob: the next `SceneOp::SvgMaskIcon` usage
     /// will re-pack masks into fresh pages.
     pub fn clear_svg_mask_atlas_cache(&mut self) {
-        self.svg_rasters
+        self.svg_raster_state
+            .rasters
             .retain(|_, entry| matches!(entry.storage, SvgRasterStorage::Standalone { .. }));
 
-        for idx in 0..self.svg_mask_atlas_pages.len() {
+        for idx in 0..self.svg_raster_state.mask_atlas_pages.len() {
             self.evict_svg_mask_atlas_page(idx);
         }
-        self.svg_mask_atlas_pages.clear();
-        self.svg_mask_atlas_free.clear();
-        self.svg_mask_atlas_bytes = 0;
+        self.svg_raster_state.mask_atlas_pages.clear();
+        self.svg_raster_state.mask_atlas_free.clear();
+        self.svg_raster_state.mask_atlas_bytes = 0;
     }
 
     pub fn take_svg_perf_snapshot(&mut self) -> Option<SvgPerfSnapshot> {
-        if !self.svg_perf_enabled {
-            return None;
-        }
-
-        let pages_live = self
-            .svg_mask_atlas_pages
-            .iter()
-            .filter(|p| p.is_some())
-            .count();
-        let rasters_live = self.svg_rasters.len();
-        let standalone_bytes_live = self.svg_raster_bytes;
-        let atlas_bytes_live = self.svg_mask_atlas_bytes;
-        let atlas_capacity_px = u64::from(pages_live as u32)
-            .saturating_mul(u64::from(SVG_MASK_ATLAS_PAGE_SIZE_PX))
-            .saturating_mul(u64::from(SVG_MASK_ATLAS_PAGE_SIZE_PX));
-        let atlas_used_px = self
-            .svg_rasters
-            .values()
-            .filter_map(|e| match e.storage {
-                SvgRasterStorage::MaskAtlas { page_index, .. } => Some((page_index, e.size_px)),
-                SvgRasterStorage::Standalone { .. } => None,
-            })
-            .filter(|(page_index, _)| {
-                self.svg_mask_atlas_pages
-                    .get(*page_index)
-                    .is_some_and(|p| p.is_some())
-            })
-            .fold(0u64, |acc, (_, (w, h))| {
-                let pad = u64::from(SVG_MASK_ATLAS_PADDING_PX.saturating_mul(2));
-                let w_pad = u64::from(w).saturating_add(pad);
-                let h_pad = u64::from(h).saturating_add(pad);
-                acc.saturating_add(w_pad.saturating_mul(h_pad))
-            });
-
-        let snap = SvgPerfSnapshot {
-            frames: self.svg_perf.frames,
-            prepare_svg_ops_us: self.svg_perf.prepare_svg_ops.as_micros() as u64,
-
-            cache_hits: self.svg_perf.cache_hits,
-            cache_misses: self.svg_perf.cache_misses,
-
-            alpha_raster_count: self.svg_perf.alpha_raster_count,
-            alpha_raster_us: self.svg_perf.alpha_raster.as_micros() as u64,
-            rgba_raster_count: self.svg_perf.rgba_raster_count,
-            rgba_raster_us: self.svg_perf.rgba_raster.as_micros() as u64,
-
-            alpha_atlas_inserts: self.svg_perf.alpha_atlas_inserts,
-            alpha_atlas_write_us: self.svg_perf.alpha_atlas_write.as_micros() as u64,
-            alpha_standalone_uploads: self.svg_perf.alpha_standalone_uploads,
-            alpha_standalone_upload_us: self.svg_perf.alpha_standalone_upload.as_micros() as u64,
-            rgba_uploads: self.svg_perf.rgba_uploads,
-            rgba_upload_us: self.svg_perf.rgba_upload.as_micros() as u64,
-
-            atlas_pages_live: pages_live,
-            svg_rasters_live: rasters_live,
-            svg_standalone_bytes_live: standalone_bytes_live,
-            svg_mask_atlas_bytes_live: atlas_bytes_live,
-            svg_mask_atlas_used_px: atlas_used_px,
-            svg_mask_atlas_capacity_px: atlas_capacity_px,
-        };
-
-        self.svg_perf = SvgPerfStats::default();
-        Some(snap)
+        self.svg_raster_state.take_perf_snapshot()
     }
 
     pub fn svg_raster_budget_bytes(&self) -> u64 {
-        self.svg_raster_budget_bytes
+        self.svg_raster_state.raster_budget_bytes()
     }
 
     pub fn set_svg_raster_budget_bytes(&mut self, bytes: u64) {
-        // Keep a small non-zero floor so callers can't accidentally force unbounded thrash.
-        self.svg_raster_budget_bytes = bytes.max(1024);
+        self.svg_raster_state.set_raster_budget_bytes(bytes);
     }
 
     pub fn path_msaa_samples(&self) -> u32 {
@@ -463,7 +347,7 @@ impl Renderer {
         };
 
         if self.path_msaa_samples != next_samples {
-            self.path_intermediate = None;
+            self.path_state.clear_intermediate();
         }
         self.path_msaa_samples = next_samples;
     }
@@ -539,7 +423,7 @@ impl Renderer {
     }
 
     pub fn intermediate_budget_bytes(&self) -> u64 {
-        self.intermediate_budget_bytes
+        self.intermediate_state.budget_bytes()
     }
 
     pub fn set_intermediate_budget_bytes(&mut self, bytes: u64) {
@@ -547,62 +431,39 @@ impl Renderer {
 
         // Allow 0 for deterministic "no intermediates" modes (diagnostics, conformance, low-end).
         // Otherwise keep a small non-zero floor so callers can't accidentally force unbounded thrash.
-        self.intermediate_budget_bytes = if bytes == 0 { 0 } else { bytes.max(1024) };
-        self.intermediate_pool
-            .enforce_budget(self.intermediate_budget_bytes);
-        self.clip_path_mask_cache.enforce_budget(
-            &mut self.intermediate_pool,
-            self.intermediate_budget_bytes / 8,
-        );
+        let budget_bytes = if bytes == 0 { 0 } else { bytes.max(1024) };
+        self.intermediate_state.set_budget_bytes(budget_bytes);
+        self.intermediate_state.pool.enforce_budget(budget_bytes);
+        self.clip_path_mask_cache
+            .enforce_budget(&mut self.intermediate_state.pool, budget_bytes / 8);
     }
 
     pub fn material_paint_budget_per_frame(&self) -> u64 {
-        self.material_paint_budget_per_frame
+        self.material_effect_state.material_paint_budget_per_frame
     }
 
     pub fn set_material_paint_budget_per_frame(&mut self, budget: u64) {
         // Allow 0 to force deterministic solid-color fallbacks in conformance tests or low-end modes.
-        self.material_paint_budget_per_frame = budget;
+        self.material_effect_state.material_paint_budget_per_frame = budget;
     }
 
     pub fn material_distinct_budget_per_frame(&self) -> usize {
-        self.material_distinct_budget_per_frame
+        self.material_effect_state
+            .material_distinct_budget_per_frame
     }
 
     pub fn set_material_distinct_budget_per_frame(&mut self, budget: usize) {
         // Allow 0 to force deterministic solid-color fallbacks in conformance tests or low-end modes.
-        self.material_distinct_budget_per_frame = budget;
+        self.material_effect_state
+            .material_distinct_budget_per_frame = budget;
     }
 
     pub fn set_intermediate_perf_enabled(&mut self, enabled: bool) {
-        self.intermediate_perf_enabled = enabled;
-        self.intermediate_perf = IntermediatePerfStats::default();
-        let _ = self.intermediate_pool.take_perf_snapshot();
+        self.intermediate_state.set_perf_enabled(enabled);
     }
 
     pub fn take_intermediate_perf_snapshot(&mut self) -> Option<IntermediatePerfSnapshot> {
-        if !self.intermediate_perf_enabled {
-            return None;
-        }
-
-        let pool = self.intermediate_pool.take_perf_snapshot();
-        let snap = IntermediatePerfSnapshot {
-            frames: self.intermediate_perf.frames,
-            budget_bytes: self.intermediate_budget_bytes,
-            last_frame_in_use_bytes: self.intermediate_perf.last_frame_in_use_bytes,
-            last_frame_peak_in_use_bytes: self.intermediate_perf.last_frame_peak_in_use_bytes,
-            last_frame_release_targets: self.intermediate_perf.last_frame_release_targets,
-            blur_degraded_to_quarter: self.intermediate_perf.blur_degraded_to_quarter,
-            blur_disabled_due_to_budget: self.intermediate_perf.blur_disabled_due_to_budget,
-            pool_free_bytes: pool.free_bytes,
-            pool_free_textures: pool.free_textures,
-            pool_allocations: pool.allocations,
-            pool_reuses: pool.reuses,
-            pool_releases: pool.releases,
-            pool_evictions: pool.evictions,
-        };
-        self.intermediate_perf = IntermediatePerfStats::default();
-        Some(snap)
+        self.intermediate_state.take_perf_snapshot()
     }
 
     pub fn set_text_font_families(&mut self, config: &TextFontFamilyConfig) -> bool {

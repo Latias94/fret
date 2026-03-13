@@ -195,23 +195,31 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     .into_element(cx)
     .test_id("ui-gallery-card-notes-list");
 
-    shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Meeting Notes").into_element(cx),
-            shadcn::CardDescription::new("Transcript from the meeting with the client.")
-                .into_element(cx),
-            shadcn::CardAction::new([shadcn::Button::new("Transcribe")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .leading_icon(fret_icons::IconId::new_static("lucide.captions"))
-                .into_element(cx)
-                .test_id("ui-gallery-card-notes-transcribe")])
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new(vec![list]).into_element(cx),
-        shadcn::CardFooter::new(vec![avatars]).into_element(cx),
-    ])
+    shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Meeting Notes"),
+                    shadcn::card_description("Transcript from the meeting with the client."),
+                    shadcn::card_action(|cx| {
+                        ui::children![
+                            cx;
+                            shadcn::Button::new("Transcribe")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .leading_icon(fret_icons::IconId::new_static("lucide.captions"))
+                                .ui()
+                                .test_id("ui-gallery-card-notes-transcribe"),
+                        ]
+                    }),
+                ]
+            }),
+            shadcn::card_content(|cx| ui::children![cx; list]),
+            shadcn::card_footer(|cx| ui::children![cx; avatars]),
+        ]
+    })
     .refine_layout(max_w_sm.clone().max_h(Px(400.0)))
     .into_element(cx)
     .test_id("ui-gallery-card-meeting-notes")

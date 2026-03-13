@@ -210,7 +210,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     hover_content = hover_content.test_id(test_id);
                 }
 
-                ui_ai::AttachmentHoverCard::new(trigger, hover_content)
+                ui_ai::AttachmentHoverCard::new(cx, trigger, hover_content)
                     .open_model(open)
                     .into_element(cx)
             })

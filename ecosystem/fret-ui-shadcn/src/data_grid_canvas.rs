@@ -217,7 +217,7 @@ impl DataGridCanvas {
             let thumb_hover = theme.color_token("scrollbar.thumb.hover.background");
 
             let (scroll_handle, paint_data, total_w, total_h, output) =
-                cx.with_state(DataGridCanvasState::default, |state| {
+                cx.slot_state(DataGridCanvasState::default, |state| {
                     let t0 = wants_output.then(Instant::now);
                     state.ensure_axes(&rows, &cols);
                     let ensure_axes_us = t0

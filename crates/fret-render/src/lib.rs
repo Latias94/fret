@@ -3,23 +3,67 @@
 //! Today the default renderer is wgpu-based (`fret-render-wgpu`). This crate exists to keep the
 //! historical `fret-render` crate name stable while we split backend implementations into
 //! explicit crates.
+//!
+//! Supported integration topologies:
+//!
+//! - Editor-hosted convenience path:
+//!   create a [`WgpuContext`] with [`WgpuContext::new`] or [`WgpuContext::new_with_surface`], then
+//!   build [`Renderer`] and [`SurfaceState`] from that context's adapter/device.
+//! - Engine-hosted direct path:
+//!   keep the engine-owned `wgpu::Instance` / `Adapter` / `Device` / `Queue`, derive
+//!   [`RendererCapabilities`] with [`RendererCapabilities::from_adapter_device`],
+//!   then call [`Renderer::new`], [`SurfaceState::new`], and [`Renderer::render_scene`] directly
+//!   without routing through [`WgpuContext`].
+//!
+//! `WgpuContext` intentionally remains part of the stable default facade as Fret's convenience
+//! bootstrap surface for first-party runners, demos, and tools that want Fret to own GPU
+//! initialization. It is supported, but it is not the only first-class integration path.
+//!
+//! Stable v1 facade buckets:
+//!
+//! - Core runtime/bootstrap entrypoints:
+//!   [`Renderer`], [`RenderSceneParams`], [`SurfaceState`], [`WgpuContext`], [`ClearColor`],
+//!   [`RenderError`]
+//! - Capability and adapter snapshots:
+//!   [`RendererCapabilities`], [`WgpuAdapterSelectionSnapshot`]
+//! - Render-target / ingest contracts:
+//!   [`RenderTargetDescriptor`] and the `RenderTarget*` metadata/value enums re-exported here
+//! - Diagnostics/report stores used by first-party runners and tooling:
+//!   [`RendererPerfFrameStore`], [`RendererPerfFrameSample`], [`WgpuHubReportCounts`],
+//!   [`WgpuHubReportFrameStore`], [`WgpuHubReportFrameSample`],
+//!   [`WgpuAllocatorReportFrameStore`], [`WgpuAllocatorReportFrameSample`]
+//! - External image/SVG upload helpers and viewport overlay support:
+//!   [`ImageDescriptor`], [`UploadedRgba8Image`], [`create_rgba8_image_storage`],
+//!   [`upload_rgba8_image`], [`write_rgba8_texture_region`], [`SvgAlphaMask`],
+//!   [`SvgRgbaImage`], [`upload_alpha_mask`], [`upload_rgba_image`], [`viewport_overlay`]
+//!
+//! Depend on `fret-render-wgpu` directly only when you need backend-specific diagnostics or helper
+//! surfaces that are intentionally not part of this default facade, including nested diagnostics
+//! detail structs and advanced value snapshots such as `RenderPerfSnapshot`,
+//! `IntermediatePerfSnapshot`, `SvgPerfSnapshot`, `BlurQualitySnapshot`,
+//! `EffectDegradationSnapshot`, `WgpuInitDiagnosticsSnapshot`, adapter sub-snapshots,
+//! allocator summary/detail rows, and per-attempt init records.
+//!
+//! ```compile_fail,E0432
+//! use fret_render::RenderPerfSnapshot;
+//! ```
+//!
+//! ```compile_fail,E0432
+//! use fret_render::WgpuInitDiagnosticsSnapshot;
+//! ```
 
 #[cfg(feature = "backend-wgpu")]
 pub use fret_render_wgpu::{
-    AdapterCapabilities, BlurQualityCounters, BlurQualitySnapshot, ClearColor,
-    EffectDegradationCounters, EffectDegradationSnapshot, ImageColorSpace, ImageDescriptor,
-    IntermediatePerfSnapshot, RenderError, RenderPerfSnapshot, RenderSceneParams,
+    ClearColor, ImageColorSpace, ImageDescriptor, RenderError, RenderSceneParams,
     RenderTargetAlphaMode, RenderTargetColorEncoding, RenderTargetColorPrimaries,
     RenderTargetColorRange, RenderTargetColorSpace, RenderTargetDescriptor,
     RenderTargetIngestStrategy, RenderTargetMatrixCoefficients, RenderTargetMetadata,
     RenderTargetOrientation, RenderTargetRotation, RenderTargetTransferFunction, Renderer,
-    RendererCapabilities, RendererPerfFrameSample, RendererPerfFrameStore,
-    StreamingImageCapabilities, SurfaceState, SvgAlphaMask, SvgPerfSnapshot, SvgRgbaImage,
-    SystemFontRescanResult, SystemFontRescanSeed, TextFontFamilyConfig, UploadedRgba8Image,
-    WgpuAdapterSelectionSnapshot, WgpuAllocatorReportFrameSample, WgpuAllocatorReportFrameStore,
-    WgpuAllocatorReportSummary, WgpuAllocatorReportTopAllocation, WgpuContext, WgpuHubReportCounts,
-    WgpuHubReportFrameSample, WgpuHubReportFrameStore, WgpuInitAttemptSnapshot,
-    WgpuInitDiagnosticsSnapshot, create_rgba8_image_storage, upload_alpha_mask, upload_rgba_image,
+    RendererCapabilities, RendererPerfFrameSample, RendererPerfFrameStore, SurfaceState,
+    SvgAlphaMask, SvgRgbaImage, SystemFontRescanResult, SystemFontRescanSeed, TextFontFamilyConfig,
+    UploadedRgba8Image, WgpuAdapterSelectionSnapshot, WgpuAllocatorReportFrameSample,
+    WgpuAllocatorReportFrameStore, WgpuContext, WgpuHubReportCounts, WgpuHubReportFrameSample,
+    WgpuHubReportFrameStore, create_rgba8_image_storage, upload_alpha_mask, upload_rgba_image,
     upload_rgba8_image, viewport_overlay, write_rgba8_texture_region,
 };
 
@@ -41,6 +85,7 @@ mod tests {
         let _ = std::mem::size_of::<RenderTargetColorSpace>();
         let _ = std::mem::size_of::<WgpuContext>();
         let _ = std::mem::size_of::<WgpuAdapterSelectionSnapshot>();
-        let _ = std::mem::size_of::<WgpuInitDiagnosticsSnapshot>();
+        let _ = WgpuContext::new;
+        let _ = WgpuContext::new_with_backends;
     }
 }

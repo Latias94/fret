@@ -89,7 +89,7 @@ pub(in super::super) fn record_backdrop_warp_pass(
 
     let dst_view_owned = ensure_color_dst_view_owned(
         frame_targets,
-        &mut renderer.intermediate_pool,
+        &mut renderer.intermediate_state.pool,
         device,
         pass.dst,
         pass.dst_size,

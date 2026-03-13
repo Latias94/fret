@@ -25,7 +25,7 @@ pub(in crate::ui) fn preview_text_selection_perf(
         gradient_metrics: Option<fret_core::TextMetrics>,
     }
 
-    let state = cx.with_state(
+    let state = cx.slot_state(
         || std::rc::Rc::new(std::cell::RefCell::new(SelectionPerfState::default())),
         |st| st.clone(),
     );

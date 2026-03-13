@@ -17,42 +17,42 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .test_id("ui-gallery-popover-align-end-content");
 
         vec![
-            shadcn::Popover::new_controllable(cx, None, false)
-                .align(shadcn::PopoverAlign::Start)
-                .build(
-                    cx,
-                    shadcn::PopoverTrigger::build(
-                        shadcn::Button::new("Start")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .size(shadcn::ButtonSize::Sm)
-                            .test_id("ui-gallery-popover-align-start-trigger"),
-                    ),
-                    start_content,
+            shadcn::Popover::new(
+                cx,
+                shadcn::PopoverTrigger::build(
+                    shadcn::Button::new("Start")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .test_id("ui-gallery-popover-align-start-trigger"),
                 ),
-            shadcn::Popover::new_controllable(cx, None, false)
-                .align(shadcn::PopoverAlign::Center)
-                .build(
-                    cx,
-                    shadcn::PopoverTrigger::build(
-                        shadcn::Button::new("Center")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .size(shadcn::ButtonSize::Sm)
-                            .test_id("ui-gallery-popover-align-center-trigger"),
-                    ),
-                    center_content,
+                start_content,
+            )
+            .align(shadcn::PopoverAlign::Start)
+            .into_element(cx),
+            shadcn::Popover::new(
+                cx,
+                shadcn::PopoverTrigger::build(
+                    shadcn::Button::new("Center")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .test_id("ui-gallery-popover-align-center-trigger"),
                 ),
-            shadcn::Popover::new_controllable(cx, None, false)
-                .align(shadcn::PopoverAlign::End)
-                .build(
-                    cx,
-                    shadcn::PopoverTrigger::build(
-                        shadcn::Button::new("End")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .size(shadcn::ButtonSize::Sm)
-                            .test_id("ui-gallery-popover-align-end-trigger"),
-                    ),
-                    end_content,
+                center_content,
+            )
+            .align(shadcn::PopoverAlign::Center)
+            .into_element(cx),
+            shadcn::Popover::new(
+                cx,
+                shadcn::PopoverTrigger::build(
+                    shadcn::Button::new("End")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .test_id("ui-gallery-popover-align-end-trigger"),
                 ),
+                end_content,
+            )
+            .align(shadcn::PopoverAlign::End)
+            .into_element(cx),
         ]
     })
     .gap(Space::N6)

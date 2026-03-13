@@ -95,22 +95,27 @@ pub fn render<H: UiHost>(
     .layout(LayoutRefinement::default().w_full())
     .into_element(cx);
 
-    shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Snackbar").into_element(cx),
-            shadcn::CardDescription::new(
-                "Snackbar MVP: Material token-driven toast-layer skin (md.comp.snackbar.*).",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new(vec![
-            host_layer,
-            buttons,
-            cx.text(format!("last action: {last}")),
-        ])
-        .into_element(cx),
-    ])
+    shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Snackbar"),
+                    shadcn::card_description(
+                        "Snackbar MVP: Material token-driven toast-layer skin (md.comp.snackbar.*).",
+                    ),
+                ]
+            }),
+            shadcn::card_content(|cx| {
+                vec![
+                    host_layer,
+                    buttons,
+                    cx.text(format!("last action: {last}")),
+                ]
+            }),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx)
 }

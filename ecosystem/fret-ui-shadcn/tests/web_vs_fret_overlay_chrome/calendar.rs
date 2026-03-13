@@ -22,9 +22,9 @@ fn build_shadcn_calendar_22_page(
         );
 
     let label = fret_ui_shadcn::Label::new("Date of birth").into_element(cx);
-    let popover = fret_ui_shadcn::Popover::new(open.clone())
+    let popover = fret_ui_shadcn::Popover::from_open(open.clone())
         .align(PopoverAlign::Start)
-        .into_element(
+        .into_element_with(
             cx,
             |cx| trigger.into_element(cx),
             |cx| {
@@ -69,9 +69,9 @@ fn build_shadcn_calendar_23_page(
         );
 
     let label = fret_ui_shadcn::Label::new("Select your stay").into_element(cx);
-    let popover = fret_ui_shadcn::Popover::new(open.clone())
+    let popover = fret_ui_shadcn::Popover::from_open(open.clone())
         .align(PopoverAlign::Start)
-        .into_element(
+        .into_element_with(
             cx,
             |cx| trigger.into_element(cx),
             |cx| {

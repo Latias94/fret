@@ -21,14 +21,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         ))
         .into_element(cx);
 
-    shadcn::FieldSet::new([
-        shadcn::FieldLegend::new("Subscription Plan")
-            .variant(shadcn::FieldLegendVariant::Label)
-            .into_element(cx),
-        shadcn::FieldDescription::new("Yearly and lifetime plans offer significant savings.")
-            .into_element(cx),
-        group,
-    ])
+    shadcn::field_set(|cx| {
+        ui::children![
+            cx;
+            shadcn::FieldLegend::new("Subscription Plan")
+                .variant(shadcn::FieldLegendVariant::Label),
+            shadcn::FieldDescription::new("Yearly and lifetime plans offer significant savings."),
+            group,
+        ]
+    })
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
     .into_element(cx)
     .test_id("ui-gallery-radio-group-fieldset")

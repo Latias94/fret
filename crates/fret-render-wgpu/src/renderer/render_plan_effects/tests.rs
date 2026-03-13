@@ -63,6 +63,75 @@ fn chain_applies_clip_only_on_final_step() {
 }
 
 #[test]
+fn unpadded_chain_applies_clip_only_on_final_step() {
+    let ctx = EffectCompileCtx {
+        viewport_size: (64, 64),
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 1.0,
+    };
+    let scissor = ScissorRect::full(64, 64);
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::FilterContent,
+        fret_core::EffectChain::from_steps(&[
+            fret_core::EffectStep::ColorAdjust {
+                saturation: 1.2,
+                brightness: 0.1,
+                contrast: 0.9,
+            },
+            fret_core::EffectStep::CustomV1 {
+                id: fret_core::EffectId::default(),
+                params: fret_core::scene::EffectParamsV1 {
+                    vec4s: [[0.0; 4]; 4],
+                },
+                max_sample_offset_px: fret_core::Px(0.0),
+            },
+        ]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        Some(17),
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    );
+
+    let color_adjust = passes.iter().find_map(|pass| match pass {
+        RenderPlanPass::ColorAdjust(pass)
+            if pass.saturation == 1.2 && pass.brightness == 0.1 && pass.contrast == 0.9 =>
+        {
+            Some(pass)
+        }
+        _ => None,
+    });
+    assert!(
+        color_adjust
+            .is_some_and(|pass| { pass.mask_uniform_index.is_none() && pass.mask.is_none() }),
+        "intermediate unpadded steps must not apply clip coverage"
+    );
+
+    let custom = passes.iter().find_map(|pass| match pass {
+        RenderPlanPass::CustomEffect(pass) => Some(pass),
+        _ => None,
+    });
+    assert!(
+        custom.is_some_and(|pass| {
+            pass.common.mask_uniform_index.is_some() || pass.common.mask.is_some()
+        }),
+        "the final unpadded step must apply clip coverage"
+    );
+}
+
+#[test]
 fn padded_blur_then_custom_uses_work_buffer() {
     let ctx = EffectCompileCtx {
         viewport_size: (64, 64),
@@ -136,6 +205,295 @@ fn padded_blur_then_custom_uses_work_buffer() {
                 && (p.common.mask_uniform_index.is_some() || p.common.mask.is_some())
         }),
         "final CustomEffect should read from the work buffer and apply clip coverage once"
+    );
+}
+
+#[test]
+fn unpadded_custom_v3_chain_reserves_distinct_raw_target_when_available() {
+    let ctx = EffectCompileCtx {
+        viewport_size: (64, 64),
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 1.0,
+    };
+    let scissor = ScissorRect::full(64, 64);
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    let evidence = apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::FilterContent,
+        fret_core::EffectChain::from_steps(&[
+            fret_core::EffectStep::ColorAdjust {
+                saturation: 1.0,
+                brightness: 1.0,
+                contrast: 1.0,
+            },
+            fret_core::EffectStep::CustomV3 {
+                id: fret_core::EffectId::default(),
+                params: fret_core::scene::EffectParamsV1 {
+                    vec4s: [[0.0; 4]; 4],
+                },
+                max_sample_offset_px: fret_core::Px(0.0),
+                user0: None,
+                user1: None,
+                sources: fret_core::scene::CustomEffectSourcesV3 {
+                    want_raw: true,
+                    pyramid: None,
+                },
+            },
+        ]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        None,
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    )
+    .expect("custom-v3 chains should report budget evidence");
+
+    assert!(
+        passes.iter().any(|pass| {
+            matches!(
+                pass,
+                RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+                    src: PlanTarget::Intermediate0,
+                    dst: PlanTarget::Intermediate1,
+                    ..
+                })
+            )
+        }),
+        "unpadded custom-v3 chains that want raw should reserve a distinct raw target when available"
+    );
+    let custom_v3 = passes.iter().find_map(|pass| match pass {
+        RenderPlanPass::CustomEffectV3(pass) => Some(pass),
+        _ => None,
+    });
+    assert!(
+        custom_v3.is_some_and(|pass| pass.src_raw == PlanTarget::Intermediate1),
+        "the final custom-v3 pass should read raw input from the reserved chain target"
+    );
+    assert_eq!(degradations.custom_effect_v3_sources.raw_requested, 1);
+    assert_eq!(degradations.custom_effect_v3_sources.raw_distinct, 1);
+    assert_eq!(evidence.base_required_full_targets, 3);
+}
+
+#[test]
+fn padded_color_adjust_then_blur_uses_masked_commit_pass() {
+    let ctx = EffectCompileCtx {
+        viewport_size: (64, 64),
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 1.0,
+    };
+    let scissor = ScissorRect {
+        x: 10,
+        y: 12,
+        w: 20,
+        h: 18,
+    };
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::FilterContent,
+        fret_core::EffectChain::from_steps(&[
+            fret_core::EffectStep::ColorAdjust {
+                saturation: 1.2,
+                brightness: 0.1,
+                contrast: 0.9,
+            },
+            fret_core::EffectStep::GaussianBlur {
+                radius_px: fret_core::Px(14.0),
+                downsample: 2,
+            },
+        ]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        Some(7),
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    );
+
+    let copied_to_work = passes.iter().any(|pass| {
+        matches!(
+            pass,
+            RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+                src: PlanTarget::Intermediate0,
+                dst: PlanTarget::Intermediate1,
+                ..
+            })
+        )
+    });
+    assert!(
+        copied_to_work,
+        "padded color-adjust->blur should copy srcdst into a work buffer"
+    );
+
+    let final_commit = passes.iter().find_map(|pass| match pass {
+        RenderPlanPass::ColorAdjust(pass)
+            if pass.src == PlanTarget::Intermediate1
+                && pass.dst == PlanTarget::Intermediate0
+                && pass.dst_scissor == Some(LocalScissorRect(scissor))
+                && pass.saturation == 1.0
+                && pass.brightness == 1.0
+                && pass.contrast == 1.0 =>
+        {
+            Some(pass)
+        }
+        _ => None,
+    });
+    assert!(
+        final_commit
+            .is_some_and(|pass| { pass.mask_uniform_index.is_some() || pass.mask.is_some() }),
+        "padded masked fallback commit should reuse a no-op ColorAdjust pass"
+    );
+}
+
+#[test]
+fn custom_v2_masked_step_preserves_image_input_and_clip_coverage() {
+    let ctx = EffectCompileCtx {
+        viewport_size: (64, 64),
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 1.0,
+    };
+    let scissor = ScissorRect {
+        x: 8,
+        y: 10,
+        w: 24,
+        h: 18,
+    };
+    let input_image = fret_core::scene::CustomEffectImageInputV1 {
+        image: fret_core::ImageId::default(),
+        uv: fret_core::scene::UvRect {
+            u0: 0.2,
+            v0: 0.1,
+            u1: 0.9,
+            v1: 0.8,
+        },
+        sampling: fret_core::scene::ImageSamplingHint::Nearest,
+    };
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::FilterContent,
+        fret_core::EffectChain::from_steps(&[fret_core::EffectStep::CustomV2 {
+            id: fret_core::EffectId::default(),
+            params: fret_core::scene::EffectParamsV1 {
+                vec4s: [[0.0; 4]; 4],
+            },
+            max_sample_offset_px: fret_core::Px(0.0),
+            input_image: Some(input_image),
+        }]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        Some(15),
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    );
+
+    assert!(
+        passes
+            .iter()
+            .any(|pass| matches!(pass, RenderPlanPass::ClipMask(_))),
+        "masked custom-v2 should allocate a clip mask pass when budget allows"
+    );
+    let pass = passes.iter().find_map(|pass| match pass {
+        RenderPlanPass::CustomEffectV2(pass) => Some(pass),
+        _ => None,
+    });
+    assert!(
+        pass.is_some_and(|pass| {
+            pass.common.dst_scissor == Some(LocalScissorRect(scissor))
+                && (pass.common.mask_uniform_index.is_some() || pass.common.mask.is_some())
+                && pass.input_image == Some(input_image.image)
+                && pass.input_uv == input_image.uv
+                && pass.input_sampling == input_image.sampling
+        }),
+        "CustomEffectV2 should preserve image input and clip coverage in the masked chain path"
+    );
+}
+
+#[test]
+fn custom_chain_budget_records_optional_mask_bytes() {
+    let ctx = EffectCompileCtx {
+        viewport_size: (64, 64),
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 1.0,
+    };
+    let scissor = ScissorRect {
+        x: 6,
+        y: 8,
+        w: 22,
+        h: 20,
+    };
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    let evidence = apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::FilterContent,
+        fret_core::EffectChain::from_steps(&[fret_core::EffectStep::CustomV1 {
+            id: fret_core::EffectId::default(),
+            params: fret_core::scene::EffectParamsV1 {
+                vec4s: [[0.0; 4]; 4],
+            },
+            max_sample_offset_px: fret_core::Px(0.0),
+        }]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        Some(9),
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    )
+    .expect("custom effect chains should report budget evidence");
+
+    assert!(
+        passes
+            .iter()
+            .any(|pass| matches!(pass, RenderPlanPass::ClipMask(_))),
+        "masked custom chain should allocate a clip-mask pass when budget allows"
+    );
+    assert!(
+        evidence.optional_mask_bytes > 0,
+        "budget evidence should record clip-mask bytes for masked custom chains"
+    );
+    assert_eq!(
+        evidence.optional_required_bytes(),
+        evidence.optional_mask_bytes,
+        "custom-v1 mask-only chains should report optional bytes entirely through the clip mask"
     );
 }
 
@@ -532,6 +890,322 @@ fn noise_compiles_to_pass() {
 }
 
 #[test]
+fn color_matrix_compiles_to_pass() {
+    let ctx = EffectCompileCtx {
+        viewport_size: (64, 64),
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 1.0,
+    };
+    let scissor = ScissorRect::full(64, 64);
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::FilterContent,
+        fret_core::EffectChain::from_steps(&[fret_core::EffectStep::ColorMatrix {
+            m: [
+                1.0, 0.0, 0.0, 0.0, 0.1, 0.0, 1.0, 0.0, 0.0, 0.2, 0.0, 0.0, 1.0, 0.0, 0.3, 0.0,
+                0.0, 0.0, 1.0, 0.0,
+            ],
+        }]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        None,
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    );
+
+    assert!(
+        passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::ColorMatrix(_))),
+        "color-matrix step should compile to a ColorMatrix pass"
+    );
+}
+
+#[test]
+fn color_adjust_masked_step_compiles_to_masked_color_adjust_pass() {
+    let ctx = EffectCompileCtx {
+        viewport_size: (64, 64),
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 1.0,
+    };
+    let scissor = ScissorRect::full(64, 64);
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::FilterContent,
+        fret_core::EffectChain::from_steps(&[fret_core::EffectStep::ColorAdjust {
+            saturation: 1.2,
+            brightness: 0.1,
+            contrast: 0.9,
+        }]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        Some(7),
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    );
+
+    assert!(
+        passes
+            .iter()
+            .any(|pass| matches!(pass, RenderPlanPass::ClipMask(_))),
+        "masked color-adjust should allocate a clip mask pass when budget allows"
+    );
+    let pass = passes.iter().find_map(|pass| match pass {
+        RenderPlanPass::ColorAdjust(pass) => Some(pass),
+        _ => None,
+    });
+    assert!(
+        pass.is_some_and(|pass| {
+            pass.dst_scissor == Some(LocalScissorRect(scissor))
+                && (pass.mask_uniform_index.is_some() || pass.mask.is_some())
+                && pass.saturation == 1.2
+                && pass.brightness == 0.1
+                && pass.contrast == 0.9
+        }),
+        "ColorAdjust should preserve clip coverage and parameters in the masked chain path"
+    );
+}
+
+#[test]
+fn backdrop_warp_v2_image_field_compiles_to_backdrop_warp_pass() {
+    let ctx = EffectCompileCtx {
+        viewport_size: (64, 64),
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 2.0,
+    };
+    let scissor = ScissorRect {
+        x: 4,
+        y: 6,
+        w: 20,
+        h: 18,
+    };
+    let image = fret_core::ImageId::default();
+    let uv = fret_core::scene::UvRect {
+        u0: 0.1,
+        v0: 0.2,
+        u1: 0.8,
+        v1: 0.9,
+    };
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::Backdrop,
+        fret_core::EffectChain::from_steps(&[fret_core::EffectStep::BackdropWarpV2(
+            fret_core::scene::BackdropWarpV2 {
+                base: fret_core::scene::BackdropWarpV1 {
+                    strength_px: fret_core::Px(3.0),
+                    scale_px: fret_core::Px(12.0),
+                    phase: 0.5,
+                    chromatic_aberration_px: fret_core::Px(1.0),
+                    kind: fret_core::scene::BackdropWarpKindV1::Wave,
+                },
+                field: fret_core::scene::BackdropWarpFieldV2::ImageDisplacementMap {
+                    image,
+                    uv,
+                    sampling: fret_core::scene::ImageSamplingHint::Nearest,
+                    encoding: fret_core::scene::WarpMapEncodingV1::NormalRgb,
+                },
+            },
+        )]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        None,
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    );
+
+    let pass = passes.iter().find_map(|p| match p {
+        RenderPlanPass::BackdropWarp(pass) => Some(pass),
+        _ => None,
+    });
+    assert!(
+        pass.is_some_and(|pass| {
+            pass.warp_image == Some(image)
+                && pass.warp_uv == uv
+                && pass.warp_sampling == fret_core::scene::ImageSamplingHint::Nearest
+                && pass.warp_encoding == fret_core::scene::WarpMapEncodingV1::NormalRgb
+                && pass.origin_px == (scissor.x, scissor.y)
+                && pass.bounds_size_px == (scissor.w, scissor.h)
+                && pass.dst_scissor == Some(LocalScissorRect(scissor))
+        }),
+        "BackdropWarpV2 should preserve image-field settings when compiling the pass"
+    );
+}
+
+#[test]
+fn backdrop_warp_v2_masked_image_field_compiles_to_masked_backdrop_warp_pass() {
+    let ctx = EffectCompileCtx {
+        viewport_size: (64, 64),
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 2.0,
+    };
+    let scissor = ScissorRect {
+        x: 4,
+        y: 6,
+        w: 20,
+        h: 18,
+    };
+    let image = fret_core::ImageId::default();
+    let uv = fret_core::scene::UvRect {
+        u0: 0.1,
+        v0: 0.2,
+        u1: 0.8,
+        v1: 0.9,
+    };
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::Backdrop,
+        fret_core::EffectChain::from_steps(&[fret_core::EffectStep::BackdropWarpV2(
+            fret_core::scene::BackdropWarpV2 {
+                base: fret_core::scene::BackdropWarpV1 {
+                    strength_px: fret_core::Px(3.0),
+                    scale_px: fret_core::Px(12.0),
+                    phase: 0.5,
+                    chromatic_aberration_px: fret_core::Px(1.0),
+                    kind: fret_core::scene::BackdropWarpKindV1::Wave,
+                },
+                field: fret_core::scene::BackdropWarpFieldV2::ImageDisplacementMap {
+                    image,
+                    uv,
+                    sampling: fret_core::scene::ImageSamplingHint::Nearest,
+                    encoding: fret_core::scene::WarpMapEncodingV1::NormalRgb,
+                },
+            },
+        )]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        Some(9),
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    );
+
+    assert!(
+        passes
+            .iter()
+            .any(|pass| matches!(pass, RenderPlanPass::ClipMask(_))),
+        "masked backdrop-warp should allocate a clip mask pass when budget allows"
+    );
+    let pass = passes.iter().find_map(|pass| match pass {
+        RenderPlanPass::BackdropWarp(pass) => Some(pass),
+        _ => None,
+    });
+    assert!(
+        pass.is_some_and(|pass| {
+            pass.warp_image == Some(image)
+                && pass.warp_uv == uv
+                && pass.warp_sampling == fret_core::scene::ImageSamplingHint::Nearest
+                && pass.warp_encoding == fret_core::scene::WarpMapEncodingV1::NormalRgb
+                && pass.dst_scissor == Some(LocalScissorRect(scissor))
+                && (pass.mask_uniform_index.is_some() || pass.mask.is_some())
+        }),
+        "BackdropWarpV2 should preserve image-field settings and clip coverage in the masked chain path"
+    );
+}
+
+#[test]
+fn pixelate_scissored_step_compiles_to_scale_nearest_pair() {
+    let ctx = EffectCompileCtx {
+        viewport_size: (64, 64),
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 1.0,
+    };
+    let scissor = ScissorRect {
+        x: 6,
+        y: 10,
+        w: 24,
+        h: 18,
+    };
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::FilterContent,
+        fret_core::EffectChain::from_steps(&[fret_core::EffectStep::Pixelate { scale: 4 }]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        None,
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    );
+
+    let scale_passes = passes
+        .iter()
+        .filter_map(|pass| match pass {
+            RenderPlanPass::ScaleNearest(pass) => Some(pass),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        scale_passes.len(),
+        2,
+        "pixelate should compile to two scale-nearest passes"
+    );
+    assert_eq!(scale_passes[0].mode, ScaleMode::Downsample);
+    assert_eq!(scale_passes[0].scale, 4);
+    assert_eq!(scale_passes[0].src_origin, (scissor.x, scissor.y));
+    assert_eq!(
+        scale_passes[0].dst_size,
+        downsampled_size((scissor.w, scissor.h), 4)
+    );
+    assert_eq!(scale_passes[1].mode, ScaleMode::Upscale);
+    assert_eq!(scale_passes[1].scale, 4);
+    assert_eq!(scale_passes[1].dst_origin, (scissor.x, scissor.y));
+    assert_eq!(scale_passes[1].dst_scissor, Some(LocalScissorRect(scissor)));
+}
+
+#[test]
 fn gaussian_blur_budget_zero_increments_effect_degradations() {
     let ctx = EffectCompileCtx {
         viewport_size: (64, 64),
@@ -727,6 +1401,82 @@ fn drop_shadow_budget_pressure_degrades_to_hard_shadow() {
 }
 
 #[test]
+fn drop_shadow_masked_blurred_path_preserves_clip_coverage() {
+    let viewport_size = (128, 128);
+    let format = wgpu::TextureFormat::Rgba8Unorm;
+    let ctx = EffectCompileCtx {
+        viewport_size,
+        format,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 1.0,
+    };
+    let scissor = ScissorRect {
+        x: 10,
+        y: 12,
+        w: 36,
+        h: 28,
+    };
+
+    let shadow = fret_core::scene::DropShadowV1 {
+        offset_px: fret_core::Point::new(fret_core::Px(2.0), fret_core::Px(3.0)),
+        blur_radius_px: fret_core::Px(8.0),
+        downsample: 2,
+        color: fret_core::Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        },
+    };
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::FilterContent,
+        fret_core::EffectChain::from_steps(&[fret_core::EffectStep::DropShadowV1(shadow)]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        Some(13),
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    );
+
+    assert!(
+        passes
+            .iter()
+            .any(|pass| matches!(pass, RenderPlanPass::ClipMask(_))),
+        "masked drop shadow should allocate a clip mask pass when budget allows"
+    );
+    assert!(
+        passes
+            .iter()
+            .any(|pass| matches!(pass, RenderPlanPass::Blur(_))),
+        "blurred drop shadow path should still emit blur passes"
+    );
+    let pass = passes.iter().rev().find_map(|pass| match pass {
+        RenderPlanPass::DropShadow(pass) => Some(pass),
+        _ => None,
+    });
+    assert!(
+        pass.is_some_and(|pass| {
+            pass.dst_scissor == Some(LocalScissorRect(scissor))
+                && (pass.mask_uniform_index.is_some() || pass.mask.is_some())
+                && pass.offset_px == (2.0, 3.0)
+                && pass.color == shadow.color
+        }),
+        "DropShadow should preserve clip coverage and shadow params in the masked blurred path"
+    );
+}
+
+#[test]
 fn gaussian_blur_target_pressure_falls_back_to_single_scratch_blur() {
     let viewport_size = (256, 256);
     let format = wgpu::TextureFormat::Rgba8Unorm;
@@ -779,5 +1529,59 @@ fn gaussian_blur_target_pressure_falls_back_to_single_scratch_blur() {
             .iter()
             .any(|p| matches!(p, RenderPlanPass::ScaleNearest(_))),
         "single-scratch blur fallback must not emit downsample scale passes"
+    );
+}
+
+#[test]
+fn gaussian_blur_masked_single_scratch_blur_applies_clip_coverage() {
+    let viewport_size = (256, 256);
+    let format = wgpu::TextureFormat::Rgba8Unorm;
+    let ctx = EffectCompileCtx {
+        viewport_size,
+        format,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 1.0,
+    };
+    let scissor = ScissorRect::full(viewport_size.0, viewport_size.1);
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    apply_chain_in_place(
+        &mut passes,
+        &[PlanTarget::Intermediate1, PlanTarget::Intermediate2],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::FilterContent,
+        fret_core::EffectChain::from_steps(&[fret_core::EffectStep::GaussianBlur {
+            radius_px: fret_core::Px(16.0),
+            downsample: 2,
+        }]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        Some(11),
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    );
+
+    assert!(
+        passes
+            .iter()
+            .any(|pass| matches!(pass, RenderPlanPass::ClipMask(_))),
+        "masked gaussian blur should allocate a clip mask pass when budget allows"
+    );
+    let final_blur = passes.iter().rev().find_map(|pass| match pass {
+        RenderPlanPass::Blur(pass) => Some(pass),
+        _ => None,
+    });
+    assert!(
+        final_blur.is_some_and(|pass| {
+            pass.dst_scissor == Some(LocalScissorRect(scissor))
+                && (pass.mask_uniform_index.is_some() || pass.mask.is_some())
+        }),
+        "single-scratch gaussian blur should preserve clip coverage on the final blur pass"
     );
 }

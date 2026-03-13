@@ -1,7 +1,5 @@
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -2534,61 +2532,6 @@ impl CommandPalette {
                 .iter()
                 .any(|row| matches!(row, CommandPaletteRenderRow::Loading(_)));
 
-            let items_fingerprint = {
-                let mut hasher = DefaultHasher::new();
-                query.as_str().hash(&mut hasher);
-                render_rows.len().hash(&mut hasher);
-                for row in &render_rows {
-                    match row {
-                        CommandPaletteRenderRow::Heading(h) => {
-                            "heading".hash(&mut hasher);
-                            h.as_ref().hash(&mut hasher);
-                        }
-                        CommandPaletteRenderRow::GroupPad => {
-                            "group_pad".hash(&mut hasher);
-                        }
-                        CommandPaletteRenderRow::Separator(_) => {
-                            "separator".hash(&mut hasher);
-                        }
-                        CommandPaletteRenderRow::Loading(loading) => {
-                            "loading".hash(&mut hasher);
-                            loading.text.as_ref().hash(&mut hasher);
-                            loading
-                                .test_id
-                                .as_ref()
-                                .map(|s| s.as_ref())
-                                .unwrap_or("")
-                                .hash(&mut hasher);
-                        }
-                        CommandPaletteRenderRow::Item(idx) => {
-                            "item".hash(&mut hasher);
-                            if let Some(item) = items.get(*idx).and_then(|item| item.as_ref()) {
-                                item.label.as_ref().hash(&mut hasher);
-                                item.value.as_ref().hash(&mut hasher);
-                                item_groups
-                                    .get(*idx)
-                                    .copied()
-                                    .flatten()
-                                    .unwrap_or(u32::MAX)
-                                    .hash(&mut hasher);
-                                item.keywords.len().hash(&mut hasher);
-                                for kw in &item.keywords {
-                                    (&**kw).hash(&mut hasher);
-                                }
-                                item.shortcut.as_deref().unwrap_or("").hash(&mut hasher);
-                                item.disabled.hash(&mut hasher);
-                                item.command
-                                    .as_ref()
-                                    .map(CommandId::as_str)
-                                    .unwrap_or("")
-                                    .hash(&mut hasher);
-                            }
-                        }
-                    }
-                }
-                hasher.finish()
-            };
-
             let (entries, disabled_flags): (Vec<PaletteEntry>, Vec<bool>) = items
                 .iter()
                 .map(|item| {
@@ -2628,15 +2571,6 @@ impl CommandPalette {
                 default_value_for_hook.clone().map(cmdk_trimmed_arc)
             })
             .model();
-
-            let _items_changed = cx.with_state(CommandPaletteState::default, |st| {
-                if st.items_fingerprint != items_fingerprint {
-                    st.items_fingerprint = items_fingerprint;
-                    true
-                } else {
-                    false
-                }
-            });
 
             let auto_highlight = self.auto_highlight;
             let cur_active_raw = cx.watch_model(&active).cloned().unwrap_or(None);
@@ -3264,7 +3198,7 @@ impl CommandPalette {
             );
             let list_labelled_by = Some(input_id.0);
 
-            let key_handler = cx.with_state(
+            let key_handler = cx.slot_state(
                 || {
                     let entries_cell: Rc<RefCell<Arc<[PaletteEntry]>>> =
                         Rc::new(RefCell::new(Arc::from([])));
@@ -3516,7 +3450,7 @@ impl CommandPalette {
                 let empty = self.empty_text;
                 CommandEmpty::new(empty).into_element(cx)
             } else {
-                let scroll_handle = cx.with_state(ScrollHandle::default, |h| h.clone());
+                let scroll_handle = cx.slot_state(ScrollHandle::default, |h| h.clone());
                 let scroll_area = ScrollArea::new(vec![
                     cx.flex(
                         FlexProps {
@@ -4067,11 +4001,6 @@ impl CommandDialog {
                     .into_element(cx)
             })
     }
-}
-
-#[derive(Default)]
-struct CommandPaletteState {
-    items_fingerprint: u64,
 }
 
 #[derive(Default)]

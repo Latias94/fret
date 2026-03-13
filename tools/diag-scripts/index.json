@@ -6816,6 +6816,25 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-web-ime-harness-beforeinput-control-intents",
+      "path": "tools/diag-scripts/ui-gallery/text-ime/ui-gallery-web-ime-harness-beforeinput-control-intents.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [],
+      "tags": [
+        "beforeinput",
+        "control_intents",
+        "ime",
+        "ui_gallery",
+        "web"
+      ],
+      "target_hints": [
+        "Run against the web UI Gallery harness page in a debug build.",
+        "Exercises synthetic beforeinput control intents without a physical keydown."
+      ]
+    },
+    {
       "id": "ui-gallery-tooltip-disabled-code-tab-scroll-range",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-disabled-code-tab-scroll-range.json",
       "required_capabilities": [

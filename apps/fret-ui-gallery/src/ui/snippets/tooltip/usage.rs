@@ -11,6 +11,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let content = shadcn::TooltipContent::new([ui::raw_text("Add to library").into_element(cx)])
         .into_element(cx);
 
-    shadcn::Tooltip::new(trigger, content).into_element(cx)
+    shadcn::Tooltip::new(cx, trigger, content).into_element(cx)
 }
 // endregion: example

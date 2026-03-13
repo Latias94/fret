@@ -238,7 +238,7 @@ pub(crate) const PAGE_EFFECTS_BLUR_TORTURE: &str = "effects_blur_torture";
 pub(crate) const PAGE_SVG_UPLOAD_TORTURE: &str = "svg_upload_torture";
 #[allow(dead_code)]
 pub(crate) const PAGE_SVG_SCROLL_TORTURE: &str = "svg_scroll_torture";
-#[cfg(feature = "gallery-dev")]
+#[cfg(any(feature = "gallery-dev", feature = "gallery-web-ime-harness"))]
 mod gallery_dev_page_ids {
     pub(crate) const PAGE_HIT_TEST_TORTURE: &str = "hit_test_torture";
     pub(crate) const PAGE_HIT_TEST_ONLY_PAINT_CACHE_PROBE: &str = "hit_test_only_paint_cache_probe";
@@ -308,7 +308,7 @@ mod gallery_dev_page_ids {
     pub(crate) const PAGE_INSPECTOR_TORTURE: &str = "inspector_torture";
     pub(crate) const PAGE_FILE_TREE_TORTURE: &str = "file_tree_torture";
 }
-#[cfg(feature = "gallery-dev")]
+#[cfg(any(feature = "gallery-dev", feature = "gallery-web-ime-harness"))]
 pub(crate) use gallery_dev_page_ids::*;
 
 #[cfg(feature = "gallery-ai")]
@@ -456,7 +456,7 @@ pub(crate) const CMD_NAV_INTRO: &str = "ui_gallery.nav.select.intro";
 pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
 pub(crate) const CMD_NAV_MOTION_PRESETS: &str = "ui_gallery.nav.select.motion_presets";
 pub(crate) const CMD_NAV_VIEW_CACHE: &str = "ui_gallery.nav.select.view_cache";
-#[cfg(feature = "gallery-dev")]
+#[cfg(any(feature = "gallery-dev", feature = "gallery-web-ime-harness"))]
 mod gallery_dev_nav_commands {
     pub(crate) const CMD_NAV_HIT_TEST_TORTURE: &str = "ui_gallery.nav.select.hit_test_torture";
     pub(crate) const CMD_NAV_HIT_TEST_ONLY_PAINT_CACHE_PROBE: &str =
@@ -567,7 +567,7 @@ mod gallery_dev_nav_commands {
     pub(crate) const CMD_NAV_INSPECTOR_TORTURE: &str = "ui_gallery.nav.select.inspector_torture";
     pub(crate) const CMD_NAV_FILE_TREE_TORTURE: &str = "ui_gallery.nav.select.file_tree_torture";
 }
-#[cfg(feature = "gallery-dev")]
+#[cfg(any(feature = "gallery-dev", feature = "gallery-web-ime-harness"))]
 pub(crate) use gallery_dev_nav_commands::*;
 
 #[cfg(feature = "gallery-ai")]
@@ -868,6 +868,18 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             ),
         ],
     },
+    #[cfg(feature = "gallery-web-ime-harness")]
+    PageGroupSpec {
+        title: "Core (Web IME)",
+        items: &[PageSpec::new(
+            PAGE_WEB_IME_HARNESS,
+            "Web IME (Harness)",
+            "Web / IME + TextInput Bridge Harness",
+            "fret-platform-web (textarea bridge, v1)",
+            CMD_NAV_WEB_IME_HARNESS,
+            &["web", "ime", "text-input", "wasm", "harness"],
+        )],
+    },
     #[cfg(feature = "gallery-dev")]
     PageGroupSpec {
         title: "Core (Dev)",
@@ -1019,14 +1031,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &[
                     "text", "shaping", "opentype", "features", "liga", "calt", "tsv1",
                 ],
-            ),
-            PageSpec::new(
-                PAGE_WEB_IME_HARNESS,
-                "Web IME (Harness)",
-                "Web / IME + TextInput Bridge Harness",
-                "fret-platform-web (textarea bridge, v1)",
-                CMD_NAV_WEB_IME_HARNESS,
-                &["web", "ime", "text-input", "wasm", "harness"],
             ),
             PageSpec::new(
                 PAGE_CHART_TORTURE,

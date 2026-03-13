@@ -33,14 +33,15 @@ pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "This mirrors the upstream docs split between reusable field primitives and higher-level form guides.",
     ]);
     let accessibility = doc_layout::notes_block([
-        "Use `FieldSet` + `FieldLegend` to group related controls for assistive technologies.",
+        "Use `field_set(...)` + `FieldLegend` to group related controls for assistive technologies.",
         "Associate labels via `FieldLabel::for_control(...)` plus matching control ids (or wrap rich choice-card content with `FieldLabel::wrap(...)`).",
         "Use `FieldError` immediately after the control or inside `FieldContent`, and pair invalid styling with control-level `aria_invalid(true)`.",
         "Use `FieldSeparator` sparingly so grouped sections remain understandable to screen readers.",
     ]);
     let api_reference = doc_layout::notes_block([
         "`Field::new([...])` is the core wrapper for a single field; `orientation(...)` covers the documented `vertical`, `horizontal`, and `responsive` layouts.",
-        "`FieldSet`, `FieldLegend`, `FieldGroup`, and `FieldSeparator` cover semantic grouping and section separation.",
+        "`field_set(...)` and `field_group(...)` are the default first-party grouped authoring entrypoints; `FieldSet` / `FieldGroup` remain the underlying typed recipe surface when direct builder access is useful.",
+        "`FieldLegend` and `FieldSeparator` cover semantic grouping labels and section separation.",
         "`FieldContent`, `FieldLabel`, `FieldTitle`, `FieldDescription`, and `FieldError` cover the documented content slots without needing an extra generic children / compose API.",
         "Width ownership stays deliberate: `FieldDescription` keeps recipe-owned full-width wrapping, while plain `FieldLabel` / `FieldTitle` keep intrinsic-width defaults unless the surrounding `Field` orientation or call site requests full width.",
     ]);
@@ -77,43 +78,45 @@ pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             DocSection::new("Usage", usage)
                 .description("Copyable minimal imports plus a representative fieldset composition.")
                 .code_rust(
-                    r#"use fret_ui_shadcn::{facade as shadcn, prelude::*};
+                    r#"use fret::ui;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 let full_name = cx.local_model_keyed("full_name", String::new);
 let newsletter = cx.local_model_keyed("newsletter", || false);
 
-shadcn::FieldSet::new([
-    shadcn::FieldLegend::new("Profile").into_element(cx),
-    shadcn::FieldDescription::new("This appears on invoices and emails.").into_element(cx),
-    shadcn::FieldGroup::new([
-        shadcn::Field::new([
-            shadcn::FieldLabel::new("Full name")
-                .for_control("profile-name")
-                .into_element(cx),
-            shadcn::Input::new(full_name)
-                .control_id("profile-name")
-                .placeholder("Evil Rabbit")
-                .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::Field::new([
-            shadcn::FieldContent::new([
-                shadcn::FieldLabel::new("Subscribe to the newsletter")
-                    .for_control("newsletter")
+shadcn::field_set(|cx| {
+    ui::children![cx;
+        shadcn::FieldLegend::new("Profile"),
+        shadcn::FieldDescription::new("This appears on invoices and emails."),
+        shadcn::field_group(|cx| {
+            ui::children![cx;
+                shadcn::Field::new([
+                    shadcn::FieldLabel::new("Full name")
+                        .for_control("profile-name")
+                        .into_element(cx),
+                    shadcn::Input::new(full_name)
+                        .control_id("profile-name")
+                        .placeholder("Evil Rabbit")
+                        .into_element(cx),
+                ]),
+                shadcn::Field::new([
+                    shadcn::FieldContent::new([
+                        shadcn::FieldLabel::new("Subscribe to the newsletter")
+                            .for_control("newsletter")
+                            .into_element(cx),
+                        shadcn::FieldDescription::new("Receive product updates by email.")
+                            .into_element(cx),
+                    ])
                     .into_element(cx),
-                shadcn::FieldDescription::new("Receive product updates by email.")
-                    .into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::Switch::new(newsletter)
-                .control_id("newsletter")
-                .into_element(cx),
-        ])
-        .orientation(shadcn::FieldOrientation::Horizontal)
-        .into_element(cx),
-    ])
-    .into_element(cx),
-])
+                    shadcn::Switch::new(newsletter)
+                        .control_id("newsletter")
+                        .into_element(cx),
+                ])
+                .orientation(shadcn::FieldOrientation::Horizontal),
+            ]
+        }),
+    ]
+})
 .into_element(cx);"#,
                 ),
             DocSection::new("Anatomy", anatomy)

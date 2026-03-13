@@ -2578,15 +2578,16 @@ impl NavigationMenu {
     }
 }
 
+/// Builder-preserving controlled helper for the common navigation-menu root path.
 pub fn navigation_menu<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+) -> NavigationMenu
 where
     I: IntoIterator<Item = NavigationMenuItem>,
 {
-    NavigationMenu::new(model).items(f(cx)).into_element(cx)
+    NavigationMenu::new(model).items(f(cx))
 }
 
 pub fn navigation_menu_list<H: UiHost, I>(
@@ -2599,17 +2600,16 @@ where
     NavigationMenuList::new(f(cx))
 }
 
+/// Builder-preserving uncontrolled helper for the common `defaultValue` root path.
 pub fn navigation_menu_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>(
     cx: &mut ElementContext<'_, H>,
     default_value: Option<T>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+) -> NavigationMenu
 where
     I: IntoIterator<Item = NavigationMenuItem>,
 {
-    NavigationMenu::uncontrolled(default_value)
-        .items(f(cx))
-        .into_element(cx)
+    NavigationMenu::uncontrolled(default_value).items(f(cx))
 }
 
 /// Alias for `NavigationMenu` that reads closer to Radix naming (`Root`).

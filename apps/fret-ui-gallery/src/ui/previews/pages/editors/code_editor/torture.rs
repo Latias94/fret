@@ -68,16 +68,16 @@ pub(in crate::ui) fn preview_code_editor_torture(
         host.request_redraw(action_cx.window);
     });
 
-    let handle = cx.with_state(
+    let handle = cx.slot_state(
         || code_editor::CodeEditorHandle::new(code_editor_torture_source()),
         |h| h.clone(),
     );
-    let last_applied = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    let last_applied = cx.slot_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
     if last_applied.get() != Some(syntax_enabled) {
         handle.set_language(if syntax_enabled { Some("rust") } else { None });
         last_applied.set(Some(syntax_enabled));
     }
-    let last_boundaries = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    let last_boundaries = cx.slot_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
     if last_boundaries.get() != Some(boundary_identifier_enabled) {
         handle.set_text_boundary_mode(if boundary_identifier_enabled {
             fret_runtime::TextBoundaryMode::Identifier
@@ -87,7 +87,7 @@ pub(in crate::ui) fn preview_code_editor_torture(
         last_boundaries.set(Some(boundary_identifier_enabled));
     }
 
-    let last_folds = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    let last_folds = cx.slot_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
     if last_folds.get() != Some(folds_enabled) {
         if folds_enabled {
             let span = handle.with_buffer(|b| b.line_text(0)).and_then(|line| {
@@ -115,7 +115,7 @@ pub(in crate::ui) fn preview_code_editor_torture(
         last_folds.set(Some(folds_enabled));
     }
 
-    let last_inlays = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    let last_inlays = cx.slot_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
     if last_inlays.get() != Some(inlays_enabled) {
         if inlays_enabled {
             let byte = handle
@@ -136,13 +136,13 @@ pub(in crate::ui) fn preview_code_editor_torture(
     }
 
     let allow_decorations_under_preedit =
-        cx.with_state(|| Rc::new(Cell::new(false)), |v| v.clone());
+        cx.slot_state(|| Rc::new(Cell::new(false)), |v| v.clone());
     let allow_decorations_under_preedit_enabled = allow_decorations_under_preedit.get();
     if handle.allow_decorations_under_inline_preedit() != allow_decorations_under_preedit_enabled {
         handle.set_allow_decorations_under_inline_preedit(allow_decorations_under_preedit_enabled);
     }
 
-    let compose_inline_preedit = cx.with_state(|| Rc::new(Cell::new(false)), |v| v.clone());
+    let compose_inline_preedit = cx.slot_state(|| Rc::new(Cell::new(false)), |v| v.clone());
     let compose_inline_preedit_enabled = compose_inline_preedit.get();
     if handle.compose_inline_preedit() != compose_inline_preedit_enabled {
         handle.set_compose_inline_preedit(compose_inline_preedit_enabled);

@@ -55,15 +55,21 @@ pub fn render<H: UiHost>(
         .test_id("ui-gallery-material3-text-field")
         .into_element(cx);
 
-    let outlined_card = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Outlined").into_element(cx),
-            shadcn::CardDescription::new("Animated label + outline \"notch\" patch (best-effort).")
-                .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new(vec![outlined_field]).into_element(cx),
-    ])
+    let outlined_card = shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Outlined"),
+                    shadcn::card_description(
+                        "Animated label + outline \"notch\" patch (best-effort).",
+                    ),
+                ]
+            }),
+            shadcn::card_content(move |_cx| vec![outlined_field]),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx);
 
@@ -78,17 +84,21 @@ pub fn render<H: UiHost>(
         .test_id("ui-gallery-material3-text-field-filled")
         .into_element(cx);
 
-    let filled_card = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Filled").into_element(cx),
-            shadcn::CardDescription::new(
-                "Active indicator bottom border + filled container + hover state layer via foundation indication (best-effort).",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new(vec![filled_field]).into_element(cx),
-    ])
+    let filled_card = shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Filled"),
+                    shadcn::card_description(
+                        "Active indicator bottom border + filled container + hover state layer via foundation indication (best-effort).",
+                    ),
+                ]
+            }),
+            shadcn::card_content(move |_cx| vec![filled_field]),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx);
 
@@ -117,17 +127,21 @@ pub fn render<H: UiHost>(
         .error(error_now)
         .test_id("ui-gallery-material3-text-field-overridden")
         .into_element(cx);
-    let override_card = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Override").into_element(cx),
-            shadcn::CardDescription::new(
-                "ADR 0220: partial per-state overrides via TextFieldStyle.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new(vec![override_field]).into_element(cx),
-    ])
+    let override_card = shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Override"),
+                    shadcn::card_description(
+                        "ADR 0220: partial per-state overrides via TextFieldStyle.",
+                    ),
+                ]
+            }),
+            shadcn::card_content(move |_cx| vec![override_field]),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx);
 
@@ -140,31 +154,36 @@ pub fn render<H: UiHost>(
                 outlined_card,
                 filled_card,
                 override_card,
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Icons").into_element(cx),
-                        shadcn::CardDescription::new(
-                            "Leading/trailing icon slots with minimum touch target hit regions.",
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        material3::TextField::new(icons_value)
-                            .variant(material3::TextFieldVariant::Outlined)
-                            .label("Search")
-                            .placeholder("Query")
-                            .supporting_text(
-                                "Leading icon is decorative; trailing icon is pressable.",
-                            )
-                            .leading_icon(fret_icons::ids::ui::SEARCH)
-                            .trailing_icon(fret_icons::ids::ui::CHEVRON_DOWN)
-                            .trailing_icon_a11y_label("Toggle suggestions")
-                            .test_id("ui-gallery-material3-text-field-icons")
-                            .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
+                shadcn::card(|cx| {
+                    ui::children![
+                        cx;
+                        shadcn::card_header(|cx| {
+                            ui::children![
+                                cx;
+                                shadcn::card_title("Icons"),
+                                shadcn::card_description(
+                                    "Leading/trailing icon slots with minimum touch target hit regions.",
+                                ),
+                            ]
+                        }),
+                        shadcn::card_content(|cx| {
+                            vec![
+                                material3::TextField::new(icons_value)
+                                    .variant(material3::TextFieldVariant::Outlined)
+                                    .label("Search")
+                                    .placeholder("Query")
+                                    .supporting_text(
+                                        "Leading icon is decorative; trailing icon is pressable.",
+                                    )
+                                    .leading_icon(fret_icons::ids::ui::SEARCH)
+                                    .trailing_icon(fret_icons::ids::ui::CHEVRON_DOWN)
+                                    .trailing_icon_a11y_label("Toggle suggestions")
+                                    .test_id("ui-gallery-material3-text-field-icons")
+                                    .into_element(cx),
+                            ]
+                        }),
+                    ]
+                })
                 .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                 .into_element(cx),
             ]

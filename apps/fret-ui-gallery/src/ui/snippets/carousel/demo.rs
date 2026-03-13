@@ -84,180 +84,139 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         if idx == 1 {
             let frame_id = demo_dnd_frame_id;
             let scope = demo_dnd_scope;
-
-            let on_down_handle_pointer = demo_dnd_pointer.clone();
-            let on_down_handle_dragging = demo_dnd_dragging.clone();
-            let on_down_dnd_service = demo_dnd_service.clone();
-            let on_down: fret_ui::action::OnPointerDown = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      down: fret_ui::action::PointerDownCx| {
-                    if down.button != fret_core::MouseButton::Left {
-                        return false;
-                    }
-
-                    host.capture_pointer();
-                    let _ = host.models_mut().update(&on_down_handle_pointer, |v| {
-                        *v = Some(down.pointer_id);
-                    });
-                    let _ = host
-                        .models_mut()
-                        .update(&on_down_handle_dragging, |v| *v = false);
-
-                    let _ = fret_ui_kit::dnd::handle_pointer_down_in_scope(
-                        host.models_mut(),
-                        &on_down_dnd_service,
-                        action_cx.window,
-                        frame_id,
-                        DEMO_DND_KIND,
-                        scope,
-                        down.pointer_id,
-                        down.position,
-                        down.tick_id,
-                        fret_ui_kit::dnd::ActivationConstraint::Distance { px: 2.0 },
-                        fret_ui_kit::dnd::CollisionStrategy::ClosestCenter,
-                        None,
+            let build_demo_dnd_handlers =
+                |pointer_model: fret_runtime::Model<Option<fret_core::PointerId>>,
+                 activation_constraint: fret_ui_kit::dnd::ActivationConstraint| {
+                    let on_update_dragging = demo_dnd_dragging.clone();
+                    let on_update = Arc::new(
+                        move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                              action_cx: fret_ui::action::ActionCx,
+                              update: &fret_ui_kit::dnd::DndUpdate| {
+                            if matches!(
+                                update.sensor,
+                                fret_ui_kit::dnd::SensorOutput::DragStart { .. }
+                                    | fret_ui_kit::dnd::SensorOutput::DragMove { .. }
+                            ) {
+                                let _ =
+                                    host.models_mut().update(&on_update_dragging, |v| *v = true);
+                                host.request_redraw(action_cx.window);
+                            }
+                        },
                     );
 
-                    host.request_redraw(action_cx.window);
-                    true
-                },
-            );
-
-            let on_move_handle_pointer = demo_dnd_pointer.clone();
-            let on_move_handle_dragging = demo_dnd_dragging.clone();
-            let on_move_dnd_service = demo_dnd_service.clone();
-            let on_move: fret_ui::action::OnPointerMove = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      mv: fret_ui::action::PointerMoveCx| {
-                    let tracked = host
-                        .models_mut()
-                        .read(&on_move_handle_pointer, |v| *v)
-                        .ok()
-                        .flatten()
-                        .is_some_and(|id| id == mv.pointer_id);
-                    if !tracked {
-                        return false;
-                    }
-
-                    let update = fret_ui_kit::dnd::handle_pointer_move_in_scope(
-                        host.models_mut(),
-                        &on_move_dnd_service,
-                        action_cx.window,
+                    let forwarders = fret_ui_kit::dnd::DndPointerForwarders::new(
+                        demo_dnd_service.clone(),
                         frame_id,
-                        DEMO_DND_KIND,
-                        scope,
-                        mv.pointer_id,
-                        mv.position,
-                        mv.tick_id,
-                        fret_ui_kit::dnd::ActivationConstraint::Distance { px: 2.0 },
-                        fret_ui_kit::dnd::CollisionStrategy::ClosestCenter,
-                        None,
+                        fret_ui_kit::dnd::DndPointerForwardersConfig::for_kind(DEMO_DND_KIND)
+                            .scope(scope)
+                            .activation_constraint(activation_constraint)
+                            .collision_strategy(fret_ui_kit::dnd::CollisionStrategy::ClosestCenter)
+                            .on_update(on_update),
                     );
 
-                    if matches!(
-                        update.sensor,
-                        fret_ui_kit::dnd::SensorOutput::DragStart { .. }
-                            | fret_ui_kit::dnd::SensorOutput::DragMove { .. }
-                    ) {
-                        let _ = host
-                            .models_mut()
-                            .update(&on_move_handle_dragging, |v| *v = true);
-                    }
+                    let down_forwarder = forwarders.on_pointer_down();
+                    let move_forwarder = forwarders.on_pointer_move();
+                    let up_forwarder = forwarders.on_pointer_up();
+                    let cancel_forwarder = forwarders.on_pointer_cancel();
 
-                    host.request_redraw(action_cx.window);
-                    true
-                },
-            );
+                    let on_down_pointer = pointer_model.clone();
+                    let on_down_dragging = demo_dnd_dragging.clone();
+                    let on_down: fret_ui::action::OnPointerDown = Arc::new(
+                        move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                              action_cx: fret_ui::action::ActionCx,
+                              down: fret_ui::action::PointerDownCx| {
+                            if down.button != fret_core::MouseButton::Left {
+                                return false;
+                            }
 
-            let on_up_handle_pointer = demo_dnd_pointer.clone();
-            let on_up_handle_dragging = demo_dnd_dragging.clone();
-            let on_up_dnd_service = demo_dnd_service.clone();
-            let on_up: fret_ui::action::OnPointerUp = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      up: fret_ui::action::PointerUpCx| {
-                    let tracked = host
-                        .models_mut()
-                        .read(&on_up_handle_pointer, |v| *v)
-                        .ok()
-                        .flatten()
-                        .is_some_and(|id| id == up.pointer_id);
-                    if !tracked {
-                        return false;
-                    }
-
-                    let _ = fret_ui_kit::dnd::handle_pointer_up_in_scope(
-                        host.models_mut(),
-                        &on_up_dnd_service,
-                        action_cx.window,
-                        frame_id,
-                        DEMO_DND_KIND,
-                        scope,
-                        up.pointer_id,
-                        up.position,
-                        up.tick_id,
-                        fret_ui_kit::dnd::ActivationConstraint::Distance { px: 2.0 },
-                        fret_ui_kit::dnd::CollisionStrategy::ClosestCenter,
-                        None,
+                            let window = action_cx.window;
+                            let _ = host.models_mut().update(&on_down_pointer, |v| {
+                                *v = Some(down.pointer_id);
+                            });
+                            let _ = host.models_mut().update(&on_down_dragging, |v| *v = false);
+                            let handled = down_forwarder(host, action_cx, down);
+                            host.request_redraw(window);
+                            handled
+                        },
                     );
 
-                    host.release_pointer_capture();
-                    let _ = host
-                        .models_mut()
-                        .update(&on_up_handle_pointer, |v| *v = None);
-                    let _ = host
-                        .models_mut()
-                        .update(&on_up_handle_dragging, |v| *v = false);
-                    host.request_redraw(action_cx.window);
-                    true
-                },
-            );
+                    let on_move_pointer = pointer_model.clone();
+                    let on_move: fret_ui::action::OnPointerMove = Arc::new(
+                        move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                              action_cx: fret_ui::action::ActionCx,
+                              mv: fret_ui::action::PointerMoveCx| {
+                            let tracked = host
+                                .models_mut()
+                                .read(&on_move_pointer, |v| *v)
+                                .ok()
+                                .flatten()
+                                .is_some_and(|id| id == mv.pointer_id);
+                            if !tracked {
+                                return false;
+                            }
 
-            let on_cancel_handle_pointer = demo_dnd_pointer.clone();
-            let on_cancel_handle_dragging = demo_dnd_dragging.clone();
-            let on_cancel_dnd_service = demo_dnd_service.clone();
-            let on_cancel: fret_ui::action::OnPointerCancel = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      cancel: fret_ui::action::PointerCancelCx| {
-                    let tracked = host
-                        .models_mut()
-                        .read(&on_cancel_handle_pointer, |v| *v)
-                        .ok()
-                        .flatten()
-                        .is_some_and(|id| id == cancel.pointer_id);
-                    if !tracked {
-                        return false;
-                    }
-
-                    let position = cancel.position.unwrap_or_else(|| host.bounds().origin);
-                    let _ = fret_ui_kit::dnd::handle_pointer_cancel_in_scope(
-                        host.models_mut(),
-                        &on_cancel_dnd_service,
-                        action_cx.window,
-                        frame_id,
-                        DEMO_DND_KIND,
-                        scope,
-                        cancel.pointer_id,
-                        position,
-                        cancel.tick_id,
-                        fret_ui_kit::dnd::ActivationConstraint::Distance { px: 2.0 },
-                        fret_ui_kit::dnd::CollisionStrategy::ClosestCenter,
-                        None,
+                            move_forwarder(host, action_cx, mv)
+                        },
                     );
 
-                    host.release_pointer_capture();
-                    let _ = host
-                        .models_mut()
-                        .update(&on_cancel_handle_pointer, |v| *v = None);
-                    let _ = host
-                        .models_mut()
-                        .update(&on_cancel_handle_dragging, |v| *v = false);
-                    host.request_redraw(action_cx.window);
-                    true
-                },
+                    let on_up_pointer = pointer_model.clone();
+                    let on_up_dragging = demo_dnd_dragging.clone();
+                    let on_up: fret_ui::action::OnPointerUp = Arc::new(
+                        move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                              action_cx: fret_ui::action::ActionCx,
+                              up: fret_ui::action::PointerUpCx| {
+                            let tracked = host
+                                .models_mut()
+                                .read(&on_up_pointer, |v| *v)
+                                .ok()
+                                .flatten()
+                                .is_some_and(|id| id == up.pointer_id);
+                            if !tracked {
+                                return false;
+                            }
+
+                            let window = action_cx.window;
+                            let handled = up_forwarder(host, action_cx, up);
+                            let _ = host.models_mut().update(&on_up_pointer, |v| *v = None);
+                            let _ = host.models_mut().update(&on_up_dragging, |v| *v = false);
+                            host.request_redraw(window);
+                            handled
+                        },
+                    );
+
+                    let on_cancel_pointer = pointer_model.clone();
+                    let on_cancel_dragging = demo_dnd_dragging.clone();
+                    let on_cancel: fret_ui::action::OnPointerCancel = Arc::new(
+                        move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                              action_cx: fret_ui::action::ActionCx,
+                              cancel: fret_ui::action::PointerCancelCx| {
+                            let tracked = host
+                                .models_mut()
+                                .read(&on_cancel_pointer, |v| *v)
+                                .ok()
+                                .flatten()
+                                .is_some_and(|id| id == cancel.pointer_id);
+                            if !tracked {
+                                return false;
+                            }
+
+                            let window = action_cx.window;
+                            let handled = cancel_forwarder(host, action_cx, cancel);
+                            let _ = host.models_mut().update(&on_cancel_pointer, |v| *v = None);
+                            let _ = host
+                                .models_mut()
+                                .update(&on_cancel_dragging, |v| *v = false);
+                            host.request_redraw(window);
+                            handled
+                        },
+                    );
+
+                    (on_down, on_move, on_up, on_cancel)
+                };
+
+            let (on_down, on_move, on_up, on_cancel) = build_demo_dnd_handlers(
+                demo_dnd_pointer.clone(),
+                fret_ui_kit::dnd::ActivationConstraint::Distance { px: 2.0 },
             );
 
             let mut props = fret_ui::element::PointerRegionProps::default();
@@ -284,195 +243,11 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
 
             // Touch-friendly long-press DnD region. We gate this via a delay+distance activation
             // constraint and keep it visually simple so it is easy to target in diag scripts.
-            let long_press_frame_id = demo_dnd_frame_id;
-            let long_press_scope = demo_dnd_scope;
-
-            let on_long_press_down_pointer = demo_dnd_long_press_pointer.clone();
-            let on_long_press_down_dragging = demo_dnd_dragging.clone();
-            let on_long_press_down_service = demo_dnd_service.clone();
-            let on_long_press_down: fret_ui::action::OnPointerDown = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      down: fret_ui::action::PointerDownCx| {
-                    if down.button != fret_core::MouseButton::Left {
-                        return false;
-                    }
-
-                    host.capture_pointer();
-                    let _ = host.models_mut().update(&on_long_press_down_pointer, |v| {
-                        *v = Some(down.pointer_id);
-                    });
-                    let _ = host
-                        .models_mut()
-                        .update(&on_long_press_down_dragging, |v| *v = false);
-
-                    let _ = fret_ui_kit::dnd::handle_pointer_down_in_scope(
-                        host.models_mut(),
-                        &on_long_press_down_service,
-                        action_cx.window,
-                        long_press_frame_id,
-                        DEMO_DND_KIND,
-                        long_press_scope,
-                        down.pointer_id,
-                        down.position,
-                        down.tick_id,
-                        fret_ui_kit::dnd::ActivationConstraint::DelayAndDistance {
-                            ticks: 12,
-                            px: 6.0,
-                        },
-                        fret_ui_kit::dnd::CollisionStrategy::ClosestCenter,
-                        None,
-                    );
-
-                    host.request_redraw(action_cx.window);
-                    true
-                },
-            );
-
-            let on_long_press_move_pointer = demo_dnd_long_press_pointer.clone();
-            let on_long_press_move_dragging = demo_dnd_dragging.clone();
-            let on_long_press_move_service = demo_dnd_service.clone();
-            let on_long_press_move: fret_ui::action::OnPointerMove = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      mv: fret_ui::action::PointerMoveCx| {
-                    let tracked = host
-                        .models_mut()
-                        .read(&on_long_press_move_pointer, |v| *v)
-                        .ok()
-                        .flatten()
-                        .is_some_and(|id| id == mv.pointer_id);
-                    if !tracked {
-                        return false;
-                    }
-
-                    let update = fret_ui_kit::dnd::handle_pointer_move_in_scope(
-                        host.models_mut(),
-                        &on_long_press_move_service,
-                        action_cx.window,
-                        long_press_frame_id,
-                        DEMO_DND_KIND,
-                        long_press_scope,
-                        mv.pointer_id,
-                        mv.position,
-                        mv.tick_id,
-                        fret_ui_kit::dnd::ActivationConstraint::DelayAndDistance {
-                            ticks: 12,
-                            px: 6.0,
-                        },
-                        fret_ui_kit::dnd::CollisionStrategy::ClosestCenter,
-                        None,
-                    );
-
-                    if matches!(
-                        update.sensor,
-                        fret_ui_kit::dnd::SensorOutput::DragStart { .. }
-                            | fret_ui_kit::dnd::SensorOutput::DragMove { .. }
-                    ) {
-                        let _ = host
-                            .models_mut()
-                            .update(&on_long_press_move_dragging, |v| *v = true);
-                    }
-
-                    host.request_redraw(action_cx.window);
-                    true
-                },
-            );
-
-            let on_long_press_up_pointer = demo_dnd_long_press_pointer.clone();
-            let on_long_press_up_dragging = demo_dnd_dragging.clone();
-            let on_long_press_up_service = demo_dnd_service.clone();
-            let on_long_press_up: fret_ui::action::OnPointerUp = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      up: fret_ui::action::PointerUpCx| {
-                    let tracked = host
-                        .models_mut()
-                        .read(&on_long_press_up_pointer, |v| *v)
-                        .ok()
-                        .flatten()
-                        .is_some_and(|id| id == up.pointer_id);
-                    if !tracked {
-                        return false;
-                    }
-
-                    let _ = fret_ui_kit::dnd::handle_pointer_up_in_scope(
-                        host.models_mut(),
-                        &on_long_press_up_service,
-                        action_cx.window,
-                        long_press_frame_id,
-                        DEMO_DND_KIND,
-                        long_press_scope,
-                        up.pointer_id,
-                        up.position,
-                        up.tick_id,
-                        fret_ui_kit::dnd::ActivationConstraint::DelayAndDistance {
-                            ticks: 12,
-                            px: 6.0,
-                        },
-                        fret_ui_kit::dnd::CollisionStrategy::ClosestCenter,
-                        None,
-                    );
-
-                    host.release_pointer_capture();
-                    let _ = host
-                        .models_mut()
-                        .update(&on_long_press_up_pointer, |v| *v = None);
-                    let _ = host
-                        .models_mut()
-                        .update(&on_long_press_up_dragging, |v| *v = false);
-                    host.request_redraw(action_cx.window);
-                    true
-                },
-            );
-
-            let on_long_press_cancel_pointer = demo_dnd_long_press_pointer.clone();
-            let on_long_press_cancel_dragging = demo_dnd_dragging.clone();
-            let on_long_press_cancel_service = demo_dnd_service.clone();
-            let on_long_press_cancel: fret_ui::action::OnPointerCancel = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      cancel: fret_ui::action::PointerCancelCx| {
-                    let tracked = host
-                        .models_mut()
-                        .read(&on_long_press_cancel_pointer, |v| *v)
-                        .ok()
-                        .flatten()
-                        .is_some_and(|id| id == cancel.pointer_id);
-                    if !tracked {
-                        return false;
-                    }
-
-                    let position = cancel.position.unwrap_or_else(|| host.bounds().origin);
-                    let _ = fret_ui_kit::dnd::handle_pointer_cancel_in_scope(
-                        host.models_mut(),
-                        &on_long_press_cancel_service,
-                        action_cx.window,
-                        long_press_frame_id,
-                        DEMO_DND_KIND,
-                        long_press_scope,
-                        cancel.pointer_id,
-                        position,
-                        cancel.tick_id,
-                        fret_ui_kit::dnd::ActivationConstraint::DelayAndDistance {
-                            ticks: 12,
-                            px: 6.0,
-                        },
-                        fret_ui_kit::dnd::CollisionStrategy::ClosestCenter,
-                        None,
-                    );
-
-                    host.release_pointer_capture();
-                    let _ = host
-                        .models_mut()
-                        .update(&on_long_press_cancel_pointer, |v| *v = None);
-                    let _ = host
-                        .models_mut()
-                        .update(&on_long_press_cancel_dragging, |v| *v = false);
-                    host.request_redraw(action_cx.window);
-                    true
-                },
-            );
+            let (on_long_press_down, on_long_press_move, on_long_press_up, on_long_press_cancel) =
+                build_demo_dnd_handlers(
+                    demo_dnd_long_press_pointer.clone(),
+                    fret_ui_kit::dnd::ActivationConstraint::DelayAndDistance { ticks: 12, px: 6.0 },
+                );
 
             let mut long_press_props = fret_ui::element::PointerRegionProps::default();
             long_press_props.layout = decl_style::layout_style(
@@ -559,7 +334,10 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         );
         let content = cx.container(props, move |_cx| layered);
 
-        let card = shadcn::Card::new([content]).into_element(cx);
+        let card = shadcn::card(
+            |cx| ui::children![cx; shadcn::card_content(|cx| ui::children![cx; content])],
+        )
+        .into_element(cx);
         ui::container(move |_cx| vec![card])
             .w_full()
             .p_1()

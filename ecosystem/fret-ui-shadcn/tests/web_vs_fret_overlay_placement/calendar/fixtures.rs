@@ -41,9 +41,9 @@ fn build_calendar_22_open_overlay(
         );
 
     let label = fret_ui_shadcn::Label::new("Date of birth").into_element(cx);
-    let popover = fret_ui_shadcn::Popover::new(open.clone())
+    let popover = fret_ui_shadcn::Popover::from_open(open.clone())
         .align(PopoverAlign::Start)
-        .into_element(
+        .into_element_with(
             cx,
             |cx| trigger.into_element(cx),
             |cx| {
@@ -83,9 +83,9 @@ fn build_calendar_23_open_overlay(
         );
 
     let label = fret_ui_shadcn::Label::new("Select your stay").into_element(cx);
-    let popover = fret_ui_shadcn::Popover::new(open.clone())
+    let popover = fret_ui_shadcn::Popover::from_open(open.clone())
         .align(PopoverAlign::Start)
-        .into_element(
+        .into_element_with(
             cx,
             |cx| trigger.into_element(cx),
             |cx| {
@@ -125,9 +125,9 @@ fn build_calendar_24_open_overlay(
         );
 
     let label = fret_ui_shadcn::Label::new("Date").into_element(cx);
-    let popover = fret_ui_shadcn::Popover::new(open.clone())
+    let popover = fret_ui_shadcn::Popover::from_open(open.clone())
         .align(PopoverAlign::Start)
-        .into_element(
+        .into_element_with(
             cx,
             |cx| trigger.into_element(cx),
             |cx| {
@@ -167,9 +167,9 @@ fn build_calendar_25_open_overlay(
         );
 
     let label = fret_ui_shadcn::Label::new("Date").into_element(cx);
-    let popover = fret_ui_shadcn::Popover::new(open.clone())
+    let popover = fret_ui_shadcn::Popover::from_open(open.clone())
         .align(PopoverAlign::Start)
-        .into_element(
+        .into_element_with(
             cx,
             |cx| trigger.into_element(cx),
             |cx| {
@@ -209,9 +209,9 @@ fn build_calendar_26_open_overlay(
         );
 
     let label = fret_ui_shadcn::Label::new("Select your stay").into_element(cx);
-    let popover = fret_ui_shadcn::Popover::new(open.clone())
+    let popover = fret_ui_shadcn::Popover::from_open(open.clone())
         .align(PopoverAlign::Start)
-        .into_element(
+        .into_element_with(
             cx,
             |cx| trigger.into_element(cx),
             |cx| {
@@ -244,10 +244,10 @@ fn build_calendar_27_open_overlay(
     use time::{Date, Month};
 
     let trigger = Button::new("6/5/2025 - 6/20/2025").variant(ButtonVariant::Outline);
-    let popover = fret_ui_shadcn::Popover::new(open.clone())
+    let popover = fret_ui_shadcn::Popover::from_open(open.clone())
         .align(PopoverAlign::End)
         .window_margin(Px(0.0))
-        .into_element(
+        .into_element_with(
             cx,
             |cx| trigger.into_element(cx),
             |cx| {
@@ -286,12 +286,12 @@ fn build_calendar_28_open_overlay(
     let trigger = Button::new("Select date")
         .variant(ButtonVariant::Ghost)
         .refine_layout(LayoutRefinement::default().mr(Space::N2));
-    let popover = fret_ui_shadcn::Popover::new(open.clone())
+    let popover = fret_ui_shadcn::Popover::from_open(open.clone())
         .align(PopoverAlign::End)
         .align_offset(Px(-8.0))
         .side_offset(Px(10.0))
         .window_margin(Px(0.0))
-        .into_element(
+        .into_element_with(
             cx,
             |cx| trigger.into_element(cx),
             |cx| {
@@ -322,10 +322,10 @@ fn build_calendar_29_open_overlay(
     use time::{Date, Month};
 
     let trigger = Button::new("Select date").variant(ButtonVariant::Ghost);
-    let popover = fret_ui_shadcn::Popover::new(open.clone())
+    let popover = fret_ui_shadcn::Popover::from_open(open.clone())
         .align(PopoverAlign::End)
         .window_margin(Px(0.0))
-        .into_element(
+        .into_element_with(
             cx,
             |cx| trigger.into_element(cx),
             |cx| {
@@ -365,9 +365,9 @@ fn build_calendar_30_open_overlay(
         );
 
     let label = fret_ui_shadcn::Label::new("Select your stay").into_element(cx);
-    let popover = fret_ui_shadcn::Popover::new(open.clone())
+    let popover = fret_ui_shadcn::Popover::from_open(open.clone())
         .align(PopoverAlign::Start)
-        .into_element(
+        .into_element_with(
             cx,
             |cx| trigger.into_element(cx),
             |cx| {

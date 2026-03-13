@@ -103,21 +103,25 @@ pub fn render<H: UiHost>(
             },
         );
 
-        shadcn::Card::new(vec![
-            shadcn::CardHeader::new(vec![
-                shadcn::CardTitle::new(label).into_element(cx),
-                shadcn::CardDescription::new(match chrome {
-                    Some(chrome) => format!(
-                        "min={}px, chrome={}x{}px",
-                        min.0, chrome.width.0, chrome.height.0
-                    ),
-                    None => format!("min={}px", min.0),
-                })
-                .into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new(vec![stack]).into_element(cx),
-        ])
+        shadcn::card(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_header(|cx| {
+                    ui::children![
+                        cx;
+                        shadcn::card_title(label),
+                        shadcn::card_description(match chrome {
+                            Some(chrome) => format!(
+                                "min={}px, chrome={}x{}px",
+                                min.0, chrome.width.0, chrome.height.0
+                            ),
+                            None => format!("min={}px", min.0),
+                        }),
+                    ]
+                }),
+                shadcn::card_content(|_cx| vec![stack]),
+            ]
+        })
         .refine_layout(LayoutRefinement::default().w_px(Px(280.0)).min_w_0())
         .into_element(cx)
     };

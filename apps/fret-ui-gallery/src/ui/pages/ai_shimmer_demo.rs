@@ -3,8 +3,6 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
 use fret::{UiChild, UiCx};
-use fret_ui_kit::ui::UiElementSinkExt as _;
-use fret_ui_shadcn::facade as shadcn;
 
 pub(super) fn preview_ai_shimmer_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let demo = snippets::shimmer_demo::render(cx);
@@ -50,45 +48,53 @@ pub(super) fn preview_ai_shimmer_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
 }
 
 fn shimmer_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let row = |prop: &'static str, ty: &'static str, default: &'static str, desc: &'static str| {
-        shadcn::TableRow::build(4, move |cx, out| {
-            out.push_ui(cx, shadcn::TableCell::build(ui::text(prop)));
-            out.push_ui(cx, shadcn::TableCell::build(ui::text(ty)));
-            out.push_ui(cx, shadcn::TableCell::build(ui::text(default)));
-            out.push_ui(cx, shadcn::TableCell::build(ui::text(desc)));
-        })
-        .border_bottom(true)
-    };
-
-    shadcn::Table::build(|cx, out| {
-        out.push_ui(
-            cx,
-            shadcn::TableHeader::build(|cx, out| {
-                out.push(
-                    shadcn::TableRow::build(4, |cx, out| {
-                        out.push(shadcn::TableHead::new("Prop").into_element(cx));
-                        out.push(shadcn::TableHead::new("Type").into_element(cx));
-                        out.push(shadcn::TableHead::new("Default").into_element(cx));
-                        out.push(shadcn::TableHead::new("Description").into_element(cx));
-                    })
-                    .border_bottom(true)
-                    .into_element(cx),
-                );
-            }),
-        );
-        out.push_ui(
-            cx,
-            shadcn::TableBody::build(|cx, out| {
-                out.push_ui(cx, row("text", "Arc<str>", "-", "Text content to apply the shimmer effect to."));
-                out.push_ui(cx, row("duration_secs", "f32", "2.0", "Animation duration in seconds (frame-based; ~60fps)."));
-                out.push_ui(cx, row("spread", "f32", "2.0", "Spread multiplier for the highlight band (multiplied by text length)."));
-                out.push_ui(cx, row("text_style", "TextStyle", "None", "Explicitly override the typography used for both base text and highlight band."));
-                out.push_ui(cx, row("use_resolved_passive_text", "flag", "false", "Resolve typography from inherited subtree text-style / foreground; explicit `text_style` still wins if provided."));
-                out.push_ui(cx, row("wrap", "TextWrap", "None", "Text wrapping policy (defaults to no wrap)."));
-                out.push_ui(cx, row("role", "SemanticsRole", "Text", "Accessibility role (rough mapping of upstream `as`)."));
-            }),
-        );
-    })
-    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
-    .into_element(cx)
+    doc_layout::text_table(
+        cx,
+        ["Prop", "Type", "Default", "Description"],
+        [
+            [
+                "text",
+                "Arc<str>",
+                "-",
+                "Text content to apply the shimmer effect to.",
+            ],
+            [
+                "duration_secs",
+                "f32",
+                "2.0",
+                "Animation duration in seconds (frame-based; ~60fps).",
+            ],
+            [
+                "spread",
+                "f32",
+                "2.0",
+                "Spread multiplier for the highlight band (multiplied by text length).",
+            ],
+            [
+                "text_style",
+                "TextStyle",
+                "None",
+                "Explicitly override the typography used for both base text and highlight band.",
+            ],
+            [
+                "use_resolved_passive_text",
+                "flag",
+                "false",
+                "Resolve typography from inherited subtree text-style / foreground; explicit `text_style` still wins if provided.",
+            ],
+            [
+                "wrap",
+                "TextWrap",
+                "None",
+                "Text wrapping policy (defaults to no wrap).",
+            ],
+            [
+                "role",
+                "SemanticsRole",
+                "Text",
+                "Accessibility role (rough mapping of upstream `as`).",
+            ],
+        ],
+        true,
+    )
 }

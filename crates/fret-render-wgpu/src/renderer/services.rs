@@ -119,9 +119,12 @@ fn find_existing_custom_effect(
     hash: u64,
     user_source: &str,
 ) -> Option<fret_core::EffectId> {
-    let ids = renderer.custom_effect_hash_index.get(&hash)?;
+    let ids = renderer
+        .material_effect_state
+        .custom_effect_hash_index
+        .get(&hash)?;
     ids.iter().copied().find(|&id| {
-        let Some(existing) = renderer.custom_effects.get(id) else {
+        let Some(existing) = renderer.material_effect_state.custom_effects.get(id) else {
             return false;
         };
         existing.abi == abi && existing.raw_source.as_ref() == user_source
@@ -146,7 +149,7 @@ fn register_custom_effect_wgsl(
 
     let h = mix_u64(hash_bytes(user_source.as_bytes()), abi_hash_salt);
     if let Some(id) = find_existing_custom_effect(renderer, abi, h, &user_source) {
-        if let Some(entry) = renderer.custom_effects.get_mut(id) {
+        if let Some(entry) = renderer.material_effect_state.custom_effects.get_mut(id) {
             entry.refs = entry.refs.saturating_add(1);
         }
         return Ok(id);
@@ -155,20 +158,27 @@ fn register_custom_effect_wgsl(
     let (wgsl_unmasked, wgsl_masked, wgsl_mask) = build_and_validate(&user_source)?;
 
     let raw_source: Arc<str> = Arc::from(user_source);
-    let id = renderer.custom_effects.insert(super::CustomEffectEntry {
-        abi,
-        raw_source: raw_source.clone(),
-        wgsl_unmasked: Arc::from(wgsl_unmasked),
-        wgsl_masked: Arc::from(wgsl_masked),
-        wgsl_mask: Arc::from(wgsl_mask),
-        refs: 1,
-    });
+    let id = renderer
+        .material_effect_state
+        .custom_effects
+        .insert(CustomEffectEntry {
+            abi,
+            raw_source: raw_source.clone(),
+            wgsl_unmasked: Arc::from(wgsl_unmasked),
+            wgsl_masked: Arc::from(wgsl_masked),
+            wgsl_mask: Arc::from(wgsl_mask),
+            refs: 1,
+        });
     renderer
+        .material_effect_state
         .custom_effect_hash_index
         .entry(h)
         .or_default()
         .push(id);
-    renderer.custom_effects_generation = renderer.custom_effects_generation.wrapping_add(1);
+    renderer.material_effect_state.custom_effects_generation = renderer
+        .material_effect_state
+        .custom_effects_generation
+        .wrapping_add(1);
     Ok(id)
 }
 
@@ -325,119 +335,35 @@ impl fret_core::PathService for Renderer {
         style: fret_core::PathStyle,
         constraints: fret_core::PathConstraints,
     ) -> (fret_core::PathId, fret_core::PathMetrics) {
-        let key = path_cache_key(commands, style, constraints);
-        let epoch = self.bump_path_cache_epoch();
-
-        match self.path_cache.entry(key) {
-            Entry::Occupied(mut e) => {
-                let entry = e.get_mut();
-                entry.refs = entry.refs.saturating_add(1);
-                entry.last_used_epoch = epoch;
-                let id = entry.id;
-
-                if let Some(prepared) = self.paths.get(id) {
-                    return (id, prepared.metrics);
-                }
-
-                // Cache entry is stale (should be rare). Rebuild it.
-                e.remove();
-            }
-            Entry::Vacant(_) => {}
-        }
-
-        let metrics = metrics_from_path_commands(commands, style);
-        let (triangles, stroke_s01_mode) = tessellate_path_commands(commands, style, constraints);
-        let id = self.paths.insert(PreparedPath {
-            metrics,
-            triangles,
-            stroke_s01_mode,
-            cache_key: key,
-        });
-        self.path_cache.insert(
-            key,
-            CachedPathEntry {
-                id,
-                refs: 1,
-                last_used_epoch: epoch,
-            },
-        );
-        self.prune_path_cache();
-        (id, metrics)
+        self.path_state.prepare_path(commands, style, constraints)
     }
 
     fn release(&mut self, path: fret_core::PathId) {
-        let Some(cache_key) = self.paths.get(path).map(|p| p.cache_key) else {
-            return;
-        };
-
-        if let Some(entry) = self.path_cache.get_mut(&cache_key)
-            && entry.refs > 0
-        {
-            entry.refs -= 1;
-        }
-
-        self.prune_path_cache();
+        self.path_state.release_path(path);
     }
 }
 
 impl fret_core::SvgService for Renderer {
     fn register_svg(&mut self, bytes: &[u8]) -> fret_core::SvgId {
-        let h = hash_bytes(bytes);
-        if let Some(ids) = self.svg_hash_index.get(&h) {
-            for &id in ids {
-                let Some(existing) = self.svgs.get(id) else {
-                    continue;
-                };
-                if existing.bytes.as_ref() == bytes {
-                    if let Some(entry) = self.svgs.get_mut(id) {
-                        entry.refs = entry.refs.saturating_add(1);
-                    }
-                    return id;
-                }
-            }
-        }
-
-        let id = self.svgs.insert(super::types::SvgEntry {
-            bytes: Arc::<[u8]>::from(bytes),
-            refs: 1,
-        });
-        self.svg_hash_index.entry(h).or_default().push(id);
-        id
+        self.svg_registry_state.register_svg(bytes)
     }
 
     fn unregister_svg(&mut self, svg: fret_core::SvgId) -> bool {
-        let Some(refs) = self.svgs.get(svg).map(|e| e.refs) else {
-            return false;
-        };
-
-        if refs > 1 {
-            if let Some(entry) = self.svgs.get_mut(svg) {
-                entry.refs = entry.refs.saturating_sub(1);
-            }
-            return true;
-        }
-
-        let Some(bytes) = self.svgs.remove(svg).map(|e| e.bytes) else {
-            return false;
-        };
-
-        let h = hash_bytes(&bytes);
-        if let Some(list) = self.svg_hash_index.get_mut(&h) {
-            list.retain(|id| *id != svg);
-            if list.is_empty() {
-                self.svg_hash_index.remove(&h);
-            }
+        match self.svg_registry_state.unregister_svg(svg) {
+            svg::SvgRegistryUnregisterOutcome::Missing => return false,
+            svg::SvgRegistryUnregisterOutcome::StillReferenced => return true,
+            svg::SvgRegistryUnregisterOutcome::Removed => {}
         }
 
         // Drop any cached rasterizations for this SVG.
         let mut keys_to_remove: Vec<SvgRasterKey> = Vec::new();
-        for k in self.svg_rasters.keys() {
+        for k in self.svg_raster_state.rasters.keys() {
             if k.svg == svg {
                 keys_to_remove.push(*k);
             }
         }
         for k in keys_to_remove {
-            if let Some(entry) = self.svg_rasters.remove(&k) {
+            if let Some(entry) = self.svg_raster_state.rasters.remove(&k) {
                 self.drop_svg_raster_entry(entry);
             }
         }
@@ -477,43 +403,52 @@ impl fret_core::MaterialService for Renderer {
             }
         }
 
-        match self.materials_by_desc.entry(desc) {
+        match self.material_effect_state.materials_by_desc.entry(desc) {
             Entry::Occupied(e) => {
                 let id = *e.get();
-                if let Some(entry) = self.materials.get_mut(id) {
+                if let Some(entry) = self.material_effect_state.materials.get_mut(id) {
                     entry.refs = entry.refs.saturating_add(1);
                 }
                 Ok(id)
             }
             Entry::Vacant(e) => {
                 let id = self
+                    .material_effect_state
                     .materials
-                    .insert(super::MaterialEntry { desc, refs: 1 });
+                    .insert(MaterialEntry { desc, refs: 1 });
                 e.insert(id);
-                self.materials_generation = self.materials_generation.wrapping_add(1);
+                self.material_effect_state.materials_generation = self
+                    .material_effect_state
+                    .materials_generation
+                    .wrapping_add(1);
                 Ok(id)
             }
         }
     }
 
     fn unregister_material(&mut self, id: fret_core::MaterialId) -> bool {
-        let Some(refs) = self.materials.get(id).map(|e| e.refs) else {
+        let Some(refs) = self.material_effect_state.materials.get(id).map(|e| e.refs) else {
             return false;
         };
 
         if refs > 1 {
-            if let Some(entry) = self.materials.get_mut(id) {
+            if let Some(entry) = self.material_effect_state.materials.get_mut(id) {
                 entry.refs = entry.refs.saturating_sub(1);
             }
             return true;
         }
 
-        let Some(entry) = self.materials.remove(id) else {
+        let Some(entry) = self.material_effect_state.materials.remove(id) else {
             return false;
         };
 
-        self.materials_by_desc.remove(&entry.desc);
-        self.materials_generation = self.materials_generation.wrapping_add(1);
+        self.material_effect_state
+            .materials_by_desc
+            .remove(&entry.desc);
+        self.material_effect_state.materials_generation = self
+            .material_effect_state
+            .materials_generation
+            .wrapping_add(1);
         true
     }
 }
@@ -584,18 +519,23 @@ impl fret_core::CustomEffectService for Renderer {
     }
 
     fn unregister_custom_effect(&mut self, id: fret_core::EffectId) -> bool {
-        let Some(refs) = self.custom_effects.get(id).map(|e| e.refs) else {
+        let Some(refs) = self
+            .material_effect_state
+            .custom_effects
+            .get(id)
+            .map(|e| e.refs)
+        else {
             return false;
         };
 
         if refs > 1 {
-            if let Some(entry) = self.custom_effects.get_mut(id) {
+            if let Some(entry) = self.material_effect_state.custom_effects.get_mut(id) {
                 entry.refs = entry.refs.saturating_sub(1);
             }
             return true;
         }
 
-        let Some(entry) = self.custom_effects.remove(id) else {
+        let Some(entry) = self.material_effect_state.custom_effects.remove(id) else {
             return false;
         };
 
@@ -607,10 +547,16 @@ impl fret_core::CustomEffectService for Renderer {
                 CustomEffectAbi::V3 => 3,
             },
         );
-        if let Some(list) = self.custom_effect_hash_index.get_mut(&h) {
+        if let Some(list) = self
+            .material_effect_state
+            .custom_effect_hash_index
+            .get_mut(&h)
+        {
             list.retain(|x| *x != id);
             if list.is_empty() {
-                self.custom_effect_hash_index.remove(&h);
+                self.material_effect_state
+                    .custom_effect_hash_index
+                    .remove(&h);
             }
         }
 
@@ -619,7 +565,10 @@ impl fret_core::CustomEffectService for Renderer {
         self.pipelines.custom_effect_v2_pipelines.remove(&id);
         self.pipelines.custom_effect_v3_pipelines.remove(&id);
 
-        self.custom_effects_generation = self.custom_effects_generation.wrapping_add(1);
+        self.material_effect_state.custom_effects_generation = self
+            .material_effect_state
+            .custom_effects_generation
+            .wrapping_add(1);
         true
     }
 }

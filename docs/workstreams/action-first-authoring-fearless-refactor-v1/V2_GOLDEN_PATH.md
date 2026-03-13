@@ -32,9 +32,9 @@ If the common path is unclear, prefer the following defaults:
 
 ## The five recommended composition entry points
 
-### 1. Root `build(...)`
+### 1. Root-owned composition entry points
 
-Use root `build(...)` helpers when the component owns the runtime boundary.
+Use root `build(...)` helpers or typed root constructors when the component owns the runtime boundary.
 
 Examples:
 
@@ -44,13 +44,14 @@ Examples:
 - `shadcn::FieldSet::build(...)`
 - `shadcn::Dialog::build(cx, trigger, content)`
 - `shadcn::AlertDialog::build(cx, trigger, content)`
-- `shadcn::Popover::build(cx, trigger, content)`
+- `shadcn::Popover::new(cx, trigger, content)`
 
-Rule: if a component already has a host-bound root builder, prefer it over assembling early-landed
-`AnyElement` trees by hand. When a helper only feeds parent children, prefer keeping it on the
-late-landing child pipeline (`UiChild` on app-facing surfaces; the unified component conversion
-surface tracked by `docs/workstreams/into-element-surface-fearless-refactor-v1/` elsewhere) over
-forcing an intermediate `AnyElement`.
+Rule: if a component already has a host-bound root builder or typed root constructor, prefer it
+over assembling early-landed `AnyElement` trees by hand. When a helper only feeds parent children,
+prefer keeping it on the late-landing child pipeline (`UiChild` on app-facing surfaces; the
+unified component conversion surface tracked by
+`docs/workstreams/into-element-surface-fearless-refactor-v1/` elsewhere) over forcing an
+intermediate `AnyElement`.
 
 ### 2. Section `build(...)`
 

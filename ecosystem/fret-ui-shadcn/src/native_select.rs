@@ -636,7 +636,7 @@ pub fn native_select<H: UiHost>(
             }
         });
 
-        let popover = Popover::new(open.clone())
+        let popover = Popover::from_open(open.clone())
             .auto_focus(true)
             .on_close_auto_focus(Some(close_auto_focus));
 

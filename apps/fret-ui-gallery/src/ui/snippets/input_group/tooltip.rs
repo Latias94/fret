@@ -29,18 +29,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .children([info_icon(cx)])
                     .test_id("ui-gallery-input-group-tooltip-password-info")
                     .into_element(cx);
+                let content = shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
+                    cx,
+                    "Password must be at least 8 characters",
+                )]);
 
-                shadcn::Tooltip::new(
-                    button,
-                    shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
-                        cx,
-                        "Password must be at least 8 characters",
-                    )])
-                    .into_element(cx),
-                )
-                .arrow(true)
-                .side(shadcn::TooltipSide::Top)
-                .into_element(cx)
+                shadcn::Tooltip::new(cx, button, content)
+                    .arrow(true)
+                    .side(shadcn::TooltipSide::Top)
+                    .into_element(cx)
             };
 
             let email_tooltip = {
@@ -54,18 +51,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     )])
                     .test_id("ui-gallery-input-group-tooltip-email-help")
                     .into_element(cx);
+                let content = shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
+                    cx,
+                    "We'll use this to send you notifications",
+                )]);
 
-                shadcn::Tooltip::new(
-                    button,
-                    shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
-                        cx,
-                        "We'll use this to send you notifications",
-                    )])
-                    .into_element(cx),
-                )
-                .arrow(true)
-                .side(shadcn::TooltipSide::Top)
-                .into_element(cx)
+                shadcn::Tooltip::new(cx, button, content)
+                    .arrow(true)
+                    .side(shadcn::TooltipSide::Top)
+                    .into_element(cx)
             };
 
             let api_key_tooltip = {
@@ -79,18 +73,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     )])
                     .test_id("ui-gallery-input-group-tooltip-api-key-help")
                     .into_element(cx);
+                let content = shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
+                    cx,
+                    "Click for help with API keys",
+                )]);
 
-                shadcn::Tooltip::new(
-                    button,
-                    shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
-                        cx,
-                        "Click for help with API keys",
-                    )])
-                    .into_element(cx),
-                )
-                .arrow(true)
-                .side(shadcn::TooltipSide::Left)
-                .into_element(cx)
+                shadcn::Tooltip::new(cx, button, content)
+                    .arrow(true)
+                    .side(shadcn::TooltipSide::Left)
+                    .into_element(cx)
             };
 
             let password_group = shadcn::InputGroup::new(password)

@@ -8,15 +8,25 @@ use fret_render_text::spans::{ResolvedSpan, paint_span_for_text_range, sanitize_
 use std::sync::Arc;
 
 fn pending_upload_bytes_for_key(text: &super::TextSystem, key: super::GlyphKey) -> Vec<u8> {
-    let atlas = match key.kind {
-        super::GlyphQuadKind::Mask => &text.mask_atlas,
-        super::GlyphQuadKind::Color => &text.color_atlas,
-        super::GlyphQuadKind::Subpixel => &text.subpixel_atlas,
-    };
+    let atlas = text.atlas_runtime.atlas(key.kind);
     let entry = atlas.entry(key).expect("expected atlas entry after ensure");
     atlas
         .pending_upload_bytes_for_entry(entry)
         .expect("expected pending upload for ensured glyph")
+}
+
+fn reset_bundled_only_font_runtime(text: &mut super::TextSystem) {
+    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    let _ = text.parley_shaper.set_common_fallback_stack_suffix(
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
+    );
+    text.font_runtime.generic_injections.clear();
+    text.font_runtime.font_db_revision = 0;
+    text.font_runtime.font_stack_key = 0;
 }
 
 #[test]
@@ -555,14 +565,7 @@ fn glyph_cache_key_tracks_scale_factor_below_one() {
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Keep this test deterministic: bundled fonts only (no system font discovery).
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
-    let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
-    );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    reset_bundled_only_font_runtime(&mut text);
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
@@ -863,7 +866,7 @@ fn emoji_sequences_use_color_quads_when_color_font_is_available() {
         for key in color_glyphs {
             text.ensure_glyph_in_atlas(key, epoch);
             assert!(
-                text.color_atlas.get(key, epoch).is_some(),
+                text.atlas_runtime.color_atlas.get(key, epoch).is_some(),
                 "expected color glyph to be present in color atlas after ensure ({label})"
             );
         }
@@ -940,11 +943,11 @@ fn cjk_glyphs_populate_mask_or_subpixel_atlas_when_cjk_lite_font_is_available() 
             text.ensure_glyph_in_atlas(key, epoch);
             match key.kind {
                 super::GlyphQuadKind::Mask => assert!(
-                    text.mask_atlas.get(key, epoch).is_some(),
+                    text.atlas_runtime.mask_atlas.get(key, epoch).is_some(),
                     "expected mask glyph to be present in mask atlas after ensure ({label})"
                 ),
                 super::GlyphQuadKind::Subpixel => assert!(
-                    text.subpixel_atlas.get(key, epoch).is_some(),
+                    text.atlas_runtime.subpixel_atlas.get(key, epoch).is_some(),
                     "expected subpixel glyph to be present in subpixel atlas after ensure ({label})"
                 ),
                 super::GlyphQuadKind::Color => {}
@@ -959,14 +962,7 @@ fn cjk_fallback_uses_cjk_lite_font_without_explicit_family_when_system_fonts_are
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
-    let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
-    );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    reset_bundled_only_font_runtime(&mut text);
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
@@ -1055,11 +1051,11 @@ fn cjk_fallback_uses_cjk_lite_font_without_explicit_family_when_system_fonts_are
         text.ensure_glyph_in_atlas(key, epoch);
         match key.kind {
             super::GlyphQuadKind::Mask => assert!(
-                text.mask_atlas.get(key, epoch).is_some(),
+                text.atlas_runtime.mask_atlas.get(key, epoch).is_some(),
                 "expected ensured CJK glyph to be present in the mask atlas"
             ),
             super::GlyphQuadKind::Subpixel => assert!(
-                text.subpixel_atlas.get(key, epoch).is_some(),
+                text.atlas_runtime.subpixel_atlas.get(key, epoch).is_some(),
                 "expected ensured CJK glyph to be present in the subpixel atlas"
             ),
             super::GlyphQuadKind::Color => {}
@@ -1074,13 +1070,16 @@ fn font_trace_records_missing_glyphs_for_named_family_when_system_fonts_are_abse
 
     // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
     text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
     );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    text.font_runtime.generic_injections.clear();
+    text.font_runtime.font_db_revision = 0;
+    text.font_runtime.font_stack_key = 0;
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
@@ -1135,13 +1134,16 @@ fn cjk_fallback_uses_common_fallback_for_named_family_when_system_fonts_are_abse
 
     // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
     text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
     );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    text.font_runtime.generic_injections.clear();
+    text.font_runtime.font_db_revision = 0;
+    text.font_runtime.font_stack_key = 0;
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
@@ -1229,13 +1231,16 @@ fn emoji_fallback_uses_bundled_color_font_without_explicit_family_when_system_fo
 
     // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
     text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
     );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    text.font_runtime.generic_injections.clear();
+    text.font_runtime.font_db_revision = 0;
+    text.font_runtime.font_stack_key = 0;
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
@@ -1346,7 +1351,7 @@ fn emoji_fallback_uses_bundled_color_font_without_explicit_family_when_system_fo
         for key in color_keys {
             text.ensure_glyph_in_atlas(key, epoch);
             assert!(
-                text.color_atlas.get(key, epoch).is_some(),
+                text.atlas_runtime.color_atlas.get(key, epoch).is_some(),
                 "expected ensured emoji glyph to be present in the color atlas ({label})"
             );
         }
@@ -1659,13 +1664,16 @@ fn variable_font_axis_overrides_participate_in_face_key_and_raster_output() {
 
     // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
     text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
     );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    text.font_runtime.generic_injections.clear();
+    text.font_runtime.font_db_revision = 0;
+    text.font_runtime.font_stack_key = 0;
 
     let added = text.add_fonts([ROBOTO_FLEX_SUBSET.to_vec()]);
     assert!(added > 0, "expected variable font to load");
@@ -1733,17 +1741,17 @@ fn variable_font_axis_overrides_participate_in_face_key_and_raster_output() {
         key_heavy.font.variation_key
     );
 
-    text.mask_atlas.reset();
-    text.color_atlas.reset();
-    text.subpixel_atlas.reset();
+    text.atlas_runtime.mask_atlas.reset();
+    text.atlas_runtime.color_atlas.reset();
+    text.atlas_runtime.subpixel_atlas.reset();
     let epoch = 1;
 
     text.ensure_glyph_in_atlas(key_light, epoch);
     let bytes_light = pending_upload_bytes_for_key(&text, key_light);
 
-    text.mask_atlas.reset();
-    text.color_atlas.reset();
-    text.subpixel_atlas.reset();
+    text.atlas_runtime.mask_atlas.reset();
+    text.atlas_runtime.color_atlas.reset();
+    text.atlas_runtime.subpixel_atlas.reset();
 
     text.ensure_glyph_in_atlas(key_heavy, epoch);
     let bytes_heavy = pending_upload_bytes_for_key(&text, key_heavy);
@@ -1767,13 +1775,16 @@ fn variable_font_weight_changes_face_key_and_raster_output() {
 
     // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
     text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
     );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    text.font_runtime.generic_injections.clear();
+    text.font_runtime.font_db_revision = 0;
+    text.font_runtime.font_stack_key = 0;
 
     let added = text.add_fonts([ROBOTO_FLEX_SUBSET.to_vec()]);
     assert!(added > 0, "expected variable font to load");
@@ -1833,17 +1844,17 @@ fn variable_font_weight_changes_face_key_and_raster_output() {
     );
 
     // Ensure path must also apply instance coordinates when rasterizing on-demand.
-    text.mask_atlas.reset();
-    text.color_atlas.reset();
-    text.subpixel_atlas.reset();
+    text.atlas_runtime.mask_atlas.reset();
+    text.atlas_runtime.color_atlas.reset();
+    text.atlas_runtime.subpixel_atlas.reset();
     let epoch = 1;
 
     text.ensure_glyph_in_atlas(key_light, epoch);
     let bytes_light = pending_upload_bytes_for_key(&text, key_light);
 
-    text.mask_atlas.reset();
-    text.color_atlas.reset();
-    text.subpixel_atlas.reset();
+    text.atlas_runtime.mask_atlas.reset();
+    text.atlas_runtime.color_atlas.reset();
+    text.atlas_runtime.subpixel_atlas.reset();
 
     text.ensure_glyph_in_atlas(key_heavy, epoch);
     let bytes_heavy = pending_upload_bytes_for_key(&text, key_heavy);
@@ -1869,13 +1880,16 @@ fn open_type_feature_overrides_can_change_shaped_glyph_output_for_known_font_fix
 
     // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
     text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
     );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    text.font_runtime.generic_injections.clear();
+    text.font_runtime.font_db_revision = 0;
+    text.font_runtime.font_stack_key = 0;
 
     let added = text.add_fonts([INTER_ROMAN.to_vec()]);
     assert!(added > 0, "expected Inter fixture font to load");
@@ -1995,13 +2009,16 @@ fn open_type_feature_overrides_can_change_word_wrap_breakpoints_for_known_font_f
 
     // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
     text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
     );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    text.font_runtime.generic_injections.clear();
+    text.font_runtime.font_db_revision = 0;
+    text.font_runtime.font_stack_key = 0;
 
     let added = text.add_fonts([INTER_ROMAN.to_vec()]);
     assert!(added > 0, "expected Inter fixture font to load");
@@ -2367,13 +2384,16 @@ fn synthesis_skew_participates_in_face_key_and_raster_output() {
 
     // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
     text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
     );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    text.font_runtime.generic_injections.clear();
+    text.font_runtime.font_db_revision = 0;
+    text.font_runtime.font_stack_key = 0;
 
     let fonts: Vec<Vec<u8>> = fret_fonts::cjk_lite_fonts()
         .iter()
@@ -2444,17 +2464,17 @@ fn synthesis_skew_participates_in_face_key_and_raster_output() {
         "expected italic request to trigger a faux skew when no italic face is available"
     );
 
-    text.mask_atlas.reset();
-    text.color_atlas.reset();
-    text.subpixel_atlas.reset();
+    text.atlas_runtime.mask_atlas.reset();
+    text.atlas_runtime.color_atlas.reset();
+    text.atlas_runtime.subpixel_atlas.reset();
     let epoch = 1;
 
     text.ensure_glyph_in_atlas(key_normal, epoch);
     let bytes_normal = pending_upload_bytes_for_key(&text, key_normal);
 
-    text.mask_atlas.reset();
-    text.color_atlas.reset();
-    text.subpixel_atlas.reset();
+    text.atlas_runtime.mask_atlas.reset();
+    text.atlas_runtime.color_atlas.reset();
+    text.atlas_runtime.subpixel_atlas.reset();
 
     text.ensure_glyph_in_atlas(key_italic, epoch);
     let bytes_italic = pending_upload_bytes_for_key(&text, key_italic);
@@ -2489,9 +2509,12 @@ fn fallback_policy_key_normalizes_family_candidates_and_stays_stable_across_case
 
     // Make the test independent from host/system fonts.
     text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
     );
 
     let config0 = fret_core::TextFontFamilyConfig {
@@ -2504,7 +2527,7 @@ fn fallback_policy_key_normalizes_family_candidates_and_stays_stable_across_case
         ..Default::default()
     };
     let _ = text.set_font_families(&config0);
-    let key0 = text.fallback_policy.fallback_policy_key;
+    let key0 = text.font_runtime.fallback_policy.fallback_policy_key;
 
     let config1 = fret_core::TextFontFamilyConfig {
         common_fallback_injection: fret_core::TextCommonFallbackInjection::CommonFallback,
@@ -2516,7 +2539,7 @@ fn fallback_policy_key_normalizes_family_candidates_and_stays_stable_across_case
         ..Default::default()
     };
     let _ = text.set_font_families(&config1);
-    let key1 = text.fallback_policy.fallback_policy_key;
+    let key1 = text.font_runtime.fallback_policy.fallback_policy_key;
 
     assert_eq!(
         key0, key1,
@@ -2583,13 +2606,16 @@ fn mixed_script_fallback_uses_bundled_faces_when_system_fonts_are_absent() {
 
     // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
     text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
     );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    text.font_runtime.generic_injections.clear();
+    text.font_runtime.font_db_revision = 0;
+    text.font_runtime.font_stack_key = 0;
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
@@ -2729,13 +2755,16 @@ fn mixed_script_fallback_uses_bundled_faces_for_named_family_when_system_fonts_a
 
     // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
     text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-    text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+    text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-        text.fallback_policy.common_fallback_stack_suffix.clone(),
+        text.font_runtime
+            .fallback_policy
+            .common_fallback_stack_suffix
+            .clone(),
     );
-    text.generic_injections.clear();
-    text.font_db_revision = 0;
-    text.font_stack_key = 0;
+    text.font_runtime.generic_injections.clear();
+    text.font_runtime.font_db_revision = 0;
+    text.font_runtime.font_stack_key = 0;
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()

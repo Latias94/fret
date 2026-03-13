@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("avatar.rs");
 
 // region: example
+use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -8,21 +9,24 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .refine_layout(LayoutRefinement::default().w_px(Px(48.0)).h_px(Px(48.0)))
         .into_element(cx);
 
-    shadcn::Empty::new([
-        fret_ui_shadcn::empty::EmptyHeader::new([
-            fret_ui_shadcn::empty::EmptyMedia::new([avatar_media]).into_element(cx),
-            fret_ui_shadcn::empty::EmptyTitle::new("User Offline").into_element(cx),
-            fret_ui_shadcn::empty::EmptyDescription::new(
-                "This user is currently offline. Leave a message and notify later.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        fret_ui_shadcn::empty::EmptyContent::new([shadcn::Button::new("Leave Message")
-            .size(shadcn::ButtonSize::Sm)
-            .into_element(cx)])
-        .into_element(cx),
-    ])
+    shadcn::empty(|cx| {
+        ui::children![
+            cx;
+            shadcn::empty_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::empty_media(|cx| ui::children![cx; avatar_media]),
+                    shadcn::empty_title("User Offline"),
+                    shadcn::empty_description(
+                        "This user is currently offline. Leave a message and notify later.",
+                    ),
+                ]
+            }),
+            shadcn::empty_content(|cx| {
+                ui::children![cx; shadcn::Button::new("Leave Message").size(shadcn::ButtonSize::Sm),]
+            }),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
     .into_element(cx)
     .test_id("ui-gallery-empty-avatar")

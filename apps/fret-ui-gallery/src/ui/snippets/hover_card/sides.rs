@@ -35,10 +35,10 @@ fn card<H: UiHost>(
 ) -> impl IntoUiElement<H> + use<H> {
     let content = side_content(cx, label, content_test_id).side(side);
     shadcn::HoverCard::new(
+        cx,
         shadcn::Button::new(label)
             .variant(shadcn::ButtonVariant::Outline)
-            .test_id(trigger_test_id)
-            .into_element(cx),
+            .test_id(trigger_test_id),
         content,
     )
     .open_delay_frames(10)

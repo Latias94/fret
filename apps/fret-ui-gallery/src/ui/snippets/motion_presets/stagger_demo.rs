@@ -108,17 +108,21 @@ pub fn render(cx: &mut UiCx<'_>, theme: &Theme) -> AnyElement {
         .items_start()
         .into_element(cx);
 
-    shadcn::Card::new([
-        shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Stagger / sequence demo").into_element(cx),
-            shadcn::CardDescription::new(
-                "One shared timeline mapped into per-item progress via a small headless stagger helper.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new([content]).into_element(cx),
-    ])
+    shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Stagger / sequence demo"),
+                    shadcn::card_description(
+                        "One shared timeline mapped into per-item progress via a small headless stagger helper.",
+                    ),
+                ]
+            }),
+            shadcn::card_content(|cx| ui::children![cx; content]),
+        ]
+    })
     .refine_layout(shell_layout)
     .into_element(cx)
     .test_id("ui-gallery-motion-presets-stagger-demo")

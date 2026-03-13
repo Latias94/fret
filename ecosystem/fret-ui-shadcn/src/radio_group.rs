@@ -878,28 +878,25 @@ impl RadioGroup {
     }
 }
 
-pub fn radio_group<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    model: Model<Option<Arc<str>>>,
-    items: Vec<RadioGroupItem>,
-) -> AnyElement {
+/// Builder-preserving controlled helper for the common radio-group authoring path.
+pub fn radio_group(model: Model<Option<Arc<str>>>, items: Vec<RadioGroupItem>) -> RadioGroup {
     let mut group = RadioGroup::new(model);
     for item in items {
         group = group.item(item);
     }
-    group.into_element(cx)
+    group
 }
 
-pub fn radio_group_uncontrolled<H: UiHost, T: Into<Arc<str>>>(
-    cx: &mut ElementContext<'_, H>,
+/// Builder-preserving uncontrolled helper for the common `defaultValue` authoring path.
+pub fn radio_group_uncontrolled<T: Into<Arc<str>>>(
     default_value: Option<T>,
     items: Vec<RadioGroupItem>,
-) -> AnyElement {
+) -> RadioGroup {
     let mut group = RadioGroup::uncontrolled(default_value);
     for item in items {
         group = group.item(item);
     }
-    group.into_element(cx)
+    group
 }
 
 #[cfg(test)]

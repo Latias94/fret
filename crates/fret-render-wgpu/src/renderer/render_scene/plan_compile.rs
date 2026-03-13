@@ -28,7 +28,7 @@ impl Renderer {
                     clear,
                     path_samples,
                     postprocess,
-                    self.intermediate_budget_bytes,
+                    self.intermediate_state.budget_bytes,
                 )
             },
         );

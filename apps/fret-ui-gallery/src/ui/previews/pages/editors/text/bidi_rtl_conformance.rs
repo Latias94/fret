@@ -84,7 +84,7 @@ pub(in crate::ui) fn preview_text_bidi_rtl_conformance(
         }
     }
 
-    let state = cx.with_state(
+    let state = cx.slot_state(
         || std::rc::Rc::new(std::cell::RefCell::new(BidiState::default())),
         |st| st.clone(),
     );

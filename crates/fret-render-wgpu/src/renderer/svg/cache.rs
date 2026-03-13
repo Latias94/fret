@@ -2,21 +2,20 @@ use super::super::*;
 
 impl Renderer {
     pub(in crate::renderer) fn bump_svg_raster_epoch(&mut self) -> u64 {
-        self.svg_raster_epoch = self.svg_raster_epoch.wrapping_add(1);
-        self.svg_raster_epoch
+        self.svg_raster_state.bump_raster_epoch()
     }
 
     pub(in crate::renderer) fn prune_svg_rasters(&mut self) {
-        if self.svg_raster_bytes <= self.svg_raster_budget_bytes {
+        if self.svg_raster_state.raster_bytes <= self.svg_raster_state.raster_budget_bytes {
             return;
         }
 
         // Best-effort eviction: never evict entries used in the current frame.
-        let cur_epoch = self.svg_raster_epoch;
+        let cur_epoch = self.svg_raster_state.raster_epoch;
 
-        while self.svg_raster_bytes > self.svg_raster_budget_bytes {
+        while self.svg_raster_state.raster_bytes > self.svg_raster_state.raster_budget_bytes {
             let mut victim_standalone: Option<(SvgRasterKey, u64)> = None;
-            for (k, v) in &self.svg_rasters {
+            for (k, v) in &self.svg_raster_state.rasters {
                 if v.last_used_epoch == cur_epoch {
                     continue;
                 }
@@ -39,10 +38,13 @@ impl Renderer {
                 break;
             };
 
-            if let Some(entry) = self.svg_rasters.remove(&victim_key) {
-                if self.perf_enabled {
-                    self.perf_svg_raster_budget_evictions =
-                        self.perf_svg_raster_budget_evictions.saturating_add(1);
+            if let Some(entry) = self.svg_raster_state.rasters.remove(&victim_key) {
+                if self.diagnostics_state.perf_enabled() {
+                    self.svg_raster_state.frame_perf.raster_budget_evictions = self
+                        .svg_raster_state
+                        .frame_perf
+                        .raster_budget_evictions
+                        .saturating_add(1);
                 }
                 self.drop_svg_raster_entry(entry);
             } else {
@@ -54,7 +56,10 @@ impl Renderer {
     pub(in crate::renderer) fn drop_svg_raster_entry(&mut self, entry: SvgRasterEntry) {
         match entry.storage {
             SvgRasterStorage::Standalone { .. } => {
-                self.svg_raster_bytes = self.svg_raster_bytes.saturating_sub(entry.approx_bytes);
+                self.svg_raster_state.raster_bytes = self
+                    .svg_raster_state
+                    .raster_bytes
+                    .saturating_sub(entry.approx_bytes);
                 let _ = self.unregister_image(entry.image);
             }
             SvgRasterStorage::MaskAtlas {
@@ -62,7 +67,8 @@ impl Renderer {
                 alloc_id,
             } => {
                 let Some(page) = self
-                    .svg_mask_atlas_pages
+                    .svg_raster_state
+                    .mask_atlas_pages
                     .get_mut(page_index)
                     .and_then(|p| p.as_mut())
                 else {

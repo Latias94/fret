@@ -2037,7 +2037,7 @@ impl PromptInputButton {
             }
         });
 
-        let mut tooltip_el = Tooltip::new(trigger, content);
+        let mut tooltip_el = Tooltip::new(cx, trigger, content);
         if let Some(side) = tooltip.side {
             tooltip_el = tooltip_el.side(side);
         }

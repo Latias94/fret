@@ -632,7 +632,7 @@ impl Context {
                     let trigger = trigger_override.unwrap_or(default_trigger);
                     let content = content_override.unwrap_or(default_content);
 
-                    let hover = HoverCard::new(trigger, content)
+                    let hover = HoverCard::new(cx, trigger, content)
                         .open_delay_frames(open_delay_frames)
                         .close_delay_frames(close_delay_frames)
                         .refine_layout(layout)
@@ -702,7 +702,7 @@ impl Context {
                             .into_element(cx)
                         });
 
-                        let hover = HoverCard::new(trigger, content)
+                        let hover = HoverCard::new(cx, trigger, content)
                             .open_delay_frames(open_delay_frames)
                             .close_delay_frames(close_delay_frames)
                             .refine_layout(layout)

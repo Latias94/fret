@@ -25,7 +25,7 @@ pub(in crate::ui) fn preview_data_table_torture(
         mem_mb: u64,
     }
 
-    let (data, columns) = cx.with_state(
+    let (data, columns) = cx.slot_state(
         || {
             let mut rows: Vec<Row> = Vec::with_capacity(50_000);
             for i in 0..50_000u64 {
@@ -83,25 +83,12 @@ pub(in crate::ui) fn preview_data_table_torture(
         |(data, columns)| (data.clone(), columns.clone()),
     );
 
-    #[derive(Default)]
-    struct DataTableTortureModels {
-        state: Option<Model<fret_ui_headless::table::TableState>>,
-    }
-
-    let state = cx.with_state(DataTableTortureModels::default, |st| st.state.clone());
-    let state = match state {
-        Some(state) => state,
-        None => {
-            let mut state_value = fret_ui_headless::table::TableState::default();
-            state_value.pagination.page_size = data.len();
-            state_value.pagination.page_index = 0;
-            let state = cx.app.models_mut().insert(state_value);
-            cx.with_state(DataTableTortureModels::default, |st| {
-                st.state = Some(state.clone());
-            });
-            state
-        }
-    };
+    let state = cx.local_model_keyed("state", || {
+        let mut state_value = fret_ui_headless::table::TableState::default();
+        state_value.pagination.page_size = data.len();
+        state_value.pagination.page_index = 0;
+        state_value
+    });
 
     let sorting: Vec<SortSpec> = cx
         .app

@@ -5,6 +5,19 @@
 //!
 //! Most apps should not depend on this crate directly; prefer the higher-level facades
 //! (`fret-framework` or the ecosystem `fret` crate) unless you are assembling a custom stack.
+//!
+//! Supported integration topologies:
+//!
+//! - Editor-hosted convenience path:
+//!   [`WgpuContext`] bootstraps `Instance` / `Adapter` / `Device` / `Queue` and remains the short
+//!   path for tools and first-party runners that let Fret own GPU initialization.
+//! - Engine-hosted direct path:
+//!   callers can keep host-owned GPU objects and use
+//!   [`RendererCapabilities::from_adapter_device`], [`Renderer::new`], [`SurfaceState::new`], and
+//!   [`Renderer::render_scene`] directly without constructing a [`WgpuContext`].
+//!
+//! See `tests/host_provided_gpu_topology_smoke.rs` for the smallest in-tree engine-hosted seam
+//! exercise.
 
 #![allow(clippy::too_many_arguments)]
 
@@ -15,7 +28,6 @@ mod perf_store;
 mod renderer;
 mod surface;
 mod svg;
-mod svg_cache;
 mod targets;
 mod text;
 mod upload_counters;
@@ -32,8 +44,8 @@ pub use fret_render_core::{
     RenderTargetRotation, RenderTargetTransferFunction,
 };
 pub use images::{
-    ImageDescriptor, ImageRegistry, UploadedRgba8Image, create_rgba8_image_storage,
-    upload_rgba8_image, write_rgba8_texture_region,
+    ImageDescriptor, UploadedRgba8Image, create_rgba8_image_storage, upload_rgba8_image,
+    write_rgba8_texture_region,
 };
 pub use perf_store::{RendererPerfFrameSample, RendererPerfFrameStore};
 pub use renderer::{BlurQualityCounters, BlurQualitySnapshot};
@@ -42,11 +54,10 @@ pub use renderer::{EffectDegradationCounters, EffectDegradationSnapshot};
 pub use renderer::{IntermediatePerfSnapshot, RenderPerfSnapshot, SvgPerfSnapshot};
 pub use surface::SurfaceState;
 pub use svg::{
-    SMOOTH_SVG_SCALE_FACTOR, SvgAlphaMask, SvgRenderer, SvgRgbaImage, UploadedAlphaMask,
-    UploadedRgbaImage, upload_alpha_mask, upload_rgba_image,
+    SvgAlphaMask, SvgRgbaImage, UploadedAlphaMask, UploadedRgbaImage, upload_alpha_mask,
+    upload_rgba_image,
 };
-pub use svg_cache::{CachedSvgImage, SvgImageCache, SvgRasterKind};
-pub use targets::{RenderTargetDescriptor, RenderTargetRegistry};
+pub use targets::RenderTargetDescriptor;
 pub use text::FontCatalogEntryMetadata;
 pub use text::SystemFontRescanResult;
 pub use text::SystemFontRescanSeed;

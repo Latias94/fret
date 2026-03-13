@@ -29,20 +29,24 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         ])
         .into_element(cx);
 
-    shadcn::FieldGroup::new([shadcn::Field::new([
-        shadcn::FieldContent::new([
-            shadcn::FieldLabel::new("Formatting")
-                .for_control(control_id.clone())
-                .test_id("ui-gallery-toggle-group-label-label")
+    shadcn::field_group(|cx| {
+        ui::children![
+            cx;
+            shadcn::Field::new([
+                shadcn::FieldContent::new([
+                    shadcn::FieldLabel::new("Formatting")
+                        .for_control(control_id.clone())
+                        .test_id("ui-gallery-toggle-group-label-label")
+                        .into_element(cx),
+                    shadcn::FieldDescription::new("Click the label to focus the current toggle item.")
+                        .for_control(control_id.clone())
+                        .into_element(cx),
+                ])
                 .into_element(cx),
-            shadcn::FieldDescription::new("Click the label to focus the current toggle item.")
-                .for_control(control_id.clone())
-                .into_element(cx),
-        ])
-        .into_element(cx),
-        group,
-    ])
-    .into_element(cx)])
+                group,
+            ]),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(360.0)))
     .into_element(cx)
     .test_id("ui-gallery-toggle-group-label")

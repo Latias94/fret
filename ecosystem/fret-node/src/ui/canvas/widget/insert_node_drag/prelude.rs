@@ -5,9 +5,7 @@ pub(super) use fret_runtime::DragKindId;
 pub(super) use fret_ui::UiHost;
 pub(super) use fret_ui::retained_bridge::EventCx;
 pub(super) use fret_ui_kit::dnd as ui_dnd;
-pub(super) use ui_dnd::{
-    ActivationConstraint, AutoScrollConfig, CollisionStrategy, DndItemId, SensorOutput,
-};
+pub(super) use ui_dnd::{ActivationConstraint, SensorOutput};
 
 pub(super) use crate::core::{CanvasPoint, EdgeId};
 pub(super) use crate::ui::canvas::state::{InsertNodeDragPreview, ViewSnapshot};

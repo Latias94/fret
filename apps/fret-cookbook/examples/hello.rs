@@ -19,7 +19,7 @@ impl View for HelloView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let rendered_once = cx.with_state(
+        let rendered_once = cx.slot_state(
             || false,
             |v| {
                 let first = !*v;

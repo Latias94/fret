@@ -15,7 +15,7 @@ impl Renderer {
 
         if self.debug_blur_radius > 0 {
             let radius = self.debug_blur_radius.max(1);
-            let budget = self.intermediate_budget_bytes;
+            let budget = self.intermediate_state.budget_bytes;
             let full = estimate_texture_bytes(viewport_size, format, 1);
             let half = estimate_texture_bytes(downsampled_size(viewport_size, 2), format, 1);
             let quarter = estimate_texture_bytes(downsampled_size(viewport_size, 4), format, 1);
@@ -27,21 +27,11 @@ impl Renderer {
             let mut downsample_scale = default_downsample_scale;
             if downsample_scale == 2 && required_half > budget {
                 downsample_scale = 4;
-                if self.intermediate_perf_enabled {
-                    self.intermediate_perf.blur_degraded_to_quarter = self
-                        .intermediate_perf
-                        .blur_degraded_to_quarter
-                        .saturating_add(1);
-                }
+                self.intermediate_state.record_blur_degraded_to_quarter();
             }
 
             if downsample_scale == 4 && required_quarter > budget {
-                if self.intermediate_perf_enabled {
-                    self.intermediate_perf.blur_disabled_due_to_budget = self
-                        .intermediate_perf
-                        .blur_disabled_due_to_budget
-                        .saturating_add(1);
-                }
+                self.intermediate_state.record_blur_disabled_due_to_budget();
                 return DebugPostprocess::None;
             }
 

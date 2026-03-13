@@ -7,6 +7,7 @@ use fret_ui::element::{
     AnyElement, FractionalRenderTransformProps, LayoutStyle, Length, SemanticsDecoration,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::motion as decl_motion;
 use fret_ui_kit::declarative::style as decl_style;
@@ -258,8 +259,8 @@ impl Progress {
     }
 }
 
-pub fn progress<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<f32>) -> AnyElement {
-    Progress::new(model).into_element(cx)
+pub fn progress<H: UiHost>(model: Model<f32>) -> impl IntoUiElement<H> + use<H> {
+    Progress::new(model)
 }
 
 #[cfg(test)]

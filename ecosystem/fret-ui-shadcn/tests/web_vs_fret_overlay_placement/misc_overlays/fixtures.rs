@@ -83,25 +83,14 @@ fn build_sidebar_13_dialog_overlay(
     )
 }
 
+#[track_caller]
 fn build_command_dialog_overlay(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
     use fret_ui_shadcn::{Button, CommandDialog, CommandItem};
 
-    #[derive(Default)]
-    struct Models {
-        query: Option<Model<String>>,
-    }
-
-    let existing = cx.with_state(Models::default, |st| st.query.clone());
-    let query = if let Some(existing) = existing {
-        existing
-    } else {
-        let model = cx.app.models_mut().insert(String::new());
-        cx.with_state(Models::default, |st| st.query = Some(model.clone()));
-        model
-    };
+    let query = cx.local_model_keyed("query", String::new);
 
     let items = vec![
         CommandItem::new("Calendar"),

@@ -7,6 +7,7 @@
 pub mod activation;
 pub mod collision;
 pub mod edge_drop;
+pub mod engine;
 pub mod frame;
 pub mod modifier;
 pub mod rect_index;
@@ -20,6 +21,7 @@ pub use collision::{
     pointer_within_collisions, pointer_within_over,
 };
 pub use edge_drop::{EdgeDropZone, compute_edge_drop_zone};
+pub use engine::{DndEngine, DndEngineUpdate, DndOperationPhase, DndOperationState};
 pub use frame::compute_dnd_over;
 pub use frame::{DndFrameOutput, compute_dnd_frame};
 pub use modifier::{Axis, axis_lock, clamp_rect_translation};

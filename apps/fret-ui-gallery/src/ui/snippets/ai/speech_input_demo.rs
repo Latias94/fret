@@ -335,18 +335,21 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     .layout(LayoutRefinement::default().w_full().min_w_0())
                     .into_element(cx);
 
-                    let content = shadcn::CardContent::new([content]).into_element(cx);
-
-                    shadcn::Card::new([content])
-                        .size(shadcn::CardSize::Sm)
-                        .refine_style(ChromeRefinement::default().shadow_none())
-                        .refine_layout(
-                            LayoutRefinement::default()
-                                .w_full()
-                                .min_w_0()
-                                .max_w(Px(448.0)),
-                        )
-                        .into_element(cx)
+                    shadcn::card(|cx| {
+                        ui::children![
+                            cx;
+                            shadcn::card_content(|cx| ui::children![cx; content]),
+                        ]
+                    })
+                    .size(shadcn::CardSize::Sm)
+                    .refine_style(ChromeRefinement::default().shadow_none())
+                    .refine_layout(
+                        LayoutRefinement::default()
+                            .w_full()
+                            .min_w_0()
+                            .max_w(Px(448.0)),
+                    )
+                    .into_element(cx)
                 };
 
                 vec![

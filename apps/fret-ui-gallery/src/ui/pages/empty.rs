@@ -14,8 +14,8 @@ pub(super) fn preview_empty(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "`Empty::new([...])` plus `EmptyHeader`, `EmptyMedia`, `EmptyTitle`, `EmptyDescription`, and `EmptyContent` matches the upstream slot model directly.",
-        "`EmptyMedia::variant(...)` covers the documented `default` and `icon` media variants without widening the public surface.",
+        "`empty(|cx| ui::children![cx; ...])` plus `empty_header`, `empty_media`, `empty_title`, `empty_description`, and `empty_content` keeps the upstream slot model intact while preserving typed builder affordances before the landing seam.",
+        "`empty_media(...).variant(...)` covers the documented `default` and `icon` media variants without widening the public surface.",
         "Gallery section order now mirrors the upstream Empty docs first: `Demo`, `Usage`, the example set through `RTL`, then `API Reference`.",
         "Current recipe defaults intentionally remain aligned to the in-repo `new-york-v4` web geometry gates (`p-6 md:p-12`, `gap-6`, dashed card chrome) rather than re-translating the base source classes one-to-one in this pass.",
         "Caller-owned refinements stay explicit for preview height, background paint, inline content layout, embedded `InputGroup` width, and page/grid placement constraints.",
@@ -35,7 +35,7 @@ pub(super) fn preview_empty(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .description("A primary empty state with actions and a secondary link.")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Usage", usage)
-                .description("Copyable minimal usage for `Empty` and its slot parts.")
+                .description("Copyable minimal usage for the `empty(...)` wrapper family and slot parts.")
                 .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Outline", outline)
                 .description("Outlined empty state for low-emphasis surfaces.")

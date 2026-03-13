@@ -187,11 +187,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .test_id("ui-gallery.calendar.natural-language.calendar")
     };
 
-    let popover = shadcn::Popover::new(open.clone())
+    let popover = shadcn::Popover::from_open(open.clone())
         .side(shadcn::PopoverSide::Bottom)
         .align(shadcn::PopoverAlign::End)
         .side_offset(Px(8.0))
-        .into_element(
+        .into_element_with(
             cx,
             move |cx| {
                 let trigger = shadcn::InputGroupButton::new("")

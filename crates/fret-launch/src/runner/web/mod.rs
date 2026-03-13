@@ -20,7 +20,9 @@ mod app_handler;
 mod effects;
 mod gfx_init;
 mod ime_mount;
+mod redraw_sink;
 mod render_loop;
+mod scheduling_diagnostics;
 mod streaming_images;
 
 use fret_app::App;
@@ -74,6 +76,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     pending_clipboard_write_results: Rc<RefCell<Vec<Result<(), String>>>>,
     tick_id: TickId,
     frame_id: FrameId,
+    raf_windows: crate::runner::common::frame_requests::AnimationFrameRequests,
 
     uploaded_images: HashMap<fret_core::ImageId, streaming_images::UploadedImageEntry>,
     streaming_uploads: StreamingUploadQueue,
@@ -193,6 +196,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             pending_clipboard_write_results: Rc::new(RefCell::new(Vec::new())),
             tick_id: TickId::default(),
             frame_id: FrameId::default(),
+            raf_windows: crate::runner::common::frame_requests::AnimationFrameRequests::default(),
             uploaded_images: HashMap::new(),
             streaming_uploads: StreamingUploadQueue::default(),
             nv12_gpu: None,

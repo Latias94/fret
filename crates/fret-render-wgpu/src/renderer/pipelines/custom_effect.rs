@@ -17,7 +17,7 @@ impl Renderer {
             return;
         }
 
-        let Some(entry) = self.custom_effects.get(effect) else {
+        let Some(entry) = self.material_effect_state.custom_effects.get(effect) else {
             return;
         };
 
@@ -259,7 +259,7 @@ impl Renderer {
             return;
         }
 
-        let Some(entry) = self.custom_effects.get(effect) else {
+        let Some(entry) = self.material_effect_state.custom_effects.get(effect) else {
             return;
         };
         if entry.abi != CustomEffectAbi::V2 {
@@ -562,7 +562,7 @@ impl Renderer {
             return;
         }
 
-        let Some(entry) = self.custom_effects.get(effect) else {
+        let Some(entry) = self.material_effect_state.custom_effects.get(effect) else {
             return;
         };
         if entry.abi != CustomEffectAbi::V3 {

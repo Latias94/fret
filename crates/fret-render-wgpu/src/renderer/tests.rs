@@ -1,12 +1,13 @@
 use super::shaders::{
-    ALPHA_THRESHOLD_MASK_SHADER, ALPHA_THRESHOLD_SHADER, BACKDROP_WARP_MASK_SHADER,
-    BACKDROP_WARP_SHADER, BLIT_SHADER, BLIT_SRGB_ENCODE_SHADER, BLUR_H_MASK_SHADER, BLUR_H_SHADER,
-    BLUR_V_MASK_SHADER, BLUR_V_SHADER, COLOR_ADJUST_MASK_SHADER, COLOR_ADJUST_SHADER,
-    COLOR_MATRIX_MASK_SHADER, COLOR_MATRIX_SHADER, COMPOSITE_PREMUL_MASK_SHADER,
-    COMPOSITE_PREMUL_SHADER, DOWNSAMPLE_NEAREST_SHADER, DROP_SHADOW_MASK_SHADER,
-    DROP_SHADOW_SHADER, MASK_SHADER, MIP_DOWNSAMPLE_BOX_2X2_SHADER, PATH_CLIP_MASK_SHADER,
-    PATH_SHADER, TEXT_COLOR_SHADER, TEXT_SHADER, TEXT_SUBPIXEL_SHADER, UPSCALE_NEAREST_MASK_SHADER,
-    UPSCALE_NEAREST_SHADER, VIEWPORT_SHADER, alpha_threshold_masked_shader_source,
+    ALPHA_THRESHOLD_MASK_SHADER, ALPHA_THRESHOLD_SHADER, BACKDROP_WARP_IMAGE_MASK_SHADER,
+    BACKDROP_WARP_IMAGE_SHADER, BACKDROP_WARP_MASK_SHADER, BACKDROP_WARP_SHADER, BLIT_SHADER,
+    BLIT_SRGB_ENCODE_SHADER, BLUR_H_MASK_SHADER, BLUR_H_SHADER, BLUR_V_MASK_SHADER, BLUR_V_SHADER,
+    COLOR_ADJUST_MASK_SHADER, COLOR_ADJUST_SHADER, COLOR_MATRIX_MASK_SHADER, COLOR_MATRIX_SHADER,
+    COMPOSITE_PREMUL_MASK_SHADER, COMPOSITE_PREMUL_SHADER, DOWNSAMPLE_NEAREST_SHADER,
+    DROP_SHADOW_MASK_SHADER, DROP_SHADOW_SHADER, MASK_SHADER, MIP_DOWNSAMPLE_BOX_2X2_SHADER,
+    PATH_CLIP_MASK_SHADER, PATH_SHADER, TEXT_COLOR_SHADER, TEXT_SHADER, TEXT_SUBPIXEL_SHADER,
+    UPSCALE_NEAREST_MASK_SHADER, UPSCALE_NEAREST_SHADER, VIEWPORT_SHADER,
+    alpha_threshold_masked_shader_source, backdrop_warp_image_masked_shader_source,
     backdrop_warp_masked_shader_source, blur_h_masked_shader_source, blur_v_masked_shader_source,
     clip_mask_shader_source, color_adjust_masked_shader_source, color_matrix_masked_shader_source,
     custom_effect_mask_shader_source, custom_effect_masked_shader_source,
@@ -64,6 +65,7 @@ fn shaders_parse_as_wgsl() {
     let clip_mask_src = clip_mask_shader_source();
     let upscale_masked_src = upscale_nearest_masked_shader_source();
     let backdrop_warp_masked_src = backdrop_warp_masked_shader_source();
+    let backdrop_warp_image_masked_src = backdrop_warp_image_masked_shader_source();
     let color_adjust_masked_src = color_adjust_masked_shader_source();
     let color_matrix_masked_src = color_matrix_masked_shader_source();
     let alpha_threshold_masked_src = alpha_threshold_masked_shader_source();
@@ -106,8 +108,14 @@ fn shaders_parse_as_wgsl() {
         ("upscale_nearest_masked", upscale_masked_src.as_str()),
         ("upscale_nearest_mask", UPSCALE_NEAREST_MASK_SHADER),
         ("backdrop_warp", BACKDROP_WARP_SHADER),
+        ("backdrop_warp_image", BACKDROP_WARP_IMAGE_SHADER),
         ("backdrop_warp_masked", backdrop_warp_masked_src.as_str()),
+        (
+            "backdrop_warp_image_masked",
+            backdrop_warp_image_masked_src.as_str(),
+        ),
         ("backdrop_warp_mask", BACKDROP_WARP_MASK_SHADER),
+        ("backdrop_warp_image_mask", BACKDROP_WARP_IMAGE_MASK_SHADER),
         ("color_adjust", COLOR_ADJUST_SHADER),
         ("color_adjust_masked", color_adjust_masked_src.as_str()),
         ("color_adjust_mask", COLOR_ADJUST_MASK_SHADER),
@@ -158,6 +166,7 @@ fn shaders_validate_for_webgpu() {
     let clip_mask_src = clip_mask_shader_source();
     let upscale_masked_src = upscale_nearest_masked_shader_source();
     let backdrop_warp_masked_src = backdrop_warp_masked_shader_source();
+    let backdrop_warp_image_masked_src = backdrop_warp_image_masked_shader_source();
     let color_adjust_masked_src = color_adjust_masked_shader_source();
     let color_matrix_masked_src = color_matrix_masked_shader_source();
     let alpha_threshold_masked_src = alpha_threshold_masked_shader_source();
@@ -200,8 +209,14 @@ fn shaders_validate_for_webgpu() {
         ("upscale_nearest_masked", upscale_masked_src.as_str()),
         ("upscale_nearest_mask", UPSCALE_NEAREST_MASK_SHADER),
         ("backdrop_warp", BACKDROP_WARP_SHADER),
+        ("backdrop_warp_image", BACKDROP_WARP_IMAGE_SHADER),
         ("backdrop_warp_masked", backdrop_warp_masked_src.as_str()),
+        (
+            "backdrop_warp_image_masked",
+            backdrop_warp_image_masked_src.as_str(),
+        ),
         ("backdrop_warp_mask", BACKDROP_WARP_MASK_SHADER),
+        ("backdrop_warp_image_mask", BACKDROP_WARP_IMAGE_MASK_SHADER),
         ("color_adjust", COLOR_ADJUST_SHADER),
         ("color_adjust_masked", color_adjust_masked_src.as_str()),
         ("color_adjust_mask", COLOR_ADJUST_MASK_SHADER),
@@ -685,9 +700,18 @@ fn scene_encoding_cache_is_busted_by_text_quality_changes() {
         .scene_encoding_cache
         .cache_key()
         .expect("scene encoding key");
-    assert_eq!(renderer.perf.scene_encoding_cache_hits, 0);
-    assert_eq!(renderer.perf.scene_encoding_cache_misses, 1);
-    assert_eq!(renderer.perf.scene_encoding_cache_last_miss_reasons, 1 << 0);
+    assert_eq!(renderer.diagnostics_state.perf.scene_encoding_cache_hits, 0);
+    assert_eq!(
+        renderer.diagnostics_state.perf.scene_encoding_cache_misses,
+        1
+    );
+    assert_eq!(
+        renderer
+            .diagnostics_state
+            .perf
+            .scene_encoding_cache_last_miss_reasons,
+        1 << 0
+    );
 
     let _ = renderer.render_scene(&ctx.device, &ctx.queue, make_params());
     let key1 = renderer
@@ -695,7 +719,7 @@ fn scene_encoding_cache_is_busted_by_text_quality_changes() {
         .cache_key()
         .expect("scene encoding key");
     assert_eq!(key1, key0);
-    assert_eq!(renderer.perf.scene_encoding_cache_hits, 1);
+    assert_eq!(renderer.diagnostics_state.perf.scene_encoding_cache_hits, 1);
 
     let changed = renderer.set_text_quality_settings(crate::text::TextQualitySettings {
         gamma: 1.7,
@@ -709,11 +733,30 @@ fn scene_encoding_cache_is_busted_by_text_quality_changes() {
         .cache_key()
         .expect("scene encoding key");
     assert_ne!(key2, key0);
-    assert_eq!(renderer.perf.scene_encoding_cache_misses, 2);
-    assert_ne!(renderer.perf.scene_encoding_cache_last_miss_reasons, 0);
-    assert_ne!(renderer.perf.scene_encoding_cache_last_miss_reasons, 1 << 0);
+    assert_eq!(
+        renderer.diagnostics_state.perf.scene_encoding_cache_misses,
+        2
+    );
     assert_ne!(
-        renderer.perf.scene_encoding_cache_last_miss_reasons & (1 << 9),
+        renderer
+            .diagnostics_state
+            .perf
+            .scene_encoding_cache_last_miss_reasons,
+        0
+    );
+    assert_ne!(
+        renderer
+            .diagnostics_state
+            .perf
+            .scene_encoding_cache_last_miss_reasons,
+        1 << 0
+    );
+    assert_ne!(
+        renderer
+            .diagnostics_state
+            .perf
+            .scene_encoding_cache_last_miss_reasons
+            & (1 << 9),
         0
     );
 }

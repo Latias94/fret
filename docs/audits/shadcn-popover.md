@@ -42,7 +42,9 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 ### API & composition
 
-- Pass: Fret exposes a `Popover` recipe with a `Model<bool>` open state.
+- Pass: Fret exposes a typed recipe-level root constructor `Popover::new(cx, trigger, content)`,
+  while keeping an explicit advanced seam (`Popover::from_open(...).into_element_with(...)`) for
+  callers that already own the open model.
 - Pass: Trigger/content composition matches the shadcn mental model: trigger element + portal-like
   content element.
 - Pass: `PopoverTrigger` now toggles `open` by default (shadcn/Radix trigger-like behavior), and
@@ -51,10 +53,13 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   wiring via `Popover::anchor_element(...)`.
   (`Popover::into_element_with_anchor(...)` passes the resolved anchor rect to the content closure,
   which covers common sizing recipes like "content width follows trigger".)
-- Note: Unlike modal overlays such as `Dialog` / `AlertDialog` / `Sheet` / `Drawer`, Popover keeps
-  anchor-aware content authoring as a first-class path (`into_element_with_anchor(...)`). Because of
-  that, Fret intentionally keeps closure-based authoring as the primary API today instead of adding
-  a generic `compose()` builder that would hide or weaken the anchor-rect contract.
+- Pass: Default root authoring no longer requires a separate `.build(...)` step; the common recipe
+  path is `Popover::new(cx, trigger, content)`.
+- Note: Unlike modal overlays such as `Dialog` / `AlertDialog` / `Sheet` / `Drawer`, Popover still
+  keeps anchor-aware content authoring as a first-class advanced path (`from_open(...).into_element_with_anchor(...)`).
+  The sibling `from_open(...).into_element_with(...)` path keeps the managed-open but non-anchor-aware
+  case explicit. Those seams preserve the anchor-rect contract for sizing recipes such as
+  "content width follows trigger".
 - Pass: Anchor overrides are treated as dismissable branches, so interacting with the anchor does
   not trigger outside-press dismissal.
 - Pass: Detached trigger wiring is available via `Popover::trigger_element(...)` (Base UI-like

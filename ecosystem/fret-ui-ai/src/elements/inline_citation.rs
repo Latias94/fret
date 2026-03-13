@@ -751,7 +751,7 @@ impl InlineCitation {
             card
         };
 
-        let hover = HoverCard::new(badge_trigger, card)
+        let hover = HoverCard::new(cx, badge_trigger, card)
             .open(Some(open_model))
             .open_delay_frames(0)
             .close_delay_frames(0)

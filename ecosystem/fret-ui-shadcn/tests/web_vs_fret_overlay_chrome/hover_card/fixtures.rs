@@ -48,7 +48,7 @@ fn build_hover_card(cx: &mut ElementContext<'_, App>, open: &Model<bool>) -> Any
     let content_el =
         fret_ui_shadcn::HoverCardContent::new(vec![cx.text("@nextjs")]).into_element(cx);
 
-    fret_ui_shadcn::HoverCard::new(trigger_el, content_el)
+    fret_ui_shadcn::HoverCard::new(cx, trigger_el, content_el)
         .open(Some(open.clone()))
         .into_element(cx)
 }

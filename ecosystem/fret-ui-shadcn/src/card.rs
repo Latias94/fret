@@ -182,31 +182,38 @@ impl Card {
     }
 }
 
-pub fn card<H: UiHost, I>(
-    cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+pub fn card<H: UiHost, I, F, T>(
+    f: F,
+) -> CardBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>
 where
-    I: IntoIterator<Item = AnyElement>,
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
-    Card::build(move |cx, out| out.extend(f(cx))).into_element(cx)
+    Card::build(move |cx, out| {
+        let children = f(cx);
+        extend_landed_children(cx, out, children);
+    })
 }
 
 /// Build a card and its sections inside a size provider.
 ///
 /// This avoids footguns where callers construct `CardHeader` / `CardContent` / `CardFooter`
 /// elements outside the `Card` subtree and accidentally miss inherited size defaults.
-pub fn card_sized<H: UiHost, I>(
-    cx: &mut ElementContext<'_, H>,
+pub fn card_sized<H: UiHost, I, F, T>(
     size: CardSize,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+    f: F,
+) -> CardBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>
 where
-    I: IntoIterator<Item = AnyElement>,
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
-    Card::build(move |cx, out| out.extend(f(cx)))
-        .size(size)
-        .into_element(cx)
+    Card::build(move |cx, out| {
+        let children = f(cx);
+        extend_landed_children(cx, out, children);
+    })
+    .size(size)
 }
 
 pub struct CardBuild<H, B> {
@@ -279,70 +286,101 @@ where
     }
 }
 
-pub fn card_header<H: UiHost, I>(
+fn extend_landed_children<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
-where
-    I: IntoIterator<Item = AnyElement>,
+    out: &mut Vec<AnyElement>,
+    children: I,
+) where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
-    CardHeader::new(f(cx)).into_element(cx)
+    for child in children {
+        out.push(child.into_element(cx));
+    }
 }
 
-pub fn card_action<H: UiHost, I>(
-    cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+pub fn card_header<H: UiHost, I, F, T>(
+    f: F,
+) -> CardHeaderBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>
 where
-    I: IntoIterator<Item = AnyElement>,
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
-    CardAction::new(f(cx)).into_element(cx)
-}
-
-pub fn card_title<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    CardTitle::new(text).into_element(cx)
-}
-
-pub fn card_description<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    CardDescription::new(text).into_element(cx)
-}
-
-pub fn card_description_children<H: UiHost, I>(
-    cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
-where
-    I: IntoIterator<Item = AnyElement>,
-{
-    CardDescription::new_children(f(cx)).into_element(cx)
-}
-
-pub fn card_content<H: UiHost, I>(
-    cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
-where
-    I: IntoIterator<Item = AnyElement>,
-{
-    with_surface_slot_provider(cx, ShadcnSurfaceSlot::CardContent, |cx| {
-        CardContent::new(f(cx)).into_element(cx)
+    CardHeader::build(move |cx, out| {
+        let children = f(cx);
+        extend_landed_children(cx, out, children);
     })
 }
 
-pub fn card_footer<H: UiHost, I>(
-    cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+pub fn card_action<H: UiHost, I, F, T>(
+    f: F,
+) -> CardActionBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>
 where
-    I: IntoIterator<Item = AnyElement>,
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
-    CardFooter::new(f(cx)).into_element(cx)
+    CardAction::build(move |cx, out| {
+        let children = f(cx);
+        extend_landed_children(cx, out, children);
+    })
+}
+
+pub fn card_title<T>(text: T) -> CardTitle
+where
+    T: Into<Arc<str>>,
+{
+    CardTitle::new(text)
+}
+
+pub fn card_description<T>(text: T) -> CardDescription
+where
+    T: Into<Arc<str>>,
+{
+    CardDescription::new(text)
+}
+
+pub fn card_description_children<H: UiHost, I, F, T>(
+    f: F,
+) -> CardDescriptionBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    CardDescription::build(move |cx, out| {
+        let children = f(cx);
+        extend_landed_children(cx, out, children);
+    })
+}
+
+pub fn card_content<H: UiHost, I, F, T>(
+    f: F,
+) -> CardContentBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    CardContent::build(move |cx, out| {
+        let children = f(cx);
+        extend_landed_children(cx, out, children);
+    })
+}
+
+pub fn card_footer<H: UiHost, I, F, T>(
+    f: F,
+) -> CardFooterBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    CardFooter::build(move |cx, out| {
+        let children = f(cx);
+        extend_landed_children(cx, out, children);
+    })
 }
 
 fn collect_built_card_children<H: UiHost>(
@@ -606,6 +644,19 @@ impl CardAction {
         }
     }
 
+    /// Builder-first variant that collects children at `into_element(cx)` time.
+    pub fn build<H: UiHost, B>(build: B) -> CardActionBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        CardActionBuild {
+            build: Some(build),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            _phantom: PhantomData,
+        }
+    }
+
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.chrome = self.chrome.merge(style);
         self
@@ -643,6 +694,69 @@ impl CardAction {
 
         let marker: Arc<str> = Arc::from(format!("{}:{}", CARD_ACTION_MARKER_PREFIX, el.id.0));
         attach_test_id(el, marker)
+    }
+}
+
+pub struct CardActionBuild<H, B> {
+    build: Option<B>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> CardActionBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = collect_built_card_children(
+            cx,
+            self.build.expect("expected card action build closure"),
+        );
+        CardAction::new(children)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout)
+            .into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for CardActionBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for CardActionBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for CardActionBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> IntoUiElement<H> for CardActionBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CardActionBuild::into_element(self, cx)
     }
 }
 
@@ -720,18 +834,20 @@ mod tests {
         );
 
         let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            Card::build(|cx, out| {
-                out.extend([
-                    card_header(cx, |cx| {
-                        vec![
-                            card_title(cx, "Card Title"),
-                            card_description(cx, "Card Description"),
-                            card_action(cx, |cx| vec![cx.text("Card Action")]),
+            card(|cx| {
+                ui::children![
+                    cx;
+                    card_header(|cx| {
+                        ui::children![
+                            cx;
+                            card_title("Card Title"),
+                            card_description("Card Description"),
+                            card_action(|cx| ui::children![cx; cx.text("Card Action")]),
                         ]
                     }),
-                    card_content(cx, |cx| vec![cx.text("Card Content")]),
-                    card_footer(cx, |cx| vec![cx.text("Card Footer")]),
-                ]);
+                    card_content(|cx| ui::children![cx; cx.text("Card Content")]),
+                    card_footer(|cx| ui::children![cx; cx.text("Card Footer")]),
+                ]
             })
             .into_element(cx)
         });
@@ -2206,6 +2322,17 @@ impl CardDescription {
         }
     }
 
+    /// Builder-first variant that collects children at `into_element(cx)` time.
+    pub fn build<H: UiHost, B>(build: B) -> CardDescriptionBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        CardDescriptionBuild {
+            build: Some(build),
+            _phantom: PhantomData,
+        }
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
@@ -2229,5 +2356,43 @@ impl CardDescription {
                 "component.card.description",
             ),
         }
+    }
+}
+
+pub struct CardDescriptionBuild<H, B> {
+    build: Option<B>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> CardDescriptionBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = collect_built_card_children(
+            cx,
+            self.build.expect("expected card description build closure"),
+        );
+        CardDescription::new_children(children).into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for CardDescriptionBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl<H: UiHost, B> IntoUiElement<H> for CardDescriptionBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CardDescriptionBuild::into_element(self, cx)
     }
 }

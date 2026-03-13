@@ -481,7 +481,7 @@ impl DataTable {
         root_props.layout.overflow = Overflow::Clip;
 
         cx.container(root_props, move |cx| {
-            let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+            let scroll_handle = cx.slot_state(VirtualListScrollHandle::new, |h| h.clone());
 
             let get_row_key = Arc::new(get_row_key);
             let header_label = Arc::new(header_label);
@@ -687,7 +687,7 @@ impl DataTable {
         let root = cx.container(root_props, move |cx| {
             let theme = Theme::global(&*cx.app).snapshot();
             let body_text_style = table_text_style(&theme);
-            let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+            let scroll_handle = cx.slot_state(VirtualListScrollHandle::new, |h| h.clone());
 
             let header_style = TextStyle {
                 weight: FontWeight::MEDIUM,

@@ -105,7 +105,7 @@ fn popover_outside_click_closes_and_activates_underlay() {
                 )
                 .into_element(cx);
 
-            let popover = fret_ui_shadcn::Popover::new(open).into_element(
+            let popover = fret_ui_shadcn::Popover::from_open(open).into_element_with(
                 cx,
                 |cx| {
                     fret_ui_shadcn::PopoverTrigger::new(

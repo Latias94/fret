@@ -2,9 +2,10 @@ use crate::alert_dialog::{
     AlertDialogAction, AlertDialogCancel, AlertDialogDescription, AlertDialogFooter,
     AlertDialogHeader, AlertDialogTitle,
 };
-use crate::card::{CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
+use crate::card::{CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
 use crate::dialog::{DialogDescription, DialogFooter, DialogHeader, DialogTitle};
 use crate::drawer::{DrawerFooter, DrawerHeader};
+use crate::empty::{EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle};
 use crate::popover::{PopoverDescription, PopoverHeader, PopoverTitle};
 use crate::sheet::{SheetDescription, SheetFooter, SheetHeader, SheetTitle};
 use crate::table::{TableBody, TableCaption, TableFooter, TableHead, TableHeader, TableRow};
@@ -34,10 +35,17 @@ impl_ui_patch_passthrough!(PopoverTitle);
 impl_ui_patch_passthrough!(PopoverDescription);
 
 impl_ui_patch_passthrough!(CardHeader);
+impl_ui_patch_passthrough!(CardAction);
 impl_ui_patch_passthrough!(CardContent);
 impl_ui_patch_passthrough!(CardFooter);
 impl_ui_patch_passthrough!(CardTitle);
 impl_ui_patch_passthrough!(CardDescription);
+
+impl_ui_patch_layout_only!(EmptyHeader);
+impl_ui_patch_chrome_layout!(EmptyMedia);
+impl_ui_patch_passthrough!(EmptyTitle);
+impl_ui_patch_passthrough!(EmptyDescription);
+impl_ui_patch_layout_only!(EmptyContent);
 
 impl_ui_patch_passthrough!(TableHeader);
 impl_ui_patch_passthrough!(TableBody);

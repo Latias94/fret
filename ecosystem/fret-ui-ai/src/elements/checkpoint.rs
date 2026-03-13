@@ -318,7 +318,7 @@ impl CheckpointTrigger {
         };
 
         let content = cx.text(tooltip);
-        let mut tooltip = Tooltip::new(button, content)
+        let mut tooltip = Tooltip::new(cx, button, content)
             .align(TooltipAlign::Start)
             .side(TooltipSide::Bottom);
         if let Some(panel_test_id) = self.tooltip_panel_test_id {

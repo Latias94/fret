@@ -113,22 +113,7 @@ pub fn menu_close_auto_focus_guard_hooks<H: UiHost>(
     on_dismiss_request: Option<OnDismissRequest>,
     on_close_auto_focus: Option<OnCloseAutoFocus>,
 ) -> (Option<OnDismissRequest>, Option<OnCloseAutoFocus>) {
-    #[derive(Default)]
-    struct MenuCloseAutoFocusGuardState {
-        dismiss_reason: Option<Model<Option<DismissReason>>>,
-    }
-
-    let dismiss_reason = cx
-        .with_state(MenuCloseAutoFocusGuardState::default, |st| {
-            st.dismiss_reason.clone()
-        })
-        .unwrap_or_else(|| {
-            let model = cx.app.models_mut().insert(None);
-            cx.with_state(MenuCloseAutoFocusGuardState::default, |st| {
-                st.dismiss_reason = Some(model.clone());
-            });
-            model
-        });
+    let dismiss_reason = cx.local_model(|| None::<DismissReason>);
 
     // Clear stale reasons when the overlay is open again (new session).
     let open_now = cx.app.models().get_copied(&open).unwrap_or(false);

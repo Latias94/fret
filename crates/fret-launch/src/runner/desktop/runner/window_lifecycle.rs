@@ -492,21 +492,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         // Important: `WindowEvent::RedrawRequested` is keyed by the winit `WindowId`, so we must
         // install the `WindowId` -> `AppWindowId` mapping *before* requesting the redraw. Otherwise, the first
         // redraw can be dropped and the window may appear blank until another event arrives.
-        if let Some(state) = self.windows.get(id) {
-            state.window.request_redraw();
-            self.app.with_global_mut_untracked(
-                fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
-                |store, _app| {
-                    store.record(
-                        id,
-                        self.frame_id,
-                        fret_runtime::RunnerFrameDriveReason::SurfaceBootstrap,
-                    );
-                },
+        if self.windows.contains_key(id) {
+            let _ = self.request_window_redraw_with_reason(
+                id,
+                fret_runtime::RunnerFrameDriveReason::SurfaceBootstrap,
             );
             // `request_redraw()` alone may not wake the event loop on some platforms; schedule a
             // one-shot RAF so the initial frame presents without requiring any user input.
-            self.raf_windows.insert(id);
+            self.raf_windows.request(id);
         }
         Ok(id)
     }

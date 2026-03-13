@@ -204,7 +204,7 @@ impl DataGrid {
                     let col_widths = col_widths.clone();
 
                     let (scroll_handle, scroll_x, total_w, total_h, rows_visible, cols_visible) =
-                        cx.with_state(DataGridViewportState::default, |state| {
+                        cx.slot_state(DataGridViewportState::default, |state| {
                             let cols_signature = (cols_revision, cols);
                             state.row_metrics.ensure_fixed_with_key(
                                 rows,

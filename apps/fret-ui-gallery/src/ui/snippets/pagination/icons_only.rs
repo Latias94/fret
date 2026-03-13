@@ -33,25 +33,24 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .refine_layout(LayoutRefinement::default().w(fret_ui_kit::LengthRefinement::Auto))
     .into_element(cx);
 
-    let content = shadcn::PaginationContent::new([
-        shadcn::PaginationItem::new(
-            shadcn::PaginationPrevious::new()
-                .on_click(CMD_APP_OPEN)
-                .into_element(cx),
-        )
-        .into_element(cx),
-        shadcn::PaginationItem::new(
-            shadcn::PaginationNext::new()
-                .on_click(CMD_APP_SAVE)
-                .into_element(cx),
-        )
-        .into_element(cx),
-    ])
+    let pagination = shadcn::pagination(|cx| {
+        ui::children![
+            cx;
+            shadcn::pagination_content(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::pagination_item(
+                        shadcn::PaginationPrevious::new().on_click(CMD_APP_OPEN),
+                    ),
+                    shadcn::pagination_item(
+                        shadcn::PaginationNext::new().on_click(CMD_APP_SAVE),
+                    ),
+                ]
+            }),
+        ]
+    })
+    .refine_layout(LayoutRefinement::default().w(fret_ui_kit::LengthRefinement::Auto))
     .into_element(cx);
-
-    let pagination = shadcn::Pagination::new([content])
-        .refine_layout(LayoutRefinement::default().w(fret_ui_kit::LengthRefinement::Auto))
-        .into_element(cx);
 
     ui::h_flex(move |_cx| [rows_field, pagination])
         .layout(LayoutRefinement::default().w_full())

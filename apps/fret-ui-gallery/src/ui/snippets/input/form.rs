@@ -44,42 +44,41 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .items_start()
     .into_element(cx);
 
-    shadcn::FieldGroup::new([
-        shadcn::Field::new([
-            shadcn::FieldLabel::new("Name").into_element(cx),
-            shadcn::Input::new(name)
-                .a11y_label("Name")
-                .placeholder("Evil Rabbit")
-                .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::Field::new([
-            shadcn::FieldLabel::new("Email").into_element(cx),
-            shadcn::Input::new(email)
-                .a11y_label("Email")
-                .placeholder("john@example.com")
-                .into_element(cx),
-            shadcn::FieldDescription::new("We'll never share your email.").into_element(cx),
-        ])
-        .into_element(cx),
-        row,
-        shadcn::Field::new([
-            shadcn::FieldLabel::new("Address").into_element(cx),
-            shadcn::Input::new(address)
-                .a11y_label("Address")
-                .placeholder("123 Main St")
-                .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::Field::new([
-            shadcn::Button::new("Cancel")
-                .variant(shadcn::ButtonVariant::Outline)
-                .into_element(cx),
-            shadcn::Button::new("Submit").into_element(cx),
-        ])
-        .orientation(shadcn::FieldOrientation::Horizontal)
-        .into_element(cx),
-    ])
+    shadcn::field_group(|cx| {
+        ui::children![
+            cx;
+            shadcn::Field::new([
+                shadcn::FieldLabel::new("Name").into_element(cx),
+                shadcn::Input::new(name)
+                    .a11y_label("Name")
+                    .placeholder("Evil Rabbit")
+                    .into_element(cx),
+            ]),
+            shadcn::Field::new([
+                shadcn::FieldLabel::new("Email").into_element(cx),
+                shadcn::Input::new(email)
+                    .a11y_label("Email")
+                    .placeholder("john@example.com")
+                    .into_element(cx),
+                shadcn::FieldDescription::new("We'll never share your email.").into_element(cx),
+            ]),
+            row,
+            shadcn::Field::new([
+                shadcn::FieldLabel::new("Address").into_element(cx),
+                shadcn::Input::new(address)
+                    .a11y_label("Address")
+                    .placeholder("123 Main St")
+                    .into_element(cx),
+            ]),
+            shadcn::Field::new([
+                shadcn::Button::new("Cancel")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .into_element(cx),
+                shadcn::Button::new("Submit").into_element(cx),
+            ])
+            .orientation(shadcn::FieldOrientation::Horizontal),
+        ]
+    })
     .refine_layout(max_w_sm)
     .into_element(cx)
     .test_id("ui-gallery-input-form")

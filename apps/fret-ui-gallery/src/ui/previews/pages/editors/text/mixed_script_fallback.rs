@@ -11,7 +11,7 @@ pub(in crate::ui) fn preview_text_mixed_script_fallback(
         injected: bool,
     }
 
-    let state = cx.with_state(
+    let state = cx.slot_state(
         || std::rc::Rc::new(std::cell::RefCell::new(MixedScriptFallbackState::default())),
         |st| st.clone(),
     );

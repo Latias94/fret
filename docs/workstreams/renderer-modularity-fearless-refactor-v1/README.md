@@ -2,7 +2,7 @@
 
 Status: Draft
 
-Last updated: 2026-03-12
+Last updated: 2026-03-13
 
 ## Motivation
 
@@ -65,9 +65,10 @@ This workstream exists to make renderer refactors boring, staged, and reversible
 
 ## Current Snapshot
 
-As of 2026-03-12:
+As of 2026-03-13:
 
-- `crates/fret-render/src/lib.rs` is effectively a wildcard re-export facade.
+- `crates/fret-render/src/lib.rs` now uses an explicit curated re-export list instead of a
+  wildcard backend dump.
 - `crates/fret-render-wgpu/src/lib.rs` re-exports a broad mix of:
   - stable-facing contracts,
   - backend bootstrap helpers,
@@ -77,8 +78,167 @@ As of 2026-03-12:
 - `crates/fret-render-wgpu/src/text/mod.rs` and `crates/fret-render-wgpu/src/renderer/shaders.rs`
   are the most obvious oversized internal modules.
 - `Renderer::new(adapter, device)` and `render_scene(device, queue, ...)` already make
-  host-provided GPU objects possible, but some convenience/diagnostics surfaces still privilege
-  `WgpuContext`.
+  host-provided GPU objects possible, and
+  `crates/fret-render-wgpu/tests/host_provided_gpu_topology_smoke.rs` now locks that engine-hosted
+  seam with a direct smoke path.
+- The public teaching surface now shows both topology entrypoints in:
+  - `crates/fret-render/src/lib.rs`
+  - `crates/fret-render-wgpu/src/lib.rs`
+  - `docs/crate-usage-guide.md`
+- The stable v1 default-facade buckets are now explicit in:
+  - `docs/workstreams/renderer-modularity-fearless-refactor-v1/SURFACE_INVENTORY.md`
+  - `crates/fret-render/tests/facade_surface_snapshot.rs`
+- The default facade no longer re-exports nested diagnostics/detail leaf structs that had zero
+  first-party consumers; those now stay backend-specific.
+- The default facade also no longer re-exports zero-direct-consumer advanced perf/init value
+  snapshots; diagnostics/report stores remain, but deeper value types now require
+  `fret-render-wgpu` directly.
+- The portable-value ownership audit is also closed for v1:
+  - render-target metadata already lives in `fret-render-core`
+  - no additional backend-owned value type move improved ownership clarity after audit
+- `WgpuContext` remains on the stable default facade as the supported convenience/bootstrap path
+  for Fret-owned GPU initialization, but the docs and gates now make clear that engine-hosted
+  adapter/device flows are equally first-class.
+- Shared text type shells now live under `crates/fret-render-wgpu/src/text/types.rs`, and
+  `text/mod.rs` no longer owns glyph/blob/shape/helper type definitions directly.
+- Text bootstrap assembly now lives under `crates/fret-render-wgpu/src/text/bootstrap.rs`, and
+  `TextSystem::new(...)` now delegates initial state assembly through that bootstrap module.
+- Initial font-policy bootstrap finalization now lives under
+  `crates/fret-render-wgpu/src/text/fonts.rs`, and `TextSystem::new(...)` no longer owns
+  fallback-policy/font-stack finalization directly.
+- Public `TextSystem::new(...)` now lives under `crates/fret-render-wgpu/src/text/bootstrap.rs`,
+  private `prepare_with_key(...)` glue now lives under
+  `crates/fret-render-wgpu/src/text/prepare.rs`, and `text/mod.rs` now keeps only the text state
+  shell plus module wiring.
+- Per-frame text perf state now lives under `crates/fret-render-wgpu/src/text/frame_perf.rs`, and
+  `text/mod.rs` no longer owns the per-frame text perf counter fields directly.
+- Text face-cache state now lives under `crates/fret-render-wgpu/src/text/face_cache.rs`, and
+  `text/mod.rs` no longer owns font-data / instance-coords / family-name cache fields directly.
+- Text pin-ring state now lives under `crates/fret-render-wgpu/src/text/pin_state.rs`, and
+  `text/mod.rs` no longer owns scene pin-ring bucket fields directly.
+- Text blob/cache state now lives under `crates/fret-render-wgpu/src/text/blob_state.rs`, and
+  `text/mod.rs` no longer owns blob-cache/LRU state fields directly.
+- Text atlas epoch state now lives under `crates/fret-render-wgpu/src/text/atlas_epoch.rs`, and
+  `text/mod.rs` no longer owns the raw glyph-atlas epoch field directly.
+- Text atlas runtime state now lives under
+  `crates/fret-render-wgpu/src/text/atlas_runtime_state.rs`, and `text/mod.rs` no longer owns
+  atlas textures/bind-group-layout fields directly.
+- Text layout-cache state now lives under
+  `crates/fret-render-wgpu/src/text/layout_cache_state.rs`, and `text/mod.rs` no longer owns
+  shape-cache/measure-cache fields directly.
+- Text font-runtime state now lives under
+  `crates/fret-render-wgpu/src/text/font_runtime_state.rs`, and `text/mod.rs` no longer owns
+  font-stack key / font-db revision / fallback-policy / generic-injection / font-trace fields
+  directly.
+- Text atlas `TextSystem` flow now lives under
+  `crates/fret-render-wgpu/src/text/atlas_flow.rs`, and `crates/fret-render-wgpu/src/text/atlas.rs`
+  no longer owns atlas bind-group access, upload flushing, scene pinning, or glyph ensure glue
+  directly.
+- Built-in renderer effect helper flow now lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/builtin.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns built-in effect
+  budget gates, clip-mask target choice, or single-scratch/two-scratch pass-builder helpers
+  directly.
+- Renderer blur planning helper flow now lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/blur.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns blur compile,
+  scissor inflation, or padded chain-scissor derivation helpers directly.
+- Renderer custom-step apply flow now lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/custom.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns custom effect
+  V1/V2/V3 step-apply branch handling directly.
+- Renderer backdrop step-apply flow now also lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/builtin.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns
+  `BackdropWarpV1`/`BackdropWarpV2` step-apply branch handling directly.
+- Renderer simple built-in step-apply flow now also lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/builtin.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns
+  `NoiseV1`, `ColorAdjust`, `ColorMatrix`, `AlphaThreshold`, `Pixelate`, or `Dither`
+  step-apply branch handling directly.
+- Renderer masked chain builtin/backdrop step-apply flow now also lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/builtin.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns masked
+  `apply_chain_in_place(...)` branch handling for `BackdropWarpV1`/`BackdropWarpV2`, `NoiseV1`,
+  `ColorAdjust`, `ColorMatrix`, `AlphaThreshold`, `Pixelate`, or `Dither` directly.
+- Renderer masked GaussianBlur chain compile flow now also lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/blur.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns masked
+  `apply_chain_in_place(...)` branch handling for `GaussianBlur` directly.
+- Renderer masked DropShadow chain compile flow now also lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/blur.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns masked
+  `apply_chain_in_place(...)` branch handling for `DropShadowV1` directly.
+- Renderer masked custom chain step-apply flow now also lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/custom.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns masked
+  `apply_chain_in_place(...)` branch handling for `CustomV1`/`CustomV2`/`CustomV3` directly.
+- Renderer padded-chain orchestration flow now also lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns the padded
+  work-buffer / optional raw-target / final-commit orchestration inside `apply_chain_in_place(...)`
+  directly.
+- Renderer padded-chain final Custom commit helpers now also live under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/custom.rs`, keeping effect-specific
+  final-step wiring out of the orchestration module.
+- Renderer chain-start preparation flow now also lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns custom-chain budget
+  initialization, scratch-target inventory, forced quarter-blur mask-tier choice, or clip-mask
+  budget charging directly.
+- Renderer unpadded chain driver flow now also lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns unpadded raw-target
+  reservation, final-step mask handoff, or masked step dispatch inside `apply_chain_in_place(...)`
+  directly.
+- Renderer unmasked chain-step dispatch flow now also lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns
+  `apply_step_in_place_with_scratch_targets(...)` directly.
+- Renderer shared chain helper flow now also lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns scratch-target
+  inventory, custom-step/raw-source detection, or backdrop-source-group decomposition helpers
+  directly.
+- Renderer top-level chain driver flow now also lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` now keeps
+  `apply_chain_in_place(...)` only as a thin forwarding surface.
+- Renderer custom-effect v3 pyramid owner state now also lives under
+  `crates/fret-render-wgpu/src/renderer/v3_pyramid.rs`, and
+  `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns the pyramid scratch/cache/write-epoch
+  fields or helper methods directly.
+- Renderer SVG raster/atlas/perf owner state now also lives under
+  `crates/fret-render-wgpu/src/renderer/svg/mod.rs`, and
+  `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns SVG raster cache, atlas storage,
+  budget/epoch, or per-frame SVG cache counter fields directly.
+- Renderer intermediate budget/perf/pool owner state now also lives under
+  `crates/fret-render-wgpu/src/renderer/intermediate_pool.rs`, and
+  `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns intermediate budget/perf/pool
+  fields directly.
+- Renderer SVG registry/service owner state now also lives under
+  `crates/fret-render-wgpu/src/renderer/svg/mod.rs`, and
+  `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns `svg_renderer`, `svgs`, or
+  `svg_hash_index` directly.
+- Renderer diagnostics/perf owner state now also lives under
+  `crates/fret-render-wgpu/src/renderer/diagnostics.rs`, and
+  `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns render perf enablement, pending
+  render-target ingest counters, last-frame perf snapshots, render-plan segment history, or render
+  scene frame index directly.
+- Renderer material/custom-effect runtime owner state now also lives under
+  `crates/fret-render-wgpu/src/renderer/material_effects.rs`, and
+  `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns material registries, material
+  budgets, custom-effect registries, or their generation counters directly.
+- Renderer path registry/cache owner state now also lives under
+  `crates/fret-render-wgpu/src/renderer/path.rs`, and
+  `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns prepared path storage, path cache
+  entries, path cache capacity, or path cache epoch directly.
+- Renderer path intermediate/composite scratch owner state now also lives under
+  `crates/fret-render-wgpu/src/renderer/path.rs`, and
+  `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns path intermediate attachments, path
+  composite vertex storage, or path composite vertex capacity directly.
+- Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
+  fully finished yet.
 - The first code slice has landed:
   - `crates/fret-render` now uses an explicit facade export list instead of wildcard re-export.
   - `RendererCapabilities::from_adapter_device(...)` now exists and is used by first-party runner
@@ -331,6 +491,39 @@ As of 2026-03-12:
   - prepared-glyph bin-offset image render dispatch now lives behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `render_prepared_glyph_image(...)` no longer owns bin-offset derivation plus scaler render call directly
+- The latest internal text state-shell tightening slice has landed:
+  - per-frame text perf state now lives under
+    `crates/fret-render-wgpu/src/text/frame_perf.rs`
+  - `text/mod.rs` no longer owns the per-frame text perf counter fields directly
+- The latest internal text state-shell tightening slice has also moved:
+  - text face-cache state under
+    `crates/fret-render-wgpu/src/text/face_cache.rs`
+  - `text/mod.rs` no longer owns font-data / instance-coords / family-name cache fields directly
+- The latest internal text state-shell tightening slice has also moved:
+  - text pin-ring state under
+    `crates/fret-render-wgpu/src/text/pin_state.rs`
+  - `text/mod.rs` no longer owns scene pin-ring bucket fields directly
+- The latest internal text state-shell tightening slice has also moved:
+  - text blob/cache state under
+    `crates/fret-render-wgpu/src/text/blob_state.rs`
+  - `text/mod.rs` no longer owns blob-cache/LRU state fields directly
+- The latest internal text state-shell tightening slice has also moved:
+  - text atlas epoch state under
+    `crates/fret-render-wgpu/src/text/atlas_epoch.rs`
+  - `text/mod.rs` no longer owns the raw glyph-atlas epoch field directly
+- The latest internal text state-shell tightening slice has also moved:
+  - text atlas runtime state under
+    `crates/fret-render-wgpu/src/text/atlas_runtime_state.rs`
+  - `text/mod.rs` no longer owns atlas textures/bind-group-layout fields directly
+- The latest internal text state-shell tightening slice has also moved:
+  - text layout-cache state under
+    `crates/fret-render-wgpu/src/text/layout_cache_state.rs`
+  - `text/mod.rs` no longer owns shape-cache/measure-cache fields directly
+- The latest internal text state-shell tightening slice has also moved:
+  - text font-runtime state under
+    `crates/fret-render-wgpu/src/text/font_runtime_state.rs`
+  - `text/mod.rs` no longer owns font-stack key / font-db revision / fallback-policy /
+    generic-injection / font-trace fields directly
 - The sixty-second internal text split has landed:
   - prepared-glyph scaler size clamp now lives behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
@@ -339,6 +532,27 @@ As of 2026-03-12:
   - prepared-glyph scaler builder assembly now lives behind a dedicated helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
   - `build_prepared_glyph_scaler(...)` no longer owns scale-context builder chaining directly
+- The sixty-fourth internal text split has landed:
+  - atlas `TextSystem` flow now lives under
+    `crates/fret-render-wgpu/src/text/atlas_flow.rs`
+  - `crates/fret-render-wgpu/src/text/atlas.rs` no longer owns atlas bind-group access, upload
+    flushing, scene pinning, or glyph ensure glue directly
+- The first renderer effect-planning split has landed:
+  - built-in effect helper flow now lives under
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects/builtin.rs`
+  - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns built-in effect
+    budget gates, clip-mask target choice, or single-scratch/two-scratch pass-builder helpers
+    directly
+- The second renderer effect-planning split has landed:
+  - blur planning helper flow now lives under
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects/blur.rs`
+  - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns blur compile,
+    scissor inflation, or padded chain-scissor derivation helpers directly
+- The third renderer effect-planning split has landed:
+  - custom-step apply flow now lives under
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects/custom.rs`
+  - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns custom effect
+    V1/V2/V3 step-apply branch handling directly
 - The sixty-fourth internal text split has landed:
   - prepared-glyph normalized-coords presence checks now live behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
@@ -424,6 +638,130 @@ As of 2026-03-12:
   - prepare-shape build helpers now live in
     `crates/fret-render-wgpu/src/text/prepare/shape_build.rs`
   - `crates/fret-render-wgpu/src/text/prepare.rs` no longer hosts the prepare-shape begin/finish chain inline
+- The eighty-fifth internal text split has landed:
+  - prepare cache-flow helpers now live in
+    `crates/fret-render-wgpu/src/text/prepare/cache_flow.rs`
+  - `crates/fret-render-wgpu/src/text/prepare.rs` no longer hosts the blob/shape cache reuse and blob finalize chain inline
+- The eighty-sixth internal text split has landed:
+  - the live prepare-with-key driver now lives in
+    `crates/fret-render-wgpu/src/text/prepare/driver.rs`
+  - `crates/fret-render-wgpu/src/text/mod.rs` now delegates the live path through that driver
+- The eighty-seventh internal text split has landed:
+  - the temporary soft-rollback shim has been removed from
+    `crates/fret-render-wgpu/src/text/mod.rs`
+  - `prepare_with_key(...)` is now a thin delegation layer and
+    `crates/fret-render-wgpu/src/text/prepare/driver.rs` fully owns the live prepare flow
+- The eighty-eighth renderer shader split has landed:
+  - the scale-nearest WGSL sources now live under
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/*.wgsl`
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts the scale-nearest shader
+    family inline
+- The eighty-ninth renderer shader split has landed:
+  - the `color_adjust`, `color_matrix`, and `alpha_threshold` WGSL sources now live under
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/*.wgsl`
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts those fullscreen effect
+    shader families inline
+- The ninetieth renderer shader split has landed:
+  - the `backdrop_warp` WGSL sources now live under
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/{backdrop_warp,backdrop_warp_image,backdrop_warp_masked_part_a,backdrop_warp_masked_part_b,backdrop_warp_image_masked_part_a,backdrop_warp_image_masked_part_b,backdrop_warp_mask,backdrop_warp_image_mask}.wgsl`
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts the `backdrop_warp`
+    shader family inline
+  - `crates/fret-render-wgpu/src/renderer/tests.rs` now validates the `backdrop_warp_image`
+    shader variants explicitly during WGSL parse and WebGPU validation coverage
+- The ninety-first renderer shader split has landed:
+  - the `COMPOSITE_PREMUL` WGSL sources now live under
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/{composite_premul,composite_premul_mask}.wgsl`
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts the `COMPOSITE_PREMUL`
+    shader pair inline
+  - the existing WGSL parse/WebGPU validation coverage in
+    `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover that shader pair without
+    test-surface changes
+- The ninety-second renderer shader split has landed:
+  - the `VIEWPORT_SHADER` WGSL source now lives under
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/viewport.wgsl`
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts `VIEWPORT_SHADER` inline
+  - the existing WGSL parse/WebGPU validation coverage in
+    `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover `VIEWPORT_SHADER` without
+    test-surface changes
+- The ninety-third renderer shader split has landed:
+  - the `MASK_SHADER` WGSL source now lives under
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/mask.wgsl`
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts `MASK_SHADER` inline
+  - the existing WGSL parse/WebGPU validation coverage in
+    `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover `MASK_SHADER` without
+    test-surface changes
+- The ninety-fourth renderer shader split has landed:
+  - the `PATH_CLIP_MASK_SHADER` WGSL source now lives under
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/path_clip_mask.wgsl`
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts `PATH_CLIP_MASK_SHADER`
+    inline
+  - the existing WGSL parse/WebGPU validation coverage in
+    `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover
+    `PATH_CLIP_MASK_SHADER` without test-surface changes
+- The ninety-fifth renderer shader split has landed:
+  - the `QUAD_SHADER_PART_A/B` WGSL sources now live under
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/{quad_part_a,quad_part_b}.wgsl`
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts the quad shader envelope
+    inline
+  - the existing WGSL parse/WebGPU validation coverage in
+    `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover the assembled
+    `quad_shader_source()` output without test-surface changes
+- The ninety-sixth renderer shader split has landed:
+  - the `CLIP_MASK_SHADER_PART_A/B` WGSL sources now live under
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/{clip_mask_part_a,clip_mask_part_b}.wgsl`
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts the clip-mask shader
+    envelope inline
+  - the existing WGSL parse/WebGPU validation coverage in
+    `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover the assembled
+    `clip_mask_shader_source()` output without test-surface changes
+- The ninety-seventh renderer shader split has landed:
+  - the `TEXT_COLOR_SHADER` WGSL source now lives under
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/text_color.wgsl`
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts `TEXT_COLOR_SHADER` inline
+  - the existing WGSL parse/WebGPU validation coverage in
+    `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover `TEXT_COLOR_SHADER`
+    without test-surface changes
+- The ninety-eighth renderer shader split has landed:
+  - the `TEXT_SUBPIXEL_SHADER` WGSL source now lives under
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/text_subpixel.wgsl`
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts `TEXT_SUBPIXEL_SHADER`
+    inline
+  - the existing WGSL parse/WebGPU validation coverage in
+    `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover `TEXT_SUBPIXEL_SHADER`
+    without test-surface changes
+- The ninety-ninth renderer shader split has landed:
+  - the `TEXT_SHADER` WGSL source now lives under
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/text.wgsl`
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts `TEXT_SHADER` inline
+  - the existing WGSL parse/WebGPU validation coverage in
+    `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover `TEXT_SHADER` without
+    test-surface changes
+- The one-hundredth renderer shader split has landed:
+  - the `PATH_SHADER` WGSL source now lives under
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/path.wgsl`
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts `PATH_SHADER` inline
+  - the existing WGSL parse/WebGPU validation coverage in
+    `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover `PATH_SHADER` without
+    test-surface changes
+  - the existing local naga validation test in
+    `crates/fret-render-wgpu/src/renderer/shaders.rs` continued to validate `PATH_SHADER`
+    unchanged
+- The first backend-root export tightening slice has landed:
+  - `crates/fret-render-wgpu/src/lib.rs` no longer re-exports zero-first-party-consumer backend
+    helpers at the crate root
+  - removed root re-exports:
+    `ImageRegistry`, `RenderTargetRegistry`, `CachedSvgImage`, `SvgImageCache`,
+    `SvgRasterKind`, `SvgRenderer`, and `SMOOTH_SVG_SCALE_FACTOR`
+  - existing first-party runner/demo/facade call sites required no source changes because none of
+    those names were consumed outside `crates/fret-render-wgpu`
+  - this slice also exposed `crates/fret-render-wgpu/src/svg_cache.rs` as a detached legacy path:
+    it currently has no active first-party consumers and only surfaces as dead-code follow-up
+- The legacy SVG cache retirement slice has landed:
+  - `crates/fret-render-wgpu/src/svg_cache.rs` is no longer part of the backend compile path
+  - `crates/fret-render-wgpu/src/svg.rs` now keeps only the internal fit-mode renderer entrypoints
+    still used by active SVG raster flow
+  - the detached app-owned `SvgImageCache` path is now explicitly retired instead of silently
+    surviving as dead code
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
@@ -564,6 +902,96 @@ As of 2026-03-12:
   - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
   - `python3 tools/check_layering.py`: passed
+- Renderer shader split verification remains green after the `backdrop_warp` externalization:
+  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+  - `python3 tools/report_largest_files.py --top 30 --min-lines 800`: `renderer/shaders.rs`
+    dropped from 5986 lines to 4934 lines and no longer appears in the top-30 oversized file
+    report
+- Renderer shader split verification remains green after the `COMPOSITE_PREMUL` externalization:
+  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+  - `python3 tools/report_largest_files.py --top 30 --min-lines 800`: `renderer/shaders.rs`
+    dropped from 4934 lines to 4350 lines while staying out of the top-30 oversized file report
+- Renderer shader split verification remains green after the `VIEWPORT_SHADER` externalization:
+  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+  - `python3 tools/report_largest_files.py --top 30 --min-lines 800`: `renderer/shaders.rs`
+    dropped from 4350 lines to 4021 lines while staying out of the top-30 oversized file report
+- Renderer shader split verification remains green after the `MASK_SHADER` externalization:
+  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+  - `python3 tools/report_largest_files.py --top 30 --min-lines 800`: `renderer/shaders.rs`
+    dropped from 4021 lines to 3701 lines while staying out of the top-30 oversized file report
+- Renderer shader split verification remains green after the `PATH_CLIP_MASK_SHADER`
+  externalization:
+  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+  - `python3 tools/report_largest_files.py --top 30 --min-lines 800`: `renderer/shaders.rs`
+    dropped from 3701 lines to 3666 lines while staying out of the top-30 oversized file report
+- Renderer shader split verification remains green after the `QUAD_SHADER_PART_A/B`
+  externalization:
+  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+  - `python3 tools/report_largest_files.py --top 30 --min-lines 800`: `renderer/shaders.rs`
+    dropped from 3666 lines to 2773 lines while staying out of the top-30 oversized file report
+- Renderer shader split verification remains green after the `CLIP_MASK_SHADER_PART_A/B`
+  externalization:
+  - `cargo nextest run -p fret-render-wgpu`: 220 passed (1 leaky), exit code 0
+  - `cargo nextest run -p fret-render-wgpu text::tests::text_measure_key_ignores_width_for_wrap_none`:
+    passed on targeted rerun
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+  - `python3 tools/report_largest_files.py --top 30 --min-lines 800`: `renderer/shaders.rs`
+    dropped from 2773 lines to 2685 lines while staying out of the top-30 oversized file report
+- Renderer shader split verification remains green after the `TEXT_COLOR_SHADER`
+  externalization:
+  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+  - `python3 tools/report_largest_files.py --top 30 --min-lines 800`: `renderer/shaders.rs`
+    dropped from 2685 lines to 2205 lines while staying out of the top-30 oversized file report
+- Renderer shader split verification remains green after the `TEXT_SUBPIXEL_SHADER`
+  externalization:
+  - `cargo nextest run -p fret-render-wgpu`: 220 passed (1 leaky), exit code 0
+  - `cargo nextest run -p fret-render-wgpu renderer::render_plan::tests::blur_scissor_is_mapped_per_pass_dst_size`:
+    passed on targeted rerun
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+  - `python3 tools/report_largest_files.py --top 30 --min-lines 800`: `renderer/shaders.rs`
+    dropped from 2205 lines to 1592 lines while staying out of the top-30 oversized file report
+- Renderer shader split verification remains green after the `TEXT_SHADER` externalization:
+  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+  - `python3 tools/report_largest_files.py --top 30 --min-lines 800`: `renderer/shaders.rs`
+    dropped from 1592 lines to 981 lines while staying out of the top-30 oversized file report
+- Renderer shader split verification remains green after the `PATH_SHADER` externalization:
+  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+  - `python3 tools/report_largest_files.py --top 30 --min-lines 800`: `renderer/shaders.rs`
+    dropped from 981 lines to 331 lines while staying out of the top-30 oversized file report
+  - `rg -n '= r#"' crates/fret-render-wgpu/src/renderer/shaders.rs`: no inline raw WGSL blocks remain
+- Backend-root export tightening verification remains green after removing the zero-consumer
+  re-exports:
+  - `cargo nextest run -p fret-render -p fret-render-wgpu`: passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+  - residual note: `fret-render-wgpu` now reports dead-code warnings around the legacy
+    `svg_cache.rs` helper path, confirming it is no longer on an active first-party route
+- Legacy SVG cache retirement verification remains green after removing `svg_cache.rs` from the
+  compile path:
+  - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+  - `fret-render-wgpu` no longer emits dead-code warnings for the retired `svg_cache.rs` path
 - Baseline gates passed during the pre-workstream audit:
   - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
   - `python3 tools/check_layering.py`: passed

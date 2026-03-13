@@ -4,13 +4,13 @@ use std::sync::Arc;
 
 impl TextSystem {
     pub fn blob(&self, id: TextBlobId) -> Option<&TextBlob> {
-        self.blobs.get(id)
+        self.blob_state.blobs.get(id)
     }
 
     pub fn release(&mut self, blob: TextBlobId) {
         let entries = fret_render_text::cache_tuning::released_blob_cache_entries();
 
-        let Some(b) = self.blobs.get_mut(blob) else {
+        let Some(b) = self.blob_state.blobs.get_mut(blob) else {
             return;
         };
 
@@ -33,11 +33,16 @@ impl TextSystem {
     }
 
     pub(super) fn remove_released_blob(&mut self, id: TextBlobId) {
-        if !self.released_blob_set.remove(&id) {
+        if !self.blob_state.released_blob_set.remove(&id) {
             return;
         }
-        if let Some(pos) = self.released_blob_lru.iter().position(|v| *v == id) {
-            self.released_blob_lru.remove(pos);
+        if let Some(pos) = self
+            .blob_state
+            .released_blob_lru
+            .iter()
+            .position(|v| *v == id)
+        {
+            self.blob_state.released_blob_lru.remove(pos);
         }
     }
 
@@ -46,45 +51,50 @@ impl TextSystem {
             return;
         }
 
-        if !self.released_blob_set.insert(id)
-            && let Some(pos) = self.released_blob_lru.iter().position(|v| *v == id)
+        if !self.blob_state.released_blob_set.insert(id)
+            && let Some(pos) = self
+                .blob_state
+                .released_blob_lru
+                .iter()
+                .position(|v| *v == id)
         {
-            self.released_blob_lru.remove(pos);
+            self.blob_state.released_blob_lru.remove(pos);
         }
-        self.released_blob_lru.push_back(id);
+        self.blob_state.released_blob_lru.push_back(id);
 
-        while self.released_blob_lru.len() > entries {
-            let Some(evict) = self.released_blob_lru.pop_front() else {
+        while self.blob_state.released_blob_lru.len() > entries {
+            let Some(evict) = self.blob_state.released_blob_lru.pop_front() else {
                 break;
             };
-            self.released_blob_set.remove(&evict);
-            if self.blobs.get(evict).is_some_and(|b| b.ref_count > 0) {
+            self.blob_state.released_blob_set.remove(&evict);
+            if self
+                .blob_state
+                .blobs
+                .get(evict)
+                .is_some_and(|b| b.ref_count > 0)
+            {
                 continue;
             }
             self.evict_blob(evict);
         }
     }
 
-    pub(super) fn clear_released_blob_cache(&mut self) {
-        self.released_blob_lru.clear();
-        self.released_blob_set.clear();
-    }
-
     fn evict_blob(&mut self, blob: TextBlobId) {
         self.remove_released_blob(blob);
 
         let remove_shape = self
+            .blob_state
             .blobs
             .get(blob)
             .is_some_and(|b| Arc::strong_count(&b.shape) == 2);
 
-        if let Some(key) = self.blob_key_by_id.remove(&blob) {
-            self.blob_cache.remove(&key);
+        if let Some(key) = self.blob_state.blob_key_by_id.remove(&blob) {
+            self.blob_state.blob_cache.remove(&key);
             if remove_shape {
                 let shape_key = fret_render_text::cache_keys::TextShapeKey::from_blob_key(&key);
-                self.shape_cache.remove(&shape_key);
+                self.layout_cache.shape_cache.remove(&shape_key);
             }
         }
-        let _ = self.blobs.remove(blob);
+        let _ = self.blob_state.blobs.remove(blob);
     }
 }

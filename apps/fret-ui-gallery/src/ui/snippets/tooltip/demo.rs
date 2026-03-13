@@ -15,7 +15,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             )]);
 
             vec![
-                shadcn::Tooltip::build(
+                shadcn::Tooltip::new(
                     cx,
                     shadcn::Button::new("Hover")
                         .variant(shadcn::ButtonVariant::Outline)

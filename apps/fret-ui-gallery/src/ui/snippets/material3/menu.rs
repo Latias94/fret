@@ -160,25 +160,31 @@ pub fn render<H: UiHost>(
         .get_cloned(&last_action)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
-    let card_default = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![shadcn::CardTitle::new("Default").into_element(cx)])
-            .into_element(cx),
-        shadcn::CardContent::new(vec![dropdown]).into_element(cx),
-    ])
+    let card_default = shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| ui::children![cx; shadcn::card_title("Default")]),
+            shadcn::card_content(move |_cx| vec![dropdown]),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
     .into_element(cx);
 
-    let card_override = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Override").into_element(cx),
-            shadcn::CardDescription::new(
-                "ADR 0220: MenuStyle overrides (container + item colors).",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new(vec![dropdown_override]).into_element(cx),
-    ])
+    let card_override = shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Override"),
+                    shadcn::card_description(
+                        "ADR 0220: MenuStyle overrides (container + item colors).",
+                    ),
+                ]
+            }),
+            shadcn::card_content(move |_cx| vec![dropdown_override]),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
     .into_element(cx);
 

@@ -180,9 +180,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
         let had_effects = !effects.is_empty();
         if !had_effects {
-            if self.streaming_uploads.has_pending() {
-                window.request_redraw();
-            }
+            self.request_streaming_pending_redraw(window);
 
             let streaming_snapshot_enabled = self.config.streaming_perf_snapshot_enabled
                 || std::env::var_os("FRET_STREAMING_DEBUG").is_some_and(|v| !v.is_empty());
@@ -294,7 +292,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     self.app.set_global::<fret_runtime::TextFontStackKey>(
                         fret_runtime::TextFontStackKey(gfx.renderer.text_font_stack_key()),
                     );
-                    window.request_redraw();
+                    self.request_sink_redraw(window);
                 }
                 Effect::TextRescanSystemFonts => {
                     // Web/WASM cannot access system fonts; ignore (ADR 0258).
@@ -362,11 +360,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         }
                     }
                     self.diag_incoming_open_payloads.insert(token, payload);
-                    self.pending_events.push(Event::IncomingOpenRequest {
-                        token,
-                        items: request_items,
-                    });
-                    window.request_redraw();
+                    self.push_pending_event_and_request_redraw(
+                        window,
+                        Event::IncomingOpenRequest {
+                            token,
+                            items: request_items,
+                        },
+                    );
                 }
                 Effect::ClipboardSetText { text } => {
                     if self.diag_clipboard_force_unavailable {
@@ -520,20 +520,28 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     }
 
                     if self.diag_clipboard_force_unavailable {
-                        self.pending_events.push(Event::ClipboardTextUnavailable {
-                            token,
-                            message: Some("diagnostics forced clipboard unavailable".to_string()),
-                        });
-                        window.request_redraw();
+                        self.push_pending_event_and_request_redraw(
+                            window,
+                            Event::ClipboardTextUnavailable {
+                                token,
+                                message: Some(
+                                    "diagnostics forced clipboard unavailable".to_string(),
+                                ),
+                            },
+                        );
                         continue;
                     }
 
                     let Some(window_handle) = web_sys::window() else {
-                        self.pending_events.push(Event::ClipboardTextUnavailable {
-                            token,
-                            message: Some("window is unavailable for clipboard read".to_string()),
-                        });
-                        window.request_redraw();
+                        self.push_pending_event_and_request_redraw(
+                            window,
+                            Event::ClipboardTextUnavailable {
+                                token,
+                                message: Some(
+                                    "window is unavailable for clipboard read".to_string(),
+                                ),
+                            },
+                        );
                         continue;
                     };
                     let navigator =
@@ -541,13 +549,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         {
                             Ok(v) => v,
                             Err(_) => {
-                                self.pending_events.push(Event::ClipboardTextUnavailable {
-                                    token,
-                                    message: Some(
-                                        "navigator is unavailable for clipboard read".to_string(),
-                                    ),
-                                });
-                                window.request_redraw();
+                                self.push_pending_event_and_request_redraw(
+                                    window,
+                                    Event::ClipboardTextUnavailable {
+                                        token,
+                                        message: Some(
+                                            "navigator is unavailable for clipboard read"
+                                                .to_string(),
+                                        ),
+                                    },
+                                );
                                 continue;
                             }
                         };
@@ -555,11 +566,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     {
                         Ok(v) => v,
                         Err(_) => {
-                            self.pending_events.push(Event::ClipboardTextUnavailable {
-                                token,
-                                message: Some("navigator.clipboard is unavailable".to_string()),
-                            });
-                            window.request_redraw();
+                            self.push_pending_event_and_request_redraw(
+                                window,
+                                Event::ClipboardTextUnavailable {
+                                    token,
+                                    message: Some("navigator.clipboard is unavailable".to_string()),
+                                },
+                            );
                             continue;
                         }
                     };
@@ -569,13 +582,15 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     {
                         Some(v) => v,
                         None => {
-                            self.pending_events.push(Event::ClipboardTextUnavailable {
-                                token,
-                                message: Some(
-                                    "navigator.clipboard.readText is unavailable".to_string(),
-                                ),
-                            });
-                            window.request_redraw();
+                            self.push_pending_event_and_request_redraw(
+                                window,
+                                Event::ClipboardTextUnavailable {
+                                    token,
+                                    message: Some(
+                                        "navigator.clipboard.readText is unavailable".to_string(),
+                                    ),
+                                },
+                            );
                             continue;
                         }
                     };
@@ -587,25 +602,30 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         Ok(v) => match v.dyn_into::<Promise>() {
                             Ok(p) => p,
                             Err(_) => {
-                                self.pending_events.push(Event::ClipboardTextUnavailable {
-                                    token,
-                                    message: Some(
-                                        "navigator.clipboard.readText did not return a Promise"
-                                            .to_string(),
-                                    ),
-                                });
-                                window.request_redraw();
+                                self.push_pending_event_and_request_redraw(
+                                    window,
+                                    Event::ClipboardTextUnavailable {
+                                        token,
+                                        message: Some(
+                                            "navigator.clipboard.readText did not return a Promise"
+                                                .to_string(),
+                                        ),
+                                    },
+                                );
                                 continue;
                             }
                         },
                         Err(_) => {
-                            self.pending_events.push(Event::ClipboardTextUnavailable {
-                                token,
-                                message: Some(
-                                    "navigator.clipboard.readText threw synchronously".to_string(),
-                                ),
-                            });
-                            window.request_redraw();
+                            self.push_pending_event_and_request_redraw(
+                                window,
+                                Event::ClipboardTextUnavailable {
+                                    token,
+                                    message: Some(
+                                        "navigator.clipboard.readText threw synchronously"
+                                            .to_string(),
+                                    ),
+                                },
+                            );
                             continue;
                         }
                     };
@@ -639,7 +659,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     }
                     self.pending_events
                         .push(Event::PrimarySelectionTextUnavailable { token });
-                    window.request_redraw();
+                    self.request_sink_redraw(window);
                 }
                 Effect::WindowMetricsSetInsets {
                     window: target_window,
@@ -682,7 +702,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         },
                     );
                     if changed {
-                        window.request_redraw();
+                        self.request_sink_redraw(window);
                     }
                 }
                 Effect::ImageRegisterRgba8 {
@@ -754,13 +774,15 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         },
                     );
 
-                    self.pending_events.push(Event::ImageRegistered {
-                        token,
-                        image,
-                        width,
-                        height,
-                    });
-                    window.request_redraw();
+                    self.push_pending_event_and_request_redraw(
+                        window,
+                        Event::ImageRegistered {
+                            token,
+                            image,
+                            width,
+                            height,
+                        },
+                    );
                 }
                 Effect::ImageUpdateRgba8 {
                     window: target_window,
@@ -956,7 +978,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 Effect::ImageUnregister { image } => {
                     self.uploaded_images.remove(&image);
                     if gfx.renderer.unregister_image(image) {
-                        window.request_redraw();
+                        self.request_sink_redraw(window);
                     }
                 }
                 Effect::ViewportInput(event) => {
@@ -980,40 +1002,48 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         .cloned()
                         .unwrap_or_default();
                     if !caps.shell.share_sheet {
-                        self.pending_events.push(Event::ShareSheetCompleted {
-                            token,
-                            outcome: fret_core::ShareSheetOutcome::Unavailable,
-                        });
-                        window.request_redraw();
+                        self.push_pending_event_and_request_redraw(
+                            window,
+                            Event::ShareSheetCompleted {
+                                token,
+                                outcome: fret_core::ShareSheetOutcome::Unavailable,
+                            },
+                        );
                         continue;
                     }
 
                     let data = match share_items_to_web_share_data(&items) {
                         Ok(Some(v)) => v,
                         Ok(None) => {
-                            self.pending_events.push(Event::ShareSheetCompleted {
-                                token,
-                                outcome: fret_core::ShareSheetOutcome::Unavailable,
-                            });
-                            window.request_redraw();
+                            self.push_pending_event_and_request_redraw(
+                                window,
+                                Event::ShareSheetCompleted {
+                                    token,
+                                    outcome: fret_core::ShareSheetOutcome::Unavailable,
+                                },
+                            );
                             continue;
                         }
                         Err(err) => {
-                            self.pending_events.push(Event::ShareSheetCompleted {
-                                token,
-                                outcome: share_outcome_from_error(err),
-                            });
-                            window.request_redraw();
+                            self.push_pending_event_and_request_redraw(
+                                window,
+                                Event::ShareSheetCompleted {
+                                    token,
+                                    outcome: share_outcome_from_error(err),
+                                },
+                            );
                             continue;
                         }
                     };
 
                     let Some(web_window) = web_sys::window() else {
-                        self.pending_events.push(Event::ShareSheetCompleted {
-                            token,
-                            outcome: fret_core::ShareSheetOutcome::Unavailable,
-                        });
-                        window.request_redraw();
+                        self.push_pending_event_and_request_redraw(
+                            window,
+                            Event::ShareSheetCompleted {
+                                token,
+                                outcome: fret_core::ShareSheetOutcome::Unavailable,
+                            },
+                        );
                         continue;
                     };
 
@@ -1021,11 +1051,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         match Reflect::get(web_window.as_ref(), &JsValue::from_str("navigator")) {
                             Ok(v) => v,
                             Err(_) => {
-                                self.pending_events.push(Event::ShareSheetCompleted {
-                                    token,
-                                    outcome: fret_core::ShareSheetOutcome::Unavailable,
-                                });
-                                window.request_redraw();
+                                self.push_pending_event_and_request_redraw(
+                                    window,
+                                    Event::ShareSheetCompleted {
+                                        token,
+                                        outcome: fret_core::ShareSheetOutcome::Unavailable,
+                                    },
+                                );
                                 continue;
                             }
                         };
@@ -1036,11 +1068,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     {
                         Some(v) => v,
                         None => {
-                            self.pending_events.push(Event::ShareSheetCompleted {
-                                token,
-                                outcome: fret_core::ShareSheetOutcome::Unavailable,
-                            });
-                            window.request_redraw();
+                            self.push_pending_event_and_request_redraw(
+                                window,
+                                Event::ShareSheetCompleted {
+                                    token,
+                                    outcome: fret_core::ShareSheetOutcome::Unavailable,
+                                },
+                            );
                             continue;
                         }
                     };
@@ -1054,11 +1088,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         if let Ok(v) = can_share_fn.call1(&navigator, data.as_ref())
                             && v.as_bool() == Some(false)
                         {
-                            self.pending_events.push(Event::ShareSheetCompleted {
-                                token,
-                                outcome: fret_core::ShareSheetOutcome::Unavailable,
-                            });
-                            window.request_redraw();
+                            self.push_pending_event_and_request_redraw(
+                                window,
+                                Event::ShareSheetCompleted {
+                                    token,
+                                    outcome: fret_core::ShareSheetOutcome::Unavailable,
+                                },
+                            );
                             continue;
                         }
                     }
@@ -1069,23 +1105,27 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         Ok(v) => match v.dyn_into::<Promise>() {
                             Ok(p) => p,
                             Err(_) => {
-                                self.pending_events.push(Event::ShareSheetCompleted {
-                                    token,
-                                    outcome: fret_core::ShareSheetOutcome::Failed {
-                                        message: "navigator.share did not return a Promise"
-                                            .to_string(),
+                                self.push_pending_event_and_request_redraw(
+                                    window,
+                                    Event::ShareSheetCompleted {
+                                        token,
+                                        outcome: fret_core::ShareSheetOutcome::Failed {
+                                            message: "navigator.share did not return a Promise"
+                                                .to_string(),
+                                        },
                                     },
-                                });
-                                window.request_redraw();
+                                );
                                 continue;
                             }
                         },
                         Err(err) => {
-                            self.pending_events.push(Event::ShareSheetCompleted {
-                                token,
-                                outcome: share_outcome_from_error(err),
-                            });
-                            window.request_redraw();
+                            self.push_pending_event_and_request_redraw(
+                                window,
+                                Event::ShareSheetCompleted {
+                                    token,
+                                    outcome: share_outcome_from_error(err),
+                                },
+                            );
                             continue;
                         }
                     };
@@ -1160,31 +1200,17 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 },
                 Effect::Redraw(target) => {
                     if target == self.app_window {
-                        window.request_redraw();
-                        self.app.with_global_mut_untracked(
-                            fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
-                            |store, _app| {
-                                store.record(
-                                    self.app_window,
-                                    self.frame_id,
-                                    fret_runtime::RunnerFrameDriveReason::EffectRedraw,
-                                );
-                            },
+                        self.request_redraw_with_reason(
+                            window,
+                            fret_runtime::RunnerFrameDriveReason::EffectRedraw,
                         );
                     }
                 }
                 Effect::RequestAnimationFrame(target) => {
                     if target == self.app_window {
-                        window.request_redraw();
-                        self.app.with_global_mut_untracked(
-                            fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
-                            |store, _app| {
-                                store.record(
-                                    self.app_window,
-                                    self.frame_id,
-                                    fret_runtime::RunnerFrameDriveReason::EffectRequestAnimationFrame,
-                                );
-                            },
+                        self.raf_windows.request(target);
+                        self.record_frame_drive_reason(
+                            fret_runtime::RunnerFrameDriveReason::EffectRequestAnimationFrame,
                         );
                     }
                 }
@@ -1197,9 +1223,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     }
 
                     let Some(payload) = self.diag_incoming_open_payloads.get(&token) else {
-                        self.pending_events
-                            .push(Event::IncomingOpenUnavailable { token });
-                        window.request_redraw();
+                        self.push_pending_event_and_request_redraw(
+                            window,
+                            Event::IncomingOpenUnavailable { token },
+                        );
                         continue;
                     };
 
@@ -1258,16 +1285,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         texts.push(text.clone());
                     }
 
-                    self.pending_events.push(Event::IncomingOpenData(
-                        fret_core::IncomingOpenDataEvent {
+                    self.push_pending_event_and_request_redraw(
+                        window,
+                        Event::IncomingOpenData(fret_core::IncomingOpenDataEvent {
                             token,
                             files,
                             texts,
                             errors,
                             limits: include_limits.then_some(limits),
-                        },
-                    ));
-                    window.request_redraw();
+                        }),
+                    );
                 }
                 Effect::IncomingOpenReadAllWithLimits {
                     window: target_window,
@@ -1279,9 +1306,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     }
 
                     let Some(payload) = self.diag_incoming_open_payloads.get(&token) else {
-                        self.pending_events
-                            .push(Event::IncomingOpenUnavailable { token });
-                        window.request_redraw();
+                        self.push_pending_event_and_request_redraw(
+                            window,
+                            Event::IncomingOpenUnavailable { token },
+                        );
                         continue;
                     };
 
@@ -1340,16 +1368,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         texts.push(text.clone());
                     }
 
-                    self.pending_events.push(Event::IncomingOpenData(
-                        fret_core::IncomingOpenDataEvent {
+                    self.push_pending_event_and_request_redraw(
+                        window,
+                        Event::IncomingOpenData(fret_core::IncomingOpenDataEvent {
                             token,
                             files,
                             texts,
                             errors,
                             limits: include_limits.then_some(limits),
-                        },
-                    ));
-                    window.request_redraw();
+                        }),
+                    );
                 }
                 Effect::IncomingOpenRelease { token } => {
                     self.diag_incoming_open_payloads.remove(&token);

@@ -22,7 +22,7 @@ pub(in super::super) fn record_path_clip_mask_pass(
     let target_size = mask_pass.dst_size;
 
     let (pass_target_texture, pass_target_view) = frame_targets.ensure_target_with_texture(
-        &mut renderer.intermediate_pool,
+        &mut renderer.intermediate_state.pool,
         device,
         mask_pass.dst,
         target_size,
@@ -102,7 +102,7 @@ pub(in super::super) fn record_path_clip_mask_pass(
     }
 
     renderer.clip_path_mask_cache.store_from(
-        &mut renderer.intermediate_pool,
+        &mut renderer.intermediate_state.pool,
         device,
         encoder,
         mask_pass.cache_key,

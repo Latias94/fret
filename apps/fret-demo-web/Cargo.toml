@@ -25,6 +25,8 @@ ui-gallery-material3 = ["fret-ui-gallery/gallery-material3"]
 ui-gallery-full = ["fret-ui-gallery/gallery-full"]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+fret-app = { path = "../../crates/fret-app" }
+fret-bootstrap = { path = "../../ecosystem/fret-bootstrap" }
 fret-examples = { path = "../fret-examples", default-features = false }
 fret-ui-gallery = { path = "../fret-ui-gallery", default-features = false }
 fret-router = { path = "../../ecosystem/fret-router", features = ["web-history", "hash-routing"] }

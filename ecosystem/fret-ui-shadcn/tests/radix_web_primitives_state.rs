@@ -1744,7 +1744,7 @@ fn radix_web_popover_open_close_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::Popover::new(open.clone()).into_element(
+        fret_ui_shadcn::Popover::from_open(open.clone()).into_element_with(
             cx,
             |cx| {
                 fret_ui_shadcn::Button::new("Open Popover")
@@ -1966,7 +1966,7 @@ fn radix_web_tooltip_hover_show_hide_matches_fret() {
     let build = |cx: &mut ElementContext<'_, App>| {
         let trigger = fret_ui_shadcn::Button::new("Hover").into_element(cx);
         let content = fret_ui_shadcn::TooltipContent::new(vec![cx.text("Tip")]).into_element(cx);
-        fret_ui_shadcn::Tooltip::new(trigger, content)
+        fret_ui_shadcn::Tooltip::new(cx, trigger, content)
             .open_delay_frames(0)
             .close_delay_frames(0)
             .into_element(cx)
@@ -2104,7 +2104,7 @@ fn radix_web_hover_card_hover_matches_fret() {
             },
         );
 
-        fret_ui_shadcn::HoverCard::new(trigger, content)
+        fret_ui_shadcn::HoverCard::new(cx, trigger, content)
             .open(Some(open.clone()))
             .open_delay_frames(0)
             .close_delay_frames(0)

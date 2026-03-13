@@ -146,19 +146,7 @@ struct TooltipOpenBroadcastState {
 pub fn tooltip_last_pointer_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> Model<Option<Point>> {
-    #[derive(Default)]
-    struct State {
-        model: Option<Model<Option<Point>>>,
-    }
-
-    let existing = cx.with_state(State::default, |st| st.model.clone());
-    if let Some(model) = existing {
-        return model;
-    }
-
-    let model = cx.app.models_mut().insert(None);
-    cx.with_state(State::default, |st| st.model = Some(model.clone()));
-    model
+    cx.local_model(|| None::<Point>)
 }
 
 #[derive(Clone)]
@@ -180,27 +168,14 @@ pub struct TooltipTriggerEventModels {
 pub fn tooltip_trigger_event_models<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> TooltipTriggerEventModels {
-    #[derive(Default)]
-    struct State {
-        models: Option<TooltipTriggerEventModels>,
-    }
-
-    let existing = cx.with_state(State::default, |st| st.models.clone());
-    if let Some(models) = existing {
-        return models;
-    }
-
-    let models = TooltipTriggerEventModels {
-        has_pointer_move_opened: cx.app.models_mut().insert(false),
+    TooltipTriggerEventModels {
+        has_pointer_move_opened: cx.local_model_keyed("has_pointer_move_opened", || false),
         pointer_transit_geometry: pointer_transit_geometry_model(cx),
-        suppress_hover_open: cx.app.models_mut().insert(false),
-        suppress_focus_open: cx.app.models_mut().insert(false),
-        close_requested: cx.app.models_mut().insert(false),
-        open: cx.app.models_mut().insert(false),
-    };
-
-    cx.with_state(State::default, |st| st.models = Some(models.clone()));
-    models
+        suppress_hover_open: cx.local_model_keyed("suppress_hover_open", || false),
+        suppress_focus_open: cx.local_model_keyed("suppress_focus_open", || false),
+        close_requested: cx.local_model_keyed("close_requested", || false),
+        open: cx.local_model_keyed("open", || false),
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy)]

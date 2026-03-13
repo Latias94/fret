@@ -286,11 +286,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .saturating_add(applied_upload_bytes);
 
         if self.config.streaming_update_ack_enabled {
-            self.pending_events
-                .push(Event::ImageUpdateApplied { token, image });
+            self.push_pending_event_and_request_redraw(
+                window,
+                Event::ImageUpdateApplied { token, image },
+            );
+            return;
         }
 
-        window.request_redraw();
+        self.request_sink_redraw(window);
     }
 
     pub(super) fn try_apply_streaming_image_update_nv12_gpu(
@@ -533,11 +536,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .saturating_add(rect.w.saturating_mul(rect.h).saturating_mul(4) as u64);
 
         if self.config.streaming_update_ack_enabled {
-            self.pending_events
-                .push(Event::ImageUpdateApplied { token, image });
+            self.push_pending_event_and_request_redraw(
+                window,
+                Event::ImageUpdateApplied { token, image },
+            );
+            return true;
         }
 
-        window.request_redraw();
+        self.request_sink_redraw(window);
         true
     }
 }

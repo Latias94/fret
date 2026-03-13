@@ -18,7 +18,7 @@ pub(in crate::ui) fn preview_inspector_torture(
         .unwrap_or(0)
         .clamp(0, 4096);
 
-    let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+    let scroll_handle = cx.slot_state(VirtualListScrollHandle::new, |h| h.clone());
 
     let list_layout = fret_ui::element::LayoutStyle {
         size: fret_ui::element::SizeStyle {

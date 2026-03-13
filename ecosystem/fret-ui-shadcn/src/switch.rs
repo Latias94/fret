@@ -8,6 +8,7 @@ use fret_ui::element::{
     SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
@@ -757,15 +758,12 @@ impl Switch {
     }
 }
 
-pub fn switch<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<bool>) -> AnyElement {
-    Switch::new(model).into_element(cx)
+pub fn switch<H: UiHost>(model: Model<bool>) -> impl IntoUiElement<H> + use<H> {
+    Switch::new(model)
 }
 
-pub fn switch_opt<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    model: Model<Option<bool>>,
-) -> AnyElement {
-    Switch::new_opt(model).into_element(cx)
+pub fn switch_opt<H: UiHost>(model: Model<Option<bool>>) -> impl IntoUiElement<H> + use<H> {
+    Switch::new_opt(model)
 }
 
 #[cfg(test)]

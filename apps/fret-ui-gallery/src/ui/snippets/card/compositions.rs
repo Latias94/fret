@@ -8,17 +8,11 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn cell(
-    cx: &mut UiCx<'_>,
-    test_id: &'static str,
-    card: shadcn::Card,
-) -> impl IntoUiElement<fret_app::App> + use<> {
-    let card = card
-        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(260.0)))
-        .into_element(cx)
-        .test_id(test_id);
-
-    ui::v_flex(move |_cx| vec![card])
+fn cell<T>(test_id: &'static str, card: T) -> impl IntoUiElement<fret_app::App> + use<T>
+where
+    T: IntoUiElement<fret_app::App>,
+{
+    ui::v_flex(move |cx| vec![card.into_element(cx).test_id(test_id)])
         .w_full()
         .min_w_0()
         .items_start()
@@ -40,124 +34,169 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         },
         |cx| {
             let content_only = {
-                let card = shadcn::Card::new(vec![
-                    shadcn::CardContent::new(vec![
-                        ui::text("Content only.").text_sm().into_element(cx),
-                    ])
-                    .into_element(cx),
-                ]);
-                cell(cx, "ui-gallery-card-compositions-content-only", card).into_element(cx)
+                cell(
+                    "ui-gallery-card-compositions-content-only",
+                    shadcn::card(|cx| {
+                        ui::children![
+                            cx;
+                            shadcn::card_content(
+                                |cx| ui::children![cx; ui::text("Content only.").text_sm()],
+                            ),
+                        ]
+                    })
+                    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(260.0))),
+                )
+                .into_element(cx)
             };
 
             let header_only = {
-                let card = shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Header only").into_element(cx),
-                        shadcn::CardDescription::new(
-                            "This card has a header and a description. No content/footer.",
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ]);
-                cell(cx, "ui-gallery-card-compositions-header-only", card).into_element(cx)
+                cell(
+                    "ui-gallery-card-compositions-header-only",
+                    shadcn::card(|cx| {
+                        ui::children![
+                            cx;
+                            shadcn::card_header(|cx| {
+                                ui::children![
+                                    cx;
+                                    shadcn::card_title("Header only"),
+                                    shadcn::card_description(
+                                        "This card has a header and a description. No content/footer.",
+                                    ),
+                                ]
+                            }),
+                        ]
+                    })
+                    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(260.0))),
+                )
+                .into_element(cx)
             };
 
             let header_and_content = {
-                let card = shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Header + Content").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text("CardContent body.").text_sm().into_element(cx),
-                    ])
-                    .into_element(cx),
-                ]);
-                cell(cx, "ui-gallery-card-compositions-header-content", card).into_element(cx)
+                cell(
+                    "ui-gallery-card-compositions-header-content",
+                    shadcn::card(|cx| {
+                        ui::children![
+                            cx;
+                            shadcn::card_header(
+                                |cx| ui::children![cx; shadcn::card_title("Header + Content")],
+                            ),
+                            shadcn::card_content(
+                                |cx| ui::children![cx; ui::text("CardContent body.").text_sm()],
+                            ),
+                        ]
+                    })
+                    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(260.0))),
+                )
+                .into_element(cx)
             };
 
             let footer_only = {
-                let card = shadcn::Card::new(vec![
-                    shadcn::CardFooter::new(vec![
-                        ui::text("Footer only.").text_sm().into_element(cx),
-                    ])
-                    .into_element(cx),
-                ]);
-                cell(cx, "ui-gallery-card-compositions-footer-only", card).into_element(cx)
+                cell(
+                    "ui-gallery-card-compositions-footer-only",
+                    shadcn::card(|cx| {
+                        ui::children![
+                            cx;
+                            shadcn::card_footer(
+                                |cx| ui::children![cx; ui::text("Footer only.").text_sm()],
+                            ),
+                        ]
+                    })
+                    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(260.0))),
+                )
+                .into_element(cx)
             };
 
             let header_and_footer = {
-                let card = shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Header + Footer").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardFooter::new(vec![
-                        ui::text("Footer content.").text_sm().into_element(cx),
-                    ])
-                    .into_element(cx),
-                ]);
-                cell(cx, "ui-gallery-card-compositions-header-footer", card).into_element(cx)
+                cell(
+                    "ui-gallery-card-compositions-header-footer",
+                    shadcn::card(|cx| {
+                        ui::children![
+                            cx;
+                            shadcn::card_header(
+                                |cx| ui::children![cx; shadcn::card_title("Header + Footer")],
+                            ),
+                            shadcn::card_footer(
+                                |cx| ui::children![cx; ui::text("Footer content.").text_sm()],
+                            ),
+                        ]
+                    })
+                    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(260.0))),
+                )
+                .into_element(cx)
             };
 
             let content_and_footer = {
-                let card = shadcn::Card::new(vec![
-                    shadcn::CardContent::new(vec![
-                        ui::text("Body content.").text_sm().into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardFooter::new(vec![
-                        ui::text("Footer content.").text_sm().into_element(cx),
-                    ])
-                    .into_element(cx),
-                ]);
-                cell(cx, "ui-gallery-card-compositions-content-footer", card).into_element(cx)
+                cell(
+                    "ui-gallery-card-compositions-content-footer",
+                    shadcn::card(|cx| {
+                        ui::children![
+                            cx;
+                            shadcn::card_content(
+                                |cx| ui::children![cx; ui::text("Body content.").text_sm()],
+                            ),
+                            shadcn::card_footer(
+                                |cx| ui::children![cx; ui::text("Footer content.").text_sm()],
+                            ),
+                        ]
+                    })
+                    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(260.0))),
+                )
+                .into_element(cx)
             };
 
             let header_content_footer = {
-                let card = shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Header + Content + Footer").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text("CardContent body.").text_sm().into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardFooter::new(vec![
-                        ui::text("Footer content.").text_sm().into_element(cx),
-                    ])
-                    .into_element(cx),
-                ]);
                 cell(
-                    cx,
                     "ui-gallery-card-compositions-header-content-footer",
-                    card,
+                    shadcn::card(|cx| {
+                        ui::children![
+                            cx;
+                            shadcn::card_header(|cx| {
+                                ui::children![
+                                    cx;
+                                    shadcn::card_title("Header + Content + Footer"),
+                                ]
+                            }),
+                            shadcn::card_content(
+                                |cx| ui::children![cx; ui::text("CardContent body.").text_sm()],
+                            ),
+                            shadcn::card_footer(
+                                |cx| ui::children![cx; ui::text("Footer content.").text_sm()],
+                            ),
+                        ]
+                    })
+                    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(260.0))),
                 )
                 .into_element(cx)
             };
 
             let bordered_sections = {
-                let card = shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Bordered Sections").into_element(cx),
-                    ])
-                    .border_bottom(true)
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text("Header/footer borders can be enabled independently.")
-                            .text_sm()
-                            .into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardFooter::new(vec![
-                        ui::text("Footer with Border").text_sm().into_element(cx),
-                    ])
-                    .border_top(true)
-                    .into_element(cx),
-                ]);
-                cell(cx, "ui-gallery-card-compositions-bordered-sections", card).into_element(cx)
+                cell(
+                    "ui-gallery-card-compositions-bordered-sections",
+                    shadcn::card(|cx| {
+                        ui::children![
+                            cx;
+                            shadcn::card_header(
+                                |cx| ui::children![cx; shadcn::card_title("Bordered Sections")],
+                            )
+                            .border_bottom(true),
+                            shadcn::card_content(|cx| {
+                                ui::children![
+                                    cx;
+                                    ui::text(
+                                        "Header/footer borders can be enabled independently.",
+                                    )
+                                    .text_sm(),
+                                ]
+                            }),
+                            shadcn::card_footer(
+                                |cx| ui::children![cx; ui::text("Footer with Border").text_sm()],
+                            )
+                            .border_top(true),
+                        ]
+                    })
+                    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(260.0))),
+                )
+                .into_element(cx)
             };
 
             vec![

@@ -1,6 +1,7 @@
 use super::*;
 use fret::UiCx;
 use fret_ui_kit::IntoUiElement;
+use fret_ui_shadcn::facade as shadcn;
 
 pub(in crate::ui) struct DocSection {
     pub title: &'static str,
@@ -175,7 +176,7 @@ pub(in crate::ui) fn render_doc_page(
         .into_element(cx)
 }
 
-#[cfg(feature = "gallery-dev")]
+#[cfg(any(feature = "gallery-dev", feature = "gallery-web-ime-harness"))]
 pub(in crate::ui) fn wrap_preview_page(
     cx: &mut UiCx<'_>,
     intro: Option<&'static str>,
@@ -274,6 +275,54 @@ pub(in crate::ui) fn muted_full_width<H: UiHost>(
         align: fret_core::TextAlign::Start,
         ink_overflow: fret_ui::element::TextInkOverflow::None,
     })
+}
+
+#[allow(dead_code)]
+pub(in crate::ui) fn text_table<const N: usize>(
+    cx: &mut UiCx<'_>,
+    headers: [&'static str; N],
+    rows: impl IntoIterator<Item = [&'static str; N]>,
+    border_bottom: bool,
+) -> AnyElement {
+    let rows = rows.into_iter().collect::<Vec<_>>();
+
+    shadcn::table(move |cx| {
+        let header = shadcn::table_header(move |_cx| {
+            let mut header = shadcn::table_row(N as u16, move |_cx| {
+                headers
+                    .into_iter()
+                    .map(shadcn::table_head)
+                    .collect::<Vec<_>>()
+            });
+            if border_bottom {
+                header = header.border_bottom(true);
+            }
+            vec![header]
+        })
+        .into_element(cx);
+
+        let body = shadcn::table_body(move |_cx| {
+            rows.into_iter()
+                .map(move |cells| {
+                    let mut row = shadcn::table_row(N as u16, move |_cx| {
+                        cells
+                            .into_iter()
+                            .map(|cell| shadcn::table_cell(ui::text(cell)))
+                            .collect::<Vec<_>>()
+                    });
+                    if border_bottom {
+                        row = row.border_bottom(true);
+                    }
+                    row
+                })
+                .collect::<Vec<_>>()
+        })
+        .into_element(cx);
+
+        vec![header, body]
+    })
+    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx)
 }
 
 fn muted_inline<H: UiHost>(

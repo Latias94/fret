@@ -87,17 +87,21 @@ pub fn render<H: UiHost>(
         .test_id("ui-gallery-material3-autocomplete")
         .into_element(cx);
 
-    let outlined_card = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Outlined").into_element(cx),
-            shadcn::CardDescription::new(
-                "Combobox-style: focus stays on the input; the active option is exposed via active-descendant.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new(vec![outlined]).into_element(cx),
-    ])
+    let outlined_card = shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Outlined"),
+                    shadcn::card_description(
+                        "Combobox-style: focus stays on the input; the active option is exposed via active-descendant.",
+                    ),
+                ]
+            }),
+            shadcn::card_content(move |_cx| vec![outlined]),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx);
 
@@ -115,17 +119,21 @@ pub fn render<H: UiHost>(
         .test_id("ui-gallery-material3-autocomplete-filled")
         .into_element(cx);
 
-    let filled_card = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Filled").into_element(cx),
-            shadcn::CardDescription::new(
-                "Filled container + active indicator outcomes (token-driven).",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new(vec![filled]).into_element(cx),
-    ])
+    let filled_card = shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Filled"),
+                    shadcn::card_description(
+                        "Filled container + active indicator outcomes (token-driven).",
+                    ),
+                ]
+            }),
+            shadcn::card_content(move |_cx| vec![filled]),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx);
 
@@ -145,17 +153,21 @@ pub fn render<H: UiHost>(
         .test_id("ui-gallery-material3-exposed-dropdown")
         .into_element(cx);
 
-    let exposed_card = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Exposed dropdown (composition)").into_element(cx),
-            shadcn::CardDescription::new(
-                "Compose-style: a committed selection model drives the closed display, while the query stays editable while focused.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new(vec![exposed]).into_element(cx),
-    ])
+    let exposed_card = shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Exposed dropdown (composition)"),
+                    shadcn::card_description(
+                        "Compose-style: a committed selection model drives the closed display, while the query stays editable while focused.",
+                    ),
+                ]
+            }),
+            shadcn::card_content(move |_cx| vec![exposed]),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx);
 

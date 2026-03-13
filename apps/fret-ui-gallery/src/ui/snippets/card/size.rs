@@ -11,29 +11,38 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         .max_w(MetricRef::Px(Px(384.0)))
         .min_w_0();
 
-    let card = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Small Card").into_element(cx),
-            shadcn::CardDescription::new("This card uses the small size variant.")
-                .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new(vec![ui::text(
-            "The card component supports a size prop that can be set to \"sm\" for a more compact appearance.",
-        )
-        .text_sm()
-        .into_element(cx)])
-        .into_element(cx),
-        shadcn::CardFooter::new(vec![
-            shadcn::Button::new("Action")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .refine_layout(LayoutRefinement::default().w_full())
-                .into_element(cx)
-                .test_id("ui-gallery-card-size-sm-action"),
-        ])
-        .into_element(cx),
-    ])
+    let card = shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Small Card"),
+                    shadcn::card_description("This card uses the small size variant."),
+                ]
+            }),
+            shadcn::card_content(|cx| {
+                ui::children![
+                    cx;
+                    ui::text(
+                        "The card component supports a size prop that can be set to \"sm\" for a more compact appearance.",
+                    )
+                    .text_sm(),
+                ]
+            }),
+            shadcn::card_footer(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::Button::new("Action")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .refine_layout(LayoutRefinement::default().w_full())
+                        .ui()
+                        .test_id("ui-gallery-card-size-sm-action"),
+                ]
+            }),
+        ]
+    })
     .size(shadcn::CardSize::Sm)
     .refine_layout(max_w_sm)
     .into_element(cx)

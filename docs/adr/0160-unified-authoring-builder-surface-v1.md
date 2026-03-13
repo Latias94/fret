@@ -98,7 +98,7 @@ exported by `fret-ui-shadcn`:
 Examples (illustrative):
 
 ```rust
-Popover::new(open)
+Popover::from_open(open)
     .ui()
     .into_element(cx, |cx| Button::new("Trigger").into_element(cx), |cx| cx.text("Panel"));
 

@@ -14,13 +14,14 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 "This tooltip demonstrates long content wrapping at the max width boundary without collapsing to min-content.",
             )
             .test_id("ui-gallery-tooltip-long-content-text");
+            let content = shadcn::TooltipContent::new(vec![text]);
 
             vec![shadcn::Tooltip::new(
+                cx,
                 shadcn::Button::new("Hover long")
                     .variant(shadcn::ButtonVariant::Outline)
-                    .test_id("ui-gallery-tooltip-long-content-trigger")
-                    .into_element(cx),
-                shadcn::TooltipContent::new(vec![text]).into_element(cx),
+                    .test_id("ui-gallery-tooltip-long-content-trigger"),
+                content,
             )
             .arrow(true)
             .side(shadcn::TooltipSide::Top)

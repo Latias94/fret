@@ -13,17 +13,17 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .variant(shadcn::ButtonVariant::Outline)
                 .test_id("ui-gallery-tooltip-focus-start")
                 .into_element(cx);
+            let focus_content = shadcn::TooltipContent::new(vec![
+                shadcn::TooltipContent::text(cx, "Opens on keyboard focus")
+                    .test_id("ui-gallery-tooltip-focus-text"),
+            ]);
 
             let focus_tooltip = shadcn::Tooltip::new(
+                cx,
                 shadcn::Button::new("Focus Trigger")
                     .variant(shadcn::ButtonVariant::Outline)
-                    .test_id("ui-gallery-tooltip-focus-trigger")
-                    .into_element(cx),
-                shadcn::TooltipContent::new(vec![
-                    shadcn::TooltipContent::text(cx, "Opens on keyboard focus")
-                        .test_id("ui-gallery-tooltip-focus-text"),
-                ])
-                .into_element(cx),
+                    .test_id("ui-gallery-tooltip-focus-trigger"),
+                focus_content,
             )
             .arrow(true)
             .arrow_test_id("ui-gallery-tooltip-focus-arrow")

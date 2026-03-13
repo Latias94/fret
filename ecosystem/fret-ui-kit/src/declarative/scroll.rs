@@ -13,6 +13,7 @@ use crate::declarative::style;
 ///
 /// Fret treats scrolling as an explicit element (not a boolean overflow flag). This wrapper exists
 /// to match gpui/tailwind ergonomics while keeping the runtime contract explicit.
+#[track_caller]
 pub fn overflow_scroll<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutRefinement,
@@ -35,7 +36,7 @@ where
     };
 
     cx.stack_props(StackProps { layout }, move |cx| {
-        let handle = cx.with_state(ScrollHandle::default, |h| h.clone());
+        let handle = cx.slot_state(ScrollHandle::default, |h| h.clone());
         let mut scroll_layout = LayoutStyle::default();
         scroll_layout.size.width = Length::Fill;
         scroll_layout.size.height = Length::Fill;
@@ -302,6 +303,7 @@ where
     })
 }
 
+#[track_caller]
 pub fn overflow_scrollbar<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutRefinement,
@@ -317,6 +319,7 @@ where
 ///
 /// Note: `Scroll` does not lay out multiple children; if you pass a `Vec` of siblings they will
 /// overlap. Prefer this helper (or `*_vstack`) to make the intended structure explicit.
+#[track_caller]
 pub fn overflow_scroll_content<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutRefinement,
@@ -327,6 +330,7 @@ pub fn overflow_scroll_content<H: UiHost>(
 }
 
 /// Horizontal scrolling with a single content root.
+#[track_caller]
 pub fn overflow_scroll_x_content<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutRefinement,
@@ -346,7 +350,7 @@ pub fn overflow_scroll_x_content<H: UiHost>(
     };
 
     cx.stack_props(StackProps { layout }, move |cx| {
-        let handle = cx.with_state(ScrollHandle::default, |h| h.clone());
+        let handle = cx.slot_state(ScrollHandle::default, |h| h.clone());
         let mut scroll_layout = LayoutStyle::default();
         scroll_layout.size.width = Length::Fill;
         // For X-only scrolling, the common expectation is "height = content height" (e.g. code

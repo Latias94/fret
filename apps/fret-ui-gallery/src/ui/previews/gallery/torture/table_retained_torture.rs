@@ -25,29 +25,8 @@ pub(in crate::ui) fn preview_table_retained_torture(
         mem_mb: u32,
     }
 
-    #[derive(Default)]
-    struct TableTortureModels {
-        data: Option<Arc<[TableRow]>>,
-        columns: Option<Arc<[ColumnDef<TableRow>]>>,
-        state: Option<Model<TableState>>,
-        keep_pinned_rows: Option<Model<bool>>,
-    }
-
-    let (data, columns, state, keep_pinned_rows) =
-        cx.with_state(TableTortureModels::default, |st| {
-            (
-                st.data.clone(),
-                st.columns.clone(),
-                st.state.clone(),
-                st.keep_pinned_rows.clone(),
-            )
-        });
-
-    let (data, columns, state, keep_pinned_rows) = match (data, columns, state, keep_pinned_rows) {
-        (Some(data), Some(columns), Some(state), Some(keep_pinned_rows)) => {
-            (data, columns, state, keep_pinned_rows)
-        }
-        _ => {
+    let (data, columns) = cx.slot_state(
+        || {
             let mut rows: Vec<TableRow> = Vec::with_capacity(50_000);
             for i in 0..50_000u64 {
                 rows.push(TableRow {
@@ -76,19 +55,13 @@ pub(in crate::ui) fn preview_table_retained_torture(
             ];
             let columns: Arc<[ColumnDef<TableRow>]> = Arc::from(cols);
 
-            let state = cx.app.models_mut().insert(TableState::default());
-            let keep_pinned_rows = cx.app.models_mut().insert(true);
+            (data, columns)
+        },
+        |(data, columns)| (data.clone(), columns.clone()),
+    );
 
-            cx.with_state(TableTortureModels::default, |st| {
-                st.data = Some(data.clone());
-                st.columns = Some(columns.clone());
-                st.state = Some(state.clone());
-                st.keep_pinned_rows = Some(keep_pinned_rows.clone());
-            });
-
-            (data, columns, state, keep_pinned_rows)
-        }
-    };
+    let state = cx.local_model_keyed("state", TableState::default);
+    let keep_pinned_rows = cx.local_model_keyed("keep_pinned_rows", || true);
 
     let sorting: Vec<fret_ui_kit::headless::table::SortSpec> = cx
         .app
@@ -285,7 +258,7 @@ pub(in crate::ui) fn preview_table_retained_torture(
 
     let table =
         cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
-            let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+            let scroll_handle = cx.slot_state(VirtualListScrollHandle::new, |h| h.clone());
 
             let state_revision = cx.app.models().revision(&state).unwrap_or(0);
             let items_revision = 1 ^ state_revision.rotate_left(17);

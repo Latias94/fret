@@ -6,6 +6,7 @@ use fret_runtime::CommandId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::IntoUiElement;
 use serde_json::{Map, Value};
 
 use super::ShadcnResolver;
@@ -92,7 +93,7 @@ impl ShadcnResolver {
                 .into_element(cx)
         };
 
-        fret_ui_shadcn::Tooltip::new(trigger, content_el).into_element(cx)
+        fret_ui_shadcn::Tooltip::new(cx, trigger, content_el).into_element(cx)
     }
 
     pub(super) fn render_popover<H: UiHost>(
@@ -107,16 +108,12 @@ impl ShadcnResolver {
             .unwrap_or("Open");
         let trigger_text = Arc::<str>::from(trigger_text);
 
-        let popover = fret_ui_shadcn::Popover::new_controllable(cx, None, false);
-        popover.into_element(
-            cx,
-            move |cx| {
-                fret_ui_shadcn::Button::new(trigger_text)
-                    .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                    .into_element(cx)
-            },
-            move |cx| fret_ui_shadcn::PopoverContent::new(children).into_element(cx),
-        )
+        let trigger = fret_ui_shadcn::PopoverTrigger::build(
+            fret_ui_shadcn::Button::new(trigger_text)
+                .variant(fret_ui_shadcn::ButtonVariant::Outline),
+        );
+        let content = fret_ui_shadcn::PopoverContent::new(children);
+        fret_ui_shadcn::Popover::new(cx, trigger, content).into_element(cx)
     }
 
     pub(super) fn render_dropdown_menu<H: UiHost>(

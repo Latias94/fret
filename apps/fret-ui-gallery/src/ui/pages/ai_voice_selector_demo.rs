@@ -3,42 +3,39 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
 use fret::{UiChild, UiCx};
-use fret_ui_kit::ui::UiElementSinkExt as _;
 
 fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let row = |part: &'static str, surface: &'static str| {
-        shadcn::TableRow::build(2, move |cx, out| {
-            out.push_ui(cx, shadcn::TableCell::build(ui::text(part)));
-            out.push_ui(cx, shadcn::TableCell::build(ui::text(surface)));
-        })
-    };
-
-    shadcn::Table::build(|cx, out| {
-        out.push_ui(
-            cx,
-            shadcn::TableHeader::build(|cx, out| {
-                out.push(
-                    shadcn::TableRow::build(2, |cx, out| {
-                        out.push(shadcn::TableHead::new("Part").into_element(cx));
-                        out.push(shadcn::TableHead::new("Fret surface").into_element(cx));
-                    })
-                    .into_element(cx),
-                );
-            }),
-        );
-        out.push_ui(
-            cx,
-            shadcn::TableBody::build(|cx, out| {
-                out.push_ui(cx, row("VoiceSelector", "UI root with controlled/uncontrolled `value_model` / `open_model` support plus a Rust-friendly `into_element_with_children(...)` compound entrypoint."));
-                out.push_ui(cx, row("VoiceSelectorTrigger + Value/Button", "Trigger chrome, selected summary, and button composition stay split so apps can mirror the official docs layout without hiding policy in the runtime."));
-                out.push_ui(cx, row("VoiceSelectorContent + Dialog", "Dialog shell with accessible title; `VoiceSelectorDialog` remains available for a command-palette style surface."));
-                out.push_ui(cx, row("VoiceSelectorInput + List", "Shared query model, filtering, highlight, and close-on-select behavior are already encapsulated at the selector / Command ecosystem layer."));
-                out.push_ui(cx, row("Empty / Group / Item / Separator / Shortcut", "These surfaces intentionally reuse `Command*` semantics so selector parity work stays aligned with shared command behavior instead of forking it."));
-                out.push_ui(cx, row("Name / Description / Gender / Accent / Age / Attributes / Bullet / Preview", "Policy-level presentation parts for AI voice metadata. These are good selector-level affordances and should not move down into `crates/fret-ui`."));
-            }),
-        );
-    })
-    .into_element(cx)
+    doc_layout::text_table(
+        cx,
+        ["Part", "Fret surface"],
+        [
+            [
+                "VoiceSelector",
+                "UI root with controlled/uncontrolled `value_model` / `open_model` support plus a Rust-friendly `into_element_with_children(...)` compound entrypoint.",
+            ],
+            [
+                "VoiceSelectorTrigger + Value/Button",
+                "Trigger chrome, selected summary, and button composition stay split so apps can mirror the official docs layout without hiding policy in the runtime.",
+            ],
+            [
+                "VoiceSelectorContent + Dialog",
+                "Dialog shell with accessible title; `VoiceSelectorDialog` remains available for a command-palette style surface.",
+            ],
+            [
+                "VoiceSelectorInput + List",
+                "Shared query model, filtering, highlight, and close-on-select behavior are already encapsulated at the selector / Command ecosystem layer.",
+            ],
+            [
+                "Empty / Group / Item / Separator / Shortcut",
+                "These surfaces intentionally reuse `Command*` semantics so selector parity work stays aligned with shared command behavior instead of forking it.",
+            ],
+            [
+                "Name / Description / Gender / Accent / Age / Attributes / Bullet / Preview",
+                "Policy-level presentation parts for AI voice metadata. These are good selector-level affordances and should not move down into `crates/fret-ui`.",
+            ],
+        ],
+        false,
+    )
 }
 
 pub(super) fn preview_ai_voice_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {

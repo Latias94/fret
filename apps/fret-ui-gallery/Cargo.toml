@@ -15,8 +15,10 @@ default-run = "fret-ui-gallery"
 default = []
 devtools-ws = ["fret-bootstrap/diagnostics-ws"]
 gallery-ai = ["dep:fret-ui-ai"]
+gallery-web-ime-harness = []
 gallery-dev = [
     "gallery-ai",
+    "gallery-web-ime-harness",
     "dep:fret-ui-magic",
     "dep:fret-code-editor-view",
     "dep:fret-chart",

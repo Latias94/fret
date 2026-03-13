@@ -20,7 +20,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                                 // This is the explicit Fret alternative to upstream `render` /
                                 // `asChild`: keep the link surface typed, but allow custom inline
                                 // children for the visual content.
-                                .children([ui::text("Home").into_element(cx)])
+                                .children(|cx| [ui::text("Home").into_element(cx)])
                                 .into_element(cx),
                         ]
                     }),
@@ -30,7 +30,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             bc::BreadcrumbLink::new("Components")
                                 .href("https://example.com/components")
                                 .on_click(CMD_APP_OPEN)
-                                .children([ui::text("Components").into_element(cx)])
+                                .children(|cx| [ui::text("Components").into_element(cx)])
                                 .into_element(cx),
                         ]
                     }),
@@ -38,7 +38,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     bc::BreadcrumbItem::new().into_element(cx, |cx| {
                         vec![
                             bc::BreadcrumbPage::new("Breadcrumb")
-                                .children([ui::text("Breadcrumb").into_element(cx)])
+                                .children(|cx| [ui::text("Breadcrumb").into_element(cx)])
                                 .into_element(cx),
                         ]
                     }),

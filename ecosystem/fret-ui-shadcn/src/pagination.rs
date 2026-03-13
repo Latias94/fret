@@ -11,7 +11,11 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::viewport_queries;
-use fret_ui_kit::{LayoutRefinement, MetricRef, Radius, Space};
+use fret_ui_kit::{
+    IntoUiElement, LayoutRefinement, MetricRef, Radius, Space, UiPatch, UiPatchTarget,
+    UiSupportsLayout,
+};
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use crate::rtl;
@@ -83,6 +87,17 @@ impl Pagination {
         }
     }
 
+    pub fn build<H: UiHost, B>(build: B) -> PaginationBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        PaginationBuild {
+            build: Some(build),
+            layout: LayoutRefinement::default().w_full(),
+            _phantom: PhantomData,
+        }
+    }
+
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
@@ -126,6 +141,16 @@ impl PaginationContent {
         Self { children }
     }
 
+    pub fn build<H: UiHost, B>(build: B) -> PaginationContentBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        PaginationContentBuild {
+            build: Some(build),
+            _phantom: PhantomData,
+        }
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
@@ -156,6 +181,16 @@ pub struct PaginationItem {
 impl PaginationItem {
     pub fn new(child: AnyElement) -> Self {
         Self { child }
+    }
+
+    pub fn build<H: UiHost, T>(child: T) -> PaginationItemBuild<H, T>
+    where
+        T: IntoUiElement<H>,
+    {
+        PaginationItemBuild {
+            child,
+            _phantom: PhantomData,
+        }
     }
 
     #[track_caller]
@@ -193,6 +228,22 @@ impl PaginationLink {
             disabled: false,
             a11y_label: None,
             test_id: None,
+        }
+    }
+
+    pub fn build<H: UiHost, B>(build: B) -> PaginationLinkBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        PaginationLinkBuild {
+            build: Some(build),
+            size: PaginationLinkSize::default(),
+            is_active: false,
+            command: None,
+            disabled: false,
+            a11y_label: None,
+            test_id: None,
+            _phantom: PhantomData,
         }
     }
 
@@ -611,6 +662,288 @@ impl PaginationEllipsis {
 impl Default for PaginationEllipsis {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+pub fn pagination<H: UiHost, I, F, T>(
+    f: F,
+) -> PaginationBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    Pagination::build(move |cx, out| {
+        let children = f(cx);
+        extend_landed_pagination_children(cx, out, children);
+    })
+}
+
+pub fn pagination_content<H: UiHost, I, F, T>(
+    f: F,
+) -> PaginationContentBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    PaginationContent::build(move |cx, out| {
+        let children = f(cx);
+        extend_landed_pagination_children(cx, out, children);
+    })
+}
+
+pub fn pagination_item<H: UiHost, T>(child: T) -> PaginationItemBuild<H, T>
+where
+    T: IntoUiElement<H>,
+{
+    PaginationItem::build(child)
+}
+
+pub fn pagination_link<H: UiHost, I, F, T>(
+    f: F,
+) -> PaginationLinkBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    PaginationLink::build(move |cx, out| {
+        let children = f(cx);
+        extend_landed_pagination_children(cx, out, children);
+    })
+}
+
+pub struct PaginationBuild<H, B> {
+    build: Option<B>,
+    layout: LayoutRefinement,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> PaginationBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = collect_built_pagination_children(
+            cx,
+            self.build.expect("expected pagination build closure"),
+        );
+        Pagination::new(children)
+            .refine_layout(self.layout)
+            .into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for PaginationBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsLayout for PaginationBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> IntoUiElement<H> for PaginationBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        PaginationBuild::into_element(self, cx)
+    }
+}
+
+pub struct PaginationContentBuild<H, B> {
+    build: Option<B>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> PaginationContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = collect_built_pagination_children(
+            cx,
+            self.build
+                .expect("expected pagination content build closure"),
+        );
+        PaginationContent::new(children).into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for PaginationContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl<H: UiHost, B> IntoUiElement<H> for PaginationContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        PaginationContentBuild::into_element(self, cx)
+    }
+}
+
+pub struct PaginationItemBuild<H, T> {
+    child: T,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, T> PaginationItemBuild<H, T>
+where
+    T: IntoUiElement<H>,
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        PaginationItem::new(self.child.into_element(cx)).into_element(cx)
+    }
+}
+
+impl<H: UiHost, T> UiPatchTarget for PaginationItemBuild<H, T>
+where
+    T: IntoUiElement<H>,
+{
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl<H: UiHost, T> IntoUiElement<H> for PaginationItemBuild<H, T>
+where
+    T: IntoUiElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        PaginationItemBuild::into_element(self, cx)
+    }
+}
+
+pub struct PaginationLinkBuild<H, B> {
+    build: Option<B>,
+    size: PaginationLinkSize,
+    is_active: bool,
+    command: Option<CommandId>,
+    disabled: bool,
+    a11y_label: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> PaginationLinkBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn size(mut self, size: PaginationLinkSize) -> Self {
+        self.size = size;
+        self
+    }
+
+    pub fn active(mut self, active: bool) -> Self {
+        self.is_active = active;
+        self
+    }
+
+    pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
+        self.command = Some(command.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = collect_built_pagination_children(
+            cx,
+            self.build.expect("expected pagination link build closure"),
+        );
+        let mut link = PaginationLink::new(children)
+            .size(self.size)
+            .active(self.is_active)
+            .disabled(self.disabled);
+        if let Some(command) = self.command {
+            link = link.on_click(command);
+        }
+        if let Some(label) = self.a11y_label {
+            link = link.a11y_label(label);
+        }
+        if let Some(test_id) = self.test_id {
+            link = link.test_id(test_id);
+        }
+        link.into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for PaginationLinkBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl<H: UiHost, B> IntoUiElement<H> for PaginationLinkBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        PaginationLinkBuild::into_element(self, cx)
+    }
+}
+
+fn collect_built_pagination_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    build: impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+) -> Vec<AnyElement> {
+    let mut out = Vec::new();
+    build(cx, &mut out);
+    out
+}
+
+fn extend_landed_pagination_children<H: UiHost, I, T>(
+    cx: &mut ElementContext<'_, H>,
+    out: &mut Vec<AnyElement>,
+    children: I,
+) where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    for child in children {
+        out.push(child.into_element(cx));
     }
 }
 

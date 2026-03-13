@@ -31,7 +31,7 @@ pub(in super::super) fn encode_svg_mask_icon(
         SvgRasterKind::AlphaMask,
         fit,
     );
-    let Some(entry) = renderer.svg_rasters.get(&key) else {
+    let Some(entry) = renderer.svg_raster_state.rasters.get(&key) else {
         return;
     };
     if renderer.gpu_resources.image_view(entry.image).is_none() {
@@ -140,7 +140,7 @@ pub(in super::super) fn encode_svg_image(
     );
 
     let key = Renderer::svg_raster_key(svg, key_rect, state.scale_factor, SvgRasterKind::Rgba, fit);
-    let Some(entry) = renderer.svg_rasters.get(&key) else {
+    let Some(entry) = renderer.svg_raster_state.rasters.get(&key) else {
         return;
     };
     if renderer.gpu_resources.image_view(entry.image).is_none() {

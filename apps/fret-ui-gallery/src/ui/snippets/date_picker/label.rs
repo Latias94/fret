@@ -16,20 +16,24 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .refine_layout(LayoutRefinement::default().w_full())
             .into_element(cx);
 
-    shadcn::FieldGroup::new([shadcn::Field::new([
-        shadcn::FieldContent::new([
-            shadcn::FieldLabel::new("Date")
-                .for_control(control_id.clone())
-                .test_id("ui-gallery-date-picker-label-label")
+    shadcn::field_group(|cx| {
+        ui::children![
+            cx;
+            shadcn::Field::new([
+                shadcn::FieldContent::new([
+                    shadcn::FieldLabel::new("Date")
+                        .for_control(control_id.clone())
+                        .test_id("ui-gallery-date-picker-label-label")
+                        .into_element(cx),
+                    shadcn::FieldDescription::new("Click the label to focus the date picker trigger.")
+                        .for_control(control_id.clone())
+                        .into_element(cx),
+                ])
                 .into_element(cx),
-            shadcn::FieldDescription::new("Click the label to focus the date picker trigger.")
-                .for_control(control_id.clone())
-                .into_element(cx),
-        ])
-        .into_element(cx),
-        date_picker,
-    ])
-    .into_element(cx)])
+                date_picker,
+            ]),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
     .into_element(cx)
     .test_id("ui-gallery-date-picker-label")

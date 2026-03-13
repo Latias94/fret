@@ -35,28 +35,36 @@ pub fn render(
         .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
         .into_element(cx);
 
-    shadcn::Card::new([
-        shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Preset selector").into_element(cx),
-            shadcn::CardDescription::new(
-                "Applies a ThemeConfig patch (durations/easings/spring params) on top of the current theme preset.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new([ui::h_flex(move |cx| {
-                vec![
-                    select,
-                    shadcn::Badge::new(format!("active: {}", preset.as_ref()))
-                        .variant(shadcn::BadgeVariant::Secondary)
-                        .into_element(cx),
+    shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Preset selector"),
+                    shadcn::card_description(
+                        "Applies a ThemeConfig patch (durations/easings/spring params) on top of the current theme preset.",
+                    ),
                 ]
-            })
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N4)
-                .items_center().into_element(cx)])
-        .into_element(cx),
-    ])
+            }),
+            shadcn::card_content(|cx| {
+                ui::children![
+                    cx;
+                    ui::h_flex(move |cx| {
+                        vec![
+                            select,
+                            shadcn::Badge::new(format!("active: {}", preset.as_ref()))
+                                .variant(shadcn::BadgeVariant::Secondary)
+                                .into_element(cx),
+                        ]
+                    })
+                    .layout(LayoutRefinement::default().w_full())
+                    .gap(Space::N4)
+                    .items_center(),
+                ]
+            }),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(760.0)).min_w_0())
     .into_element(cx)
     .test_id("ui-gallery-motion-presets-selector-card")

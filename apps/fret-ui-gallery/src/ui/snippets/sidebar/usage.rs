@@ -53,18 +53,21 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .refine_layout(LayoutRefinement::default().h_full())
             .into_element(cx);
 
-            let inset = shadcn::SidebarInset::new([shadcn::Card::new(vec![
-                shadcn::CardHeader::new(vec![
-                    shadcn::CardTitle::new("Minimal usage").into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::CardContent::new(vec![
-                    shadcn::SidebarTrigger::new().into_element(cx),
-                    cx.text("Use SidebarProvider to own width defaults and state."),
-                    cx.text("Sidebar keeps theme-token fallbacks for recipe chrome."),
-                ])
-                .into_element(cx),
-            ])
+            let inset = shadcn::SidebarInset::new([shadcn::card(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_header(
+                        |cx| ui::children![cx; shadcn::card_title("Minimal usage")],
+                    ),
+                    shadcn::card_content(|cx| {
+                        vec![
+                            shadcn::SidebarTrigger::new().into_element(cx),
+                            cx.text("Use SidebarProvider to own width defaults and state."),
+                            cx.text("Sidebar keeps theme-token fallbacks for recipe chrome."),
+                        ]
+                    }),
+                ]
+            })
             .refine_layout(LayoutRefinement::default().w_full().h_full().min_w_0())
             .into_element(cx)])
             .into_element(cx);

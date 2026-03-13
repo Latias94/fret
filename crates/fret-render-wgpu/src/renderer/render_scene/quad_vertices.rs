@@ -160,7 +160,7 @@ pub(super) fn upload_plan_quad_vertices(
     if !vertices.is_empty() {
         renderer.ensure_path_composite_vertex_buffer(device, vertices.len());
         queue.write_buffer(
-            &renderer.path_composite_vertices,
+            renderer.path_composite_vertices_ref(),
             0,
             bytemuck::cast_slice(&vertices),
         );

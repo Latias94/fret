@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use fret_core::{Color, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
@@ -15,7 +16,9 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::motion::drive_tween_color_for_element;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, Space, ui,
+};
 
 use crate::{overlay_motion, rtl, use_direction};
 
@@ -520,6 +523,20 @@ pub mod primitives {
 
     use fret_ui::element::{ContainerProps, LayoutStyle, SizeStyle};
 
+    fn collect_landed_children<H: UiHost, I, T>(
+        cx: &mut ElementContext<'_, H>,
+        children: I,
+    ) -> Vec<AnyElement>
+    where
+        I: IntoIterator<Item = T>,
+        T: IntoUiElement<H>,
+    {
+        children
+            .into_iter()
+            .map(|child| child.into_element(cx))
+            .collect()
+    }
+
     fn text_style(theme: &Theme) -> TextStyle {
         let text_px = theme
             .metric_by_key("component.breadcrumb.text_px")
@@ -563,24 +580,28 @@ pub mod primitives {
         }
 
         #[track_caller]
-        pub fn into_element<H: UiHost, I>(
+        pub fn into_element<H: UiHost, I, TChild>(
             self,
             cx: &mut ElementContext<'_, H>,
             children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
         ) -> AnyElement
         where
-            I: IntoIterator<Item = AnyElement>,
+            I: IntoIterator<Item = TChild>,
+            TChild: IntoUiElement<H>,
         {
             let props = {
                 let theme = Theme::global(&*cx.app);
                 decl_style::container_props(theme, self.chrome, self.layout)
             };
-            cx.container(props, move |cx| children(cx))
-                .attach_semantics(
-                    SemanticsDecoration::default()
-                        .role(SemanticsRole::Region)
-                        .label("breadcrumb"),
-                )
+            cx.container(props, move |cx| {
+                let built_children = children(cx);
+                collect_landed_children(cx, built_children)
+            })
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::Region)
+                    .label("breadcrumb"),
+            )
         }
     }
 
@@ -606,13 +627,14 @@ pub mod primitives {
         }
 
         #[track_caller]
-        pub fn into_element<H: UiHost, I>(
+        pub fn into_element<H: UiHost, I, TChild>(
             self,
             cx: &mut ElementContext<'_, H>,
             children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
         ) -> AnyElement
         where
-            I: IntoIterator<Item = AnyElement>,
+            I: IntoIterator<Item = TChild>,
+            TChild: IntoUiElement<H>,
         {
             let (muted, style, gap, props) = {
                 let theme = Theme::global(&*cx.app);
@@ -642,7 +664,8 @@ pub mod primitives {
                         move |cx| {
                             // Apply the list-level muted foreground by default; individual children
                             // (BreadcrumbLink/Page) can override it.
-                            let mut out: Vec<AnyElement> = children(cx).into_iter().collect();
+                            let built_children = children(cx);
+                            let mut out = collect_landed_children(cx, built_children);
                             for el in &mut out {
                                 // Best-effort: only text nodes support local color overrides.
                                 if let fret_ui::element::ElementKind::Text(props) = &mut el.kind {
@@ -685,13 +708,14 @@ pub mod primitives {
         }
 
         #[track_caller]
-        pub fn into_element<H: UiHost, I>(
+        pub fn into_element<H: UiHost, I, TChild>(
             self,
             cx: &mut ElementContext<'_, H>,
             children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
         ) -> AnyElement
         where
-            I: IntoIterator<Item = AnyElement>,
+            I: IntoIterator<Item = TChild>,
+            TChild: IntoUiElement<H>,
         {
             let (item_gap, props) = {
                 let theme = Theme::global(&*cx.app);
@@ -713,7 +737,10 @@ pub mod primitives {
                         align: CrossAlign::Center,
                         wrap: false,
                     },
-                    move |cx| children(cx),
+                    move |cx| {
+                        let built_children = children(cx);
+                        collect_landed_children(cx, built_children)
+                    },
                 )]
             })
             .attach_semantics(SemanticsDecoration::default().role(SemanticsRole::ListItem))
@@ -750,6 +777,76 @@ pub mod primitives {
         }
     }
 
+    pub struct BreadcrumbLinkBuild<H, Children> {
+        link: BreadcrumbLink,
+        children: Children,
+        _marker: PhantomData<fn() -> H>,
+    }
+
+    impl<H, Children> BreadcrumbLinkBuild<H, Children> {
+        fn new(link: BreadcrumbLink, children: Children) -> Self {
+            Self {
+                link,
+                children,
+                _marker: PhantomData,
+            }
+        }
+
+        pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
+            self.link = self.link.on_click(command);
+            self
+        }
+
+        pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
+            self.link = self.link.on_activate(on_activate);
+            self
+        }
+
+        pub fn href(mut self, href: impl Into<Arc<str>>) -> Self {
+            self.link = self.link.href(href);
+            self
+        }
+
+        pub fn target(mut self, target: impl Into<Arc<str>>) -> Self {
+            self.link = self.link.target(target);
+            self
+        }
+
+        pub fn rel(mut self, rel: impl Into<Arc<str>>) -> Self {
+            self.link = self.link.rel(rel);
+            self
+        }
+
+        pub fn truncate(mut self, truncate: bool) -> Self {
+            self.link = self.link.truncate(truncate);
+            self
+        }
+
+        pub fn refine_style(mut self, chrome: ChromeRefinement) -> Self {
+            self.link = self.link.refine_style(chrome);
+            self
+        }
+
+        pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+            self.link = self.link.refine_layout(layout);
+            self
+        }
+    }
+
+    impl<H: UiHost, Children, I, TChild> BreadcrumbLinkBuild<H, Children>
+    where
+        Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+        I: IntoIterator<Item = TChild>,
+        TChild: IntoUiElement<H>,
+    {
+        #[track_caller]
+        pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+            let built_children = (self.children)(cx);
+            let children = collect_landed_children(cx, built_children);
+            self.link.children_raw(children).into_element(cx)
+        }
+    }
+
     impl BreadcrumbLink {
         pub fn new(label: impl Into<Arc<str>>) -> Self {
             Self {
@@ -766,7 +863,20 @@ pub mod primitives {
             }
         }
 
-        pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        pub fn children<H: UiHost, I, TChild, Children>(
+            self,
+            children: Children,
+        ) -> BreadcrumbLinkBuild<H, Children>
+        where
+            Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+            I: IntoIterator<Item = TChild>,
+            TChild: IntoUiElement<H>,
+        {
+            BreadcrumbLinkBuild::new(self, children)
+        }
+
+        /// Explicit raw seam for pre-landed inline children.
+        pub fn children_raw(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
             self.children = children.into_iter().collect();
             self
         }
@@ -975,6 +1085,51 @@ pub mod primitives {
         layout: LayoutRefinement,
     }
 
+    pub struct BreadcrumbPageBuild<H, Children> {
+        page: BreadcrumbPage,
+        children: Children,
+        _marker: PhantomData<fn() -> H>,
+    }
+
+    impl<H, Children> BreadcrumbPageBuild<H, Children> {
+        fn new(page: BreadcrumbPage, children: Children) -> Self {
+            Self {
+                page,
+                children,
+                _marker: PhantomData,
+            }
+        }
+
+        pub fn truncate(mut self, truncate: bool) -> Self {
+            self.page = self.page.truncate(truncate);
+            self
+        }
+
+        pub fn refine_style(mut self, chrome: ChromeRefinement) -> Self {
+            self.page = self.page.refine_style(chrome);
+            self
+        }
+
+        pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+            self.page = self.page.refine_layout(layout);
+            self
+        }
+    }
+
+    impl<H: UiHost, Children, I, TChild> BreadcrumbPageBuild<H, Children>
+    where
+        Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+        I: IntoIterator<Item = TChild>,
+        TChild: IntoUiElement<H>,
+    {
+        #[track_caller]
+        pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+            let built_children = (self.children)(cx);
+            let children = collect_landed_children(cx, built_children);
+            self.page.children_raw(children).into_element(cx)
+        }
+    }
+
     impl BreadcrumbPage {
         pub fn new(label: impl Into<Arc<str>>) -> Self {
             Self {
@@ -986,7 +1141,20 @@ pub mod primitives {
             }
         }
 
-        pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        pub fn children<H: UiHost, I, TChild, Children>(
+            self,
+            children: Children,
+        ) -> BreadcrumbPageBuild<H, Children>
+        where
+            Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+            I: IntoIterator<Item = TChild>,
+            TChild: IntoUiElement<H>,
+        {
+            BreadcrumbPageBuild::new(self, children)
+        }
+
+        /// Explicit raw seam for pre-landed inline children.
+        pub fn children_raw(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
             self.children = children.into_iter().collect();
             self
         }
@@ -1504,7 +1672,7 @@ mod tests {
                     primitives::BreadcrumbLink::new("Home")
                         .href("/")
                         .on_click("ui_gallery.app.open")
-                        .children([cx.text("Home")])
+                        .children(|cx| [cx.text("Home")])
                         .into_element(cx)
                         .test_id("breadcrumb-link-children-command"),
                 ]

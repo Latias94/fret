@@ -2423,20 +2423,23 @@ fn named_demo_state<H: UiHost, S: Clone + 'static>(
     init: impl FnOnce(&mut ElementContext<'_, H>) -> S,
 ) -> S {
     cx.named(name, |cx| {
-        let existing = cx.with_state(|| None::<S>, |st| st.clone());
+        let slot = cx.slot_id();
+        let existing = cx.state_for(slot, || None::<S>, |st| st.clone());
         match existing {
             Some(v) => v,
             None => {
                 let v = init(cx);
-                cx.with_state(
+                cx.state_for(
+                    slot,
                     || None::<S>,
                     |st| {
                         if st.is_none() {
                             *st = Some(v.clone());
                         }
+                        st.clone()
+                            .expect("named_demo_state slot must contain a value after init")
                     },
-                );
-                v
+                )
             }
         }
     })

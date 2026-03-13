@@ -2857,28 +2857,28 @@ impl Tabs {
     }
 }
 
+/// Builder-preserving controlled helper for the common tabs authoring path.
 pub fn tabs<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+) -> Tabs
 where
     I: IntoIterator<Item = TabsItem>,
 {
-    Tabs::new(model).items(f(cx)).into_element(cx)
+    Tabs::new(model).items(f(cx))
 }
 
+/// Builder-preserving uncontrolled helper for the common `defaultValue` tabs authoring path.
 pub fn tabs_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>(
     cx: &mut ElementContext<'_, H>,
     default_value: Option<T>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+) -> Tabs
 where
     I: IntoIterator<Item = TabsItem>,
 {
-    Tabs::uncontrolled(default_value)
-        .items(f(cx))
-        .into_element(cx)
+    Tabs::uncontrolled(default_value).items(f(cx))
 }
 
 #[cfg(test)]

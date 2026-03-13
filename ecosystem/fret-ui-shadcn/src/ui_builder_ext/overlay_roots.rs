@@ -27,7 +27,7 @@ impl PopoverUiBuilderExt for UiBuilder<Popover> {
         TTrigger: IntoUiElement<H>,
         TContent: IntoUiElement<H>,
     {
-        self.build().into_element(
+        self.build().into_element_with(
             cx,
             |cx| trigger(cx).into_element(cx),
             |cx| content(cx).into_element(cx),

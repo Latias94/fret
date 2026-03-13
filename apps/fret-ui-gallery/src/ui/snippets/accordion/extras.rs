@@ -118,21 +118,24 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             ])
             .into_element(cx);
 
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Subscription & Billing").into_element(cx),
-            shadcn::CardDescription::new(
-                "Common questions about your account, plans, and payments.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx);
-
-        let content = shadcn::CardContent::new([accordion]).into_element(cx);
-
-        shadcn::Card::new([header, content])
-            .refine_layout(max_w_sm.clone())
-            .into_element(cx)
-            .test_id("ui-gallery-accordion-extras-card")
+        shadcn::card(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_header(|cx| {
+                    ui::children![
+                        cx;
+                        shadcn::card_title("Subscription & Billing"),
+                        shadcn::card_description(
+                            "Common questions about your account, plans, and payments.",
+                        ),
+                    ]
+                }),
+                shadcn::card_content(|cx| ui::children![cx; accordion]),
+            ]
+        })
+        .refine_layout(max_w_sm.clone())
+        .into_element(cx)
+        .test_id("ui-gallery-accordion-extras-card")
     };
 
     let rtl = with_direction_provider(cx, LayoutDirection::Rtl, |cx| {

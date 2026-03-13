@@ -80,43 +80,14 @@ fn build_shadcn_context_menu_demo(
         )
 }
 
+#[track_caller]
 fn build_shadcn_context_menu_demo_stateful(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    #[derive(Default)]
-    struct Models {
-        checked_bookmarks: Option<Model<bool>>,
-        checked_full_urls: Option<Model<bool>>,
-        radio_person: Option<Model<Option<Arc<str>>>>,
-    }
-
-    let existing = cx.with_state(Models::default, |st| {
-        match (
-            st.checked_bookmarks.as_ref(),
-            st.checked_full_urls.as_ref(),
-            st.radio_person.as_ref(),
-        ) {
-            (Some(a), Some(b), Some(c)) => Some((a.clone(), b.clone(), c.clone())),
-            _ => None,
-        }
-    });
-
-    let (checked_bookmarks, checked_full_urls, radio_person) = if let Some(existing) = existing {
-        existing
-    } else {
-        let checked_bookmarks = cx.app.models_mut().insert(false);
-        let checked_full_urls = cx.app.models_mut().insert(true);
-        let radio_person = cx.app.models_mut().insert(Some(Arc::from("benoit")));
-
-        cx.with_state(Models::default, |st| {
-            st.checked_bookmarks = Some(checked_bookmarks.clone());
-            st.checked_full_urls = Some(checked_full_urls.clone());
-            st.radio_person = Some(radio_person.clone());
-        });
-
-        (checked_bookmarks, checked_full_urls, radio_person)
-    };
+    let checked_bookmarks = cx.local_model_keyed("checked_bookmarks", || false);
+    let checked_full_urls = cx.local_model_keyed("checked_full_urls", || true);
+    let radio_person = cx.local_model_keyed("radio_person", || Some(Arc::from("benoit")));
 
     build_shadcn_context_menu_demo(cx, open, checked_bookmarks, checked_full_urls, radio_person)
 }

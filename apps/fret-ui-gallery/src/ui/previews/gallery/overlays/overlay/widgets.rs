@@ -198,17 +198,17 @@ fn underlay(cx: &mut UiCx<'_>) -> AnyElement {
 fn tooltip(cx: &mut UiCx<'_>) -> AnyElement {
     use std::time::Duration;
 
+    let tooltip_a_content = shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
+        cx,
+        "Tooltip: hover intent + placement",
+    )])
+    .test_id("ui-gallery-tooltip-content");
     let tooltip_a = shadcn::Tooltip::new(
+        cx,
         shadcn::Button::new("Tooltip A (delay)")
             .variant(shadcn::ButtonVariant::Outline)
-            .test_id("ui-gallery-tooltip-trigger")
-            .into_element(cx),
-        shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
-            cx,
-            "Tooltip: hover intent + placement",
-        )])
-        .into_element(cx)
-        .test_id("ui-gallery-tooltip-content"),
+            .test_id("ui-gallery-tooltip-trigger"),
+        tooltip_a_content,
     )
     .arrow(true)
     .arrow_test_id("ui-gallery-tooltip-arrow")
@@ -216,17 +216,17 @@ fn tooltip(cx: &mut UiCx<'_>) -> AnyElement {
     .side(shadcn::TooltipSide::Top)
     .into_element(cx);
 
+    let tooltip_b_content = shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
+        cx,
+        "Skip-delay window should open this immediately after closing A.",
+    )])
+    .test_id("ui-gallery-tooltip-skip-content");
     let tooltip_b = shadcn::Tooltip::new(
+        cx,
         shadcn::Button::new("Tooltip B (skip delay)")
             .variant(shadcn::ButtonVariant::Outline)
-            .test_id("ui-gallery-tooltip-skip-trigger")
-            .into_element(cx),
-        shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
-            cx,
-            "Skip-delay window should open this immediately after closing A.",
-        )])
-        .into_element(cx)
-        .test_id("ui-gallery-tooltip-skip-content"),
+            .test_id("ui-gallery-tooltip-skip-trigger"),
+        tooltip_b_content,
     )
     .arrow(true)
     .arrow_test_id("ui-gallery-tooltip-skip-arrow")
@@ -254,15 +254,14 @@ fn hover_card(cx: &mut UiCx<'_>) -> AnyElement {
     use std::time::Duration;
 
     shadcn::HoverCard::new(
+        cx,
         shadcn::Button::new("HoverCard (hover)")
             .variant(shadcn::ButtonVariant::Outline)
-            .test_id("ui-gallery-hovercard-trigger")
-            .into_element(cx),
+            .test_id("ui-gallery-hovercard-trigger"),
         shadcn::HoverCardContent::new(vec![
             cx.text("HoverCard content (overlay-root)"),
             cx.text("Move pointer from trigger to content."),
         ])
-        .into_element(cx)
         .test_id("ui-gallery-hovercard-content"),
     )
     .open_delay(Duration::from_millis(700))
@@ -288,7 +287,7 @@ fn popover(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement {
         });
     });
 
-    shadcn::Popover::new(popover_open.clone())
+    shadcn::Popover::from_open(popover_open.clone())
         .auto_focus(true)
         .on_dismiss_request(Some(popover_on_dismiss))
         .into_element(
@@ -578,7 +577,7 @@ fn sheet(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement {
 fn portal_geometry(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement {
     let portal_geometry_popover_open = models.portal_geometry_popover_open.clone();
 
-    let popover = shadcn::Popover::new(portal_geometry_popover_open.clone())
+    let popover = shadcn::Popover::from_open(portal_geometry_popover_open.clone())
         .side(shadcn::PopoverSide::Right)
         .align(shadcn::PopoverAlign::Start)
         .side_offset(Px(8.0))

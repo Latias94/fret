@@ -1510,6 +1510,36 @@ fn platform_replace_and_mark_with_marked_none_behaves_like_replace() {
 }
 
 #[test]
+fn ime_delete_surrounding_preserves_selection_direction_and_preedit() {
+    let handle = CodeEditorHandle::new("abcdef");
+    let mut st = handle.state.borrow_mut();
+    st.selection = Selection {
+        anchor: 4,
+        focus: 2,
+    };
+    st.preedit = Some(PreeditState {
+        text: "XY".to_string(),
+        cursor: Some((0, 2)),
+    });
+
+    let did = input::apply_ime_delete_surrounding(&mut st, 1, 1);
+    assert!(did.is_some());
+    assert_eq!(st.buffer.text_string(), "acdf");
+    assert_eq!(
+        st.selection,
+        Selection {
+            anchor: 3,
+            focus: 1,
+        }
+    );
+    assert_eq!(
+        st.preedit.as_ref().map(|p| p.text.as_str()),
+        Some("XY"),
+        "delete-surrounding should not clear the active preedit state"
+    );
+}
+
+#[test]
 fn platform_replace_and_mark_range_spanning_newline_is_clamped_to_anchor_line() {
     // Staging contract: selection-replacing composition ranges that span a newline in the
     // platform-facing composed window are clamped to the anchor logical line in the view model.

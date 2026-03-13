@@ -87,7 +87,7 @@ fn build_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         .test_id("tooltip-trigger")
         .into_element(cx);
     let content = fret_ui_shadcn::TooltipContent::new([cx.text("Tooltip")]).into_element(cx);
-    let tooltip = fret_ui_shadcn::Tooltip::new(trigger, content)
+    let tooltip = fret_ui_shadcn::Tooltip::new(cx, trigger, content)
         .open_delay_frames(0)
         .close_delay_frames(0)
         .panel_test_id("tooltip-panel")

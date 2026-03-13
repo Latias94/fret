@@ -13,7 +13,7 @@ fn build_shadcn_popover_demo_page(
     use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
     use fret_ui_shadcn::{Button, ButtonVariant, Popover, PopoverContent};
 
-    Popover::new(open.clone()).into_element(
+    Popover::from_open(open.clone()).into_element_with(
         cx,
         |cx| {
             Button::new("Open popover")

@@ -174,7 +174,7 @@ pub fn render(cx: &mut UiCx<'_>, theme: &Theme) -> AnyElement {
         }
 
         let (shift_active, generation, deltas_y) =
-            cx.with_state(StackShiftListShiftState::default, |st| {
+            cx.slot_state(StackShiftListShiftState::default, |st| {
                 let mut changed = st.last_targets_y.len() != targets_y.len();
                 if !changed {
                     for (id, curr) in &targets_y {
@@ -248,7 +248,7 @@ pub fn render(cx: &mut UiCx<'_>, theme: &Theme) -> AnyElement {
             out_y.clone_from(&targets_y);
         }
 
-        cx.with_state(StackShiftListShiftState::default, |st| {
+        cx.slot_state(StackShiftListShiftState::default, |st| {
             st.last_visual_y.clone_from(&out_y);
 
             if shift_active && !shift.animating && (shift.progress - 1.0).abs() <= f32::EPSILON {
@@ -390,17 +390,21 @@ pub fn render(cx: &mut UiCx<'_>, theme: &Theme) -> AnyElement {
         .items_start()
         .into_element(cx);
 
-    shadcn::Card::new([
-        shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Stack shift list demo").into_element(cx),
-            shadcn::CardDescription::new(
-                "A list insert/remove choreography driven by semantic `stack.shift` tokens (duration + stagger + easing).",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new([content]).into_element(cx),
-    ])
+    shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Stack shift list demo"),
+                    shadcn::card_description(
+                        "A list insert/remove choreography driven by semantic `stack.shift` tokens (duration + stagger + easing).",
+                    ),
+                ]
+            }),
+            shadcn::card_content(|cx| ui::children![cx; content]),
+        ]
+    })
     .refine_layout(shell_layout)
     .into_element(cx)
     .test_id("ui-gallery-motion-presets-stack-shift-list-demo")

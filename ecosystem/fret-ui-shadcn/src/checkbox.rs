@@ -7,6 +7,7 @@ use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, PressableProps,
 };
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
@@ -629,15 +630,12 @@ impl Checkbox {
     }
 }
 
-pub fn checkbox<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<bool>) -> AnyElement {
-    Checkbox::new(model).into_element(cx)
+pub fn checkbox<H: UiHost>(model: Model<bool>) -> impl IntoUiElement<H> + use<H> {
+    Checkbox::new(model)
 }
 
-pub fn checkbox_opt<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    model: Model<Option<bool>>,
-) -> AnyElement {
-    Checkbox::new_optional(model).into_element(cx)
+pub fn checkbox_opt<H: UiHost>(model: Model<Option<bool>>) -> impl IntoUiElement<H> + use<H> {
+    Checkbox::new_optional(model)
 }
 
 #[cfg(test)]

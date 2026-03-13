@@ -22,10 +22,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(cx);
 
         shadcn::HoverCard::new(
+            cx,
             shadcn::Button::new("مرر هنا")
                 .variant(shadcn::ButtonVariant::Outline)
-                .test_id("ui-gallery-hover-card-rtl-trigger")
-                .into_element(cx),
+                .test_id("ui-gallery-hover-card-rtl-trigger"),
             shadcn::HoverCardContent::new(vec![body])
                 .test_id("ui-gallery-hover-card-rtl-content")
                 .side(shadcn::HoverCardSide::Left),

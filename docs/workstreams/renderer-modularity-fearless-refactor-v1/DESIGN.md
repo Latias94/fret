@@ -169,6 +169,8 @@ following domains explicit:
   - scene encoding
   - render-plan compilation
   - degradation decisions
+  - effect-step helpers vs multi-step chain orchestration should remain explicit subdomains
+    inside render-plan effect planning
 - execution
   - uploads
   - pass recording
@@ -185,6 +187,55 @@ following domains explicit:
 
 The point is to move from "one large owner with many helper files" toward "explicit domains with
 owned boundaries."
+
+For `render_plan_effects`, that means the long-term boring shape is:
+
+- effect-specific apply/build helpers stay grouped by effect family,
+- padded/unpadded chain orchestration, raw-source selection, and final commit semantics live behind
+  explicit chain-level helpers instead of staying inline in `apply_chain_in_place(...)`.
+- chain-start resource preparation (budget evidence, scratch inventory, clip-mask charging) should
+  also live with chain orchestration rather than in the top-level driver body.
+- masked and unmasked multi-step chain dispatch should converge on explicit helper surfaces rather
+  than leaving one path inline in the top-level module.
+- shared chain-local utility helpers such as scratch-target discovery, custom-step detection, and
+  backdrop-source-group decomposition should live with chain orchestration instead of remaining as
+  top-level cross-module helpers.
+- the top-level chain entrypoint itself should also live with chain orchestration, leaving the
+  parent module with only a thin forwarding surface when that entrypoint remains part of the
+  curated module contract.
+- once chain dispatch is extracted, the top-level module should mostly retain shared budgeting /
+  utility helpers plus curated wrapper entrypoints.
+
+For `Renderer` state-shell tightening, the same principle applies:
+
+- feature-local execution scratch, reuse caches, and write-epoch tracking should collapse into
+  dedicated owner structs instead of remaining as loose `Renderer` fields plus ad hoc helper
+  methods in `renderer/mod.rs`.
+- the first such extractions should target high-cohesion islands with narrow call surfaces, so
+  owner splits remain reversible and do not force broad service rewrites.
+- cache-heavy subsystems that combine memory budgets, reuse/eviction policy, and per-frame counters
+  are especially good early targets because they reduce `Renderer` field sprawl without forcing the
+  public service surface to move at the same time.
+- intermediate reuse pools are a model example of that pattern: budget knobs, reuse/eviction
+  policy, and perf counters should move behind one owner shell so config, planning, and execution
+  sites can share a single seam without changing degradation semantics.
+- registry-style shells are another good early target when they combine ID ownership, refcounting,
+  hash-based deduplication, and one service-local backend helper; separating SVG registry ownership
+  from SVG raster budget/atlas state keeps service paths from punching through one broad owner.
+- diagnostics/perf state is the next high-cohesion pattern after caches and registries: runtime
+  enablement flags, pending per-frame counters, accumulated snapshots, and render-plan history
+  belong behind one owner shell so config/resources/render-scene code stop sharing loose fields.
+- material/custom-effect runtime registries are the matching service-local shell on the content
+  side: registration maps, refcounts, generation counters, and author-facing degradation budgets
+  should live together so services, scene encoding, and effect pipelines stop depending on loose
+  `Renderer` fields.
+- path registry/cache state is the equivalent ownership seam for tessellated geometry: prepared
+  path storage, cache entries, eviction policy, and epoch tracking should move behind one owner so
+  path services and path encoding stop depending on four loose fields.
+- path intermediate/composite scratch state is the matching execution-time seam for path passes:
+  intermediate attachments, composite quad vertex storage, and byte-estimate helpers should move
+  behind the same path owner so config, plan sync, perf snapshots, and pass recorders stop
+  depending on loose `Renderer` fields.
 
 ### 5. Tighten public exports after evidence exists
 

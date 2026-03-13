@@ -11,6 +11,8 @@ use winit::event_loop::{ActiveEventLoop, ControlFlow};
 use winit::platform::web::{WindowAttributesWeb, WindowExtWeb};
 use winit::window::{Window, WindowAttributes, WindowId};
 
+use crate::runner::common::scheduling;
+
 use super::{GfxState, WinitAppDriver, WinitRunner};
 
 impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
@@ -257,7 +259,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
         self.window = Some(window);
         if let Some(window) = self.window.as_ref() {
-            window.request_redraw();
+            self.request_sink_redraw(window.as_ref());
         }
     }
 
@@ -283,7 +285,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         self.web_services.tick();
         self.pending_events.extend(self.web_services.take_events());
 
-        window.request_redraw();
+        self.request_sink_redraw(window.as_ref());
     }
 
     fn window_event(
@@ -308,8 +310,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
         match &event {
             WindowEvent::CloseRequested => {
-                self.pending_events.push(Event::WindowCloseRequested);
-                window.request_redraw();
+                self.push_pending_event_and_request_redraw(window, Event::WindowCloseRequested);
             }
             WindowEvent::SurfaceResized(size) => {
                 if let Some(gfx) = self.gfx.as_mut() {
@@ -324,7 +325,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     &event,
                     &mut self.pending_events,
                 );
-                window.request_redraw();
+                self.request_sink_redraw(window);
             }
             WindowEvent::ScaleFactorChanged { .. } => {
                 if let Some(gfx) = self.gfx.as_mut() {
@@ -341,7 +342,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     &event,
                     &mut self.pending_events,
                 );
-                window.request_redraw();
+                self.request_sink_redraw(window);
             }
             WindowEvent::RedrawRequested => {
                 self.render_frame(event_loop, window);
@@ -379,7 +380,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     self.gfx = Some(gfx);
                 }
                 if !self.pending_events.is_empty() {
-                    window.request_redraw();
+                    self.request_sink_redraw(window);
                 }
             }
         }
@@ -388,6 +389,16 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
     fn about_to_wait(&mut self, event_loop: &dyn ActiveEventLoop) {
         if self.maybe_exit(event_loop) {
             return;
+        }
+        if self.exiting {
+            return;
+        }
+        self.tick_id = scheduling::begin_turn(&mut self.tick_id);
+        self.app.set_tick_id(self.tick_id);
+        if self.raf_windows.has_pending()
+            && let Some(window) = self.window.clone()
+        {
+            self.flush_raf_redraw_requests(window.as_ref());
         }
         event_loop.set_control_flow(ControlFlow::Wait);
     }

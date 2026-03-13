@@ -9,7 +9,6 @@ pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvas
     buttons: MouseButtons,
     zoom: f32,
     drag_kind: DragKindId,
-    dnd_drop_canvas: DndItemId,
 ) -> bool {
     let Some(pending) = canvas.interaction.pending_insert_node_drag.clone() else {
         return false;
@@ -43,53 +42,37 @@ pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvas
     let current_window = canvas_to_window::<M>(cx.bounds, position, snapshot.pan, zoom);
 
     let dnd = ui_dnd::dnd_service_model_global(cx.app);
-    let frame_id = cx.app.frame_id();
     let tick_id = cx.app.tick_id();
-
-    ui_dnd::register_droppable_rect(
-        cx.app.models_mut(),
-        &dnd,
-        window,
-        frame_id,
-        dnd_drop_canvas,
-        cx.bounds,
-        0,
-        false,
+    let activation_probe = ui_dnd::DndActivationProbe::new(
+        dnd.clone(),
+        ui_dnd::DndActivationProbeConfig::for_kind(drag_kind)
+            .activation_constraint(ActivationConstraint::Distance { px: 6.0 }),
     );
-    let update = ui_dnd::handle_pointer_move_or_init_in_scope(
-        cx.app.models_mut(),
-        &dnd,
+    let payload = super::InsertNodeDragPayload {
+        candidate: pending.candidate.clone(),
+    };
+    let sensor = ui_dnd::try_begin_cross_window_drag_on_activation(
+        cx.app,
+        &activation_probe,
         window,
-        frame_id,
-        drag_kind,
-        ui_dnd::DND_SCOPE_DEFAULT,
         pointer_id,
         pending.start_tick,
         start_window,
         current_window,
         tick_id,
-        ActivationConstraint::Distance { px: 6.0 },
-        CollisionStrategy::PointerWithin,
-        Some((cx.bounds, AutoScrollConfig::default())),
-    );
-    if !matches!(update.sensor, SensorOutput::DragStart { .. }) {
-        return false;
-    }
-
-    cx.app.begin_cross_window_drag_with_kind(
-        pointer_id,
-        drag_kind,
-        window,
-        start_window,
-        super::InsertNodeDragPayload {
-            candidate: pending.candidate.clone(),
+        move |app| {
+            fret_runtime::DragHost::begin_cross_window_drag_with_kind(
+                app,
+                pointer_id,
+                drag_kind,
+                window,
+                start_window,
+                payload,
+            );
         },
     );
-    ui_dnd::clear_pointer(cx.app.models_mut(), &dnd, window, drag_kind, pointer_id);
-    if let Some(drag) = cx.app.drag_mut(pointer_id)
-        && drag.payload::<super::InsertNodeDragPayload>().is_some()
-    {
-        drag.dragging = true;
+    if !matches!(sensor, SensorOutput::DragStart { .. }) {
+        return false;
     }
 
     super::session::finish_pending_insert_node_drag(&mut canvas.interaction, cx);

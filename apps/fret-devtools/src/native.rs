@@ -487,8 +487,10 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     semantics::refresh_semantics_cache_if_needed(cx.app, st);
     ws::maybe_request_semantics_node_details(cx.app, st);
 
+    let continuous_frames_slot = cx.slot_id();
     let mut needs_frames = false;
-    cx.with_state(
+    cx.state_for(
+        continuous_frames_slot,
         || None::<ContinuousFrames>,
         |lease: &mut Option<ContinuousFrames>| {
             if lease.is_none() {
@@ -498,7 +500,8 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     );
     if needs_frames {
         let lease = cx.begin_continuous_frames();
-        cx.with_state(
+        cx.state_for(
+            continuous_frames_slot,
             || None::<ContinuousFrames>,
             |slot: &mut Option<ContinuousFrames>| {
                 *slot = Some(lease);
@@ -1129,7 +1132,7 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
                 hasher.finish()
             };
 
-            let rows = cx.with_state(RowsCache::default, |cache| {
+            let rows = cx.slot_state(RowsCache::default, |cache| {
                 if cache.key != rows_key {
                     let next = semantics::compute_rows(&index, &expanded, &search);
                     cache.key = rows_key;
@@ -1138,12 +1141,12 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
                 Arc::clone(&cache.rows)
             });
 
-            let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+            let scroll_handle = cx.slot_state(VirtualListScrollHandle::new, |h| h.clone());
 
             if let Some(sel) = selected_id {
                 let rows_for_scroll = Arc::clone(&rows);
                 let handle_for_scroll = scroll_handle.clone();
-                cx.with_state(SelectionScrollSync::default, |sync| {
+                cx.slot_state(SelectionScrollSync::default, |sync| {
                     let next = (rows_key, sel);
                     if sync.last == Some(next) {
                         return;
@@ -1155,7 +1158,7 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
                     }
                 });
             } else {
-                cx.with_state(SelectionScrollSync::default, |sync| sync.last = None);
+                cx.slot_state(SelectionScrollSync::default, |sync| sync.last = None);
             }
 
             let mut layout = LayoutStyle::default();

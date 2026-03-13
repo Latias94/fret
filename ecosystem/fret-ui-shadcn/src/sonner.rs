@@ -263,7 +263,7 @@ impl Toaster {
                 prev_toaster_id,
                 close_duration_changed,
                 swipe_changed,
-            ) = cx.with_state(ToasterConfigState::default, |st| {
+            ) = cx.slot_state(ToasterConfigState::default, |st| {
                 let max_toasts_changed = st.max_toasts != self.max_toasts;
                 let duration_changed =
                     st.toaster_id.as_ref() != self.id.as_ref() || st.duration != self.duration;

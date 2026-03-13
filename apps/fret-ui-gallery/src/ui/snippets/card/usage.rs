@@ -11,24 +11,22 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         .max_w(MetricRef::Px(Px(384.0)))
         .min_w_0();
 
-    shadcn::Card::build(|cx, out| {
-        out.extend([
-            shadcn::card_header(cx, |cx| {
-                vec![
-                    shadcn::card_title(cx, "Card Title"),
-                    shadcn::card_description(cx, "Card Description"),
-                    shadcn::card_action(cx, |cx| {
-                        vec![ui::text("Card Action").text_sm().into_element(cx)]
-                    }),
+    shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Card Title"),
+                    shadcn::card_description("Card Description"),
+                    shadcn::card_action(
+                        |cx| ui::children![cx; ui::text("Card Action").text_sm()]
+                    ),
                 ]
             }),
-            shadcn::card_content(cx, |cx| {
-                vec![ui::text("Card Content").text_sm().into_element(cx)]
-            }),
-            shadcn::card_footer(cx, |cx| {
-                vec![ui::text("Card Footer").text_sm().into_element(cx)]
-            }),
-        ]);
+            shadcn::card_content(|cx| ui::children![cx; ui::text("Card Content").text_sm()]),
+            shadcn::card_footer(|cx| ui::children![cx; ui::text("Card Footer").text_sm()]),
+        ]
     })
     .refine_layout(max_w_sm)
     .into_element(cx)

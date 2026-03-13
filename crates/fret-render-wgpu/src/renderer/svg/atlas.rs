@@ -45,18 +45,23 @@ impl Renderer {
                 size_px.1 as i32,
             )),
             entries: 0,
-            last_used_epoch: self.svg_raster_epoch,
+            last_used_epoch: self.svg_raster_state.raster_epoch,
             _texture: texture,
         };
 
-        let idx = self.svg_mask_atlas_free.pop().unwrap_or_else(|| {
-            self.svg_mask_atlas_pages.push(None);
-            self.svg_mask_atlas_pages.len() - 1
-        });
-        self.svg_mask_atlas_pages[idx] = Some(page);
+        let idx = self
+            .svg_raster_state
+            .mask_atlas_free
+            .pop()
+            .unwrap_or_else(|| {
+                self.svg_raster_state.mask_atlas_pages.push(None);
+                self.svg_raster_state.mask_atlas_pages.len() - 1
+            });
+        self.svg_raster_state.mask_atlas_pages[idx] = Some(page);
 
-        self.svg_mask_atlas_bytes = self
-            .svg_mask_atlas_bytes
+        self.svg_raster_state.mask_atlas_bytes = self
+            .svg_raster_state
+            .mask_atlas_bytes
             .saturating_add(u64::from(size_px.0).saturating_mul(u64::from(size_px.1)));
         idx
     }
@@ -86,7 +91,12 @@ impl Renderer {
         let size = etagere::Size::new(w_pad as i32, h_pad as i32);
 
         let mut alloc: Option<(usize, etagere::Allocation)> = None;
-        for (idx, page) in self.svg_mask_atlas_pages.iter_mut().enumerate() {
+        for (idx, page) in self
+            .svg_raster_state
+            .mask_atlas_pages
+            .iter_mut()
+            .enumerate()
+        {
             let Some(page) = page.as_mut() else {
                 continue;
             };
@@ -97,7 +107,7 @@ impl Renderer {
         }
         if alloc.is_none() {
             let page_index = self.ensure_svg_mask_atlas_page(device, queue);
-            let page = self.svg_mask_atlas_pages[page_index]
+            let page = self.svg_raster_state.mask_atlas_pages[page_index]
                 .as_mut()
                 .expect("atlas page exists");
             let allocation = page.allocator.allocate(size)?;
@@ -105,7 +115,7 @@ impl Renderer {
         }
 
         let (page_index, allocation) = alloc?;
-        let page = self.svg_mask_atlas_pages[page_index]
+        let page = self.svg_raster_state.mask_atlas_pages[page_index]
             .as_mut()
             .expect("atlas page exists");
         let Ok(x) = u32::try_from(allocation.rectangle.min.x) else {
@@ -140,7 +150,7 @@ impl Renderer {
         let v1 = (y + pad + h) as f32 / page_h;
 
         page.entries += 1;
-        page.last_used_epoch = self.svg_raster_epoch;
+        page.last_used_epoch = self.svg_raster_state.raster_epoch;
 
         Some((
             page.image,
@@ -153,7 +163,8 @@ impl Renderer {
 
     pub(in crate::renderer) fn evict_svg_mask_atlas_page(&mut self, page_index: usize) {
         let Some(page) = self
-            .svg_mask_atlas_pages
+            .svg_raster_state
+            .mask_atlas_pages
             .get_mut(page_index)
             .and_then(|p| p.take())
         else {
@@ -161,7 +172,7 @@ impl Renderer {
         };
 
         let mut keys_to_remove: Vec<SvgRasterKey> = Vec::new();
-        for (k, v) in &self.svg_rasters {
+        for (k, v) in &self.svg_raster_state.rasters {
             let is_page = match &v.storage {
                 SvgRasterStorage::MaskAtlas {
                     page_index: idx, ..
@@ -172,20 +183,28 @@ impl Renderer {
                 keys_to_remove.push(*k);
             }
         }
-        if self.perf_enabled {
-            self.perf_svg_mask_atlas_page_evictions =
-                self.perf_svg_mask_atlas_page_evictions.saturating_add(1);
-            self.perf_svg_mask_atlas_entries_evicted = self
-                .perf_svg_mask_atlas_entries_evicted
+        if self.diagnostics_state.perf_enabled() {
+            self.svg_raster_state.frame_perf.mask_atlas_page_evictions = self
+                .svg_raster_state
+                .frame_perf
+                .mask_atlas_page_evictions
+                .saturating_add(1);
+            self.svg_raster_state.frame_perf.mask_atlas_entries_evicted = self
+                .svg_raster_state
+                .frame_perf
+                .mask_atlas_entries_evicted
                 .saturating_add(keys_to_remove.len() as u64);
         }
         for k in keys_to_remove {
-            let _ = self.svg_rasters.remove(&k);
+            let _ = self.svg_raster_state.rasters.remove(&k);
         }
 
-        self.svg_mask_atlas_bytes = self.svg_mask_atlas_bytes.saturating_sub(page.bytes());
+        self.svg_raster_state.mask_atlas_bytes = self
+            .svg_raster_state
+            .mask_atlas_bytes
+            .saturating_sub(page.bytes());
         let _ = self.unregister_image(page.image);
 
-        self.svg_mask_atlas_free.push(page_index);
+        self.svg_raster_state.mask_atlas_free.push(page_index);
     }
 }

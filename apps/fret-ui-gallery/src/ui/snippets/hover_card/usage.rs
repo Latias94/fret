@@ -13,6 +13,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     )
     .into_element(cx)]);
 
-    shadcn::HoverCard::new(trigger, content).into_element(cx)
+    shadcn::HoverCard::new(cx, trigger, content).into_element(cx)
 }
 // endregion: example

@@ -50,9 +50,8 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
 
     ui::v_flex(|cx| {
         vec![
-            shadcn::raw::typography::muted(
-                "Chart UI contracts: Tooltip + Legend content recipes.",
-            ).into_element(cx),
+            shadcn::raw::typography::muted("Chart UI contracts: Tooltip + Legend content recipes.")
+                .into_element(cx),
             tooltip(
                 cx,
                 "January",

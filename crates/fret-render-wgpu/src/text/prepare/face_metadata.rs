@@ -30,11 +30,11 @@ impl TextSystem {
                 missing_glyphs: usage.missing_glyphs,
             });
         }
-        self.font_trace.maybe_record(
+        self.font_runtime.font_trace.maybe_record(
             text,
             style,
             constraints,
-            &self.fallback_policy,
+            &self.font_runtime.fallback_policy,
             shape.missing_glyphs,
             families,
         );
@@ -57,9 +57,11 @@ impl TextSystem {
         };
 
         let font_data = self
+            .face_cache
             .font_data_by_face
             .get(&(usage.font_data_id, usage.face_index))?;
         let coords: &[i16] = self
+            .face_cache
             .font_instance_coords_by_face
             .get(&face_key)
             .map(|v| v.as_ref())
@@ -76,6 +78,7 @@ impl TextSystem {
 
     fn family_name_for_face(&mut self, font_data_id: u64, face_index: u32) -> Option<String> {
         if let Some(name) = self
+            .face_cache
             .font_face_family_name_cache
             .get(&(font_data_id, face_index))
             .cloned()
@@ -83,12 +86,16 @@ impl TextSystem {
             return Some(name);
         }
 
-        let font_data = self.font_data_by_face.get(&(font_data_id, face_index))?;
+        let font_data = self
+            .face_cache
+            .font_data_by_face
+            .get(&(font_data_id, face_index))?;
         let name = fret_render_text::font_names::best_family_name_from_font_bytes(
             font_data.data.data(),
             face_index,
         )?;
-        self.font_face_family_name_cache
+        self.face_cache
+            .font_face_family_name_cache
             .insert((font_data_id, face_index), name.clone());
         Some(name)
     }

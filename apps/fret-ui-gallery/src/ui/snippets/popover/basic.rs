@@ -21,18 +21,18 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .into_element(cx)])
     .test_id("ui-gallery-popover-basic-panel");
 
-    let popover = shadcn::Popover::new_controllable(cx, None, false)
-        .align(shadcn::PopoverAlign::Start)
-        .build(
-            cx,
-            shadcn::PopoverTrigger::build(
-                shadcn::Button::new("Open Popover")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .test_id("ui-gallery-popover-basic-trigger"),
-            ),
-            content,
-        )
-        .test_id("ui-gallery-popover-basic-popover");
+    let popover = shadcn::Popover::new(
+        cx,
+        shadcn::PopoverTrigger::build(
+            shadcn::Button::new("Open Popover")
+                .variant(shadcn::ButtonVariant::Outline)
+                .test_id("ui-gallery-popover-basic-trigger"),
+        ),
+        content,
+    )
+    .align(shadcn::PopoverAlign::Start)
+    .into_element(cx)
+    .test_id("ui-gallery-popover-basic-popover");
 
     centered(popover)
         .into_element(cx)

@@ -17,24 +17,12 @@ struct DropdownMenuRadioGroupCase {
     recipe: DropdownMenuRadioGroupRecipe,
 }
 
+#[track_caller]
 fn build_dropdown_menu_radio_group_demo_overlay(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    #[derive(Default)]
-    struct Models {
-        position: Option<Model<Option<Arc<str>>>>,
-    }
-
-    let existing = cx.with_state(Models::default, |st| st.position.as_ref().cloned());
-
-    let position = if let Some(existing) = existing {
-        existing
-    } else {
-        let position = cx.app.models_mut().insert(Some(Arc::from("bottom")));
-        cx.with_state(Models::default, |st| st.position = Some(position.clone()));
-        position
-    };
+    let position = cx.local_model_keyed("position", || Some(Arc::from("bottom")));
 
     build_dropdown_menu_radio_group_demo(cx, open, position)
 }

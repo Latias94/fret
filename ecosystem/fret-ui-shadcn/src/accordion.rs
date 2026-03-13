@@ -2143,54 +2143,54 @@ impl Accordion {
     }
 }
 
+/// Builder-preserving controlled helper for the common accordion authoring path.
 pub fn accordion_single<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+) -> Accordion
 where
     I: IntoIterator<Item = AccordionItem>,
 {
-    Accordion::single(model).items(f(cx)).into_element(cx)
+    Accordion::single(model).items(f(cx))
 }
 
+/// Builder-preserving uncontrolled helper for the common `defaultValue` accordion path.
 pub fn accordion_single_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>(
     cx: &mut ElementContext<'_, H>,
     default_value: Option<T>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+) -> Accordion
 where
     I: IntoIterator<Item = AccordionItem>,
 {
-    Accordion::single_uncontrolled(default_value)
-        .items(f(cx))
-        .into_element(cx)
+    Accordion::single_uncontrolled(default_value).items(f(cx))
 }
 
+/// Builder-preserving controlled helper for the common multi-open accordion path.
 pub fn accordion_multiple<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Vec<Arc<str>>>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+) -> Accordion
 where
     I: IntoIterator<Item = AccordionItem>,
 {
-    Accordion::multiple(model).items(f(cx)).into_element(cx)
+    Accordion::multiple(model).items(f(cx))
 }
 
+/// Builder-preserving uncontrolled helper for the common multi-open `defaultValue` path.
 pub fn accordion_multiple_uncontrolled<H: UiHost, V, I>(
     cx: &mut ElementContext<'_, H>,
     default_value: V,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+) -> Accordion
 where
     V: IntoIterator,
     V::Item: Into<Arc<str>>,
     I: IntoIterator<Item = AccordionItem>,
 {
-    Accordion::multiple_uncontrolled(default_value)
-        .items(f(cx))
-        .into_element(cx)
+    Accordion::multiple_uncontrolled(default_value).items(f(cx))
 }
 
 #[cfg(test)]

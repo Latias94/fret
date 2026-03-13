@@ -458,7 +458,7 @@ where
             let content = {
                 let content_container = |cx: &mut ElementContext<'_, H>| {
                     let handle =
-                        cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
+                        cx.slot_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
                     let mut scroll_layout = LayoutStyle::default();
                     if resizable_layout {
                         scroll_layout.size.width = Length::Fill;

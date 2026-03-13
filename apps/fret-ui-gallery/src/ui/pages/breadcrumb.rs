@@ -17,7 +17,7 @@ pub(super) fn preview_breadcrumb(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = doc_layout::notes_block([
         "`fret_ui_shadcn::Breadcrumb` remains the compact builder for standard trails: `Breadcrumb::new().items([...])`.",
         "For upstream parity, `breadcrumb::primitives::{Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator, BreadcrumbEllipsis}` keep the shadcn-shaped composition surface.",
-        "`BreadcrumbLink` and `BreadcrumbPage` now expose `.children([...])` as the explicit Fret alternative to upstream arbitrary React children, while `href(...)`, `on_click(...)`, and `on_activate(...)` keep navigation typed instead of introducing generic `Slot` / `asChild` prop merging.",
+        "`BreadcrumbLink` and `BreadcrumbPage` now expose `.children(|cx| [...])` as the default typed alternative to upstream arbitrary React children, while `children_raw(...)` stays explicit for pre-landed content and `href(...)`, `on_click(...)`, and `on_activate(...)` keep navigation typed instead of introducing generic `Slot` / `asChild` prop merging.",
         "`BreadcrumbSeparator` keeps a narrow typed override surface through `BreadcrumbSeparatorKind` because the documented parity cases are icon/text separators rather than arbitrary slot-prop merging.",
     ]);
 
@@ -27,7 +27,7 @@ pub(super) fn preview_breadcrumb(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Breadcrumb already exposes both upstream-shaped primitives and a compact builder; the docs `Usage` section prefers primitives for parity, while the compact builder remains a Fret ergonomic shortcut.",
         "Prefer short, task-oriented labels and keep only the current page as non-clickable text.",
         "Use separators and collapse strategy (`BreadcrumbItem::ellipsis`) to keep paths readable in narrow sidebars.",
-        "Dropdown and router-link samples use typed pressables/links; `.children([...])` covers composable inline content without widening the public surface into a generic Slot/`asChild` mechanism (ADR 0115).",
+        "Dropdown and router-link samples use typed pressables/links; `.children(|cx| [...])` covers composable inline content without widening the public surface into a generic Slot/`asChild` mechanism (ADR 0115), while `children_raw(...)` remains the explicit advanced seam.",
         "The live gallery keeps usage links deterministic via `on_click(\"ui_gallery.app.open\")`, so clicking `Home` no longer launches the system browser while the code still demonstrates the semantic-link path.",
         "The root/list/current-page semantics now approximate upstream `nav/ol/li` more closely; separators and ellipsis stay presentation-only in the semantics tree.",
     ]);
@@ -72,7 +72,7 @@ pub(super) fn preview_breadcrumb(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             DocSection::new("Link Component", link_component)
                 .title_test_id("ui-gallery-breadcrumb-section-title-link-component")
                 .description(
-                    "Use the typed link surface to model router-integrated breadcrumb items; `.children([...])` is the explicit Fret alternative to upstream `render` / `asChild`.",
+                    "Use the typed link surface to model router-integrated breadcrumb items; `.children(|cx| [...])` is the default Fret alternative to upstream `render` / `asChild`.",
                 )
                 .code_rust_from_file_region(snippets::link_component::SOURCE, "example"),
             DocSection::new("RTL", rtl)

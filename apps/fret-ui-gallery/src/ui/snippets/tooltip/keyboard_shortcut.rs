@@ -18,26 +18,23 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .children([keyboard_icon])
                 .test_id("ui-gallery-tooltip-keyboard-trigger")
                 .into_element(cx);
+            let keyboard_content = shadcn::TooltipContent::new(vec![
+                ui::h_row(|cx| {
+                    vec![
+                        cx.text("Save Changes"),
+                        shadcn::Kbd::new("S").into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .items_center()
+                .into_element(cx),
+            ]);
 
             vec![
-                shadcn::Tooltip::new(
-                    keyboard_trigger,
-                    shadcn::TooltipContent::new(vec![
-                        ui::h_row(|cx| {
-                            vec![
-                                cx.text("Save Changes"),
-                                shadcn::Kbd::new("S").into_element(cx),
-                            ]
-                        })
-                        .gap(Space::N2)
-                        .items_center()
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                )
-                .side(shadcn::TooltipSide::Top)
-                .into_element(cx)
-                .test_id("ui-gallery-tooltip-keyboard"),
+                shadcn::Tooltip::new(cx, keyboard_trigger, keyboard_content)
+                    .side(shadcn::TooltipSide::Top)
+                    .into_element(cx)
+                    .test_id("ui-gallery-tooltip-keyboard"),
             ]
         })
         .into_iter()

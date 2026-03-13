@@ -77,7 +77,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .into_element(cx),
                     shadcn::raw::typography::muted(
                         "Controlled via SidebarProvider.open(Some(model)).",
-                    ).into_element(cx),
+                    )
+                    .into_element(cx),
                 ]
             })
             .gap(Space::N2)
@@ -173,18 +174,21 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .test_id("ui-gallery-sidebar-controlled-trigger")
                 .into_element(cx);
 
-            let inset = shadcn::SidebarInset::new([shadcn::Card::new(vec![
-                shadcn::CardHeader::new(vec![
-                    shadcn::CardTitle::new("Sidebar Inset").into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::CardContent::new(vec![
-                    cx.text("Use a main content panel next to Sidebar when controlled."),
-                    cx.text(format!("open={}", open_now)),
-                    cx.text(format!("selected={}", selected_value.as_ref())),
-                ])
-                .into_element(cx),
-            ])
+            let inset = shadcn::SidebarInset::new([shadcn::card(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_header(
+                        |cx| ui::children![cx; shadcn::card_title("Sidebar Inset")],
+                    ),
+                    shadcn::card_content(|cx| {
+                        vec![
+                            cx.text("Use a main content panel next to Sidebar when controlled."),
+                            cx.text(format!("open={}", open_now)),
+                            cx.text(format!("selected={}", selected_value.as_ref())),
+                        ]
+                    }),
+                ]
+            })
             .refine_layout(LayoutRefinement::default().w_full().h_full().min_w_0())
             .into_element(cx)])
             .into_element(cx);

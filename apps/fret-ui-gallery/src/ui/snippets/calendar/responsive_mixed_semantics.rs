@@ -56,10 +56,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .into_element(cx)
     .test_id("ui-gallery-calendar-responsive-panel");
 
-    let popover = shadcn::Popover::new(popover_open.clone())
+    let popover = shadcn::Popover::from_open(popover_open.clone())
         .side(shadcn::PopoverSide::Bottom)
         .align(shadcn::PopoverAlign::Start)
-        .into_element(
+        .into_element_with(
             cx,
             move |cx| {
                 shadcn::Button::new("Open calendar popover")

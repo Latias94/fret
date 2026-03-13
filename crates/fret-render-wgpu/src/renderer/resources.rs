@@ -441,14 +441,6 @@ impl Renderer {
             vertex_usage,
         );
 
-        let path_composite_vertex_capacity = 64 * 6;
-        let path_composite_vertices = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("fret path composite vertices"),
-            size: (path_composite_vertex_capacity * std::mem::size_of::<ViewportVertex>()) as u64,
-            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
         let scale_param_size = std::mem::size_of::<ScaleParamsUniform>() as u64;
         let scale_param_stride = scale_param_size.div_ceil(256) * 256;
         let scale_param_capacity = 64usize;
@@ -560,108 +552,28 @@ impl Renderer {
             textures,
             effect_params,
             pipelines: GpuPipelines::default(),
-            custom_effect_v3_pyramid_scratch: None,
-            custom_effect_v3_pyramid_cache: None,
-            plan_target_write_epochs: [0; 8],
+            custom_effect_v3_pyramid: v3_pyramid::CustomEffectV3PyramidState::default(),
             quad_instances,
             path_paints,
             text_paints,
             viewport_vertices,
             text_vertices,
             path_vertices,
-            path_intermediate: None,
-            path_composite_vertices,
-            path_composite_vertex_capacity,
             text_system,
-            paths: SlotMap::with_key(),
-            path_cache: HashMap::new(),
-            path_cache_capacity: 2048,
-            path_cache_epoch: 0,
-            svg_renderer: SvgRenderer::new(),
-            svgs: SlotMap::with_key(),
-            svg_hash_index: HashMap::new(),
-            svg_rasters: HashMap::new(),
-            svg_mask_atlas_pages: Vec::new(),
-            svg_mask_atlas_free: Vec::new(),
-            svg_raster_bytes: 0,
-            svg_mask_atlas_bytes: 0,
-            svg_raster_budget_bytes: 64 * 1024 * 1024,
-            svg_raster_epoch: 0,
-            svg_perf_enabled: false,
-            svg_perf: SvgPerfStats::default(),
+            path_state: PathState::new(device),
+            svg_registry_state: svg::SvgRegistryState::new(),
+            svg_raster_state: svg::SvgRasterState::default(),
             clip_path_mask_cache: ClipPathMaskCache::new((256 * 1024 * 1024) / 8),
-            perf_enabled: false,
-            perf_svg_raster_cache_hits: 0,
-            perf_svg_raster_cache_misses: 0,
-            perf_svg_raster_budget_evictions: 0,
-            perf_svg_mask_atlas_page_evictions: 0,
-            perf_svg_mask_atlas_entries_evicted: 0,
-            perf_pending_render_target_updates_requested_by_ingest: [0;
-                fret_render_core::RenderTargetIngestStrategy::COUNT],
-            perf_pending_render_target_updates_by_ingest: [0;
-                fret_render_core::RenderTargetIngestStrategy::COUNT],
-            perf_pending_render_target_updates_ingest_fallbacks: 0,
-            perf_pending_render_target_metadata_degradations_color_encoding_dropped: 0,
-            perf: RenderPerfStats::default(),
-            last_frame_perf: None,
-            last_render_plan_segment_report: None,
-            render_scene_frame_index: 0,
+            diagnostics_state: DiagnosticsState::default(),
             path_msaa_samples: 4,
             debug_offscreen_blit_enabled: false,
             debug_pixelate_scale: 0,
             debug_blur_radius: 0,
             debug_blur_scissor: None,
-            intermediate_budget_bytes: 256 * 1024 * 1024,
-            intermediate_perf_enabled: false,
-            intermediate_perf: IntermediatePerfStats::default(),
-            intermediate_pool: IntermediatePool::default(),
+            intermediate_state: IntermediateState::default(),
             gpu_resources: super::gpu_resources::GpuResources::default(),
             scene_encoding_cache: super::scene_encoding_cache::SceneEncodingCache::default(),
-
-            materials: SlotMap::with_key(),
-            materials_by_desc: HashMap::new(),
-            materials_generation: 0,
-            material_paint_budget_per_frame: 50_000,
-            material_distinct_budget_per_frame: 256,
-            custom_effects: SlotMap::with_key(),
-            custom_effect_hash_index: HashMap::new(),
-            custom_effects_generation: 0,
-        }
-    }
-
-    pub(super) fn bump_path_cache_epoch(&mut self) -> u64 {
-        self.path_cache_epoch = self.path_cache_epoch.wrapping_add(1);
-        self.path_cache_epoch
-    }
-
-    pub(super) fn prune_path_cache(&mut self) {
-        if self.path_cache.len() <= self.path_cache_capacity {
-            return;
-        }
-
-        // Simple O(n) eviction: drop least-recently-used entries with refs == 0.
-        // This keeps the implementation small and deterministic for MVP-PATH-2.
-        while self.path_cache.len() > self.path_cache_capacity {
-            let mut victim: Option<(PathCacheKey, CachedPathEntry)> = None;
-            for (k, v) in &self.path_cache {
-                if v.refs != 0 {
-                    continue;
-                }
-                let replace = match victim {
-                    None => true,
-                    Some((_, cur)) => v.last_used_epoch < cur.last_used_epoch,
-                };
-                if replace {
-                    victim = Some((*k, *v));
-                }
-            }
-
-            let Some((key, entry)) = victim else {
-                break;
-            };
-
-            self.path_cache.remove(&key);
-            self.paths.remove(entry.id);
+            material_effect_state: MaterialEffectState::default(),
         }
     }
 
@@ -675,30 +587,13 @@ impl Renderer {
             desc.metadata.color_encoding,
         ) {
             desc.metadata.color_encoding = fret_render_core::RenderTargetColorEncoding::default();
-            if self.perf_enabled {
-                self.perf_pending_render_target_metadata_degradations_color_encoding_dropped = self
-                    .perf_pending_render_target_metadata_degradations_color_encoding_dropped
-                    .saturating_add(1);
-            }
+            self.diagnostics_state
+                .note_render_target_metadata_degradation_color_encoding_dropped();
         }
-        if self.perf_enabled {
-            let effective_ix =
-                render_target_ingest_strategy_perf_index(desc.metadata.ingest_strategy);
-            self.perf_pending_render_target_updates_by_ingest[effective_ix] =
-                self.perf_pending_render_target_updates_by_ingest[effective_ix].saturating_add(1);
-
-            let requested_ix =
-                render_target_ingest_strategy_perf_index(desc.metadata.requested_ingest_strategy);
-            self.perf_pending_render_target_updates_requested_by_ingest[requested_ix] = self
-                .perf_pending_render_target_updates_requested_by_ingest[requested_ix]
-                .saturating_add(1);
-
-            if desc.metadata.requested_ingest_strategy != desc.metadata.ingest_strategy {
-                self.perf_pending_render_target_updates_ingest_fallbacks = self
-                    .perf_pending_render_target_updates_ingest_fallbacks
-                    .saturating_add(1);
-            }
-        }
+        self.diagnostics_state.note_render_target_update(
+            desc.metadata.requested_ingest_strategy,
+            desc.metadata.ingest_strategy,
+        );
         self.gpu_resources.register_render_target(desc)
     }
 
@@ -725,30 +620,13 @@ impl Renderer {
             desc.metadata.color_encoding,
         ) {
             desc.metadata.color_encoding = fret_render_core::RenderTargetColorEncoding::default();
-            if self.perf_enabled {
-                self.perf_pending_render_target_metadata_degradations_color_encoding_dropped = self
-                    .perf_pending_render_target_metadata_degradations_color_encoding_dropped
-                    .saturating_add(1);
-            }
+            self.diagnostics_state
+                .note_render_target_metadata_degradation_color_encoding_dropped();
         }
-        if self.perf_enabled {
-            let effective_ix =
-                render_target_ingest_strategy_perf_index(desc.metadata.ingest_strategy);
-            self.perf_pending_render_target_updates_by_ingest[effective_ix] =
-                self.perf_pending_render_target_updates_by_ingest[effective_ix].saturating_add(1);
-
-            let requested_ix =
-                render_target_ingest_strategy_perf_index(desc.metadata.requested_ingest_strategy);
-            self.perf_pending_render_target_updates_requested_by_ingest[requested_ix] = self
-                .perf_pending_render_target_updates_requested_by_ingest[requested_ix]
-                .saturating_add(1);
-
-            if desc.metadata.requested_ingest_strategy != desc.metadata.ingest_strategy {
-                self.perf_pending_render_target_updates_ingest_fallbacks = self
-                    .perf_pending_render_target_updates_ingest_fallbacks
-                    .saturating_add(1);
-            }
-        }
+        self.diagnostics_state.note_render_target_update(
+            desc.metadata.requested_ingest_strategy,
+            desc.metadata.ingest_strategy,
+        );
         self.gpu_resources.update_render_target(id, desc)
     }
 

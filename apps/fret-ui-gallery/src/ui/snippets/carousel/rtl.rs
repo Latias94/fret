@@ -46,7 +46,7 @@ fn slide_card(
         move |_cx| vec![number],
     );
 
-    shadcn::Card::new([content]).into_element(cx)
+    shadcn::card(|cx| ui::children![cx; shadcn::card_content(|cx| ui::children![cx; content])])
 }
 
 fn slide(

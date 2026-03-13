@@ -11,12 +11,12 @@ fn make_tooltip<H: UiHost>(
     side: shadcn::TooltipSide,
     content: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
+    let tooltip_content =
+        shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(cx, content)]);
     shadcn::Tooltip::new(
-        shadcn::Button::new(label)
-            .variant(shadcn::ButtonVariant::Outline)
-            .into_element(cx),
-        shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(cx, content)])
-            .into_element(cx),
+        cx,
+        shadcn::Button::new(label).variant(shadcn::ButtonVariant::Outline),
+        tooltip_content,
     )
     .arrow(true)
     .side(side)
@@ -32,15 +32,15 @@ fn make_tooltip_with_test_ids<H: UiHost>(
     panel_test_id: &'static str,
     text_test_id: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
+    let tooltip_content = shadcn::TooltipContent::new(vec![
+        shadcn::TooltipContent::text(cx, content).test_id(text_test_id),
+    ]);
     shadcn::Tooltip::new(
+        cx,
         shadcn::Button::new(label)
             .variant(shadcn::ButtonVariant::Outline)
-            .test_id(trigger_test_id)
-            .into_element(cx),
-        shadcn::TooltipContent::new(vec![
-            shadcn::TooltipContent::text(cx, content).test_id(text_test_id),
-        ])
-        .into_element(cx),
+            .test_id(trigger_test_id),
+        tooltip_content,
     )
     .arrow(true)
     .side(side)

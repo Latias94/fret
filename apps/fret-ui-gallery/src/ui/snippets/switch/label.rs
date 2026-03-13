@@ -15,20 +15,24 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .a11y_label("Switch label association")
         .into_element(cx);
 
-    shadcn::FieldGroup::new([shadcn::Field::new([
-        shadcn::FieldContent::new([
-            shadcn::FieldLabel::new("Enable notifications")
-                .for_control(control_id.clone())
-                .test_id("ui-gallery-switch-label-label")
+    shadcn::field_group(|cx| {
+        ui::children![
+            cx;
+            shadcn::Field::new([
+                shadcn::FieldContent::new([
+                    shadcn::FieldLabel::new("Enable notifications")
+                        .for_control(control_id.clone())
+                        .test_id("ui-gallery-switch-label-label")
+                        .into_element(cx),
+                    shadcn::FieldDescription::new("Click the label to toggle the switch.")
+                        .for_control(control_id.clone())
+                        .into_element(cx),
+                ])
                 .into_element(cx),
-            shadcn::FieldDescription::new("Click the label to toggle the switch.")
-                .for_control(control_id.clone())
-                .into_element(cx),
-        ])
-        .into_element(cx),
-        switch,
-    ])
-    .into_element(cx)])
+                switch,
+            ]),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(360.0)))
     .into_element(cx)
     .test_id("ui-gallery-switch-label")

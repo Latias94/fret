@@ -519,7 +519,7 @@ fn render_tooltip_fixture(
                         )
                         .into_element(cx);
 
-                    let tooltip = fret_ui_shadcn::Tooltip::new(trigger, content)
+                    let tooltip = fret_ui_shadcn::Tooltip::new(cx, trigger, content)
                         .open_delay_frames(0)
                         .close_delay_frames(0)
                         .side(match side {
@@ -622,7 +622,7 @@ fn render_hover_card_fixture(
                 },
             );
 
-            let hover_card = fret_ui_shadcn::HoverCard::new(trigger, content)
+            let hover_card = fret_ui_shadcn::HoverCard::new(cx, trigger, content)
                 .open_delay_frames(0)
                 .close_delay_frames(0)
                 .side(match side {
@@ -797,7 +797,7 @@ fn radix_web_popover_open_geometry_matches_fret() {
                     ..Default::default()
                 },
                 |cx| {
-                    let popover = fret_ui_shadcn::Popover::new(open.clone())
+                    let popover = fret_ui_shadcn::Popover::from_open(open.clone())
                         .side(match parse_side(side_str) {
                             Side::Top => fret_ui_shadcn::PopoverSide::Top,
                             Side::Right => fret_ui_shadcn::PopoverSide::Right,
@@ -809,7 +809,7 @@ fn radix_web_popover_open_geometry_matches_fret() {
                             Align::Center => fret_ui_shadcn::PopoverAlign::Center,
                             Align::End => fret_ui_shadcn::PopoverAlign::End,
                         })
-                        .into_element(
+                        .into_element_with(
                             cx,
                             |cx| {
                                 let trigger = fixed_trigger(
@@ -865,7 +865,7 @@ fn radix_web_popover_open_geometry_matches_fret() {
                         ..Default::default()
                     },
                     |cx| {
-                        let popover = fret_ui_shadcn::Popover::new(open.clone())
+                        let popover = fret_ui_shadcn::Popover::from_open(open.clone())
                             .side(match parse_side(side_str) {
                                 Side::Top => fret_ui_shadcn::PopoverSide::Top,
                                 Side::Right => fret_ui_shadcn::PopoverSide::Right,
@@ -877,7 +877,7 @@ fn radix_web_popover_open_geometry_matches_fret() {
                                 Align::Center => fret_ui_shadcn::PopoverAlign::Center,
                                 Align::End => fret_ui_shadcn::PopoverAlign::End,
                             })
-                            .into_element(
+                            .into_element_with(
                                 cx,
                                 |cx| {
                                     let trigger = fixed_trigger(

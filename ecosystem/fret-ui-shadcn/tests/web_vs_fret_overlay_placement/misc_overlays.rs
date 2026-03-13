@@ -95,7 +95,7 @@ fn fret_tooltip_tracks_trigger_when_underlay_scrolls() {
                                     "Tooltip content",
                                 )])
                                 .into_element(cx);
-                                let tooltip = Tooltip::new(trigger, content)
+                                let tooltip = Tooltip::new(cx, trigger, content)
                                     .open_delay_frames(0)
                                     .close_delay_frames(0);
 
@@ -301,7 +301,7 @@ fn fret_popover_tracks_trigger_when_underlay_scrolls() {
                         ..Default::default()
                     },
                     move |cx| {
-                        vec![Popover::new(open.clone()).into_element(
+                        vec![Popover::from_open(open.clone()).into_element_with(
                             cx,
                             move |cx| {
                                 cx.semantics(
@@ -603,7 +603,7 @@ fn fret_hover_card_tracks_trigger_when_underlay_scrolls() {
                         );
 
                         vec![
-                            HoverCard::new(trigger, content)
+                            HoverCard::new(cx, trigger, content)
                                 .open_delay_frames(0)
                                 .close_delay_frames(0)
                                 .side(HoverCardSide::Bottom)

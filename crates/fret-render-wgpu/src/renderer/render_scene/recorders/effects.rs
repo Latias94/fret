@@ -125,7 +125,7 @@ fn record_fullscreen_param_effect_pass<
 
     let dst_view_owned = ensure_color_dst_view_owned(
         frame_targets,
-        &mut renderer.intermediate_pool,
+        &mut renderer.intermediate_state.pool,
         device,
         dst,
         dst_size,
@@ -330,7 +330,7 @@ fn record_fullscreen_texture_effect_pass<
 
     let dst_view_owned = ensure_color_dst_view_owned(
         frame_targets,
-        &mut renderer.intermediate_pool,
+        &mut renderer.intermediate_state.pool,
         device,
         dst,
         dst_size,
@@ -700,7 +700,13 @@ pub(in super::super) fn record_custom_effect_pass(
     let common = pass.common;
     let effect = common.effect;
 
-    if exec.renderer.custom_effects.get(effect).is_none() {
+    if exec
+        .renderer
+        .material_effect_state
+        .custom_effects
+        .get(effect)
+        .is_none()
+    {
         let blit = FullscreenBlitPass {
             src: common.src,
             dst: common.dst,
@@ -777,7 +783,12 @@ pub(in super::super) fn record_custom_effect_v2_pass(
     let common = pass.common;
     let effect = common.effect;
 
-    let Some(entry) = exec.renderer.custom_effects.get(effect) else {
+    let Some(entry) = exec
+        .renderer
+        .material_effect_state
+        .custom_effects
+        .get(effect)
+    else {
         let blit = FullscreenBlitPass {
             src: common.src,
             dst: common.dst,
@@ -869,7 +880,7 @@ pub(in super::super) fn record_custom_effect_v2_pass(
 
     let dst_view_owned = ensure_color_dst_view_owned(
         &mut *exec.frame_targets,
-        &mut exec.renderer.intermediate_pool,
+        &mut exec.renderer.intermediate_state.pool,
         exec.device,
         common.dst,
         common.dst_size,
@@ -1059,7 +1070,12 @@ pub(in super::super) fn record_custom_effect_v3_pass(
     let common = pass.common;
     let effect = common.effect;
 
-    let Some(entry) = exec.renderer.custom_effects.get(effect) else {
+    let Some(entry) = exec
+        .renderer
+        .material_effect_state
+        .custom_effects
+        .get(effect)
+    else {
         let blit = FullscreenBlitPass {
             src: common.src,
             dst: common.dst,
@@ -1164,7 +1180,7 @@ pub(in super::super) fn record_custom_effect_v3_pass(
     };
 
     let pyramid_override_view = if pass.pyramid_wanted && pass.pyramid_levels >= 2 {
-        let reuse = exec.renderer.can_reuse_custom_effect_v3_pyramid(
+        let reuse = exec.renderer.custom_effect_v3_pyramid.can_reuse(
             pass.src_raw,
             common.src_size,
             exec.format,
@@ -1185,7 +1201,7 @@ pub(in super::super) fn record_custom_effect_v3_pass(
         }
 
         let (mip_views, mip_sizes, full_view) = {
-            let scratch = exec.renderer.ensure_custom_effect_v3_pyramid_scratch(
+            let scratch = exec.renderer.custom_effect_v3_pyramid.ensure_scratch(
                 exec.device,
                 common.src_size,
                 exec.format,
@@ -1280,7 +1296,7 @@ pub(in super::super) fn record_custom_effect_v3_pass(
                 );
             }
 
-            exec.renderer.set_custom_effect_v3_pyramid_cache(
+            exec.renderer.custom_effect_v3_pyramid.set_cache(
                 pass.src_raw,
                 common.src_size,
                 exec.format,
@@ -1309,7 +1325,7 @@ pub(in super::super) fn record_custom_effect_v3_pass(
 
     let dst_view_owned = ensure_color_dst_view_owned(
         &mut *exec.frame_targets,
-        &mut exec.renderer.intermediate_pool,
+        &mut exec.renderer.intermediate_state.pool,
         exec.device,
         common.dst,
         common.dst_size,
@@ -1569,7 +1585,7 @@ pub(in super::super) fn record_composite_premul_pass(
 
     let dst_view_owned = ensure_color_dst_view_owned(
         frame_targets,
-        &mut renderer.intermediate_pool,
+        &mut renderer.intermediate_state.pool,
         device,
         pass.dst,
         pass.dst_size,
@@ -1671,7 +1687,7 @@ pub(in super::super) fn record_composite_premul_pass(
         &uniform_offsets,
         &bind_group,
         &[],
-        &renderer.path_composite_vertices,
+        renderer.path_composite_vertices_ref(),
         base,
         len,
         pass.dst_scissor,
@@ -1709,7 +1725,7 @@ pub(in super::super) fn record_clip_mask_pass(
     }
     let Some(dst_view) = ensure_mask_dst_view(
         frame_targets,
-        &mut renderer.intermediate_pool,
+        &mut renderer.intermediate_state.pool,
         device,
         pass.dst,
         pass.dst_size,

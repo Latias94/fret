@@ -85,7 +85,7 @@ fn popover_escape_closes_and_restores_focus_to_trigger() {
 
     let build = move |open: Model<bool>| {
         move |cx: &mut ElementContext<'_, App>| {
-            vec![fret_ui_shadcn::Popover::new(open).into_element(
+            vec![fret_ui_shadcn::Popover::from_open(open).into_element_with(
                 cx,
                 |cx| {
                     fret_ui_shadcn::PopoverTrigger::new(

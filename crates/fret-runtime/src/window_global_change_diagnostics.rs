@@ -98,7 +98,12 @@ impl WindowGlobalChangeDiagnosticsStore {
                 .total_global_count
                 .saturating_add(window_snapshot.total_global_count);
             snapshot.max_batch_count = snapshot.max_batch_count.max(window_snapshot.batch_count);
-            if window_snapshot.last_unix_ms.unwrap_or(0) >= snapshot.last_unix_ms.unwrap_or(0) {
+            let next_unix_ms = window_snapshot.last_unix_ms.unwrap_or(0);
+            let current_unix_ms = snapshot.last_unix_ms.unwrap_or(0);
+            if next_unix_ms > current_unix_ms
+                || (next_unix_ms == current_unix_ms
+                    && window_snapshot.last_frame_id >= snapshot.last_frame_id)
+            {
                 snapshot.last_unix_ms = window_snapshot.last_unix_ms;
                 snapshot.last_frame_id = window_snapshot.last_frame_id;
             }
@@ -183,7 +188,7 @@ mod tests {
         assert_eq!(aggregate.batch_count, 3);
         assert_eq!(aggregate.total_global_count, 4);
         assert_eq!(aggregate.max_batch_count, 2);
-        assert!(matches!(aggregate.last_frame_id, 4 | 8));
+        assert_eq!(aggregate.last_frame_id, 8);
         assert_eq!(aggregate.globals[0].name, "A");
         assert_eq!(aggregate.globals[0].count, 2);
     }

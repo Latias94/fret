@@ -33,14 +33,6 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let new_password = cx.local_model_keyed("new_password", String::new);
 
     let account_card = {
-        let header = shadcn::CardHeader::new(ui::children![
-            cx;
-            shadcn::CardTitle::new("Account"),
-            shadcn::CardDescription::new(
-                "Make changes to your account here. Click save when you're done.",
-            )
-        ]);
-
         let content = ui::v_flex(move |cx| {
             ui::children![
                 cx;
@@ -51,21 +43,28 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         .gap(Space::N4)
         .items_start()
         .layout(LayoutRefinement::default().w_full().min_w_0());
-        let content = shadcn::CardContent::new(ui::children![cx; content]);
-        let footer =
-            shadcn::CardFooter::new(ui::children![cx; shadcn::Button::new("Save changes")]);
-        shadcn::Card::new(ui::children![cx; header, content, footer]).into_element(cx)
+        shadcn::card(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_header(|cx| {
+                    ui::children![
+                        cx;
+                        shadcn::card_title("Account"),
+                        shadcn::card_description(
+                            "Make changes to your account here. Click save when you're done.",
+                        ),
+                    ]
+                }),
+                shadcn::card_content(|cx| ui::children![cx; content]),
+                shadcn::card_footer(|cx| {
+                    ui::children![cx; shadcn::Button::new("Save changes")]
+                }),
+            ]
+        })
+        .into_element(cx)
     };
 
     let password_card = {
-        let header = shadcn::CardHeader::new(ui::children![
-            cx;
-            shadcn::CardTitle::new("Password"),
-            shadcn::CardDescription::new(
-                "Change your password here. After saving, you'll be logged out.",
-            )
-        ]);
-
         let content = ui::v_flex(move |cx| {
             ui::children![
                 cx;
@@ -81,10 +80,25 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         .gap(Space::N4)
         .items_start()
         .layout(LayoutRefinement::default().w_full().min_w_0());
-        let content = shadcn::CardContent::new(ui::children![cx; content]);
-        let footer =
-            shadcn::CardFooter::new(ui::children![cx; shadcn::Button::new("Save password")]);
-        shadcn::Card::new(ui::children![cx; header, content, footer]).into_element(cx)
+        shadcn::card(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_header(|cx| {
+                    ui::children![
+                        cx;
+                        shadcn::card_title("Password"),
+                        shadcn::card_description(
+                            "Change your password here. After saving, you'll be logged out.",
+                        ),
+                    ]
+                }),
+                shadcn::card_content(|cx| ui::children![cx; content]),
+                shadcn::card_footer(|cx| {
+                    ui::children![cx; shadcn::Button::new("Save password")]
+                }),
+            ]
+        })
+        .into_element(cx)
     };
 
     shadcn::Tabs::uncontrolled(Some(Arc::<str>::from("account")))

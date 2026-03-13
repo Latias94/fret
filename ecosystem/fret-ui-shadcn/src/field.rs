@@ -597,14 +597,18 @@ impl FieldSet {
     }
 }
 
-pub fn field_set<H: UiHost, I>(
-    cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+pub fn field_set<H: UiHost, I, F, T>(
+    f: F,
+) -> FieldSetBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>
 where
-    I: IntoIterator<Item = AnyElement>,
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
-    FieldSet::new(f(cx)).into_element(cx)
+    FieldSet::build(move |cx, out| {
+        let children = f(cx);
+        extend_landed_field_children(cx, out, children);
+    })
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -794,14 +798,18 @@ impl FieldGroup {
     }
 }
 
-pub fn field_group<H: UiHost, I>(
-    cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+pub fn field_group<H: UiHost, I, F, T>(
+    f: F,
+) -> FieldGroupBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>
 where
-    I: IntoIterator<Item = AnyElement>,
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
-    FieldGroup::new(f(cx)).into_element(cx)
+    FieldGroup::build(move |cx, out| {
+        let children = f(cx);
+        extend_landed_field_children(cx, out, children);
+    })
 }
 
 pub struct FieldSetBuild<H, B> {
@@ -933,6 +941,19 @@ fn collect_built_field_children<H: UiHost>(
     let mut out = Vec::new();
     build(cx, &mut out);
     out
+}
+
+fn extend_landed_field_children<H: UiHost, I, T>(
+    cx: &mut ElementContext<'_, H>,
+    out: &mut Vec<AnyElement>,
+    children: I,
+) where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    for child in children {
+        out.push(child.into_element(cx));
+    }
 }
 
 #[derive(Debug)]

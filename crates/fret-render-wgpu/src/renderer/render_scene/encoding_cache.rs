@@ -150,10 +150,14 @@ impl Renderer {
             images_generation,
             text_atlas_revision,
             text_quality_key: self.text_system.text_quality_key(),
-            materials_generation: self.materials_generation,
-            material_paint_budget_per_frame: self.material_paint_budget_per_frame,
-            material_distinct_budget_per_frame: self.material_distinct_budget_per_frame,
-            custom_effects_generation: self.custom_effects_generation,
+            materials_generation: self.material_effect_state.materials_generation,
+            material_paint_budget_per_frame: self
+                .material_effect_state
+                .material_paint_budget_per_frame,
+            material_distinct_budget_per_frame: self
+                .material_effect_state
+                .material_distinct_budget_per_frame,
+            custom_effects_generation: self.material_effect_state.custom_effects_generation,
         }
     }
 

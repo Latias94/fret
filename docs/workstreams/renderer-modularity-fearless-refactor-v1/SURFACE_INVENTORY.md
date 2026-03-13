@@ -1,8 +1,8 @@
 # Renderer Modularity (Fearless Refactor v1) — Surface Inventory
 
-Status: Draft
+Status: In progress
 
-Last updated: 2026-03-12
+Last updated: 2026-03-13
 
 Related:
 
@@ -49,6 +49,14 @@ Primary consumers:
 - `crates/fret-launch`
 - `apps/fret-examples`
 - stress/demo apps under `apps/`
+
+`WgpuContext` closure for v1:
+
+- broad first-party usage still exists across `crates/fret-launch`, `ecosystem/fret-bootstrap`,
+  demos, stress apps, and cookbook examples
+- keep `WgpuContext` as a stable convenience/bootstrap surface on `crates/fret-render`
+- do not treat it as the sole first-class topology; engine-hosted adapter/device flows remain
+  equally supported
 
 ### B. Capability / diagnostics surface
 
@@ -144,29 +152,81 @@ Rationale:
 - they are not part of the first-party runner/bootstrap story,
 - and they are not required by the current demo / cookbook / launch paths.
 
-## Deferred review candidates
+## Store-vs-snapshot closure (2026-03-13)
 
-The following exports also have low or niche first-party usage, but are deferred from the first
-shrink slice because they are closer to diagnostics or structured public output:
+The 2026-03-13 rescan closed the "stores vs deeper diagnostics values" question for the default
+facade:
+
+- keep diagnostics/report stores and their immediate sample/count wrapper types on `crates/fret-render`
+- move zero-direct-consumer advanced perf/init value snapshots out of the default facade
+
+Why the stores stay:
+
+- `RendererPerfFrameStore` / `RendererPerfFrameSample` are used by `crates/fret-launch`,
+  `ecosystem/fret-bootstrap`, and `apps/fret-examples`
+- `WgpuHubReportCounts` / `WgpuHubReportFrameStore` / `WgpuHubReportFrameSample` are used by
+  `crates/fret-launch` and `ecosystem/fret-bootstrap`
+- `WgpuAllocatorReportFrameStore` / `WgpuAllocatorReportFrameSample` are used by
+  `crates/fret-launch` and `ecosystem/fret-bootstrap`
+
+## Advanced value snapshots retired from the default facade
+
+The following advanced diagnostics/perf value types had no direct first-party consumers outside
+`crates/fret-render*` during the 2026-03-13 rescan and have now been removed from
+`crates/fret-render`:
+
+- `BlurQualitySnapshot`
+- `EffectDegradationSnapshot`
+- `RenderPerfSnapshot`
+- `IntermediatePerfSnapshot`
+- `SvgPerfSnapshot`
+- `WgpuInitDiagnosticsSnapshot`
+
+These values still exist in the backend and can still be observed indirectly through public parent
+surfaces such as `RendererPerfFrameSample`, `Renderer::take_*_snapshot(...)`, and
+`WgpuContext::init_diagnostics`. The decision here is only that naming these advanced value types
+directly is no longer part of the stable default-facade story.
+
+## Nested detail structs retired from the default facade
+
+The following leaf/detail structs had no first-party consumers outside `crates/fret-render*` during
+the 2026-03-13 rescan and have now been removed from `crates/fret-render`:
 
 - `AdapterCapabilities`
 - `StreamingImageCapabilities`
 - `BlurQualityCounters`
 - `EffectDegradationCounters`
-- `EffectDegradationSnapshot`
-- `IntermediatePerfSnapshot`
-- `RenderPerfSnapshot`
-- `SvgPerfSnapshot`
 - `WgpuAllocatorReportSummary`
 - `WgpuAllocatorReportTopAllocation`
 - `WgpuInitAttemptSnapshot`
 
-These may still move out of the default facade later, but they need a more explicit decision on
-how much diagnostics depth `crates/fret-render` is supposed to expose by default.
+Rationale:
+
+- they are detail rows nested inside still-public parent snapshots/stores,
+- they are not part of the primary default-facade teaching surface,
+- and first-party callers did not need source changes after the shrink.
+
+## Stable v1 Facade Closure (2026-03-13)
+
+The stable default-facade contract for v1 is now intentionally described as:
+
+1. Buckets A through E are the public default-facade story.
+2. Nested diagnostics detail structs may stay backend-only even when their parent snapshots/stores
+   remain on the default facade.
+3. Advanced perf/init value snapshots may stay backend-only even when parent stores or convenience
+   surfaces still expose those values indirectly.
+4. `crates/fret-render/tests/facade_surface_snapshot.rs` is the external compile-time gate for the
+   chosen buckets.
+5. `crates/fret-render/src/lib.rs` compile-fail doctests now guard backend-only advanced snapshot
+   names from accidentally re-entering the default facade.
+6. `crates/fret-render/src/lib.rs` and `docs/crate-usage-guide.md` are the public prose anchors
+   for this facade story.
 
 ## Current v1 Recommendation
 
 1. Keep buckets A through E in the default facade.
 2. Remove the first shrink candidates from the default facade now.
-3. Leave deferred review candidates in place until the diagnostics story is explicitly closed.
-4. Keep `crates/fret-render-wgpu` itself broader for now; shrink the default facade first.
+3. Keep diagnostics/report stores on the default facade where first-party runners/tooling use them.
+4. Keep advanced perf/init value snapshots backend-specific unless a real default-facade consumer
+   appears.
+5. Keep `crates/fret-render-wgpu` itself broader for now; shrink the default facade first.

@@ -759,7 +759,7 @@ where
         let children = self.children.expect("expected scroll children closure");
 
         cx.container(container, move |cx| {
-            let handle = cx.with_state(ScrollHandle::default, |h| {
+            let handle = cx.slot_state(ScrollHandle::default, |h| {
                 if let Some(handle) = provided_handle.clone() {
                     *h = handle;
                 }
@@ -909,7 +909,7 @@ where
         let build = self.build.expect("expected scroll area build closure");
 
         cx.container(container, move |cx| {
-            let handle = cx.with_state(ScrollHandle::default, |h| {
+            let handle = cx.slot_state(ScrollHandle::default, |h| {
                 if let Some(handle) = provided_handle.clone() {
                     *h = handle;
                 }

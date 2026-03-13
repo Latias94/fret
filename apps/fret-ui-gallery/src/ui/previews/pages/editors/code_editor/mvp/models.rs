@@ -15,8 +15,9 @@ pub(super) struct CodeEditorMvpHandles {
 }
 
 impl CodeEditorMvpHandles {
+    #[track_caller]
     pub(super) fn get(cx: &mut UiCx<'_>) -> Self {
-        cx.with_state(
+        cx.slot_state(
             || CodeEditorMvpHandles {
                 main: code_editor::CodeEditorHandle::new(code_editor_mvp_source()),
                 word_fixture: code_editor::CodeEditorHandle::new(
@@ -71,8 +72,9 @@ pub(super) struct CodeEditorMvpAppliedFlags {
     pub(super) boundary_identifier_enabled: Option<bool>,
 }
 
+#[track_caller]
 pub(super) fn applied_flags(cx: &mut UiCx<'_>) -> Rc<Cell<CodeEditorMvpAppliedFlags>> {
-    cx.with_state(
+    cx.slot_state(
         || Rc::new(Cell::new(CodeEditorMvpAppliedFlags::default())),
         |v| v.clone(),
     )

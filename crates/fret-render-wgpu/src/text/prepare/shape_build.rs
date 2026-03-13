@@ -62,9 +62,7 @@ fn prepare_shape_input<'a>(
 }
 
 fn next_prepare_shape_epoch(text_system: &mut TextSystem) -> u64 {
-    let epoch = text_system.glyph_atlas_epoch;
-    text_system.glyph_atlas_epoch = text_system.glyph_atlas_epoch.saturating_add(1);
-    epoch
+    text_system.atlas_epoch.next()
 }
 
 fn prepared_shape_face_usages(

@@ -41,27 +41,17 @@ fn estimate_text_shape_heap_bytes(shape: &TextShape) -> u64 {
 
 impl TextSystem {
     pub fn begin_frame_diagnostics(&mut self) {
-        self.font_trace.begin_frame();
+        self.font_runtime.font_trace.begin_frame();
 
-        self.perf_frame_cache_resets = 0;
-        self.perf_frame_blob_cache_hits = 0;
-        self.perf_frame_blob_cache_misses = 0;
-        self.perf_frame_blobs_created = 0;
-        self.perf_frame_shape_cache_hits = 0;
-        self.perf_frame_shape_cache_misses = 0;
-        self.perf_frame_shapes_created = 0;
-        self.perf_frame_missing_glyphs = 0;
-        self.perf_frame_texts_with_missing_glyphs = 0;
-        self.mask_atlas.begin_frame_diagnostics();
-        self.color_atlas.begin_frame_diagnostics();
-        self.subpixel_atlas.begin_frame_diagnostics();
+        self.frame_perf.clear();
+        self.atlas_runtime.begin_frame_diagnostics();
     }
 
     pub fn font_trace_snapshot(
         &self,
         frame_id: fret_core::FrameId,
     ) -> fret_core::RendererTextFontTraceSnapshot {
-        self.font_trace.snapshot(frame_id)
+        self.font_runtime.font_trace.snapshot(frame_id)
     }
 
     pub fn diagnostics_snapshot(
@@ -81,10 +71,10 @@ impl TextSystem {
                 .saturating_add(estimate_text_shape_heap_bytes(shape.as_ref()));
         };
 
-        for shape in self.shape_cache.values() {
+        for shape in self.layout_cache.shape_cache.values() {
             add_shape(shape);
         }
-        for blob in self.blobs.values() {
+        for blob in self.blob_state.blobs.values() {
             add_shape(&blob.shape);
         }
 
@@ -93,7 +83,7 @@ impl TextSystem {
         let mut seen_palettes: HashSet<usize> = HashSet::new();
         let mut seen_decorations: HashSet<usize> = HashSet::new();
 
-        for blob in self.blobs.values() {
+        for blob in self.blob_state.blobs.values() {
             if let Some(palette) = blob.paint_palette.as_ref() {
                 let ptr = palette.as_ptr() as usize;
                 if seen_palettes.insert(ptr) {
@@ -118,15 +108,15 @@ impl TextSystem {
 
         fret_core::RendererTextPerfSnapshot {
             frame_id,
-            font_stack_key: self.font_stack_key,
-            font_db_revision: self.font_db_revision,
-            fallback_policy_key: self.fallback_policy.fallback_policy_key,
-            frame_missing_glyphs: self.perf_frame_missing_glyphs,
-            frame_texts_with_missing_glyphs: self.perf_frame_texts_with_missing_glyphs,
-            blobs_live: self.blobs.len() as u64,
-            blob_cache_entries: self.blob_cache.len() as u64,
-            shape_cache_entries: self.shape_cache.len() as u64,
-            measure_cache_buckets: self.measure.buckets_len() as u64,
+            font_stack_key: self.font_runtime.font_stack_key,
+            font_db_revision: self.font_runtime.font_db_revision,
+            fallback_policy_key: self.font_runtime.fallback_policy.fallback_policy_key,
+            frame_missing_glyphs: self.frame_perf.missing_glyphs,
+            frame_texts_with_missing_glyphs: self.frame_perf.texts_with_missing_glyphs,
+            blobs_live: self.blob_state.blobs.len() as u64,
+            blob_cache_entries: self.blob_state.blob_cache.len() as u64,
+            shape_cache_entries: self.layout_cache.shape_cache.len() as u64,
+            measure_cache_buckets: self.layout_cache.measure.buckets_len() as u64,
             shape_cache_bytes_estimate_total,
             blob_paint_palette_bytes_estimate_total,
             blob_decorations_bytes_estimate_total,
@@ -134,16 +124,16 @@ impl TextSystem {
             frame_unwrapped_layout_cache_hits: 0,
             frame_unwrapped_layout_cache_misses: 0,
             frame_unwrapped_layouts_created: 0,
-            frame_cache_resets: self.perf_frame_cache_resets,
-            frame_blob_cache_hits: self.perf_frame_blob_cache_hits,
-            frame_blob_cache_misses: self.perf_frame_blob_cache_misses,
-            frame_blobs_created: self.perf_frame_blobs_created,
-            frame_shape_cache_hits: self.perf_frame_shape_cache_hits,
-            frame_shape_cache_misses: self.perf_frame_shape_cache_misses,
-            frame_shapes_created: self.perf_frame_shapes_created,
-            mask_atlas: self.mask_atlas.diagnostics_snapshot(),
-            color_atlas: self.color_atlas.diagnostics_snapshot(),
-            subpixel_atlas: self.subpixel_atlas.diagnostics_snapshot(),
+            frame_cache_resets: self.frame_perf.cache_resets,
+            frame_blob_cache_hits: self.frame_perf.blob_cache_hits,
+            frame_blob_cache_misses: self.frame_perf.blob_cache_misses,
+            frame_blobs_created: self.frame_perf.blobs_created,
+            frame_shape_cache_hits: self.frame_perf.shape_cache_hits,
+            frame_shape_cache_misses: self.frame_perf.shape_cache_misses,
+            frame_shapes_created: self.frame_perf.shapes_created,
+            mask_atlas: self.atlas_runtime.mask_atlas.diagnostics_snapshot(),
+            color_atlas: self.atlas_runtime.color_atlas.diagnostics_snapshot(),
+            subpixel_atlas: self.atlas_runtime.subpixel_atlas.diagnostics_snapshot(),
             registered_font_blobs_count: font_db.registered_font_blobs_count,
             registered_font_blobs_total_bytes: font_db.registered_font_blobs_total_bytes,
             family_id_cache_entries: font_db.family_id_cache_entries,
@@ -157,28 +147,33 @@ impl TextSystem {
     ) -> fret_core::RendererTextFallbackPolicySnapshot {
         fret_core::RendererTextFallbackPolicySnapshot {
             frame_id,
-            font_stack_key: self.font_stack_key,
-            font_db_revision: self.font_db_revision,
-            fallback_policy_key: self.fallback_policy.fallback_policy_key,
+            font_stack_key: self.font_runtime.font_stack_key,
+            font_db_revision: self.font_runtime.font_db_revision,
+            fallback_policy_key: self.font_runtime.fallback_policy.fallback_policy_key,
             system_fonts_enabled: self.parley_shaper.system_fonts_enabled(),
-            locale_bcp47: self.fallback_policy.locale_bcp47.clone(),
+            locale_bcp47: self.font_runtime.fallback_policy.locale_bcp47.clone(),
             common_fallback_injection: self
+                .font_runtime
                 .fallback_policy
                 .font_family_config
                 .common_fallback_injection,
-            prefer_common_fallback: self.fallback_policy.prefer_common_fallback(),
+            prefer_common_fallback: self.font_runtime.fallback_policy.prefer_common_fallback(),
             common_fallback_stack_suffix: self
                 .parley_shaper
                 .common_fallback_stack_suffix()
                 .to_string(),
-            common_fallback_candidates: self.fallback_policy.common_fallback_candidates.clone(),
+            common_fallback_candidates: self
+                .font_runtime
+                .fallback_policy
+                .common_fallback_candidates
+                .clone(),
         }
     }
 
     pub(crate) fn take_atlas_perf_snapshot(&mut self) -> super::TextAtlasPerfSnapshot {
-        let mask = self.mask_atlas.take_perf_snapshot();
-        let color = self.color_atlas.take_perf_snapshot();
-        let subpixel = self.subpixel_atlas.take_perf_snapshot();
+        let mask = self.atlas_runtime.mask_atlas.take_perf_snapshot();
+        let color = self.atlas_runtime.color_atlas.take_perf_snapshot();
+        let subpixel = self.atlas_runtime.subpixel_atlas.take_perf_snapshot();
 
         super::TextAtlasPerfSnapshot {
             uploads: mask.uploads + color.uploads + subpixel.uploads,
@@ -193,19 +188,16 @@ impl TextSystem {
     }
 
     pub(crate) fn atlas_revision(&self) -> u64 {
-        self.mask_atlas
+        self.atlas_runtime
+            .mask_atlas
             .revision()
             .wrapping_mul(0x9E37_79B9_7F4A_7C15)
-            ^ self.color_atlas.revision().rotate_left(1)
-            ^ self.subpixel_atlas.revision().rotate_left(2)
+            ^ self.atlas_runtime.color_atlas.revision().rotate_left(1)
+            ^ self.atlas_runtime.subpixel_atlas.revision().rotate_left(2)
     }
 
     pub(crate) fn glyph_uv_for_instance(&self, glyph: &GlyphInstance) -> Option<(u16, [f32; 4])> {
-        let atlas = match glyph.kind() {
-            GlyphQuadKind::Mask => &self.mask_atlas,
-            GlyphQuadKind::Color => &self.color_atlas,
-            GlyphQuadKind::Subpixel => &self.subpixel_atlas,
-        };
+        let atlas = self.atlas_runtime.atlas(glyph.kind());
 
         let entry = atlas.entry(glyph.key)?;
         let (w, h) = atlas.dimensions();
@@ -222,11 +214,7 @@ impl TextSystem {
     }
 
     pub(crate) fn debug_atlas_dims(&self, kind: GlyphQuadKind) -> (u32, u32) {
-        match kind {
-            GlyphQuadKind::Mask => self.mask_atlas.dimensions(),
-            GlyphQuadKind::Color => self.color_atlas.dimensions(),
-            GlyphQuadKind::Subpixel => self.subpixel_atlas.dimensions(),
-        }
+        self.atlas_runtime.atlas(kind).dimensions()
     }
 
     pub(crate) fn debug_lookup_glyph_atlas_entry(
@@ -238,11 +226,7 @@ impl TextSystem {
         w: u32,
         h: u32,
     ) -> Option<DebugGlyphAtlasLookup> {
-        let atlas = match kind {
-            GlyphQuadKind::Mask => &self.mask_atlas,
-            GlyphQuadKind::Color => &self.color_atlas,
-            GlyphQuadKind::Subpixel => &self.subpixel_atlas,
-        };
+        let atlas = self.atlas_runtime.atlas(kind);
 
         let k = atlas.find_key_for_bounds(page, x, y, w, h)?;
 

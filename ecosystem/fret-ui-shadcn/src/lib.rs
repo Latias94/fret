@@ -19,6 +19,26 @@
 //! environment or `UiServices`-boundary hooks, and treat the crate root as a raw escape hatch
 //! rather than the default app-facing namespace.
 //!
+//! Most thin public helper constructors now stay on the typed `IntoUiElement<H>` lane (for
+//! example `badge`, `checkbox`, `input`, `textarea`, `slider`, `progress`, `switch`, `toggle`,
+//! `tabs`, `accordion_single(...)`, `accordion_single_uncontrolled(...)`,
+//! `accordion_multiple(...)`, `accordion_multiple_uncontrolled(...)`, `separator`,
+//! `toggle_group_single(...)`, `toggle_group_single_uncontrolled(...)`,
+//! `toggle_group_multiple(...)`, `toggle_group_multiple_uncontrolled(...)`, `input_group`,
+//! `input_otp`, `resizable_panel_group(...)`, `navigation_menu(...)`,
+//! `navigation_menu_uncontrolled(...)`, `command`, the `card(...)` /
+//! `card_header(...)` / `card_content(...)` wrapper family, and the
+//! `table(...)` / `table_header(...)` / `table_body(...)` / `table_row(...)` helper family,
+//! `field_set(...)` / `field_group(...)` for grouped form authoring, and the
+//! `empty(...)` / `empty_header(...)` / `empty_media(...)` / `empty_content(...)` wrapper family,
+//! plus the `pagination(...)` / `pagination_content(...)` / `pagination_item(...)` /
+//! `pagination_link(...)` wrappers, along with `radio_group(...)` /
+//! `radio_group_uncontrolled(...)` returning a typed `RadioGroup` so fluent configuration stays
+//! open until the explicit landing seam).
+//! Remaining raw escape hatches are intentionally rare and explicitly documented where the
+//! underlying storage still owns a concrete landed child (for example `kbd_icon(...)` and
+//! `use_combobox_anchor(...)`).
+//!
 //! ## Feature flags
 //!
 //! - `app-integration`: explicit app-surface helpers under `fret_ui_shadcn::app::{install, ...}`
@@ -140,7 +160,7 @@ pub use accordion::{
     AccordionTrigger, accordion_multiple, accordion_multiple_uncontrolled, accordion_single,
     accordion_single_uncontrolled,
 };
-pub use alert::{Alert, AlertAction, AlertDescription, AlertTitle, AlertVariant};
+pub use alert::{Alert, AlertAction, AlertDescription, AlertTitle, AlertVariant, alert};
 pub use alert_dialog::{
     AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogContentSize,
     AlertDialogDescription, AlertDialogFooter, AlertDialogHandle, AlertDialogHeader,
@@ -255,10 +275,12 @@ pub use dropdown_menu::{
 };
 pub use empty::{
     Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyMediaVariant, EmptyTitle,
+    empty, empty_content, empty_description, empty_header, empty_media, empty_title,
 };
 pub use field::{
     Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend,
-    FieldLegendVariant, FieldOrientation, FieldSeparator, FieldSet, FieldTitle,
+    FieldLegendVariant, FieldOrientation, FieldSeparator, FieldSet, FieldTitle, field_group,
+    field_set,
 };
 pub use form::{
     Form, FormControl, FormDescription, FormErrorVisibility, FormField, FormItem, FormLabel,
@@ -301,7 +323,8 @@ pub use navigation_menu::{
 };
 pub use pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
-    PaginationLinkSize, PaginationNext, PaginationPrevious,
+    PaginationLinkSize, PaginationNext, PaginationPrevious, pagination, pagination_content,
+    pagination_item, pagination_link,
 };
 pub use popover::{
     Popover, PopoverAlign, PopoverAnchor, PopoverContent, PopoverDescription, PopoverHeader,
@@ -349,6 +372,8 @@ pub use spinner::Spinner;
 pub use switch::{Switch, SwitchSize, switch};
 pub use table::{
     Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow,
+    table, table_body, table_caption, table_cell, table_footer, table_head, table_header,
+    table_row,
 };
 pub use tabs::{
     Tabs, TabsContent, TabsItem, TabsList, TabsListVariant, TabsListVariants, TabsRoot,
@@ -380,7 +405,7 @@ pub mod facade {
         AccordionTrigger, accordion_multiple, accordion_multiple_uncontrolled, accordion_single,
         accordion_single_uncontrolled,
     };
-    pub use crate::alert::{Alert, AlertAction, AlertDescription, AlertTitle, AlertVariant};
+    pub use crate::alert::{Alert, AlertAction, AlertDescription, AlertTitle, AlertVariant, alert};
     pub use crate::alert_dialog::{
         AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
         AlertDialogContentSize, AlertDialogDescription, AlertDialogFooter, AlertDialogHandle,
@@ -488,11 +513,13 @@ pub mod facade {
     };
     pub use crate::empty::{
         Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyMediaVariant,
-        EmptyTitle,
+        EmptyTitle, empty, empty_content, empty_description, empty_header, empty_media,
+        empty_title,
     };
     pub use crate::field::{
         Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend,
-        FieldLegendVariant, FieldOrientation, FieldSeparator, FieldSet, FieldTitle,
+        FieldLegendVariant, FieldOrientation, FieldSeparator, FieldSet, FieldTitle, field_group,
+        field_set,
     };
     pub use crate::form::{
         Form, FormControl, FormDescription, FormErrorVisibility, FormField, FormItem, FormLabel,
@@ -538,7 +565,8 @@ pub mod facade {
     };
     pub use crate::pagination::{
         Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
-        PaginationLinkSize, PaginationNext, PaginationPrevious,
+        PaginationLinkSize, PaginationNext, PaginationPrevious, pagination, pagination_content,
+        pagination_item, pagination_link,
     };
     pub use crate::popover::{
         Popover, PopoverAlign, PopoverAnchor, PopoverContent, PopoverDescription, PopoverHeader,
@@ -586,6 +614,8 @@ pub mod facade {
     pub use crate::switch::{Switch, SwitchSize, switch};
     pub use crate::table::{
         Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow,
+        table, table_body, table_caption, table_cell, table_footer, table_head, table_header,
+        table_row,
     };
     pub use crate::tabs::{
         Tabs, TabsContent, TabsItem, TabsList, TabsListVariant, TabsListVariants, TabsRoot,
@@ -694,5 +724,8 @@ pub mod prelude {
     pub use fret_ui::element::{AnyElement, TextProps};
     pub use fret_ui::{ElementContext, Invalidation, Theme, UiHost, UiTree};
     pub use fret_ui_kit::IntoUiElement;
-    pub use fret_ui_kit::declarative::{CachedSubtreeExt, CachedSubtreeProps};
+    pub use fret_ui_kit::declarative::{
+        CachedSubtreeExt, CachedSubtreeProps, UiElementA11yExt, UiElementKeyContextExt,
+        UiElementTestIdExt,
+    };
 }

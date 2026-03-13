@@ -96,7 +96,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             next_environment_poll_at: now,
             #[cfg(target_os = "linux")]
             linux_portal_settings_listener_started: false,
-            raf_windows: HashSet::new(),
+            raf_windows: crate::runner::common::frame_requests::AnimationFrameRequests::default(),
             timers: HashMap::new(),
             clipboard: NativeClipboard::default(),
             diag_clipboard_force_unavailable_windows: HashSet::new(),

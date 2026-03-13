@@ -176,6 +176,19 @@ fn collect_built_table_children<H: UiHost>(
     out
 }
 
+fn extend_landed_table_children<H: UiHost, I, T>(
+    cx: &mut ElementContext<'_, H>,
+    out: &mut Vec<AnyElement>,
+    children: I,
+) where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    for child in children {
+        out.push(child.into_element(cx));
+    }
+}
+
 /// shadcn/ui `Table` root.
 ///
 /// Upstream wraps `<table>` in a horizontally scrollable container (`overflow-x-auto`). We model
@@ -1200,6 +1213,98 @@ impl TableCaption {
             )]
         })
     }
+}
+
+pub fn table<H: UiHost, I, F, T>(
+    f: F,
+) -> TableBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    Table::build(move |cx, out| {
+        let children = f(cx);
+        extend_landed_table_children(cx, out, children);
+    })
+}
+
+pub fn table_header<H: UiHost, I, F, T>(
+    f: F,
+) -> TableHeaderBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    TableHeader::build(move |cx, out| {
+        let children = f(cx);
+        extend_landed_table_children(cx, out, children);
+    })
+}
+
+pub fn table_body<H: UiHost, I, F, T>(
+    f: F,
+) -> TableBodyBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    TableBody::build(move |cx, out| {
+        let children = f(cx);
+        extend_landed_table_children(cx, out, children);
+    })
+}
+
+pub fn table_footer<H: UiHost, I, F, T>(
+    f: F,
+) -> TableFooterBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    TableFooter::build(move |cx, out| {
+        let children = f(cx);
+        extend_landed_table_children(cx, out, children);
+    })
+}
+
+pub fn table_row<H: UiHost, I, F, T>(
+    cols: u16,
+    f: F,
+) -> TableRowBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    TableRow::build(cols, move |cx, out| {
+        let children = f(cx);
+        extend_landed_table_children(cx, out, children);
+    })
+}
+
+pub fn table_head<T>(text: T) -> TableHead
+where
+    T: Into<Arc<str>>,
+{
+    TableHead::new(text)
+}
+
+pub fn table_cell<H: UiHost, T>(child: T) -> TableCellBuild<H, T>
+where
+    T: IntoUiElement<H>,
+{
+    TableCell::build(child)
+}
+
+pub fn table_caption<T>(text: T) -> TableCaption
+where
+    T: Into<Arc<str>>,
+{
+    TableCaption::new(text)
 }
 
 #[cfg(test)]

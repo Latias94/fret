@@ -57,10 +57,10 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     };
 
     let overlay = if is_desktop {
-        shadcn::Popover::new(open.clone())
+        shadcn::Popover::from_open(open.clone())
             .side(shadcn::PopoverSide::Bottom)
             .align(shadcn::PopoverAlign::Start)
-            .into_element(
+            .into_element_with(
                 cx,
                 move |cx| trigger(cx),
                 move |cx| {
