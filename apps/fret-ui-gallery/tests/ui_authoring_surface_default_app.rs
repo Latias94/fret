@@ -171,8 +171,37 @@ fn progress_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/progress/controlled.rs",
             "src/ui/snippets/progress/demo.rs",
         ],
-        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
         "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/progress",
+        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn progress_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/progress.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Label\", label)",
+            "DocSection::build(cx, \"Controlled\", controlled)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Label\", label)",
+            "DocSection::new(\"Controlled\", controlled)",
+            "DocSection::new(\"RTL\", rtl)",
+        ],
     );
 }
 
@@ -3994,7 +4023,7 @@ fn material3_date_and_time_picker_snippets_prefer_uncontrolled_dialog_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/date_picker.rs",
         &[
-            "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, ) -> AnyElement {",
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
             "let dialog = material3::DatePickerDialog::uncontrolled(cx);",
             "let open = dialog.open_model();",
             "let month = dialog.month_model();",
@@ -4009,7 +4038,7 @@ fn material3_date_and_time_picker_snippets_prefer_uncontrolled_dialog_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/time_picker.rs",
         &[
-            "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, ) -> AnyElement {",
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
             "let dialog = material3::TimePickerDialog::uncontrolled(cx);",
             "let open = dialog.open_model();",
             "let selected = dialog.selected_model();",

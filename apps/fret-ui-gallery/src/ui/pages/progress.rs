@@ -18,6 +18,22 @@ pub(super) fn preview_progress(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "For labeled progress, prefer composing `FieldLabel` + `Progress` instead of adding one-off widget APIs.",
     ]);
     let notes = DocSection::build(cx, "Notes", notes).test_id_prefix("ui-gallery-progress-notes");
+    let demo = DocSection::build(cx, "Demo", demo)
+        .test_id_prefix("ui-gallery-progress-demo")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .description("Copyable minimal usage for `Progress`.")
+        .test_id_prefix("ui-gallery-progress-usage")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let label = DocSection::build(cx, "Label", label)
+        .test_id_prefix("ui-gallery-progress-label")
+        .code_rust_from_file_region(snippets::label::SOURCE, "example");
+    let controlled = DocSection::build(cx, "Controlled", controlled)
+        .test_id_prefix("ui-gallery-progress-controlled")
+        .code_rust_from_file_region(snippets::controlled::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .test_id_prefix("ui-gallery-progress-rtl")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -25,22 +41,11 @@ pub(super) fn preview_progress(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             "Preview follows shadcn Progress docs flow: Demo -> Usage. Gallery adds labeled, controlled, and RTL variants.",
         ),
         vec![
-            DocSection::new("Demo", demo)
-                .test_id_prefix("ui-gallery-progress-demo")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .description("Copyable minimal usage for `Progress`.")
-                .test_id_prefix("ui-gallery-progress-usage")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Label", label)
-                .test_id_prefix("ui-gallery-progress-label")
-                .code_rust_from_file_region(snippets::label::SOURCE, "example"),
-            DocSection::new("Controlled", controlled)
-                .test_id_prefix("ui-gallery-progress-controlled")
-                .code_rust_from_file_region(snippets::controlled::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .test_id_prefix("ui-gallery-progress-rtl")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            demo,
+            usage,
+            label,
+            controlled,
+            rtl,
             notes,
         ],
     );
