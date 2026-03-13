@@ -80,6 +80,36 @@ fn assert_selected_generic_helpers_prefer_into_ui_element(
     }
 }
 
+fn assert_material3_overlay_snippet_prefers_uncontrolled_copyable_root(
+    relative_path: &str,
+    required_markers: &[&str],
+    forbidden_markers: &[&str],
+) {
+    let path = manifest_path(relative_path);
+    let source = read_path(&path);
+    let normalized = source.split_whitespace().collect::<String>();
+
+    for marker in required_markers {
+        let marker = marker.split_whitespace().collect::<String>();
+        assert!(
+            normalized.contains(&marker),
+            "{} is missing Material 3 overlay authoring marker `{}`",
+            path.display(),
+            marker
+        );
+    }
+
+    for marker in forbidden_markers {
+        let marker = marker.split_whitespace().collect::<String>();
+        assert!(
+            !normalized.contains(&marker),
+            "{} reintroduced legacy Material 3 overlay teaching marker `{}`",
+            path.display(),
+            marker
+        );
+    }
+}
+
 fn assert_sources_absent(relative_root: &str, forbidden_markers: &[&str]) {
     for path in rust_sources(relative_root) {
         let source = read_path(&path);
@@ -203,6 +233,20 @@ fn navigation_menu_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface()
 
 #[test]
 fn selected_navigation_menu_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    for relative_path in [
+        "src/ui/snippets/navigation_menu/usage.rs",
+        "src/ui/snippets/navigation_menu/link_component.rs",
+        "src/ui/snippets/navigation_menu/demo.rs",
+        "src/ui/snippets/navigation_menu/docs_demo.rs",
+        "src/ui/snippets/navigation_menu/rtl.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["shadcn::navigation_menu("],
+            &["shadcn::NavigationMenu::new("],
+        );
+    }
+
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/navigation_menu/docs_demo.rs",
         &[
@@ -297,11 +341,20 @@ fn tabs_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/tabs/line.rs",
             "src/ui/snippets/tabs/list.rs",
             "src/ui/snippets/tabs/rtl.rs",
+            "src/ui/snippets/tabs/usage.rs",
             "src/ui/snippets/tabs/vertical.rs",
             "src/ui/snippets/tabs/vertical_line.rs",
         ],
-        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
         "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/tabs",
+        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
     );
 }
 
@@ -314,6 +367,59 @@ fn selected_tabs_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         ],
         &[
             "fn field(label: &'static str, model: Model<String>, a11y: &'static str, password: bool,) -> AnyElement",
+        ],
+    );
+}
+
+#[test]
+fn selected_tabs_snippets_prefer_builder_preserving_helpers() {
+    for relative_path in [
+        "src/ui/snippets/tabs/demo.rs",
+        "src/ui/snippets/tabs/disabled.rs",
+        "src/ui/snippets/tabs/extras.rs",
+        "src/ui/snippets/tabs/icons.rs",
+        "src/ui/snippets/tabs/line.rs",
+        "src/ui/snippets/tabs/list.rs",
+        "src/ui/snippets/tabs/rtl.rs",
+        "src/ui/snippets/tabs/usage.rs",
+        "src/ui/snippets/tabs/vertical.rs",
+        "src/ui/snippets/tabs/vertical_line.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["shadcn::tabs_uncontrolled("],
+            &["shadcn::Tabs::uncontrolled(", "shadcn::TabsRoot::new("],
+        );
+    }
+}
+
+#[test]
+fn tabs_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/tabs.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Line\", line)",
+            "DocSection::build(cx, \"Vertical\", vertical)",
+            "DocSection::build(cx, \"Disabled\", disabled)",
+            "DocSection::build(cx, \"Icons\", icons)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"List\", list)",
+            "DocSection::build(cx, \"Vertical (Line)\", vertical_line)",
+            "DocSection::build(cx, \"Extras\", extras)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Line\", line)",
+            "DocSection::new(\"Vertical\", vertical)",
+            "DocSection::new(\"Disabled\", disabled)",
+            "DocSection::new(\"Icons\", icons)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"List\", list)",
+            "DocSection::new(\"Vertical (Line)\", vertical_line)",
+            "DocSection::new(\"Extras\", extras)",
         ],
     );
 }
@@ -1715,9 +1821,11 @@ fn selected_avatar_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         "src/ui/snippets/avatar/sizes.rs",
         &[
             "fn avatar_with_image<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<ImageId>>, size: shadcn::AvatarSize, fallback_text: &'static str, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            "shadcn::avatar_sized(",
         ],
         &[
             "fn avatar_with_image<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<ImageId>>, size: shadcn::AvatarSize, fallback_text: &'static str, test_id: &'static str,) -> AnyElement",
+            "shadcn::Avatar::new([image, fallback]).size(size)",
         ],
     );
 
@@ -2178,8 +2286,12 @@ fn selected_resizable_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         "src/ui/snippets/resizable/usage.rs",
         &[
             "fn panel<H: UiHost>(_cx: &mut ElementContext<'_, H>, label: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            "shadcn::resizable_panel_group(",
         ],
-        &["fn panel<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str) -> AnyElement"],
+        &[
+            "fn panel<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str) -> AnyElement",
+            "shadcn::ResizablePanelGroup::new(",
+        ],
     );
 
     for relative_path in [
@@ -2191,10 +2303,12 @@ fn selected_resizable_snippet_helpers_prefer_into_ui_element_over_anyelement() {
             &[
                 "fn box_group<H: UiHost, B>(cx: &mut ElementContext<'_, H>, layout: LayoutRefinement, body: B,) -> impl IntoUiElement<H> + use<H, B> where B: IntoUiElement<H>",
                 "fn panel<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str,) -> impl IntoUiElement<H> + use<H>",
+                "shadcn::resizable_panel_group(",
             ],
             &[
                 "fn box_group<H: UiHost>(cx: &mut ElementContext<'_, H>, layout: LayoutRefinement, body: AnyElement,) -> AnyElement",
                 "fn panel<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str) -> AnyElement",
+                "shadcn::ResizablePanelGroup::new(",
             ],
         );
     }
@@ -2208,10 +2322,12 @@ fn selected_resizable_snippet_helpers_prefer_into_ui_element_over_anyelement() {
             &[
                 "fn box_group<H: UiHost, B>(cx: &mut ElementContext<'_, H>, layout: LayoutRefinement, body: B,) -> impl IntoUiElement<H> + use<H, B> where B: IntoUiElement<H>",
                 "fn panel<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, height: Option<Px>,) -> impl IntoUiElement<H> + use<H>",
+                "shadcn::resizable_panel_group(",
             ],
             &[
                 "fn box_group<H: UiHost>(cx: &mut ElementContext<'_, H>, layout: LayoutRefinement, body: AnyElement,) -> AnyElement",
                 "fn panel<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, height: Option<Px>,) -> AnyElement",
+                "shadcn::ResizablePanelGroup::new(",
             ],
         );
     }
@@ -2219,12 +2335,29 @@ fn selected_resizable_snippet_helpers_prefer_into_ui_element_over_anyelement() {
 
 #[test]
 fn selected_scroll_area_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    for relative_path in [
+        "src/ui/snippets/scroll_area/usage.rs",
+        "src/ui/snippets/scroll_area/horizontal.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["shadcn::scroll_area("],
+            &["shadcn::ScrollArea::new("],
+        );
+    }
+
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/scroll_area/nested_scroll_routing.rs",
         &[
             "fn row<H: UiHost>(cx: &mut ElementContext<'_, H>, i: usize) -> impl IntoUiElement<H> + use<H>",
+            "shadcn::scroll_area(cx, |_cx| [inner_rail])",
+            "shadcn::scroll_area(cx, |_cx| [outer_body])",
         ],
-        &["fn row<H: UiHost>(cx: &mut ElementContext<'_, H>, i: usize) -> AnyElement"],
+        &[
+            "fn row<H: UiHost>(cx: &mut ElementContext<'_, H>, i: usize) -> AnyElement",
+            "shadcn::ScrollArea::new([inner_rail])",
+            "shadcn::ScrollArea::new([outer_body])",
+        ],
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
@@ -2393,6 +2526,34 @@ fn selected_radio_group_snippets_prefer_field_set_wrapper_family() {
             &["shadcn::FieldSet::new(", "shadcn::FieldSet::build("],
         );
     }
+}
+
+#[test]
+fn selected_radio_group_snippets_prefer_builder_preserving_helpers() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/radio_group/usage.rs",
+        &["shadcn::radio_group_uncontrolled("],
+        &["shadcn::RadioGroup::uncontrolled("],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/radio_group/label.rs",
+        &[
+            "shadcn::radio_group(",
+            "shadcn::RadioGroupItem::new(\"free\", \"Free\")",
+        ],
+        &["shadcn::RadioGroup::new(value)"],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/form/upstream_demo.rs",
+        &[
+            "shadcn::radio_group(",
+            "notify_type.clone()",
+            "shadcn::RadioGroupItem::new(\"all\", \"All new messages\")",
+        ],
+        &["shadcn::RadioGroup::new(notify_type.clone())"],
+    );
 }
 
 #[test]
@@ -2645,6 +2806,245 @@ fn selected_toggle_group_snippet_helpers_prefer_into_ui_element_over_anyelement(
 }
 
 #[test]
+fn toggle_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/toggle/demo.rs",
+            "src/ui/snippets/toggle/disabled.rs",
+            "src/ui/snippets/toggle/label.rs",
+            "src/ui/snippets/toggle/outline.rs",
+            "src/ui/snippets/toggle/rtl.rs",
+            "src/ui/snippets/toggle/size.rs",
+            "src/ui/snippets/toggle/usage.rs",
+            "src/ui/snippets/toggle/with_text.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/toggle",
+        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn selected_toggle_snippets_prefer_builder_preserving_helpers() {
+    for relative_path in [
+        "src/ui/snippets/toggle/demo.rs",
+        "src/ui/snippets/toggle/disabled.rs",
+        "src/ui/snippets/toggle/outline.rs",
+        "src/ui/snippets/toggle/rtl.rs",
+        "src/ui/snippets/toggle/size.rs",
+        "src/ui/snippets/toggle/usage.rs",
+        "src/ui/snippets/toggle/with_text.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["shadcn::toggle_uncontrolled("],
+            &["shadcn::Toggle::uncontrolled("],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/toggle/label.rs",
+        &["shadcn::toggle("],
+        &["shadcn::Toggle::new("],
+    );
+}
+
+#[test]
+fn toggle_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/toggle.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Outline\", outline)",
+            "DocSection::build(cx, \"With Text\", with_text)",
+            "DocSection::build(cx, \"Size\", size)",
+            "DocSection::build(cx, \"Disabled\", disabled)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Label Association\", label)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Outline\", outline)",
+            "DocSection::new(\"With Text\", with_text)",
+            "DocSection::new(\"Size\", size)",
+            "DocSection::new(\"Disabled\", disabled)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Label Association\", label)",
+        ],
+    );
+}
+
+#[test]
+fn radio_group_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/radio_group/choice_card.rs",
+            "src/ui/snippets/radio_group/demo.rs",
+            "src/ui/snippets/radio_group/description.rs",
+            "src/ui/snippets/radio_group/disabled.rs",
+            "src/ui/snippets/radio_group/extras.rs",
+            "src/ui/snippets/radio_group/fieldset.rs",
+            "src/ui/snippets/radio_group/invalid.rs",
+            "src/ui/snippets/radio_group/label.rs",
+            "src/ui/snippets/radio_group/plans.rs",
+            "src/ui/snippets/radio_group/rtl.rs",
+            "src/ui/snippets/radio_group/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/radio_group",
+        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn radio_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/radio_group.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Description\", description)",
+            "DocSection::build(cx, \"Choice Card\", choice_card)",
+            "DocSection::build(cx, \"Fieldset\", fieldset)",
+            "DocSection::build(cx, \"Disabled\", disabled)",
+            "DocSection::build(cx, \"Invalid\", invalid)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Label Association (Fret)\", label)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Description\", description)",
+            "DocSection::new(\"Choice Card\", choice_card)",
+            "DocSection::new(\"Fieldset\", fieldset)",
+            "DocSection::new(\"Disabled\", disabled)",
+            "DocSection::new(\"Invalid\", invalid)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Label Association (Fret)\", label)",
+        ],
+    );
+}
+
+#[test]
+fn accordion_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/accordion/basic.rs",
+            "src/ui/snippets/accordion/borders.rs",
+            "src/ui/snippets/accordion/card.rs",
+            "src/ui/snippets/accordion/demo.rs",
+            "src/ui/snippets/accordion/disabled.rs",
+            "src/ui/snippets/accordion/extras.rs",
+            "src/ui/snippets/accordion/multiple.rs",
+            "src/ui/snippets/accordion/rtl.rs",
+            "src/ui/snippets/accordion/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/accordion",
+        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn selected_accordion_snippets_prefer_builder_preserving_helpers() {
+    for relative_path in [
+        "src/ui/snippets/accordion/basic.rs",
+        "src/ui/snippets/accordion/borders.rs",
+        "src/ui/snippets/accordion/demo.rs",
+        "src/ui/snippets/accordion/disabled.rs",
+        "src/ui/snippets/accordion/rtl.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["shadcn::accordion_single_uncontrolled("],
+            &["shadcn::Accordion::single_uncontrolled("],
+        );
+    }
+
+    for relative_path in [
+        "src/ui/snippets/accordion/card.rs",
+        "src/ui/snippets/accordion/multiple.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["shadcn::accordion_multiple_uncontrolled("],
+            &["shadcn::Accordion::multiple_uncontrolled("],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/accordion/extras.rs",
+        &[
+            "shadcn::accordion_single_uncontrolled(",
+            "shadcn::accordion_multiple_uncontrolled(",
+        ],
+        &[
+            "shadcn::Accordion::single_uncontrolled(",
+            "shadcn::Accordion::multiple_uncontrolled(",
+        ],
+    );
+}
+
+#[test]
+fn accordion_usage_snippet_keeps_the_composable_advanced_seam() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/accordion/usage.rs",
+        &["acc::AccordionRoot::single_uncontrolled("],
+        &["shadcn::Accordion::single_uncontrolled("],
+    );
+}
+
+#[test]
+fn accordion_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/accordion.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Basic\", basic)",
+            "DocSection::build(cx, \"Multiple\", multiple)",
+            "DocSection::build(cx, \"Disabled\", disabled)",
+            "DocSection::build(cx, \"Borders\", borders)",
+            "DocSection::build(cx, \"Card\", card)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Basic\", basic)",
+            "DocSection::new(\"Multiple\", multiple)",
+            "DocSection::new(\"Disabled\", disabled)",
+            "DocSection::new(\"Borders\", borders)",
+            "DocSection::new(\"Card\", card)",
+            "DocSection::new(\"RTL\", rtl)",
+        ],
+    );
+}
+
+#[test]
 fn selected_drawer_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/drawer/demo.rs",
@@ -2841,6 +3241,26 @@ fn selected_dialog_snippet_helpers_prefer_into_ui_element_over_anyelement() {
 #[test]
 fn selected_item_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/item/size.rs",
+        &[
+            "shadcn::item_sized(cx, shadcn::ItemSize::Default, |cx|",
+            "shadcn::item_sized(cx, shadcn::ItemSize::Sm, |cx|",
+            "shadcn::item_sized(cx, shadcn::ItemSize::Xs, |cx|",
+        ],
+        &[
+            ".size(shadcn::ItemSize::Default)",
+            ".size(shadcn::ItemSize::Sm)",
+            ".size(shadcn::ItemSize::Xs)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/item/group.rs",
+        &["shadcn::item_group(cx, |cx|"],
+        &["shadcn::ItemGroup::new(children)"],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/item/avatar.rs",
         &[
             "fn icon_button(cx: &mut UiCx<'_>, icon_id: &'static str, variant: shadcn::ButtonVariant, test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
@@ -2911,6 +3331,130 @@ fn selected_item_snippet_helpers_prefer_into_ui_element_over_anyelement() {
             "fn item_icon(cx: &mut UiCx<'_>, variant: shadcn::ItemVariant, icon_id: &'static str, title: &'static str, description: Option<&'static str>, actions: Vec<AnyElement>, test_id: &'static str,) -> AnyElement",
             "fn item_avatar(cx: &mut UiCx<'_>, username: &'static str, message: &'static str, initials: &'static str, test_id: Arc<str>, add_action_test_id: Arc<str>,) -> AnyElement",
             "fn item_team(cx: &mut UiCx<'_>, test_id: &'static str, action_test_id: &'static str) -> AnyElement",
+        ],
+    );
+}
+
+#[test]
+fn selected_native_select_snippets_prefer_builder_preserving_helpers() {
+    for relative_path in [
+        "src/ui/snippets/native_select/demo.rs",
+        "src/ui/snippets/native_select/disabled.rs",
+        "src/ui/snippets/native_select/invalid.rs",
+        "src/ui/snippets/native_select/label.rs",
+        "src/ui/snippets/native_select/with_groups.rs",
+        "src/ui/snippets/native_select/usage.rs",
+        "src/ui/snippets/native_select/rtl.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["shadcn::native_select("],
+            &[
+                "shadcn::NativeSelect::new(",
+                "shadcn::NativeSelect::new_controllable(",
+            ],
+        );
+    }
+}
+
+#[test]
+fn selected_pages_prefer_builder_preserving_helper_family_in_copy() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/tabs.rs",
+        &[
+            "`tabs_uncontrolled(cx, default, |cx| ..)`",
+            "`tabs(cx, model, |cx| ..)`",
+        ],
+        &[
+            "Tabs already exposes composable `TabsRoot` / `TabsList` / `TabsTrigger` / `TabsContent`, so the main parity gap here is documentation clarity rather than missing authoring APIs.",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/avatar.rs",
+        &["`avatar_sized(...)`"],
+        &[
+            "`Avatar::new([..])` and `Avatar::children([..])` are already sufficient for composable avatar content; no extra generic children or slot-merge API is needed here.",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/item.rs",
+        &["`item_sized(...)`", "`item_group(...)`"],
+        &[],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/scroll_area.rs",
+        &["`scroll_area(...)`"],
+        &[
+            "ScrollArea already exposes both a compact builder and a Radix-shaped composable surface, so the main parity gap here is usage clarity rather than missing authoring APIs.",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/native_select.rs",
+        &["`native_select(model, open)`", "`new_controllable(...)`"],
+        &[
+            "`NativeSelect::new(model, open)` and `new_controllable(...)` cover the controlled and default-value/open authoring paths.",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/navigation_menu.rs",
+        &[
+            "`navigation_menu(cx, model, |cx| ..)`",
+            "`NavigationMenu::new(model)`",
+        ],
+        &[
+            "Navigation Menu already exposes a shadcn-friendly builder surface, so the remaining drift is mainly public-surface/docs parity rather than mechanism coverage.",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/resizable.rs",
+        &["`resizable_panel_group(...)`"],
+        &[],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/slider.rs",
+        &["`slider(model)`", "`new_controllable(...)`"],
+        &[
+            "Slider already exposes the important authoring surface (`new`, `new_controllable`, range/step/orientation/on_value_commit), so the main parity gap here is usage clarity rather than missing composition APIs.",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/radio_group.rs",
+        &[
+            "`radio_group_uncontrolled(default, items)`",
+            "`radio_group(model, items)`",
+        ],
+        &[
+            "`RadioGroup::uncontrolled(default)` and `RadioGroup::new(model)` cover the documented uncontrolled and controlled authoring paths.",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/toggle.rs",
+        &[
+            "`toggle_uncontrolled(cx, false, |cx| ..)`",
+            "`toggle(cx, model, |cx| ..)`",
+        ],
+        &[
+            "`Toggle::uncontrolled(false)` mirrors the upstream `<Toggle />` quick-start path; `variant(...)`, `size(...)`, `disabled(...)`, and `a11y_label(...)` cover the documented control surface.",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/accordion.rs",
+        &[
+            "`accordion_single_uncontrolled(cx, default, |cx| ..)`",
+            "`accordion_multiple_uncontrolled(cx, default, |cx| ..)`",
+        ],
+        &[
+            "The legacy builder-style API remains available as a compact Fret shorthand, but the docs `Usage` section now prefers the composable Radix-shaped surface for parity.",
         ],
     );
 }
@@ -3025,11 +3569,26 @@ fn selected_slider_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         "src/ui/snippets/slider/demo.rs",
         &[
             "fn controlled<H: UiHost>(cx: &mut ElementContext<'_, H>, controlled_values: Model<Vec<f32>>,) -> impl IntoUiElement<H> + use<H>",
+            "shadcn::slider(controlled_values)",
         ],
         &[
             "fn controlled<H: UiHost>(cx: &mut ElementContext<'_, H>, controlled_values: Model<Vec<f32>>,) -> AnyElement",
+            "shadcn::Slider::new(controlled_values)",
         ],
     );
+
+    for relative_path in [
+        "src/ui/snippets/slider/usage.rs",
+        "src/ui/snippets/slider/label.rs",
+        "src/ui/snippets/field/slider.rs",
+        "src/ui/snippets/progress/controlled.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["shadcn::slider("],
+            &["shadcn::Slider::new("],
+        );
+    }
 }
 
 #[test]
@@ -3098,6 +3657,79 @@ fn material3_doc_pages_prefer_ui_cx_on_the_default_app_surface() {
             "app-facing Material 3 page surface",
         );
     }
+}
+
+#[test]
+fn material3_overlay_snippets_prefer_uncontrolled_copyable_roots() {
+    assert_material3_overlay_snippet_prefers_uncontrolled_copyable_root(
+        "src/ui/snippets/material3/menu.rs",
+        &[
+            "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, last_action: Model<Arc<str>>, ) -> AnyElement {",
+            "material3::DropdownMenu::uncontrolled(cx)",
+            "let open = dropdown.open_model();",
+        ],
+        &[
+            "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Model<bool>, last_action: Model<Arc<str>>, ) -> AnyElement {",
+            "let open = cx.local_model_keyed(\"open\", || false);",
+        ],
+    );
+
+    assert_material3_overlay_snippet_prefers_uncontrolled_copyable_root(
+        "src/ui/snippets/material3/dialog.rs",
+        &[
+            "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, last_action: Model<Arc<str>>, ) -> AnyElement {",
+            "let default_dialog = material3::Dialog::uncontrolled(cx);",
+            "let open = default_dialog.open_model();",
+        ],
+        &[
+            "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Model<bool>, last_action: Model<Arc<str>>, ) -> AnyElement {",
+            "let open = cx.local_model_keyed(\"open\", || false);",
+        ],
+    );
+
+    assert_material3_overlay_snippet_prefers_uncontrolled_copyable_root(
+        "src/ui/snippets/material3/bottom_sheet.rs",
+        &[
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "material3::ModalBottomSheet::uncontrolled(cx)",
+            "let open = sheet.open_model();",
+        ],
+        &[
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, open: Model<bool>) -> AnyElement {",
+            "let open = cx.local_model_keyed(\"open\", || false);",
+        ],
+    );
+
+    assert_material3_overlay_snippet_prefers_uncontrolled_copyable_root(
+        "src/ui/snippets/material3/state_matrix.rs",
+        &[
+            "fn render_search_view<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Vec<AnyElement> {",
+            "material3::SearchView::uncontrolled(cx)",
+        ],
+        &[
+            "let open = cx.local_model_keyed(\"open\", || false);",
+            "let query = cx.local_model_keyed(\"query\", String::new);",
+            "material3::SearchView::new(open, query)",
+        ],
+    );
+}
+
+#[test]
+fn material3_autocomplete_snippet_prefers_uncontrolled_query_and_dialog_roots() {
+    assert_material3_overlay_snippet_prefers_uncontrolled_copyable_root(
+        "src/ui/snippets/material3/autocomplete.rs",
+        &[
+            "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, disabled: Model<bool>, error: Model<bool>, ) -> AnyElement {",
+            "let outlined_autocomplete = material3::Autocomplete::uncontrolled(cx);",
+            "let value = outlined_autocomplete.query_model();",
+            "let dialog = material3::Dialog::uncontrolled(cx);",
+            "let dialog_open = dialog.open_model();",
+        ],
+        &[
+            "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, value: Model<String>, disabled: Model<bool>, error: Model<bool>, dialog_open: Model<bool>, ) -> AnyElement {",
+            "material3::Dialog::new(dialog_open.clone())",
+        ],
+    );
 }
 
 #[test]
