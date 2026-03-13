@@ -77,7 +77,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .into_element(cx),
                     shadcn::raw::typography::muted(
                         "Controlled via SidebarProvider.open(Some(model)).",
-                    ).into_element(cx),
+                    )
+                    .into_element(cx),
                 ]
             })
             .gap(Space::N2)

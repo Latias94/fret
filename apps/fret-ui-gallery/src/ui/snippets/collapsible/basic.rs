@@ -70,7 +70,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     vec![
                         shadcn::raw::typography::p(
                             "This panel can be expanded or collapsed to reveal additional content.",
-                        ).into_element(cx),
+                        )
+                        .into_element(cx),
                         shadcn::Button::new("Learn more")
                             .size(shadcn::ButtonSize::Sm)
                             .variant(shadcn::ButtonVariant::Secondary)
