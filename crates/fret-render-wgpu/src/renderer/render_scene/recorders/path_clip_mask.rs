@@ -8,42 +8,22 @@ pub(in super::super) fn record_path_clip_mask_pass(
     resources: &RecordPassResources<'_>,
     mask_pass: &PathClipMaskPass,
 ) {
-    let device = exec.device;
-    let frame_index = exec.frame_index;
-    let usage = exec.usage;
-    let frame_targets = &mut *exec.frame_targets;
-    let encoder = &mut *exec.encoder;
     let encoding = exec.encoding;
     let perf_enabled = exec.perf_enabled;
-    let frame_perf = &mut *exec.frame_perf;
-
-    let renderer = &mut *exec.renderer;
 
     let target_size = mask_pass.dst_size;
-
-    let (pass_target_texture, pass_target_view) = frame_targets.ensure_target_with_texture(
-        &mut renderer.intermediate_state.pool,
-        device,
+    let Some((pass_target_view, cache_hit)) = exec.ensure_clip_path_mask_target_and_try_cache_copy(
+        mask_pass.cache_key,
         mask_pass.dst,
         target_size,
-        wgpu::TextureFormat::R8Unorm,
-        usage,
-    );
-
-    if renderer.clip_path_mask_cache.try_copy_into(
-        encoder,
-        mask_pass.cache_key,
-        target_size,
-        pass_target_texture,
-        frame_index,
-    ) {
-        if perf_enabled {
-            frame_perf.clip_path_mask_cache_hits =
-                frame_perf.clip_path_mask_cache_hits.saturating_add(1);
-        }
+    ) else {
+        return;
+    };
+    if cache_hit {
         return;
     }
 
+    let renderer = &*exec.renderer;
     let uniform_offset = (mask_pass.uniform_index as u64).saturating_mul(renderer.uniform_stride());
 
     let vertex_size = std::mem::size_of::<PathVertex>() as u64;
@@ -51,7 +31,7 @@ pub(in super::super) fn record_path_clip_mask_pass(
     let size = (mask_pass.vertex_count as u64).saturating_mul(vertex_size);
 
     {
-        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        let mut rp = exec.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("fret path clip-mask pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                 view: &pass_target_view,
@@ -95,18 +75,13 @@ pub(in super::super) fn record_path_clip_mask_pass(
     }
 
     if perf_enabled {
-        frame_perf.clip_mask_draw_calls = frame_perf.clip_mask_draw_calls.saturating_add(1);
-        frame_perf.clip_path_mask_cache_misses =
-            frame_perf.clip_path_mask_cache_misses.saturating_add(1);
+        exec.frame_perf.clip_mask_draw_calls =
+            exec.frame_perf.clip_mask_draw_calls.saturating_add(1);
+        exec.frame_perf.clip_path_mask_cache_misses = exec
+            .frame_perf
+            .clip_path_mask_cache_misses
+            .saturating_add(1);
     }
 
-    renderer.clip_path_mask_cache.store_from(
-        &mut renderer.intermediate_state.pool,
-        device,
-        encoder,
-        mask_pass.cache_key,
-        target_size,
-        pass_target_texture,
-        frame_index,
-    );
+    exec.store_clip_path_mask_cache_from_target(mask_pass.cache_key, mask_pass.dst, target_size);
 }

@@ -27,6 +27,45 @@ impl<'a> RenderSceneExecutor<'a> {
         require_mask_view(&*self.frame_targets, mask_target, mask_size, pass_name)
     }
 
+    pub(super) fn ensure_clip_path_mask_target_and_try_cache_copy(
+        &mut self,
+        cache_key: u64,
+        dst: PlanTarget,
+        target_size: (u32, u32),
+    ) -> Option<(wgpu::TextureView, bool)> {
+        if !matches!(
+            dst,
+            PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
+        ) {
+            debug_assert!(false, "PathClipMask dst must be Mask[0-2]");
+            return None;
+        }
+
+        let (pass_target_texture, pass_target_view) =
+            self.frame_targets.ensure_target_with_texture(
+                &mut self.renderer.intermediate_state.pool,
+                self.device,
+                dst,
+                target_size,
+                wgpu::TextureFormat::R8Unorm,
+                self.usage,
+            );
+
+        let cache_hit = self.renderer.clip_path_mask_cache.try_copy_into(
+            &mut *self.encoder,
+            cache_key,
+            target_size,
+            pass_target_texture,
+            self.frame_index,
+        );
+        if cache_hit && self.perf_enabled {
+            self.frame_perf.clip_path_mask_cache_hits =
+                self.frame_perf.clip_path_mask_cache_hits.saturating_add(1);
+        }
+
+        Some((pass_target_view, cache_hit))
+    }
+
     pub(super) fn ensure_color_dst_view_owned(
         &mut self,
         dst: PlanTarget,
@@ -43,6 +82,39 @@ impl<'a> RenderSceneExecutor<'a> {
             self.usage,
             pass_name,
         )
+    }
+
+    pub(super) fn store_clip_path_mask_cache_from_target(
+        &mut self,
+        cache_key: u64,
+        dst: PlanTarget,
+        target_size: (u32, u32),
+    ) {
+        if !matches!(
+            dst,
+            PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
+        ) {
+            debug_assert!(false, "PathClipMask dst must be Mask[0-2]");
+            return;
+        }
+
+        let (pass_target_texture, _) = self.frame_targets.ensure_target_with_texture(
+            &mut self.renderer.intermediate_state.pool,
+            self.device,
+            dst,
+            target_size,
+            wgpu::TextureFormat::R8Unorm,
+            self.usage,
+        );
+        self.renderer.clip_path_mask_cache.store_from(
+            &mut self.renderer.intermediate_state.pool,
+            self.device,
+            &mut *self.encoder,
+            cache_key,
+            target_size,
+            pass_target_texture,
+            self.frame_index,
+        );
     }
 
     pub(super) fn custom_effect_v3_pyramid_reuse(

@@ -565,6 +565,23 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu gpu_backdrop_blur_is_scissored_and_preserves_ordering`
   - `cargo nextest run -p fret-render-wgpu gpu_scissored_blur_preserves_outside_region`
   - `cargo nextest run -p fret-render-wgpu gpu_offscreen_identity_blit_matches_direct`
+- The twentieth renderer recorder-facade split has landed:
+  - the existing render-scene recorder execution facade in
+    `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs` now also fronts the
+    `scale_nearest` and `path_clip_mask` recorders
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scale_nearest.rs` no longer
+    reaches directly into frame-target helpers or `intermediate_state.pool` for source/mask view
+    lookup or destination color-target allocation
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/path_clip_mask.rs` no longer
+    reaches directly into frame-target allocation or clip-path cache store/copy glue; that
+    ownership now routes through executor helpers while the draw pass stays local
+- Renderer scale-and-clip-recorder-facade split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu gpu_filter_content_pixelate_is_scissored_and_preserves_outside_content`
+  - `cargo nextest run -p fret-render-wgpu gpu_backdrop_pixelate_is_scissored_and_preserves_ordering`
+  - `cargo nextest run -p fret-render-wgpu gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite`
+  - `cargo nextest run -p fret-render-wgpu gpu_backdrop_pixelate_respects_rounded_clip_stack_on_writeback`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

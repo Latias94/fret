@@ -268,7 +268,9 @@ For `Renderer` state-shell tightening, the same principle applies:
   feature-local scratch/cache access should route through narrow executor helpers so recorder
   modules stop reaching directly into `Renderer` owner shells. The first rollout should focus on
   shared fullscreen-style recorders and feature-local hotspots, where the helper surface can
-  tighten access without changing pass algorithms.
+  tighten access without changing pass algorithms. Cache-backed mask-target flows follow the same
+  rule: target acquisition and cache copy/store glue should move first, while the draw algorithm
+  stays in the recorder.
 - render-text dump state is the matching diagnostics/export seam for text debugging:
   dump collection scratch and serialization scratch should move behind one owner so render-scene
   execution keeps only a thin bridge to `TextSystem`.
