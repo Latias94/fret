@@ -474,6 +474,16 @@ Current snapshot (2026-03-13):
   - the existing local naga validation test in
     `crates/fret-render-wgpu/src/renderer/shaders.rs` continued to validate `PATH_SHADER`
     unchanged
+- The first backend-root export tightening slice has landed:
+  - `crates/fret-render-wgpu/src/lib.rs` no longer re-exports zero-first-party-consumer backend
+    helpers at the crate root
+  - removed root re-exports:
+    `ImageRegistry`, `RenderTargetRegistry`, `CachedSvgImage`, `SvgImageCache`,
+    `SvgRasterKind`, `SvgRenderer`, and `SMOOTH_SVG_SCALE_FACTOR`
+  - existing first-party runner/demo/facade call sites required no source changes because none of
+    those names were consumed outside `crates/fret-render-wgpu`
+  - this slice also exposed `crates/fret-render-wgpu/src/svg_cache.rs` as a detached legacy path:
+    it currently has no active first-party consumers and only surfaces as dead-code follow-up
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
@@ -560,6 +570,13 @@ Current snapshot (2026-03-13):
   - `python3 tools/report_largest_files.py --top 30 --min-lines 800`: `renderer/shaders.rs`
     dropped from 981 lines to 331 lines while staying out of the top-30 oversized file report
   - `rg -n '= r#"' crates/fret-render-wgpu/src/renderer/shaders.rs`: no inline raw WGSL blocks remain
+- Backend-root export tightening verification is green after removing the zero-consumer
+  re-exports:
+  - `cargo nextest run -p fret-render -p fret-render-wgpu`: passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+  - residual note: `fret-render-wgpu` now reports dead-code warnings around the legacy
+    `svg_cache.rs` helper path, confirming it is no longer on an active first-party route
 - The strongest current risks are:
   - wildcard facade exports,
   - oversized backend public surface,

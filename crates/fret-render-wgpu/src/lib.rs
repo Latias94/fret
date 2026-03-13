@@ -32,8 +32,8 @@ pub use fret_render_core::{
     RenderTargetRotation, RenderTargetTransferFunction,
 };
 pub use images::{
-    ImageDescriptor, ImageRegistry, UploadedRgba8Image, create_rgba8_image_storage,
-    upload_rgba8_image, write_rgba8_texture_region,
+    ImageDescriptor, UploadedRgba8Image, create_rgba8_image_storage, upload_rgba8_image,
+    write_rgba8_texture_region,
 };
 pub use perf_store::{RendererPerfFrameSample, RendererPerfFrameStore};
 pub use renderer::{BlurQualityCounters, BlurQualitySnapshot};
@@ -42,11 +42,10 @@ pub use renderer::{EffectDegradationCounters, EffectDegradationSnapshot};
 pub use renderer::{IntermediatePerfSnapshot, RenderPerfSnapshot, SvgPerfSnapshot};
 pub use surface::SurfaceState;
 pub use svg::{
-    SMOOTH_SVG_SCALE_FACTOR, SvgAlphaMask, SvgRenderer, SvgRgbaImage, UploadedAlphaMask,
-    UploadedRgbaImage, upload_alpha_mask, upload_rgba_image,
+    SvgAlphaMask, SvgRgbaImage, UploadedAlphaMask, UploadedRgbaImage, upload_alpha_mask,
+    upload_rgba_image,
 };
-pub use svg_cache::{CachedSvgImage, SvgImageCache, SvgRasterKind};
-pub use targets::{RenderTargetDescriptor, RenderTargetRegistry};
+pub use targets::RenderTargetDescriptor;
 pub use text::FontCatalogEntryMetadata;
 pub use text::SystemFontRescanResult;
 pub use text::SystemFontRescanSeed;

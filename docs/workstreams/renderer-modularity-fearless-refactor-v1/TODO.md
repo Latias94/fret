@@ -487,6 +487,15 @@ ID format:
 
 - [~] RMFR-exports-060 Review cache/registry-style exports and remove public visibility where no
   real consumer exists.
+  - Landed so far:
+    - `crates/fret-render-wgpu/src/lib.rs` no longer re-exports zero-first-party-consumer
+      backend helpers at the crate root
+    - removed root re-exports:
+      `ImageRegistry`, `RenderTargetRegistry`, `CachedSvgImage`, `SvgImageCache`,
+      `SvgRasterKind`, `SvgRenderer`, and `SMOOTH_SVG_SCALE_FACTOR`
+    - no first-party runner/demo/facade call sites needed migration for that slice
+    - that slice also surfaced `crates/fret-render-wgpu/src/svg_cache.rs` as a detached legacy
+      helper path with no active first-party consumers
 - [ ] RMFR-exports-061 Decide whether backend-only diagnostics stores belong in the stable default
   facade or under a more explicit backend namespace.
 - [ ] RMFR-exports-062 Confirm whether `WgpuContext` remains a stable convenience surface or should
@@ -511,10 +520,11 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: `PATH_SHADER` WGSL now lives under `renderer/pipelines/wgsl/path.wgsl`,
-    `renderer/shaders.rs` no longer hosts that shader inline, the existing `renderer/tests.rs`
-    WGSL validation coverage continued to cover it unchanged, and the local naga validation in
-    `renderer/shaders.rs` remained intact.
+  - Latest landed slice: `crates/fret-render-wgpu/src/lib.rs` no longer re-exports
+    `ImageRegistry`, `RenderTargetRegistry`, `CachedSvgImage`, `SvgImageCache`,
+    `SvgRasterKind`, `SvgRenderer`, or `SMOOTH_SVG_SCALE_FACTOR` at the crate root, no
+    first-party call sites needed migration, and `svg_cache.rs` was exposed as a detached legacy
+    follow-up.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:
