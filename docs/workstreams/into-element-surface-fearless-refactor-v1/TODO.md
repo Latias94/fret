@@ -131,6 +131,7 @@ Validation snapshot on 2026-03-13:
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app native_select_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app resizable_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app navigation_menu_ -- --nocapture`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app scroll_area_ -- --nocapture`
 
 Implementation note on 2026-03-13:
 
@@ -207,11 +208,17 @@ Implementation note on 2026-03-13:
   now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep the local menu
   value state inside each snippet, and `apps/fret-ui-gallery/src/ui/pages/navigation_menu.rs`
   now routes those previews through `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the same UI Gallery top-level snippet cleanup now also covers the scroll-area family:
+  `apps/fret-ui-gallery/src/ui/snippets/scroll_area/{demo,usage,horizontal,nested_scroll_routing,rtl}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, the app-facing examples
+  now consistently teach `shadcn::scroll_area(cx, |_cx| [...])`, and
+  `apps/fret-ui-gallery/src/ui/pages/scroll_area.rs` routes those previews through
+  `DocSection::build(cx, ...)` while intentionally keeping `drag_baseline` /
+  `expand_at_bottom` on diagnostics-owned `DocSection::new(...)` seams.
 - after `accordion` / `tabs` / `toggle` / `radio_group` / `slider` / `native_select` /
-  `resizable` / `navigation_menu`, the next default-app UI Gallery app-facing queue should move
-  to `scroll_area`, keeping `demo` / `usage` / `horizontal` / `nested_scroll_routing` / `rtl` on
-  the typed teaching lane while intentionally leaving `drag_baseline` / `expand_at_bottom` on
-  diagnostics-owned raw seams.
+  `resizable` / `navigation_menu` / `scroll_area`, the next default-app UI Gallery app-facing
+  queue should move to `progress`, which is currently the smallest remaining page-local family
+  that still teaches top-level `UiCx -> AnyElement` returns without needing diagnostics exceptions.
 - `apps/fret-cookbook/examples/customv1_basics.rs` now keeps both advanced reusable helpers
   `panel_shell(...)` and `preview_content(...)` on `IntoUiElement<KernelApp>`-based signatures
   instead of returning raw `AnyElement` for non-raw composition.

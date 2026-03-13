@@ -355,6 +355,17 @@ Exit criteria:
   `DocSection::build(cx, ...)`; the old `pub fn render(...) -> AnyElement` teaching pattern is now
   forbidden for that family by
   `ui_authoring_surface_default_app::{navigation_menu_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface,navigation_menu_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app top-level snippet cleanup now also records the
+  `scroll_area` family:
+  `apps/fret-ui-gallery/src/ui/snippets/scroll_area/{demo,usage,horizontal,nested_scroll_routing,rtl}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/scroll_area.rs` consumes those previews through
+  `DocSection::build(cx, ...)` and intentionally keeps
+  `drag_baseline` / `expand_at_bottom` on `DocSection::new(...)`; the old
+  `pub fn render(...) -> AnyElement` teaching pattern is now forbidden for the app-facing family by
+  `ui_authoring_surface_default_app::{scroll_area_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface,scroll_area_page_uses_typed_doc_sections_for_app_facing_snippets}`, while
+  `selected_scroll_area_snippet_helpers_prefer_into_ui_element_over_anyelement` now also locks the
+  helper-family preference for `shadcn::scroll_area(...)`.
 - the same first-party teaching sweep now also closes the remaining default-root drift on the
   `tabs` / `toggle` / `accordion` lane:
   `tabs/{usage,demo,disabled,extras,icons,line,list,rtl,vertical,vertical_line}.rs`,
@@ -375,10 +386,9 @@ Exit criteria:
   `apps/fret-cookbook/examples/simple_todo_v2_target.rs`, and the scaffold `simple-todo` / `todo`
   templates now all use that helper, and the scaffold README/tests teach it as the default
   first-party keyed-list story.
-- the next UI Gallery app-facing snippet batch is now `scroll_area`:
-  keep `demo` / `usage` / `horizontal` / `nested_scroll_routing` / `rtl` on the typed teaching
-  lane, but keep `drag_baseline` / `expand_at_bottom` as explicit diagnostics-owned raw seams
-  rather than forcing them through the ordinary copyable default-app surface.
+- the next UI Gallery app-facing snippet batch is now `progress`:
+  it is currently the smallest remaining page-local family that still teaches top-level
+  `UiCx -> AnyElement` returns without also carrying diagnostics-owned raw seams.
 - M6 raw-seam inventory now has executable source gates in `surface_policy_tests.rs`:
   explicit raw/bridge helpers are currently limited to
   `kbd.rs::kbd_icon(...)` and

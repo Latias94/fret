@@ -336,6 +336,49 @@ fn navigation_menu_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn scroll_area_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/scroll_area/demo.rs",
+            "src/ui/snippets/scroll_area/usage.rs",
+            "src/ui/snippets/scroll_area/horizontal.rs",
+            "src/ui/snippets/scroll_area/nested_scroll_routing.rs",
+            "src/ui/snippets/scroll_area/rtl.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+}
+
+#[test]
+fn scroll_area_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/scroll_area.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Horizontal\", horizontal)",
+            "DocSection::build(cx, \"Nested scroll routing\", nested_scroll_routing)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::new(\"Scrollbar drag baseline\", drag_baseline)",
+            "DocSection::new(\"Expand at bottom\", expand_at_bottom)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Horizontal\", horizontal)",
+            "DocSection::new(\"Nested scroll routing\", nested_scroll_routing)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::build(cx, \"Scrollbar drag baseline\", drag_baseline)",
+            "DocSection::build(cx, \"Expand at bottom\", expand_at_bottom)",
+        ],
+    );
+}
+
+#[test]
 fn chart_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
@@ -2413,6 +2456,7 @@ fn selected_scroll_area_snippet_helpers_prefer_into_ui_element_over_anyelement()
     for relative_path in [
         "src/ui/snippets/scroll_area/usage.rs",
         "src/ui/snippets/scroll_area/horizontal.rs",
+        "src/ui/snippets/scroll_area/rtl.rs",
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
@@ -2437,8 +2481,14 @@ fn selected_scroll_area_snippet_helpers_prefer_into_ui_element_over_anyelement()
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/scroll_area/demo.rs",
-        &["fn tag_row<H: UiHost>(tag: Arc<str>) -> impl IntoUiElement<H> + use<H>"],
-        &["fn tag_row<H: UiHost>(tag: Arc<str>) -> AnyElement"],
+        &[
+            "fn tag_row(tag: Arc<str>) -> impl IntoUiElement<fret_app::App> + use<>",
+            "shadcn::scroll_area(cx, |_cx| [content])",
+        ],
+        &[
+            "fn tag_row(tag: Arc<str>) -> AnyElement",
+            "shadcn::ScrollArea::build(",
+        ],
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
@@ -3878,6 +3928,18 @@ fn material3_overlay_snippets_prefer_uncontrolled_copyable_roots() {
             "material3::SearchView::new(open, query)",
         ],
     );
+
+    assert_material3_snippet_prefers_copyable_root(
+        "src/ui/snippets/material3/modal_navigation_drawer.rs",
+        &[
+            "let modal = material3::ModalNavigationDrawer::uncontrolled(cx);",
+            "let open = modal.open_model();",
+        ],
+        &[
+            "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Model<bool>, value: Model<Arc<str>>, ) -> AnyElement {",
+            "material3::ModalNavigationDrawer::new(open.clone())",
+        ],
+    );
 }
 
 #[test]
@@ -3923,6 +3985,38 @@ fn material3_select_snippet_prefers_uncontrolled_value_roots() {
             "let selected_typeahead = cx.local_model_keyed(\"selected_typeahead\", || None::<Arc<str>>);",
             "let selected_rich = cx.local_model_keyed(\"selected_rich\", || None::<Arc<str>>);",
             "let selected_transformed = cx.local_model_keyed(\"selected_transformed\", || None::<Arc<str>>);",
+        ],
+    );
+}
+
+#[test]
+fn material3_date_and_time_picker_snippets_prefer_uncontrolled_dialog_roots() {
+    assert_material3_snippet_prefers_copyable_root(
+        "src/ui/snippets/material3/date_picker.rs",
+        &[
+            "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, ) -> AnyElement {",
+            "let dialog = material3::DatePickerDialog::uncontrolled(cx);",
+            "let open = dialog.open_model();",
+            "let month = dialog.month_model();",
+            "let selected = dialog.selected_model();",
+        ],
+        &[
+            "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Model<bool>, month: Model<CalendarMonth>, selected: Model<Option<time::Date>>, ) -> AnyElement {",
+            "material3::DatePickerDialog::new(open, month.clone(), selected.clone())",
+        ],
+    );
+
+    assert_material3_snippet_prefers_copyable_root(
+        "src/ui/snippets/material3/time_picker.rs",
+        &[
+            "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, ) -> AnyElement {",
+            "let dialog = material3::TimePickerDialog::uncontrolled(cx);",
+            "let open = dialog.open_model();",
+            "let selected = dialog.selected_model();",
+        ],
+        &[
+            "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Model<bool>, selected: Model<time::Time>, ) -> AnyElement {",
+            "material3::TimePickerDialog::new(open, selected.clone())",
         ],
     );
 }
