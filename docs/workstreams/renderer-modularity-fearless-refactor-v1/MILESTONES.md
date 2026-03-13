@@ -421,6 +421,19 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu diff_segment_reports_tracks_shape_changes_and_pass_growth`
   - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
   - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
+- The tenth renderer owner-state split has landed:
+  - scene-encoding cache state now lives under
+    `crates/fret-render-wgpu/src/renderer/scene_encoding_cache.rs`
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns the scene-encoding cache shell
+    directly; cache key construction, hit/miss bookkeeping, and cache storage now sit behind the
+    owner
+  - `render_scene/encoding_cache.rs` now stays as a thin wrapper around owner-state bookkeeping
+    plus the actual `encode_scene_ops_into(...)` call
+- Renderer scene-encoding-state split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu miss_reasons_include_material_registry_and_budgets`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

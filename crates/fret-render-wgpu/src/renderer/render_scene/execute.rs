@@ -265,7 +265,7 @@ impl Renderer {
 
         self.plan_quad_vertex_bases_scratch = quad_vertex_bases;
 
-        self.scene_encoding_cache
+        self.scene_encoding_state
             .store_after_frame(key, cache_hit, encoding);
         cmd
     }

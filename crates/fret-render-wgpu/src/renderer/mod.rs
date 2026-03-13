@@ -63,7 +63,7 @@ use material_effects::*;
 use path::*;
 use render_plan::*;
 use render_plan_reporting::*;
-use scene_encoding_cache::SceneEncodingCache;
+use scene_encoding_cache::SceneEncodingState;
 use types::*;
 pub use types::{BlurQualityCounters, BlurQualitySnapshot};
 pub use types::{
@@ -136,7 +136,7 @@ pub struct Renderer {
 
     gpu_resources: GpuResources,
 
-    scene_encoding_cache: SceneEncodingCache,
+    scene_encoding_state: SceneEncodingState,
 
     material_effect_state: MaterialEffectState,
 }

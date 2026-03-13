@@ -569,7 +569,7 @@ impl Renderer {
             debug_blur_scissor: None,
             intermediate_state: IntermediateState::default(),
             gpu_resources: super::gpu_resources::GpuResources::default(),
-            scene_encoding_cache: super::scene_encoding_cache::SceneEncodingCache::default(),
+            scene_encoding_state: super::scene_encoding_cache::SceneEncodingState::default(),
             material_effect_state: MaterialEffectState::default(),
         }
     }

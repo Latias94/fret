@@ -240,6 +240,10 @@ For `Renderer` state-shell tightening, the same principle applies:
   per-segment pass-count scratch, segment report scratch, and JSON dump scratch should move behind
   one owner so render-scene diagnostics code stops depending on transient renderer bookkeeping
   fields.
+- scene-encoding cache state is the matching frame-reuse seam for encode-stage reuse:
+  cache key construction inputs, hit/miss bookkeeping, miss-reason reporting, and cache/scratch
+  storage should move behind one owner so render-scene execution stops depending on a loose cache
+  shell.
 
 ### 5. Tighten public exports after evidence exists
 

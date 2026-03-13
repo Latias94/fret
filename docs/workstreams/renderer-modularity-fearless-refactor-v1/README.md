@@ -241,6 +241,11 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/render_plan_reporting.rs`, and
   `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns render-plan segment report scratch,
   per-segment pass-count scratch, or render-plan JSON dump scratch directly.
+- Renderer scene-encoding cache owner state now also lives under
+  `crates/fret-render-wgpu/src/renderer/scene_encoding_cache.rs`, and
+  `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns the scene-encoding cache shell
+  directly; cache key construction, hit/miss bookkeeping, and cache storage now sit behind that
+  owner.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:
