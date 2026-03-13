@@ -416,12 +416,18 @@ ID format:
     - `VIEWPORT_SHADER` WGSL source moved into
       `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/viewport.wgsl`
     - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts `VIEWPORT_SHADER` inline
+    - `MASK_SHADER` WGSL source moved into
+      `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/mask.wgsl`
+    - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts `MASK_SHADER` inline
 - [ ] RMFR-shaders-051 Avoid splitting shader source files purely for line count if no boundary
   benefit exists.
 - [~] RMFR-shaders-052 Keep WGSL validation tests aligned with any source reorganization.
   - Landed so far:
     - `crates/fret-render-wgpu/src/renderer/tests.rs` now validates the `backdrop_warp_image`
       shader variants explicitly during WGSL parse and WebGPU validation coverage.
+    - the existing WGSL parse/WebGPU validation coverage in
+      `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover `MASK_SHADER` without
+      test-surface changes
 
 ---
 
