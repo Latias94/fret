@@ -49,7 +49,7 @@ This file tracks the execution checklist for `DESIGN.md`.
 - [x] Recenter the UI-kit controller around the headless engine output instead of hand-assembling
   partial `DndUpdate` values.
 - [ ] Make `DndPointerForwarders` the preferred path for new integrations.
-- [ ] Migrate at least one first-party production integration away from hand-written forwarding:
+- [x] Migrate at least one first-party production integration away from hand-written forwarding:
   - sortable recipe
   - Kanban
   - or both
@@ -84,7 +84,7 @@ This file tracks the execution checklist for `DESIGN.md`.
 
 ## Product adoption and gates
 
-- [ ] Sortable recipe gate added or strengthened.
+- [x] Sortable recipe gate added or strengthened.
 - [ ] Kanban gate added or strengthened.
 - [ ] Docking tab hover/insert path verified against the new engine/controller shape.
 - [ ] Carousel-vs-DnD arbitration gate remains green after adapter changes.
@@ -104,4 +104,4 @@ This file tracks the execution checklist for `DESIGN.md`.
 - [x] `DndUpdate` collision output made truthful.
 - [x] Headless engine/operation introduced.
 - [x] UI-kit controller reduced to a thinner adapter.
-- [ ] At least one real first-party integration migrated to the preferred seam.
+- [x] At least one real first-party integration migrated to the preferred seam.
