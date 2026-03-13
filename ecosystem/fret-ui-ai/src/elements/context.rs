@@ -5,7 +5,6 @@
 use std::sync::Arc;
 
 use fret_core::{FontWeight, Px, SemanticsRole, TextOverflow, TextWrap};
-use fret_runtime::Model;
 use fret_ui::SvgSource;
 use fret_ui::element::{
     AnyElement, InteractivityGateProps, LayoutStyle, Length, SemanticsDecoration, SvgIconProps,
@@ -977,14 +976,7 @@ impl ContextContentHeader {
                 .gap(Space::N3)
                 .into_element(cx);
 
-            let progress_model = cx.with_state(|| None::<Model<f32>>, |st| st.clone());
-            let progress_model = if let Some(m) = progress_model {
-                m
-            } else {
-                let m = cx.app.models_mut().insert(pct * 100.0);
-                cx.with_state(|| None::<Model<f32>>, |st| *st = Some(m.clone()));
-                m
-            };
+            let progress_model = cx.local_model(|| pct * 100.0);
 
             let next = pct * 100.0;
             let _ = cx.app.models_mut().update(&progress_model, |v| {

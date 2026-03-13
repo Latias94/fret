@@ -11,7 +11,8 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{
-    ColorFallback, ColorRef, LayoutRefinement, MetricRef, Space, WidgetStateProperty, WidgetStates,
+    ColorFallback, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, Space,
+    WidgetStateProperty, WidgetStates,
 };
 
 use fret_ui_shadcn::button::ButtonStyle;
@@ -541,6 +542,7 @@ pub struct PromptInputSlots {
     pub block_end: Vec<AnyElement>,
 }
 
+#[track_caller]
 fn prompt_input_referenced_sources_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     controlled: Option<Model<Vec<AttachmentSourceDocumentData>>>,
@@ -548,26 +550,7 @@ fn prompt_input_referenced_sources_model<H: UiHost>(
     if let Some(model) = controlled {
         return model;
     }
-
-    #[derive(Default)]
-    struct LocalState {
-        model: Option<Model<Vec<AttachmentSourceDocumentData>>>,
-    }
-
-    let existing = cx.with_state(LocalState::default, |st| st.model.clone());
-    let model = match existing {
-        Some(m) => m,
-        None => {
-            let m = cx
-                .app
-                .models_mut()
-                .insert(Vec::<AttachmentSourceDocumentData>::new());
-            cx.with_state(LocalState::default, |st| st.model = Some(m.clone()));
-            m
-        }
-    };
-
-    model
+    cx.local_model(Vec::<AttachmentSourceDocumentData>::new)
 }
 
 #[derive(Clone)]
@@ -2022,8 +2005,8 @@ impl PromptInputButton {
             return trigger;
         };
 
-        let content = TooltipContent::with(cx, |cx| {
-            let text = TooltipContent::text(cx, tooltip.content.clone());
+        let content = TooltipContent::build(cx, |cx| {
+            let text = TooltipContent::text(tooltip.content.clone()).into_element(cx);
             if let Some(shortcut) = tooltip.shortcut.clone() {
                 let kbd = Kbd::new(shortcut).into_element(cx);
                 vec![
@@ -2226,23 +2209,9 @@ impl PromptInputActionMenuContent {
     }
 }
 
-#[derive(Default)]
-struct PromptInputActionMenuState {
-    open: Option<Model<bool>>,
-}
-
+#[track_caller]
 fn prompt_input_action_menu_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
-    let open = cx.with_state(PromptInputActionMenuState::default, |st| st.open.clone());
-    match open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(PromptInputActionMenuState::default, |st| {
-                st.open = Some(model.clone())
-            });
-            model
-        }
-    }
+    cx.local_model(|| false)
 }
 
 /// Action menu root aligned with AI Elements `PromptInputActionMenu`.
@@ -2301,7 +2270,7 @@ impl PromptInputActionMenu {
         let trigger = self.trigger;
         let entries = self.content.into_entries();
 
-        DropdownMenu::new(open.clone())
+        DropdownMenu::from_open(open.clone())
             .modal(modal)
             .align(align)
             .side(side)

@@ -12,11 +12,8 @@ use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let selected = cx.local_model_keyed("selected", || None::<Arc<str>>);
-    let selected_unclamped = cx.local_model_keyed("selected_unclamped", || None::<Arc<str>>);
-    let selected_typeahead = cx.local_model_keyed("selected_typeahead", || None::<Arc<str>>);
-    let selected_rich = cx.local_model_keyed("selected_rich", || None::<Arc<str>>);
-    let selected_transformed = cx.local_model_keyed("selected_transformed", || None::<Arc<str>>);
+    let default_select = material3::Select::uncontrolled(cx);
+    let selected = default_select.value_model();
     let menu_width_floor_enabled = cx.local_model_keyed("menu_width_floor_enabled", || true);
     let menu_width_floor_enabled_now = cx
         .get_model_copied(&menu_width_floor_enabled, Invalidation::Layout)
@@ -36,7 +33,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ]
     .into();
 
-    let default = material3::Select::new(selected.clone())
+    let default = default_select
+        .clone()
         .a11y_label("Material 3 Select")
         .placeholder("Pick one")
         .items(items.clone())
@@ -95,7 +93,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ]
     .into();
 
-    let unclamped = material3::Select::new(selected_unclamped.clone())
+    let unclamped = material3::Select::uncontrolled(cx)
         .a11y_label("Material 3 Select (unclamped menu width)")
         .placeholder("Unclamped")
         .items(unclamped_items)
@@ -145,7 +143,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .into_element(cx)
     };
 
-    let typeahead_select = material3::Select::new(selected_typeahead.clone())
+    let typeahead_select = material3::Select::uncontrolled(cx)
         .a11y_label("Material 3 Select (typeahead delay)")
         .placeholder("Typeahead probe")
         .items(typeahead_items)
@@ -176,7 +174,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ]
     .into();
 
-    let rich_select = material3::Select::new(selected_rich.clone())
+    let rich_select = material3::Select::uncontrolled(cx)
         .a11y_label("Material 3 Select (supporting text options)")
         .placeholder("Option richness probe")
         .items(rich_items)
@@ -194,7 +192,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ]
     .into();
 
-    let transformed_select = material3::Select::new(selected_transformed.clone())
+    let transformed_select = material3::Select::uncontrolled(cx)
         .a11y_label("Material 3 Select (transformed)")
         .placeholder("Transformed")
         .items(transformed_items)

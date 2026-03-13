@@ -38,7 +38,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     };
 
     let voice_tooltip_content =
-        shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(cx, "Voice Mode")]);
+        shadcn::TooltipContent::build(cx, |_cx| [shadcn::TooltipContent::text("Voice Mode")]);
     let voice_tooltip = shadcn::Tooltip::new(cx, voice_button, voice_tooltip_content)
         .arrow(true)
         .side(shadcn::TooltipSide::Top)

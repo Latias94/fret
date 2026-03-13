@@ -259,7 +259,7 @@ where
                     move |cx, _st| {
                         let id = cx.root_id();
                         let auto_scroll_state: Arc<Mutex<SelectScrollArrowAutoScrollState>> =
-                            cx.with_state_for(
+                            cx.state_for(
                                 id,
                                 || Arc::new(Mutex::new(SelectScrollArrowAutoScrollState::default())),
                                 |s| s.clone(),
@@ -2146,18 +2146,18 @@ fn select_impl<H: UiHost>(
             let typeahead_labels: Arc<[Arc<str>]> = Arc::from(typeahead_labels.into_boxed_slice());
             let typeahead_disabled: Arc<[bool]> = Arc::from(typeahead_disabled.into_boxed_slice());
 
-            let trigger_state: Arc<Mutex<SelectTriggerKeyState>> = cx.with_state_for(
+            let trigger_state: Arc<Mutex<SelectTriggerKeyState>> = cx.state_for(
                 trigger_id,
                 || Arc::new(Mutex::new(SelectTriggerKeyState::new())),
                 |s| s.clone(),
             );
-            let mouse_open_guard: radix_select::SelectMouseOpenGuard = cx.with_state_for(
+            let mouse_open_guard: radix_select::SelectMouseOpenGuard = cx.state_for(
                 trigger_id,
                 || radix_select::select_mouse_open_guard(),
                 |g| g.clone(),
             );
             let mouse_up_selection_gate: Arc<Mutex<radix_select::SelectMouseUpSelectionGateState>> =
-                cx.with_state_for(
+                cx.state_for(
                     trigger_id,
                     || Arc::new(Mutex::new(radix_select::SelectMouseUpSelectionGateState::default())),
                     |g| g.clone(),
@@ -3808,7 +3808,7 @@ fn select_impl<H: UiHost>(
                                                                                     if !item_disabled {
                                                                                         let hover_clear_token: Arc<
                                                                                             Mutex<Option<TimerToken>>,
-                                                                                        > = cx.with_state_for(
+                                                                                        > = cx.state_for(
                                                                                             id,
                                                                                             || {
                                                                                                 Arc::new(Mutex::new(

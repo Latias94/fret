@@ -1,11 +1,12 @@
 pub const SOURCE: &str = include_str!("extras.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let w_fit = LayoutRefinement::default().w(fret_ui_kit::LengthRefinement::Auto);
     let max_w_xs = LayoutRefinement::default().w_full().max_w(Px(320.0));
 

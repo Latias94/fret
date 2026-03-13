@@ -280,7 +280,7 @@ impl RelativeTimeClock {
             scheduling::set_continuous_frames(cx, want_auto_update);
             if want_auto_update {
                 let now = Instant::now();
-                let due = cx.with_state_for(id, AutoUpdateState::default, |st| {
+                let due = cx.state_for(id, AutoUpdateState::default, |st| {
                     if let Some(next) = st.next_update_at {
                         if now >= next {
                             st.next_update_at = Some(now + tick.std_duration());
@@ -300,7 +300,7 @@ impl RelativeTimeClock {
                         .update(&time_model, |v| *v = *v + tick.time_duration());
                 }
             } else {
-                cx.with_state_for(id, AutoUpdateState::default, |st| {
+                cx.state_for(id, AutoUpdateState::default, |st| {
                     st.next_update_at = None;
                 });
             }

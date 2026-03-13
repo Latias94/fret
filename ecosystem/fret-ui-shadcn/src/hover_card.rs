@@ -521,7 +521,7 @@ impl HoverCard {
                     applied: bool,
                 }
                 let should_apply =
-                    cx.with_state_for(hover_card_id, HoverCardDefaultOpenInit::default, |st| {
+                    cx.state_for(hover_card_id, HoverCardDefaultOpenInit::default, |st| {
                         if st.applied {
                             false
                         } else {
@@ -560,7 +560,7 @@ impl HoverCard {
             }
 
             let (overlay_hovered, anchor_bounds, floating_bounds) =
-                cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
+                cx.state_for(hover_card_id, HoverCardSharedState::default, |st| {
                     (st.overlay_hovered, st.anchor_bounds, st.floating_bounds)
                 });
             let focused = cx.is_focused_element(trigger_id);
@@ -590,7 +590,7 @@ impl HoverCard {
             let overlay_root_id = fret_ui::elements::global_root(cx.window, &overlay_root_name);
             let has_text_selection = cx.has_active_text_selection_in_root(overlay_root_id);
             let text_selection_just_cleared =
-                cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
+                cx.state_for(hover_card_id, HoverCardSharedState::default, |st| {
                     let prev = st.had_text_selection;
                     st.had_text_selection = has_text_selection;
                     prev && !has_text_selection
@@ -601,7 +601,7 @@ impl HoverCard {
                 saw_selection_while_pointer_down: bool,
             }
 
-            let clear_stale_pointer_down_after_selection = cx.with_state_for(
+            let clear_stale_pointer_down_after_selection = cx.state_for(
                 hover_card_id,
                 HoverCardSelectionPointerState::default,
                 |st| {
@@ -737,7 +737,7 @@ impl HoverCard {
                 );
             }
             if !motion.present {
-                cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
+                cx.state_for(hover_card_id, HoverCardSharedState::default, |st| {
                     st.overlay_hovered = false;
                     st.anchor_bounds = None;
                     st.floating_bounds = None;
@@ -764,7 +764,7 @@ impl HoverCard {
                 move |cx| {
                 let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
                 let Some(anchor) = anchor else {
-                    cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
+                    cx.state_for(hover_card_id, HoverCardSharedState::default, |st| {
                         st.overlay_hovered = false;
                         st.anchor_bounds = None;
                         st.floating_bounds = None;
@@ -835,7 +835,7 @@ impl HoverCard {
                     Some(content_id),
                     trace,
                 );
-                cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
+                cx.state_for(hover_card_id, HoverCardSharedState::default, |st| {
                     st.anchor_bounds = Some(anchor);
                     st.floating_bounds = Some(layout.rect);
                 });
@@ -869,7 +869,7 @@ impl HoverCard {
                         layout: popper_content::popper_wrapper_layout(placed, wrapper_insets),
                     },
                     move |cx, hovered| {
-                        cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
+                        cx.state_for(hover_card_id, HoverCardSharedState::default, |st| {
                             st.overlay_hovered = hovered;
                         });
 

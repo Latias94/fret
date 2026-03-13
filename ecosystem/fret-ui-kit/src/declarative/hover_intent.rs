@@ -13,6 +13,7 @@ struct HoverIntentDriverState {
 
 /// Drive [`HoverIntentState`] using the UI runtime's frame clock, and request continuous frames
 /// while the intent is in a delayed-transition state.
+#[track_caller]
 pub fn hover_intent<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     hovered: bool,
@@ -26,7 +27,7 @@ pub fn hover_intent<H: UiHost>(
     let cfg = HoverIntentConfig::new(open_delay_ticks, close_delay_ticks);
 
     let frame_tick = cx.app.frame_id().0;
-    let update = cx.with_state(HoverIntentDriverState::default, |st| {
+    let update = cx.slot_state(HoverIntentDriverState::default, |st| {
         match st.last_frame_tick {
             None => {
                 st.last_frame_tick = Some(frame_tick);

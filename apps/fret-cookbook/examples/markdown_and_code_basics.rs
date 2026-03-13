@@ -76,16 +76,6 @@ impl View for MarkdownAndCodeBasicsView {
         // Keep the "Copy" affordance visible in scripts/screenshots without requiring hover.
         components.code_block_ui.copy_button_on_hover = false;
 
-        let header = shadcn::CardHeader::build(|cx, out| {
-            out.push_ui(cx, shadcn::CardTitle::new("Markdown and code basics"));
-            out.push_ui(
-                cx,
-                shadcn::CardDescription::new(
-                    "Markdown rendering + fenced code blocks (copy button, wrap mode, max height).",
-                ),
-            );
-        });
-
         let wrap_toggle = shadcn::ToggleGroup::single(wrap_state.clone_model())
             .items([
                 shadcn::ToggleGroupItem::new(WRAP_SCROLL_X, [cx.text("Scroll X")])
@@ -170,14 +160,20 @@ impl View for MarkdownAndCodeBasicsView {
         let body = ui::v_flex(|cx| ui::children![cx; controls, shadcn::Separator::new(), panels])
             .gap(Space::N3);
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(cx, header);
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(cx, body);
+        let card = shadcn::card(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_header(|cx| {
+                    ui::children![
+                        cx;
+                        shadcn::card_title("Markdown and code basics"),
+                        shadcn::card_description(
+                            "Markdown rendering + fenced code blocks (copy button, wrap mode, max height).",
+                        ),
+                    ]
                 }),
-            );
+                shadcn::card_content(|cx| ui::children![cx; body]),
+            ]
         })
         .ui()
         .w_full()

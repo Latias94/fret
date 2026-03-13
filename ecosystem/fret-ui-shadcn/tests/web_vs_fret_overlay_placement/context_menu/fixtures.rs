@@ -39,7 +39,7 @@ fn build_context_menu_demo_overlay(
         ContextMenuRadioGroup, ContextMenuRadioItemSpec, ContextMenuShortcut,
     };
 
-    ContextMenu::new(open.clone())
+    ContextMenu::from_open(open.clone())
         // new-york-v4 context-menu-demo: `ContextMenuContent className="w-52"`.
         .min_width(Px(208.0))
         // new-york-v4 context-menu-demo: `ContextMenuSubContent className="w-44"`.

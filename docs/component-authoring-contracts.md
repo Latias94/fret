@@ -33,8 +33,9 @@ at least one regression test before expanding usage.
     - authored local models: `ElementContext::{local_model, local_model_keyed}`
     - explicit-identity models: `ElementContext::model_for(...)`
     - helper/runtime slots: `ElementContext::{slot_state, slot_id, keyed_slot_id}`
-    - explicit identity slots: `ElementContext::{state_for, with_state_for}`
-    - lower-level compatibility API: `ElementContext::with_state(...)`
+    - explicit identity slots: `ElementContext::state_for(...)`
+    - root-scoped runtime state: `ElementContext::root_state(...)`
+    - lower-level deprecated compatibility aliases: `ElementContext::{with_state, with_state_for}`
   - Model reads + observation: `ElementContext::{observe_model, read_model_ref, get_model_*}`
   - Focus reads: `ElementContext::{focused_element, is_focused_element}`
   - Cross-frame geometry queries: `ElementContext::{last_bounds_for_element, last_visual_bounds_for_element}`
@@ -175,9 +176,10 @@ Public constructors/setters that accept children should use:
 Practical note (ecosystem ergonomics):
 
 - If an ecosystem-level helper or component entrypoint calls `cx.scope(...)` / `cx.keyed(...)` /
-  `cx.named(...)` internally, prefer marking that helper/entrypoint `#[track_caller]` so element
-  identity is anchored at the **application callsite** rather than the helper’s source line. This
-  reduces “state sticks to the wrong sibling after insertion” bugs in toolbars and forms.
+  `cx.named(...)` / `cx.slot_state(...)` / `cx.slot_id(...)` / `cx.local_model(...)` internally,
+  prefer marking that helper/entrypoint `#[track_caller]` so identity is anchored at the
+  **application callsite** rather than the helper’s source line. This reduces “state sticks to the
+  wrong sibling after insertion” bugs in toolbars, forms, and repeated helper invocations.
 
 Practical guidance:
 
@@ -188,6 +190,10 @@ Practical guidance:
   pinning radios, or faceted-filter option toggles), key the local model by a semantic id such as
   `(surface, column_id)` or `(surface, option_value)` instead of caching `Vec<Model<_>>` shells in
   helper state.
+- Generated/spec-driven surfaces with their own stable semantic ids (for example GenUI
+  `ElementKey`) should treat those ids as the primary state key: prefer
+  `local_model_keyed(element_key, ...)` and `keyed_slot_state(element_key, ...)` over call-order
+  dependent helper slots.
 - Use `root_state` for shared per-root runtime state, `slot_state` for helper internals such as
   uncontrolled models/hysteresis/memo caches, and `provide` for inherited provider values.
 - Keep helper-local sync metadata small: previous-open flags, last-synced revisions, and similar
@@ -197,6 +203,12 @@ Practical guidance:
   `VirtualListScrollHandle`, row-order caches, grouped-display caches, typeahead buffers, and
   similar non-provider internals should live in `slot_state(...)` unless they need an explicit,
   externally chosen identity.
+- If one helper must read/update the same helper-local slot multiple times in one render pass
+  (for example transition leases or tooltip hover/broadcast runtime), allocate the slot once via
+  `slot_id()` and then use `state_for(slot, ...)` for every access in that helper.
+- When a public helper/component entrypoint allocates helper-local slots or models, prefer
+  `#[track_caller]` on that entrypoint so repeated use from the same parent render gets
+  caller-local state instead of collapsing onto the helper's source line.
 - Avoid capturing element IDs in long-lived app state unless you also control their lifetime and
   re-derivation strategy (IDs are stable but not global identifiers).
 

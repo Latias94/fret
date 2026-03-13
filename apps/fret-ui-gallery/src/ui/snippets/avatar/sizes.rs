@@ -23,16 +23,16 @@ fn avatar_with_image<H: UiHost>(
     fallback_text: &'static str,
     test_id: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
-    let image = shadcn::AvatarImage::model(avatar_image.clone()).into_element(cx);
-    let fallback = shadcn::AvatarFallback::new(fallback_text)
-        .when_image_missing_model(avatar_image)
-        .delay_ms(120)
-        .into_element(cx);
-
-    shadcn::Avatar::new([image, fallback])
-        .size(size)
-        .into_element(cx)
-        .test_id(test_id)
+    shadcn::avatar_sized(cx, size, |cx| {
+        let image = shadcn::AvatarImage::model(avatar_image.clone()).into_element(cx);
+        let fallback = shadcn::AvatarFallback::new(fallback_text)
+            .when_image_missing_model(avatar_image)
+            .delay_ms(120)
+            .into_element(cx);
+        [image, fallback]
+    })
+    .into_element(cx)
+    .test_id(test_id)
 }
 
 pub fn render<H: UiHost>(

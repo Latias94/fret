@@ -32,7 +32,7 @@ fn element_state_survives_gc_lag_frames_when_element_is_temporarily_missing() {
             move |cx| {
                 if frame == 0 || frame == 3 {
                     let leaf = cx.named("leaf", |cx| cx.text("leaf"));
-                    let value = cx.with_state_for(
+                    let value = cx.state_for(
                         leaf.id,
                         || 0u64,
                         |v| {
@@ -97,7 +97,7 @@ fn element_state_is_dropped_after_exceeding_gc_lag_frames() {
             move |cx| {
                 if frame == 0 || frame == 4 {
                     let leaf = cx.named("leaf", |cx| cx.text("leaf"));
-                    let value = cx.with_state_for(
+                    let value = cx.state_for(
                         leaf.id,
                         || 0u64,
                         |v| {

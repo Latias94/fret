@@ -25,7 +25,7 @@ pub(super) fn preview_avatar(
 
     let api_reference = doc_layout::notes_block([
         "`Avatar`, `AvatarImage`, and `AvatarFallback` cover the base shadcn/Base UI surface, while `AvatarBadge`, `AvatarGroup`, and `AvatarGroupCount` stay as explicit typed recipe parts.",
-        "`Avatar::new([..])` and `Avatar::children([..])` are already sufficient for composable avatar content; no extra generic children or slot-merge API is needed here.",
+        "`Avatar::new([..])` remains the base composable builder, while `avatar_sized(...)` is the preferred helper when size-dependent children should inherit the active avatar size before landing.",
         "Dropdown composition remains recipe-owned: the authored pressable child button is the trigger, and the nested avatar stays presentational content inside it.",
     ]);
 
@@ -84,7 +84,7 @@ pub(super) fn preview_avatar(
                 .test_id_prefix("ui-gallery-avatar-group-count-icon")
                 .code_rust_from_file_region(snippets::group_count_icon::SOURCE, "example"),
             DocSection::new("Sizes", sizes)
-                .description("Upstream: `size=\"sm\" | \"default\" | \"lg\"`.")
+                .description("Upstream: `size=\"sm\" | \"default\" | \"lg\"`; first-party examples teach `avatar_sized(...)` for that lane.")
                 .test_id_prefix("ui-gallery-avatar-sizes")
                 .code_rust_from_file_region(snippets::sizes::SOURCE, "example"),
             DocSection::new("Dropdown", dropdown)

@@ -247,62 +247,15 @@ impl WebPreview {
                     .get_model_cloned(&url_model, Invalidation::Layout)
                     .unwrap_or_default();
 
-                let url_draft = cx.with_state(|| None::<Model<String>>, |st| st.clone());
-                let url_draft = if let Some(model) = url_draft {
-                    model
-                } else {
-                    let model = cx.app.models_mut().insert(url_now.clone());
-                    cx.with_state(|| None::<Model<String>>, |st| *st = Some(model.clone()));
-                    model
-                };
+                let url_draft = cx.local_model(|| url_now.clone());
 
-                let console_open = cx.with_state(|| None::<Model<bool>>, |st| st.clone());
-                let console_open = if let Some(model) = console_open {
-                    model
-                } else {
-                    let model = cx.app.models_mut().insert(false);
-                    cx.with_state(|| None::<Model<bool>>, |st| *st = Some(model.clone()));
-                    model
-                };
+                let console_open = cx.local_model(|| false);
 
                 #[cfg(feature = "webview")]
-                let nav_intent = {
-                    #[derive(Default)]
-                    struct NavIntentState {
-                        model: Option<Model<Option<WebPreviewBackendAction>>>,
-                    }
-
-                    let existing = cx.with_state(NavIntentState::default, |st| st.model.clone());
-                    if let Some(existing) = existing {
-                        existing
-                    } else {
-                        let model = cx.app.models_mut().insert(None::<WebPreviewBackendAction>);
-                        cx.with_state(NavIntentState::default, |st| {
-                            st.model = Some(model.clone());
-                        });
-                        model
-                    }
-                };
+                let nav_intent = { cx.local_model(|| None::<WebPreviewBackendAction>) };
 
                 #[cfg(feature = "webview")]
-                let console_clear_intent = {
-                    #[derive(Default)]
-                    struct ConsoleClearIntentState {
-                        model: Option<Model<bool>>,
-                    }
-
-                    let existing =
-                        cx.with_state(ConsoleClearIntentState::default, |st| st.model.clone());
-                    if let Some(existing) = existing {
-                        existing
-                    } else {
-                        let model = cx.app.models_mut().insert(false);
-                        cx.with_state(ConsoleClearIntentState::default, |st| {
-                            st.model = Some(model.clone());
-                        });
-                        model
-                    }
-                };
+                let console_clear_intent = { cx.local_model(|| false) };
 
                 let controller = WebPreviewController {
                     url: url_model.clone(),
@@ -329,14 +282,14 @@ impl WebPreview {
 
                     let current_backend = backend.clone();
                     let prev_backend_id =
-                        cx.with_state(BackendInit::default, |st| st.last_backend_id);
+                        cx.root_state(BackendInit::default, |st| st.last_backend_id);
 
                     match current_backend {
                         None => {
                             if let Some(prev) = prev_backend_id {
                                 webview_push_request(cx.app, WebViewRequest::Destroy { id: prev });
                             }
-                            cx.with_state(BackendInit::default, |st| *st = BackendInit::default());
+                            cx.root_state(BackendInit::default, |st| *st = BackendInit::default());
                         }
                         Some(backend) => {
                             if prev_backend_id.is_some_and(|prev| prev != backend.id) {
@@ -346,19 +299,19 @@ impl WebPreview {
                                         WebViewRequest::Destroy { id: prev },
                                     );
                                 }
-                                cx.with_state(BackendInit::default, |st| {
+                                cx.root_state(BackendInit::default, |st| {
                                     st.created = false;
                                     st.last_loaded_url.clear();
                                     st.last_backend_id = Some(backend.id);
                                 });
                             } else {
-                                cx.with_state(BackendInit::default, |st| {
+                                cx.root_state(BackendInit::default, |st| {
                                     st.last_backend_id = Some(backend.id);
                                 });
                             }
 
                             let needs_create =
-                                cx.with_state(BackendInit::default, |st| !st.created);
+                                cx.root_state(BackendInit::default, |st| !st.created);
                             if needs_create {
                                 let url_now_string = url_now.clone();
                                 let url_now: Arc<str> = Arc::from(url_now_string.clone());
@@ -370,12 +323,12 @@ impl WebPreview {
                                         initial_url: url_now,
                                     },
                                 );
-                                cx.with_state(BackendInit::default, |st| {
+                                cx.root_state(BackendInit::default, |st| {
                                     st.created = true;
                                     st.last_loaded_url = url_now_string;
                                 });
                             } else {
-                                let needs_load = cx.with_state(BackendInit::default, |st| {
+                                let needs_load = cx.root_state(BackendInit::default, |st| {
                                     st.last_loaded_url != url_now
                                 });
                                 if needs_load {
@@ -387,7 +340,7 @@ impl WebPreview {
                                             url: next,
                                         },
                                     );
-                                    cx.with_state(BackendInit::default, |st| {
+                                    cx.root_state(BackendInit::default, |st| {
                                         st.last_loaded_url = url_now;
                                     });
                                 }
@@ -446,7 +399,7 @@ impl WebPreview {
                                         .app
                                         .models_mut()
                                         .update(&url_draft, |v| *v = next.clone());
-                                    cx.with_state(BackendInit::default, |st| {
+                                    cx.root_state(BackendInit::default, |st| {
                                         st.last_loaded_url = next;
                                     });
                                 }
@@ -721,7 +674,8 @@ impl WebPreviewNavigationButton {
         );
 
         let trigger = TooltipTrigger::new(button).into_element(cx);
-        let content = TooltipContent::new([TooltipContent::text(cx, tooltip)]).into_element(cx);
+        let content =
+            TooltipContent::build(cx, |_cx| [TooltipContent::text(tooltip)]).into_element(cx);
         Tooltip::new(cx, trigger, content).into_element(cx)
     }
 }
@@ -778,13 +732,13 @@ impl WebPreviewUrl {
             prev_url: String,
         }
 
-        let needs_sync = cx.with_state(SyncState::default, |st| st.prev_url != url_now);
+        let needs_sync = cx.slot_state(SyncState::default, |st| st.prev_url != url_now);
         if needs_sync {
             let _ = cx
                 .app
                 .models_mut()
                 .update(&controller.url_draft, |v| *v = url_now.clone());
-            cx.with_state(SyncState::default, |st| st.prev_url = url_now.clone());
+            cx.slot_state(SyncState::default, |st| st.prev_url = url_now.clone());
         }
 
         let draft = controller.url_draft.clone();

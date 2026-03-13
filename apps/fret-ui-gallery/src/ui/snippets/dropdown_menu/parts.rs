@@ -7,7 +7,7 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     super::preview_frame_with(cx, |cx| {
-        shadcn::DropdownMenu::new_controllable(cx, None, false).build_parts(
+        shadcn::DropdownMenu::uncontrolled(cx).build_parts(
             cx,
             shadcn::DropdownMenuTrigger::build(
                 shadcn::Button::new("Parts")
@@ -17,13 +17,13 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             shadcn::DropdownMenuContent::new()
                 .align(shadcn::DropdownMenuAlign::Start)
                 .side_offset(Px(4.0)),
-            |cx| {
+            |_cx| {
                 [
                     shadcn::DropdownMenuLabel::new("My Account").into(),
                     shadcn::DropdownMenuSeparator::new().into(),
                     shadcn::DropdownMenuItem::new("Profile")
                         .leading_icon(IconId::new_static("lucide.user"))
-                        .trailing(shadcn::DropdownMenuShortcut::new("Cmd+P").into_element(cx))
+                        .shortcut("Cmd+P")
                         .test_id("ui-gallery-dropdown-menu-parts-profile")
                         .into(),
                     shadcn::DropdownMenuSub::new(

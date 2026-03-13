@@ -325,7 +325,7 @@ impl StackTraceCopyButton {
             return hidden(cx);
         };
         let theme = Theme::global(&*cx.app).clone();
-        let feedback = cx.with_state(CopyFeedbackRef::default, |st| st.clone());
+        let feedback = cx.slot_state(CopyFeedbackRef::default, |st| st.clone());
 
         let on_copy = self.on_copy;
         let timeout = self.timeout;

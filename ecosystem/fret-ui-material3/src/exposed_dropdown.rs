@@ -15,6 +15,7 @@ use fret_ui::action::OnPressablePointerDown;
 use fret_ui::element::AnyElement;
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, UiHost};
+use fret_ui_kit::declarative::controllable_state;
 
 use crate::{Autocomplete, AutocompleteItem, AutocompleteVariant, OnAutocompleteSelect};
 
@@ -86,6 +87,50 @@ impl ExposedDropdown {
             a11y_label: None,
             test_id: None,
         }
+    }
+
+    /// Creates an exposed dropdown with controlled/uncontrolled committed selection and query
+    /// models.
+    ///
+    /// When a model is `None`, it is stored at the root call site and initialized from the
+    /// corresponding default value.
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        selected_value: Option<Model<Option<Arc<str>>>>,
+        default_selected_value: Option<Arc<str>>,
+        query: Option<Model<String>>,
+        default_query: impl Into<String>,
+    ) -> Self {
+        let selected_value = controllable_state::use_controllable_model(cx, selected_value, || {
+            default_selected_value.clone()
+        })
+        .model();
+        let default_query = default_query.into();
+        let query = controllable_state::use_controllable_model(cx, query, || default_query).model();
+
+        Self::new(selected_value).query(query)
+    }
+
+    /// Default teaching-surface constructor for an exposed dropdown that owns its selection and
+    /// query models.
+    pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {
+        Self::new_controllable(cx, None, None, None, String::new())
+    }
+
+    /// Returns the committed selection model, including the internally owned model for
+    /// uncontrolled use.
+    pub fn selected_value_model(&self) -> Model<Option<Arc<str>>> {
+        self.selected_value.clone()
+    }
+
+    /// Returns the query model.
+    ///
+    /// This is always available for `new_controllable(...)`, `uncontrolled(cx)`, or when the
+    /// caller provided `.query(...)` explicitly.
+    pub fn query_model(&self) -> Model<String> {
+        self.query
+            .clone()
+            .expect("ExposedDropdown query model is only available after `.query(...)`, `new_controllable(...)`, or `uncontrolled(cx)`")
     }
 
     pub fn query(mut self, query: Model<String>) -> Self {
@@ -179,12 +224,6 @@ impl ExposedDropdown {
     }
 }
 
-#[derive(Default)]
-struct ExposedDropdownRuntimeState {
-    query: Option<Model<String>>,
-    input_id_out: Option<Rc<Cell<Option<GlobalElementId>>>>,
-}
-
 fn label_for_value<'a>(items: &'a [AutocompleteItem], value: &str) -> Option<&'a Arc<str>> {
     items
         .iter()
@@ -199,26 +238,13 @@ fn exposed_dropdown_into_element<H: UiHost>(
     cx.scope(|cx| {
         let query = match exposed.query.clone() {
             Some(v) => v,
-            None => {
-                let existing =
-                    cx.with_state(ExposedDropdownRuntimeState::default, |st| st.query.clone());
-                if let Some(model) = existing {
-                    model
-                } else {
-                    let model = cx.app.models_mut().insert(String::new());
-                    cx.with_state(ExposedDropdownRuntimeState::default, |st| {
-                        st.query = Some(model.clone())
-                    });
-                    model
-                }
-            }
+            None => cx.local_model(String::new),
         };
 
-        let input_id_out = cx.with_state(ExposedDropdownRuntimeState::default, |st| {
-            st.input_id_out
-                .get_or_insert_with(|| Rc::new(Cell::new(None)))
-                .clone()
-        });
+        let input_id_out = cx.slot_state(
+            || Rc::new(Cell::new(None::<GlobalElementId>)),
+            |id| id.clone(),
+        );
 
         let selected_value = cx
             .get_model_cloned(&exposed.selected_value, Invalidation::Layout)
@@ -290,4 +316,100 @@ fn exposed_dropdown_into_element<H: UiHost>(
 
         ac.into_element(cx)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::elements::with_element_cx;
+    use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+
+    use super::*;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        )
+    }
+
+    #[test]
+    fn exposed_dropdown_new_controllable_uses_controlled_models_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let controlled_selected = app.models_mut().insert(Some(Arc::<str>::from("beta")));
+        let controlled_query = app.models_mut().insert(String::from("be"));
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-exposed-dropdown-controlled",
+            |cx| {
+                let exposed = ExposedDropdown::new_controllable(
+                    cx,
+                    Some(controlled_selected.clone()),
+                    None,
+                    Some(controlled_query.clone()),
+                    "",
+                );
+                assert_eq!(exposed.selected_value_model(), controlled_selected);
+                assert_eq!(exposed.query_model(), controlled_query);
+            },
+        );
+    }
+
+    #[test]
+    fn exposed_dropdown_new_controllable_applies_default_selected_and_query() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-exposed-dropdown-defaults",
+            |cx| {
+                let exposed = ExposedDropdown::new_controllable(
+                    cx,
+                    None,
+                    Some(Arc::<str>::from("beta")),
+                    None,
+                    String::from("Beta"),
+                );
+                let selected = cx
+                    .watch_model(&exposed.selected_value_model())
+                    .layout()
+                    .cloned()
+                    .unwrap_or(None);
+                let query = cx
+                    .watch_model(&exposed.query_model())
+                    .layout()
+                    .cloned()
+                    .unwrap_or_default();
+                assert_eq!(selected.as_deref(), Some("beta"));
+                assert_eq!(query, "Beta");
+            },
+        );
+    }
+
+    #[test]
+    fn exposed_dropdown_uncontrolled_multiple_instances_do_not_share_models() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-exposed-dropdown-uncontrolled-scope",
+            |cx| {
+                let a = ExposedDropdown::uncontrolled(cx);
+                let b = ExposedDropdown::uncontrolled(cx);
+                assert_ne!(a.selected_value_model(), b.selected_value_model());
+                assert_ne!(a.query_model(), b.query_model());
+            },
+        );
+    }
 }

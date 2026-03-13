@@ -5,15 +5,11 @@ use fret_runtime::CommandId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    shadcn::ContextMenu::new_controllable(cx, None, false).into_element_parts(
+    shadcn::ContextMenu::uncontrolled(cx).build_parts(
         cx,
-        |cx| {
-            shadcn::ContextMenuTrigger::new(
-                shadcn::Button::new("Right click here")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .into_element(cx),
-            )
-        },
+        shadcn::ContextMenuTrigger::build(
+            shadcn::Button::new("Right click here").variant(shadcn::ButtonVariant::Outline),
+        ),
         shadcn::ContextMenuContent::new(),
         |_cx| {
             vec![

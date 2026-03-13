@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Axis;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -42,33 +43,36 @@ fn panel<H: UiHost>(
     ui::container_props(props, move |_cx| [body])
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let max_w_sm = LayoutRefinement::default().w_full().max_w(Px(384.0));
 
-    let h_fractions = cx.local_model_keyed("h_fractions", || vec![0.5, 0.5]);
-    let v_fractions = cx.local_model_keyed("v_fractions", || vec![0.25, 0.75]);
+    let h_fractions = cx.local_model_keyed("ui-gallery-resizable-rtl-h-fractions", || vec![0.5, 0.5]);
+    let v_fractions =
+        cx.local_model_keyed("ui-gallery-resizable-rtl-v-fractions", || vec![0.25, 0.75]);
 
     let group = with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
-        let nested_vertical = shadcn::ResizablePanelGroup::new(v_fractions.clone())
-            .axis(Axis::Vertical)
-            .test_id_prefix("ui-gallery-resizable-rtl.nested-vertical")
-            .entries([
+        let nested_vertical = shadcn::resizable_panel_group(cx, v_fractions.clone(), |cx| {
+            [
                 shadcn::ResizablePanel::new([panel(cx, "اثنان", None).into_element(cx)]).into(),
                 shadcn::ResizableHandle::new().with_handle(true).into(),
                 shadcn::ResizablePanel::new([panel(cx, "ثلاثة", None).into_element(cx)]).into(),
-            ])
-            .into_element(cx);
+            ]
+        })
+        .axis(Axis::Vertical)
+        .test_id_prefix("ui-gallery-resizable-rtl.nested-vertical")
+        .into_element(cx);
 
-        shadcn::ResizablePanelGroup::new(h_fractions.clone())
-            .axis(Axis::Horizontal)
-            .test_id_prefix("ui-gallery-resizable-rtl")
-            .entries([
+        shadcn::resizable_panel_group(cx, h_fractions.clone(), |cx| {
+            [
                 shadcn::ResizablePanel::new([panel(cx, "واحد", Some(Px(200.0))).into_element(cx)])
                     .into(),
                 shadcn::ResizableHandle::new().with_handle(true).into(),
                 shadcn::ResizablePanel::new([nested_vertical]).into(),
-            ])
-            .into_element(cx)
+            ]
+        })
+        .axis(Axis::Horizontal)
+        .test_id_prefix("ui-gallery-resizable-rtl")
+        .into_element(cx)
     });
 
     box_group(

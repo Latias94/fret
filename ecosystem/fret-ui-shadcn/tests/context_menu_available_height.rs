@@ -162,7 +162,7 @@ fn render_frame(
                 |_cx, _st| Vec::new(),
             );
 
-            let menu = ContextMenu::new(open)
+            let menu = ContextMenu::from_open(open)
                 .side(DropdownMenuSide::Top)
                 .side_offset(Px(2.0))
                 .window_margin(Px(0.0))

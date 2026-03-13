@@ -117,22 +117,21 @@ impl View for HelloCounterView {
         .items_center()
         .justify_center();
 
-        let header = shadcn::CardHeader::build(|cx, out| {
-            out.push_ui(
-                cx,
+        let header = shadcn::card_header(|cx| {
+            ui::children![cx;
                 ui::v_flex(|cx| {
                     ui::children![
                         cx;
                         hero_icon,
-                        shadcn::CardTitle::new("Hello Counter"),
-                        shadcn::CardDescription::new(
+                        shadcn::card_title("Hello Counter"),
+                        shadcn::card_description(
                             "A minimal counter demo using `fret` + shadcn/ui (view runtime + typed actions).",
                         ),
                     ]
                 })
                 .gap(Space::N2)
                 .items_center(),
-            );
+            ]
         });
 
         let count_text = cx
@@ -273,20 +272,12 @@ impl View for HelloCounterView {
         .gap(Space::N6)
         .items_center();
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(cx, header);
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(cx, content_body);
-                }),
-            );
-            out.push_ui(
-                cx,
-                shadcn::CardFooter::build(|cx, out| {
-                    out.push_ui(cx, actions);
-                }),
-            );
+        let card = shadcn::card(|cx| {
+            ui::children![cx;
+                header,
+                shadcn::card_content(|cx| ui::children![cx; content_body]),
+                shadcn::card_footer(|cx| ui::children![cx; actions]),
+            ]
         })
         .refine_style(ChromeRefinement::default().shadow_lg())
         .ui()

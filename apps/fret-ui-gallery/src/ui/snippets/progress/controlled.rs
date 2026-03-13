@@ -21,7 +21,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                 shadcn::Progress::new_values_first(values.clone())
                     .into_element(cx)
                     .test_id("ui-gallery-progress-controlled-bar"),
-                shadcn::Slider::new(values.clone())
+                shadcn::slider(values.clone())
                     .range(0.0, 100.0)
                     .step(1.0)
                     .a11y_label("Progress value")

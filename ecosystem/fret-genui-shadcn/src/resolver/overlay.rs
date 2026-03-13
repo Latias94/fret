@@ -72,12 +72,12 @@ impl ShadcnResolver {
             .get("content")
             .and_then(|v| v.as_str())
             .unwrap_or("");
-        let content_el =
-            fret_ui_shadcn::TooltipContent::new([fret_ui_shadcn::TooltipContent::text(
-                cx,
-                Arc::<str>::from(content),
-            )])
-            .into_element(cx);
+        let content_el = fret_ui_shadcn::TooltipContent::build(cx, |_cx| {
+            [fret_ui_shadcn::TooltipContent::text(Arc::<str>::from(
+                content,
+            ))]
+        })
+        .into_element(cx);
 
         let trigger = if children.is_empty() {
             fret_ui_shadcn::Button::new(Arc::<str>::from("?"))

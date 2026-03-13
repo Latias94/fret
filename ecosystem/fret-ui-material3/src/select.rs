@@ -25,6 +25,7 @@ use fret_ui::element::{
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{Invalidation, Theme, UiHost};
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
@@ -268,9 +269,9 @@ impl std::fmt::Debug for Select {
 }
 
 impl Select {
-    pub fn new(model: Model<Option<Arc<str>>>) -> Self {
+    pub fn new(selected_value: Model<Option<Arc<str>>>) -> Self {
         Self {
-            model,
+            model: selected_value,
             items: Arc::from([]),
             variant: SelectVariant::default(),
             menu_align: SelectMenuAlign::default(),
@@ -287,6 +288,33 @@ impl Select {
             test_id: None,
             style: SelectStyle::default(),
         }
+    }
+
+    /// Creates a select with a controlled/uncontrolled committed value model.
+    ///
+    /// When `selected_value` is `None`, the value model is stored at the root call site and
+    /// initialized from `default_selected_value`.
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        selected_value: Option<Model<Option<Arc<str>>>>,
+        default_selected_value: Option<Arc<str>>,
+    ) -> Self {
+        let selected_value = controllable_state::use_controllable_model(cx, selected_value, || {
+            default_selected_value.clone()
+        })
+        .model();
+        Self::new(selected_value)
+    }
+
+    /// Default teaching-surface constructor for a select that owns its committed value model.
+    pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {
+        Self::new_controllable(cx, None, None)
+    }
+
+    /// Returns the resolved committed value model, including the internally owned model for
+    /// uncontrolled use.
+    pub fn value_model(&self) -> Model<Option<Arc<str>>> {
+        self.model.clone()
     }
 
     pub fn items(mut self, items: impl Into<Arc<[SelectItem]>>) -> Self {
@@ -385,25 +413,16 @@ struct SelectRuntimeModels {
     listbox_element_id: Rc<Cell<Option<GlobalElementId>>>,
 }
 
+#[track_caller]
 fn select_runtime_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> SelectRuntimeModels {
-    #[derive(Default)]
-    struct State {
-        models: Option<SelectRuntimeModels>,
+    SelectRuntimeModels {
+        open: cx.local_model(|| false),
+        scroll_handle: cx.slot_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone()),
+        listbox_element_id: cx.slot_state(
+            || Rc::new(Cell::new(None::<GlobalElementId>)),
+            |id| id.clone(),
+        ),
     }
-
-    let existing = cx.with_state(State::default, |st| st.models.clone());
-    if let Some(models) = existing {
-        return models;
-    }
-
-    let models = SelectRuntimeModels {
-        open: cx.app.models_mut().insert(false),
-        scroll_handle: fret_ui::scroll::ScrollHandle::default(),
-        listbox_element_id: Rc::new(Cell::new(None)),
-    };
-
-    cx.with_state(State::default, |st| st.models = Some(models.clone()));
-    models
 }
 
 fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select) -> AnyElement {
@@ -437,7 +456,7 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
         struct OpenState {
             last_open: bool,
         }
-        let opening = cx.with_state(OpenState::default, |st| {
+        let opening = cx.slot_state(OpenState::default, |st| {
             let opening = is_open && !st.last_open;
             st.last_open = is_open;
             opening
@@ -957,7 +976,7 @@ fn select_trigger_element<H: UiHost>(
                 let should_float = focused || open || populated;
 
                 let (float_progress, float_want_frames) =
-                    cx.with_state(SelectTriggerRuntime::default, |rt| {
+                    cx.slot_state(SelectTriggerRuntime::default, |rt| {
                         if rt.float_target != should_float {
                             rt.float_target = should_float;
                             rt.float.set_target(
@@ -972,7 +991,7 @@ fn select_trigger_element<H: UiHost>(
                     });
 
                 let (chevron_progress, chevron_want_frames) =
-                    cx.with_state(SelectChevronRuntime::default, |rt| {
+                    cx.slot_state(SelectChevronRuntime::default, |rt| {
                         if rt.target_open != open {
                             rt.target_open = open;
                             rt.anim.set_target(
@@ -1785,6 +1804,80 @@ mod item_text_tests {
     }
 }
 
+#[cfg(test)]
+mod controllable_state_tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::elements::with_element_cx;
+    use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        )
+    }
+
+    #[test]
+    fn select_new_controllable_uses_controlled_value_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let controlled_selected = app.models_mut().insert(Some(Arc::<str>::from("beta")));
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-select-controlled",
+            |cx| {
+                let select = Select::new_controllable(cx, Some(controlled_selected.clone()), None);
+                assert_eq!(select.value_model(), controlled_selected);
+            },
+        );
+    }
+
+    #[test]
+    fn select_new_controllable_applies_default_selected_value() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-select-default-selected-value",
+            |cx| {
+                let select = Select::new_controllable(cx, None, Some(Arc::<str>::from("beta")));
+                let selected = cx
+                    .watch_model(&select.value_model())
+                    .layout()
+                    .cloned()
+                    .unwrap_or(None);
+                assert_eq!(selected.as_deref(), Some("beta"));
+            },
+        );
+    }
+
+    #[test]
+    fn select_uncontrolled_multiple_instances_do_not_share_value_models() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-select-uncontrolled-scope",
+            |cx| {
+                let a = Select::uncontrolled(cx);
+                let b = Select::uncontrolled(cx);
+                assert_ne!(a.value_model(), b.value_model());
+            },
+        );
+    }
+}
+
 fn select_listbox_panel<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     variant: SelectVariant,
@@ -1807,7 +1900,7 @@ fn select_listbox_panel<H: UiHost>(
         listbox: Option<Arc<str>>,
     }
 
-    let listbox_test_id = cx.with_state(DerivedTestIds::default, |st| {
+    let listbox_test_id = cx.slot_state(DerivedTestIds::default, |st| {
         if st.base.as_deref() != test_id.as_deref() {
             st.base = test_id.clone();
             st.listbox = st
@@ -1837,7 +1930,7 @@ fn select_listbox_panel<H: UiHost>(
         two_line: bool,
     }
 
-    let (disabled, typeahead_items, two_line) = cx.with_state(DerivedItems::default, |st| {
+    let (disabled, typeahead_items, two_line) = cx.slot_state(DerivedItems::default, |st| {
         let ptr = Arc::as_ptr(&items) as *const SelectItem as usize;
         let len = items.len();
         if st.disabled.is_none() || st.ptr != ptr || st.len != len {

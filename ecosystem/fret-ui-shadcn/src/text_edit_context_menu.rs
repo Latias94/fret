@@ -2,6 +2,7 @@ use crate::context_menu::{ContextMenu, ContextMenuEntry, ContextMenuItem};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::IntoUiElement;
 
 /// Returns standard text-edit context menu entries (Copy/Cut/Paste/Select All).
 ///
@@ -39,6 +40,9 @@ pub fn text_selection_context_menu_entries() -> Vec<ContextMenuEntry> {
 /// Wraps a trigger element with a standard text-edit context menu.
 ///
 /// This is an opt-in helper: it does not change `Input` / `Textarea` default behavior.
+/// This intentionally stays `-> AnyElement` because `ContextMenu::build(...)` is itself the final
+/// wrapper landing seam: the helper evaluates the typed trigger and injects the fixed entry set in
+/// one root-level overlay call.
 ///
 /// The underlying commands are `edit.*` so runners can map them to native OS actions when
 /// available (desktop now; mobile later).
@@ -55,46 +59,65 @@ pub fn text_selection_context_menu_entries() -> Vec<ContextMenuEntry> {
 /// # }
 /// ```
 #[track_caller]
-pub fn text_edit_context_menu<H: UiHost>(
+pub fn text_edit_context_menu<H: UiHost, TTrigger>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
-    trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
-) -> AnyElement {
-    ContextMenu::new(open).into_element(cx, trigger, |_cx| text_edit_context_menu_entries())
+    trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger,
+) -> AnyElement
+where
+    TTrigger: IntoUiElement<H>,
+{
+    let trigger = trigger(cx);
+    ContextMenu::from_open(open).build(cx, trigger, |_cx| text_edit_context_menu_entries())
 }
 
 /// Wraps a trigger element with a standard text-selection context menu.
 ///
 /// Use this for non-editable selectable text surfaces.
+/// This keeps the same deliberate raw landing seam as [`text_edit_context_menu`].
 #[track_caller]
-pub fn text_selection_context_menu<H: UiHost>(
+pub fn text_selection_context_menu<H: UiHost, TTrigger>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
-    trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
-) -> AnyElement {
-    ContextMenu::new(open).into_element(cx, trigger, |_cx| text_selection_context_menu_entries())
+    trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger,
+) -> AnyElement
+where
+    TTrigger: IntoUiElement<H>,
+{
+    let trigger = trigger(cx);
+    ContextMenu::from_open(open).build(cx, trigger, |_cx| text_selection_context_menu_entries())
 }
 
 /// Like [`text_edit_context_menu`], but supports controlled/uncontrolled open state.
+/// This keeps the same deliberate raw landing seam as [`text_edit_context_menu`].
 #[track_caller]
-pub fn text_edit_context_menu_controllable<H: UiHost>(
+pub fn text_edit_context_menu_controllable<H: UiHost, TTrigger>(
     cx: &mut ElementContext<'_, H>,
     open: Option<Model<bool>>,
     default_open: bool,
-    trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
-) -> AnyElement {
+    trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger,
+) -> AnyElement
+where
+    TTrigger: IntoUiElement<H>,
+{
+    let trigger = trigger(cx);
     ContextMenu::new_controllable(cx, open, default_open)
-        .into_element(cx, trigger, |_cx| text_edit_context_menu_entries())
+        .build(cx, trigger, |_cx| text_edit_context_menu_entries())
 }
 
 /// Like [`text_selection_context_menu`], but supports controlled/uncontrolled open state.
+/// This keeps the same deliberate raw landing seam as [`text_edit_context_menu`].
 #[track_caller]
-pub fn text_selection_context_menu_controllable<H: UiHost>(
+pub fn text_selection_context_menu_controllable<H: UiHost, TTrigger>(
     cx: &mut ElementContext<'_, H>,
     open: Option<Model<bool>>,
     default_open: bool,
-    trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
-) -> AnyElement {
+    trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger,
+) -> AnyElement
+where
+    TTrigger: IntoUiElement<H>,
+{
+    let trigger = trigger(cx);
     ContextMenu::new_controllable(cx, open, default_open)
-        .into_element(cx, trigger, |_cx| text_selection_context_menu_entries())
+        .build(cx, trigger, |_cx| text_selection_context_menu_entries())
 }

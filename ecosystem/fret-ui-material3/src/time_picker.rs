@@ -113,16 +113,6 @@ enum TimePickerSelection {
     Minute,
 }
 
-#[derive(Default)]
-struct DockedRuntime {
-    selection: Option<Model<TimePickerSelection>>,
-    display_mode: Option<Model<TimePickerDisplayMode>>,
-    input_hour: Option<Model<String>>,
-    input_minute: Option<Model<String>>,
-    dial_dragging: Option<Model<bool>>,
-    time_input_edit: Option<Model<TimeInputEditState>>,
-}
-
 #[derive(Clone)]
 pub struct DockedTimePicker {
     time: Model<Time>,
@@ -170,22 +160,20 @@ impl DockedTimePicker {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let selection_model = ensure_selection_model(cx, DockedRuntime::default);
+            let selection_model = ensure_selection_model(cx);
             let selection = cx
                 .get_model_copied(&selection_model, Invalidation::Layout)
                 .unwrap_or_default();
-            let display_mode_model =
-                ensure_display_mode_model(cx, DockedRuntime::default, self.display_mode);
+            let display_mode_model = ensure_display_mode_model(cx, self.display_mode);
             let display_mode = cx
                 .get_model_copied(&display_mode_model, Invalidation::Layout)
                 .unwrap_or_default();
             let time_now = cx
                 .get_model_copied(&self.time, Invalidation::Layout)
                 .unwrap_or_else(default_time);
-            let (input_hour, input_minute) =
-                ensure_time_input_models(cx, DockedRuntime::default, time_now, self.is_24h);
-            let dial_dragging_model = ensure_dial_dragging_model(cx, DockedRuntime::default);
-            let time_input_edit = ensure_time_input_edit_state_model(cx, DockedRuntime::default);
+            let (input_hour, input_minute) = ensure_time_input_models(cx, time_now, self.is_24h);
+            let dial_dragging_model = ensure_dial_dragging_model(cx);
+            let time_input_edit = ensure_time_input_edit_state_model(cx);
 
             // Compose baseline: TimePickerMaxHeight (384dp) + padding.
             // We keep a stable box to make headless suites deterministic.
@@ -243,7 +231,6 @@ impl DockedTimePicker {
 
 #[derive(Default)]
 struct DialogRuntime {
-    models: Option<DialogModels>,
     was_open: bool,
 }
 
@@ -357,35 +344,20 @@ impl TimePickerDialog {
                 .get_model_copied(&self.open, Invalidation::Layout)
                 .unwrap_or(false);
 
-            let prev_open = cx.with_state(DialogRuntime::default, |st| st.was_open);
-            cx.with_state(DialogRuntime::default, |st| st.was_open = open_now);
+            let prev_open = cx.root_state(DialogRuntime::default, |st| st.was_open);
+            cx.root_state(DialogRuntime::default, |st| st.was_open = open_now);
 
-            let existing = cx.with_state(DialogRuntime::default, |st| st.models.clone());
-            let models = match existing {
-                Some(models) => models,
-                None => {
-                    let draft_time = cx.app.models_mut().insert(default_time());
-                    let selection = cx.app.models_mut().insert(TimePickerSelection::Hour);
-                    let display_mode = cx
-                        .app
-                        .models_mut()
-                        .insert(self.initial_display_mode);
-                    let (hour, minute) = time_to_display(default_time(), self.is_24h);
-                    let input_hour = cx.app.models_mut().insert(format!("{hour:02}"));
-                    let input_minute = cx.app.models_mut().insert(format!("{minute:02}"));
-                    let dial_dragging = cx.app.models_mut().insert(false);
-                    let time_input_edit = cx.app.models_mut().insert(TimeInputEditState::default());
-                    let models = DialogModels {
-                        draft_time,
-                        selection,
-                        display_mode,
-                        input_hour,
-                        input_minute,
-                        dial_dragging,
-                        time_input_edit,
-                    };
-                    cx.with_state(DialogRuntime::default, |st| st.models = Some(models.clone()));
-                    models
+            let models = {
+                let initial_time = default_time();
+                let (hour, minute) = time_to_display(initial_time, self.is_24h);
+                DialogModels {
+                    draft_time: cx.local_model(default_time),
+                    selection: cx.local_model(|| TimePickerSelection::Hour),
+                    display_mode: cx.local_model(|| self.initial_display_mode),
+                    input_hour: cx.local_model(|| format!("{hour:02}")),
+                    input_minute: cx.local_model(|| format!("{minute:02}")),
+                    dial_dragging: cx.local_model(|| false),
+                    time_input_edit: cx.local_model(TimeInputEditState::default),
                 }
             };
 
@@ -500,7 +472,7 @@ impl TimePickerDialog {
                 }
 
                 let (scrim_test_id, panel_test_id) =
-                    cx.with_state(DerivedTestIds::default, |st| {
+                    cx.slot_state(DerivedTestIds::default, |st| {
                         if st.base.as_deref() != self.test_id.as_deref() {
                             st.base = self.test_id.clone();
                             st.scrim = st.base.as_ref().map(|id| {
@@ -1140,7 +1112,7 @@ fn time_input_field<H: UiHost>(
             update_time_input_edit_ids(cx, &time_input_edit, kind, pressable_id);
 
             let (_gained_focus, lost_focus) =
-                cx.with_state_for(pressable_id, TimeInputFieldRuntime::default, |rt| {
+                cx.state_for(pressable_id, TimeInputFieldRuntime::default, |rt| {
                     let gained = !rt.was_focused && focused;
                     let lost = rt.was_focused && !focused;
                     rt.was_focused = focused;
@@ -2496,89 +2468,41 @@ fn time_picker_actions<H: UiHost>(
     })
 }
 
-fn ensure_selection_model<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    default_rt: fn() -> DockedRuntime,
-) -> Model<TimePickerSelection> {
-    let existing = cx.with_state(default_rt, |st| st.selection.clone());
-    match existing {
-        Some(m) => m,
-        None => {
-            let m = cx.app.models_mut().insert(TimePickerSelection::Hour);
-            cx.with_state(default_rt, |st| st.selection = Some(m.clone()));
-            m
-        }
-    }
+#[track_caller]
+fn ensure_selection_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<TimePickerSelection> {
+    cx.local_model(|| TimePickerSelection::Hour)
 }
 
+#[track_caller]
 fn ensure_display_mode_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    default_rt: fn() -> DockedRuntime,
     initial: TimePickerDisplayMode,
 ) -> Model<TimePickerDisplayMode> {
-    let existing = cx.with_state(default_rt, |st| st.display_mode.clone());
-    match existing {
-        Some(m) => m,
-        None => {
-            let m = cx.app.models_mut().insert(initial);
-            cx.with_state(default_rt, |st| st.display_mode = Some(m.clone()));
-            m
-        }
-    }
+    cx.local_model(|| initial)
 }
 
-fn ensure_dial_dragging_model<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    default_rt: fn() -> DockedRuntime,
-) -> Model<bool> {
-    let existing = cx.with_state(default_rt, |st| st.dial_dragging.clone());
-    match existing {
-        Some(m) => m,
-        None => {
-            let m = cx.app.models_mut().insert(false);
-            cx.with_state(default_rt, |st| st.dial_dragging = Some(m.clone()));
-            m
-        }
-    }
+#[track_caller]
+fn ensure_dial_dragging_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
+    cx.local_model(|| false)
 }
 
+#[track_caller]
 fn ensure_time_input_models<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    default_rt: fn() -> DockedRuntime,
     time_now: Time,
     is_24h: bool,
 ) -> (Model<String>, Model<String>) {
-    let existing = cx.with_state(default_rt, |st| {
-        st.input_hour.clone().zip(st.input_minute.clone())
-    });
-    match existing {
-        Some(models) => models,
-        None => {
-            let (hour, minute) = time_to_display(time_now, is_24h);
-            let hour_m = cx.app.models_mut().insert(format!("{hour:02}"));
-            let minute_m = cx.app.models_mut().insert(format!("{minute:02}"));
-            cx.with_state(default_rt, |st| {
-                st.input_hour = Some(hour_m.clone());
-                st.input_minute = Some(minute_m.clone());
-            });
-            (hour_m, minute_m)
-        }
-    }
+    let (hour, minute) = time_to_display(time_now, is_24h);
+    let hour_m = cx.local_model(|| format!("{hour:02}"));
+    let minute_m = cx.local_model(|| format!("{minute:02}"));
+    (hour_m, minute_m)
 }
 
+#[track_caller]
 fn ensure_time_input_edit_state_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    default_rt: fn() -> DockedRuntime,
 ) -> Model<TimeInputEditState> {
-    let existing = cx.with_state(default_rt, |st| st.time_input_edit.clone());
-    match existing {
-        Some(m) => m,
-        None => {
-            let m = cx.app.models_mut().insert(TimeInputEditState::default());
-            cx.with_state(default_rt, |st| st.time_input_edit = Some(m.clone()));
-            m
-        }
-    }
+    cx.local_model(TimeInputEditState::default)
 }
 
 fn with_alpha(mut c: Color, alpha: f32) -> Color {

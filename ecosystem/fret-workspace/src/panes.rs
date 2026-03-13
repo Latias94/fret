@@ -366,29 +366,16 @@ fn set_split_fraction(tree: &mut WorkspacePaneTree, path: &[SplitChild], fractio
 
 #[derive(Debug, Default)]
 struct SplitResizeModelState {
-    fractions: Option<Model<Vec<f32>>>,
     last_model_fraction: Option<f32>,
     last_window_fraction: Option<f32>,
 }
 
-#[derive(Debug, Default)]
-struct WorkspaceTabDragModelState {
-    model: Option<Model<WorkspaceTabDragState>>,
-}
-
+#[track_caller]
 fn get_tab_drag_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<WorkspaceTabDragState> {
-    let existing = cx.with_state(WorkspaceTabDragModelState::default, |st| st.model.clone());
-    if let Some(m) = existing {
-        return m;
-    }
-
-    let model = cx.app.models_mut().insert(WorkspaceTabDragState::default());
-    cx.with_state(WorkspaceTabDragModelState::default, |st| {
-        st.model = Some(model.clone());
-    });
-    model
+    cx.local_model(WorkspaceTabDragState::default)
 }
 
+#[track_caller]
 pub fn workspace_pane_tree_element_with_resize<H: UiHost, F>(
     cx: &mut ElementContext<'_, H>,
     window: Model<WorkspaceWindowLayout>,
@@ -539,29 +526,12 @@ where
                     ResizablePanelGroupStyle::from_theme(theme)
                 };
 
-                let (fractions_model, last_model_fraction, last_window_fraction) = {
-                    let (model, last_model_fraction, last_window_fraction) =
-                        cx.with_state(SplitResizeModelState::default, |state| {
-                            (
-                                state.fractions.clone(),
-                                state.last_model_fraction,
-                                state.last_window_fraction,
-                            )
-                        });
-
-                    let model = match model {
-                        Some(model) => model,
-                        None => {
-                            let model = cx.app.models_mut().insert(vec![fraction, 1.0 - fraction]);
-                            cx.with_state(SplitResizeModelState::default, |state| {
-                                state.fractions = Some(model.clone());
-                            });
-                            model
-                        }
-                    };
-
-                    (model, last_model_fraction, last_window_fraction)
-                };
+                let resize_slot = cx.slot_id();
+                let fractions_model = cx.model_for(resize_slot, || vec![fraction, 1.0 - fraction]);
+                let (last_model_fraction, last_window_fraction) =
+                    cx.state_for(resize_slot, SplitResizeModelState::default, |state| {
+                        (state.last_model_fraction, state.last_window_fraction)
+                    });
 
                 let fractions_now = cx
                     .get_model_cloned(&fractions_model, Invalidation::Layout)
@@ -597,7 +567,7 @@ where
                     });
                 }
 
-                cx.with_state(SplitResizeModelState::default, |state| {
+                cx.state_for(resize_slot, SplitResizeModelState::default, |state| {
                     state.last_model_fraction = Some(next_model_fraction);
                     state.last_window_fraction = Some(next_window_fraction);
                 });

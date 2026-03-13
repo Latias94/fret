@@ -29,67 +29,59 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .corner_radii_override(corners_last)
         .into_element(cx);
 
-    let menu = shadcn::DropdownMenu::new(menu_open.clone())
+    let menu = shadcn::DropdownMenu::from_open(menu_open.clone())
         .align(shadcn::DropdownMenuAlign::End)
-        .into_element(
-            cx,
-            |_cx| menu_trigger,
-            |_cx| {
-                vec![
-                    shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
-                        shadcn::DropdownMenuEntry::Item(
-                            shadcn::DropdownMenuItem::new("Mark as Read")
-                                .leading_icon(icon_id("lucide.mail-check")),
-                        ),
-                        shadcn::DropdownMenuEntry::Item(
-                            shadcn::DropdownMenuItem::new("Archive")
-                                .leading_icon(icon_id("lucide.archive")),
-                        ),
-                    ])),
-                    shadcn::DropdownMenuEntry::Separator,
-                    shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
-                        shadcn::DropdownMenuEntry::Item(
-                            shadcn::DropdownMenuItem::new("Snooze")
-                                .leading_icon(icon_id("lucide.clock")),
-                        ),
-                        shadcn::DropdownMenuEntry::Item(
-                            shadcn::DropdownMenuItem::new("Add to Calendar")
-                                .leading_icon(icon_id("lucide.calendar-plus")),
-                        ),
-                        shadcn::DropdownMenuEntry::Item(
-                            shadcn::DropdownMenuItem::new("Add to List")
-                                .leading_icon(icon_id("lucide.list-filter")),
-                        ),
-                        shadcn::DropdownMenuEntry::Item(
-                            shadcn::DropdownMenuItem::new("Label As...")
-                                .leading_icon(icon_id("lucide.tag"))
-                                .submenu([shadcn::DropdownMenuEntry::RadioGroup(
-                                    shadcn::DropdownMenuRadioGroup::new(label_value.clone())
-                                        .item(shadcn::DropdownMenuRadioItemSpec::new(
-                                            "personal", "Personal",
-                                        ))
-                                        .item(shadcn::DropdownMenuRadioItemSpec::new(
-                                            "work", "Work",
-                                        ))
-                                        .item(shadcn::DropdownMenuRadioItemSpec::new(
-                                            "other", "Other",
-                                        )),
-                                )]),
-                        ),
-                    ])),
-                    shadcn::DropdownMenuEntry::Separator,
-                    shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
-                        shadcn::DropdownMenuEntry::Item(
-                            shadcn::DropdownMenuItem::new("Trash")
-                                .variant(
-                                    fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
-                                )
-                                .leading_icon(icon_id("lucide.trash")),
-                        ),
-                    ])),
-                ]
-            },
-        );
+        .build(cx, menu_trigger, |_cx| {
+            vec![
+                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Mark as Read")
+                            .leading_icon(icon_id("lucide.mail-check")),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Archive")
+                            .leading_icon(icon_id("lucide.archive")),
+                    ),
+                ])),
+                shadcn::DropdownMenuEntry::Separator,
+                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Snooze")
+                            .leading_icon(icon_id("lucide.clock")),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Add to Calendar")
+                            .leading_icon(icon_id("lucide.calendar-plus")),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Add to List")
+                            .leading_icon(icon_id("lucide.list-filter")),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Label As...")
+                            .leading_icon(icon_id("lucide.tag"))
+                            .submenu([shadcn::DropdownMenuEntry::RadioGroup(
+                                shadcn::DropdownMenuRadioGroup::new(label_value.clone())
+                                    .item(shadcn::DropdownMenuRadioItemSpec::new(
+                                        "personal", "Personal",
+                                    ))
+                                    .item(shadcn::DropdownMenuRadioItemSpec::new("work", "Work"))
+                                    .item(shadcn::DropdownMenuRadioItemSpec::new("other", "Other")),
+                            )]),
+                    ),
+                ])),
+                shadcn::DropdownMenuEntry::Separator,
+                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Trash")
+                            .variant(
+                                fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                            )
+                            .leading_icon(icon_id("lucide.trash")),
+                    ),
+                ])),
+            ]
+        });
 
     let back = shadcn::ButtonGroup::new([shadcn::Button::new("")
         .a11y_label("Go Back")

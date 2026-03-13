@@ -5,26 +5,7 @@ pub(super) fn use_uncontrolled_model<T: Clone + 'static, H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     default_value: impl FnOnce() -> T,
 ) -> Model<T> {
-    struct UncontrolledModelState<T> {
-        model: Option<Model<T>>,
-    }
-
-    impl<T> Default for UncontrolledModelState<T> {
-        fn default() -> Self {
-            Self { model: None }
-        }
-    }
-
-    let model = cx.with_state(UncontrolledModelState::<T>::default, |st| st.model.clone());
-    if let Some(model) = model {
-        return model;
-    }
-
-    let model = cx.app.models_mut().insert(default_value());
-    cx.with_state(UncontrolledModelState::<T>::default, |st| {
-        st.model = Some(model.clone());
-    });
-    model
+    cx.local_model(default_value)
 }
 
 pub(super) fn mouse_buttons_contains(

@@ -163,26 +163,22 @@ impl View for DropShadowBasicsView {
         .items_center()
         .test_id(TEST_ID_STAGE);
 
-        let header = shadcn::CardHeader::build(|cx, out| {
-            out.push_ui(cx, shadcn::CardTitle::new("Drop shadow basics"));
-            out.push_ui(
-                cx,
-                shadcn::CardDescription::new(
-                    "A small, deterministic surface for DropShadowV1 renderer semantics (toggle + screenshot baseline).",
-                ),
-            );
-        });
-
         let content = ui::v_flex(|cx| ui::children![cx; toolbar, stage]).gap(Space::N5);
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(cx, header);
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(cx, content);
+        let card = shadcn::card(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_header(|cx| {
+                    ui::children![
+                        cx;
+                        shadcn::card_title("Drop shadow basics"),
+                        shadcn::card_description(
+                            "A small, deterministic surface for DropShadowV1 renderer semantics (toggle + screenshot baseline).",
+                        ),
+                    ]
                 }),
-            );
+                shadcn::card_content(|cx| ui::children![cx; content]),
+            ]
         })
         .ui()
         .w_full()

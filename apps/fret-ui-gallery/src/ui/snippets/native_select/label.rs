@@ -1,17 +1,18 @@
 pub const SOURCE: &str = include_str!("label.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::primitives::control_registry::ControlId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let value = cx.local_model_keyed("value", || None::<Arc<str>>);
-    let open = cx.local_model_keyed("open", || false);
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let value = cx.local_model_keyed("ui-gallery-native-select-label-value", || None::<Arc<str>>);
+    let open = cx.local_model_keyed("ui-gallery-native-select-label-open", || false);
 
     let control_id = ControlId::from("ui-gallery-native-select-label");
-    let native_select = shadcn::NativeSelect::new(value, open)
+    let native_select = shadcn::native_select(value, open)
         .control_id(control_id.clone())
         .test_id_prefix("ui-gallery-native-select-label")
         .options([

@@ -9,12 +9,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .delay(Duration::ZERO)
         .timeout_duration(Duration::from_millis(400))
         .with(cx, |cx| {
-            let text = shadcn::TooltipContent::text(
-                cx,
-                "This tooltip demonstrates long content wrapping at the max width boundary without collapsing to min-content.",
-            )
-            .test_id("ui-gallery-tooltip-long-content-text");
-            let content = shadcn::TooltipContent::new(vec![text]);
+            let content = shadcn::TooltipContent::build(cx, |_cx| {
+                [shadcn::TooltipContent::text(
+                    "This tooltip demonstrates long content wrapping at the max width boundary without collapsing to min-content.",
+                )
+                .test_id("ui-gallery-tooltip-long-content-text")]
+            });
 
             vec![shadcn::Tooltip::new(
                 cx,

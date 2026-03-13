@@ -154,6 +154,7 @@ impl ShadcnResolver {
     pub(super) fn render_progress<H: UiHost>(
         &mut self,
         cx: &mut ElementContext<'_, H>,
+        key: &ElementKey,
         props: &ResolvedProps,
         children: Vec<AnyElement>,
     ) -> AnyElement {
@@ -164,7 +165,7 @@ impl ShadcnResolver {
             .unwrap_or(min)
             .clamp(min, max);
 
-        let model = Self::ensure_f32_model(cx, v);
+        let model = Self::ensure_f32_model(cx, key, v);
         let cur = cx.app.models().get_copied(&model).unwrap_or(v);
         if (cur - v).abs() > f32::EPSILON {
             let _ = cx.app.models_mut().update(&model, |m| *m = v);

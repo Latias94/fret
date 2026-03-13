@@ -416,3 +416,11 @@ impl Renderer {
             .expect("viewport pipeline must exist")
     }
 }
+
+impl GpuPipelines {
+    pub(super) fn evict_custom_effect_pipelines(&mut self, effect: fret_core::EffectId) {
+        self.custom_effect_pipelines.remove(&effect);
+        self.custom_effect_v2_pipelines.remove(&effect);
+        self.custom_effect_v3_pipelines.remove(&effect);
+    }
+}

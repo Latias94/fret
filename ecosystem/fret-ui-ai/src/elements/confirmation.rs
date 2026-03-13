@@ -2,7 +2,6 @@
 
 use std::sync::Arc;
 
-use fret_core::TextLineHeightPolicy;
 use fret_ui::Theme;
 use fret_ui::element::{AnyElement, InteractivityGateProps, LayoutStyle, SemanticsDecoration};
 use fret_ui::{ElementContext, UiHost};
@@ -263,7 +262,7 @@ impl Confirmation {
             return hidden(cx);
         };
 
-        cx.with_state(ConfirmationLocalState::default, |st| {
+        cx.root_state(ConfirmationLocalState::default, |st| {
             st.context = Some(context.clone())
         });
         let children = resolve_confirmation_children(children(cx), &context);

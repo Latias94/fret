@@ -12,12 +12,15 @@ Companion docs:
 - `TARGET_INTERFACE_STATE.md`
 - `MIGRATION_MATRIX.md`
 
-Execution note on 2026-03-12:
+Execution note on 2026-03-13:
 
 - this is now the first active interface-refactor lane,
 - do M0/M1 here before expanding trait-budget follow-ups elsewhere,
 - use the canonical compare set (`simple_todo_v2_target`, `todo_demo`, scaffold template) as the
   first downstream migration/evidence target after the unified trait lands.
+- raw seam closure on the shadcn lane is now considered done; keep the next batches focused on
+  remaining app/helper migration rather than reopening `kbd_icon(...)` or `text_edit_context_menu*`
+  unless the underlying storage/builder model changes.
 
 ## M0 — Lock the target vocabulary
 
@@ -101,29 +104,113 @@ Validation note on 2026-03-12:
 
 - [x] Migrate `ecosystem/fret` curated app/component re-exports to the new vocabulary.
 - [x] Migrate `ecosystem/fret-ui-kit` curated docs and examples.
-- [ ] Migrate `ecosystem/fret-ui-shadcn` reusable helper surfaces where raw `AnyElement` is not
+- [x] Migrate `ecosystem/fret-ui-shadcn` reusable helper surfaces where raw `AnyElement` is not
   conceptually required.
-- [ ] Keep the canonical authoring compare set aligned on the target vocabulary:
+- [x] Keep the canonical authoring compare set aligned on the target vocabulary:
   - [x] `apps/fret-cookbook/examples/simple_todo_v2_target.rs`
   - [x] `apps/fret-examples/src/todo_demo.rs`
   - [x] `apps/fretboard/src/scaffold/templates.rs`
-- [ ] Migrate official cookbook examples toward `Ui` / `UiChild`.
-- [ ] Migrate selected `apps/fret-examples` helper surfaces that are still on raw child returns.
+- [x] Migrate official cookbook examples toward `Ui` / `UiChild`.
+- [x] Migrate selected `apps/fret-examples` helper surfaces that are still on raw child returns.
 - [ ] Migrate UI Gallery in two lanes:
   - [ ] app-facing teaching snippets toward `UiChild`,
   - [ ] generic reusable snippets toward the unified component conversion trait,
   - [ ] leave justified diagnostics/harness/raw helpers on `AnyElement`.
 
-Implementation note on 2026-03-12:
+Validation snapshot on 2026-03-13:
+
+- `CARGO_TARGET_DIR=target/codex-assets-reload cargo test -p fret-cookbook --lib`
+- `CARGO_TARGET_DIR=target/codex-fret-examples cargo test -p fret-examples --lib`
+- `CARGO_TARGET_DIR=target/codex-fretboard cargo test -p fretboard scaffold::templates::tests::todo_template_uses_default_authoring_dialect -- --exact`
+- `CARGO_TARGET_DIR=target/codex-fretboard cargo test -p fretboard scaffold::templates::tests::simple_todo_template_has_low_adapter_noise_and_no_query_selector -- --exact`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app accordion_ -- --nocapture`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app tabs_ -- --nocapture`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app toggle_ -- --nocapture`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app radio_group_ -- --nocapture`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app slider_ -- --nocapture`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app native_select_ -- --nocapture`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app resizable_ -- --nocapture`
+
+Implementation note on 2026-03-13:
 
 - the canonical compare set now shares the same posture:
   app-facing imports via `fret::app::prelude::*`,
   `App` / `WindowId`,
   extracted helpers returning `impl UiChild`,
-  and one explicit `card/content.into_element(cx)` landing seam before the page shell.
+  with page-shell helpers dropping local `cx` when the body can stay fully late-landed and the
+  remaining explicit `.into_element(cx)` step living only at the final render-root `Ui`
+  conversion boundary,
+  `ui::for_each_keyed(...)` as the default keyed-list helper,
+  and `shadcn::card(...)` / `card_header(...)` / `card_content(...)` as the default card
+  teaching family instead of `Card::build(...)`.
+- `apps/fret-examples/src/todo_demo.rs::todo_page(...)` now stays on `impl UiChild`, drops the
+  helper-local `cx`, and lets the page shell accept the card value without an intermediate
+  `.into_element(cx)` landing seam.
+- `apps/fret-examples/src/simple_todo_demo.rs::todo_row(...)` now stays on
+  `impl IntoUiElement<App> + use<>` instead of `AnyElement`, while intentionally keeping
+  `ui::for_each_keyed_with_cx(...)` because the keyed row still watches a per-item model inside
+  the keyed child scope.
+- `apps/fretboard/src/scaffold/templates.rs::{todo_page(...),simple_todo::todo_page(...)}`
+  now follows that same rule: page helpers stay on `impl UiChild`, drop helper-local `cx`, and
+  keep the explicit `.into_element(cx)` only at the final render-root conversion for the generated
+  `todo` / `simple-todo` templates.
+- the remaining advanced IMUI compare lane now also hides its non-raw helper returns behind typed
+  signatures:
+  `apps/fret-examples/src/imui_editor_proof_demo.rs::{render_editor_name_assist_surface,render_authoring_parity_surface,render_authoring_parity_shared_state,render_authoring_parity_declarative_group,render_authoring_parity_imui_group,render_authoring_parity_imui_host}`
+  now expose `IntoUiElement<...>`-based signatures while keeping the internal
+  `PropertyGroup::into_element(...)` / `imui_build(...)` landing seams explicit.
+- after that cleanup, the current real non-`lib.rs` source scan now leaves only one intentional
+  `-> AnyElement` helper on the examples/cookbook lane:
+  `apps/fret-cookbook/examples/chart_interactions_basics.rs::chart_canvas(...)`.
+- the UI Gallery app-facing snippet lane now also starts landing on typed top-level snippet
+  surfaces:
+  `apps/fret-ui-gallery/src/ui/snippets/accordion/{basic,borders,card,demo,disabled,extras,multiple,rtl,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and
+  `apps/fret-ui-gallery/src/ui/pages/accordion.rs` now routes those previews through
+  `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the same UI Gallery top-level snippet cleanup now also covers the tabs family:
+  `apps/fret-ui-gallery/src/ui/snippets/tabs/{demo,disabled,extras,icons,line,list,rtl,usage,vertical,vertical_line}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and
+  `apps/fret-ui-gallery/src/ui/pages/tabs.rs` now routes those previews through
+  `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the same UI Gallery top-level snippet cleanup now also covers the toggle family:
+  `apps/fret-ui-gallery/src/ui/snippets/toggle/{demo,disabled,label,outline,rtl,size,usage,with_text}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and
+  `apps/fret-ui-gallery/src/ui/pages/toggle.rs` now routes those previews through
+  `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the same UI Gallery top-level snippet cleanup now also covers the radio-group family:
+  `apps/fret-ui-gallery/src/ui/snippets/radio_group/{choice_card,demo,description,disabled,extras,fieldset,invalid,label,plans,rtl,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and
+  `apps/fret-ui-gallery/src/ui/pages/radio_group.rs` now routes those previews through
+  `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the same UI Gallery top-level snippet cleanup now also covers the slider family:
+  `apps/fret-ui-gallery/src/ui/snippets/slider/{demo,extras,label,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep their local model
+  state inside the snippet instead of routing it through the page shell, and
+  `apps/fret-ui-gallery/src/ui/pages/slider.rs` now routes those previews through
+  `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the same UI Gallery top-level snippet cleanup now also covers the native-select family:
+  `apps/fret-ui-gallery/src/ui/snippets/native_select/{demo,disabled,invalid,label,rtl,usage,with_groups}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep local value/open
+  model state inside each snippet instead of routing it through `pages/native_select.rs`, and
+  `apps/fret-ui-gallery/src/ui/pages/native_select.rs` now routes those previews through
+  `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the same UI Gallery top-level snippet cleanup now also covers the resizable family:
+  `apps/fret-ui-gallery/src/ui/snippets/resizable/{demo,handle,notes,rtl,usage,vertical}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep local fractions
+  model state inside each snippet instead of routing it through page/content/runtime-driver relay
+  state, and `apps/fret-ui-gallery/src/ui/pages/resizable.rs` now routes those previews through
+  `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- after `accordion` / `tabs` / `toggle` / `radio_group` / `slider` / `native_select` /
+  `resizable`, the next default-app UI Gallery app-facing queue should move to the remaining
+  top-level families that still re-teach eager `AnyElement` returns, starting with the smallest
+  page-local lanes rather than reopening reusable-helper work.
 - `apps/fret-cookbook/examples/customv1_basics.rs` now keeps both advanced reusable helpers
   `panel_shell(...)` and `preview_content(...)` on `IntoUiElement<KernelApp>`-based signatures
   instead of returning raw `AnyElement` for non-raw composition.
+- `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs::{render_image_panel,render_svg_panel}`
+  now also keep their advanced helper surfaces on `IntoUiElement<KernelApp>`-based signatures
+  instead of returning raw `AnyElement` for ordinary card/panel composition.
 - `fret-ui-shadcn` `ui_ext/support.rs` and `ui_ext/data.rs` now implement
   `IntoUiElement<H>` directly, so shadcn reusable glue no longer spells
   `UiIntoElement` on those adapters.
@@ -163,15 +250,45 @@ Implementation note on 2026-03-12:
   preserves the concrete `NavigationMenu` builder so root-level `.viewport(...)` /
   `.indicator(...)` / `.md_breakpoint_query(...)` / `.delay_ms(...)` steps stay available before
   the explicit landing seam. Meanwhile,
+  `avatar.rs::avatar_sized(...)`, `item.rs::{item_sized(...), item_group(...)}`,
+  `scroll_area.rs::scroll_area(...)`, and `native_select.rs::native_select(...)` now likewise
+  preserve the concrete `Avatar`, `Item`, `ItemGroup`, `ScrollArea`, and `NativeSelect` builders
+  so common size/group/scroll/select configuration can stay fluent before the explicit landing
+  seam. Meanwhile, the first-party UI Gallery teaching lane now follows those same
+  helpers: `avatar/sizes.rs`, `item/{size,group}.rs`, `scroll_area/{usage,horizontal,nested_scroll_routing}.rs`,
+  `native_select/{demo,usage,disabled,invalid,label,with_groups,rtl}.rs`, and the corresponding
+  page copy now teach the builder-preserving helper family instead of the older eager `::new(...)`
+  or `new_controllable(...)` defaults. The same teaching-lane cleanup now also covers
+  `slider/{usage,label,demo}.rs`, `field/slider.rs`, `progress/controlled.rs`,
+  `radio_group/{usage,label}.rs`, `form/upstream_demo.rs`, and the `slider` / `radio_group`
+  pages so default controlled/uncontrolled examples now teach `slider(model)`,
+  `radio_group(model, items)`, and `radio_group_uncontrolled(default, items)` while keeping
+  `new_controllable(...)` only on the default-value bridge examples. The same first-party
+  teaching sweep now also closes the default root-helper drift on `navigation_menu` /
+  `resizable`: `navigation_menu/{usage,demo,docs_demo,link_component,rtl}.rs`,
+  `resizable/{usage,demo,vertical,handle,rtl}.rs`, and the corresponding pages now teach
+  `navigation_menu(cx, model, |cx| ..)` and `resizable_panel_group(cx, model, |cx| ..)` on the
+  default lane instead of leading with raw `::new(...)` root constructors. The same first-party
+  teaching sweep now also closes the remaining default-root drift on `tabs` / `toggle` /
+  `accordion`: `tabs/{usage,demo,disabled,extras,icons,line,list,rtl,vertical,vertical_line}.rs`,
+  `toggle/{usage,demo,outline,with_text,disabled,size,rtl,label}.rs`, and
+  `accordion/{demo,basic,multiple,disabled,borders,card,extras,rtl}.rs` now teach
+  `tabs_uncontrolled(cx, default, |cx| ..)`,
+  `toggle_uncontrolled(cx, default, |cx| ..)` / `toggle(cx, model, |cx| ..)`, and
+  `accordion_single_uncontrolled(cx, default, |cx| ..)` /
+  `accordion_multiple_uncontrolled(cx, default, |cx| ..)` as the default first-party helper
+  family, while `accordion/usage.rs` intentionally keeps the composable `AccordionRoot` surface
+  as the explicit advanced seam and the corresponding `tabs` / `toggle` / `accordion` page copy
+  now records that boundary directly. Meanwhile,
   `radio_group.rs::{radio_group(...), radio_group_uncontrolled(...)}` now expose typed
   constructor/wrapper outputs, with the radio-group helpers returning the concrete `RadioGroup`
   value so fluent `.a11y_label(...)` / `.disabled(...)` / `.style(...)` steps remain available
   before the explicit landing seam, while
   `card.rs::{card<H, I, F, T>(...), card_sized<H, I, F, T>(...), card_header<H, I, F, T>(...), card_action<H, I, F, T>(...), card_title<H, T>(...), card_description<H, T>(...), card_description_children<H, I, F, T>(...), card_content<H, I, F, T>(...), card_footer<H, I, F, T>(...)}`
   now expose typed constructor/wrapper outputs, while
-  `kbd.rs::kbd_icon<H>(...)` and `combobox.rs::use_combobox_anchor(...)` remain explicit raw
-  helper seams because `Kbd::from_children(...)` and `PopoverAnchor::new(...)` still own concrete
-  landed-child storage.
+  `kbd.rs::kbd_icon<H>(...)` remains the explicit raw helper seam because
+  `Kbd::from_children(...)` still owns concrete landed-child storage. Combobox anchor overrides now
+  reuse `PopoverAnchor::build(...).into_anchor(cx)` instead of a combobox-specific raw alias.
   The card lane now also has builder support where the wrapper still needs late child collection:
   `CardAction::build(...)` and `CardDescription::build(...)`.
 - `fret-ui-shadcn/src/typography.rs` now completes the dedicated typography lane:
@@ -208,6 +325,116 @@ Implementation note on 2026-03-12:
 - helper ergonomics are also tightening around render-local `cx` ownership:
   where a helper can remain fully late-landed, Gallery examples should drop the `cx` parameter
   instead of carrying it only to attach `.into_element(cx)` / `test_id(...)` at helper scope.
+- the keyed-list lane now also has a dedicated default helper on `fret-ui-kit`:
+  `ui::for_each_keyed(cx, items, |item| key, |item| child)` intentionally serves the
+  conditional-list case where a layout closure wants to stay on the ordinary
+  `ui::v_flex(|cx| ...)` / `ui::h_flex(|cx| ...)` lane instead of dropping to
+  `*_build(|cx, out| ...)` only to spell `for item in ... { out.push_ui(cx, ui::keyed(...)) }`.
+  The canonical compare set (`todo_demo`, `simple_todo_v2_target`, scaffold `simple-todo` /
+  `todo`) now uses that helper for row lists, and the scaffold README/tests record
+  `ui::for_each_keyed(...)` as the default first-party keyed-list teaching surface.
+- the keyed-list lane now also has the explicit keyed-scope variant:
+  `ui::for_each_keyed_with_cx(cx, items, |item| key, |cx, item| child)` exists for the smaller
+  but real class of row builders that need the inner keyed child scope itself (for example
+  row-local `cx.text(...)`, local keyed state, or other child-scope work that should happen
+  inside the keyed boundary). `apps/fret-examples/src/simple_todo_demo.rs` now uses that helper
+  instead of `ui::v_flex_build(...)` + `cx.keyed(...)`, which keeps the keyed-scope escape hatch
+  on the ordinary `ui::v_flex(|cx| ..)` lane without introducing a wider `keyed_column(...)`
+  abstraction yet.
+- the default product docs now teach the same keyed-list lane:
+  `docs/first-hour.md`, `docs/authoring-golden-path-v2.md`, and
+  `docs/examples/todo-app-golden-path.md` now prefer `ui::for_each_keyed(...)` as the default
+  list-identity story, reserve `ui::for_each_keyed_with_cx(...)` for row builders that truly need
+  the inner keyed child scope, and frame `*_build(...)` sinks as explicit advanced/manual
+  collection seams rather than the first-contact default.
+- the query-demo compare lane now also follows the promoted card/default composition posture:
+  `apps/fret-examples/src/query_demo.rs` and
+  `apps/fret-examples/src/query_async_tokio_demo.rs` now use `shadcn::card(...)` /
+  `card_header(...)` / `card_content(...)` plus ordinary `ui::h_row(...)` / `ui::v_flex(...)`
+  composition for fixed child lists, while keeping one narrow `ui::v_flex_build(...)` seam only
+  where `query_demo` still conditionally appends optional diagnostic text rows.
+- the cookbook high-signal app-authoring lane now also follows the promoted card teaching family:
+  `apps/fret-cookbook/examples/query_basics.rs`,
+  `apps/fret-cookbook/examples/form_basics.rs`,
+  `apps/fret-cookbook/examples/async_inbox_basics.rs`, and
+  `apps/fret-cookbook/examples/router_basics.rs` now all teach
+  `shadcn::card(...)` / `card_header(...)` / `card_content(...)` instead of
+  `Card::build(...)` / `CardHeader::build(...)` / `CardContent::build(...)`, while keeping only
+  the justified narrow manual seams that are still driven by conditional child emission
+  (`query_basics::lines(...)`) or typed router/outlet ownership boundaries (`router_basics`).
+- the next cookbook app-authoring batch now follows the same surface:
+  `apps/fret-cookbook/examples/toggle_basics.rs`,
+  `apps/fret-cookbook/examples/payload_actions_basics.rs`,
+  `apps/fret-cookbook/examples/hello_counter.rs`,
+  `apps/fret-cookbook/examples/text_input_basics.rs`, and
+  `apps/fret-cookbook/examples/commands_keymap_basics.rs` now also teach the card wrapper family
+  (`card(...)`, `card_header(...)`, `card_content(...)`, and `card_footer(...)` where needed)
+  instead of leading with `Card::build(...)` / section builders on the default teaching lane.
+- the next cookbook interop/state batch now also follows the same outer-card teaching surface:
+  `apps/fret-cookbook/examples/undo_basics.rs`,
+  `apps/fret-cookbook/examples/drag_basics.rs`,
+  `apps/fret-cookbook/examples/external_texture_import_basics.rs`,
+  `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`, and
+  `apps/fret-cookbook/examples/date_picker_basics.rs` now all teach
+  `shadcn::card(...)` plus the slot helper family for their outer shells instead of
+  `Card::build(...)`, while preserving the justified advanced seams that still belong to
+  interop/assets internals (`Alert::build(...)`, conditional asset error callouts, and retained
+  viewport ownership).
+- the next cookbook visual/app-support batch now also follows the same outer-card teaching
+  surface:
+  `apps/fret-cookbook/examples/customv1_basics.rs`,
+  `apps/fret-cookbook/examples/drop_shadow_basics.rs`,
+  `apps/fret-cookbook/examples/effects_layer_basics.rs`,
+  `apps/fret-cookbook/examples/toast_basics.rs`, and
+  `apps/fret-cookbook/examples/markdown_and_code_basics.rs` now teach `shadcn::card(...)` plus
+  the slot helper family instead of `Card::build(...)`, with
+  `customv1_basics.rs::panel_shell(...)` also moving onto `card(...)` / `card_header(...)` /
+  `card_content(...)` so advanced cookbook helper code no longer re-teaches the old outer-shell
+  pattern.
+- the advanced cookbook bootstrap lane now also matches the real `UiAppBuilder` surface:
+  `apps/fret-cookbook/examples/{external_texture_import_basics,embedded_viewport_basics,gizmo_basics,docking_basics,chart_interactions_basics}.rs`
+  now explicitly install Lucide icons through `.setup(fret_icons_lucide::app::install)` instead
+  of teaching a nonexistent `.with_lucide_icons()` facade, and
+  `apps/fret-cookbook/Cargo.toml` now includes `dep:fret-icons-lucide` behind the
+  `cookbook-bootstrap` feature so the documented bootstrap path matches the code that actually
+  compiles.
+- the advanced retained/interop cookbook lane now also converges on the promoted outer-card
+  family where the shell is ordinary authoring surface:
+  `apps/fret-cookbook/examples/icons_and_assets_basics.rs`,
+  `apps/fret-cookbook/examples/embedded_viewport_basics.rs`,
+  `apps/fret-cookbook/examples/gizmo_basics.rs`,
+  `apps/fret-cookbook/examples/docking_basics.rs`, and
+  `apps/fret-cookbook/examples/chart_interactions_basics.rs` now teach `shadcn::card(...)` plus
+  the slot helper family for their top-level shells instead of `Card::build(...)`, while
+  intentionally keeping raw retained/canvas/viewport seams such as
+  `chart_interactions_basics.rs::chart_canvas(...)`, dock-host retained roots, and embedded
+  viewport ownership explicit.
+- the remaining cookbook card-shell cleanup is now closed on the examples tree:
+  `apps/fret-cookbook/examples/theme_switching_basics.rs`,
+  `apps/fret-cookbook/examples/data_table_basics.rs`,
+  `apps/fret-cookbook/examples/virtual_list_basics.rs`,
+  `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs`,
+  `apps/fret-cookbook/examples/overlay_basics.rs`, and
+  `apps/fret-cookbook/examples/utility_window_materials_windows.rs` now also teach
+  `shadcn::card(...)` plus the slot helper family for their ordinary shells, so
+  `apps/fret-cookbook/examples/**` no longer contains first-party
+  `Card::build(...)` / `CardHeader::build(...)` / `CardContent::build(...)` teaching on the
+  default authoring lane.
+- the cookbook source-policy lane now also locks that convergence directly in code:
+  `apps/fret-cookbook/src/lib.rs::cookbook_examples_keep_card_wrapper_family_as_the_only_card_teaching_surface`
+  now fails if any example reintroduces `shadcn::Card::build(...)`,
+  `shadcn::CardHeader::build(...)`, or `shadcn::CardContent::build(...)`, while
+  `retained_canvas_helpers_keep_raw_landing_seams` continues to record
+  `chart_interactions_basics.rs::chart_canvas(...) -> AnyElement` as the one explicit retained
+  bridge seam on that lane.
+- the examples helper-return lane is now also tightened on the default-app side:
+  `apps/fret-examples/src/{custom_effect_v2_identity_web_demo,custom_effect_v2_web_demo,custom_effect_v2_lut_web_demo,custom_effect_v2_glass_chrome_web_demo}.rs`
+  now keep `stage_tile(...)` on `impl IntoUiElement<App> + use<>` and move the explicit
+  `.into_element(cx)` seam back to the stage `Vec<AnyElement>` assembly site, while
+  `apps/fret-examples/src/async_playground_demo.rs::catalog_item(...)` now likewise returns
+  `impl IntoUiElement<KernelApp> + use<>` and lands explicitly at the `out.push(...)` sink.
+  `apps/fret-examples/src/lib.rs` now records those helpers in source-policy tests so they do not
+  drift back to `AnyElement`-typed authoring helpers.
 - `fret-ui-shadcn::prelude::*` now re-exports `IntoUiElement`, so direct-crate first-party
   shadcn examples do not need ad-hoc trait imports just to land typed helpers such as
   `shadcn::raw::typography::*`.
@@ -262,6 +489,12 @@ Implementation note on 2026-03-12:
   `navigation_menu.rs::{navigation_menu(...), navigation_menu_uncontrolled(...)}` now also
   returns the concrete `NavigationMenu` builder instead of eagerly landing the root helper, so
   common navigation-menu root configuration can stay fluent until the explicit
+  `.into_element(cx)` seam.
+- Verification update on 2026-03-13:
+  `avatar.rs::avatar_sized(...)`, `item.rs::{item_sized(...), item_group(...)}`,
+  `scroll_area.rs::scroll_area(...)`, and `native_select.rs::native_select(...)` now also stay on
+  the builder-preserving lane instead of eagerly landing the obvious helper surface, so ordinary
+  avatar/item/scroll/select authoring can keep fluent root configuration open until the explicit
   `.into_element(cx)` seam.
 - first-party docs/tests no longer need to mention the old scaffold name for ordinary authoring:
   `docs/first-hour.md` now teaches `IntoUiElement<H>`, and `fret-ui-ai` builder smoke tests
@@ -801,8 +1034,39 @@ Implementation note on 2026-03-12:
 ## M6 — Keep advanced/raw seams explicit and justified
 
 - [ ] Document the legitimate raw `AnyElement` cases:
-  - [ ] overlay/controller internals,
-  - [ ] diagnostics/harness helpers,
-  - [ ] low-level heterogeneous landing APIs,
-  - [ ] manual assembly / advanced runtime seams.
-- [ ] Ensure raw surfaces remain explicit rather than leaking back into the app-facing story.
+  - [x] overlay/controller internals.
+    Evidence: `ecosystem/fret-ui-shadcn/src/ui_builder_ext/*.rs` still keeps
+    `into_element(...) -> AnyElement` as the explicit landing seam while closure inputs are already
+    typed via `IntoUiElement<H>`.
+  - [x] diagnostics/harness helpers.
+    Evidence: retained/manual-assembly seams such as
+    `apps/fret-cookbook/examples/chart_interactions_basics.rs::chart_canvas(...) -> AnyElement`
+    remain explicitly called out in this workstream rather than reintroduced into default teaching
+    surfaces.
+  - [x] low-level heterogeneous landing APIs.
+    Evidence: `kbd.rs::kbd_icon(...)` remains inventoried by
+    `surface_policy_tests::{explicit_raw_or_bridge_public_anyelement_helpers_stay_small_and_reviewable,kbd_icon_stays_an_explicit_raw_helper_for_kbd_child_lists}`,
+    while combobox anchor overrides now route through
+    `surface_policy_tests::combobox_surface_uses_generic_popover_anchor_builder_not_combobox_specific_raw_alias`.
+  - [x] manual assembly / advanced runtime seams.
+    Evidence: `text_edit_context_menu.rs::{text_edit_context_menu,text_selection_context_menu,text_edit_context_menu_controllable,text_selection_context_menu_controllable}`
+    now keep the final wrapper landing seam explicit while accepting typed trigger values through
+    `IntoUiElement<H>`; `state.rs::{use_selector_badge,query_status_badge}` have been promoted
+    back to typed `Badge` outputs, `query_error_alert(...)` now returns `Option<Alert>`, and this
+    lane is covered by
+    `surface_policy_tests::state_helpers_prefer_typed_badge_outputs_when_no_runtime_landing_seam_is_required`.
+  - [x] slot-scoped typed helper surfaces.
+    Evidence: `tooltip.rs::TooltipContent::{build,text}(...)` now stay on the typed lane and are
+    covered by
+    `surface_policy_tests::tooltip_content_helpers_prefer_typed_build_and_text_outputs_when_slot_scope_is_required`.
+- [x] Ensure raw surfaces remain explicit rather than leaking back into the app-facing story.
+  - Current status: legacy module-local root helpers are cleared (`drawer(...)`, `menubar(...)`,
+    `combobox(...)` deleted).
+  - These helpers are now inventoried by
+    `surface_policy_tests::legacy_public_anyelement_helper_inventory_is_explicit_until_promoted_or_deleted`
+    and the inventory is expected to stay empty unless a new helper is added by explicit review.
+  - Current shadcn deliberate-raw helper contracts are now fixed to
+    `kbd.rs::kbd_icon(...)` and
+    `text_edit_context_menu.rs::{text_edit_context_menu,text_selection_context_menu,text_edit_context_menu_controllable,text_selection_context_menu_controllable}`,
+    with `surface_policy_tests::text_edit_context_menu_helpers_keep_landing_seam_explicit_but_accept_typed_triggers`
+    documenting the final wrapper-seam rationale directly in source.

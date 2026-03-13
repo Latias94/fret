@@ -730,7 +730,7 @@ impl CommitCopyButton {
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let feedback = cx.with_state(CopyFeedbackRef::default, |st| st.clone());
+        let feedback = cx.slot_state(CopyFeedbackRef::default, |st| st.clone());
 
         let hash = self.hash;
         let on_copy = self.on_copy;

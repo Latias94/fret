@@ -206,22 +206,23 @@ impl DockPanelFactory<KernelApp> for DockingBasicsCardPanelFactory {
     ) -> Option<fret_core::NodeId> {
         let root_name = format!("cookbook.docking.panel.{}", panel.kind.0);
         Some(cx.render_cached_panel_root(&root_name, |cx| {
-            let body = shadcn::Card::build(|cx, out| {
-                out.push_ui(
-                    cx,
-                    shadcn::CardHeader::build(|cx, out| {
-                        out.push_ui(cx, shadcn::CardTitle::new(self.title));
-                        out.push_ui(cx, shadcn::CardDescription::new(PANEL_DESCRIPTION));
+            let body = shadcn::card(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_header(|cx| {
+                        ui::children![
+                            cx;
+                            shadcn::card_title(self.title),
+                            shadcn::card_description(PANEL_DESCRIPTION),
+                        ]
                     }),
-                );
-                out.push_ui(
-                    cx,
-                    shadcn::CardContent::build(|cx, out| {
-                        out.push(cx.text(
-                            "Try: click tabs, drag tabs, drag the splitter, right-click a tab.",
-                        ));
+                    shadcn::card_content(|cx| {
+                        ui::children![
+                            cx;
+                            cx.text("Try: click tabs, drag tabs, drag the splitter, right-click a tab."),
+                        ]
                     }),
-                );
+                ]
             })
             .ui()
             .w_full()
@@ -417,32 +418,29 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut DockingBasicsWindowStat
             vec![cx.retained_subtree(props)]
         });
 
-    let card = shadcn::Card::build(|cx, out| {
-        out.push_ui(
-            cx,
-            shadcn::CardHeader::build(|cx, out| {
-                out.push_ui(cx, shadcn::CardTitle::new("Docking basics"));
-                out.push_ui(
-                    cx,
-                    shadcn::CardDescription::new(
+    let card = shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Docking basics"),
+                    shadcn::card_description(
                         "Minimal retained dock host + app-owned panel registry + runner dock_op wiring.",
                     ),
-                );
+                ]
             }),
-        );
-        out.push_ui(
-            cx,
-            shadcn::CardContent::build(|cx, out| {
-                out.push_ui(
-                    cx,
+            shadcn::card_content(|cx| {
+                ui::children![
+                    cx;
                     ui::v_flex(|cx| ui::children![cx; toolbar, dock_host])
                         .gap(Space::N3)
                         .w_full()
                         .h_full()
                         .min_w_0(),
-                );
+                ]
             }),
-        );
+        ]
     })
     .ui()
     .w_full()
@@ -526,8 +524,8 @@ fn main() -> anyhow::Result<()> {
         .with_main_window("cookbook-docking-basics", (1120.0, 820.0))
         .with_command_default_keybindings()
         .setup(DockingBasicsBundle)
-        .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
-        .with_lucide_icons();
+        .setup(fret_icons_lucide::app::install)
+        .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096);
 
     #[cfg(feature = "cookbook-diag")]
     let builder = builder.with_default_diagnostics();

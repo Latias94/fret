@@ -70,7 +70,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
             if items.len() > ITEMS_TO_DISPLAY {
                 out.push(bc::BreadcrumbItem::new().into_element(cx, |cx| {
                     if is_desktop {
-                        let dropdown = shadcn::DropdownMenu::new(open.clone())
+                        let dropdown = shadcn::DropdownMenu::from_open(open.clone())
                             .align(shadcn::DropdownMenuAlign::Start);
                         vec![dropdown.into_element(
                             cx,

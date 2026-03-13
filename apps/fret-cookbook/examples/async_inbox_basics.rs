@@ -277,25 +277,18 @@ impl View for AsyncInboxBasicsView {
         let body = ui::v_flex(|cx| ui::children![cx; status_row, progress_row, controls, log])
             .gap(Space::N3);
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(
-                cx,
-                shadcn::CardHeader::build(|cx, out| {
-                    out.push_ui(cx, shadcn::CardTitle::new("Async inbox basics"));
-                    out.push_ui(
-                        cx,
-                        shadcn::CardDescription::new(
+        let card = shadcn::card(|cx| {
+            ui::children![cx;
+                shadcn::card_header(|cx| {
+                    ui::children![cx;
+                        shadcn::card_title("Async inbox basics"),
+                        shadcn::card_description(
                             "Background work sends data-only messages into an Inbox, drained at a runner boundary (ADR 0175).",
                         ),
-                    );
+                    ]
                 }),
-            );
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(cx, body);
-                }),
-            );
+                shadcn::card_content(|cx| ui::children![cx; body]),
+            ]
         })
         .ui()
         .w_full()

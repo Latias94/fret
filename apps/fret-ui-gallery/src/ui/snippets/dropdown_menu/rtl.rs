@@ -8,7 +8,7 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     super::preview_frame_with(cx, |cx| {
         with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
-            shadcn::DropdownMenu::new_controllable(cx, None, false).build_parts(
+            shadcn::DropdownMenu::uncontrolled(cx).build_parts(
                 cx,
                 shadcn::DropdownMenuTrigger::build(
                     shadcn::Button::new("RTL")

@@ -1,6 +1,6 @@
 # Renderer Modularity (Fearless Refactor v1) — Design
 
-Status: Draft
+Status: Closed for v1
 
 ## Context
 
@@ -33,6 +33,19 @@ This design aims to improve modularity without destabilizing render semantics.
 
 - Render-plan semantics guardrails:
   - `docs/workstreams/renderer-render-plan-semantics-audit-v1/renderer-render-plan-semantics-audit-v1.md`
+
+## Closeout note
+
+V1 reached the intended shape without adding new renderer crates or a new renderer-facade ADR.
+
+Closeout decisions are recorded in:
+
+- `docs/workstreams/renderer-modularity-fearless-refactor-v1/FINISHING_AUDIT.md`
+- `docs/workstreams/renderer-modularity-fearless-refactor-v1/SHADERS_AUDIT.md`
+- `docs/workstreams/renderer-modularity-fearless-refactor-v1/CLOSEOUT_AUDIT.md`
+
+The stable topology guidance continues to be owned by `docs/architecture.md`, while the accepted
+modularization/gate process contract remains `docs/adr/0201-renderer-internals-modularization-and-gates-v1.md`.
 
 ## Problem Statement
 
@@ -104,6 +117,8 @@ These decisions are intentionally locked before code refactors begin:
 7. `text/mod.rs` is the first large internal breakup target.
 8. `renderer/shaders.rs` is not a first-wave extraction target unless a real ownership boundary
    requires it.
+   - Once it shrinks to a small index/assembly file backed by reviewable `pipelines/wgsl/*.wgsl`
+     sources, v1 should stop there instead of splitting Rust modules purely by shader family name.
 
 ## Target v1 Architecture
 
@@ -229,6 +244,15 @@ For `Renderer` state-shell tightening, the same principle applies:
   side: registration maps, refcounts, generation counters, and author-facing degradation budgets
   should live together so services, scene encoding, and effect pipelines stop depending on loose
   `Renderer` fields.
+- once those registry shells exist, service-local custom-effect coordination becomes the next
+  readability seam: WGSL validation/build flow, capability gating, and pipeline-cache eviction
+  should move into companion service modules that talk to the registry and pipeline owners through
+  narrow helper methods instead of mutating hash indexes and cache maps inline from
+  `services.rs`.
+- the same rule applies to adjacent SVG/material services: sampled-material capability gating,
+  material register/unregister refcounting, and SVG unregister raster cleanup should route through
+  owner helpers and companion service modules instead of keeping registry/raster map mutation
+  inline in `services.rs`.
 - path registry/cache state is the equivalent ownership seam for tessellated geometry: prepared
   path storage, cache entries, eviction policy, and epoch tracking should move behind one owner so
   path services and path encoding stop depending on four loose fields.
@@ -236,6 +260,103 @@ For `Renderer` state-shell tightening, the same principle applies:
   intermediate attachments, composite quad vertex storage, and byte-estimate helpers should move
   behind the same path owner so config, plan sync, perf snapshots, and pass recorders stop
   depending on loose `Renderer` fields.
+- render-plan reporting/dump state is the matching diagnostics seam for planning observability:
+  per-segment pass-count scratch, segment report scratch, and JSON dump scratch should move behind
+  one owner so render-scene diagnostics code stops depending on transient renderer bookkeeping
+  fields. Once that state shell exists, dump-specific summaries such as custom-effect aggregates,
+  target-usage rollups, and diagnostics-only v3 counters should prefer adjacent companion modules
+  instead of re-growing the owner into another monolith. The same applies to JSON schema/pass
+  encoding helpers: pass/postprocess/effect-marker encoders should live in adjacent companions so
+  dump emission stays a thin assembly/orchestration layer. Env-trigger policy and filesystem
+  emission follow the same rule: they should prefer one adjacent emit companion module. Segment/
+  count/degradation scratch rebuild plus JSON assembly can also live in one adjacent dump-assembly
+  companion so the owner file stays focused on serialization and orchestration without re-growing
+  the diagnostics seam. Perf-field mapping and degradation-counter accumulation should follow the
+  same pattern: keep them in one adjacent reporting-perf companion so the owner file stays focused
+  on segment-report diffing and dump orchestration.
+- scene-encoding cache state is the matching frame-reuse seam for encode-stage reuse:
+  cache key construction inputs, hit/miss bookkeeping, miss-reason reporting, and cache/scratch
+  storage should move behind one owner so render-scene execution stops depending on a loose cache
+  shell.
+  - When cache-local diagnostics/reporting grows beyond simple counters, the preferred boring
+    shape is an adjacent diagnostics companion module so the cache owner keeps reuse/storage flow
+    while miss-reason diffing, trace display, and perf accounting evolve independently.
+- frame scratch state is the matching per-frame upload/build seam:
+  viewport-uniform scratch, render-space scratch, and plan-quad scratch should move behind one
+  owner so render-scene upload helpers stop depending on loose renderer vectors.
+- geometry upload state is the matching persistent upload/binding seam:
+  quad instance/path paint/text paint rings plus viewport/text/path vertex upload rings and their
+  bind-group layouts should move behind one owner so pipeline creation and render-scene uploads
+  stop depending on six loose `Renderer` fields.
+- frame binding state is the matching uniform/bind-group seam:
+  the base uniform bind group, uniform/clip/mask/render-space buffer ownership, resize/rebuild
+  policy, and per-frame upload helpers should move behind one owner so render-scene binding/upload
+  paths stop depending on loose `Renderer` fields.
+- render-scene dispatch state is the matching transient execution seam:
+  command encoder ownership, frame-target lifetime, scale-param cursor state, quad-vertex sizing,
+  and pass-loop orchestration should move behind one owner so `dispatch.rs` stops owning
+  short-lived execution plumbing inline.
+- render-scene executor lifecycle glue is the matching post-pass execution seam:
+  target write-epoch updates and `ReleaseTarget` pool-release behavior should move behind one
+  helper surface so `executor.rs` keeps only pass recording dispatch instead of inline lifecycle
+  bookkeeping.
+- render-scene recorder execution facades are the matching recorder-access seam:
+  high-churn recorder helpers such as source/mask view lookup, intermediate target allocation, and
+  feature-local scratch/cache access should route through narrow executor helpers so recorder
+  modules stop reaching directly into `Renderer` owner shells. The first rollout should focus on
+  shared fullscreen-style recorders and feature-local hotspots, where the helper surface can
+  tighten access without changing pass algorithms. Cache-backed mask-target flows follow the same
+  rule: target acquisition and cache copy/store glue should move first, while the draw algorithm
+  stays in the recorder. Path/backdrop recorders follow the same staging: move target and
+  view-selection access first, then revisit heavier service-local state only if it still blocks
+  modularity after the target-allocation seam is closed. Once recorder shells stop owning target
+  allocation, the same seam should be reused by shared fullscreen helper flows and by renderer
+  methods that were only depending on recorder args for target allocation. Bespoke effect recorders
+  should follow the same closure path: composite/writeback flows and mask-only clip-target flows
+  should consume the same executor accessors instead of keeping ad hoc frame-target helper calls in
+  `recorders/effects.rs`. Once recorder access is uniformly routed through the executor facade,
+  effect-family bind-group builders become the next thinning seam: move descriptor-heavy binding
+  assembly into narrow helper modules first, and only then decide whether pipeline/mode selection
+  should split further by family. For larger effect families such as `CustomEffectV3`, the helper
+  seam can also absorb pipeline/layout choice once the recorder still only differs by
+  unmasked/uniform-mask/texture-mask mode, leaving source preparation and pass execution local.
+  Feature-local build subflows such as `CustomEffectV3` pyramid blit/downsample passes can then
+  move behind executor helpers as the next stage, so recorder modules stop owning pass-loop glue
+  once the surrounding orchestration has become thin enough. After that, source-view preparation
+  itself can collapse behind the same executor seam so recorder bodies stop owning the
+  `src`/`src_raw`/`src_pyramid` choice graph and only consume prepared effect-local inputs.
+  User-image fallback selection, sampler choice, and feature-local perf accounting are the next
+  natural closure on the same path because they are execution-time preparation concerns rather than
+  recorder-local draw semantics. Once those preparations are closed, param/meta upload and final
+  masked-vs-unmasked dispatch can move to an effect-family helper module so the parent recorder
+  body becomes pure orchestration. If the remaining orchestration then only does
+  availability/fallback checks plus prepared-input sequencing, the family entrypoint itself should
+  move into that effect-local module as well so `recorders/effects.rs` stops acting as a pass
+  family index for code it no longer owns. Small shared helpers such as parameter packing may
+  still remain in `recorders/effects.rs` temporarily without blocking that ownership closure, as
+  long as the family entrypoint and its effect-specific fallback/upload/dispatch logic move
+  together. The same rule also applies to smaller self-contained writeback families such as
+  `CompositePremul`: if the recorder only consumes shared bind-group and draw helpers, its
+  entrypoint should also move into a family-local module instead of remaining under
+  `recorders/effects.rs`. Small fullscreen utility families such as `ClipMask` follow the same
+  rule when they only consume shared pipeline/pass helpers plus executor allocation/uniform access:
+  once the entrypoint is self-contained, it should move out of `recorders/effects.rs` as well.
+  After those recorder-specific entrypoints are moved, any residual fullscreen param/texture
+  helper flow should also collapse into a dedicated shared-helper module so the parent
+  `recorders/effects.rs` file can be evaluated purely as a recorder-family owner instead of as a
+  mixed family-plus-helper bucket. `CustomEffectV1` follows the same rule after `CustomEffectV2`
+  and `CustomEffectV3`: once availability/fallback and effect-specific pipeline selection live
+  together, the v1 family should also move into its own family-local module instead of remaining
+  as the last custom-effect entrypoint under the shared utility bucket. If the residual file then
+  only contains a handful of homogeneous fullscreen recorder entrypoints that all reuse the same
+  shared-helper surface and no longer own target allocation or cross-owner mutation, v1 can stop
+  there without forcing one-file-per-family splitting.
+- render-text dump state is the matching diagnostics/export seam for text debugging:
+  dump collection scratch and serialization scratch should move behind one owner so render-scene
+  execution keeps only a thin bridge to `TextSystem`.
+- render-scene config state is the matching execution-policy seam:
+  strict output-clear validation, requested path MSAA samples, and debug postprocess knobs should
+  move behind one owner so config/render-scene helpers stop depending on loose renderer scalars.
 
 ### 5. Tighten public exports after evidence exists
 

@@ -1520,6 +1520,38 @@ pub struct TooltipContent {
     layout: LayoutRefinement,
 }
 
+#[derive(Debug, Clone)]
+struct TooltipContentText {
+    text: Arc<str>,
+}
+
+impl TooltipContentText {
+    fn new(text: impl Into<Arc<str>>) -> Self {
+        Self { text: text.into() }
+    }
+}
+
+impl<H: UiHost> IntoUiElement<H> for TooltipContentText {
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).snapshot();
+        let text_style = tooltip_text_style(&theme);
+        let fg = tooltip_text_fg(&theme);
+
+        ui::text(self.text)
+            .text_size_px(text_style.size)
+            .line_height_px(
+                text_style
+                    .line_height
+                    .unwrap_or_else(|| theme.metric_token("font.line_height")),
+            )
+            .font_weight(text_style.weight)
+            .wrap(TextWrap::Word)
+            .overflow(TextOverflow::Clip)
+            .text_color(ColorRef::Color(fg))
+            .into_element(cx)
+    }
+}
+
 impl TooltipContent {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
@@ -1536,37 +1568,27 @@ impl TooltipContent {
     /// (e.g. `Kbd` uses `bg-background/20 text-background` inside tooltips). Fret models these
     /// selectors via inherited state, so this helper ensures descendants can observe the slot.
     #[track_caller]
-    pub fn with<H: UiHost>(
-        cx: &mut ElementContext<'_, H>,
-        f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-    ) -> AnyElement {
-        with_surface_slot_provider(cx, ShadcnSurfaceSlot::TooltipContent, |cx| {
-            TooltipContent::new(f(cx)).into_element(cx)
-        })
+    pub fn build<H: UiHost, I, F, T>(cx: &mut ElementContext<'_, H>, f: F) -> Self
+    where
+        F: FnOnce(&mut ElementContext<'_, H>) -> I,
+        I: IntoIterator<Item = T>,
+        T: IntoUiElement<H>,
+    {
+        let children = with_surface_slot_provider(cx, ShadcnSurfaceSlot::TooltipContent, |cx| {
+            f(cx)
+                .into_iter()
+                .map(|child| child.into_element(cx))
+                .collect::<Vec<_>>()
+        });
+
+        TooltipContent::new(children)
     }
 
-    pub fn text<H: UiHost>(
-        cx: &mut ElementContext<'_, H>,
-        text: impl Into<Arc<str>>,
-    ) -> AnyElement {
-        let theme = Theme::global(&*cx.app).snapshot();
-        let text = text.into();
-
-        let text_style = tooltip_text_style(&theme);
-        let fg = tooltip_text_fg(&theme);
-
-        ui::text(text)
-            .text_size_px(text_style.size)
-            .line_height_px(
-                text_style
-                    .line_height
-                    .unwrap_or_else(|| theme.metric_token("font.line_height")),
-            )
-            .font_weight(text_style.weight)
-            .wrap(TextWrap::Word)
-            .overflow(TextOverflow::Clip)
-            .text_color(ColorRef::Color(fg))
-            .into_element(cx)
+    pub fn text<H: UiHost, T>(text: T) -> impl IntoUiElement<H> + use<H, T>
+    where
+        T: Into<Arc<str>>,
+    {
+        TooltipContentText::new(text)
     }
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {

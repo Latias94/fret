@@ -12,8 +12,10 @@ struct ContinuousFramesLeaseState {
 /// - it reduces duplicated scheduling policy in components,
 /// - it lets the runtime drive per-window RAF requests while any lease is held,
 /// - and it keeps the lease lifetime tied to element state.
+#[track_caller]
 pub fn set_continuous_frames<H: UiHost>(cx: &mut ElementContext<'_, H>, enabled: bool) {
-    let (start, stop) = cx.with_state(ContinuousFramesLeaseState::default, |st| {
+    let lease_slot = cx.slot_id();
+    let (start, stop) = cx.state_for(lease_slot, ContinuousFramesLeaseState::default, |st| {
         let start = enabled && st.lease.is_none();
         let stop = !enabled && st.lease.is_some();
         (start, stop)
@@ -21,11 +23,11 @@ pub fn set_continuous_frames<H: UiHost>(cx: &mut ElementContext<'_, H>, enabled:
 
     if start {
         let lease = cx.begin_continuous_frames();
-        cx.with_state(ContinuousFramesLeaseState::default, |st| {
+        cx.state_for(lease_slot, ContinuousFramesLeaseState::default, |st| {
             st.lease = Some(lease);
         });
     } else if stop {
-        cx.with_state(ContinuousFramesLeaseState::default, |st| {
+        cx.state_for(lease_slot, ContinuousFramesLeaseState::default, |st| {
             st.lease = None;
         });
     }

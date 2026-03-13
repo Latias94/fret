@@ -20,8 +20,9 @@ pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let notes = doc_layout::notes_block([
         "Preview follows the upstream shadcn Context Menu docs (v4 Base UI).",
+        "Default copyable root path is `ContextMenu::uncontrolled(cx).build_parts(...)`, while `ContextMenu::from_open(...)` and `new_controllable(...)` stay as the explicit managed-open seams.",
         "Context Menu already exposes shadcn-style parts plus `ContextMenuSub*` helpers, so the remaining gap is mostly docs/page parity rather than missing menu infrastructure.",
-        "A separate generic children API is not required here yet: typed menu entries stay explicit, while `into_element_parts(...)` keeps docs-style authoring ergonomic.",
+        "A separate generic children API is not required here yet: typed menu entries stay explicit, while `build_parts(...)` keeps docs-style authoring ergonomic.",
         "Examples are snippet-backed: preview and code stay in sync.",
         "Keep `ui-gallery-context-menu-*` test IDs stable; multiple diag scripts depend on them.",
     ]);

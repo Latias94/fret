@@ -691,7 +691,7 @@ impl NavigationMenuLink {
         }
 
         let mut element = cx.pressable_with_id_props(move |cx, st, link_id| {
-            let modifier_state: Arc<std::sync::Mutex<ModifierState>> = cx.with_state_for(
+            let modifier_state: Arc<std::sync::Mutex<ModifierState>> = cx.state_for(
                 link_id,
                 || Arc::new(std::sync::Mutex::new(ModifierState::default())),
                 |s| s.clone(),
@@ -1421,12 +1421,12 @@ impl NavigationMenu {
                             handler(value);
                         }
                     }
-                    let safe_corridor: Arc<Mutex<SafeCorridorState>> = cx.with_state_for(
+                    let safe_corridor: Arc<Mutex<SafeCorridorState>> = cx.state_for(
                         root_id,
                         || Arc::new(Mutex::new(SafeCorridorState::default())),
                         |st| st.clone(),
                     );
-                    let selected_changed = cx.with_state_for(root_id, SelectionSyncState::default, |st| {
+                    let selected_changed = cx.state_for(root_id, SelectionSyncState::default, |st| {
                         let changed = selected != st.last_selected;
                         if changed {
                             st.last_selected = selected.clone();

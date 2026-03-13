@@ -91,14 +91,11 @@ impl DataTableViewOptions {
         let open = self.open;
         let items = self.items;
 
-        DropdownMenu::new(open).into_element(
+        DropdownMenu::from_open(open).build(
             cx,
-            |cx| {
-                Button::new("Columns")
-                    .variant(ButtonVariant::Outline)
-                    .trailing_icon(fret_icons::IconId::new_static("lucide.chevron-down"))
-                    .into_element(cx)
-            },
+            Button::new("Columns")
+                .variant(ButtonVariant::Outline)
+                .trailing_icon(fret_icons::IconId::new_static("lucide.chevron-down")),
             move |_cx| {
                 items
                     .iter()

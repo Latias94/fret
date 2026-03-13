@@ -632,7 +632,7 @@ fn animated_button_corner_radii<H: UiHost>(
 ) -> (Corners, bool) {
     let target = if pressed { pressed_radius } else { base_radius };
 
-    cx.with_state_for(pressable_id, ButtonCornerRuntime::default, |rt| {
+    cx.state_for(pressable_id, ButtonCornerRuntime::default, |rt| {
         if !rt.spring.is_initialized() {
             // Initialize lazily with the default radius to avoid an animated "pop" on first frame.
             rt.spring.reset(now_frame, base_radius);

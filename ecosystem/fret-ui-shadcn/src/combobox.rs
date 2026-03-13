@@ -37,7 +37,7 @@ use crate::overlay_motion;
 use crate::test_id::test_id_slug;
 use crate::{
     CommandEntry, CommandGroup, CommandItem, CommandList, CommandPalette, CommandSeparator, Drawer,
-    DrawerContent, Popover, PopoverAlign, PopoverAnchor, PopoverContent, PopoverSide,
+    DrawerContent, Popover, PopoverAlign, PopoverContent, PopoverSide,
 };
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -90,15 +90,6 @@ impl ComboboxStyle {
         }
         self
     }
-}
-
-/// Returns a layout-only anchor wrapper for combobox overlay placement.
-///
-/// Upstream shadcn/ui v4 returns a DOM ref (`useComboboxAnchor()`) used to anchor the popup. In
-/// Fret, we model the same outcome by wrapping a child element and exposing a stable element ID.
-/// This intentionally stays raw because `PopoverAnchor::new(...)` stores a concrete landed child.
-pub fn use_combobox_anchor(child: AnyElement) -> PopoverAnchor {
-    PopoverAnchor::new(child)
 }
 
 pub use kit_combobox::ComboboxOpenChangeReason;
@@ -1094,66 +1085,6 @@ impl Combobox {
             self.style,
         )
     }
-}
-
-#[allow(clippy::too_many_arguments)]
-pub fn combobox<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    model: Model<Option<Arc<str>>>,
-    open: Model<bool>,
-    query: Option<Model<String>>,
-    items: impl IntoIterator<Item = ComboboxItem>,
-    width: Option<Px>,
-    placeholder: Arc<str>,
-    search_placeholder: Arc<str>,
-    empty_text: Arc<str>,
-    disabled: bool,
-    a11y_label: Option<Arc<str>>,
-    search_enabled: bool,
-    consume_outside_pointer_events: bool,
-) -> AnyElement {
-    let items: Vec<ComboboxItem> = items.into_iter().collect();
-    combobox_with_patch(
-        cx,
-        model,
-        open,
-        query,
-        items,
-        Vec::new(),
-        None,
-        None,
-        width,
-        popper::Side::Bottom,
-        popper::Align::Center,
-        Px(4.0),
-        Px(0.0),
-        None,
-        placeholder,
-        search_placeholder,
-        empty_text,
-        false,
-        disabled,
-        None,
-        a11y_label,
-        false,
-        fret_ui_kit::declarative::viewport_tailwind::MD,
-        search_enabled,
-        false,
-        false,
-        false,
-        true,
-        ComboboxTriggerVariant::default(),
-        consume_outside_pointer_events,
-        kit_combobox::SelectionCommitPolicy::default(),
-        kit_combobox::ComboboxCloseAutoFocusPolicy::default(),
-        None,
-        None,
-        None,
-        None,
-        ChromeRefinement::default(),
-        LayoutRefinement::default(),
-        ComboboxStyle::default(),
-    )
 }
 
 #[allow(clippy::too_many_arguments)]

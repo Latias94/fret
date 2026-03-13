@@ -580,7 +580,7 @@ impl EnvironmentVariable {
         let el = cx.container(
             decl_style::container_props(&theme, chrome, LayoutRefinement::default()),
             move |cx| {
-                cx.with_state(EnvironmentVariableState::default, |st| {
+                cx.root_state(EnvironmentVariableState::default, |st| {
                     st.data = Some(data);
                 });
 
@@ -840,7 +840,7 @@ impl EnvironmentVariableCopyButton {
         };
 
         let theme = Theme::global(&*cx.app).clone();
-        let feedback = cx.with_state(CopyFeedbackRef::default, |st| st.clone());
+        let feedback = cx.slot_state(CopyFeedbackRef::default, |st| st.clone());
 
         let name = data.name;
         let value = data.value;

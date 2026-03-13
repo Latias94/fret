@@ -1,18 +1,13 @@
 pub const SOURCE: &str = include_str!("multiple.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    shadcn::Accordion::multiple_uncontrolled(["notifications"])
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .max_w(Px(512.0))
-                .min_w_0(),
-        )
-        .items([
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    shadcn::accordion_multiple_uncontrolled(cx, ["notifications"], |cx| {
+        [
             shadcn::AccordionItem::new(
                 "notifications",
                 shadcn::AccordionTrigger::new(vec![cx.text("Notifications")])
@@ -32,8 +27,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     shadcn::raw::typography::p("Manage passwords, 2FA, and active sessions.")
                 ]),
             ),
-        ])
-        .into_element(cx)
-        .test_id("ui-gallery-accordion-multiple")
+        ]
+    })
+    .refine_layout(
+        LayoutRefinement::default()
+            .w_full()
+            .max_w(Px(512.0))
+            .min_w_0(),
+    )
+    .into_element(cx)
+    .test_id("ui-gallery-accordion-multiple")
 }
 // endregion: example

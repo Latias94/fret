@@ -85,7 +85,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .layout(LayoutRefinement::default().w_px(Px(960.0)))
         .into_element(cx);
 
-        let inner = shadcn::ScrollArea::new([inner_rail])
+        let inner = shadcn::scroll_area(cx, |_cx| [inner_rail])
             .axis(fret_ui::element::ScrollAxis::X)
             .scroll_handle(inner_handle)
             .viewport_test_id("ui-gallery-scroll-area-nested-inner-viewport")
@@ -114,7 +114,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .gap(Space::N3)
         .into_element(cx);
 
-        let outer = shadcn::ScrollArea::new([outer_body])
+        let outer = shadcn::scroll_area(cx, |_cx| [outer_body])
             .axis(fret_ui::element::ScrollAxis::Y)
             .scroll_handle(outer_handle)
             .viewport_test_id("ui-gallery-scroll-area-nested-outer-viewport")

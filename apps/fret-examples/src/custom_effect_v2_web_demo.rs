@@ -364,7 +364,7 @@ impl CustomEffectV2WebDriver {
         w: Px,
         h: Px,
         corner_radius_px: Px,
-    ) -> AnyElement {
+    ) -> impl IntoUiElement<App> + use<> {
         let mut layout = LayoutStyle::default();
         layout.position = fret_ui::element::PositionStyle::Absolute;
         layout.inset.left = Some(left).into();
@@ -957,42 +957,54 @@ impl CustomEffectV2WebDriver {
                         18.0,
                     ));
 
-                    items.push(Self::stage_tile(
-                        cx,
-                        Self::srgb(24, 160, 255, 0.25),
-                        Px(48.0),
-                        Px(40.0),
-                        Px(220.0),
-                        Px(140.0),
-                        tile_corner_radius_px,
-                    ));
-                    items.push(Self::stage_tile(
-                        cx,
-                        Self::srgb(245, 158, 11, 0.22),
-                        Px(320.0),
-                        Px(96.0),
-                        Px(260.0),
-                        Px(160.0),
-                        tile_corner_radius_px,
-                    ));
-                    items.push(Self::stage_tile(
-                        cx,
-                        Self::srgb(34, 197, 94, 0.18),
-                        Px(140.0),
-                        Px(240.0),
-                        Px(300.0),
-                        Px(180.0),
-                        tile_corner_radius_px,
-                    ));
-                    items.push(Self::stage_tile(
-                        cx,
-                        Self::srgb(168, 85, 247, 0.16),
-                        Px(520.0),
-                        Px(280.0),
-                        Px(260.0),
-                        Px(160.0),
-                        tile_corner_radius_px,
-                    ));
+                    items.push(
+                        Self::stage_tile(
+                            cx,
+                            Self::srgb(24, 160, 255, 0.25),
+                            Px(48.0),
+                            Px(40.0),
+                            Px(220.0),
+                            Px(140.0),
+                            tile_corner_radius_px,
+                        )
+                        .into_element(cx),
+                    );
+                    items.push(
+                        Self::stage_tile(
+                            cx,
+                            Self::srgb(245, 158, 11, 0.22),
+                            Px(320.0),
+                            Px(96.0),
+                            Px(260.0),
+                            Px(160.0),
+                            tile_corner_radius_px,
+                        )
+                        .into_element(cx),
+                    );
+                    items.push(
+                        Self::stage_tile(
+                            cx,
+                            Self::srgb(34, 197, 94, 0.18),
+                            Px(140.0),
+                            Px(240.0),
+                            Px(300.0),
+                            Px(180.0),
+                            tile_corner_radius_px,
+                        )
+                        .into_element(cx),
+                    );
+                    items.push(
+                        Self::stage_tile(
+                            cx,
+                            Self::srgb(168, 85, 247, 0.16),
+                            Px(520.0),
+                            Px(280.0),
+                            Px(260.0),
+                            Px(160.0),
+                            tile_corner_radius_px,
+                        )
+                        .into_element(cx),
+                    );
 
                     let mut hint_layout = LayoutStyle::default();
                     hint_layout.position = fret_ui::element::PositionStyle::Absolute;

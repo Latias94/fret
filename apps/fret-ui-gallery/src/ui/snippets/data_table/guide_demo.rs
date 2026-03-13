@@ -392,48 +392,44 @@ fn legacy_demo_content(
                             .icon(fret_icons::ids::ui::MORE_HORIZONTAL)
                             .into_element(cx);
 
-                        let menu = shadcn::DropdownMenu::new(open)
+                        let menu = shadcn::DropdownMenu::from_open(open)
                             .align(shadcn::DropdownMenuAlign::End)
                             .side(shadcn::DropdownMenuSide::Bottom)
-                            .into_element(
-                                cx,
-                                move |_cx| trigger,
-                                move |_cx| {
-                                    vec![
-                                        shadcn::DropdownMenuEntry::Item(
-                                            shadcn::DropdownMenuItem::new("Edit")
-                                                .test_id(Arc::<str>::from(format!(
-                                                    "ui-gallery-data-table-row-actions-item-edit-{}",
-                                                    row.id
-                                                )))
-                                                .on_select(CommandId::new(
-                                                    "ui_gallery.data_table.row_actions.edit",
-                                                )),
-                                        ),
-                                        shadcn::DropdownMenuEntry::Item(
-                                            shadcn::DropdownMenuItem::new("Make a copy")
-                                                .test_id(Arc::<str>::from(format!(
-                                                    "ui-gallery-data-table-row-actions-item-copy-{}",
-                                                    row.id
-                                                )))
-                                                .on_select(CommandId::new(
-                                                    "ui_gallery.data_table.row_actions.copy",
-                                                )),
-                                        ),
-                                        shadcn::DropdownMenuEntry::Separator,
-                                        shadcn::DropdownMenuEntry::Item(
-                                            shadcn::DropdownMenuItem::new("Delete")
-                                                .test_id(Arc::<str>::from(format!(
-                                                    "ui-gallery-data-table-row-actions-item-delete-{}",
-                                                    row.id
-                                                )))
-                                                .on_select(CommandId::new(
-                                                    "ui_gallery.data_table.row_actions.delete",
-                                                )),
-                                        ),
-                                    ]
-                                },
-                            );
+                            .build(cx, trigger, move |_cx| {
+                                vec![
+                                    shadcn::DropdownMenuEntry::Item(
+                                        shadcn::DropdownMenuItem::new("Edit")
+                                            .test_id(Arc::<str>::from(format!(
+                                                "ui-gallery-data-table-row-actions-item-edit-{}",
+                                                row.id
+                                            )))
+                                            .on_select(CommandId::new(
+                                                "ui_gallery.data_table.row_actions.edit",
+                                            )),
+                                    ),
+                                    shadcn::DropdownMenuEntry::Item(
+                                        shadcn::DropdownMenuItem::new("Make a copy")
+                                            .test_id(Arc::<str>::from(format!(
+                                                "ui-gallery-data-table-row-actions-item-copy-{}",
+                                                row.id
+                                            )))
+                                            .on_select(CommandId::new(
+                                                "ui_gallery.data_table.row_actions.copy",
+                                            )),
+                                    ),
+                                    shadcn::DropdownMenuEntry::Separator,
+                                    shadcn::DropdownMenuEntry::Item(
+                                        shadcn::DropdownMenuItem::new("Delete")
+                                            .test_id(Arc::<str>::from(format!(
+                                                "ui-gallery-data-table-row-actions-item-delete-{}",
+                                                row.id
+                                            )))
+                                            .on_select(CommandId::new(
+                                                "ui_gallery.data_table.row_actions.delete",
+                                            )),
+                                    ),
+                                ]
+                            });
 
                         align_end(menu).into_element(cx)
                     }),

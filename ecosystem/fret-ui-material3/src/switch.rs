@@ -485,7 +485,7 @@ impl Switch {
                         }
 
                         let switch_state_id = cx.root_id();
-                        let icon_keepalive = cx.with_state_for(
+                        let icon_keepalive = cx.state_for(
                             switch_state_id,
                             SwitchIconKeepAliveRuntime::default,
                             |st| {

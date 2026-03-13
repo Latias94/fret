@@ -49,34 +49,31 @@ pub fn render<H: UiHost>(
             ]
         };
 
+        let image = shadcn::AvatarImage::model(avatar_image_for_trigger.clone()).into_element(cx);
+        let fallback = shadcn::AvatarFallback::new("CN")
+            .when_image_missing_model(avatar_image_for_trigger.clone())
+            .delay_ms(120)
+            .into_element(cx);
+
+        let avatar = shadcn::Avatar::new([image, fallback])
+            .size(shadcn::AvatarSize::Default)
+            .into_element(cx);
+
+        let trigger = shadcn::Button::new("")
+            .variant(shadcn::ButtonVariant::Ghost)
+            .size(shadcn::ButtonSize::Icon)
+            .a11y_label("Open user menu")
+            .corner_radii_override(Corners::all(Px(999.0)))
+            .children([avatar])
+            .test_id("ui-gallery-avatar-dropdown-trigger-avatar")
+            .into_element(cx);
+
         vec![
-            shadcn::DropdownMenu::new(open).into_element_parts(
+            shadcn::DropdownMenu::from_open(open).build_parts(
                 cx,
-                move |cx| {
-                    let image = shadcn::AvatarImage::model(avatar_image_for_trigger.clone())
-                        .into_element(cx);
-                    let fallback = shadcn::AvatarFallback::new("CN")
-                        .when_image_missing_model(avatar_image_for_trigger.clone())
-                        .delay_ms(120)
-                        .into_element(cx);
-
-                    let avatar = shadcn::Avatar::new([image, fallback])
-                        .size(shadcn::AvatarSize::Default)
-                        .into_element(cx);
-
-                    let trigger = shadcn::Button::new("")
-                        .variant(shadcn::ButtonVariant::Ghost)
-                        .size(shadcn::ButtonSize::Icon)
-                        .a11y_label("Open user menu")
-                        .corner_radii_override(Corners::all(Px(999.0)))
-                        .children([avatar])
-                        .test_id("ui-gallery-avatar-dropdown-trigger-avatar")
-                        .into_element(cx);
-
-                    // shadcn/Radix parity: the authored child button is the actual trigger surface.
-                    // The nested Avatar is presentational content inside that pressable child.
-                    shadcn::DropdownMenuTrigger::new(trigger)
-                },
+                // shadcn/Radix parity: the authored child button is the actual trigger surface.
+                // The nested Avatar is presentational content inside that pressable child.
+                shadcn::DropdownMenuTrigger::new(trigger),
                 shadcn::DropdownMenuContent::new()
                     .align(shadcn::DropdownMenuAlign::End)
                     .side_offset(Px(4.0))

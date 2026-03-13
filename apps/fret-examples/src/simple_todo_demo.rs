@@ -113,13 +113,17 @@ impl SimpleTodoDriver {
                         .w_full()
                         .into_element(cx);
 
-                    let rows = ui::v_flex_build(|cx, out| {
-                        for t in &todos {
-                            let remove_cmd = CommandId::new(format!("{CMD_REMOVE_PREFIX}{}", t.id));
-                            out.push(
-                                cx.keyed(t.id, |cx| todo_row(cx, theme.clone(), t, remove_cmd)),
-                            );
-                        }
+                    let rows = ui::v_flex(|cx| {
+                        ui::for_each_keyed_with_cx(
+                            cx,
+                            &todos,
+                            |t| t.id,
+                            |cx, t| {
+                                let remove_cmd =
+                                    CommandId::new(format!("{CMD_REMOVE_PREFIX}{}", t.id));
+                                todo_row(cx, theme.clone(), t, remove_cmd)
+                            },
+                        )
                     })
                     .gap(Space::N3)
                     .w_full()
@@ -242,7 +246,7 @@ fn todo_row(
     theme: fret_ui::ThemeSnapshot,
     item: &TodoItem,
     remove_cmd: CommandId,
-) -> fret_ui::element::AnyElement {
+) -> impl fret_ui_kit::IntoUiElement<App> + use<> {
     let done = cx.watch_model(&item.done).paint().value_or_default();
 
     let checkbox = shadcn::Checkbox::new(item.done.clone());
@@ -266,7 +270,6 @@ fn todo_row(
         .gap(Space::N2)
         .items_center()
         .w_full()
-        .into_element(cx)
 }
 
 fn create_window_state(

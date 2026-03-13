@@ -5,22 +5,25 @@ use fret_runtime::CommandId;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn trigger_surface<H: UiHost>(label: &'static str) -> impl IntoUiElement<H> + use<H> {
+fn trigger_surface<H: UiHost>(
+    label: &'static str,
+    test_id: &'static str,
+) -> impl IntoUiElement<H> + use<H> {
     shadcn::Button::new(label)
         .variant(shadcn::ButtonVariant::Outline)
         .size(shadcn::ButtonSize::Sm)
+        .test_id(test_id)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    shadcn::ContextMenu::new_controllable(cx, None, false)
+    shadcn::ContextMenu::uncontrolled(cx)
         .content_test_id("ui-gallery-context-menu-basic-content")
-        .into_element(
+        .build(
             cx,
-            |cx| {
-                trigger_surface("Right click for actions")
-                    .into_element(cx)
-                    .test_id("ui-gallery-context-menu-basic-trigger")
-            },
+            trigger_surface(
+                "Right click for actions",
+                "ui-gallery-context-menu-basic-trigger",
+            ),
             |_cx| {
                 vec![
                     shadcn::ContextMenuEntry::Item(

@@ -376,194 +376,152 @@ pub fn sync_root_open_for<H: UiHost>(
     timer_handler_element: GlobalElementId,
     is_open: bool,
 ) {
-    let was_open = cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+    let was_open = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
         st.was_open
     });
     if is_open && !was_open {
-        if let Some(model) =
-            cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
-                st.open_value.clone()
-            })
-        {
+        if let Some(model) = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+            st.open_value.clone()
+        }) {
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
-        if let Some(model) =
-            cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
-                st.trigger.clone()
-            })
-        {
+        if let Some(model) = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+            st.trigger.clone()
+        }) {
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
-        if let Some(model) =
-            cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
-                st.last_pointer.clone()
-            })
-        {
+        if let Some(model) = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+            st.last_pointer.clone()
+        }) {
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
-        if let Some(model) =
-            cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
-                st.geometry.clone()
-            })
-        {
+        if let Some(model) = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+            st.geometry.clone()
+        }) {
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
-        if let Some(model) =
-            cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
-                st.close_timer.clone()
-            })
-        {
+        if let Some(model) = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+            st.close_timer.clone()
+        }) {
             let token = cx.app.models_mut().read(&model, |v| *v).ok().flatten();
             if let Some(token) = token {
                 cx.app.push_effect(Effect::CancelTimer { token });
             }
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
-        if let Some(model) =
-            cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
-                st.focus_timer.clone()
-            })
-        {
+        if let Some(model) = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+            st.focus_timer.clone()
+        }) {
             let token = cx.app.models_mut().read(&model, |v| *v).ok().flatten();
             if let Some(token) = token {
                 cx.app.push_effect(Effect::CancelTimer { token });
             }
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
-        if let Some(model) =
-            cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
-                st.open_timer.clone()
-            })
-        {
+        if let Some(model) = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+            st.open_timer.clone()
+        }) {
             let token = cx.app.models_mut().read(&model, |v| *v).ok().flatten();
             if let Some(token) = token {
                 cx.app.push_effect(Effect::CancelTimer { token });
             }
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
-        if let Some(model) =
-            cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
-                st.pointer_dir.clone()
-            })
-        {
+        if let Some(model) = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+            st.pointer_dir.clone()
+        }) {
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
-        if let Some(model) =
-            cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
-                st.pointer_grace_intent.clone()
-            })
-        {
+        if let Some(model) = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+            st.pointer_grace_intent.clone()
+        }) {
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
-        if let Some(model) =
-            cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
-                st.pointer_grace_timer.clone()
-            })
-        {
+        if let Some(model) = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+            st.pointer_grace_timer.clone()
+        }) {
             let token = cx.app.models_mut().read(&model, |v| *v).ok().flatten();
             if let Some(token) = token {
                 cx.app.push_effect(Effect::CancelTimer { token });
             }
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
-        if let Some(model) =
-            cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
-                st.pending_open_value.clone()
-            })
-        {
+        if let Some(model) = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+            st.pending_open_value.clone()
+        }) {
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
-        if let Some(model) =
-            cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
-                st.pending_open_trigger.clone()
-            })
-        {
+        if let Some(model) = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+            st.pending_open_trigger.clone()
+        }) {
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
-        if let Some(model) =
-            cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
-                st.focus_target.clone()
-            })
-        {
+        if let Some(model) = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+            st.focus_target.clone()
+        }) {
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
-        cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+        cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
             st.was_open = true
         });
     } else if !is_open && was_open {
-        if let Some(model) =
-            cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
-                st.close_timer.clone()
-            })
-        {
+        if let Some(model) = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+            st.close_timer.clone()
+        }) {
             let token = cx.app.models_mut().read(&model, |v| *v).ok().flatten();
             if let Some(token) = token {
                 cx.app.push_effect(Effect::CancelTimer { token });
             }
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
-        if let Some(model) =
-            cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
-                st.focus_timer.clone()
-            })
-        {
+        if let Some(model) = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+            st.focus_timer.clone()
+        }) {
             let token = cx.app.models_mut().read(&model, |v| *v).ok().flatten();
             if let Some(token) = token {
                 cx.app.push_effect(Effect::CancelTimer { token });
             }
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
-        if let Some(model) =
-            cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
-                st.open_timer.clone()
-            })
-        {
+        if let Some(model) = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+            st.open_timer.clone()
+        }) {
             let token = cx.app.models_mut().read(&model, |v| *v).ok().flatten();
             if let Some(token) = token {
                 cx.app.push_effect(Effect::CancelTimer { token });
             }
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
-        if let Some(model) =
-            cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
-                st.pointer_dir.clone()
-            })
-        {
+        if let Some(model) = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+            st.pointer_dir.clone()
+        }) {
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
-        if let Some(model) =
-            cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
-                st.pointer_grace_intent.clone()
-            })
-        {
+        if let Some(model) = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+            st.pointer_grace_intent.clone()
+        }) {
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
-        if let Some(model) =
-            cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
-                st.pointer_grace_timer.clone()
-            })
-        {
+        if let Some(model) = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+            st.pointer_grace_timer.clone()
+        }) {
             let token = cx.app.models_mut().read(&model, |v| *v).ok().flatten();
             if let Some(token) = token {
                 cx.app.push_effect(Effect::CancelTimer { token });
             }
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
-        if let Some(model) =
-            cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
-                st.pending_open_value.clone()
-            })
-        {
+        if let Some(model) = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+            st.pending_open_value.clone()
+        }) {
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
-        if let Some(model) =
-            cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
-                st.pending_open_trigger.clone()
-            })
-        {
+        if let Some(model) = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+            st.pending_open_trigger.clone()
+        }) {
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
-        cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+        cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
             st.was_open = false
         });
     }
@@ -577,174 +535,173 @@ pub fn ensure_models_for<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     timer_handler_element: GlobalElementId,
 ) -> MenuSubmenuModels {
-    let open_value = cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+    let open_value = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
         st.open_value.clone()
     });
     let open_value = if let Some(open_value) = open_value {
         open_value
     } else {
         let open_value = cx.app.models_mut().insert(None);
-        cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+        cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
             st.open_value = Some(open_value.clone());
         });
         open_value
     };
 
-    let trigger = cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+    let trigger = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
         st.trigger.clone()
     });
     let trigger = if let Some(trigger) = trigger {
         trigger
     } else {
         let trigger = cx.app.models_mut().insert(None);
-        cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+        cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
             st.trigger = Some(trigger.clone());
         });
         trigger
     };
 
-    let last_pointer = cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+    let last_pointer = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
         st.last_pointer.clone()
     });
     let last_pointer = if let Some(last_pointer) = last_pointer {
         last_pointer
     } else {
         let last_pointer = cx.app.models_mut().insert(None);
-        cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+        cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
             st.last_pointer = Some(last_pointer.clone());
         });
         last_pointer
     };
 
-    let geometry = cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+    let geometry = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
         st.geometry.clone()
     });
     let geometry = if let Some(geometry) = geometry {
         geometry
     } else {
         let geometry = cx.app.models_mut().insert(None);
-        cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+        cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
             st.geometry = Some(geometry.clone());
         });
         geometry
     };
 
-    let close_timer = cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+    let close_timer = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
         st.close_timer.clone()
     });
     let close_timer = if let Some(close_timer) = close_timer {
         close_timer
     } else {
         let close_timer = cx.app.models_mut().insert(None);
-        cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+        cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
             st.close_timer = Some(close_timer.clone());
         });
         close_timer
     };
 
-    let pointer_dir = cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+    let pointer_dir = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
         st.pointer_dir.clone()
     });
     let pointer_dir = if let Some(pointer_dir) = pointer_dir {
         pointer_dir
     } else {
         let pointer_dir = cx.app.models_mut().insert(None);
-        cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+        cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
             st.pointer_dir = Some(pointer_dir.clone());
         });
         pointer_dir
     };
 
     let pointer_grace_intent =
-        cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+        cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
             st.pointer_grace_intent.clone()
         });
     let pointer_grace_intent = if let Some(pointer_grace_intent) = pointer_grace_intent {
         pointer_grace_intent
     } else {
         let pointer_grace_intent = cx.app.models_mut().insert(None);
-        cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+        cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
             st.pointer_grace_intent = Some(pointer_grace_intent.clone());
         });
         pointer_grace_intent
     };
 
     let pointer_grace_timer =
-        cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+        cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
             st.pointer_grace_timer.clone()
         });
     let pointer_grace_timer = if let Some(pointer_grace_timer) = pointer_grace_timer {
         pointer_grace_timer
     } else {
         let pointer_grace_timer = cx.app.models_mut().insert(None);
-        cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+        cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
             st.pointer_grace_timer = Some(pointer_grace_timer.clone());
         });
         pointer_grace_timer
     };
 
-    let focus_target = cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+    let focus_target = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
         st.focus_target.clone()
     });
     let focus_target = if let Some(focus_target) = focus_target {
         focus_target
     } else {
         let focus_target = cx.app.models_mut().insert(None);
-        cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+        cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
             st.focus_target = Some(focus_target.clone());
         });
         focus_target
     };
 
-    let focus_timer = cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+    let focus_timer = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
         st.focus_timer.clone()
     });
     let focus_timer = if let Some(focus_timer) = focus_timer {
         focus_timer
     } else {
         let focus_timer = cx.app.models_mut().insert(None);
-        cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+        cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
             st.focus_timer = Some(focus_timer.clone());
         });
         focus_timer
     };
 
-    let pending_open_value =
-        cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
-            st.pending_open_value.clone()
-        });
+    let pending_open_value = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+        st.pending_open_value.clone()
+    });
     let pending_open_value = if let Some(pending_open_value) = pending_open_value {
         pending_open_value
     } else {
         let pending_open_value = cx.app.models_mut().insert(None);
-        cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+        cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
             st.pending_open_value = Some(pending_open_value.clone());
         });
         pending_open_value
     };
 
     let pending_open_trigger =
-        cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+        cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
             st.pending_open_trigger.clone()
         });
     let pending_open_trigger = if let Some(pending_open_trigger) = pending_open_trigger {
         pending_open_trigger
     } else {
         let pending_open_trigger = cx.app.models_mut().insert(None);
-        cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+        cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
             st.pending_open_trigger = Some(pending_open_trigger.clone());
         });
         pending_open_trigger
     };
 
-    let open_timer = cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+    let open_timer = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
         st.open_timer.clone()
     });
     let open_timer = if let Some(open_timer) = open_timer {
         open_timer
     } else {
         let open_timer = cx.app.models_mut().insert(None);
-        cx.with_state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+        cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
             st.open_timer = Some(open_timer.clone());
         });
         open_timer

@@ -722,7 +722,7 @@ fn animated_icon_button_corner_radii<H: UiHost>(
 ) -> (Corners, bool) {
     let target = shapes.target_radius(pressed, checked).0;
 
-    cx.with_state_for(pressable_id, IconButtonCornerRuntime::default, |rt| {
+    cx.state_for(pressable_id, IconButtonCornerRuntime::default, |rt| {
         if !rt.spring.is_initialized() {
             rt.spring.reset(now_frame, target);
         }

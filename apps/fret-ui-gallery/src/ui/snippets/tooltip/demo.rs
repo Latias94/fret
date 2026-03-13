@@ -9,10 +9,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .delay(Duration::ZERO)
         .timeout_duration(Duration::from_millis(400))
         .with(cx, |cx| {
-            let content = shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
-                cx,
-                "Add to library",
-            )]);
+            let content = shadcn::TooltipContent::build(cx, |_cx| {
+                [shadcn::TooltipContent::text("Add to library")]
+            });
 
             vec![
                 shadcn::Tooltip::new(

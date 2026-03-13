@@ -245,13 +245,9 @@ impl NavigationBar {
                         let container_id = cx.root_id();
                         let item_count = items.len();
 
-                        cx.with_state_for(
-                            container_id,
-                            NavigationBarLayoutRuntime::default,
-                            |rt| {
-                                rt.icon_slots.ensure_len(item_count);
-                            },
-                        );
+                        cx.state_for(container_id, NavigationBarLayoutRuntime::default, |rt| {
+                            rt.icon_slots.ensure_len(item_count);
+                        });
 
                         let indicator = navigation_bar_active_indicator(
                             cx,
@@ -539,7 +535,7 @@ fn navigation_bar_item<H: UiHost>(
 
                 let icon_slot = cx.named("icon_slot", |cx| {
                     let icon_slot_id = cx.root_id();
-                    cx.with_state_for(container_id, NavigationBarLayoutRuntime::default, |rt| {
+                    cx.state_for(container_id, NavigationBarLayoutRuntime::default, |rt| {
                         rt.icon_slots.set(idx, icon_slot_id);
                     });
 
@@ -556,7 +552,7 @@ fn navigation_bar_item<H: UiHost>(
                             BadgeValue::Text(value) => Badge::text(value),
                         };
 
-                        let badge_test_id = cx.with_state(DerivedBadgeTestId::default, |st| {
+                        let badge_test_id = cx.slot_state(DerivedBadgeTestId::default, |st| {
                             if st.base.as_deref() != test_id.as_deref() {
                                 st.base = test_id.clone();
                                 st.badge = st
@@ -670,7 +666,7 @@ fn navigation_bar_active_indicator<H: UiHost>(
 
         let icon_slot_bounds = selected_idx
             .and_then(|idx| {
-                cx.with_state_for(container_id, NavigationBarLayoutRuntime::default, |rt| {
+                cx.state_for(container_id, NavigationBarLayoutRuntime::default, |rt| {
                     rt.icon_slots.get(idx)
                 })
             })

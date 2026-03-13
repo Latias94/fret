@@ -346,8 +346,9 @@ impl MessageAction {
         let provider = TooltipProvider::new();
         let mut out = provider.with(cx, move |cx| {
             let trigger = TooltipTrigger::new(btn).into_element(cx);
-            let content = TooltipContent::new(vec![TooltipContent::text(cx, tooltip_text.clone())])
-                .into_element(cx);
+            let content =
+                TooltipContent::build(cx, |_cx| [TooltipContent::text(tooltip_text.clone())])
+                    .into_element(cx);
 
             let mut tip = Tooltip::new(cx, trigger, content);
             if let Some(panel_test_id) = panel_test_id.clone() {

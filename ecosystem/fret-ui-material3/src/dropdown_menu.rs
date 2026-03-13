@@ -17,6 +17,7 @@ use fret_ui::element::{AnyElement, Overflow};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::overlay;
 use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::direction as direction_prim;
@@ -99,6 +100,29 @@ impl DropdownMenu {
             test_id: None,
             menu_style: MenuStyle::default(),
         }
+    }
+
+    /// Creates a menu with a controlled/uncontrolled open model.
+    ///
+    /// When `open` is `None`, the menu stores its internal open model at the root call site and
+    /// initializes it from `default_open`.
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: Option<Model<bool>>,
+        default_open: bool,
+    ) -> Self {
+        let open = controllable_state::use_controllable_model(cx, open, || default_open).model();
+        Self::new(open)
+    }
+
+    /// Default teaching-surface constructor for a menu that owns its open model.
+    pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {
+        Self::new_controllable(cx, None, false)
+    }
+
+    /// Returns the resolved open model, including the internally owned model for uncontrolled use.
+    pub fn open_model(&self) -> Model<bool> {
+        self.open.clone()
     }
 
     pub fn align(mut self, align: DropdownMenuAlign) -> Self {
@@ -249,7 +273,7 @@ impl DropdownMenu {
                     test_id: Option<Arc<str>>,
                 }
 
-                let default_test_id = cx.with_state(DerivedDefaultTestId::default, |st| {
+                let default_test_id = cx.slot_state(DerivedDefaultTestId::default, |st| {
                     if st.test_id.is_none() || st.trigger != trigger_id.0 {
                         st.trigger = trigger_id.0;
                         st.test_id = Some(Arc::<str>::from(format!(
@@ -361,4 +385,79 @@ fn estimated_menu_panel_size(
 
     let w = anchor.size.width.0.max(min_width.0).max(0.0);
     Size::new(Px(w), Px(h.max(1.0)))
+}
+
+#[cfg(test)]
+mod tests {
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::elements::with_element_cx;
+    use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+
+    use super::*;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        )
+    }
+
+    #[test]
+    fn dropdown_menu_new_controllable_uses_controlled_model_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let controlled = app.models_mut().insert(true);
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-dropdown-menu-controlled",
+            |cx| {
+                let menu = DropdownMenu::new_controllable(cx, Some(controlled.clone()), false);
+                assert_eq!(menu.open_model(), controlled);
+            },
+        );
+    }
+
+    #[test]
+    fn dropdown_menu_new_controllable_applies_default_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-dropdown-menu-default-open",
+            |cx| {
+                let menu = DropdownMenu::new_controllable(cx, None, true);
+                let open = cx
+                    .watch_model(&menu.open_model())
+                    .layout()
+                    .copied()
+                    .unwrap_or(false);
+                assert!(open);
+            },
+        );
+    }
+
+    #[test]
+    fn dropdown_menu_uncontrolled_multiple_instances_do_not_share_open_model() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-dropdown-menu-uncontrolled-scope",
+            |cx| {
+                let a = DropdownMenu::uncontrolled(cx);
+                let b = DropdownMenu::uncontrolled(cx);
+                assert_ne!(a.open_model(), b.open_model());
+            },
+        );
+    }
 }

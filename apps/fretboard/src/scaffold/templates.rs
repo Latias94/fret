@@ -550,7 +550,7 @@ __ADD_BTN_DEF__
         .gap(Space::N1)
         .items_center();
 
-        let rows = ui::v_flex_build(|cx, out| {
+        let rows = ui::v_flex(|cx| {
             if derived.rows.is_empty() {
                 let text = match filter_value {
                     TodoFilter::All => "No tasks yet. Add one above.",
@@ -558,19 +558,18 @@ __ADD_BTN_DEF__
                     TodoFilter::Completed => "No completed tasks.",
                 };
 
-                out.push_ui(
-                    cx,
+                return ui::children![
+                    cx;
                     ui::text(text)
                         .text_sm()
-                        .text_color(ColorRef::Color(theme_for_rows.color_token("muted-foreground"))),
-                );
-                return;
+                        .text_color(ColorRef::Color(theme_for_rows.color_token("muted-foreground")))
+                ];
             }
 
-            for row in derived.rows.iter() {
+            ui::for_each_keyed(cx, derived.rows.iter(), |row| row.id, |row| {
                 let theme = theme_for_rows.clone();
-                out.push_ui(cx, ui::keyed(row.id, |_cx| todo_row(theme, row)));
-            }
+                todo_row(theme, row)
+            })
         })
         .gap(Space::N3)
         .w_full();
@@ -586,23 +585,16 @@ __PALETTE_BUTTON__
         .gap(Space::N4)
         .w_full();
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(
-                cx,
-                shadcn::CardHeader::build(|cx, out| {
-                    out.push_ui(cx, shadcn::CardTitle::new("Todo"));
-                    out.push_ui(
-                        cx,
-                        shadcn::CardDescription::new("View runtime + typed actions + selector + query (v1)."),
-                    );
+        let card = shadcn::card(|cx| {
+            ui::children![cx;
+                shadcn::card_header(|cx| {
+                    ui::children![cx;
+                        shadcn::card_title("Todo"),
+                        shadcn::card_description("View runtime + typed actions + selector + query (v1)."),
+                    ]
                 }),
-            );
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(cx, content);
-                }),
-            );
+                shadcn::card_content(|cx| ui::children![cx; content]),
+            ]
         })
         .ui()
         .bg(ColorRef::Color(theme.color_token("background")))
@@ -613,17 +605,15 @@ __PALETTE_BUTTON__
         .max_w(Px(520.0))
         ;
 
-        let card = card.into_element(cx);
-        todo_page(cx, theme, card).into()
+        todo_page(theme, card).into_element(cx).into()
     }
 }
 
 fn todo_page(
-    cx: &mut UiCx<'_>,
     theme: ThemeSnapshot,
     content: impl UiChild,
-) -> fret_ui::element::AnyElement {
-    ui::container(|cx| ui::children![cx;
+) -> impl UiChild {
+    ui::container(move |cx| ui::children![cx;
         ui::v_flex(|cx| ui::children![cx; content])
             .w_full()
             .h_full()
@@ -635,7 +625,6 @@ fn todo_page(
     .p(Space::N6)
     .w_full()
     .h_full()
-    .into_element(cx)
 }
 
 fn filter_chip(
@@ -945,23 +934,22 @@ __ADD_BTN_DEF__
             .items_center()
             .w_full();
 
-        let rows = ui::v_flex_build(|cx, out| {
+        let rows = ui::v_flex(|cx| {
             if todos.is_empty() {
-                out.push_ui(
-                    cx,
+                return ui::children![
+                    cx;
                     ui::text("No tasks yet. Add one above.")
                         .text_sm()
                         .text_color(ColorRef::Color(
                             theme_for_rows.color_token("muted-foreground"),
-                        )),
-                );
-                return;
+                        ))
+                ];
             }
 
-            for row in &todos {
+            ui::for_each_keyed(cx, &todos, |row| row.id, |row| {
                 let theme = theme_for_rows.clone();
-                out.push_ui(cx, ui::keyed(row.id, |_cx| todo_row(theme, row)));
-            }
+                todo_row(theme, row)
+            })
         })
         .gap(Space::N3)
         .w_full();
@@ -970,26 +958,19 @@ __ADD_BTN_DEF__
             .gap(Space::N4)
             .w_full();
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(
-                cx,
-                shadcn::CardHeader::build(|cx, out| {
-                    out.push_ui(cx, shadcn::CardTitle::new("Simple Todo"));
-                    out.push_ui(
-                        cx,
-                        shadcn::CardDescription::new(
+        let card = shadcn::card(|cx| {
+            ui::children![cx;
+                shadcn::card_header(|cx| {
+                    ui::children![cx;
+                        shadcn::card_title("Simple Todo"),
+                        shadcn::card_description(
                             "View runtime + typed actions + local-state keyed lists (no selector/query).",
                         ),
-                    );
-                    out.push_ui(cx, header_actions);
+                        header_actions,
+                    ]
                 }),
-            );
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(cx, content);
-                }),
-            );
+                shadcn::card_content(|cx| ui::children![cx; content]),
+            ]
         })
         .ui()
         .bg(ColorRef::Color(theme.color_token("background")))
@@ -1009,22 +990,19 @@ __PALETTE_BUTTON__
         .justify_center()
         .items_center();
 
-        let content = content.into_element(cx);
-        todo_page(cx, theme, content).into()
+        todo_page(theme, content).into_element(cx).into()
     }
 }
 
 fn todo_page(
-    cx: &mut UiCx<'_>,
     theme: ThemeSnapshot,
     content: impl UiChild,
-) -> fret_ui::element::AnyElement {
+) -> impl UiChild {
     ui::container(|cx| ui::children![cx; content])
         .bg(ColorRef::Color(theme.color_token("muted")))
         .p(Space::N6)
         .w_full()
         .h_full()
-        .into_element(cx)
 }
 
 fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {
@@ -1212,7 +1190,7 @@ cargo run --release
 
 - Edit UI in `src/main.rs`
 - Use `ui::children![cx; ...]` to build heterogeneous child lists without call-site `.into_element(cx)` noise.
-- When rendering dynamic lists, prefer `out.push_ui(cx, ui::keyed(id, |cx| ...))` to keep identity stable without an eager landing cliff.
+- When rendering dynamic lists, prefer `ui::for_each_keyed(cx, items, |item| id, |item| ...)` to keep identity stable without dropping back to `v_flex_build(...)`.
 "#
     )
 }
@@ -1286,6 +1264,7 @@ mod tests {
         assert!(src.contains("ui::container("));
         assert!(src.contains("ui::h_flex("));
         assert!(src.contains("ui::children!["));
+        assert!(src.contains("ui::for_each_keyed("));
         assert!(!src.contains("ui::container( |"));
         assert!(!src.contains("ui::h_flex( |"));
         assert!(!src.contains("ui::v_flex( |"));
@@ -1296,11 +1275,16 @@ mod tests {
         assert!(!src.contains(".run_view::<TodoView>()"));
         assert!(src.contains("fret::actions!(["));
         assert!(src.contains("fret::payload_actions!([Toggle(u64) ="));
-        assert!(src.contains("shadcn::Card::build(|cx, out| {"));
-        assert!(src.contains("shadcn::CardHeader::build(|cx, out| {"));
-        assert!(src.contains("shadcn::CardContent::build(|cx, out| {"));
-        assert!(src.contains("out.push_ui(\n                cx,\n                shadcn::CardHeader::build(|cx, out| {"));
-        assert!(src.contains("out.push_ui(\n                cx,\n                shadcn::CardContent::build(|cx, out| {"));
+        assert!(src.contains("shadcn::card(|cx| {"));
+        assert!(src.contains("shadcn::card_header(|cx| {"));
+        assert!(src.contains("shadcn::card_content(|cx| ui::children![cx; content])"));
+        assert!(src.contains("shadcn::card_title(\"Todo\")"));
+        assert!(src.contains(
+            "shadcn::card_description(\"View runtime + typed actions + selector + query (v1).\")"
+        ));
+        assert!(!src.contains("shadcn::Card::build(|cx, out| {"));
+        assert!(!src.contains("shadcn::CardHeader::build(|cx, out| {"));
+        assert!(!src.contains("shadcn::CardContent::build(|cx, out| {"));
         assert!(src.contains("cx.actions().locals::<act::Add>"));
         assert!(src.contains("cx.actions().locals::<act::ClearDone>"));
         assert!(src.contains("cx.actions()\n            .local_update::<act::RefreshTip, u64>("));
@@ -1315,10 +1299,11 @@ mod tests {
         assert!(src.contains("let draft_state = cx.state().local::<String>();"));
         assert!(src.contains("let filter_state = cx.state().local_init(|| TodoFilter::All);"));
         assert!(src.contains("let todos_state = cx.state().local_init(|| {"));
-        assert!(src.contains("let card = card.into_element(cx);"));
-        assert!(src.contains("todo_page(cx, theme, card).into()"));
+        assert!(src.contains("todo_page(theme, card).into_element(cx).into()"));
+        assert!(!src.contains("let card = card.into_element(cx);"));
+        assert!(!src.contains("todo_page(cx, theme, card).into()"));
         assert!(src.contains("fn todo_page("));
-        assert!(src.contains(") -> fret_ui::element::AnyElement {"));
+        assert!(src.contains(") -> impl UiChild {"));
         assert!(!src.contains("Model<Vec<TodoItem>>"));
         assert!(!src.contains("Model<bool>"));
         assert!(!src.contains(".models_mut().insert("));
@@ -1365,7 +1350,7 @@ mod tests {
         assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
         assert!(src.contains("impl UiChild"));
         assert!(src.contains("ui::children!["));
-        assert!(src.contains("ui::keyed("));
+        assert!(src.contains("ui::for_each_keyed("));
         assert!(!src.contains("ui::container( |"));
         assert!(!src.contains("ui::h_flex( |"));
         assert!(!src.contains("ui::v_flex( |"));
@@ -1375,11 +1360,14 @@ mod tests {
         assert!(src.contains(".run()"));
         assert!(!src.contains(".run_view::<TodoView>()"));
         assert!(src.contains("fret::actions!(["));
-        assert!(src.contains("shadcn::Card::build(|cx, out| {"));
-        assert!(src.contains("shadcn::CardHeader::build(|cx, out| {"));
-        assert!(src.contains("shadcn::CardContent::build(|cx, out| {"));
-        assert!(src.contains("out.push_ui(\n                cx,\n                shadcn::CardHeader::build(|cx, out| {"));
-        assert!(src.contains("out.push_ui(\n                cx,\n                shadcn::CardContent::build(|cx, out| {"));
+        assert!(src.contains("shadcn::card(|cx| {"));
+        assert!(src.contains("shadcn::card_header(|cx| {"));
+        assert!(src.contains("shadcn::card_content(|cx| ui::children![cx; content])"));
+        assert!(src.contains("shadcn::card_title(\"Simple Todo\")"));
+        assert!(src.contains("shadcn::card_description("));
+        assert!(!src.contains("shadcn::Card::build(|cx, out| {"));
+        assert!(!src.contains("shadcn::CardHeader::build(|cx, out| {"));
+        assert!(!src.contains("shadcn::CardContent::build(|cx, out| {"));
         assert!(src.contains("cx.actions().locals::<act::Add>"));
         assert!(src.contains("cx.actions().locals::<act::ClearDone>"));
         assert!(src.contains("cx.actions()\n            .payload::<act::Toggle>()"));
@@ -1388,10 +1376,11 @@ mod tests {
         assert!(src.contains("let draft_state = cx.state().local::<String>();"));
         assert!(src.contains("let next_id_state = cx.state().local_init(|| 3u64);"));
         assert!(src.contains("let todos_state = cx.state().local_init(|| {"));
-        assert!(src.contains("let content = content.into_element(cx);"));
-        assert!(src.contains("todo_page(cx, theme, content).into()"));
+        assert!(src.contains("todo_page(theme, content).into_element(cx).into()"));
+        assert!(!src.contains("let content = content.into_element(cx);"));
+        assert!(!src.contains("todo_page(cx, theme, content).into()"));
         assert!(src.contains("fn todo_page("));
-        assert!(src.contains(") -> fret_ui::element::AnyElement {"));
+        assert!(src.contains(") -> impl UiChild {"));
         assert!(src.contains("shadcn::Input::new(&draft_state)"));
         assert!(src.contains("shadcn::Checkbox::from_checked(row.done)"));
         assert!(!src.contains("Model<Vec<TodoItem>>"));
@@ -1441,7 +1430,7 @@ mod tests {
 
         let simple = simple_todo_template_readme_md("simple-todo-app", opts());
         assert!(simple.contains(
-            "When rendering dynamic lists, prefer `out.push_ui(cx, ui::keyed(id, |cx| ...))`"
+            "When rendering dynamic lists, prefer `ui::for_each_keyed(cx, items, |item| id, |item| ...)`"
         ));
         assert!(simple.contains("prefer `LocalState<Vec<_>>` + payload actions"));
         assert!(simple.contains("Read tracked state near the top of `render()`"));

@@ -822,11 +822,11 @@ impl ScrollArea {
 pub fn scroll_area<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+) -> ScrollArea
 where
     I: IntoIterator<Item = AnyElement>,
 {
-    ScrollArea::new(f(cx)).into_element(cx)
+    ScrollArea::new(f(cx))
 }
 
 pub struct ScrollAreaBuild<H, B> {

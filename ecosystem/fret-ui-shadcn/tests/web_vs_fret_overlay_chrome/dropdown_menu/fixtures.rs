@@ -58,7 +58,7 @@ fn build_dropdown_menu_demo_minimal(
         DropdownMenuLabel, DropdownMenuShortcut,
     };
 
-    DropdownMenu::new(open.clone())
+    DropdownMenu::from_open(open.clone())
         .min_width(Px(224.0))
         .into_element(
             cx,
@@ -85,7 +85,7 @@ fn build_dropdown_menu_invite_submenu(
 ) -> AnyElement {
     use fret_ui_shadcn::{Button, DropdownMenu, DropdownMenuEntry, DropdownMenuItem};
 
-    DropdownMenu::new(open.clone())
+    DropdownMenu::from_open(open.clone())
         .min_width(Px(224.0))
         .into_element(
             cx,
@@ -310,7 +310,7 @@ fn web_vs_fret_dropdown_menu_overlay_chrome_cases_match_web_fixtures() {
                     "menu",
                     SemanticsRole::Menu,
                     |cx, open| {
-                        fret_ui_shadcn::DropdownMenu::new(open.clone()).into_element(
+                        fret_ui_shadcn::DropdownMenu::from_open(open.clone()).into_element(
                             cx,
                             |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
                             |_cx| {

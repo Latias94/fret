@@ -130,37 +130,29 @@ impl View for QueryDemoView {
             ))
         });
 
-        let status_row = ui::h_row_build(|cx, out| {
-            out.push_ui(cx, shadcn::Badge::new(status_label).variant(status_variant));
-            out.push_ui(
-                cx,
+        let status_row = ui::h_row(|cx| {
+            ui::children![cx;
+                shadcn::Badge::new(status_label).variant(status_variant),
                 shadcn::Badge::new(if fail_mode { "Mode: Error" } else { "Mode: Ok" })
                     .variant(shadcn::BadgeVariant::Secondary),
-            );
+            ]
         })
         .gap(Space::N2)
         .items_center()
         .into_element(cx);
 
-        let buttons = ui::h_row_build(|cx, out| {
-            out.push_ui(
-                cx,
+        let buttons = ui::h_row(|cx| {
+            ui::children![cx;
                 shadcn::Button::new("Invalidate")
                     .variant(shadcn::ButtonVariant::Default)
                     .action(act::Invalidate),
-            );
-            out.push_ui(
-                cx,
                 shadcn::Button::new("Invalidate namespace")
                     .variant(shadcn::ButtonVariant::Ghost)
                     .action(act::InvalidateNamespace),
-            );
-            out.push_ui(
-                cx,
                 shadcn::Button::new("Toggle error mode")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .action(act::ToggleFailMode),
-            );
+            ]
         })
         .gap(Space::N2)
         .items_center()
@@ -191,48 +183,37 @@ impl View for QueryDemoView {
         .gap(Space::N2)
         .into_element(cx);
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(
-                cx,
-                shadcn::CardHeader::build(|cx, out| {
-                    out.push_ui(cx, shadcn::CardTitle::new("Query demo"));
-                    out.push_ui(
-                        cx,
-                        shadcn::CardDescription::new("Async resource state via fret-query."),
-                    );
-                    out.push(status_row);
+        let card = shadcn::card(|cx| {
+            ui::children![cx;
+                shadcn::card_header(|cx| {
+                    ui::children![cx;
+                        shadcn::card_title("Query demo"),
+                        shadcn::card_description("Async resource state via fret-query."),
+                        status_row,
+                    ]
                 }),
-            );
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(
-                        cx,
-                        ui::v_flex_build(|_cx, out| {
-                            out.extend([buttons, detail_body]);
-                        })
-                        .gap(Space::N4)
-                        .w_full(),
-                    );
+                shadcn::card_content(|cx| {
+                    ui::children![cx;
+                        ui::v_flex(|cx| ui::children![cx; buttons, detail_body])
+                            .gap(Space::N4)
+                            .w_full()
+                    ]
                 }),
-            );
+            ]
         })
         .ui()
         .w_full()
-        .max_w(Px(520.0))
-        .into_element(cx);
+        .max_w(Px(520.0));
 
-        ui::v_flex_build(|_cx, out| {
-            out.push(card);
-        })
-        .bg(ColorRef::Color(theme.color_token("background")))
-        .p(Space::N6)
-        .w_full()
-        .h_full()
-        .justify_center()
-        .items_center()
-        .into_element(cx)
-        .into()
+        ui::v_flex(|cx| ui::children![cx; card])
+            .bg(ColorRef::Color(theme.color_token("background")))
+            .p(Space::N6)
+            .w_full()
+            .h_full()
+            .justify_center()
+            .items_center()
+            .into_element(cx)
+            .into()
     }
 }
 

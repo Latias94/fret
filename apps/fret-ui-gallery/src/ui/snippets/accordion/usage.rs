@@ -1,12 +1,13 @@
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_shadcn::accordion::composable as acc;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let item = acc::AccordionItem::new(Arc::from("item-1"))
         .trigger(acc::AccordionTrigger::new(vec![
             cx.text("Is it accessible?"),

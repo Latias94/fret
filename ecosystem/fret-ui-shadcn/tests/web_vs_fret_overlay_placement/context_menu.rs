@@ -54,7 +54,7 @@ fn fret_context_menu_does_not_move_when_underlay_scrolls() {
                         ..Default::default()
                     },
                     move |cx| {
-                        let menu = ContextMenu::new(open.clone());
+                        let menu = ContextMenu::from_open(open.clone());
 
                         vec![menu.into_element(
                             cx,

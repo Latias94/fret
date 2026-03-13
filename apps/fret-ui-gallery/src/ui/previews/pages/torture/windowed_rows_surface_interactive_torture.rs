@@ -51,7 +51,7 @@ pub(in crate::ui) fn preview_windowed_rows_surface_interactive_torture(
                     ..Default::default()
                 },
                 move |cx, root_id| {
-                    let state = cx.with_state_for(
+                    let state = cx.state_for(
                         root_id,
                         || Rc::new(RefCell::new(RowChromeState::default())),
                         |s| s.clone(),

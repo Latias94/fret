@@ -172,7 +172,7 @@ impl CodeBlock {
             language: self.language.clone(),
             show_line_numbers: self.show_line_numbers,
         };
-        cx.with_state(CodeBlockLocalState::default, |st| {
+        cx.root_state(CodeBlockLocalState::default, |st| {
             st.context = Some(context);
         });
         self.children(children(cx)).into_element(cx)
@@ -576,7 +576,7 @@ impl CodeBlockCopyButton {
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let feedback = cx.with_state(CopyFeedbackRef::default, |st| st.clone());
+        let feedback = cx.slot_state(CopyFeedbackRef::default, |st| st.clone());
 
         let code = self
             .code

@@ -406,42 +406,36 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                         .into_element(cx);
 
                     let payment_id = row.id.clone();
-                    let menu = shadcn::DropdownMenu::new(open)
+                    let menu = shadcn::DropdownMenu::from_open(open)
                         .align(shadcn::DropdownMenuAlign::End)
                         .side(shadcn::DropdownMenuSide::Bottom)
-                        .into_element(
-                            cx,
-                            move |_cx| trigger,
-                            move |_cx| {
-                                vec![
-                                    shadcn::DropdownMenuEntry::Label(
-                                        shadcn::DropdownMenuLabel::new("Actions"),
+                        .build(cx, trigger, move |_cx| {
+                            vec![
+                                shadcn::DropdownMenuEntry::Label(shadcn::DropdownMenuLabel::new(
+                                    "Actions",
+                                )),
+                                shadcn::DropdownMenuEntry::Item(
+                                    shadcn::DropdownMenuItem::new("Copy payment ID").on_select(
+                                        CommandId::new(Arc::<str>::from(format!(
+                                            "ui_gallery.data_table.basic.copy_payment_id.{}",
+                                            payment_id
+                                        ))),
                                     ),
-                                    shadcn::DropdownMenuEntry::Item(
-                                        shadcn::DropdownMenuItem::new("Copy payment ID").on_select(
-                                            CommandId::new(Arc::<str>::from(format!(
-                                                "ui_gallery.data_table.basic.copy_payment_id.{}",
-                                                payment_id
-                                            ))),
-                                        ),
+                                ),
+                                shadcn::DropdownMenuEntry::Separator,
+                                shadcn::DropdownMenuEntry::Item(
+                                    shadcn::DropdownMenuItem::new("View customer").on_select(
+                                        CommandId::new("ui_gallery.data_table.basic.view_customer"),
                                     ),
-                                    shadcn::DropdownMenuEntry::Separator,
-                                    shadcn::DropdownMenuEntry::Item(
-                                        shadcn::DropdownMenuItem::new("View customer").on_select(
-                                            CommandId::new(
-                                                "ui_gallery.data_table.basic.view_customer",
-                                            ),
-                                        ),
-                                    ),
-                                    shadcn::DropdownMenuEntry::Item(
-                                        shadcn::DropdownMenuItem::new("View payment details")
-                                            .on_select(CommandId::new(
-                                                "ui_gallery.data_table.basic.view_payment_details",
-                                            )),
-                                    ),
-                                ]
-                            },
-                        );
+                                ),
+                                shadcn::DropdownMenuEntry::Item(
+                                    shadcn::DropdownMenuItem::new("View payment details")
+                                        .on_select(CommandId::new(
+                                            "ui_gallery.data_table.basic.view_payment_details",
+                                        )),
+                                ),
+                            ]
+                        });
 
                     align_end(menu).into_element(cx)
                 }),

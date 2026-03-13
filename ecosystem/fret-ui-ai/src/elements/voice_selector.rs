@@ -79,20 +79,9 @@ pub fn use_voice_selector_controller<H: UiHost>(
     cx.provided::<VoiceSelectorController>().cloned()
 }
 
-#[derive(Default)]
-struct VoiceSelectorState {
-    query: Option<Model<String>>,
-}
-
+#[track_caller]
 fn query_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
-    cx.with_state(VoiceSelectorState::default, |st| st.query.clone())
-        .unwrap_or_else(|| {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(VoiceSelectorState::default, |st| {
-                st.query = Some(model.clone())
-            });
-            model
-        })
+    cx.local_model(String::new)
 }
 
 fn muted_fg(theme: &Theme) -> Color {

@@ -11,7 +11,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     shadcn::Field::new([
         shadcn::FieldTitle::new("Price Range").into_element(cx),
         shadcn::FieldDescription::new("Set your budget range ($200-$800).").into_element(cx),
-        shadcn::Slider::new(slider_values)
+        shadcn::slider(slider_values)
             .range(0.0, 1000.0)
             .step(10.0)
             .a11y_label("Price Range")

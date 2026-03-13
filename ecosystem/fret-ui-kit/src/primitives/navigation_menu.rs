@@ -99,7 +99,7 @@ fn navigation_menu_entry_focus_registry<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     root_id: GlobalElementId,
 ) -> Arc<Mutex<EntryFocusRegistry>> {
-    cx.with_state_for(
+    cx.state_for(
         root_id,
         || Arc::new(Mutex::new(EntryFocusRegistry::default())),
         |s| s.clone(),
@@ -134,7 +134,7 @@ pub fn navigation_menu_register_trigger_id<H: UiHost>(
     value: Arc<str>,
     trigger_id: GlobalElementId,
 ) {
-    cx.with_state_for(root_id, TriggerIdRegistry::default, |st| {
+    cx.state_for(root_id, TriggerIdRegistry::default, |st| {
         st.ids.insert(value, trigger_id);
     });
 }
@@ -145,7 +145,7 @@ pub fn navigation_menu_trigger_id<H: UiHost>(
     root_id: GlobalElementId,
     value: &str,
 ) -> Option<GlobalElementId> {
-    cx.with_state_for(root_id, TriggerIdRegistry::default, |st| {
+    cx.state_for(root_id, TriggerIdRegistry::default, |st| {
         st.ids.get(value).copied()
     })
 }
@@ -180,7 +180,7 @@ pub fn navigation_menu_register_viewport_content_id<H: UiHost>(
     value: Arc<str>,
     content_id: GlobalElementId,
 ) {
-    cx.with_state_for(root_id, ViewportContentIdRegistry::default, |st| {
+    cx.state_for(root_id, ViewportContentIdRegistry::default, |st| {
         st.ids.insert(value, content_id);
     });
 }
@@ -191,7 +191,7 @@ pub fn navigation_menu_viewport_content_id<H: UiHost>(
     root_id: GlobalElementId,
     value: &str,
 ) -> Option<GlobalElementId> {
-    cx.with_state_for(root_id, ViewportContentIdRegistry::default, |st| {
+    cx.state_for(root_id, ViewportContentIdRegistry::default, |st| {
         st.ids.get(value).copied()
     })
 }
@@ -205,7 +205,7 @@ pub fn navigation_menu_register_viewport_panel_id<H: UiHost>(
     root_id: GlobalElementId,
     viewport_panel_id: GlobalElementId,
 ) {
-    cx.with_state_for(root_id, ViewportPanelIdRegistry::default, |st| {
+    cx.state_for(root_id, ViewportPanelIdRegistry::default, |st| {
         st.id = Some(viewport_panel_id);
     });
 }
@@ -215,7 +215,7 @@ pub fn navigation_menu_viewport_panel_id<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     root_id: GlobalElementId,
 ) -> Option<GlobalElementId> {
-    cx.with_state_for(root_id, ViewportPanelIdRegistry::default, |st| st.id)
+    cx.state_for(root_id, ViewportPanelIdRegistry::default, |st| st.id)
 }
 
 /// Registers the indicator track element id for the root.
@@ -226,7 +226,7 @@ pub fn navigation_menu_register_indicator_track_id<H: UiHost>(
     root_id: GlobalElementId,
     indicator_track_id: GlobalElementId,
 ) {
-    cx.with_state_for(root_id, IndicatorTrackIdRegistry::default, |st| {
+    cx.state_for(root_id, IndicatorTrackIdRegistry::default, |st| {
         st.id = Some(indicator_track_id);
     });
 }
@@ -236,7 +236,7 @@ pub fn navigation_menu_indicator_track_id<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     root_id: GlobalElementId,
 ) -> Option<GlobalElementId> {
-    cx.with_state_for(root_id, IndicatorTrackIdRegistry::default, |st| st.id)
+    cx.state_for(root_id, IndicatorTrackIdRegistry::default, |st| st.id)
 }
 
 /// Registers the indicator diamond element id for the root.
@@ -245,7 +245,7 @@ pub fn navigation_menu_register_indicator_diamond_id<H: UiHost>(
     root_id: GlobalElementId,
     indicator_diamond_id: GlobalElementId,
 ) {
-    cx.with_state_for(root_id, IndicatorDiamondIdRegistry::default, |st| {
+    cx.state_for(root_id, IndicatorDiamondIdRegistry::default, |st| {
         st.id = Some(indicator_diamond_id);
     });
 }
@@ -255,7 +255,7 @@ pub fn navigation_menu_indicator_diamond_id<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     root_id: GlobalElementId,
 ) -> Option<GlobalElementId> {
-    cx.with_state_for(root_id, IndicatorDiamondIdRegistry::default, |st| st.id)
+    cx.state_for(root_id, IndicatorDiamondIdRegistry::default, |st| st.id)
 }
 
 fn navigation_menu_viewport_content_semantics_id_in_scope<H: UiHost>(
@@ -352,7 +352,7 @@ pub fn navigation_menu_viewport_selected_value<H: UiHost>(
     selected: Option<Arc<str>>,
     present: bool,
 ) -> Option<Arc<str>> {
-    cx.with_state_for(root_id, ViewportPresentSelectionState::default, |st| {
+    cx.state_for(root_id, ViewportPresentSelectionState::default, |st| {
         if selected.is_some() {
             st.last_present_selected = selected.clone();
             return selected;
@@ -383,7 +383,7 @@ pub fn navigation_menu_register_viewport_size<H: UiHost>(
     value: Arc<str>,
     size: Size,
 ) {
-    cx.with_state_for(root_id, ViewportSizeRegistry::default, |st| {
+    cx.state_for(root_id, ViewportSizeRegistry::default, |st| {
         st.sizes.insert(value, size);
         st.last_size = Some(size);
     });
@@ -433,7 +433,7 @@ pub fn navigation_menu_viewport_size_for_transition<H: UiHost>(
     fallback: Size,
 ) -> NavigationMenuViewportSizeOutput {
     let (active_size, last_size, from_size, to_size) =
-        cx.with_state_for(root_id, ViewportSizeRegistry::default, |st| {
+        cx.state_for(root_id, ViewportSizeRegistry::default, |st| {
             let active_size = selected
                 .as_ref()
                 .and_then(|v| st.sizes.get(v).copied())
@@ -615,12 +615,12 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
 
     let overlay_root_name = OverlayController::popover_root_name(root_id);
     let mut computed_layout: Option<NavigationMenuViewportOverlayLayout> = None;
-    let root_state: Arc<Mutex<NavigationMenuRootState>> = cx.with_state_for(
+    let root_state: Arc<Mutex<NavigationMenuRootState>> = cx.state_for(
         root_id,
         || Arc::new(Mutex::new(NavigationMenuRootState::default())),
         |s| s.clone(),
     );
-    let trigger_states: Arc<Mutex<TriggerStateRegistry>> = cx.with_state_for(
+    let trigger_states: Arc<Mutex<TriggerStateRegistry>> = cx.state_for(
         root_id,
         || Arc::new(Mutex::new(TriggerStateRegistry::default())),
         |s| s.clone(),
@@ -856,7 +856,7 @@ impl NavigationMenuRoot {
         cx: &mut ElementContext<'_, H>,
         root_id: GlobalElementId,
     ) -> NavigationMenuContext {
-        let root_state: Arc<Mutex<NavigationMenuRootState>> = cx.with_state_for(
+        let root_state: Arc<Mutex<NavigationMenuRootState>> = cx.state_for(
             root_id,
             || Arc::new(Mutex::new(NavigationMenuRootState::default())),
             |s| s.clone(),
@@ -971,7 +971,7 @@ impl NavigationMenuTrigger {
         let root_id = ctx.root_id;
         let root_state = ctx.root_state.clone();
         let entry_focus_registry = navigation_menu_entry_focus_registry(cx, root_id);
-        let trigger_states: Arc<Mutex<TriggerStateRegistry>> = cx.with_state_for(
+        let trigger_states: Arc<Mutex<TriggerStateRegistry>> = cx.state_for(
             root_id,
             || Arc::new(Mutex::new(TriggerStateRegistry::default())),
             |s| s.clone(),
@@ -1384,7 +1384,7 @@ impl NavigationMenuLink {
         let dismiss_on_ctrl_or_meta = self.dismiss_on_ctrl_or_meta;
         cx.pressable(pressable, move |cx, st| {
             if dismiss && !disabled {
-                let modifier_state: Arc<Mutex<LinkModifierState>> = cx.with_state_for(
+                let modifier_state: Arc<Mutex<LinkModifierState>> = cx.state_for(
                     cx.root_id(),
                     || Arc::new(Mutex::new(LinkModifierState::default())),
                     |s| s.clone(),
@@ -1887,13 +1887,13 @@ pub fn navigation_menu_content_transition_with_durations_and_easing<H: UiHost>(
     ease: fn(f32) -> f32,
 ) -> NavigationMenuContentTransitionOutput {
     if !open {
-        cx.with_state_for(id, ContentTransitionState::default, |st| {
+        cx.state_for(id, ContentTransitionState::default, |st| {
             st.last_selected = None;
             st.last_selected_idx = None;
             st.from_idx = None;
             st.to_idx = None;
         });
-        cx.with_state_for(id, ContentTransitionMotionState::default, |st| {
+        cx.state_for(id, ContentTransitionMotionState::default, |st| {
             st.seq = 0;
             st.tick = 0;
             st.timeline = TransitionTimeline::default();
@@ -1906,7 +1906,7 @@ pub fn navigation_menu_content_transition_with_durations_and_easing<H: UiHost>(
         .as_deref()
         .and_then(|v| values.iter().position(|it| it.as_ref() == v));
 
-    let (seq, from_idx, to_idx) = cx.with_state_for(id, ContentTransitionState::default, |st| {
+    let (seq, from_idx, to_idx) = cx.state_for(id, ContentTransitionState::default, |st| {
         let changed = selected.is_some()
             && st.last_selected.is_some()
             && selected != st.last_selected
@@ -1940,7 +1940,7 @@ pub fn navigation_menu_content_transition_with_durations_and_easing<H: UiHost>(
     let frame_tick = cx.frame_id.0;
 
     let (out, start_lease, stop_lease) =
-        cx.with_state_for(id, ContentTransitionMotionState::default, |st| {
+        cx.state_for(id, ContentTransitionMotionState::default, |st| {
             if st.configured_open_ticks != open_ticks || st.configured_close_ticks != close_ticks {
                 st.configured_open_ticks = open_ticks;
                 st.configured_close_ticks = close_ticks;
@@ -1974,15 +1974,15 @@ pub fn navigation_menu_content_transition_with_durations_and_easing<H: UiHost>(
 
     if start_lease {
         let lease = cx.begin_continuous_frames();
-        cx.with_state_for(id, ContentTransitionMotionState::default, |st| {
+        cx.state_for(id, ContentTransitionMotionState::default, |st| {
             st.lease = Some(lease);
         });
     } else if stop_lease {
-        cx.with_state_for(id, ContentTransitionMotionState::default, |st| {
+        cx.state_for(id, ContentTransitionMotionState::default, |st| {
             st.lease = None;
         });
 
-        cx.with_state_for(id, ContentTransitionState::default, |st| {
+        cx.state_for(id, ContentTransitionState::default, |st| {
             st.from_idx = None;
             st.to_idx = None;
         });
@@ -1993,7 +1993,7 @@ pub fn navigation_menu_content_transition_with_durations_and_easing<H: UiHost>(
     } else {
         // If no continuous-frames lease was acquired (e.g. a 1-tick transition), still clear the
         // switch state immediately.
-        cx.with_state_for(id, ContentTransitionState::default, |st| {
+        cx.state_for(id, ContentTransitionState::default, |st| {
             st.from_idx = None;
             st.to_idx = None;
         });
@@ -2022,13 +2022,13 @@ pub fn navigation_menu_content_transition_with_durations_and_cubic_bezier<H: UiH
     bezier: CubicBezier,
 ) -> NavigationMenuContentTransitionOutput {
     if !open {
-        cx.with_state_for(id, ContentTransitionState::default, |st| {
+        cx.state_for(id, ContentTransitionState::default, |st| {
             st.last_selected = None;
             st.last_selected_idx = None;
             st.from_idx = None;
             st.to_idx = None;
         });
-        cx.with_state_for(id, ContentTransitionMotionState::default, |st| {
+        cx.state_for(id, ContentTransitionMotionState::default, |st| {
             st.seq = 0;
             st.tick = 0;
             st.timeline = TransitionTimeline::default();
@@ -2041,7 +2041,7 @@ pub fn navigation_menu_content_transition_with_durations_and_cubic_bezier<H: UiH
         .as_deref()
         .and_then(|v| values.iter().position(|it| it.as_ref() == v));
 
-    let (seq, from_idx, to_idx) = cx.with_state_for(id, ContentTransitionState::default, |st| {
+    let (seq, from_idx, to_idx) = cx.state_for(id, ContentTransitionState::default, |st| {
         let changed = selected.is_some()
             && st.last_selected.is_some()
             && selected != st.last_selected
@@ -2075,7 +2075,7 @@ pub fn navigation_menu_content_transition_with_durations_and_cubic_bezier<H: UiH
     let frame_tick = cx.frame_id.0;
 
     let (out, start_lease, stop_lease) =
-        cx.with_state_for(id, ContentTransitionMotionState::default, |st| {
+        cx.state_for(id, ContentTransitionMotionState::default, |st| {
             if st.configured_open_ticks != open_ticks || st.configured_close_ticks != close_ticks {
                 st.configured_open_ticks = open_ticks;
                 st.configured_close_ticks = close_ticks;
@@ -2111,15 +2111,15 @@ pub fn navigation_menu_content_transition_with_durations_and_cubic_bezier<H: UiH
 
     if start_lease {
         let lease = cx.begin_continuous_frames();
-        cx.with_state_for(id, ContentTransitionMotionState::default, |st| {
+        cx.state_for(id, ContentTransitionMotionState::default, |st| {
             st.lease = Some(lease);
         });
     } else if stop_lease {
-        cx.with_state_for(id, ContentTransitionMotionState::default, |st| {
+        cx.state_for(id, ContentTransitionMotionState::default, |st| {
             st.lease = None;
         });
 
-        cx.with_state_for(id, ContentTransitionState::default, |st| {
+        cx.state_for(id, ContentTransitionState::default, |st| {
             st.from_idx = None;
             st.to_idx = None;
         });
@@ -2130,7 +2130,7 @@ pub fn navigation_menu_content_transition_with_durations_and_cubic_bezier<H: UiH
     } else {
         // If no continuous-frames lease was acquired (e.g. a 1-tick transition), still clear the
         // switch state immediately.
-        cx.with_state_for(id, ContentTransitionState::default, |st| {
+        cx.state_for(id, ContentTransitionState::default, |st| {
             st.from_idx = None;
             st.to_idx = None;
         });

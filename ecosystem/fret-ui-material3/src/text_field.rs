@@ -820,7 +820,7 @@ impl TextField {
                                         animated_border,
                                         animated_border_color,
                                         placeholder_opacity,
-                                    ) = cx.with_state(TextFieldRuntime::default, |rt| {
+                                    ) = cx.root_state(TextFieldRuntime::default, |rt| {
                                         if disabled {
                                             rt.float_target = should_float;
                                             rt.float.reset(
@@ -1073,7 +1073,7 @@ impl TextField {
                                     icon: Option<Arc<str>>,
                                 }
 
-                                let icon_test_id = cx.with_state(DerivedTestIds::default, |st| {
+                                let icon_test_id = cx.slot_state(DerivedTestIds::default, |st| {
                                     if st.base.as_deref() != test_id.as_deref()
                                         || st.explicit.as_deref() != leading_icon_test_id.as_deref()
                                     {
@@ -1250,7 +1250,7 @@ impl TextField {
                                     icon: Option<Arc<str>>,
                                 }
 
-                                let icon_test_id = cx.with_state(DerivedTestIds::default, |st| {
+                                let icon_test_id = cx.slot_state(DerivedTestIds::default, |st| {
                                     if st.base.as_deref() != test_id.as_deref()
                                         || st.explicit.as_deref()
                                             != trailing_icon_test_id.as_deref()

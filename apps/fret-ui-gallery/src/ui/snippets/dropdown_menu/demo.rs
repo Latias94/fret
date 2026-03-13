@@ -8,7 +8,7 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     cx.keyed("ui_gallery.dropdown_menu.demo", |cx| {
         super::preview_frame_with(cx, |cx| {
-            shadcn::DropdownMenu::new_controllable(cx, None, false).build_parts(
+            shadcn::DropdownMenu::uncontrolled(cx).build_parts(
                 cx,
                 shadcn::DropdownMenuTrigger::build(
                     shadcn::Button::new("Open")
@@ -20,21 +20,21 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .side_offset(Px(4.0))
                     // new-york-v4 dropdown-menu-demo: `DropdownMenuContent className="w-56"`.
                     .min_width(Px(224.0)),
-                |cx| {
+                |_cx| {
                     [
                         shadcn::DropdownMenuGroup::new([
                             shadcn::DropdownMenuLabel::new("My Account").into(),
                             shadcn::DropdownMenuItem::new("Profile")
-                                .trailing(shadcn::DropdownMenuShortcut::new("⇧⌘P").into_element(cx))
+                                .shortcut("⇧⌘P")
                                 .test_id("ui-gallery-dropdown-menu-demo-profile")
                                 // ui-gallery diag scripts: assert this updates the global status bar.
                                 .action("ui_gallery.menu.dropdown.apple")
                                 .into(),
                             shadcn::DropdownMenuItem::new("Billing")
-                                .trailing(shadcn::DropdownMenuShortcut::new("⌘B").into_element(cx))
+                                .shortcut("⌘B")
                                 .into(),
                             shadcn::DropdownMenuItem::new("Settings")
-                                .trailing(shadcn::DropdownMenuShortcut::new("⌘S").into_element(cx))
+                                .shortcut("⌘S")
                                 .into(),
                         ])
                         .into(),
@@ -52,7 +52,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             )
                             .into(),
                             shadcn::DropdownMenuItem::new("New Team")
-                                .trailing(shadcn::DropdownMenuShortcut::new("⌘+T").into_element(cx))
+                                .shortcut("⌘+T")
                                 .into(),
                         ])
                         .into(),
@@ -65,7 +65,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         .into(),
                         shadcn::DropdownMenuSeparator::new().into(),
                         shadcn::DropdownMenuGroup::new([shadcn::DropdownMenuItem::new("Log out")
-                            .trailing(shadcn::DropdownMenuShortcut::new("⇧⌘Q").into_element(cx))
+                            .shortcut("⇧⌘Q")
                             .into()])
                         .into(),
                     ]

@@ -66,6 +66,9 @@ Guidelines:
 
 - Prefer `local_model_keyed(...)` as the default copyable authoring surface when the state is local
   to one element subtree but still needs to be a `Model<T>`.
+- For generated/spec-driven UI surfaces that already expose a stable semantic identity (for example
+  GenUI `ElementKey`), key authored models and helper sync slots directly from that semantic id via
+  `local_model_keyed(...)` / `keyed_slot_state(...)` instead of relying on call order.
 - For recipe-local binding sets (dropdown checkbox models, per-column visibility/pinning toggles,
   faceted filter options, similar “one model per semantic id” surfaces), derive each binding with
   `local_model_keyed((surface, semantic_id), ...)` instead of caching a `Vec<Model<_>>` inside
@@ -73,6 +76,22 @@ Guidelines:
 - Keep only small synchronization scratch in helper slots: previous-open edges, last-synced state
   revisions, and other non-observable runtime metadata should live in `slot_state(...)` or an
   explicit `state_for(keyed_slot_id(...), ...)` slot.
+- When an ecosystem helper exposes `slot_state(...)`, `slot_id(...)`, or `local_model(...)`
+  internally, prefer `#[track_caller]` on the public helper entrypoint so slot identity follows the
+  app callsite rather than collapsing onto the helper implementation line.
+- When a helper really wants **root-scoped shared runtime state**, spell that intent with
+  `root_state(...)` directly; keep `with_state(...)` only as a deprecated
+  compatibility/migration alias rather than the default implementation surface for new
+  framework/ecosystem code.
+- Likewise, use `state_for(...)` directly for explicit-identity slots in first-party code;
+  `with_state_for(...)` remains a deprecated compatibility alias rather than the preferred teaching
+  surface.
+- A lightweight repository gate keeps that contract honest:
+  `python3 tools/gate_no_first_party_with_state_alias_usage.py` forbids first-party Rust sources
+  from calling `.with_state(...)` or `.with_state_for(...)`.
+- Staged dialog/sheet draft models (pickers, selects, similar temporary edit state) should usually
+  be authored as `local_model(...)` handles, while only small open-edge/runtime bookkeeping stays
+  in `root_state(...)` or `slot_state(...)`.
 - Reserve `with_state + App::models_mut().insert(...)` for low-level migration/compat work, not as
   the teaching surface for new code.
 - First-party teaching surfaces should follow the same rule: `ecosystem/fret-ui-shadcn` examples,
@@ -82,6 +101,29 @@ Guidelines:
 - If a value affects rendering, make it observable (model or element state), otherwise view caching
   will reuse stale output.
 - Prefer granular models (split state) over “one giant model” to keep invalidation cheap.
+
+#### Compatibility alias removal plan
+
+Current repository state:
+
+- first-party Rust usage of `.with_state(...)` and `.with_state_for(...)` is zero
+- first-party code is guarded by
+  `python3 tools/gate_no_first_party_with_state_alias_usage.py`
+- active guides now teach `root_state(...)` / `state_for(...)`
+- `ElementContext::{with_state, with_state_for}` remain available but deprecated
+
+Recommended removal sequence for the eventual breaking release:
+
+1. Ship at least one release with the deprecation warnings in place so downstream crates get a
+   clear migration signal.
+2. Keep the repository gate active during that period so first-party examples/docs cannot regress.
+3. Publish a concise migration note:
+   - `with_state(...)` -> `root_state(...)`
+   - `with_state_for(...)` -> `state_for(...)`
+4. Audit any maintained downstream templates/examples/companion repos that still teach the old
+   aliases and update them before the breaking release lands.
+5. In the breaking release, delete the alias methods from `ElementContext`, keep the gate, and
+   keep the root/slot semantics tests so the replacement surfaces remain contract-locked.
 
 ### 2) Derived state (now exists; selectors/computed)
 

@@ -1,16 +1,21 @@
 pub const SOURCE: &str = include_str!("with_text.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     ui::h_row(|cx| {
         vec![
-            shadcn::Toggle::uncontrolled(false)
-                .a11y_label("Toggle italic with text")
-                .leading_icon(IconId::new_static("lucide.italic"))
-                .label("Italic")
-                .into_element(cx),
+            shadcn::toggle_uncontrolled(cx, false, |cx| {
+                ui::children![
+                    cx;
+                    shadcn::raw::icon::icon(cx, IconId::new_static("lucide.italic")),
+                    ui::text("Italic")
+                ]
+            })
+            .a11y_label("Toggle italic with text")
+            .into_element(cx),
         ]
     })
     .gap(Space::N2)

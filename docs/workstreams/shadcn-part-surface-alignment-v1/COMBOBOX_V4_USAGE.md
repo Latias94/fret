@@ -79,18 +79,19 @@ ComboboxInput::new()
     .show_clear(true)
 ```
 
-## Anchor override (`use_combobox_anchor`)
+## Anchor override (`PopoverAnchor::build(...).into_anchor(cx)`)
 
 Upstream v4 uses `useComboboxAnchor()` (a DOM ref) and passes it to `ComboboxContent` as
 `anchor={anchor}` (Base UI `Positioner.anchor`) to control popup positioning.
 
-In Fret, we model the same outcome via a layout-only wrapper (`use_combobox_anchor(child)`) that
-exposes a stable element ID. Pass the ID to `ComboboxContent::anchor_element_id(...)`:
+In Fret, use the generic overlay anchor builder and element ID surface instead of a
+combobox-specific helper. Pass the resulting ID to `ComboboxContent::anchor_element_id(...)`:
 
 ```rust
-use fret_ui_shadcn::{ComboboxContent, use_combobox_anchor};
+use fret_ui_kit::ui;
+use fret_ui_shadcn::{ComboboxContent, PopoverAnchor};
 
-let anchor = use_combobox_anchor(cx.text("anchor"));
+let anchor = PopoverAnchor::build(ui::label("anchor")).into_anchor(cx);
 let anchor_id = anchor.element_id();
 let _anchor_el = anchor.into_element(cx);
 
@@ -227,5 +228,6 @@ pub fn example_combobox_multiple(cx: &mut ElementContext<'_, App>) -> AnyElement
 - Render-prop ergonomics are not modeled; lists are provided explicitly.
 - `ComboboxInput.show_trigger(false)` hides the default trigger icon (the trigger control still
   toggles the overlay).
-- Base UI anchor refs (`useComboboxAnchor()`) are modeled via `use_combobox_anchor(child)` +
-  `ComboboxContent::anchor_element_id(...)` (element ID), not a DOM ref.
+- Base UI anchor refs (`useComboboxAnchor()`) are modeled via
+  `PopoverAnchor::build(child).into_anchor(cx)` + `ComboboxContent::anchor_element_id(...)`
+  (element ID), not a DOM ref.

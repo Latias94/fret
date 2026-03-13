@@ -58,14 +58,14 @@ impl View for DataTableBasicsView {
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let header = shadcn::CardHeader::build(|cx, out| {
-            out.push_ui(cx, shadcn::CardTitle::new("Data table basics"));
-            out.push_ui(
-                cx,
-                shadcn::CardDescription::new(
+        let header = shadcn::card_header(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_title("Data table basics"),
+                shadcn::card_description(
                     "A shadcn-style DataTable backed by the TanStack-aligned headless engine: sorting, filtering, pagination, and virtualized rows.",
                 ),
-            );
+            ]
         });
 
         let toolbar = shadcn::DataTableToolbar::new(
@@ -117,18 +117,19 @@ impl View for DataTableBasicsView {
             .size_full()
             .test_id(TEST_ID_TABLE);
 
-        let content = shadcn::CardContent::build(|cx, out| {
-            out.push_ui(
-                cx,
-                ui::v_flex(|cx| ui::children![cx; toolbar, table_slot, pagination])
-                    .gap(Space::N3)
-                    .h_full(),
-            );
-        });
-
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(cx, header);
-            out.push_ui(cx, content);
+        let card = shadcn::card(|cx| {
+            ui::children![
+                cx;
+                header,
+                shadcn::card_content(|cx| {
+                    ui::children![
+                        cx;
+                        ui::v_flex(|cx| ui::children![cx; toolbar, table_slot, pagination])
+                            .gap(Space::N3)
+                            .h_full(),
+                    ]
+                }),
+            ]
         })
         .ui()
         .w_full()

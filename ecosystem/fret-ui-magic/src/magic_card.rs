@@ -3,7 +3,6 @@ use std::sync::Arc;
 use fret_core::geometry::{Corners, Edges, Point, Size};
 use fret_core::scene::{ColorSpace, GradientStop, MAX_STOPS, Paint, RadialGradient, TileMode};
 use fret_core::{Color, Px};
-use fret_runtime::Model;
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, PointerRegionProps};
 use fret_ui::{ElementContext, Invalidation, UiHost};
@@ -51,11 +50,6 @@ impl Default for MagicCardProps {
     }
 }
 
-#[derive(Default)]
-struct MagicCardModels {
-    pointer_local: Option<Model<Option<Point>>>,
-}
-
 fn radial(center: Point, radius: Px, inner: Color, outer: Color) -> Paint {
     let mut stops = [GradientStop::new(0.0, Color::TRANSPARENT); MAX_STOPS];
     stops[0] = GradientStop::new(0.0, inner);
@@ -70,6 +64,7 @@ fn radial(center: Point, radius: Px, inner: Color, outer: Color) -> Paint {
     })
 }
 
+#[track_caller]
 pub fn magic_card<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     props: MagicCardProps,
@@ -78,17 +73,7 @@ pub fn magic_card<H: UiHost, I>(
 where
     I: IntoIterator<Item = AnyElement>,
 {
-    let pointer_local = cx.with_state(MagicCardModels::default, |st| st.pointer_local.clone());
-    let pointer_local = match pointer_local {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(None);
-            cx.with_state(MagicCardModels::default, |st| {
-                st.pointer_local = Some(model.clone());
-            });
-            model
-        }
-    };
+    let pointer_local = cx.local_model(|| None::<Point>);
 
     let pointer_local_value = cx
         .get_model_copied(&pointer_local, Invalidation::Paint)

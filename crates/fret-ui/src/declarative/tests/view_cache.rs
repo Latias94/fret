@@ -40,7 +40,7 @@ fn view_cache_skips_child_render_when_clean_and_preserves_element_state() {
                         let leaf = cx.text("leaf");
                         *leaf_id.lock().unwrap() = Some(leaf.id);
 
-                        cx.with_state_for(leaf.id, || 123u32, |_| {});
+                        cx.state_for(leaf.id, || 123u32, |_| {});
 
                         vec![leaf]
                     }),

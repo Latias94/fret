@@ -247,7 +247,7 @@ impl NativeSelect {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        native_select(
+        render_native_select(
             cx,
             self.model,
             self.open,
@@ -267,8 +267,13 @@ impl NativeSelect {
     }
 }
 
+/// Builder-preserving helper for the common native-select authoring path.
+pub fn native_select(model: Model<Option<Arc<str>>>, open: Model<bool>) -> NativeSelect {
+    NativeSelect::new(model, open)
+}
+
 #[allow(clippy::too_many_arguments)]
-pub fn native_select<H: UiHost>(
+fn render_native_select<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
     open: Model<bool>,

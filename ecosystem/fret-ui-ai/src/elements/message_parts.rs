@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use fret_core::{FontWeight, SemanticsRole, TextOverflow, TextStyle, TextWrap};
-use fret_runtime::Model;
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsDecoration, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::typography;
@@ -71,24 +70,7 @@ impl MessageParts {
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        #[derive(Default)]
-        struct CitationSelectionState {
-            selected_source_id: Option<Model<Option<Arc<str>>>>,
-        }
-
-        let selected_source_id = cx.with_state(CitationSelectionState::default, |st| {
-            st.selected_source_id.clone()
-        });
-        let selected_source_id = match selected_source_id {
-            Some(model) => model,
-            None => {
-                let model = cx.app.models_mut().insert(None::<Arc<str>>);
-                cx.with_state(CitationSelectionState::default, |st| {
-                    st.selected_source_id = Some(model.clone());
-                });
-                model
-            }
-        };
+        let selected_source_id = cx.local_model(|| None::<Arc<str>>);
 
         let sources_for_citations = self.parts.iter().find_map(|part| match part {
             MessagePart::Sources(items) => Some(items.clone()),

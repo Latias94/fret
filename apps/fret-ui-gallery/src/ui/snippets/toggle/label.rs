@@ -1,11 +1,12 @@
 pub const SOURCE: &str = include_str!("label.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::primitives::control_registry::ControlId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let pressed = cx.local_model_keyed("pressed", || false);
     let pressed_now = cx
         .get_model_cloned(&pressed, Invalidation::Paint)
@@ -25,15 +26,19 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         .into_element(cx),
                 ])
                 .into_element(cx),
-                shadcn::Toggle::new(pressed.clone())
-                    .variant(shadcn::ToggleVariant::Outline)
-                    .size(shadcn::ToggleSize::Sm)
-                    .control_id(control_id)
-                    .a11y_label("Toggle bookmark label association")
-                    .leading_icon(IconId::new_static("lucide.bookmark"))
-                    .label("Bookmark")
-                    .into_element(cx)
-                    .test_id("ui-gallery-toggle-label-control"),
+                shadcn::toggle(cx, pressed.clone(), |cx| {
+                    ui::children![
+                        cx;
+                        shadcn::raw::icon::icon(cx, IconId::new_static("lucide.bookmark")),
+                        ui::text("Bookmark")
+                    ]
+                })
+                .variant(shadcn::ToggleVariant::Outline)
+                .size(shadcn::ToggleSize::Sm)
+                .control_id(control_id)
+                .a11y_label("Toggle bookmark label association")
+                .into_element(cx)
+                .test_id("ui-gallery-toggle-label-control"),
             ])
             .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
             .into_element(cx),

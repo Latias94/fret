@@ -153,8 +153,7 @@ pub(super) fn upload_plan_quad_vertices(
     plan: &RenderPlan,
     viewport_size: (u32, u32),
 ) -> Vec<Option<u32>> {
-    let mut vertices = std::mem::take(&mut renderer.plan_quad_vertices_scratch);
-    let mut bases = std::mem::take(&mut renderer.plan_quad_vertex_bases_scratch);
+    let (mut vertices, mut bases) = renderer.frame_scratch_state.take_plan_quad_scratch();
     build_plan_quad_vertices_into(plan, viewport_size, &mut vertices, &mut bases);
 
     if !vertices.is_empty() {
@@ -166,7 +165,8 @@ pub(super) fn upload_plan_quad_vertices(
         );
     }
 
-    vertices.clear();
-    renderer.plan_quad_vertices_scratch = vertices;
+    renderer
+        .frame_scratch_state
+        .finish_plan_quad_vertices(vertices);
     bases
 }

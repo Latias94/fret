@@ -1,6 +1,6 @@
 # Renderer Modularity (Fearless Refactor v1) — TODO
 
-Status: In progress
+Status: Closed for v1
 
 Last updated: 2026-03-13
 
@@ -128,7 +128,7 @@ ID format:
 
 ### D1. Text
 
-- [~] RMFR-text-030 Split `crates/fret-render-wgpu/src/text/mod.rs` into explicit submodules.
+- [x] RMFR-text-030 Split `crates/fret-render-wgpu/src/text/mod.rs` into explicit submodules.
   - Suggested first slices:
     - font catalog / fallback policy
     - shaping + measurement
@@ -444,14 +444,25 @@ ID format:
       `crates/fret-render-wgpu/src/text/prepare/driver.rs`
     - `crates/fret-render-wgpu/src/text/mod.rs` now delegates directly into that driver
     - the temporary soft-rollback shim has been removed from `crates/fret-render-wgpu/src/text/mod.rs`
-- [ ] RMFR-text-031 Keep `fret_render_text` as the low-level text contract crate and avoid moving
+    - `crates/fret-render-wgpu/src/text/mod.rs` is now an 84-line state shell plus module wiring,
+      which is the intended boring v1 stop-point
+- [x] RMFR-text-031 Keep `fret_render_text` as the low-level text contract crate and avoid moving
   backend-specific state there prematurely.
-- [ ] RMFR-text-032 Add focused tests around any extracted text subdomain whose behavior was
+- [x] RMFR-text-032 Add focused tests around any extracted text subdomain whose behavior was
   previously only covered through the monolithic module.
+  - `crates/fret-render-text` remains a low-level shaping/measure/fallback contract crate.
+  - Backend-specific state stays in `crates/fret-render-wgpu/src/text/*` owner/state modules.
+  - Focused extracted-domain gates now include:
+    - `text::tests::text_locale_changes_font_stack_key`
+    - `text::tests::emoji_sequences_use_color_quads_when_color_font_is_available`
+    - `text::tests::cjk_glyphs_populate_mask_or_subpixel_atlas_when_cjk_lite_font_is_available`
+    - `text_measure_matches_prepare_across_fractional_scale_factors`
+  - Closeout rationale:
+    `docs/workstreams/renderer-modularity-fearless-refactor-v1/CLOSEOUT_AUDIT.md`
 
 ### D2. Renderer state owner
 
-- [~] RMFR-renderer-040 Identify the subdomain state that can move out of `Renderer` without
+- [x] RMFR-renderer-040 Identify the subdomain state that can move out of `Renderer` without
   changing behavior.
   - Landed so far:
     - built-in effect helper flow moved into
@@ -518,6 +529,14 @@ ID format:
       `apply_step_in_place_with_scratch_targets(...)` directly
     - shared chain utility helpers moved into
       `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`
+    - v1 closeout decision:
+      `Renderer` now holds explicit owner shells for text, path, SVG, diagnostics,
+      intermediate pools, materials/custom effects, and v3 pyramid state, so the ownership goal is
+      considered complete for v1
+    - Evidence:
+      - `crates/fret-render-wgpu/src/renderer/mod.rs`
+      - `docs/workstreams/renderer-modularity-fearless-refactor-v1/FINISHING_AUDIT.md`
+      - `docs/workstreams/renderer-modularity-fearless-refactor-v1/CLOSEOUT_AUDIT.md`
     - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns
       `available_scratch_targets(...)`, `is_custom_effect_step(...)`,
       `step_wants_custom_v3_raw(...)`, or `backdrop_source_group_parts(...)` directly
@@ -558,11 +577,157 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/path.rs`
     - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns path intermediate attachments,
       path composite vertex storage, or path composite vertex capacity directly
-  - Current next hotspot:
-    - decide whether scene-encoding cache invalidation evidence belongs with diagnostics state or
-      should stay coupled to `scene_encoding_cache.rs`
-    - evaluate scene-encoding shell and its invalidation/debug evidence as the next owner-state cut
-- [ ] RMFR-renderer-041 Extract cohesive domain owners for:
+    - render-plan reporting/dump owner moved into
+      `crates/fret-render-wgpu/src/renderer/render_plan_reporting.rs`
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns render-plan segment report
+      scratch, per-segment pass-count scratch, or render-plan JSON dump scratch directly
+    - scene-encoding cache owner moved into
+      `crates/fret-render-wgpu/src/renderer/scene_encoding_cache.rs`
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns the scene-encoding cache shell
+      directly; cache key construction, hit/miss bookkeeping, and cache storage now sit behind the
+      owner
+    - scene-encoding cache miss-reason diffing, trace display, and perf miss accounting now also
+      live under
+      `crates/fret-render-wgpu/src/renderer/scene_encoding_cache_diagnostics.rs`
+    - `crates/fret-render-wgpu/src/renderer/scene_encoding_cache.rs` now keeps only cache owner
+      flow plus delegation to the diagnostics companion module
+    - frame scratch owner moved into
+      `crates/fret-render-wgpu/src/renderer/frame_scratch.rs`
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns viewport-uniform scratch,
+      render-space scratch, plan-quad vertex scratch, or plan-quad base scratch directly
+    - render-text dump owner moved into
+      `crates/fret-render-wgpu/src/renderer/render_text_dump.rs`
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns render-text dump scratch
+      directly; dump collection/output scratch now sits behind that owner
+    - render-scene config owner moved into
+      `crates/fret-render-wgpu/src/renderer/render_scene_config.rs`
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns render-plan strict-clear
+      config, path MSAA requested samples, or debug postprocess knobs directly
+    - geometry/upload owner moved into
+      `crates/fret-render-wgpu/src/renderer/geometry_upload.rs`
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns quad instance/path paint/text
+      paint ring buffers or viewport/text/path vertex upload rings directly
+    - frame-binding owner moved into
+      `crates/fret-render-wgpu/src/renderer/frame_binding_state.rs`
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns `uniform_bind_group` or
+      `UniformResources` directly
+    - render-scene dispatch owner moved into
+      `crates/fret-render-wgpu/src/renderer/render_scene/dispatch_state.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/dispatch.rs` now keeps only transient
+      execution-state wiring plus delegation
+    - render-scene executor lifecycle glue moved into
+      `crates/fret-render-wgpu/src/renderer/render_scene/executor_lifecycle.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/executor.rs` now keeps only pass-record
+      dispatch while target write-epoch and `ReleaseTarget` glue sit behind helper methods
+    - render-scene recorder execution facade moved into
+      `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now routes the
+      `CustomEffectV3` pass through executor helpers for source/mask view lookup, pyramid
+      reuse/scratch/cache, and destination intermediate allocation
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/blit.rs` and `blur.rs` now
+      route fullscreen source/mask view lookup and destination intermediate allocation through the
+      same executor helper surface
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scale_nearest.rs` now routes
+      source/mask view lookup and destination intermediate allocation through that same facade
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/path_clip_mask.rs` now routes
+      mask-target acquisition and clip-path cache copy/store through executor helpers instead of
+      touching frame-target and pool/cache owners inline
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/backdrop_warp.rs` now routes
+      source/mask view lookup and destination intermediate allocation through the executor facade
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/path_msaa.rs` now routes
+      pass target allocation through the same facade while leaving path-intermediate/composite draw
+      logic local to the recorder
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs` now allocates
+      pass targets in the recorder shell before delegating to `Renderer::record_scene_draw_range_pass(...)`
+    - shared fullscreen param/texture helper flow in
+      `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now routes common
+      source/mask view lookup and destination allocation through `RenderSceneExecutor` helpers
+    - the remaining bespoke effect paths in
+      `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now also route
+      `CustomEffectV2`, `CompositePremul`, `ClipMask`, and the `CustomEffectV3` source-pyramid
+      fallback through the same executor helper surface for color/mask view lookup and
+      color/mask target allocation
+    - effect-family bind-group builder flow for `CustomEffectV2` and `CompositePremul` now lives
+      under
+      `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_bindings.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+      `BindGroupDescriptor` assembly branches for those two recorder paths directly
+    - `CustomEffectV3` main-pass bind-group assembly and unmasked / uniform-mask / texture-mask
+      pipeline selection now also live under
+      `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_bindings.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+      main `CustomEffectV3` bind-group descriptor branches or pipeline choice table directly
+    - `CustomEffectV3` pyramid build blit/downsample scissor projection and pass-loop glue now
+      live under `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+      pyramid-build loop directly; it now only decides whether to build and which pyramid view to
+      use afterward
+    - `CustomEffectV3` source-view preparation now also lives under
+      `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+      `src` / `src_raw` / final `src_pyramid` preparation graph directly
+    - `CustomEffectV3` user-image fallback resolution, sampler choice, and incompatible-image perf
+      accounting now also live under
+      `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+      `user0` / `user1` preparation flow directly
+    - `CustomEffectV3` param/meta upload and final masked/unmasked dispatch now live under
+      `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_custom_v3.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+      v3 upload/dispatch body directly
+    - the remaining `CustomEffectV3` orchestration entrypoint now also lives under
+      `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_custom_v3.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+      `CustomEffectV3` recorder path at all; `recorders/mod.rs` now re-exports it directly from
+      the family-local module
+    - the full `CustomEffectV2` recorder entrypoint now also lives under
+      `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_custom_v2.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+      `CustomEffectV2` recorder path; `recorders/mod.rs` now re-exports it directly from the
+      family-local module while shared param packing still stays in `effects.rs`
+    - the `CompositePremul` recorder entrypoint now also lives under
+      `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_composite.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+      `CompositePremul` recorder path; `recorders/mod.rs` now re-exports it directly from the
+      family-local module while shared bind-group and quad-pass helpers stay in shared seams
+    - the `ClipMask` recorder entrypoint now also lives under
+      `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_clip_mask.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+      `ClipMask` recorder path; `recorders/mod.rs` now re-exports it directly from the
+      family-local module while shared clip-mask pipeline and pass helpers stay in shared seams
+    - the remaining shared fullscreen helper flow now also lives under
+      `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_shared.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now keeps only the
+      remaining recorder family entrypoints while shared parameter packing and fullscreen
+      param/texture helper flow moved behind that dedicated helper module
+    - the `CustomEffectV1` recorder entrypoint now also lives under
+      `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_custom_v1.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+      `CustomEffectV1` recorder path; `recorders/mod.rs` now re-exports it directly from the
+      family-local module while shared fullscreen helpers stay in `effects_shared.rs`
+    - render-plan dump summaries now live under
+      `crates/fret-render-wgpu/src/renderer/render_plan_dump_summary.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps JSON schema/pass
+      encoding plus env-triggered dump emission while custom-effect / target-usage / v3
+      diagnostics summaries moved behind the companion summary module
+    - render-plan dump pass/postprocess/marker encoders now live under
+      `crates/fret-render-wgpu/src/renderer/render_plan_dump_encode.rs`
+    - render-plan dump segment/count/degradation assembly now routes through
+      `crates/fret-render-wgpu/src/renderer/render_plan_dump_assemble.rs` while JSON encoding
+      stays behind the companion encode module and final dump emission stays in
+      `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs`
+    - render-plan dump env gating and file emission now live under
+      `crates/fret-render-wgpu/src/renderer/render_plan_dump_emit.rs`
+    - render-plan dump segment/count/degradation scratch rebuild plus JSON assembly now live under
+      `crates/fret-render-wgpu/src/renderer/render_plan_dump_assemble.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps serialization and only
+      a thin gate/assemble/emit orchestration shell
+  - Finishing audit decision:
+    - `docs/workstreams/renderer-modularity-fearless-refactor-v1/FINISHING_AUDIT.md` closes the
+      remaining `effects.rs` hotspot for v1: the current post-helper-extraction surface is the
+      intended long-term home for `AlphaThreshold`, `ColorAdjust`, `ColorMatrix`, `Dither`,
+      `Noise`, and `DropShadow` unless future families introduce new owner-specific state
+- [x] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG
   - materials/custom effects
@@ -585,12 +750,61 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/path.rs`
     - path intermediate / composite scratch state now lives under
       `crates/fret-render-wgpu/src/renderer/path.rs`
-- [ ] RMFR-renderer-042 Reduce cross-domain mutable coupling inside `Renderer`.
-- [ ] RMFR-renderer-043 Keep service trait implementations readable after extraction.
+    - render-plan reporting / dump state now lives under
+      `crates/fret-render-wgpu/src/renderer/render_plan_reporting.rs`
+    - scene-encoding cache state now lives under
+      `crates/fret-render-wgpu/src/renderer/scene_encoding_cache.rs`
+    - frame scratch state now lives under
+      `crates/fret-render-wgpu/src/renderer/frame_scratch.rs`
+    - render-text dump state now lives under
+      `crates/fret-render-wgpu/src/renderer/render_text_dump.rs`
+    - render-scene config state now lives under
+      `crates/fret-render-wgpu/src/renderer/render_scene_config.rs`
+    - geometry/upload state now lives under
+      `crates/fret-render-wgpu/src/renderer/geometry_upload.rs`
+    - frame-binding state now lives under
+      `crates/fret-render-wgpu/src/renderer/frame_binding_state.rs`
+    - render-scene dispatch state now lives under
+      `crates/fret-render-wgpu/src/renderer/render_scene/dispatch_state.rs`
+    - render-scene executor lifecycle glue now lives under
+      `crates/fret-render-wgpu/src/renderer/render_scene/executor_lifecycle.rs`
+    - finishing audit now records v1 closure evidence in
+      `docs/workstreams/renderer-modularity-fearless-refactor-v1/FINISHING_AUDIT.md`
+- [x] RMFR-renderer-042 Reduce cross-domain mutable coupling inside `Renderer`.
+  - Landed so far:
+    - custom-effect hash/dedup/refcount/index mutation now lives under
+      `crates/fret-render-wgpu/src/renderer/material_effects.rs`
+    - custom-effect pipeline-cache eviction now lives behind
+      `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs::evict_custom_effect_pipelines(...)`
+    - the custom-effect service path now coordinates those owner helpers instead of mutating
+      registry and pipeline maps inline from `services.rs`
+    - material register/unregister refcount and descriptor-index mutation now also live under
+      `crates/fret-render-wgpu/src/renderer/material_effects.rs`
+    - SVG unregister raster draining now also lives behind
+      `crates/fret-render-wgpu/src/renderer/svg/mod.rs` and
+      `crates/fret-render-wgpu/src/renderer/svg/cache.rs::unregister_svg_rasters(...)`
+    - render-plan perf-field mapping and degradation perf accumulation now also live under
+      `crates/fret-render-wgpu/src/renderer/render_plan_reporting_perf.rs`
+    - finishing audit concludes the remaining `Renderer` fields are owner handles rather than loose
+      cross-domain mutable bookkeeping for v1
+- [x] RMFR-renderer-043 Keep service trait implementations readable after extraction.
+  - Landed so far:
+    - custom-effect service WGSL validation, capability gating, registration, unregister flow, and
+      focused tests now live under
+      `crates/fret-render-wgpu/src/renderer/services_custom_effects.rs`
+    - SVG/material service impls plus sampled-material capability gating now also live under
+      `crates/fret-render-wgpu/src/renderer/services_assets.rs`
+    - `crates/fret-render-wgpu/src/renderer/services.rs` now keeps text/path service impls only
+    - `crates/fret-render-wgpu/src/renderer/render_plan_reporting.rs` now keeps reporting owner
+      orchestration only, while perf counter collection lives under
+      `crates/fret-render-wgpu/src/renderer/render_plan_reporting_perf.rs`
+    - finishing audit locks the current v1 boring shape:
+      `crates/fret-render-wgpu/src/renderer/services.rs` stays as the `TextService`/`PathService`
+      home and does not need further splitting
 
 ### D3. Shaders and pipelines
 
-- [ ] RMFR-shaders-050 Audit whether `renderer/shaders.rs` needs ownership-oriented splitting or
+- [x] RMFR-shaders-050 Audit whether `renderer/shaders.rs` needs ownership-oriented splitting or
   only comment/index cleanup.
   - Landed so far:
     - scale-nearest WGSL sources moved into
@@ -643,9 +857,19 @@ ID format:
     - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts `PATH_SHADER` inline
     - `crates/fret-render-wgpu/src/renderer/shaders.rs` now acts as a shader index/assembly file
       instead of a large inline-WGSL store
-- [ ] RMFR-shaders-051 Avoid splitting shader source files purely for line count if no boundary
+    - shader audit now records the v1 stop-point in
+      `docs/workstreams/renderer-modularity-fearless-refactor-v1/SHADERS_AUDIT.md`: keep
+      `shaders.rs` as the shader index/assembly surface
+- [x] RMFR-shaders-051 Avoid splitting shader source files purely for line count if no boundary
   benefit exists.
-- [~] RMFR-shaders-052 Keep WGSL validation tests aligned with any source reorganization.
+  - Landed so far:
+    - `crates/fret-render-wgpu/src/renderer/shaders.rs` is now 331 lines and no longer carries
+      inline WGSL bodies
+    - the reviewable units now live under
+      `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/*.wgsl`
+    - shader audit now closes the remaining split question for v1:
+      no further Rust-side splitting is needed without a new ownership boundary
+- [x] RMFR-shaders-052 Keep WGSL validation tests aligned with any source reorganization.
   - Landed so far:
     - `crates/fret-render-wgpu/src/renderer/tests.rs` now validates the `backdrop_warp_image`
       shader variants explicitly during WGSL parse and WebGPU validation coverage.
@@ -676,12 +900,15 @@ ID format:
     - the existing local naga validation test in
       `crates/fret-render-wgpu/src/renderer/shaders.rs` continued to validate `PATH_SHADER`
       unchanged
+    - shader audit now records these native WGSL parse/naga validation gates as sufficient v1
+      closure evidence, while the conditional wasm/browser Tint guard remains available for future
+      drift detection
 
 ---
 
 ## E. Public Export Tightening
 
-- [~] RMFR-exports-060 Review cache/registry-style exports and remove public visibility where no
+- [x] RMFR-exports-060 Review cache/registry-style exports and remove public visibility where no
   real consumer exists.
   - Landed so far:
     - `crates/fret-render-wgpu/src/lib.rs` no longer re-exports zero-first-party-consumer
@@ -696,6 +923,8 @@ ID format:
       path
     - `crates/fret-render-wgpu/src/svg.rs` now keeps only the internal fit-mode SVG raster
       entrypoints that active renderer code still uses
+    - the remaining cache/registry helper types now sit behind private backend modules rather than
+      the crate root, so they are no longer accidental public surface area
 - [x] RMFR-exports-061 Decide whether backend-only diagnostics stores belong in the stable default
   facade or under a more explicit backend namespace.
   - Consumer rescan confirmed diagnostics/report stores and their immediate sample/count wrapper
@@ -727,7 +956,13 @@ ID format:
     advanced snapshot names
 - [x] RMFR-gates-072 Add targeted smoke coverage for host-provided GPU topology if absent.
   - Targeted gate: `cargo nextest run -p fret-render-wgpu renderer_accepts_host_provided_gpu_topology`
-- [ ] RMFR-gates-073 Keep render-plan semantics guardrails green for any planning/execution change.
+- [x] RMFR-gates-073 Keep render-plan semantics guardrails green for any planning/execution change.
+  - Latest closeout bundle:
+    - `python3 tools/check_layering.py`
+    - `CARGO_TARGET_DIR=target-codex-render cargo check -p fret-render-wgpu --tests`
+    - `CARGO_TARGET_DIR=target-codex-render cargo nextest run -p fret-render-wgpu -E 'test(requested_and_emitted_custom_effect_counters_track_all_versions) | test(degradation_counters_track_reason_and_kind_totals) | test(diff_segment_reports_tracks_shape_changes_and_pass_growth) | test(render_plan_dump_assembly_tracks_segment_passes_and_counts) | test(custom_effect_summaries_include_abi_and_input_counts) | test(target_usage_tracks_max_size) | test(encode_custom_effect_v3_pass_keeps_distinct_source_targets)'`
+    - `CARGO_TARGET_DIR=target-codex-render cargo nextest run -p fret-render-wgpu -E 'test(text_locale_changes_font_stack_key) | test(emoji_sequences_use_color_quads_when_color_font_is_available) | test(cjk_glyphs_populate_mask_or_subpixel_atlas_when_cjk_lite_font_is_available) | test(text_measure_matches_prepare_across_fractional_scale_factors)'`
+    - `CARGO_TARGET_DIR=target-codex-render cargo nextest run -p fret-render -p fret-render-wgpu -E 'test(facade_surface_snapshot_matches_v1_contract_buckets) | test(renderer_accepts_host_provided_gpu_topology)'`
 - [x] RMFR-gates-074 If facade docs/examples change, leave evidence anchors in the workstream docs.
   - Evidence anchors:
     - `crates/fret-render/src/lib.rs`
@@ -741,25 +976,49 @@ ID format:
 
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
-- [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: path intermediate/composite scratch owner state now lives under
-    `crates/fret-render-wgpu/src/renderer/path.rs`, and
-    `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns path intermediate attachments,
-    path composite vertex storage, or path composite vertex capacity directly.
-- [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
-- [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
-- [ ] RMFR-docs-084 Decide whether this workstream also needs:
+- [x] RMFR-docs-081 Update this tracker as refactor stages land.
+  - Latest landed slice: render-plan dump assembly/emit ownership now routes through dedicated
+    companion modules: `crates/fret-render-wgpu/src/renderer/render_plan_dump_emit.rs` now owns
+    env gating and file emission, `crates/fret-render-wgpu/src/renderer/render_plan_dump_assemble.rs`
+    now owns scratch rebuild plus JSON assembly, and
+    `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps serialization and thin
+    orchestration only.
+- [x] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
+  - Closeout decision: no new ADR was required for this v1 workstream.
+  - Existing topology/process contracts remain covered by `docs/architecture.md` and
+    `docs/adr/0201-renderer-internals-modularization-and-gates-v1.md`.
+- [x] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
+  - No new ADR or ADR revision landed for closeout, so no new alignment row change was required.
+  - The existing alignment row for ADR 0201 remains current.
+- [x] RMFR-docs-084 Decide whether this workstream also needs:
   - `EVIDENCE_AND_GATES.md`
   - `OPEN_QUESTIONS.md`
   - `MIGRATION_MATRIX.md`
+  - Closeout decision: no extra workstream files are needed for v1.
+  - The current doc set plus `FINISHING_AUDIT.md`, `SHADERS_AUDIT.md`, and
+    `CLOSEOUT_AUDIT.md` is sufficient.
 
 ---
 
 ## H. Cleanup / Exit
 
-- [ ] RMFR-cleanup-090 Finish migrating first-party callers to the curated facade surface.
-- [ ] RMFR-cleanup-091 Remove or quarantine exports that are now explicitly internal-only.
-- [ ] RMFR-cleanup-092 Re-check whether additional crate splits are still necessary after internal
+- [x] RMFR-cleanup-090 Finish migrating first-party callers to the curated facade surface.
+  - Closeout rescan found first-party callers already aligned with the curated `fret-render`
+    surface; no extra migrations were needed beyond the slices already landed.
+- [x] RMFR-cleanup-091 Remove or quarantine exports that are now explicitly internal-only.
+  - Root re-exports for zero-consumer cache/registry helpers are gone, the detached legacy
+    `svg_cache.rs` path is retired, and remaining helper types stay behind private backend modules.
+- [x] RMFR-cleanup-092 Re-check whether additional crate splits are still necessary after internal
   modularization.
-- [ ] RMFR-cleanup-093 Make sure the final docs teach one boring renderer integration story for
+- [x] RMFR-cleanup-093 Make sure the final docs teach one boring renderer integration story for
   each supported topology.
+  - Closeout decision: no additional renderer crate split is necessary for v1.
+  - The final boring integration story now lives in:
+    - `crates/fret-render/src/lib.rs`
+    - `crates/fret-render-wgpu/src/lib.rs`
+    - `docs/crate-usage-guide.md`
+    - `docs/workstreams/renderer-modularity-fearless-refactor-v1/CLOSEOUT_AUDIT.md`
+
+## Closure Summary
+
+All `RMFR-*` tracker items are now closed for v1.

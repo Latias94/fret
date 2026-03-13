@@ -972,7 +972,7 @@ fn build_context_menu_demo<H: UiHost>(
         ContextMenuShortcut,
     };
 
-    ContextMenu::new(open)
+    ContextMenu::from_open(open)
         // new-york-v4 context-menu-demo: `ContextMenuContent className="w-52"`.
         .min_width(Px(208.0))
         // new-york-v4 context-menu-demo: `ContextMenuSubContent className="w-44"`.
@@ -3226,7 +3226,7 @@ fn build_dropdown_menu_dialog_open_snapshot(
             )
             .children([decl_icon::icon(cx, fret_icons::ids::ui::MORE_HORIZONTAL)]);
 
-        DropdownMenu::new(open.clone())
+        DropdownMenu::from_open(open.clone())
             .min_width(Px(160.0))
             .align(DropdownMenuAlign::End)
             .into_element(
@@ -3382,7 +3382,7 @@ fn build_item_dropdown_open_snapshot(
             })
             .collect();
 
-        let dropdown = DropdownMenu::new(open.clone())
+        let dropdown = DropdownMenu::from_open(open.clone())
             .min_width(Px(288.0))
             .align(DropdownMenuAlign::End)
             .into_element(cx, move |cx| button.into_element(cx), |_cx| entries);
@@ -3453,7 +3453,7 @@ fn build_dropdown_menu_checkboxes_demo(
         DropdownMenuLabel,
     };
 
-    DropdownMenu::new(open.clone())
+    DropdownMenu::from_open(open.clone())
         // new-york-v4 dropdown-menu-checkboxes: `DropdownMenuContent className="w-56"`.
         .min_width(Px(224.0))
         .into_element(
@@ -3494,7 +3494,7 @@ fn build_dropdown_menu_radio_group_demo(
         DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
     };
 
-    DropdownMenu::new(open.clone())
+    DropdownMenu::from_open(open.clone())
         // new-york-v4 dropdown-menu-radio-group: `DropdownMenuContent className="w-56"`.
         .min_width(Px(224.0))
         .into_element(
@@ -3569,7 +3569,7 @@ fn render_button_group_demo_dropdown_menu<H: UiHost>(
 
     let label: Model<Option<Arc<str>>> = cx.app.models_mut().insert(Some(Arc::from("personal")));
 
-    let dropdown = DropdownMenu::new(open.clone())
+    let dropdown = DropdownMenu::from_open(open.clone())
         .align(DropdownMenuAlign::End)
         // new-york-v4 button-group-demo: `DropdownMenuContent className="w-52"`.
         .min_width(Px(208.0))
@@ -3711,7 +3711,7 @@ fn assert_button_group_demo_constrained_menu_item_height_matches(web_name: &str)
             )
         }
 
-        DropdownMenu::new(open.clone())
+        DropdownMenu::from_open(open.clone())
             .align(DropdownMenuAlign::End)
             // new-york-v4 button-group-demo: `DropdownMenuContent className="w-52"`.
             .min_width(Px(208.0))
@@ -3850,7 +3850,7 @@ fn assert_button_group_demo_constrained_menu_content_insets_match(web_name: &str
             )
         }
 
-        DropdownMenu::new(open.clone())
+        DropdownMenu::from_open(open.clone())
             .align(DropdownMenuAlign::End)
             .min_width(Px(208.0))
             .into_element(
@@ -3997,7 +3997,7 @@ fn assert_mode_toggle_constrained_menu_item_height_matches(web_name: &str) {
             )
         }
 
-        DropdownMenu::new(open.clone())
+        DropdownMenu::from_open(open.clone())
             .align(DropdownMenuAlign::End)
             .into_element(
                 cx,
@@ -4094,7 +4094,7 @@ fn assert_mode_toggle_constrained_menu_content_insets_match(web_name: &str) {
             )
         }
 
-        DropdownMenu::new(open.clone())
+        DropdownMenu::from_open(open.clone())
             .align(DropdownMenuAlign::End)
             .into_element(
                 cx,
@@ -4202,7 +4202,7 @@ fn assert_combobox_dropdown_menu_overlay_placement_matches(web_name: &str) {
                 )
                 .children([decl_icon::icon(cx, fret_icons::ids::ui::MORE_HORIZONTAL)]);
 
-            DropdownMenu::new(open.clone())
+            DropdownMenu::from_open(open.clone())
                 .align(DropdownMenuAlign::End)
                 // new-york-v4 combobox-dropdown-menu: `DropdownMenuContent className="w-[200px]"`.
                 .min_width(Px(200.0))
@@ -4301,7 +4301,7 @@ fn assert_combobox_dropdown_menu_constrained_menu_item_height_matches(web_name: 
             )
             .children([decl_icon::icon(cx, fret_icons::ids::ui::MORE_HORIZONTAL)]);
 
-        DropdownMenu::new(open.clone())
+        DropdownMenu::from_open(open.clone())
             .align(DropdownMenuAlign::End)
             .min_width(Px(200.0))
             .into_element(
@@ -4424,7 +4424,7 @@ fn assert_combobox_dropdown_menu_constrained_menu_content_insets_match(web_name:
             )
             .children([decl_icon::icon(cx, fret_icons::ids::ui::MORE_HORIZONTAL)]);
 
-        DropdownMenu::new(open.clone())
+        DropdownMenu::from_open(open.clone())
             .align(DropdownMenuAlign::End)
             .min_width(Px(200.0))
             .into_element(
@@ -4518,7 +4518,7 @@ fn build_breadcrumb_dropdown_open_snapshot(theme: &WebGoldenTheme) -> fret_core:
             DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem,
         };
 
-        let dropdown = DropdownMenu::new(open.clone()).align(DropdownMenuAlign::Start);
+        let dropdown = DropdownMenu::from_open(open.clone()).align(DropdownMenuAlign::Start);
 
         bc::Breadcrumb::new().into_element(cx, |cx| {
             vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
@@ -4681,7 +4681,7 @@ fn assert_dropdown_menu_demo_constrained_overlay_placement_matches(web_name: &st
                 DropdownMenuLabel, DropdownMenuShortcut,
             };
 
-            DropdownMenu::new(open.clone())
+            DropdownMenu::from_open(open.clone())
                 // new-york-v4 dropdown-menu-demo: `DropdownMenuContent className="w-56"`.
                 .min_width(Px(224.0))
                 .into_element(
@@ -4778,7 +4778,7 @@ fn assert_dropdown_menu_demo_constrained_menu_item_height_matches(web_name: &str
             DropdownMenuLabel, DropdownMenuShortcut,
         };
 
-        DropdownMenu::new(open.clone())
+        DropdownMenu::from_open(open.clone())
             .min_width(Px(224.0))
             .into_element(
                 cx,
@@ -4946,7 +4946,7 @@ fn assert_dropdown_menu_demo_profile_item_padding_and_shortcut_match_impl(web_na
             DropdownMenuLabel, DropdownMenuShortcut,
         };
 
-        DropdownMenu::new(open.clone())
+        DropdownMenu::from_open(open.clone())
             .min_width(Px(224.0))
             .into_element(
                 cx,
@@ -5373,7 +5373,7 @@ fn assert_dropdown_menu_demo_constrained_menu_content_insets_match(web_name: &st
             DropdownMenuLabel, DropdownMenuShortcut,
         };
 
-        DropdownMenu::new(open.clone())
+        DropdownMenu::from_open(open.clone())
             .min_width(Px(224.0))
             .into_element(
                 cx,
@@ -5525,7 +5525,7 @@ fn assert_dropdown_menu_demo_constrained_scroll_state_matches(web_name: &str) {
             DropdownMenuLabel, DropdownMenuShortcut,
         };
 
-        DropdownMenu::new(open.clone())
+        DropdownMenu::from_open(open.clone())
             .min_width(Px(224.0))
             .into_element(
                 cx,
@@ -5669,7 +5669,7 @@ fn assert_dropdown_menu_demo_wheel_scroll_matches_web_scrolled(web_name: &str, w
             DropdownMenuLabel, DropdownMenuShortcut,
         };
 
-        let el = DropdownMenu::new(open.clone())
+        let el = DropdownMenu::from_open(open.clone())
             .min_width(Px(224.0))
             .into_element(
                 cx,
@@ -5853,7 +5853,7 @@ fn assert_dropdown_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
         FrameId(1),
         false,
         |cx| {
-            let el = DropdownMenu::new(open.clone())
+            let el = DropdownMenu::from_open(open.clone())
                 // new-york-v4 dropdown-menu-demo: `DropdownMenuContent className="w-56"`.
                 .min_width(Px(224.0))
                 .into_element(
@@ -5885,7 +5885,7 @@ fn assert_dropdown_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
         FrameId(2),
         true,
         |cx| {
-            let el = DropdownMenu::new(open.clone())
+            let el = DropdownMenu::from_open(open.clone())
                 .min_width(Px(224.0))
                 .into_element(
                     cx,
@@ -5935,7 +5935,7 @@ fn assert_dropdown_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
             FrameId(3 + tick),
             request_semantics,
             |cx| {
-                let el = DropdownMenu::new(open.clone())
+                let el = DropdownMenu::from_open(open.clone())
                     .min_width(Px(224.0))
                     .into_element(
                         cx,
@@ -6128,7 +6128,7 @@ fn build_button_group_demo_submenu_snapshot(web_name: &str) -> (WebGolden, Seman
     let label_value: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("personal")));
 
     let render = |cx: &mut ElementContext<'_, App>| {
-        DropdownMenu::new(open.clone())
+        DropdownMenu::from_open(open.clone())
             .align(DropdownMenuAlign::End)
             // new-york-v4 button-group-demo: `DropdownMenuContent className="w-52"`.
             .min_width(Px(208.0))
@@ -6513,7 +6513,7 @@ fn build_dropdown_menu_demo_submenu_snapshot(web_name: &str) -> (WebGolden, Sema
             DropdownMenuLabel, DropdownMenuShortcut,
         };
 
-        DropdownMenu::new(open.clone())
+        DropdownMenu::from_open(open.clone())
             .min_width(Px(224.0))
             .into_element(
                 cx,
@@ -8574,7 +8574,7 @@ fn assert_context_menu_demo_constrained_overlay_placement_matches(web_name: &str
             let checked_full_urls = cx.local_model_keyed("checked_full_urls", || false);
             let radio_person = cx.local_model_keyed("radio_person", || Some(Arc::from("pedro")));
 
-            fret_ui_shadcn::ContextMenu::new(open.clone())
+            fret_ui_shadcn::ContextMenu::from_open(open.clone())
                 // new-york-v4 context-menu-demo: `ContextMenuContent className="w-52"`.
                 .min_width(Px(208.0))
                 // new-york-v4 context-menu-demo: `ContextMenuSubContent className="w-44"`.
@@ -9371,7 +9371,7 @@ fn assert_context_menu_demo_constrained_scroll_state_matches(web_name: &str) {
             ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItemSpec, ContextMenuShortcut,
         };
 
-        ContextMenu::new(open.clone())
+        ContextMenu::from_open(open.clone())
             .min_width(Px(208.0))
             .submenu_min_width(Px(176.0))
             .into_element(
@@ -9561,7 +9561,7 @@ fn assert_context_menu_demo_wheel_scroll_matches_web_scrolled(web_name: &str, wh
             ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItemSpec, ContextMenuShortcut,
         };
 
-        let el = ContextMenu::new(open.clone())
+        let el = ContextMenu::from_open(open.clone())
             .min_width(Px(208.0))
             .submenu_min_width(Px(176.0))
             .into_element(

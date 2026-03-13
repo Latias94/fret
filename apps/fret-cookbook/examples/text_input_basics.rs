@@ -164,28 +164,22 @@ impl View for TextInputBasicsView {
             .gap(Space::N2)
             .items_center();
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(
-                cx,
-                shadcn::CardHeader::build(|cx, out| {
-                    out.push_ui(cx, shadcn::CardTitle::new("Text input basics"));
-                    out.push_ui(
-                        cx,
-                        shadcn::CardDescription::new(
+        let card = shadcn::card(|cx| {
+            ui::children![cx;
+                shadcn::card_header(|cx| {
+                    ui::children![cx;
+                        shadcn::card_title("Text input basics"),
+                        shadcn::card_description(
                             "A minimal Input example (Enter = submit, Escape = clear) with numeric semantics gates.",
                         ),
-                    );
+                    ]
                 }),
-            );
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(
-                        cx,
-                        ui::v_flex(|cx| ui::children![cx; input, buttons, stats]).gap(Space::N3),
-                    );
+                shadcn::card_content(|cx| {
+                    ui::children![cx;
+                        ui::v_flex(|cx| ui::children![cx; input, buttons, stats]).gap(Space::N3)
+                    ]
                 }),
-            );
+            ]
         })
         .ui()
         .w_full()

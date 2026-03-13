@@ -974,7 +974,7 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
             #[cfg(debug_assertions)]
             {
                 let frame_id = cx.frame_id.0;
-                cx.with_state(UseStateSlot::<T>::default, |slot| {
+                cx.root_state(UseStateSlot::<T>::default, |slot| {
                     if slot.last_frame_id != frame_id {
                         slot.last_frame_id = frame_id;
                         slot.calls_in_frame = 0;
@@ -991,14 +991,14 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
                 });
             }
 
-            let existing = cx.with_state(UseStateSlot::<T>::default, |slot| slot.model.clone());
+            let existing = cx.root_state(UseStateSlot::<T>::default, |slot| slot.model.clone());
             if let Some(model) = existing {
                 return model;
             }
 
             let init = init.take().expect("use_state init closure is available");
             let model = cx.app.models_mut().insert(init());
-            cx.with_state(UseStateSlot::<T>::default, |slot| {
+            cx.root_state(UseStateSlot::<T>::default, |slot| {
                 if slot.model.is_none() {
                     slot.model = Some(model.clone());
                 }

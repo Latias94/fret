@@ -16,7 +16,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .p_4()
     .into_element(cx);
 
-    shadcn::ScrollArea::new([content])
+    shadcn::scroll_area(cx, |_cx| [content])
         .refine_layout(LayoutRefinement::default().w_px(Px(350.0)).h_px(Px(200.0)))
         .into_element(cx)
         .test_id("ui-gallery-scroll-area-usage")

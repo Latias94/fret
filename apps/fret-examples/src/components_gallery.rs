@@ -1020,12 +1020,11 @@ impl ComponentsGalleryDriver {
                                             },
                                             |cx| {
                                                 let tooltip_content =
-                                                    shadcn::TooltipContent::new(vec![
-                                                        shadcn::TooltipContent::text(
-                                                            cx,
+                                                    shadcn::TooltipContent::build(cx, |_cx| {
+                                                        [shadcn::TooltipContent::text(
                                                             "Tooltip: hover intent + placement",
-                                                        ),
-                                                    ]);
+                                                        )]
+                                                    });
                                                 let tooltip = shadcn::Tooltip::new(
                                                     cx,
                                                     shadcn::Button::new("Tooltip (hover)")
@@ -1109,7 +1108,7 @@ impl ComponentsGalleryDriver {
                                                 };
 
                                                 let dropdown =
-                                                    shadcn::DropdownMenu::new(dropdown_open.clone())
+                                                    shadcn::DropdownMenu::from_open(dropdown_open.clone())
                                                     .into_element(
                                                         cx,
                                                         |cx| {
@@ -1142,7 +1141,7 @@ impl ComponentsGalleryDriver {
                                                     );
 
                                                 let context_menu =
-                                                    shadcn::ContextMenu::new(context_menu_open.clone())
+                                                    shadcn::ContextMenu::from_open(context_menu_open.clone())
                                                         .into_element(
                                                             cx,
                                                             |cx| {

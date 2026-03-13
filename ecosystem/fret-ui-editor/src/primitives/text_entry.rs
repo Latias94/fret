@@ -32,10 +32,11 @@ pub(crate) struct EditorTextEntryFocusState {
     timer: Option<TimerToken>,
 }
 
+#[track_caller]
 pub(crate) fn editor_text_entry_focus_state<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> Arc<Mutex<EditorTextEntryFocusState>> {
-    cx.with_state(
+    cx.slot_state(
         || Arc::new(Mutex::new(EditorTextEntryFocusState::default())),
         |state| state.clone(),
     )

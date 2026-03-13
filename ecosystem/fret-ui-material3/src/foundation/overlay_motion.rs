@@ -21,6 +21,7 @@ pub struct OverlayOpenCloseMotion {
     pub scale: f32,
 }
 
+#[track_caller]
 pub fn drive_overlay_open_close_motion<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: bool,
@@ -58,7 +59,7 @@ pub fn drive_overlay_open_close_motion<H: UiHost>(
     // 1e-3. Keep overlay mount/unmount decisions stable by snapping close-to-target values.
     let settle_epsilon = 0.01;
 
-    let (scale, alpha, animating, within_close_grace) = cx.with_state(State::default, |st| {
+    let (scale, alpha, animating, within_close_grace) = cx.slot_state(State::default, |st| {
         if open {
             st.closing_started_at = None;
         } else if st.last_open && st.closing_started_at.is_none() {

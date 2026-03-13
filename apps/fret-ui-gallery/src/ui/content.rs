@@ -307,8 +307,6 @@ fn page_preview(
     let time_picker_open = models.time_picker_open.clone();
     #[cfg(feature = "gallery-material3")]
     let time_picker_selected = models.time_picker_selected.clone();
-    let resizable_h_fractions = models.resizable_h_fractions.clone();
-    let resizable_v_fractions = models.resizable_v_fractions.clone();
     let data_table_state = models.data_table_state.clone();
     #[cfg(feature = "gallery-dev")]
     let data_grid_selected_row = models.data_grid_selected_row.clone();
@@ -347,21 +345,15 @@ fn page_preview(
     let material3_modal_navigation_drawer_open =
         models.material3_modal_navigation_drawer_open.clone();
     #[cfg(feature = "gallery-material3")]
-    let material3_dialog_open = models.material3_dialog_open.clone();
-    #[cfg(feature = "gallery-material3")]
     let material3_text_field_value = models.material3_text_field_value.clone();
     #[cfg(feature = "gallery-material3")]
     let material3_text_field_disabled = models.material3_text_field_disabled.clone();
     #[cfg(feature = "gallery-material3")]
     let material3_text_field_error = models.material3_text_field_error.clone();
     #[cfg(feature = "gallery-material3")]
-    let material3_autocomplete_value = models.material3_autocomplete_value.clone();
-    #[cfg(feature = "gallery-material3")]
     let material3_autocomplete_disabled = models.material3_autocomplete_disabled.clone();
     #[cfg(feature = "gallery-material3")]
     let material3_autocomplete_error = models.material3_autocomplete_error.clone();
-    #[cfg(feature = "gallery-material3")]
-    let material3_autocomplete_dialog_open = models.material3_autocomplete_dialog_open.clone();
     #[cfg(feature = "gallery-material3")]
     let material3_menu_open = models.material3_menu_open.clone();
     let text_input = models.text_input.clone();
@@ -576,9 +568,7 @@ fn page_preview(
             date_picker_month,
             date_picker_selected,
         ),
-        PAGE_RESIZABLE => {
-            pages::preview_resizable(cx, resizable_h_fractions, resizable_v_fractions)
-        }
+        PAGE_RESIZABLE => pages::preview_resizable(cx),
         PAGE_DATA_TABLE => pages::preview_data_table(cx, data_table_state),
         #[cfg(feature = "gallery-dev")]
         PAGE_DATA_GRID => preview_data_grid(cx, data_grid_selected_row),
@@ -739,7 +729,7 @@ fn page_preview(
         #[cfg(feature = "gallery-material3")]
         PAGE_MATERIAL3_BOTTOM_SHEET => {
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-                pages::material3::preview_material3_bottom_sheet(cx, sheet_open)
+                pages::material3::preview_material3_bottom_sheet(cx)
             })
         }
         #[cfg(feature = "gallery-material3")]
@@ -780,10 +770,8 @@ fn page_preview(
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 pages::material3::preview_material3_autocomplete(
                     cx,
-                    material3_autocomplete_value,
                     material3_autocomplete_disabled,
                     material3_autocomplete_error,
-                    material3_autocomplete_dialog_open,
                 )
             })
         }
@@ -850,21 +838,13 @@ fn page_preview(
         #[cfg(feature = "gallery-material3")]
         PAGE_MATERIAL3_DIALOG => {
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-                pages::material3::preview_material3_dialog(
-                    cx,
-                    material3_dialog_open,
-                    last_action.clone(),
-                )
+                pages::material3::preview_material3_dialog(cx, last_action.clone())
             })
         }
         #[cfg(feature = "gallery-material3")]
         PAGE_MATERIAL3_MENU => {
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-                pages::material3::preview_material3_menu(
-                    cx,
-                    material3_menu_open,
-                    last_action.clone(),
-                )
+                pages::material3::preview_material3_menu(cx, last_action.clone())
             })
         }
         #[cfg(feature = "gallery-material3")]

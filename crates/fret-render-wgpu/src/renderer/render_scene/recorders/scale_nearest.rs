@@ -1,8 +1,5 @@
 use super::super::super::*;
 use super::super::executor::{RecordPassCtx, RenderSceneExecutor};
-use super::super::helpers::{
-    ensure_color_dst_view_owned, require_color_src_view, require_mask_view,
-};
 
 pub(in super::super) fn record_scale_nearest_pass(
     exec: &mut RenderSceneExecutor<'_>,
@@ -11,21 +8,22 @@ pub(in super::super) fn record_scale_nearest_pass(
 ) {
     let device = exec.device;
     let queue = exec.queue;
-    let format = exec.format;
     let target_view = exec.target_view;
     let viewport_size = exec.viewport_size;
-    let usage = exec.usage;
-    let encoder = &mut *exec.encoder;
-    let frame_targets = &mut *exec.frame_targets;
     let encoding = exec.encoding;
     let scale_param_size = exec.scale_param_size;
-    let scale_param_cursor = &mut *exec.scale_param_cursor;
     let perf_enabled = exec.perf_enabled;
-    let frame_perf = &mut *exec.frame_perf;
-
-    let renderer = &mut *exec.renderer;
 
     let scale = pass.scale.max(1);
+    let Some(src_view) = exec.require_color_src_view(pass.src, pass.src_size, "ScaleNearest")
+    else {
+        return;
+    };
+    let dst_view_owned = exec.ensure_color_dst_view_owned(pass.dst, pass.dst_size, "ScaleNearest");
+    let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+
+    let renderer = &*exec.renderer;
+    let scale_param_cursor = &mut *exec.scale_param_cursor;
     let scale_param_offset =
         u64::from(*scale_param_cursor) * renderer.effect_params.scale_param_stride;
     let scale_param_offset_u32 = scale_param_offset as u32;
@@ -44,7 +42,8 @@ pub(in super::super) fn record_scale_nearest_pass(
         bytemuck::bytes_of(&params),
     );
     if perf_enabled {
-        frame_perf.uniform_bytes = frame_perf
+        exec.frame_perf.uniform_bytes = exec
+            .frame_perf
             .uniform_bytes
             .saturating_add(std::mem::size_of::<ScaleParamsUniform>() as u64);
     }
@@ -55,24 +54,6 @@ pub(in super::super) fn record_scale_nearest_pass(
         offset: 0,
         size: Some(scale_param_size_nz),
     });
-
-    let Some(src_view) =
-        require_color_src_view(frame_targets, pass.src, pass.src_size, "ScaleNearest")
-    else {
-        return;
-    };
-
-    let dst_view_owned = ensure_color_dst_view_owned(
-        frame_targets,
-        &mut renderer.intermediate_state.pool,
-        device,
-        pass.dst,
-        pass.dst_size,
-        format,
-        usage,
-        "ScaleNearest",
-    );
-    let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
     if let Some(mask) = pass.mask {
         debug_assert!(matches!(pass.mode, ScaleMode::Upscale));
@@ -88,12 +69,9 @@ pub(in super::super) fn record_scale_nearest_pass(
         let mask_uniform_index = pass
             .mask_uniform_index
             .expect("mask pass needs uniform index");
-        let uniform_offset =
-            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
+        let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride()) as u32;
 
-        let Some(mask_view) =
-            require_mask_view(frame_targets, mask.target, mask.size, "ScaleNearest")
-        else {
+        let Some(mask_view) = exec.require_mask_view(mask.target, mask.size, "ScaleNearest") else {
             return;
         };
         let mask_layout = renderer.scale_mask_bind_group_layout_ref();
@@ -118,7 +96,7 @@ pub(in super::super) fn record_scale_nearest_pass(
 
         let pipeline = renderer.upscale_mask_pipeline_ref();
         run_fullscreen_triangle_pass_uniform_texture(
-            encoder,
+            &mut *exec.encoder,
             "fret upscale-nearest mask pass",
             pipeline,
             dst_view,
@@ -135,13 +113,16 @@ pub(in super::super) fn record_scale_nearest_pass(
             &[scale_param_offset_u32],
             pass.dst_scissor,
             pass.dst_size,
-            if perf_enabled { Some(frame_perf) } else { None },
+            if perf_enabled {
+                Some(&mut *exec.frame_perf)
+            } else {
+                None
+            },
         );
     } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
         debug_assert!(matches!(pass.mode, ScaleMode::Upscale));
         let pipeline = renderer.upscale_masked_pipeline_ref();
-        let uniform_offset =
-            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
+        let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride()) as u32;
 
         let layout = renderer.scale_bind_group_layout_ref();
         let bind_group = create_texture_uniform_bind_group(
@@ -153,7 +134,7 @@ pub(in super::super) fn record_scale_nearest_pass(
         );
 
         run_fullscreen_triangle_pass_uniform_texture(
-            encoder,
+            &mut *exec.encoder,
             "fret upscale-nearest masked pass",
             pipeline,
             dst_view,
@@ -170,7 +151,11 @@ pub(in super::super) fn record_scale_nearest_pass(
             &[scale_param_offset_u32],
             pass.dst_scissor,
             pass.dst_size,
-            if perf_enabled { Some(frame_perf) } else { None },
+            if perf_enabled {
+                Some(&mut *exec.frame_perf)
+            } else {
+                None
+            },
         );
     } else {
         let layout = renderer.scale_bind_group_layout_ref();
@@ -187,7 +172,7 @@ pub(in super::super) fn record_scale_nearest_pass(
             ScaleMode::Upscale => "fret upscale-nearest pass",
         };
         run_fullscreen_triangle_pass(
-            encoder,
+            &mut *exec.encoder,
             label,
             pipeline,
             dst_view,
@@ -196,7 +181,11 @@ pub(in super::super) fn record_scale_nearest_pass(
             &bind_group,
             &[scale_param_offset_u32],
             pass.dst_scissor,
-            if perf_enabled { Some(frame_perf) } else { None },
+            if perf_enabled {
+                Some(&mut *exec.frame_perf)
+            } else {
+                None
+            },
         );
     }
 }

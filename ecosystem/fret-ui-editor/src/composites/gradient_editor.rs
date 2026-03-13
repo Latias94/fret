@@ -147,7 +147,7 @@ impl GradientEditor {
         let density = EditorDensity::resolve(theme);
 
         let state_id = cx.named("gradient_editor.preview_state", |cx| cx.root_id());
-        let preview_state: Arc<Mutex<GradientPreviewState>> = cx.with_state_for(
+        let preview_state: Arc<Mutex<GradientPreviewState>> = cx.state_for(
             state_id,
             || Arc::new(Mutex::new(GradientPreviewState::default())),
             |s| s.clone(),

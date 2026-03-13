@@ -136,25 +136,20 @@ impl View for OverlayBasicsView {
                 .gap(Space::N3)
                 .items_center();
 
-                shadcn::Card::build(|cx, out| {
-                    out.push_ui(
-                        cx,
-                        shadcn::CardHeader::build(|cx, out| {
-                            out.push_ui(cx, shadcn::CardTitle::new("Overlay basics"));
-                            out.push_ui(
-                                cx,
-                                shadcn::CardDescription::new(
+                shadcn::card(|cx| {
+                    ui::children![
+                        cx;
+                        shadcn::card_header(|cx| {
+                            ui::children![
+                                cx;
+                                shadcn::card_title("Overlay basics"),
+                                shadcn::card_description(
                                     "A minimal Dialog example with stable test IDs.",
                                 ),
-                            );
+                            ]
                         }),
-                    );
-                    out.push_ui(
-                        cx,
-                        shadcn::CardContent::build(|cx, out| {
-                            out.push_ui(cx, content);
-                        }),
-                    );
+                        shadcn::card_content(|cx| ui::children![cx; content]),
+                    ]
                 })
                 .ui()
                 .w_full()

@@ -27,7 +27,7 @@ impl ShadcnResolver {
             })
             .unwrap_or(false);
 
-        let model = Self::ensure_bool_model(cx, desired);
+        let model = Self::ensure_bool_model(cx, key, desired);
 
         if let (Some(scope), Some(path)) = (Self::genui_scope(cx), props.bindings.get("checked")) {
             #[derive(Default)]
@@ -39,7 +39,7 @@ impl ShadcnResolver {
             let cur = cx.app.models().get_copied(&model).unwrap_or(false);
             let mut to_emit: Option<bool> = None;
             let mut sync_model_to: Option<bool> = None;
-            cx.with_state(LastState::default, |st| {
+            cx.keyed_slot_state(key.clone(), LastState::default, |st| {
                 let model_changed = st.last_model.is_some_and(|v| v != cur);
                 let desired_changed = st.last_desired.is_some_and(|v| v != desired);
 
@@ -114,8 +114,8 @@ impl ShadcnResolver {
         let resolved_props = &props.props;
 
         let desired = Self::json_to_option_arc_str(resolved_props.get("value"));
-        let model = Self::ensure_optional_arc_str_model(cx, desired.clone());
-        let open = Self::ensure_bool_model(cx, false);
+        let model = Self::ensure_optional_arc_str_model(cx, key, desired.clone());
+        let open = Self::ensure_bool_model(cx, key, false);
 
         let cur = cx.app.models().get_cloned(&model).unwrap_or(None);
         if let (Some(scope), Some(path)) = (Self::genui_scope(cx), props.bindings.get("value")) {
@@ -129,7 +129,7 @@ impl ShadcnResolver {
             let desired_s = desired.as_deref().map(|s| s.to_string());
             let mut to_emit: Option<Option<Arc<str>>> = None;
             let mut sync_model_to: Option<Option<Arc<str>>> = None;
-            cx.with_state(LastState::default, |st| {
+            cx.keyed_slot_state(key.clone(), LastState::default, |st| {
                 let model_changed = st.last_model.as_ref().is_some_and(|v| v != &cur_s);
                 let desired_changed = st.last_desired.as_ref().is_some_and(|v| v != &desired_s);
 
@@ -252,7 +252,7 @@ impl ShadcnResolver {
         let resolved_props = &props.props;
 
         let desired = Self::json_to_option_arc_str(resolved_props.get("value"));
-        let model = Self::ensure_optional_arc_str_model(cx, desired.clone());
+        let model = Self::ensure_optional_arc_str_model(cx, key, desired.clone());
         let cur = cx.app.models().get_cloned(&model).unwrap_or(None);
 
         if let (Some(scope), Some(path)) = (Self::genui_scope(cx), props.bindings.get("value")) {
@@ -266,7 +266,7 @@ impl ShadcnResolver {
             let desired_s = desired.as_deref().map(|s| s.to_string());
             let mut to_emit: Option<Option<Arc<str>>> = None;
             let mut sync_model_to: Option<Option<Arc<str>>> = None;
-            cx.with_state(LastState::default, |st| {
+            cx.keyed_slot_state(key.clone(), LastState::default, |st| {
                 let model_changed = st.last_model.as_ref().is_some_and(|v| v != &cur_s);
                 let desired_changed = st.last_desired.as_ref().is_some_and(|v| v != &desired_s);
 

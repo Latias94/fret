@@ -360,15 +360,11 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                 NavigationMenuMdBreakpointQuery::Viewport
             };
 
-            let mut nav_menu = shadcn::NavigationMenu::new(demo_value.clone())
-                .md_breakpoint_query(md_query)
-                .list(shadcn::NavigationMenuList::new(vec![
-                    getting_started,
-                    components,
-                    with_icon,
-                    docs,
-                ]))
-                .viewport_test_id("ui-gallery-navigation-menu-demo-viewport");
+            let mut nav_menu = shadcn::navigation_menu(cx, demo_value.clone(), |_cx| {
+                vec![getting_started, components, with_icon, docs]
+            })
+            .md_breakpoint_query(md_query)
+            .viewport_test_id("ui-gallery-navigation-menu-demo-viewport");
             if use_container_query {
                 nav_menu = nav_menu.container_query_region(region_id);
             }

@@ -34,7 +34,9 @@ impl Renderer {
                 self.ensure_mask_pipeline(device, format);
                 self.ensure_path_pipeline(device, format);
                 self.ensure_path_clip_mask_pipeline(device);
-                let path_samples = self.effective_path_msaa_samples(format);
+                let path_samples = self
+                    .render_scene_config_state
+                    .effective_path_msaa_samples(&self.adapter, format);
                 span.record("path_samples", path_samples);
                 if path_samples > 1 {
                     self.ensure_composite_pipeline(device, format);
@@ -48,10 +50,11 @@ impl Renderer {
         }
 
         if perf_enabled {
-            frame_perf.path_msaa_samples_requested = self.path_msaa_samples;
+            frame_perf.path_msaa_samples_requested =
+                self.render_scene_config_state.path_msaa_samples();
             frame_perf.path_msaa_samples_effective = path_samples;
             if self.adapter.get_info().backend == wgpu::Backend::Vulkan
-                && self.path_msaa_samples > 1
+                && self.render_scene_config_state.path_msaa_samples() > 1
                 && path_samples == 1
                 && std::env::var_os("FRET_DISABLE_VULKAN_PATH_MSAA").is_some()
             {

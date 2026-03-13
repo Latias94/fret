@@ -58,6 +58,7 @@ cookbook-undo = ["dep:fret-undo"]
 cookbook-async = ["dep:fret-executor"]
 cookbook-bootstrap = [
     "dep:fret-bootstrap",
+    "dep:fret-icons-lucide",
     "dep:fret-render",
     "fret/ui-assets",
     "fret/icons",

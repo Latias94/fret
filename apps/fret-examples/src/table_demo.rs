@@ -446,15 +446,12 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                                                 let grouped_column_mode =
                                                     grouped_column_mode_model.clone();
 
-                                                vec![shadcn::DropdownMenu::new(open).into_element(
+                                                vec![shadcn::DropdownMenu::from_open(open).build(
                                                     cx,
-                                                    |cx| {
-                                                        shadcn::Button::new("Table options")
-                                                            .variant(shadcn::ButtonVariant::Outline)
-                                                            .size(shadcn::ButtonSize::Sm)
-                                                            .toggle_model(open_for_trigger)
-                                                            .into_element(cx)
-                                                    },
+                                                    shadcn::Button::new("Table options")
+                                                        .variant(shadcn::ButtonVariant::Outline)
+                                                        .size(shadcn::ButtonSize::Sm)
+                                                        .toggle_model(open_for_trigger),
                                                     |_cx| {
                                                         vec![
                                                             shadcn::DropdownMenuEntry::Label(
@@ -592,7 +589,7 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                                                             })
                                                             .unwrap_or(false);
 
-                                                        vec![shadcn::ContextMenu::new(open).into_element(
+                                                        vec![shadcn::ContextMenu::from_open(open).into_element(
                                                             cx,
                                                             |cx| cx.text(label.clone()),
                                                             |_cx| {

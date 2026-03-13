@@ -12,7 +12,7 @@ fn make_tooltip<H: UiHost>(
     content: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
     let tooltip_content =
-        shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(cx, content)]);
+        shadcn::TooltipContent::build(cx, |_cx| [shadcn::TooltipContent::text(content)]);
     shadcn::Tooltip::new(
         cx,
         shadcn::Button::new(label).variant(shadcn::ButtonVariant::Outline),
@@ -32,9 +32,9 @@ fn make_tooltip_with_test_ids<H: UiHost>(
     panel_test_id: &'static str,
     text_test_id: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
-    let tooltip_content = shadcn::TooltipContent::new(vec![
-        shadcn::TooltipContent::text(cx, content).test_id(text_test_id),
-    ]);
+    let tooltip_content = shadcn::TooltipContent::build(cx, |_cx| {
+        [shadcn::TooltipContent::text(content).test_id(text_test_id)]
+    });
     shadcn::Tooltip::new(
         cx,
         shadcn::Button::new(label)

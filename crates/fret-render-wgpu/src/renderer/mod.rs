@@ -28,20 +28,33 @@ mod util;
 mod buffers;
 mod config;
 mod diagnostics;
+mod frame_binding_state;
+mod frame_scratch;
 mod frame_targets;
 mod fullscreen;
+mod geometry_upload;
 mod intermediate_pool;
 mod material_effects;
 mod pipelines;
 mod render_plan;
 mod render_plan_compiler;
 mod render_plan_dump;
+mod render_plan_dump_assemble;
+mod render_plan_dump_emit;
+mod render_plan_dump_encode;
+mod render_plan_dump_summary;
 mod render_plan_effects;
+mod render_plan_reporting;
+mod render_plan_reporting_perf;
 mod render_scene;
+mod render_scene_config;
 mod render_text_dump;
 mod resources;
 mod scene_encoding_cache;
+mod scene_encoding_cache_diagnostics;
 mod services;
+mod services_assets;
+mod services_custom_effects;
 mod shaders;
 mod svg;
 #[cfg(test)]
@@ -51,7 +64,10 @@ mod v3_pyramid;
 
 use clip_path_mask_cache::*;
 use diagnostics::*;
+use frame_binding_state::*;
+use frame_scratch::*;
 use fullscreen::*;
+use geometry_upload::*;
 use gpu_effect_params::GpuEffectParams;
 use gpu_globals::GpuGlobals;
 use gpu_pipelines::GpuPipelines;
@@ -61,7 +77,9 @@ use intermediate_pool::*;
 use material_effects::*;
 use path::*;
 use render_plan::*;
-use scene_encoding_cache::SceneEncodingCache;
+use render_plan_reporting::*;
+use render_scene_config::*;
+use scene_encoding_cache::SceneEncodingState;
 use types::*;
 pub use types::{BlurQualityCounters, BlurQualitySnapshot};
 pub use types::{
@@ -87,39 +105,23 @@ impl Default for ClearColor {
 
 pub struct Renderer {
     adapter: wgpu::Adapter,
-    uniform_bind_group: wgpu::BindGroup,
-    uniforms: UniformResources,
-    viewport_uniform_bytes_scratch: Vec<u8>,
-    render_space_bytes_scratch: Vec<u8>,
-    plan_quad_vertices_scratch: Vec<ViewportVertex>,
-    plan_quad_vertex_bases_scratch: Vec<Option<u32>>,
-    render_plan_scene_draw_range_passes_scratch: Vec<u32>,
-    render_plan_path_msaa_batch_passes_scratch: Vec<u32>,
-    render_plan_segment_report_scratch: Vec<RenderPlanSegmentReport>,
-    render_plan_dump_scratch: render_plan_dump::RenderPlanJsonDumpScratch,
-    render_plan_strict_output_clear: bool,
+    frame_binding_state: FrameBindingState,
+    frame_scratch_state: FrameScratchState,
+    render_plan_reporting_state: RenderPlanReportingState,
+    render_scene_config_state: RenderSceneConfigState,
     globals: GpuGlobals,
     textures: GpuTextures,
     effect_params: GpuEffectParams,
     pipelines: GpuPipelines,
+    geometry_upload_state: GeometryUploadState,
 
     custom_effect_v3_pyramid: v3_pyramid::CustomEffectV3PyramidState,
-
-    quad_instances: buffers::StorageRingBuffer<QuadInstance>,
-
-    path_paints: buffers::StorageRingBuffer<PaintGpu>,
-
-    text_paints: buffers::StorageRingBuffer<PaintGpu>,
-
-    viewport_vertices: buffers::RingBuffer<ViewportVertex>,
-
-    text_vertices: buffers::RingBuffer<TextVertex>,
-
-    path_vertices: buffers::RingBuffer<PathVertex>,
 
     text_system: TextSystem,
 
     path_state: PathState,
+
+    render_text_dump_state: render_text_dump::RenderTextDumpState,
 
     svg_registry_state: svg::SvgRegistryState,
     svg_raster_state: svg::SvgRasterState,
@@ -128,29 +130,14 @@ pub struct Renderer {
 
     diagnostics_state: DiagnosticsState,
 
-    path_msaa_samples: u32,
-    debug_offscreen_blit_enabled: bool,
-    debug_pixelate_scale: u32,
-    debug_blur_radius: u32,
-    debug_blur_scissor: Option<ScissorRect>,
     intermediate_state: IntermediateState,
 
     gpu_resources: GpuResources,
 
-    scene_encoding_cache: SceneEncodingCache,
+    scene_encoding_state: SceneEncodingState,
 
     material_effect_state: MaterialEffectState,
 }
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct RenderPlanSegmentReport {
-    draw_range: (usize, usize),
-    start_uniform_fingerprint: u64,
-    flags_mask: u8,
-    scene_draw_range_passes: u32,
-    path_msaa_batch_passes: u32,
-}
-
 pub struct RenderSceneParams<'a> {
     pub format: wgpu::TextureFormat,
     pub target_view: &'a wgpu::TextureView,

@@ -30,52 +30,48 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .corner_radii_override(corners_last)
         .into_element(cx);
 
-    let dropdown = shadcn::DropdownMenu::new(open.clone())
+    let dropdown = shadcn::DropdownMenu::from_open(open.clone())
         .align(shadcn::DropdownMenuAlign::End)
-        .into_element(
-            cx,
-            |_cx| dropdown_trigger,
-            |_cx| {
-                vec![
-                    shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
-                        shadcn::DropdownMenuEntry::Item(
-                            shadcn::DropdownMenuItem::new("Mute Conversation")
-                                .leading_icon(icon_id("lucide.volume-x")),
-                        ),
-                        shadcn::DropdownMenuEntry::Item(
-                            shadcn::DropdownMenuItem::new("Mark as Read")
-                                .leading_icon(icon_id("lucide.check")),
-                        ),
-                        shadcn::DropdownMenuEntry::Item(
-                            shadcn::DropdownMenuItem::new("Report Conversation")
-                                .leading_icon(icon_id("lucide.alert-triangle")),
-                        ),
-                        shadcn::DropdownMenuEntry::Item(
-                            shadcn::DropdownMenuItem::new("Block User")
-                                .leading_icon(icon_id("lucide.user-round-x")),
-                        ),
-                        shadcn::DropdownMenuEntry::Item(
-                            shadcn::DropdownMenuItem::new("Share Conversation")
-                                .leading_icon(icon_id("lucide.share")),
-                        ),
-                        shadcn::DropdownMenuEntry::Item(
-                            shadcn::DropdownMenuItem::new("Copy Conversation")
-                                .leading_icon(icon_id("lucide.copy")),
-                        ),
-                    ])),
-                    shadcn::DropdownMenuEntry::Separator,
-                    shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
-                        shadcn::DropdownMenuEntry::Item(
-                            shadcn::DropdownMenuItem::new("Delete Conversation")
-                                .variant(
-                                    fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
-                                )
-                                .leading_icon(icon_id("lucide.trash")),
-                        ),
-                    ])),
-                ]
-            },
-        );
+        .build(cx, dropdown_trigger, |_cx| {
+            vec![
+                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Mute Conversation")
+                            .leading_icon(icon_id("lucide.volume-x")),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Mark as Read")
+                            .leading_icon(icon_id("lucide.check")),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Report Conversation")
+                            .leading_icon(icon_id("lucide.alert-triangle")),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Block User")
+                            .leading_icon(icon_id("lucide.user-round-x")),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Share Conversation")
+                            .leading_icon(icon_id("lucide.share")),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Copy Conversation")
+                            .leading_icon(icon_id("lucide.copy")),
+                    ),
+                ])),
+                shadcn::DropdownMenuEntry::Separator,
+                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Delete Conversation")
+                            .variant(
+                                fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                            )
+                            .leading_icon(icon_id("lucide.trash")),
+                    ),
+                ])),
+            ]
+        });
 
     shadcn::ButtonGroup::new([
         shadcn::Button::new("Follow")

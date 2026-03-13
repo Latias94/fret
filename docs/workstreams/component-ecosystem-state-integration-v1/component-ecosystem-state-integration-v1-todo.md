@@ -77,9 +77,9 @@ Exit criteria:
 - [x] CSTATE-recipe-020 Define adapter module layout (recommended: recipe-local `state` modules).
   - Evidence: `ecosystem/fret-ui-shadcn/src/state.rs`
 - [x] CSTATE-recipe-021 Add one selector-based recipe helper (e.g. computed counters/filters).
-  - Evidence: `ecosystem/fret-ui-shadcn/src/state.rs` (`use_selector_badge`)
+  - Evidence: `ecosystem/fret-ui-shadcn/src/state.rs` (`use_selector_badge -> Badge`)
 - [x] CSTATE-recipe-022 Add one query-based recipe helper (loading/success/error/invalidate flow).
-  - Evidence: `ecosystem/fret-ui-shadcn/src/state.rs` (`query_status_badge`, `query_error_alert`)
+  - Evidence: `ecosystem/fret-ui-shadcn/src/state.rs` (`query_status_badge -> Badge`, `query_error_alert -> Option<Alert>`)
 - [ ] CSTATE-recipe-023 Ensure typed routing is used for dynamic row/item commands in adapted recipes.
 
 ---

@@ -101,6 +101,7 @@ fn series_color(style: ChartStyle, series: delinea::SeriesId) -> Color {
     palette[(series.0 as usize) % palette.len()]
 }
 
+#[track_caller]
 fn ensure_engine_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     controlled: Option<Model<ChartEngine>>,
@@ -110,26 +111,9 @@ fn ensure_engine_model<H: UiHost>(
         return model;
     }
 
-    struct EngineState {
-        model: Option<Model<ChartEngine>>,
-    }
-    impl Default for EngineState {
-        fn default() -> Self {
-            Self { model: None }
-        }
-    }
-
-    let existing = cx.with_state(EngineState::default, |st| st.model.clone());
-    if let Some(model) = existing {
-        return model;
-    }
-
     let mut spec = spec;
     spec.axis_pointer.get_or_insert_with(Default::default);
-    let engine = ChartEngine::new(spec).expect("chart spec should be valid");
-    let model = cx.app.models_mut().insert(engine);
-    cx.with_state(EngineState::default, |st| st.model = Some(model.clone()));
-    model
+    cx.local_model(|| ChartEngine::new(spec).expect("chart spec should be valid"))
 }
 
 #[derive(Debug, Clone)]
@@ -209,36 +193,18 @@ pub fn chart_canvas_panel<H: UiHost>(
     let engine = ensure_engine_model(cx, props.engine.clone(), props.spec.clone());
 
     // Tool-local drag model.
-    let pan_drag: Model<Option<ChartPanDrag>> = {
-        struct PanDragState {
-            model: Option<Model<Option<ChartPanDrag>>>,
-        }
-        impl Default for PanDragState {
-            fn default() -> Self {
-                Self { model: None }
-            }
-        }
+    let pan_drag: Model<Option<ChartPanDrag>> = cx.local_model(|| None::<ChartPanDrag>);
 
-        let existing = cx.with_state(PanDragState::default, |st| st.model.clone());
-        if let Some(model) = existing {
-            model
-        } else {
-            let model = cx.app.models_mut().insert(None::<ChartPanDrag>);
-            cx.with_state(PanDragState::default, |st| st.model = Some(model.clone()));
-            model
-        }
-    };
-
-    let legend_state: Arc<Mutex<LegendOverlayState>> = cx.with_state(
+    let legend_state: Arc<Mutex<LegendOverlayState>> = cx.slot_state(
         || Arc::new(Mutex::new(LegendOverlayState::default())),
         |st| st.clone(),
     );
-    let tooltip_state: Arc<Mutex<TooltipOverlayState>> = cx.with_state(
+    let tooltip_state: Arc<Mutex<TooltipOverlayState>> = cx.slot_state(
         || Arc::new(Mutex::new(TooltipOverlayState::default())),
         |st| st.clone(),
     );
 
-    let default_tooltip_formatter: Arc<dyn TooltipFormatter> = cx.with_state(
+    let default_tooltip_formatter: Arc<dyn TooltipFormatter> = cx.slot_state(
         || Arc::new(DefaultTooltipFormatter::default()) as Arc<dyn TooltipFormatter>,
         |st| st.clone(),
     );
@@ -251,9 +217,11 @@ pub fn chart_canvas_panel<H: UiHost>(
     let bounds = cx.bounds;
     let mut unfinished = false;
 
-    let (prev_marks_rev, prev_output_rev) = cx.with_state(MarksCache::default, |cache| {
-        (cache.marks_rev, cache.output_rev)
-    });
+    let marks_cache_slot = cx.slot_id();
+    let (prev_marks_rev, prev_output_rev) =
+        cx.state_for(marks_cache_slot, MarksCache::default, |cache| {
+            (cache.marks_rev, cache.output_rev)
+        });
 
     let mut marks_rev = prev_marks_rev;
     let mut output_rev = prev_output_rev;
@@ -423,26 +391,27 @@ pub fn chart_canvas_panel<H: UiHost>(
         st.series_rank_by_id = series_rank_by_id;
     }
 
-    let (cache, axis_pointer, hover_point_px) = cx.with_state(MarksCache::default, |cache| {
-        if cache.marks_rev != marks_rev {
-            if let Some(marks) = output_marks.clone() {
-                cache.marks_rev = marks_rev;
-                cache.marks = marks;
+    let (cache, axis_pointer, hover_point_px) =
+        cx.state_for(marks_cache_slot, MarksCache::default, |cache| {
+            if cache.marks_rev != marks_rev {
+                if let Some(marks) = output_marks.clone() {
+                    cache.marks_rev = marks_rev;
+                    cache.marks = marks;
+                }
             }
-        }
 
-        if cache.output_rev != output_rev {
-            cache.output_rev = output_rev;
-            cache.axis_pointer = axis_pointer;
-            cache.hover_point_px = hover_point_px;
-        }
+            if cache.output_rev != output_rev {
+                cache.output_rev = output_rev;
+                cache.axis_pointer = axis_pointer;
+                cache.hover_point_px = hover_point_px;
+            }
 
-        (
-            cache.marks.clone(),
-            cache.axis_pointer,
-            cache.hover_point_px,
-        )
-    });
+            (
+                cache.marks.clone(),
+                cache.axis_pointer,
+                cache.hover_point_px,
+            )
+        });
 
     let style = props.style;
     let engine_c = engine.clone();

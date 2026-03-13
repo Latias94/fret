@@ -467,7 +467,7 @@ fn catalog_panel(
             cx,
             ui::v_flex_build(|cx, out| {
                 for id in QueryId::ALL {
-                    out.push(catalog_item(cx, st, theme.clone(), selected, id));
+                    out.push(catalog_item(cx, st, theme.clone(), selected, id).into_element(cx));
                 }
             })
             .gap(Space::N1)
@@ -494,7 +494,7 @@ fn catalog_item(
     theme: ThemeSnapshot,
     selected: QueryId,
     id: QueryId,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let selected = selected == id;
     let select_cmd = select_command_for_id(id);
     let diag = st.last_diag.get(&id).cloned();

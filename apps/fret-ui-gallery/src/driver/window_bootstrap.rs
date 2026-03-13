@@ -244,9 +244,6 @@ impl UiGalleryDriver {
             .models_mut()
             .insert(time::Time::from_hms(9, 41, 0).expect("valid time"));
 
-        let resizable_h_fractions = app.models_mut().insert(vec![0.5, 0.5]);
-        let resizable_v_fractions = app.models_mut().insert(vec![0.25, 0.75]);
-
         let mut data_table_state_value = fret_ui_headless::table::TableState::default();
         data_table_state_value.pagination.page_size = 25;
         let data_table_state = app.models_mut().insert(data_table_state_value);
@@ -333,21 +330,15 @@ impl UiGalleryDriver {
         #[cfg(feature = "gallery-material3")]
         let material3_modal_navigation_drawer_open = app.models_mut().insert(false);
         #[cfg(feature = "gallery-material3")]
-        let material3_dialog_open = app.models_mut().insert(false);
-        #[cfg(feature = "gallery-material3")]
         let material3_text_field_value = app.models_mut().insert(String::new());
         #[cfg(feature = "gallery-material3")]
         let material3_text_field_disabled = app.models_mut().insert(false);
         #[cfg(feature = "gallery-material3")]
         let material3_text_field_error = app.models_mut().insert(false);
         #[cfg(feature = "gallery-material3")]
-        let material3_autocomplete_value = app.models_mut().insert(String::new());
-        #[cfg(feature = "gallery-material3")]
         let material3_autocomplete_disabled = app.models_mut().insert(false);
         #[cfg(feature = "gallery-material3")]
         let material3_autocomplete_error = app.models_mut().insert(false);
-        #[cfg(feature = "gallery-material3")]
-        let material3_autocomplete_dialog_open = app.models_mut().insert(false);
         #[cfg(feature = "gallery-material3")]
         let material3_menu_open = app.models_mut().insert(false);
         let text_input = app.models_mut().insert(String::new());
@@ -491,8 +482,6 @@ impl UiGalleryDriver {
             time_picker_open,
             #[cfg(feature = "gallery-material3")]
             time_picker_selected,
-            resizable_h_fractions,
-            resizable_v_fractions,
             data_table_state,
             #[cfg(feature = "gallery-dev")]
             data_grid_selected_row,
@@ -549,21 +538,15 @@ impl UiGalleryDriver {
             #[cfg(feature = "gallery-material3")]
             material3_modal_navigation_drawer_open,
             #[cfg(feature = "gallery-material3")]
-            material3_dialog_open,
-            #[cfg(feature = "gallery-material3")]
             material3_text_field_value,
             #[cfg(feature = "gallery-material3")]
             material3_text_field_disabled,
             #[cfg(feature = "gallery-material3")]
             material3_text_field_error,
             #[cfg(feature = "gallery-material3")]
-            material3_autocomplete_value,
-            #[cfg(feature = "gallery-material3")]
             material3_autocomplete_disabled,
             #[cfg(feature = "gallery-material3")]
             material3_autocomplete_error,
-            #[cfg(feature = "gallery-material3")]
-            material3_autocomplete_dialog_open,
             #[cfg(feature = "gallery-material3")]
             material3_menu_open,
             text_input,

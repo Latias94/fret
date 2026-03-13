@@ -343,103 +343,7 @@ impl Renderer {
 
         let text_system = TextSystem::new(device);
 
-        const FRAMES_IN_FLIGHT: usize = 3;
-        let quad_instance_bind_group_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("fret quad instances bind group layout"),
-                entries: &[wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                }],
-            });
-
-        let instance_usage = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST;
-        let quad_instances = buffers::StorageRingBuffer::<QuadInstance>::new(
-            device,
-            FRAMES_IN_FLIGHT,
-            1024,
-            quad_instance_bind_group_layout,
-            "fret quad instances",
-            instance_usage,
-        );
-
-        let path_paint_bind_group_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("fret path paints bind group layout"),
-                entries: &[wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                }],
-            });
-
-        let paint_usage = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST;
-        let path_paints = buffers::StorageRingBuffer::<PaintGpu>::new(
-            device,
-            FRAMES_IN_FLIGHT,
-            1024,
-            path_paint_bind_group_layout,
-            "fret path paints",
-            paint_usage,
-        );
-
-        let text_paint_bind_group_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("fret text paints bind group layout"),
-                entries: &[wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                }],
-            });
-
-        let text_paints = buffers::StorageRingBuffer::<PaintGpu>::new(
-            device,
-            FRAMES_IN_FLIGHT,
-            1024,
-            text_paint_bind_group_layout,
-            "fret text paints",
-            paint_usage,
-        );
-
-        let vertex_usage = wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST;
-        let viewport_vertices = buffers::RingBuffer::<ViewportVertex>::new(
-            device,
-            FRAMES_IN_FLIGHT,
-            64 * 6,
-            "fret viewport vertices",
-            vertex_usage,
-        );
-        let text_vertices = buffers::RingBuffer::<TextVertex>::new(
-            device,
-            FRAMES_IN_FLIGHT,
-            512 * 6,
-            "fret text vertices",
-            vertex_usage,
-        );
-        let path_vertices = buffers::RingBuffer::<PathVertex>::new(
-            device,
-            FRAMES_IN_FLIGHT,
-            1024,
-            "fret path vertices",
-            vertex_usage,
-        );
+        let geometry_upload_state = GeometryUploadState::new(device);
 
         let scale_param_size = std::mem::size_of::<ScaleParamsUniform>() as u64;
         let scale_param_stride = scale_param_size.div_ceil(256) * 256;
@@ -532,47 +436,28 @@ impl Renderer {
             custom_effect_v3_meta_buffer,
         };
 
-        let render_plan_strict_output_clear =
-            std::env::var("FRET_RENDER_PLAN_STRICT_OUTPUT_CLEAR").is_ok_and(|v| v != "0");
-
         Self {
             adapter: adapter.clone(),
-            uniform_bind_group,
-            uniforms,
-            viewport_uniform_bytes_scratch: Vec::new(),
-            render_space_bytes_scratch: Vec::new(),
-            plan_quad_vertices_scratch: Vec::new(),
-            plan_quad_vertex_bases_scratch: Vec::new(),
-            render_plan_scene_draw_range_passes_scratch: Vec::new(),
-            render_plan_path_msaa_batch_passes_scratch: Vec::new(),
-            render_plan_segment_report_scratch: Vec::new(),
-            render_plan_dump_scratch: super::render_plan_dump::RenderPlanJsonDumpScratch::default(),
-            render_plan_strict_output_clear,
+            frame_binding_state: FrameBindingState::new(uniform_bind_group, uniforms),
+            frame_scratch_state: FrameScratchState::default(),
+            render_plan_reporting_state: RenderPlanReportingState::default(),
+            render_scene_config_state: RenderSceneConfigState::new(),
             globals,
             textures,
             effect_params,
             pipelines: GpuPipelines::default(),
+            geometry_upload_state,
             custom_effect_v3_pyramid: v3_pyramid::CustomEffectV3PyramidState::default(),
-            quad_instances,
-            path_paints,
-            text_paints,
-            viewport_vertices,
-            text_vertices,
-            path_vertices,
             text_system,
             path_state: PathState::new(device),
+            render_text_dump_state: super::render_text_dump::RenderTextDumpState::default(),
             svg_registry_state: svg::SvgRegistryState::new(),
             svg_raster_state: svg::SvgRasterState::default(),
             clip_path_mask_cache: ClipPathMaskCache::new((256 * 1024 * 1024) / 8),
             diagnostics_state: DiagnosticsState::default(),
-            path_msaa_samples: 4,
-            debug_offscreen_blit_enabled: false,
-            debug_pixelate_scale: 0,
-            debug_blur_radius: 0,
-            debug_blur_scissor: None,
             intermediate_state: IntermediateState::default(),
             gpu_resources: super::gpu_resources::GpuResources::default(),
-            scene_encoding_cache: super::scene_encoding_cache::SceneEncodingCache::default(),
+            scene_encoding_state: super::scene_encoding_cache::SceneEncodingState::default(),
             material_effect_state: MaterialEffectState::default(),
         }
     }

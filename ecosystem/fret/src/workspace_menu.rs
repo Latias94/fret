@@ -183,11 +183,6 @@ pub struct InWindowMenubarFocusHandle {
 }
 
 #[derive(Default)]
-struct InWindowMenubarMenuState {
-    open: Option<fret_runtime::Model<bool>>,
-}
-
-#[derive(Default)]
 struct InWindowMenubarBridgeState {
     last_focus_before_menubar: Option<fret_runtime::Model<Option<GlobalElementId>>>,
     focus_is_trigger: Option<fret_runtime::Model<bool>>,
@@ -198,7 +193,7 @@ fn ensure_last_focus_before_menubar_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     group: GlobalElementId,
 ) -> fret_runtime::Model<Option<GlobalElementId>> {
-    let existing = cx.with_state_for(group, InWindowMenubarBridgeState::default, |st| {
+    let existing = cx.state_for(group, InWindowMenubarBridgeState::default, |st| {
         st.last_focus_before_menubar.clone()
     });
     if let Some(existing) = existing {
@@ -206,7 +201,7 @@ fn ensure_last_focus_before_menubar_model<H: UiHost>(
     }
 
     let model = cx.app.models_mut().insert(None);
-    cx.with_state_for(group, InWindowMenubarBridgeState::default, |st| {
+    cx.state_for(group, InWindowMenubarBridgeState::default, |st| {
         st.last_focus_before_menubar = Some(model.clone());
     });
     model
@@ -217,7 +212,7 @@ fn ensure_menubar_focus_is_trigger_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     group: GlobalElementId,
 ) -> fret_runtime::Model<bool> {
-    let existing = cx.with_state_for(group, InWindowMenubarBridgeState::default, |st| {
+    let existing = cx.state_for(group, InWindowMenubarBridgeState::default, |st| {
         st.focus_is_trigger.clone()
     });
     if let Some(existing) = existing {
@@ -225,7 +220,7 @@ fn ensure_menubar_focus_is_trigger_model<H: UiHost>(
     }
 
     let model = cx.app.models_mut().insert(false);
-    cx.with_state_for(group, InWindowMenubarBridgeState::default, |st| {
+    cx.state_for(group, InWindowMenubarBridgeState::default, |st| {
         st.focus_is_trigger = Some(model.clone());
     });
     model
@@ -727,6 +722,7 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
     )
 }
 
+#[track_caller]
 fn render_menu_from_runtime<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     group_active: fret_runtime::Model<Option<menubar_trigger_row::MenubarActiveTrigger>>,
@@ -737,16 +733,7 @@ fn render_menu_from_runtime<H: UiHost>(
 ) -> AnyElement {
     let key = menu.title.clone();
     cx.keyed(key, |cx| {
-        let open = cx.with_state(InWindowMenubarMenuState::default, |st| st.open.clone());
-        let open = if let Some(open) = open {
-            open
-        } else {
-            let open = cx.app.models_mut().insert(false);
-            cx.with_state(InWindowMenubarMenuState::default, |st| {
-                st.open = Some(open.clone())
-            });
-            open
-        };
+        let open = cx.local_model(|| false);
 
         let theme = cx.theme_snapshot();
         let enabled = menu.enabled;

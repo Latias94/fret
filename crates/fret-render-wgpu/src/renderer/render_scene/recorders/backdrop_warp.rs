@@ -1,8 +1,5 @@
 use super::super::super::*;
 use super::super::executor::{RecordPassCtx, RenderSceneExecutor};
-use super::super::helpers::{
-    ensure_color_dst_view_owned, require_color_src_view, require_mask_view,
-};
 
 pub(in super::super) fn record_backdrop_warp_pass(
     exec: &mut RenderSceneExecutor<'_>,
@@ -11,17 +8,10 @@ pub(in super::super) fn record_backdrop_warp_pass(
 ) {
     let device = exec.device;
     let queue = exec.queue;
-    let format = exec.format;
     let target_view = exec.target_view;
     let viewport_size = exec.viewport_size;
-    let usage = exec.usage;
-    let encoder = &mut *exec.encoder;
-    let frame_targets = &mut *exec.frame_targets;
     let encoding = exec.encoding;
     let perf_enabled = exec.perf_enabled;
-    let frame_perf = &mut *exec.frame_perf;
-
-    let renderer = &mut *exec.renderer;
 
     #[repr(C)]
     #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
@@ -53,6 +43,14 @@ pub(in super::super) fn record_backdrop_warp_pass(
         fret_core::scene::ImageSamplingHint::Default
         | fret_core::scene::ImageSamplingHint::Linear => 1u32,
     };
+    let Some(src_view) = exec.require_color_src_view(pass.src, pass.src_size, "BackdropWarp")
+    else {
+        return;
+    };
+    let dst_view_owned = exec.ensure_color_dst_view_owned(pass.dst, pass.dst_size, "BackdropWarp");
+    let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+
+    let renderer = &*exec.renderer;
     queue.write_buffer(
         &renderer.effect_params.backdrop_warp_param_buffer,
         0,
@@ -72,7 +70,8 @@ pub(in super::super) fn record_backdrop_warp_pass(
         }),
     );
     if perf_enabled {
-        frame_perf.uniform_bytes = frame_perf
+        exec.frame_perf.uniform_bytes = exec
+            .frame_perf
             .uniform_bytes
             .saturating_add(std::mem::size_of::<BackdropWarpParams>() as u64);
     }
@@ -80,24 +79,6 @@ pub(in super::super) fn record_backdrop_warp_pass(
     let warp_view = pass
         .warp_image
         .and_then(|image| renderer.gpu_resources.image_view(image));
-
-    let Some(src_view) =
-        require_color_src_view(frame_targets, pass.src, pass.src_size, "BackdropWarp")
-    else {
-        return;
-    };
-
-    let dst_view_owned = ensure_color_dst_view_owned(
-        frame_targets,
-        &mut renderer.intermediate_state.pool,
-        device,
-        pass.dst,
-        pass.dst_size,
-        format,
-        usage,
-        "BackdropWarp",
-    );
-    let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
     if let Some(mask) = pass.mask {
         debug_assert!(matches!(
@@ -112,12 +93,9 @@ pub(in super::super) fn record_backdrop_warp_pass(
         let mask_uniform_index = pass
             .mask_uniform_index
             .expect("mask backdrop-warp needs uniform index");
-        let uniform_offset =
-            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
+        let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride()) as u32;
 
-        let Some(mask_view) =
-            require_mask_view(frame_targets, mask.target, mask.size, "BackdropWarp")
-        else {
+        let Some(mask_view) = exec.require_mask_view(mask.target, mask.size, "BackdropWarp") else {
             return;
         };
 
@@ -178,7 +156,7 @@ pub(in super::super) fn record_backdrop_warp_pass(
         };
 
         run_fullscreen_triangle_pass_uniform_texture(
-            encoder,
+            &mut *exec.encoder,
             label,
             pipeline,
             dst_view,
@@ -195,7 +173,11 @@ pub(in super::super) fn record_backdrop_warp_pass(
             &[],
             pass.dst_scissor,
             pass.dst_size,
-            if perf_enabled { Some(frame_perf) } else { None },
+            if perf_enabled {
+                Some(&mut *exec.frame_perf)
+            } else {
+                None
+            },
         );
     } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
         let (bind_group, pipeline) = if let Some(warp_view) = warp_view {
@@ -238,11 +220,10 @@ pub(in super::super) fn record_backdrop_warp_pass(
             let pipeline = renderer.backdrop_warp_masked_pipeline_ref();
             (bind_group, pipeline)
         };
-        let uniform_offset =
-            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
+        let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride()) as u32;
 
         run_fullscreen_triangle_pass_uniform_texture(
-            encoder,
+            &mut *exec.encoder,
             "fret backdrop-warp masked pass",
             pipeline,
             dst_view,
@@ -259,7 +240,11 @@ pub(in super::super) fn record_backdrop_warp_pass(
             &[],
             pass.dst_scissor,
             pass.dst_size,
-            if perf_enabled { Some(frame_perf) } else { None },
+            if perf_enabled {
+                Some(&mut *exec.frame_perf)
+            } else {
+                None
+            },
         );
     } else {
         let (bind_group, pipeline) = if let Some(warp_view) = warp_view {
@@ -304,7 +289,7 @@ pub(in super::super) fn record_backdrop_warp_pass(
         };
 
         run_fullscreen_triangle_pass(
-            encoder,
+            &mut *exec.encoder,
             "fret backdrop-warp pass",
             pipeline,
             dst_view,
@@ -313,7 +298,11 @@ pub(in super::super) fn record_backdrop_warp_pass(
             &bind_group,
             &[],
             pass.dst_scissor,
-            perf_enabled.then_some(frame_perf),
+            if perf_enabled {
+                Some(&mut *exec.frame_perf)
+            } else {
+                None
+            },
         );
     }
 }

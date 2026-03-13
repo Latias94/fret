@@ -1,17 +1,15 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
-use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     shadcn::DirectionProvider::new(shadcn::LayoutDirection::Rtl)
         .into_element(cx, |cx| {
-            shadcn::Tabs::uncontrolled(Some(Arc::<str>::from("preview")))
-                .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
-                .items([
+            shadcn::tabs_uncontrolled(cx, Some("preview"), |cx| {
+                [
                     shadcn::TabsItem::new(
                         "preview",
                         "Preview",
@@ -32,8 +30,10 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                         ],
                     )
                     .trigger_test_id("ui-gallery-tabs-rtl-trigger-code"),
-                ])
-                .into_element(cx)
+                ]
+            })
+            .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
+            .into_element(cx)
         })
         .test_id("ui-gallery-tabs-rtl")
 }

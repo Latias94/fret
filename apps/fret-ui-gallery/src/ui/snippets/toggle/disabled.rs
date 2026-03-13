@@ -1,21 +1,20 @@
 pub const SOURCE: &str = include_str!("disabled.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     ui::h_row(|cx| {
         vec![
-            shadcn::Toggle::uncontrolled(false)
+            shadcn::toggle_uncontrolled(cx, false, |cx| ui::children![cx; ui::text("Disabled")])
                 .disabled(true)
                 .a11y_label("Toggle disabled")
-                .label("Disabled")
                 .into_element(cx),
-            shadcn::Toggle::uncontrolled(false)
+            shadcn::toggle_uncontrolled(cx, false, |cx| ui::children![cx; ui::text("Disabled")])
                 .disabled(true)
                 .variant(shadcn::ToggleVariant::Outline)
                 .a11y_label("Toggle disabled outline")
-                .label("Disabled")
                 .into_element(cx),
         ]
     })

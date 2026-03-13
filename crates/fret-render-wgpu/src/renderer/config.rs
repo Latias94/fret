@@ -298,97 +298,52 @@ impl Renderer {
     }
 
     pub fn path_msaa_samples(&self) -> u32 {
-        self.path_msaa_samples
-    }
-
-    fn path_msaa_samples_override_from_env() -> Option<u32> {
-        static OVERRIDE: OnceLock<Option<u32>> = OnceLock::new();
-        *OVERRIDE.get_or_init(|| {
-            let Ok(raw) = std::env::var("FRET_RENDER_WGPU_PATH_MSAA_SAMPLES") else {
-                return None;
-            };
-
-            let trimmed = raw.trim();
-            if trimmed.is_empty() {
-                return None;
-            }
-
-            match trimmed.parse::<u32>() {
-                Ok(samples) => {
-                    tracing::warn!(
-                        path_msaa_samples = samples,
-                        "Renderer path MSAA samples overridden via FRET_RENDER_WGPU_PATH_MSAA_SAMPLES."
-                    );
-                    Some(samples)
-                }
-                Err(_) => {
-                    tracing::warn!(
-                        raw = trimmed,
-                        "Invalid FRET_RENDER_WGPU_PATH_MSAA_SAMPLES; ignoring override."
-                    );
-                    None
-                }
-            }
-        })
+        self.render_scene_config_state.path_msaa_samples()
     }
 
     pub fn set_path_msaa_samples(&mut self, samples: u32) {
-        let samples = Self::path_msaa_samples_override_from_env().unwrap_or(samples);
-        let samples = samples.max(1);
-        let samples = samples.min(16);
-        let next_samples = if samples == 1 {
-            1
-        } else {
-            // wgpu requires sample counts to be powers of two. Prefer a conservative downgrade to
-            // the nearest supported-shape value (rather than rounding up to a potentially
-            // unsupported count).
-            let pow2_floor = 1u32 << (31 - samples.leading_zeros());
-            pow2_floor.max(1)
-        };
-
-        if self.path_msaa_samples != next_samples {
+        if self
+            .render_scene_config_state
+            .set_path_msaa_samples(samples)
+        {
             self.path_state.clear_intermediate();
         }
-        self.path_msaa_samples = next_samples;
     }
 
     pub fn debug_offscreen_blit_enabled(&self) -> bool {
-        self.debug_offscreen_blit_enabled
+        self.render_scene_config_state
+            .debug_offscreen_blit_enabled()
     }
 
     pub fn set_debug_offscreen_blit_enabled(&mut self, enabled: bool) {
-        self.debug_offscreen_blit_enabled = enabled;
+        self.render_scene_config_state
+            .set_debug_offscreen_blit_enabled(enabled);
     }
 
     pub fn debug_pixelate_scale(&self) -> u32 {
-        self.debug_pixelate_scale
+        self.render_scene_config_state.debug_pixelate_scale()
     }
 
     pub fn set_debug_pixelate_scale(&mut self, scale: u32) {
-        // 0 disables the debug pixelate path; otherwise clamp to a sane upper bound.
-        self.debug_pixelate_scale = scale.min(128);
+        self.render_scene_config_state
+            .set_debug_pixelate_scale(scale);
     }
 
     pub fn debug_blur_radius(&self) -> u32 {
-        self.debug_blur_radius
+        self.render_scene_config_state.debug_blur_radius()
     }
 
     pub fn set_debug_blur_radius(&mut self, radius: u32) {
-        // 0 disables the debug blur path; otherwise clamp to a sane upper bound.
-        self.debug_blur_radius = radius.min(64);
+        self.render_scene_config_state.set_debug_blur_radius(radius);
     }
 
     pub fn debug_blur_scissor(&self) -> Option<(u32, u32, u32, u32)> {
-        self.debug_blur_scissor.map(|s| (s.x, s.y, s.w, s.h))
+        self.render_scene_config_state.debug_blur_scissor_tuple()
     }
 
     pub fn set_debug_blur_scissor(&mut self, scissor: Option<(u32, u32, u32, u32)>) {
-        self.debug_blur_scissor = scissor.and_then(|(x, y, w, h)| {
-            if w == 0 || h == 0 {
-                return None;
-            }
-            Some(ScissorRect { x, y, w, h })
-        });
+        self.render_scene_config_state
+            .set_debug_blur_scissor(scissor);
     }
 
     fn intermediate_budget_override_bytes_from_env() -> Option<u64> {
@@ -508,60 +463,5 @@ impl Renderer {
 
     pub fn text_font_stack_key(&self) -> u64 {
         self.text_system.font_stack_key()
-    }
-
-    pub(super) fn effective_path_msaa_samples(&self, format: wgpu::TextureFormat) -> u32 {
-        let requested = self.path_msaa_samples.max(1);
-        if requested == 1 {
-            return 1;
-        }
-
-        // Vulkan path MSAA can be disabled via env var as an emergency escape hatch for driver
-        // issues. Prefer the opt-out knob over backend allow/deny lists to match GPUI's default
-        // behavior ("enable when supported; disable only when needed").
-        if self.adapter.get_info().backend == wgpu::Backend::Vulkan
-            && std::env::var_os("FRET_DISABLE_VULKAN_PATH_MSAA").is_some()
-        {
-            static WARNED: OnceLock<()> = OnceLock::new();
-            if WARNED.set(()).is_ok() {
-                let info = self.adapter.get_info();
-                tracing::warn!(
-                    backend = ?info.backend,
-                    vendor = info.vendor,
-                    device = info.device,
-                    driver = info.driver,
-                    driver_info = info.driver_info,
-                    "Vulkan path MSAA is disabled via FRET_DISABLE_VULKAN_PATH_MSAA=1."
-                );
-            }
-            return 1;
-        }
-
-        let features = self.adapter.get_texture_format_features(format);
-        if !features
-            .allowed_usages
-            .contains(wgpu::TextureUsages::RENDER_ATTACHMENT)
-        {
-            return 1;
-        }
-
-        // When MSAA is enabled we render into an intermediate and then sample from the resolved
-        // texture in the composite pass, so the format must be sampleable and support resolves.
-        if !features
-            .allowed_usages
-            .contains(wgpu::TextureUsages::TEXTURE_BINDING)
-            || !features
-                .flags
-                .contains(wgpu::TextureFormatFeatureFlags::MULTISAMPLE_RESOLVE)
-        {
-            return 1;
-        }
-
-        for candidate in [16u32, 8, 4, 2] {
-            if candidate <= requested && features.flags.sample_count_supported(candidate) {
-                return candidate;
-            }
-        }
-        1
     }
 }

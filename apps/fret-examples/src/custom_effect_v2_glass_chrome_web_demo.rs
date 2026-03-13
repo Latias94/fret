@@ -463,7 +463,7 @@ impl CustomEffectV2GlassChromeWebDriver {
         w: Px,
         h: Px,
         corner_radius_px: Px,
-    ) -> AnyElement {
+    ) -> impl IntoUiElement<App> + use<> {
         let mut layout = LayoutStyle::default();
         layout.position = PositionStyle::Absolute;
         layout.inset.left = Some(left).into();
@@ -735,33 +735,42 @@ impl CustomEffectV2GlassChromeWebDriver {
                     let mut items: Vec<AnyElement> = Vec::new();
                     let tile_radius = Px(18.0);
 
-                    items.push(Self::stage_tile(
-                        cx,
-                        Self::srgb_hex(0x1a_9e_ff, 0.22),
-                        Px(48.0),
-                        Px(40.0),
-                        Px(220.0),
-                        Px(140.0),
-                        tile_radius,
-                    ));
-                    items.push(Self::stage_tile(
-                        cx,
-                        Self::srgb_hex(0xf5_9e_1a, 0.18),
-                        Px(320.0),
-                        Px(96.0),
-                        Px(260.0),
-                        Px(160.0),
-                        tile_radius,
-                    ));
-                    items.push(Self::stage_tile(
-                        cx,
-                        Self::srgb_hex(0x21_d6_59, 0.16),
-                        Px(140.0),
-                        Px(248.0),
-                        Px(280.0),
-                        Px(120.0),
-                        tile_radius,
-                    ));
+                    items.push(
+                        Self::stage_tile(
+                            cx,
+                            Self::srgb_hex(0x1a_9e_ff, 0.22),
+                            Px(48.0),
+                            Px(40.0),
+                            Px(220.0),
+                            Px(140.0),
+                            tile_radius,
+                        )
+                        .into_element(cx),
+                    );
+                    items.push(
+                        Self::stage_tile(
+                            cx,
+                            Self::srgb_hex(0xf5_9e_1a, 0.18),
+                            Px(320.0),
+                            Px(96.0),
+                            Px(260.0),
+                            Px(160.0),
+                            tile_radius,
+                        )
+                        .into_element(cx),
+                    );
+                    items.push(
+                        Self::stage_tile(
+                            cx,
+                            Self::srgb_hex(0x21_d6_59, 0.16),
+                            Px(140.0),
+                            Px(248.0),
+                            Px(280.0),
+                            Px(120.0),
+                            tile_radius,
+                        )
+                        .into_element(cx),
+                    );
 
                     if visible {
                         items.push(Self::lens(cx, &controls_for_stage).into_element(cx));

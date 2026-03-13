@@ -7,7 +7,8 @@ use std::sync::Arc;
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let open = cx.local_model(|| false);
-    let dropdown = shadcn::DropdownMenu::new(open.clone()).align(shadcn::DropdownMenuAlign::Start);
+    let dropdown =
+        shadcn::DropdownMenu::from_open(open.clone()).align(shadcn::DropdownMenuAlign::Start);
 
     let crumb = bc::Breadcrumb::new().into_element(cx, |cx| {
         vec![bc::BreadcrumbList::new().into_element(cx, |cx| {

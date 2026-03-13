@@ -69,7 +69,7 @@ impl Suggestions {
         // Prefer a plain scroll region here: shadcn/Radix `ScrollArea` roots often assume `h-full`
         // semantics, which can collapse to 0 height under auto-height stacks in layout engines
         // like Taffy. Suggestions should shrink-wrap to the pill height, matching upstream.
-        let handle = cx.with_state(ScrollHandle::default, |h| h.clone());
+        let handle = cx.slot_state(ScrollHandle::default, |h| h.clone());
 
         let mut scroll_layout = LayoutStyle::default();
         scroll_layout.size.width = Length::Fill;

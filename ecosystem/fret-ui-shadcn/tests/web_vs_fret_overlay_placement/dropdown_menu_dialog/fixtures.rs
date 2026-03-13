@@ -38,7 +38,7 @@ fn build_dropdown_menu_dialog_overlay(
         )
         .children([decl_icon::icon(cx, fret_icons::ids::ui::MORE_HORIZONTAL)]);
 
-    DropdownMenu::new(open.clone())
+    DropdownMenu::from_open(open.clone())
         // new-york-v4 dropdown-menu-dialog: `DropdownMenuContent className="w-40"`.
         .min_width(Px(160.0))
         .align(DropdownMenuAlign::End)

@@ -406,6 +406,7 @@ mod tests {
 }
 
 /// Install a first-character typeahead policy for the current roving container.
+#[track_caller]
 pub fn typeahead_first_char_arc_str<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     labels: Arc<[Arc<str>]>,
@@ -415,7 +416,7 @@ pub fn typeahead_first_char_arc_str<H: UiHost>(
         handler: OnRovingTypeahead,
     }
 
-    let handler = cx.with_state(
+    let handler = cx.slot_state(
         || {
             let labels_cell: Rc<RefCell<Arc<[Arc<str>]>>> = Rc::new(RefCell::new(labels.clone()));
             let labels_read = labels_cell.clone();
@@ -468,6 +469,7 @@ pub fn typeahead_first_char_arc_str<H: UiHost>(
 }
 
 /// Install a prefix-buffer typeahead policy for the current roving container.
+#[track_caller]
 pub fn typeahead_prefix_arc_str<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     labels: Arc<[Arc<str>]>,
@@ -512,7 +514,7 @@ pub fn typeahead_prefix_arc_str<H: UiHost>(
         }
     }
 
-    let handler = cx.with_state(
+    let handler = cx.slot_state(
         || make_state(labels.clone(), timeout_ticks),
         |state| {
             if state.timeout_ticks != timeout_ticks {
@@ -530,6 +532,7 @@ pub fn typeahead_prefix_arc_str<H: UiHost>(
 ///
 /// This matches Radix Menu's `getNextMatch` behavior (it searches circularly) even when roving
 /// navigation uses `loop=false`.
+#[track_caller]
 pub fn typeahead_prefix_arc_str_always_wrap<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     labels: Arc<[Arc<str>]>,
@@ -574,7 +577,7 @@ pub fn typeahead_prefix_arc_str_always_wrap<H: UiHost>(
         }
     }
 
-    let handler = cx.with_state(
+    let handler = cx.slot_state(
         || make_state(labels.clone(), timeout_ticks),
         |state| {
             if state.timeout_ticks != timeout_ticks {

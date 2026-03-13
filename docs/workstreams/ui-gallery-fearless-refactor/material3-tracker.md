@@ -2,7 +2,7 @@
 
 This tracker scopes the **Material 3** portion of UI Gallery.
 
-Status (2026-03-11):
+Status (2026-03-13):
 
 - shadcn + AI Elements pages are snippet-backed (Preview ≡ Code).
 - Material 3 pages are snippet-backed (Preview ≡ Code) and routed through
@@ -11,6 +11,25 @@ Status (2026-03-11):
   surface no longer depends on `src/ui/previews/material3/**`.
 - Material 3 pages share a single `render_material3_demo_page(...)` scaffold helper in
   `apps/fret-ui-gallery/src/ui/pages/material3/shared.rs` (reduces per-page boilerplate).
+- Material 3 overlay snippets now keep `new(open)` as the explicit externally owned seam, while
+  the default copyable path uses `*::uncontrolled(cx)` plus `open_model()` so docs/examples do not
+  need snippet-local `local_model_keyed("open", ...)` state for the default case.
+- `SearchView` now follows the same split for its open/query pair: keep `new(open, query)` as the
+  explicit controlled seam, and use `SearchView::uncontrolled(cx)` for the copyable state-matrix
+  demo path.
+- `Autocomplete` now follows the same query-state split: keep `new(query)` as the explicit
+  controlled seam, and use `Autocomplete::uncontrolled(cx)` plus `query_model()` for the copyable
+  page/demo path. The dialog probe on that page also uses `Dialog::uncontrolled(cx)`.
+- `ExposedDropdown` now follows the same committed-selection/query split: keep
+  `new(selected_value).query(query)` as the explicit controlled seams, and use
+  `new_controllable(...)` / `uncontrolled(cx)` plus accessors on the copyable demo path.
+- `Select` now follows the same committed-value split: keep `new(selected_value)` as the explicit
+  controlled seam, and use `new_controllable(...)` / `uncontrolled(cx)` plus `value_model()` on
+  the copyable demo path. The first-party snippet no longer hand-rolls snippet-local selection
+  models for its default demo/probes.
+- That Material 3 authoring split is now guarded by source gates in
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` and
+  `ecosystem/fret-ui-material3/src/lib.rs`.
 - `apps/fret-ui-gallery/src/ui/pages/material3/mod.rs` is split into smaller per-area modules
   (`controls.rs`, `inputs.rs`, `navigation.rs`, `overlays.rs`, `gallery.rs`, `shared.rs`) so future
   migrations stay low-conflict.
@@ -83,19 +102,19 @@ Legend:
 | `material3_badge` | `preview_material3_badge` | `apps/fret-ui-gallery/src/ui/pages/material3/controls.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_badge.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/badge.rs` | Validate placement with navigation bar/rail examples. |
 | `material3_segmented_button` | `preview_material3_segmented_button` | `apps/fret-ui-gallery/src/ui/pages/material3/controls.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_segmented_button.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/segmented_button.rs` | Selection model + disabled items. |
 | `material3_top_app_bar` | `preview_material3_top_app_bar` | `apps/fret-ui-gallery/src/ui/pages/material3/navigation.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_top_app_bar.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/top_app_bar.rs` | Track scroll/condense behavior if implemented. |
-| `material3_bottom_sheet` | `preview_material3_bottom_sheet` | `apps/fret-ui-gallery/src/ui/pages/material3/overlays.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_bottom_sheet.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/bottom_sheet.rs` | Overlay + drag affordances; requires explicit layout constraints. |
+| `material3_bottom_sheet` | `preview_material3_bottom_sheet` | `apps/fret-ui-gallery/src/ui/pages/material3/overlays.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_bottom_sheet.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/bottom_sheet.rs` | Overlay + drag affordances; default snippet now uses `ModalBottomSheet::uncontrolled(cx)` + `open_model()`, while `new(open)` remains the explicit app-owned seam. |
 | `material3_date_picker` | `preview_material3_date_picker` | `apps/fret-ui-gallery/src/ui/pages/material3/inputs.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_date_picker.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/date_picker.rs` | Ensure locale/week-start semantics are explicit in snippet. |
 | `material3_time_picker` | `preview_material3_time_picker` | `apps/fret-ui-gallery/src/ui/pages/material3/inputs.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_time_picker.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/time_picker.rs` | Clock dial may need explicit viewport sizing. |
 | `material3_autocomplete` | `preview_material3_autocomplete` | `apps/fret-ui-gallery/src/ui/pages/material3/inputs.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_autocomplete.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/autocomplete.rs` | Interaction policy lives in kit; keep page focused on outcomes. |
-| `material3_select` | `preview_material3_select` | `apps/fret-ui-gallery/src/ui/pages/material3/inputs.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_select.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/select.rs` | Overlay + list semantics; likely depends on focus/keyboard coverage. |
+| `material3_select` | `preview_material3_select` | `apps/fret-ui-gallery/src/ui/pages/material3/inputs.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_select.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/select.rs` | Overlay + list semantics; default snippet now uses `Select::uncontrolled(cx)` + `value_model()`, while `new(selected_value)` remains the explicit app-owned seam. |
 | `material3_text_field` | `preview_material3_text_field` | `apps/fret-ui-gallery/src/ui/pages/material3/inputs.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_text_field.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/text_field.rs` | Error/supporting text layout needs explicit constraints. |
 | `material3_tabs` | `preview_material3_tabs` | `apps/fret-ui-gallery/src/ui/pages/material3/navigation.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_tabs.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/tabs.rs` | Track indicator motion + roving focus behavior. |
 | `material3_navigation_bar` | `preview_material3_navigation_bar` | `apps/fret-ui-gallery/src/ui/pages/material3/navigation.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_navigation_bar.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/navigation_bar.rs` | Active/inactive label + icon states. |
 | `material3_navigation_rail` | `preview_material3_navigation_rail` | `apps/fret-ui-gallery/src/ui/pages/material3/navigation.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_navigation_rail.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/navigation_rail.rs` | Extended rail + badges. |
 | `material3_navigation_drawer` | `preview_material3_navigation_drawer` | `apps/fret-ui-gallery/src/ui/pages/material3/navigation.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_navigation_drawer.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/navigation_drawer.rs` | Docked vs modal behaviors should be distinct. |
 | `material3_modal_navigation_drawer` | `preview_material3_modal_navigation_drawer` | `apps/fret-ui-gallery/src/ui/pages/material3/navigation.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_modal_navigation_drawer.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/modal_navigation_drawer.rs` | Overlay + scrim + focus restore. |
-| `material3_dialog` | `preview_material3_dialog` | `apps/fret-ui-gallery/src/ui/pages/material3/overlays.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_dialog.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/dialog.rs` | Dismiss + focus trap + restore. |
-| `material3_menu` | `preview_material3_menu` | `apps/fret-ui-gallery/src/ui/pages/material3/overlays.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_menu.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/menu.rs` | Keyboard navigation + typeahead (when available). |
+| `material3_dialog` | `preview_material3_dialog` | `apps/fret-ui-gallery/src/ui/pages/material3/overlays.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_dialog.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/dialog.rs` | Dismiss + focus trap + restore. Default snippet now uses `Dialog::uncontrolled(cx)` + `open_model()`; `new(open)` stays as the explicit externally owned seam. |
+| `material3_menu` | `preview_material3_menu` | `apps/fret-ui-gallery/src/ui/pages/material3/overlays.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_menu.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/menu.rs` | Keyboard navigation + typeahead (when available). Default snippet now uses `DropdownMenu::uncontrolled(cx)` + `open_model()`; `new(open)` stays available for explicit controlled ownership. |
 | `material3_list` | `preview_material3_list` | `apps/fret-ui-gallery/src/ui/pages/material3/navigation.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_list.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/list.rs` | Roving focus; list item density. |
 | `material3_snackbar` | `preview_material3_snackbar` | `apps/fret-ui-gallery/src/ui/pages/material3/overlays.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_snackbar.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/snackbar.rs` | Queue/stack policy is app-level; show a minimal example. |
 | `material3_tooltip` | `preview_material3_tooltip` | `apps/fret-ui-gallery/src/ui/pages/material3/overlays.rs` | Yes | `apps/fret-ui-gallery/src/ui/pages/material3_tooltip.rs` | `apps/fret-ui-gallery/src/ui/snippets/material3/tooltip.rs` | Hover + keyboard focus + delay policy. |

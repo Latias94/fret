@@ -1,5 +1,6 @@
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
+use std::marker::PhantomData;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
@@ -67,14 +68,66 @@ pub struct ContextMenuTrigger {
     child: AnyElement,
 }
 
+pub struct ContextMenuTriggerBuild<H, T> {
+    child: Option<T>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
 impl ContextMenuTrigger {
     pub fn new(child: AnyElement) -> Self {
         Self { child }
     }
 
+    /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
+    pub fn build<H: UiHost, T>(child: T) -> ContextMenuTriggerBuild<H, T>
+    where
+        T: IntoUiElement<H>,
+    {
+        ContextMenuTriggerBuild {
+            child: Some(child),
+            _phantom: PhantomData,
+        }
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
+    }
+}
+
+impl<H: UiHost, T> ContextMenuTriggerBuild<H, T>
+where
+    T: IntoUiElement<H>,
+{
+    #[track_caller]
+    pub fn into_trigger(self, cx: &mut ElementContext<'_, H>) -> ContextMenuTrigger {
+        ContextMenuTrigger::new(
+            self.child
+                .expect("expected context-menu trigger child")
+                .into_element(cx),
+        )
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.into_trigger(cx).into_element(cx)
+    }
+}
+
+impl<H: UiHost> IntoUiElement<H> for ContextMenuTrigger {
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        ContextMenuTrigger::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, T> IntoUiElement<H> for ContextMenuTriggerBuild<H, T>
+where
+    T: IntoUiElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        ContextMenuTriggerBuild::into_element(self, cx)
     }
 }
 
@@ -2993,7 +3046,8 @@ impl std::fmt::Debug for ContextMenu {
 }
 
 impl ContextMenu {
-    pub fn new(open: Model<bool>) -> Self {
+    /// Explicit advanced seam for authoring against an already-managed open model.
+    pub fn from_open(open: Model<bool>) -> Self {
         Self {
             open,
             disabled: false,
@@ -3021,6 +3075,18 @@ impl ContextMenu {
         }
     }
 
+    /// Compatibility alias for call sites that still own the open model explicitly.
+    pub fn new(open: Model<bool>) -> Self {
+        Self::from_open(open)
+    }
+
+    /// Default typed root constructor for the common uncontrolled context-menu authoring path.
+    ///
+    /// This stores the internal `open` model at the root call site and starts closed.
+    pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {
+        Self::new_controllable(cx, None, false)
+    }
+
     /// Creates a context menu with a controlled/uncontrolled open model (Radix `open` / `defaultOpen`).
     ///
     /// Note: If `open` is `None`, the internal model is stored in element state at the call site.
@@ -3032,7 +3098,7 @@ impl ContextMenu {
     ) -> Self {
         let open =
             fret_ui_kit::primitives::open_state::open_use_model(cx, open, || default_open).model();
-        Self::new(open)
+        Self::from_open(open)
     }
 
     pub fn align(mut self, align: DropdownMenuAlign) -> Self {
@@ -3152,6 +3218,40 @@ impl ContextMenu {
         self
     }
 
+    /// Host-bound builder-first helper that late-lands the trigger at the root call site.
+    #[track_caller]
+    pub fn build<H: UiHost, I>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl IntoUiElement<H>,
+        entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = ContextMenuEntry>,
+    {
+        self.into_element(cx, move |cx| trigger.into_element(cx), entries)
+    }
+
+    /// Part-based authoring surface aligned with shadcn/ui v4 exports.
+    ///
+    /// This is a thin adapter over `ContextMenu::into_element(...)` that allows call sites to use
+    /// `ContextMenuTrigger` and `ContextMenuContent` parts (and to attach content placement
+    /// options in a shadcn-like location).
+    #[track_caller]
+    pub fn build_parts<H: UiHost, I>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl IntoUiElement<H>,
+        content: impl Into<ContextMenuContent>,
+        entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = ContextMenuEntry>,
+    {
+        let menu = content.into().apply_to(self);
+        menu.build(cx, trigger, entries)
+    }
+
     /// Part-based authoring surface aligned with shadcn/ui v4 exports.
     ///
     /// This is a thin adapter over `ContextMenu::into_element(...)` that allows call sites to use
@@ -3168,8 +3268,8 @@ impl ContextMenu {
     where
         I: IntoIterator<Item = ContextMenuEntry>,
     {
-        let menu = content.into().apply_to(self);
-        menu.into_element(cx, |cx| trigger(cx).into_element(cx), entries)
+        let trigger = trigger(cx);
+        self.build_parts(cx, trigger, content, entries)
     }
 
     #[track_caller]
@@ -3361,7 +3461,7 @@ impl ContextMenu {
                         touch_on_cancel(host, acx, cancel)
                     }));
                     let region_id = cx.root_id();
-                    let installed = cx.with_state_for(
+                    let installed = cx.state_for(
                         region_id,
                         ContextMenuTriggerTimerInstalledState::default,
                         |st| st.installed,
@@ -3391,7 +3491,7 @@ impl ContextMenu {
                                 true
                             }),
                         );
-                        cx.with_state_for(
+                        cx.state_for(
                             region_id,
                             ContextMenuTriggerTimerInstalledState::default,
                             |st| {
@@ -4794,7 +4894,7 @@ mod tests {
         let open = app.models_mut().insert(false);
 
         let content = ContextMenuPortal::new(ContextMenuContent::new().side_offset(Px(9.0)));
-        let menu = ContextMenuContent::from(content).apply_to(ContextMenu::new(open));
+        let menu = ContextMenuContent::from(content).apply_to(ContextMenu::from_open(open));
 
         assert_eq!(menu.side_offset, Px(9.0));
     }
@@ -4817,7 +4917,7 @@ mod tests {
     }
 
     #[test]
-    fn context_menu_new_controllable_multiple_instances_do_not_share_open_model() {
+    fn context_menu_uncontrolled_multiple_instances_do_not_share_open_model() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let bounds = Rect::new(
@@ -4826,8 +4926,8 @@ mod tests {
         );
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            let menu_a = ContextMenu::new_controllable(cx, None, false);
-            let menu_b = ContextMenu::new_controllable(cx, None, false);
+            let menu_a = ContextMenu::uncontrolled(cx);
+            let menu_b = ContextMenu::uncontrolled(cx);
 
             assert_ne!(menu_a.open.id(), menu_b.open.id());
         });
@@ -5063,7 +5163,7 @@ mod tests {
             bounds,
             "context-menu",
             |cx| {
-                vec![ContextMenu::new(open).into_element(
+                vec![ContextMenu::from_open(open).into_element(
                     cx,
                     |cx| {
                         cx.container(
@@ -5123,7 +5223,7 @@ mod tests {
             "context-menu-test-id-prefix",
             move |cx| {
                 vec![
-                    ContextMenu::new(open.clone())
+                    ContextMenu::from_open(open.clone())
                         .test_id_prefix("ctx")
                         .into_element(
                             cx,
@@ -5184,7 +5284,7 @@ mod tests {
             "context-menu",
             move |cx| {
                 vec![
-                    ContextMenu::new(open)
+                    ContextMenu::from_open(open)
                         .on_dismiss_request(on_dismiss_request)
                         .into_element(
                             cx,
@@ -5245,44 +5345,51 @@ mod tests {
         app.set_frame_id(next_frame);
 
         OverlayController::begin_frame(app, window);
-        let root = fret_ui::declarative::render_root(
-            ui,
-            app,
-            services,
-            window,
-            bounds,
-            "context-menu-shift-f10",
-            |cx| {
-                vec![ContextMenu::new(open).disabled(disabled).into_element(
-                    cx,
-                    |cx| {
-                        cx.pressable(
-                            PressableProps {
-                                layout: {
-                                    let mut layout = LayoutStyle::default();
-                                    layout.size.width = Length::Px(Px(120.0));
-                                    layout.size.height = Length::Px(Px(40.0));
-                                    layout
+        let root =
+            fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "context-menu-shift-f10",
+                |cx| {
+                    vec![
+                        ContextMenu::from_open(open)
+                            .disabled(disabled)
+                            .into_element(
+                                cx,
+                                |cx| {
+                                    cx.pressable(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(120.0));
+                                                layout.size.height = Length::Px(Px(40.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: true,
+                                            a11y: PressableA11y {
+                                                role: Some(SemanticsRole::Button),
+                                                label: Some(Arc::from("Trigger")),
+                                                test_id: Some(Arc::from("trigger")),
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        |cx, _st| {
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
+                                        },
+                                    )
                                 },
-                                enabled: true,
-                                focusable: true,
-                                a11y: PressableA11y {
-                                    role: Some(SemanticsRole::Button),
-                                    label: Some(Arc::from("Trigger")),
-                                    test_id: Some(Arc::from("trigger")),
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            |cx, _st| {
-                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
-                            },
-                        )
-                    },
-                    |_cx| vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))],
-                )]
-            },
-        );
+                                |_cx| vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))],
+                            ),
+                    ]
+                },
+            );
         ui.set_root(root);
         OverlayController::render(ui, app, services, window, bounds);
         ui.request_semantics_snapshot();
@@ -5437,7 +5544,7 @@ mod tests {
                                 false
                             }));
                             let region_id = cx.root_id();
-                            let installed = cx.with_state_for(
+                            let installed = cx.state_for(
                                 region_id,
                                 ContextMenuTriggerTimerInstalledState::default,
                                 |st| st.installed,
@@ -5455,7 +5562,7 @@ mod tests {
                                         false
                                     }),
                                 );
-                                cx.with_state_for(
+                                cx.state_for(
                                     region_id,
                                     ContextMenuTriggerTimerInstalledState::default,
                                     |st| {
@@ -5749,7 +5856,7 @@ mod tests {
                     },
                 );
 
-                let trigger = ContextMenu::new(open).into_element(
+                let trigger = ContextMenu::from_open(open).into_element(
                     cx,
                     |cx| {
                         cx.pressable(
@@ -5842,7 +5949,7 @@ mod tests {
                     },
                 );
 
-                let trigger = ContextMenu::new(open)
+                let trigger = ContextMenu::from_open(open)
                     .modal(modal)
                     .on_dismiss_request(on_dismiss_request.clone())
                     .into_element(
@@ -5937,7 +6044,7 @@ mod tests {
                     },
                 );
 
-                let trigger = ContextMenu::new(open).into_element(
+                let trigger = ContextMenu::from_open(open).into_element(
                     cx,
                     |cx| {
                         cx.pressable(
@@ -6030,7 +6137,7 @@ mod tests {
                     },
                 );
 
-                let trigger = ContextMenu::new(open)
+                let trigger = ContextMenu::from_open(open)
                     .on_dismiss_request(on_dismiss_request)
                     .into_element(
                         cx,
@@ -6131,7 +6238,7 @@ mod tests {
                 );
 
                 let trigger =
-                    ContextMenu::new(open)
+                    ContextMenu::from_open(open)
                         .on_open_auto_focus(on_open_auto_focus.clone())
                         .on_close_auto_focus(on_close_auto_focus.clone())
                         .into_element(
@@ -6194,7 +6301,7 @@ mod tests {
             bounds,
             "context-menu-submenu-arrow-right",
             move |cx| {
-                vec![ContextMenu::new(open).into_element(
+                vec![ContextMenu::from_open(open).into_element(
                     cx,
                     |cx| {
                         cx.pressable(

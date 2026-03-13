@@ -1043,7 +1043,7 @@ fn radix_web_dropdown_menu_open_geometry_matches_fret() {
         true,
         |cx| {
             let trigger = fixed_trigger(cx, "Open", 200.0, 200.0, 80.0, 36.0);
-            let menu = fret_ui_shadcn::DropdownMenu::new(open.clone())
+            let menu = fret_ui_shadcn::DropdownMenu::from_open(open.clone())
                 .side(match parse_side(side_str) {
                     Side::Top => fret_ui_shadcn::DropdownMenuSide::Top,
                     Side::Right => fret_ui_shadcn::DropdownMenuSide::Right,
@@ -1110,7 +1110,7 @@ fn radix_web_dropdown_menu_open_geometry_matches_fret() {
             request_semantics,
             |cx| {
                 let trigger = fixed_trigger(cx, "Open", 200.0, 200.0, 80.0, 36.0);
-                let menu = fret_ui_shadcn::DropdownMenu::new(open.clone())
+                let menu = fret_ui_shadcn::DropdownMenu::from_open(open.clone())
                     .side(match parse_side(side_str) {
                         Side::Top => fret_ui_shadcn::DropdownMenuSide::Top,
                         Side::Right => fret_ui_shadcn::DropdownMenuSide::Right,
@@ -1972,7 +1972,7 @@ fn radix_web_context_menu_open_geometry_matches_fret() {
                                     |cx, _st| vec![fixed_size_container(cx, trigger_w, trigger_h)],
                                 );
 
-                                let menu = fret_ui_shadcn::ContextMenu::new(open)
+                                let menu = fret_ui_shadcn::ContextMenu::from_open(open)
                                     .min_width(Px(web_content_rect.w))
                                     .into_element(
                                         cx,
@@ -2114,7 +2114,7 @@ fn radix_web_context_menu_open_geometry_matches_fret() {
                                         },
                                     );
 
-                                    let menu = fret_ui_shadcn::ContextMenu::new(open)
+                                    let menu = fret_ui_shadcn::ContextMenu::from_open(open)
                                         .min_width(Px(web_content_rect.w))
                                         .into_element(
                                             cx,

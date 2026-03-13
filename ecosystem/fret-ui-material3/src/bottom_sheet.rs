@@ -16,6 +16,7 @@ use fret_ui::element::{
     PressableA11y, PressableProps, RingPlacement, RingStyle,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::{OverlayController, OverlayPresence};
@@ -150,7 +151,7 @@ impl DockedBottomSheet {
                     drag_handle: Option<Arc<str>>,
                 }
 
-                let drag_handle_test_id = cx.with_state(DerivedDragHandleTestId::default, |st| {
+                let drag_handle_test_id = cx.slot_state(DerivedDragHandleTestId::default, |st| {
                     if st.base.as_deref() != test_id_for_children.as_deref() {
                         st.base = test_id_for_children.clone();
                         st.drag_handle = st
@@ -221,6 +222,29 @@ impl ModalBottomSheet {
             drag_handle: true,
             test_id: None,
         }
+    }
+
+    /// Creates a modal bottom sheet with a controlled/uncontrolled open model.
+    ///
+    /// When `open` is `None`, the sheet stores its internal open model at the root call site and
+    /// initializes it from `default_open`.
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: Option<Model<bool>>,
+        default_open: bool,
+    ) -> Self {
+        let open = controllable_state::use_controllable_model(cx, open, || default_open).model();
+        Self::new(open)
+    }
+
+    /// Default teaching-surface constructor for a sheet that owns its open model.
+    pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {
+        Self::new_controllable(cx, None, false)
+    }
+
+    /// Returns the resolved open model, including the internally owned model for uncontrolled use.
+    pub fn open_model(&self) -> Model<bool> {
+        self.open.clone()
     }
 
     pub fn scrim_opacity(mut self, opacity: f32) -> Self {
@@ -348,7 +372,7 @@ impl ModalBottomSheet {
                     sheet: Option<Arc<str>>,
                 }
 
-                let (scrim_test_id, sheet_test_id) = cx.with_state(DerivedTestIds::default, |st| {
+                let (scrim_test_id, sheet_test_id) = cx.slot_state(DerivedTestIds::default, |st| {
                     if st.base.as_deref() != test_id.as_deref() {
                         st.base = test_id.clone();
                         st.scrim =
@@ -553,4 +577,79 @@ fn absolute_fill_layout() -> LayoutStyle {
         left: Some(Px(0.0)).into(),
     };
     layout
+}
+
+#[cfg(test)]
+mod tests {
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::elements::with_element_cx;
+    use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+
+    use super::*;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        )
+    }
+
+    #[test]
+    fn modal_bottom_sheet_new_controllable_uses_controlled_model_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let controlled = app.models_mut().insert(true);
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-bottom-sheet-controlled",
+            |cx| {
+                let sheet = ModalBottomSheet::new_controllable(cx, Some(controlled.clone()), false);
+                assert_eq!(sheet.open_model(), controlled);
+            },
+        );
+    }
+
+    #[test]
+    fn modal_bottom_sheet_new_controllable_applies_default_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-bottom-sheet-default-open",
+            |cx| {
+                let sheet = ModalBottomSheet::new_controllable(cx, None, true);
+                let open = cx
+                    .watch_model(&sheet.open_model())
+                    .layout()
+                    .copied()
+                    .unwrap_or(false);
+                assert!(open);
+            },
+        );
+    }
+
+    #[test]
+    fn modal_bottom_sheet_uncontrolled_multiple_instances_do_not_share_open_model() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-bottom-sheet-uncontrolled-scope",
+            |cx| {
+                let a = ModalBottomSheet::uncontrolled(cx);
+                let b = ModalBottomSheet::uncontrolled(cx);
+                assert_ne!(a.open_model(), b.open_model());
+            },
+        );
+    }
 }

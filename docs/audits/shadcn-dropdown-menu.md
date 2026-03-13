@@ -56,8 +56,13 @@ Key upstream behaviors/surfaces:
 - Pass: Dismissible popover (outside press + Escape) via `window_overlays`.
 - Pass: On open, focus moves to the first focusable descendant (driven by overlay policy), enabling
   keyboard navigation inside the menu.
-- Pass: Controlled/uncontrolled open state parity is available via
+- Pass: The default copyable root path is now `DropdownMenu::uncontrolled(cx)`, so common
+  shadcn-style examples do not need to spell an explicit open model.
+- Pass: Controlled/uncontrolled open state parity remains available via
   `DropdownMenu::new_controllable(cx, open, default_open)` (Base UI / Radix `open` + `defaultOpen`).
+- Pass: The explicit managed-open seams are `DropdownMenu::from_open(open)` and
+  `DropdownMenu::new_controllable(cx, open, default_open)`; the older one-arg `new(open)` alias has
+  been removed from the first-party surface.
 - Pass: Open lifecycle callbacks are available via `DropdownMenu::on_open_change` and
   `DropdownMenu::on_open_change_complete` (Base UI `onOpenChange` + `onOpenChangeComplete`).
 - Pass: `DropdownMenu::modal(bool)` is supported (default `true`).
@@ -107,13 +112,17 @@ Still missing (relative to upstream shadcn/ui v4):
 Notes on API mapping:
 
 - Pass: Fret still supports the direct typed builder entry point
-  `DropdownMenu::into_element(trigger, entries)`.
+  `DropdownMenu::uncontrolled(cx).build(cx, trigger, entries)` for the default authoring path.
 - Pass: Fret also exposes a parts bridge via `DropdownMenu::into_element_parts(...)`, so shadcn-style
   `DropdownMenuTrigger` / `DropdownMenuContent` call sites no longer need to be translated into a
   different authoring shape.
+- Pass: Managed-open callers can stay explicit via `DropdownMenu::from_open(open)` without pushing
+  that model-owned seam into copied examples.
 - Pass: Checkable items now expose a source-aligned snapshot + callback path:
   - `DropdownMenuCheckboxItem::from_checked(...)` + `.on_checked_change(...)`
   - `DropdownMenuRadioGroup::from_value(...)` + `.on_value_change(...)`
+- Pass: `DropdownMenu::test_id_prefix(...)` derives the content id on the `role=menu` semantics
+  node itself (for example `dd-content`) and keeps deterministic item ids for automation.
 - Note: Fret intentionally does not add a separate generic `compose()` builder for `DropdownMenu`
   today. The typed `DropdownMenuEntry` model is already the important contract, and the parts bridge
   keeps placement/content slots explicit without weakening entry semantics.
@@ -121,7 +130,11 @@ Notes on API mapping:
   parts bridge already covers the docs-style `Trigger` / `Content` path, and typed entries remain
   the more important contract boundary.
 - Groups/labels/shortcuts/destructive variant are modeled via:
-  `DropdownMenuEntry::{Group,Label}` and `DropdownMenuItem::{trailing,variant}`.
+  `DropdownMenuEntry::{Group,Label}`, `DropdownMenuItem::{shortcut,trailing,variant}`, and
+  matching shortcut helpers on checkbox/radio items.
+- Pass: copyable first-party examples now prefer `.shortcut("...")` over manually composing
+  `DropdownMenuShortcut`, while still keeping `DropdownMenuShortcut` available as the explicit
+  trailing escape hatch.
 
 ## Validation
 
@@ -130,11 +143,19 @@ Notes on API mapping:
 - Contract test: `dropdown_menu_new_controllable_applies_default_open`
 - Contract test: `dropdown_menu_open_change_events_emit_change_and_complete_after_settle`
 - Contract test: `dropdown_menu_open_change_events_complete_without_animation`
+- Contract test: `estimated_menu_panel_width_grows_for_explicit_shortcut`
+- Contract test: `estimated_menu_panel_width_grows_for_submenu_chevron`
 - Interaction test: `dropdown_menu_disabled_blocks_arrow_key_open_from_trigger`
 - Interaction test: `dropdown_menu_disabled_hides_content_even_when_open_model_true`
   (ensures `pos_in_set`/`set_size` exclude separators).
+- Diag docs/demo/basic/submenu gates:
+  - `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-docs-smoke.json`
+  - `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-demo-click-profile-last-action.json`
+  - `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-basic-typeahead-billing.json`
+  - `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-submenu-open-smoke.json`
 - Interaction test: `dropdown_menu_submenu_opens_on_hover_and_closes_on_leave`
 - Keyboard test: `dropdown_menu_submenu_opens_on_arrow_right_without_pointer_move`
+- Keyboard test: `dropdown_menu_nested_submenu_opens_on_arrow_right_and_keeps_test_ids`
 - Direction test: `dropdown_menu_align_start_respects_direction_provider`
 - Web placement gate (root): `web_vs_fret_dropdown_menu_demo_overlay_placement_matches`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.open.json`).
@@ -202,6 +223,10 @@ Notes on API mapping:
   submenu triggers (via wheel), the root menu panel origin remains stable under wheel input
   (asserted in `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` during
   `web_vs_fret_dropdown_menu_demo_submenu_*`).
+- Diag gate: `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-item-chrome-fill.json`
+  (asserts the interactive row chrome still fills the authored item bounds on demo/basic examples).
+- Diag screenshot evidence: `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-demo-open-screenshot-zinc-dark.json`
+  (captures the docs-aligned demo open state in the zinc dark preset).
 - Underlay scroll anchor stability gate: when the trigger lives inside a scrolling underlay, the
   menu panel tracks the trigger after wheel-driven scroll updates (validated in
   `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` via

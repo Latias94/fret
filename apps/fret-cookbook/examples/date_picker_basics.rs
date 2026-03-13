@@ -26,14 +26,13 @@ impl View for DatePickerBasicsView {
             .map(|d| d.to_string())
             .unwrap_or_else(|| "<none>".to_string());
 
-        let header = shadcn::CardHeader::build(|cx, out| {
-            out.push_ui(cx, shadcn::CardTitle::new("Date picker basics"));
-            out.push_ui(
-                cx,
-                shadcn::CardDescription::new(
+        let header = shadcn::card_header(|cx| {
+            ui::children![cx;
+                shadcn::card_title("Date picker basics"),
+                shadcn::card_description(
                     "A minimal DatePicker example (local state bridged into the controlled DatePicker surface).",
                 ),
-            );
+            ]
         });
 
         let picker = shadcn::DatePicker::new_controllable(
@@ -59,21 +58,15 @@ impl View for DatePickerBasicsView {
         .gap(Space::N2)
         .items_center();
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(cx, header);
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(
-                        cx,
-                        ui::v_flex_build(|cx, out| {
-                            out.push(picker);
-                            out.push_ui(cx, selected_row);
-                        })
-                        .gap(Space::N3),
-                    );
+        let card = shadcn::card(|cx| {
+            ui::children![cx;
+                header,
+                shadcn::card_content(|cx| {
+                    ui::children![cx;
+                        ui::v_flex(|cx| ui::children![cx; picker, selected_row]).gap(Space::N3)
+                    ]
                 }),
-            );
+            ]
         })
         .ui()
         .w_full()

@@ -80,27 +80,9 @@ pub(super) fn read_drag_snapshot_for_pointer(
     out
 }
 
-#[derive(Debug, Default)]
-struct WorkspaceTabStripDragStateModel {
-    model: Option<Model<WorkspaceTabStripDragState>>,
-}
-
+#[track_caller]
 pub(super) fn get_drag_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> Model<WorkspaceTabStripDragState> {
-    let existing = cx.with_state(WorkspaceTabStripDragStateModel::default, |st| {
-        st.model.clone()
-    });
-    if let Some(m) = existing {
-        return m;
-    }
-
-    let model = cx
-        .app
-        .models_mut()
-        .insert(WorkspaceTabStripDragState::default());
-    cx.with_state(WorkspaceTabStripDragStateModel::default, |st| {
-        st.model = Some(model.clone());
-    });
-    model
+    cx.local_model(WorkspaceTabStripDragState::default)
 }

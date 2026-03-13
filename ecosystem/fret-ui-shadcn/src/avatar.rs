@@ -80,12 +80,12 @@ pub fn avatar_sized<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     size: AvatarSize,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+) -> Avatar
 where
     I: IntoIterator<Item = AnyElement>,
 {
     let children = with_avatar_size_provider(cx, size, |cx| f(cx).into_iter().collect::<Vec<_>>());
-    Avatar::new(children).size(size).into_element(cx)
+    Avatar::new(children).size(size)
 }
 
 /// shadcn/ui `Avatar` root.
@@ -735,7 +735,7 @@ impl AvatarFallback {
             let dt = fret_ui_kit::declarative::motion::effective_frame_delta_for_cx(cx);
             let delay = self.delay;
             let delay_ready =
-                cx.with_state_for(id, radix_avatar::AvatarFallbackDelay::default, |gate| {
+                cx.state_for(id, radix_avatar::AvatarFallbackDelay::default, |gate| {
                     gate.drive(frame_id, dt, delay, want_render)
                 });
             scheduling::set_continuous_frames(

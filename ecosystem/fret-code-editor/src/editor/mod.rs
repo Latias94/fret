@@ -1861,9 +1861,9 @@ impl CodeEditor {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let scroll_handle = cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
-        let cell_w = cx.with_state(|| Cell::new(Px(0.0)), |c| c.clone());
-        let scroll_dir = cx.with_state(|| Cell::new(1i32), |c| c.clone());
+        let scroll_handle = cx.slot_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
+        let cell_w = cx.slot_state(|| Cell::new(Px(0.0)), |c| c.clone());
+        let scroll_dir = cx.slot_state(|| Cell::new(1i32), |c| c.clone());
 
         let handle = self.handle.clone();
         let editor_state = self.handle.state.clone();

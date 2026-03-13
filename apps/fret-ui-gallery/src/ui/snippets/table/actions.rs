@@ -26,16 +26,13 @@ fn action_row(
     let trigger_id = format!("ui-gallery-table-actions-trigger-{key}");
 
     shadcn::table_row(3, move |cx| {
-        let dropdown = shadcn::DropdownMenu::new(open_model.clone()).into_element(
+        let dropdown = shadcn::DropdownMenu::from_open(open_model.clone()).build(
             cx,
-            |cx| {
-                shadcn::Button::new("?")
-                    .variant(shadcn::ButtonVariant::Ghost)
-                    .size(shadcn::ButtonSize::Icon)
-                    .toggle_model(open_model.clone())
-                    .test_id(Arc::<str>::from(trigger_id.clone()))
-                    .into_element(cx)
-            },
+            shadcn::Button::new("?")
+                .variant(shadcn::ButtonVariant::Ghost)
+                .size(shadcn::ButtonSize::Icon)
+                .toggle_model(open_model.clone())
+                .test_id(Arc::<str>::from(trigger_id.clone())),
             |_cx| {
                 vec![
                     shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Edit")),

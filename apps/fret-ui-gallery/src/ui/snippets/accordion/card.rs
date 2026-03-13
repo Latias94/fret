@@ -1,13 +1,13 @@
 pub const SOURCE: &str = include_str!("card.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let accordion = shadcn::Accordion::multiple_uncontrolled(["plans"])
-        .refine_layout(LayoutRefinement::default().w_full().min_w_0())
-        .items([
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let accordion = shadcn::accordion_multiple_uncontrolled(cx, ["plans"], |cx| {
+        [
             shadcn::AccordionItem::new(
                 "plans",
                 shadcn::AccordionTrigger::new(vec![cx.text("What subscription plans do you offer?")]),
@@ -28,7 +28,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     )
                 ]),
             ),
-        ])
+        ]
+    })
+        .refine_layout(LayoutRefinement::default().w_full().min_w_0())
         .into_element(cx);
 
     shadcn::card(|cx| {

@@ -408,30 +408,27 @@ impl View for CanvasPanZoomBasicsView {
                 .into()
         };
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(
-                cx,
-                shadcn::CardHeader::build(|cx, out| {
-                    out.push_ui(cx, shadcn::CardTitle::new("Canvas pan/zoom basics"));
-                    out.push_ui(
-                        cx,
-                        shadcn::CardDescription::new(
+        let card = shadcn::card(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_header(|cx| {
+                    ui::children![
+                        cx;
+                        shadcn::card_title("Canvas pan/zoom basics"),
+                        shadcn::card_description(
                             "Uses fret-canvas pan/zoom wiring + a tiny app-owned drag tool for one item.",
                         ),
-                    );
+                    ]
                 }),
-            );
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(
-                        cx,
+                shadcn::card_content(|cx| {
+                    ui::children![
+                        cx;
                         ui::v_flex(|cx| ui::children![cx; toolbar, hint, canvas])
                             .gap(Space::N3)
                             .w_full(),
-                    );
+                    ]
                 }),
-            );
+            ]
         })
         .ui()
         .w_full()

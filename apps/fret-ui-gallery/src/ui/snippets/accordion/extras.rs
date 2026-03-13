@@ -1,12 +1,13 @@
 pub const SOURCE: &str = include_str!("extras.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let max_w_xl = LayoutRefinement::default()
         .w_full()
         .max_w(Px(640.0))
@@ -20,9 +21,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .max_w(Px(384.0))
         .min_w_0();
 
-    let multiple = shadcn::Accordion::multiple_uncontrolled(["notifications"])
-        .refine_layout(max_w_lg.clone())
-        .items([
+    let multiple = shadcn::accordion_multiple_uncontrolled(cx, ["notifications"], |cx| {
+        [
             shadcn::AccordionItem::new(
                 "notifications",
                 shadcn::AccordionTrigger::new(vec![cx.text("Notifications")])
@@ -42,28 +42,29 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     shadcn::raw::typography::p("Manage passwords, 2FA, and active sessions.")
                 ]),
             ),
-        ])
-        .into_element(cx)
-        .test_id("ui-gallery-accordion-extras-multiple");
+        ]
+    })
+    .refine_layout(max_w_lg.clone())
+    .into_element(cx)
+    .test_id("ui-gallery-accordion-extras-multiple");
 
-    let disabled = shadcn::Accordion::single_uncontrolled(Some("item-1"))
-        .collapsible(true)
-        .refine_layout(max_w_sm.clone())
-        .items([shadcn::AccordionItem::new(
+    let disabled = shadcn::accordion_single_uncontrolled(cx, Some("item-1"), |cx| {
+        [shadcn::AccordionItem::new(
             "item-1",
             shadcn::AccordionTrigger::new(vec![cx.text("Disabled")]).disabled(true),
             shadcn::AccordionContent::new(ui::children![
                 cx;
                 shadcn::raw::typography::p("This item is disabled and should not be interactive.")
             ]),
-        )])
-        .into_element(cx);
+        )]
+    })
+    .collapsible(true)
+    .refine_layout(max_w_sm.clone())
+    .into_element(cx);
 
     let borders = {
-        let accordion = shadcn::Accordion::single_uncontrolled(Some("item-1"))
-            .collapsible(true)
-            .refine_layout(max_w_sm.clone())
-            .items([shadcn::AccordionItem::new(
+        let accordion = shadcn::accordion_single_uncontrolled(cx, Some("item-1"), |cx| {
+            [shadcn::AccordionItem::new(
                 "item-1",
                 shadcn::AccordionTrigger::new(vec![cx.text("Borders")]),
                 shadcn::AccordionContent::new(ui::children![
@@ -72,8 +73,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         "Use an outer chrome wrapper when you want a bordered surface.",
                     )
                 ]),
-            )])
-            .into_element(cx);
+            )]
+        })
+        .collapsible(true)
+        .refine_layout(max_w_sm.clone())
+        .into_element(cx);
 
         let props = cx.with_theme(|theme| {
             decl_style::container_props(
@@ -90,9 +94,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     };
 
     let card = {
-        let accordion = shadcn::Accordion::multiple_uncontrolled(["plans"])
-            .refine_layout(LayoutRefinement::default().w_full().min_w_0())
-            .items([
+        let accordion = shadcn::accordion_multiple_uncontrolled(cx, ["plans"], |cx| {
+            [
                 shadcn::AccordionItem::new(
                     "plans",
                     shadcn::AccordionTrigger::new(vec![cx.text(
@@ -115,7 +118,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         )
                     ]),
                 ),
-            ])
+            ]
+        })
+            .refine_layout(LayoutRefinement::default().w_full().min_w_0())
             .into_element(cx);
 
         shadcn::card(|cx| {
@@ -139,10 +144,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     };
 
     let rtl = with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
-        shadcn::Accordion::single_uncontrolled(Some("item-1"))
-            .collapsible(true)
-            .refine_layout(max_w_xl.clone())
-            .items([shadcn::AccordionItem::new(
+        shadcn::accordion_single_uncontrolled(cx, Some("item-1"), |cx| {
+            [shadcn::AccordionItem::new(
                 "item-1",
                 shadcn::AccordionTrigger::new(vec![cx.text("RTL")])
                     .test_id("ui-gallery-accordion-extras-rtl-trigger"),
@@ -152,8 +155,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         "Ensure icons and spacing mirror correctly under RTL.",
                     )
                 ]),
-            )])
-            .into_element(cx)
+            )]
+        })
+        .collapsible(true)
+        .refine_layout(max_w_xl.clone())
+        .into_element(cx)
     });
 
     let multiple_section = ui::v_flex(move |cx| {

@@ -98,40 +98,39 @@ impl View for SimpleTodoView {
             .items_center()
             .w_full();
 
-        let rows = ui::v_flex_build(|cx, out| {
-            for row in &todos {
-                let theme = theme_for_rows.clone();
-                out.push_ui(cx, ui::keyed(row.id, |_cx| todo_row(theme, row)));
-            }
+        let rows = ui::v_flex(|cx| {
+            ui::for_each_keyed(
+                cx,
+                &todos,
+                |row| row.id,
+                |row| {
+                    let theme = theme_for_rows.clone();
+                    todo_row(theme, row)
+                },
+            )
         })
         .gap(Space::N2)
         .test_id(TEST_ID_ROWS);
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(
-                cx,
-                shadcn::CardHeader::build(|cx, out| {
-                    out.push_ui(cx, shadcn::CardTitle::new("Simple todo"));
-                    out.push_ui(
-                        cx,
-                        shadcn::CardDescription::new(
+        let card = shadcn::card(|cx| {
+            ui::children![cx;
+                shadcn::card_header(|cx| {
+                    ui::children![cx;
+                        shadcn::card_title("Simple todo"),
+                        shadcn::card_description(
                             "LocalState<Vec<_>> + typed actions + keyed lists (no selector/query).",
                         ),
-                    );
-                    out.push_ui(cx, header_actions);
+                        header_actions,
+                    ]
                 }),
-            );
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(
-                        cx,
+                shadcn::card_content(|cx| {
+                    ui::children![cx;
                         ui::v_flex(|cx| ui::children![cx; input_row, rows])
                             .gap(Space::N4)
-                            .w_full(),
-                    );
+                            .w_full()
+                    ]
                 }),
-            );
+            ]
         })
         .ui()
         .w_full()

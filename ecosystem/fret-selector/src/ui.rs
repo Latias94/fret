@@ -200,7 +200,7 @@ impl<'a, H: UiHost> SelectorElementContextExt for ElementContext<'a, H> {
         self.keyed(key, |cx| {
             let deps_value = deps(cx);
 
-            let cached = cx.with_state(SelectorMemoState::<Deps, TValue>::new, |state| {
+            let cached = cx.root_state(SelectorMemoState::<Deps, TValue>::new, |state| {
                 #[cfg(debug_assertions)]
                 state.record_call(frame_id, callsite_key);
                 #[cfg(debug_assertions)]
@@ -214,7 +214,7 @@ impl<'a, H: UiHost> SelectorElementContextExt for ElementContext<'a, H> {
             }
 
             let value = compute(cx);
-            cx.with_state(SelectorMemoState::<Deps, TValue>::new, |state| {
+            cx.root_state(SelectorMemoState::<Deps, TValue>::new, |state| {
                 state.selector.set(deps_value, value.clone());
             });
             value
@@ -238,7 +238,7 @@ impl<'a, H: UiHost> SelectorElementContextExt for ElementContext<'a, H> {
         self.keyed(key, |cx| {
             let deps_value = deps(cx);
 
-            let cached = cx.with_state(SelectorMemoState::<Deps, TValue>::new, |state| {
+            let cached = cx.root_state(SelectorMemoState::<Deps, TValue>::new, |state| {
                 #[cfg(debug_assertions)]
                 state.record_call(frame_id, callsite_key);
                 #[cfg(debug_assertions)]
@@ -252,7 +252,7 @@ impl<'a, H: UiHost> SelectorElementContextExt for ElementContext<'a, H> {
             }
 
             let value = compute(cx);
-            cx.with_state(SelectorMemoState::<Deps, TValue>::new, |state| {
+            cx.root_state(SelectorMemoState::<Deps, TValue>::new, |state| {
                 state.selector.set(deps_value, value.clone());
             });
             value
@@ -276,7 +276,7 @@ impl<'a, H: UiHost> SelectorElementContextExt for ElementContext<'a, H> {
         self.keyed((callsite_key, key), |cx| {
             let deps_value = deps(cx);
 
-            let cached = cx.with_state(SelectorMemoState::<Deps, TValue>::new, |state| {
+            let cached = cx.root_state(SelectorMemoState::<Deps, TValue>::new, |state| {
                 #[cfg(debug_assertions)]
                 state.record_call(frame_id, callsite_key);
                 #[cfg(debug_assertions)]
@@ -290,7 +290,7 @@ impl<'a, H: UiHost> SelectorElementContextExt for ElementContext<'a, H> {
             }
 
             let value = compute(cx);
-            cx.with_state(SelectorMemoState::<Deps, TValue>::new, |state| {
+            cx.root_state(SelectorMemoState::<Deps, TValue>::new, |state| {
                 state.selector.set(deps_value, value.clone());
             });
             value
@@ -313,7 +313,7 @@ impl<'a, H: UiHost> SelectorElementContextExt for ElementContext<'a, H> {
         self.keyed((callsite_key, key), |cx| {
             let deps_value = deps(cx);
 
-            let cached = cx.with_state(SelectorMemoState::<Deps, TValue>::new, |state| {
+            let cached = cx.root_state(SelectorMemoState::<Deps, TValue>::new, |state| {
                 #[cfg(debug_assertions)]
                 state.record_call(frame_id, callsite_key);
                 #[cfg(debug_assertions)]
@@ -327,7 +327,7 @@ impl<'a, H: UiHost> SelectorElementContextExt for ElementContext<'a, H> {
             }
 
             let value = compute(cx);
-            cx.with_state(SelectorMemoState::<Deps, TValue>::new, |state| {
+            cx.root_state(SelectorMemoState::<Deps, TValue>::new, |state| {
                 state.selector.set(deps_value, value.clone());
             });
             value

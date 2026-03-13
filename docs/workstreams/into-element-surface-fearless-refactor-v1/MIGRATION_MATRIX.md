@@ -1,7 +1,7 @@
 # Into-Element Surface — Migration Matrix
 
 Status: execution tracker
-Last updated: 2026-03-12
+Last updated: 2026-03-13
 
 This matrix tracks how the current conversion surface should move toward the target state.
 
@@ -32,7 +32,7 @@ An old conversion name is eligible for deletion only when all of the following a
 3. first-party reusable crates no longer depend on it as public API,
 4. a gate exists to prevent it from reappearing on curated surfaces.
 
-## Current Name Classification (2026-03-12)
+## Current Name Classification (2026-03-13)
 
 | Name | Intended posture | Current reality | Status |
 | --- | --- | --- | --- |
@@ -60,7 +60,7 @@ An old conversion name is eligible for deletion only when all of the following a
 | App helper signatures | most official app surfaces already prefer `Ui` and `UiCx`, but some helpers still land raw children; advanced/manual-assembly examples historically leaked `AnyElement` even for non-raw helpers; page-local Gallery doc helpers also tended to early-land to satisfy `DocSection::new(...)`; default-app Gallery reusable helpers sometimes still spelled raw `AnyElement` instead of a typed landing contract | app-facing helpers prefer `impl UiChild`; advanced/manual-assembly helpers prefer `impl IntoUiElement<KernelApp>` when `UiChild` is not the teaching surface; default-app reusable helpers that need a concrete host spell `impl IntoUiElement<fret_app::App>` rather than private `KernelApp`; wrapper/composer helpers should also accept `IntoUiElement<H>` inputs instead of pre-landed `AnyElement` | continue app-surface cleanup in cookbook/examples/gallery teaching surfaces, keep advanced examples off raw landed helper returns unless the seam is genuinely low-level, keep Gallery page-local helpers on `UiChild` even when the doc scaffold still consumes `AnyElement` at the section boundary, and migrate default-app reusable snippet helpers off `AnyElement` where no raw seam is intended | app teaching surfaces no longer need raw child return types by default, advanced helper surfaces reserve `AnyElement` for justified raw seams, default-app reusable helpers use an explicit typed landing contract instead of raw `AnyElement`, wrapper/composer helpers accept `IntoUiElement<H>` rather than pre-landed `AnyElement`, and Gallery page/helpers do not early-land just because the doc scaffold or snippet registry has an explicit raw boundary | In progress | `apps/fret-cookbook/examples/`, `apps/fret-examples/src/assets_demo.rs`, `apps/fret-examples/src/async_playground_demo.rs`, `apps/fret-examples/src/custom_effect_v1_demo.rs`, `apps/fret-examples/src/custom_effect_v2_demo.rs`, `apps/fret-examples/src/custom_effect_v3_demo.rs`, `apps/fret-examples/src/postprocess_theme_demo.rs`, `apps/fretboard/src/scaffold/templates.rs`, `apps/fret-ui-gallery/src/ui/pages/ai_persona_demo.rs`, `apps/fret-ui-gallery/src/ui/pages/ai_commit_demo.rs`, `apps/fret-ui-gallery/src/ui/pages/ai_context_demo.rs`, `apps/fret-ui-gallery/src/ui/pages/ai_file_tree_demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/ai/context_default.rs`, `apps/fret-ui-gallery/src/ui/snippets/ai/context_demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/ai/file_tree_basic.rs`, `apps/fret-ui-gallery/src/ui/snippets/ai/file_tree_expanded.rs`, `apps/fret-ui-gallery/src/ui/snippets/ai/test_results_demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/avatar/demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/avatar/group.rs`, `apps/fret-ui-gallery/src/ui/snippets/avatar/with_badge.rs`, `apps/fret-ui-gallery/src/ui/snippets/avatar/fallback_only.rs`, `apps/fret-ui-gallery/src/ui/snippets/avatar/sizes.rs`, `apps/fret-ui-gallery/src/ui/snippets/avatar/group_count.rs`, `apps/fret-ui-gallery/src/ui/snippets/avatar/group_count_icon.rs`, `apps/fret-ui-gallery/src/ui/snippets/avatar/badge_icon.rs`, `apps/fret-ui-gallery/src/ui/snippets/avatar/dropdown.rs`, `apps/fret-ui-gallery/src/ui/snippets/badge/demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/badge/spinner.rs`, `apps/fret-ui-gallery/src/ui/snippets/badge/rtl.rs`, `apps/fret-ui-gallery/src/ui/snippets/badge/counts.rs`, `apps/fret-ui-gallery/src/ui/snippets/badge/colors.rs`, `apps/fret-ui-gallery/src/ui/snippets/badge/icon.rs`, `apps/fret-ui-gallery/src/ui/snippets/badge/variants.rs`, `apps/fret-ui-gallery/src/ui/snippets/breadcrumb/dropdown.rs`, `apps/fret-ui-gallery/src/ui/snippets/button/demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/button/size.rs`, `apps/fret-ui-gallery/src/ui/snippets/button/with_icon.rs`, `apps/fret-ui-gallery/src/ui/snippets/button/link_render.rs`, `apps/fret-ui-gallery/src/ui/snippets/button/rtl.rs`, `apps/fret-ui-gallery/src/ui/snippets/button/loading.rs`, `apps/fret-ui-gallery/src/ui/snippets/button/variants.rs`, `apps/fret-ui-gallery/src/ui/snippets/button/button_group.rs`, `apps/fret-ui-gallery/src/ui/snippets/button/rounded.rs`, `apps/fret-ui-gallery/src/ui/snippets/hover_card/sides.rs`, `apps/fret-ui-gallery/src/ui/snippets/hover_card/trigger_delays.rs`, `apps/fret-ui-gallery/src/ui/snippets/context_menu/basic.rs`, `apps/fret-ui-gallery/src/ui/snippets/context_menu/radio.rs`, `apps/fret-ui-gallery/src/ui/snippets/context_menu/checkboxes.rs`, `apps/fret-ui-gallery/src/ui/snippets/context_menu/groups.rs`, `apps/fret-ui-gallery/src/ui/snippets/context_menu/icons.rs`, `apps/fret-ui-gallery/src/ui/snippets/context_menu/shortcuts.rs`, `apps/fret-ui-gallery/src/ui/snippets/context_menu/destructive.rs`, `apps/fret-ui-gallery/src/ui/snippets/context_menu/demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/context_menu/rtl.rs`, `apps/fret-ui-gallery/src/ui/snippets/context_menu/submenu.rs`, `apps/fret-ui-gallery/src/ui/snippets/combobox/long_list.rs`, `apps/fret-ui-gallery/src/ui/snippets/combobox/input_group.rs`, `apps/fret-ui-gallery/src/ui/snippets/combobox/trigger_button.rs`, `apps/fret-ui-gallery/src/ui/snippets/combobox/groups_with_separator.rs`, `apps/fret-ui-gallery/src/ui/snippets/combobox/groups.rs`, `apps/fret-ui-gallery/src/ui/snippets/combobox/disabled.rs`, `apps/fret-ui-gallery/src/ui/snippets/combobox/custom_items.rs`, `apps/fret-ui-gallery/src/ui/snippets/combobox/clear_button.rs`, `apps/fret-ui-gallery/src/ui/snippets/combobox/invalid.rs`, `apps/fret-ui-gallery/src/ui/snippets/pagination/simple.rs`, `apps/fret-ui-gallery/src/ui/snippets/pagination/usage.rs`, `apps/fret-ui-gallery/src/ui/snippets/carousel/basic.rs`, `apps/fret-ui-gallery/src/ui/snippets/carousel/sizes.rs`, `apps/fret-ui-gallery/src/ui/snippets/carousel/plugin_wheel_gestures.rs`, `apps/fret-ui-gallery/src/ui/snippets/carousel/spacing_responsive.rs`, `apps/fret-ui-gallery/src/ui/snippets/carousel/loop_carousel.rs`, `apps/fret-ui-gallery/src/ui/snippets/carousel/options.rs`, `apps/fret-ui-gallery/src/ui/snippets/carousel/loop_downgrade_cannot_loop.rs`, `apps/fret-ui-gallery/src/ui/snippets/carousel/spacing.rs`, `apps/fret-ui-gallery/src/ui/snippets/carousel/usage.rs`, `apps/fret-ui-gallery/src/ui/snippets/carousel/sizes_thirds.rs`, `apps/fret-ui-gallery/src/ui/snippets/carousel/parts.rs`, `apps/fret-ui-gallery/src/ui/snippets/carousel/api.rs`, `apps/fret-ui-gallery/src/ui/snippets/carousel/duration_embla.rs`, `apps/fret-ui-gallery/src/ui/snippets/carousel/rtl.rs`, `apps/fret-ui-gallery/src/ui/snippets/carousel/plugin_autoplay.rs`, `apps/fret-ui-gallery/src/ui/snippets/carousel/plugin_autoplay_delays.rs`, `apps/fret-ui-gallery/src/ui/snippets/carousel/plugin_autoplay_controlled.rs`, `apps/fret-ui-gallery/src/ui/snippets/carousel/plugin_autoplay_stop_on_focus.rs`, `apps/fret-ui-gallery/src/ui/snippets/carousel/plugin_autoplay_stop_on_last_snap.rs`, `apps/fret-ui-gallery/src/ui/snippets/carousel/events.rs`, `apps/fret-ui-gallery/src/ui/snippets/skeleton/avatar.rs`, `apps/fret-ui-gallery/src/ui/snippets/skeleton/rtl.rs`, `apps/fret-ui-gallery/src/ui/snippets/skeleton/form.rs`, `apps/fret-ui-gallery/src/ui/snippets/skeleton/table.rs`, `apps/fret-ui-gallery/src/ui/snippets/popover/basic.rs`, `apps/fret-ui-gallery/src/ui/snippets/popover/demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/popover/with_form.rs`, `apps/fret-ui-gallery/src/ui/snippets/resizable/usage.rs`, `apps/fret-ui-gallery/src/ui/snippets/resizable/vertical.rs`, `apps/fret-ui-gallery/src/ui/snippets/resizable/handle.rs`, `apps/fret-ui-gallery/src/ui/snippets/data_table/basic_demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/data_table/default_demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/data_table/guide_demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/data_table/rtl_demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/table/demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/table/footer.rs`, `apps/fret-ui-gallery/src/ui/snippets/table/rtl.rs`, `apps/fret-ui-gallery/src/ui/snippets/table/actions.rs`, `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/mod.rs`, `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/avatar.rs`, `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/basic.rs`, `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/checkboxes.rs`, `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/checkboxes_icons.rs`, `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/complex.rs`, `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/destructive.rs`, `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/icons.rs`, `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/parts.rs`, `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/radio_group.rs`, `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/radio_icons.rs`, `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/rtl.rs`, `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/shortcuts.rs`, `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/submenu.rs`, `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/usage.rs`, `apps/fret-ui-gallery/src/ui/snippets/button_group/api_reference.rs`, `apps/fret-ui-gallery/src/ui/snippets/toggle_group/size.rs`, `apps/fret-ui-gallery/src/ui/snippets/drawer/demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/drawer/responsive_dialog.rs`, `apps/fret-ui-gallery/src/ui/snippets/drawer/sides.rs`, `apps/fret-ui-gallery/src/ui/snippets/drawer/scrollable_content.rs`, `apps/fret-ui-gallery/src/ui/snippets/dialog/demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/dialog/rtl.rs`, `apps/fret-ui-gallery/src/ui/snippets/dialog/scrollable_content.rs`, `apps/fret-ui-gallery/src/ui/snippets/dialog/sticky_footer.rs`, `apps/fret-ui-gallery/src/ui/snippets/separator/menu.rs`, `apps/fret-ui-gallery/src/ui/snippets/separator/list.rs`, `apps/fret-ui-gallery/src/ui/snippets/sheet/demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/sheet/rtl.rs`, `apps/fret-ui-gallery/src/ui/snippets/item/avatar.rs`, `apps/fret-ui-gallery/src/ui/snippets/item/icon.rs`, `apps/fret-ui-gallery/src/ui/snippets/item/link.rs`, `apps/fret-ui-gallery/src/ui/snippets/item/link_render.rs`, `apps/fret-ui-gallery/src/ui/snippets/item/dropdown.rs`, `apps/fret-ui-gallery/src/ui/snippets/item/extras_rtl.rs`, `apps/fret-ui-gallery/src/ui/snippets/item/gallery.rs`, `apps/fret-ui-gallery/src/ui/snippets/toast/deprecated.rs`, `apps/fret-ui-gallery/src/ui/snippets/motion_presets/fluid_tabs_demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/tooltip/rtl.rs`, `apps/fret-ui-gallery/src/ui/snippets/tooltip/sides.rs`, `apps/fret-ui-gallery/src/ui/snippets/tabs/demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/collapsible/basic.rs`, `apps/fret-ui-gallery/src/ui/snippets/collapsible/settings_panel.rs`, `apps/fret-ui-gallery/src/ui/snippets/collapsible/rtl.rs`, `apps/fret-ui-gallery/src/ui/snippets/collapsible/file_tree.rs`, `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` |
 | Raw explicit IR | `AnyElement` and `Elements` are used widely in low-level helpers, tests, overlays, diagnostics, and manual assembly | retain raw types explicitly on advanced/internal surfaces | document raw use as intentional rather than accidental | raw surfaces are clearly documented as advanced/internal rather than default teaching | In progress | `ecosystem/fret/src/lib.rs`, `crates/fret-ui/src/`, `apps/fret-ui-gallery/src/driver/` |
 
-Execution note on 2026-03-12:
+Execution note on 2026-03-13:
 
 - the focused `selected_*` source gate now also covers
   `apps/fret-ui-gallery/src/ui/snippets/ai/{attachments_usage,file_tree_demo,speech_input_demo}.rs`,
@@ -96,6 +96,21 @@ Execution note on 2026-03-12:
   wrapper outputs, while `ecosystem/fret-ui-shadcn/src/kbd.rs::kbd_icon<H>(...)` remains
   intentionally raw because `Kbd::from_children(...)` still owns a concrete `Vec<AnyElement>`
   child seam.
+- the same shadcn surface gate now also records the final wrapper-seam decision for
+  `ecosystem/fret-ui-shadcn/src/text_edit_context_menu.rs::{text_edit_context_menu,
+  text_selection_context_menu, text_edit_context_menu_controllable,
+  text_selection_context_menu_controllable}`:
+  these helpers keep `-> AnyElement` deliberately because `ContextMenu::build(...)` is the actual
+  root landing boundary, while the trigger input stays on `IntoUiElement<H>`.
+- the canonical compare/example helper lane is now closed outside intentional retained seams:
+  `apps/fret-examples/src/todo_demo.rs::todo_page(...)`,
+  `apps/fret-examples/src/simple_todo_demo.rs::todo_row(...)`,
+  `apps/fret-examples/src/imui_editor_proof_demo.rs::{render_editor_name_assist_surface,render_authoring_parity_surface,render_authoring_parity_shared_state,render_authoring_parity_declarative_group,render_authoring_parity_imui_group,render_authoring_parity_imui_host}`,
+  and `apps/fretboard/src/scaffold/templates.rs::{todo_page(...),simple_todo::todo_page(...)}`
+  now stay on `UiChild` / `IntoUiElement<...>`-based signatures, and the current non-`lib.rs`
+  scan of `apps/fret-examples/src` plus `apps/fret-cookbook/examples` leaves only
+  `apps/fret-cookbook/examples/chart_interactions_basics.rs::chart_canvas(...) -> AnyElement` as
+  the remaining intentional helper seam on that lane.
 - the internal declarative semantics surface now also records
   `ecosystem/fret-ui-kit/src/declarative/semantics.rs`,
   where `UiElementTestIdExt`, `UiElementA11yExt`, and `UiElementKeyContextExt` wrappers now land
@@ -121,6 +136,66 @@ Execution note on 2026-03-12:
   `apps/fret-ui-gallery/src/ui/snippets/combobox/{long_list,input_group,trigger_button,groups_with_separator,groups,disabled,custom_items,clear_button,invalid}.rs`,
   where `state_rows(...)` joined `state_row(...)` on `IntoUiElement<fret_app::App>`-based helper
   signatures while keeping explicit `.into_element(cx)` only at sibling child-collection seams.
+- the UI Gallery default-app source gate now also records the first top-level snippet-family move
+  from eager landing to typed app-facing return values:
+  `apps/fret-ui-gallery/src/ui/snippets/accordion/{basic,borders,card,demo,disabled,extras,multiple,rtl,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/accordion.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `pub fn render(...) -> AnyElement` teaching pattern is now
+  forbidden for that family by
+  `ui_authoring_surface_default_app::{accordion_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface,accordion_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the next top-level snippet-family
+  move on the tabs lane:
+  `apps/fret-ui-gallery/src/ui/snippets/tabs/{demo,disabled,extras,icons,line,list,rtl,usage,vertical,vertical_line}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/tabs.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `pub fn render(...) -> AnyElement` teaching pattern is now
+  forbidden for that family by
+  `ui_authoring_surface_default_app::{tabs_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface,tabs_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the next top-level snippet-family
+  move on the toggle lane:
+  `apps/fret-ui-gallery/src/ui/snippets/toggle/{demo,disabled,label,outline,rtl,size,usage,with_text}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/toggle.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `pub fn render(...) -> AnyElement` teaching pattern is now
+  forbidden for that family by
+  `ui_authoring_surface_default_app::{toggle_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface,toggle_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the next top-level snippet-family
+  move on the radio-group lane:
+  `apps/fret-ui-gallery/src/ui/snippets/radio_group/{choice_card,demo,description,disabled,extras,fieldset,invalid,label,plans,rtl,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/radio_group.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `pub fn render(...) -> AnyElement` teaching pattern is now
+  forbidden for that family by
+  `ui_authoring_surface_default_app::{radio_group_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface,radio_group_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the next top-level snippet-family
+  move on the slider lane:
+  `apps/fret-ui-gallery/src/ui/snippets/slider/{demo,extras,label,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep their local model
+  state inside the snippet instead of routing it through `pages/slider.rs`, while
+  `apps/fret-ui-gallery/src/ui/pages/slider.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `pub fn render(...) -> AnyElement` teaching pattern is now
+  forbidden for that family by
+  `ui_authoring_surface_default_app::{slider_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface,slider_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the next top-level snippet-family
+  move on the native-select lane:
+  `apps/fret-ui-gallery/src/ui/snippets/native_select/{demo,disabled,invalid,label,rtl,usage,with_groups}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep value/open model
+  state inside each snippet instead of routing it through `pages/native_select.rs`, while
+  `apps/fret-ui-gallery/src/ui/pages/native_select.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `pub fn render(...) -> AnyElement` teaching pattern is now
+  forbidden for that family by
+  `ui_authoring_surface_default_app::{native_select_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface,native_select_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the next top-level snippet-family
+  move on the resizable lane:
+  `apps/fret-ui-gallery/src/ui/snippets/resizable/{demo,handle,notes,rtl,usage,vertical}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep fractions model
+  state inside the snippet instead of routing it through `pages/resizable.rs`,
+  `ui/content.rs`, `ui/models.rs`, and runtime-driver bootstrap relay fields, while
+  `apps/fret-ui-gallery/src/ui/pages/resizable.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `pub fn render(...) -> AnyElement` teaching pattern is now
+  forbidden for that family by
+  `ui_authoring_surface_default_app::{resizable_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface,resizable_page_uses_typed_doc_sections_for_app_facing_snippets}`.
 - the cookbook advanced-example source gate now also records
   `apps/fret-cookbook/examples/customv1_basics.rs`,
   where `panel_shell(...)` and `preview_content(...)` now use `IntoUiElement<KernelApp>`-based
@@ -176,6 +251,20 @@ Execution note on 2026-03-12:
 - the focused shadcn surface gate now also records the prelude ergonomics follow-up:
   `ecosystem/fret-ui-shadcn/src/lib.rs::prelude` now re-exports `IntoUiElement`, so direct-crate
   first-party shadcn examples do not need local trait imports just to land typed helpers.
+- the examples source-policy gate for raw shadcn escape hatches is now aligned to the reviewed
+  allowlist instead of a broad `raw::*` allowance:
+  `apps/fret-examples/src/lib.rs::examples_source_tree_limits_raw_shadcn_escape_hatches`
+  currently permits only `shadcn::raw::typography::*`, `shadcn::raw::extras::*`,
+  `fret::shadcn::raw::prelude::*`, and the documented advanced service hooks
+  `raw::advanced::{sync_theme_from_environment(...), install_with_ui_services(...)}`.
+- next execution order on 2026-03-13:
+  1. keep M3 focused on helper-return migration outside the now-closed shadcn raw inventory,
+     especially first-party app/example helpers that still leak `AnyElement` without being true
+     retained/diagnostic/overlay seams;
+  2. keep default-app/UI Gallery reusable helpers moving toward `impl UiChild` /
+     `impl IntoUiElement<fret_app::App>` rather than broadening snippet-local raw helper returns;
+  3. treat the remaining raw-explicit-IR lane as documentation/gating work unless the underlying
+     runtime/storage contract actually changes.
 
 ## Hard Delete Matrix
 

@@ -56,7 +56,7 @@ impl ShadcnResolver {
 
         let desired = Self::json_to_label(resolved_props.get("value")).to_string();
 
-        let model = Self::ensure_string_model(cx, desired.clone());
+        let model = Self::ensure_string_model(cx, key, desired.clone());
 
         let cur = cx.app.models().get_cloned(&model).unwrap_or_default();
 
@@ -69,7 +69,7 @@ impl ShadcnResolver {
 
             let mut to_emit: Option<String> = None;
             let mut sync_model_to: Option<String> = None;
-            cx.with_state(LastState::default, |st| {
+            cx.keyed_slot_state(key.clone(), LastState::default, |st| {
                 let model_changed = st.last_model.as_deref().is_some_and(|v| v != cur.as_str());
                 let desired_changed = st
                     .last_desired
@@ -176,7 +176,7 @@ impl ShadcnResolver {
             .unwrap_or(64) as f32;
 
         let desired = Self::json_to_label(resolved_props.get("value")).to_string();
-        let model = Self::ensure_string_model(cx, desired.clone());
+        let model = Self::ensure_string_model(cx, key, desired.clone());
 
         let cur = cx.app.models().get_cloned(&model).unwrap_or_default();
         if let (Some(scope), Some(path)) = (Self::genui_scope(cx), props.bindings.get("value")) {
@@ -188,7 +188,7 @@ impl ShadcnResolver {
 
             let mut to_emit: Option<String> = None;
             let mut sync_model_to: Option<String> = None;
-            cx.with_state(LastState::default, |st| {
+            cx.keyed_slot_state(key.clone(), LastState::default, |st| {
                 let model_changed = st.last_model.as_deref().is_some_and(|v| v != cur.as_str());
                 let desired_changed = st
                     .last_desired
@@ -326,7 +326,7 @@ impl ShadcnResolver {
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
-        let model = Self::ensure_bool_model(cx, desired);
+        let model = Self::ensure_bool_model(cx, key, desired);
 
         if let (Some(scope), Some(path)) = (Self::genui_scope(cx), props.bindings.get("checked")) {
             #[derive(Default)]
@@ -337,7 +337,7 @@ impl ShadcnResolver {
             let cur = cx.app.models().get_copied(&model).unwrap_or(false);
             let mut to_emit: Option<bool> = None;
             let mut sync_model_to: Option<bool> = None;
-            cx.with_state(LastState::default, |st| {
+            cx.keyed_slot_state(key.clone(), LastState::default, |st| {
                 let model_changed = st.last_model.is_some_and(|v| v != cur);
                 let desired_changed = st.last_desired.is_some_and(|v| v != desired);
 

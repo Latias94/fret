@@ -123,25 +123,18 @@ impl View for AssetsReloadEpochBasicsView {
             .gap(Space::N4)
             .items_stretch();
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(
-                cx,
-                shadcn::CardHeader::build(|cx, out| {
-                    out.push_ui(cx, shadcn::CardTitle::new("Assets reload epoch basics"));
-                    out.push_ui(
-                        cx,
-                        shadcn::CardDescription::new(
+        let card = shadcn::card(|cx| {
+            ui::children![cx;
+                shadcn::card_header(|cx| {
+                    ui::children![cx;
+                        shadcn::card_title("Assets reload epoch basics"),
+                        shadcn::card_description(
                             "Load a file image + SVG icon and trigger a ViewCache-safe dev reload by bumping UiAssetsReloadEpoch.",
                         ),
-                    );
+                    ]
                 }),
-            );
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(cx, content);
-                }),
-            );
+                shadcn::card_content(|cx| ui::children![cx; content]),
+            ]
         })
         .ui()
         .w_full()
@@ -152,18 +145,19 @@ impl View for AssetsReloadEpochBasicsView {
 }
 
 fn render_image_panel(
-    cx: &mut UiCx<'_>,
+    _cx: &mut UiCx<'_>,
     theme: &ThemeSnapshot,
     st: fret_ui_assets::ImageSourceState,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let status = match st.status {
         fret_ui_assets::image_asset_state::ImageLoadingStatus::Idle => "idle",
         fret_ui_assets::image_asset_state::ImageLoadingStatus::Loading => "loading",
         fret_ui_assets::image_asset_state::ImageLoadingStatus::Loaded => "ready",
         fret_ui_assets::image_asset_state::ImageLoadingStatus::Error => "error",
     };
+    let border = ColorRef::Color(theme.color_token("border"));
 
-    let image_box = ui::container(|cx| {
+    let image_box = ui::container(move |cx| {
         if let Some(image) = st.image {
             let mut img = ImageProps::new(image);
             img.layout = LayoutStyle {
@@ -180,13 +174,13 @@ fn render_image_panel(
         }
     })
     .border_1()
-    .border_color(ColorRef::Color(theme.color_token("border")))
+    .border_color(border)
     .rounded(Radius::Lg)
     .w_px(Px(240.0))
     .h_px(Px(180.0))
     .overflow_hidden();
 
-    let body = ui::v_flex_build(|cx, out| {
+    let body = ui::v_flex_build(move |cx, out| {
         out.push_ui(
             cx,
             ui::h_flex(|cx| {
@@ -214,36 +208,28 @@ fn render_image_panel(
     .gap(Space::N3)
     .items_start();
 
-    shadcn::Card::build(|cx, out| {
-        out.push_ui(
-            cx,
-            shadcn::CardHeader::build(|cx, out| {
-                out.push_ui(cx, shadcn::CardTitle::new("Image from disk"));
-                out.push_ui(
-                    cx,
-                    shadcn::CardDescription::new(
+    shadcn::card(|cx| {
+        ui::children![cx;
+            shadcn::card_header(|cx| {
+                ui::children![cx;
+                    shadcn::card_title("Image from disk"),
+                    shadcn::card_description(
                         "Loads `assets/textures/test.jpg` via ImageSource + ImageAssetCache (async decode, cached upload).",
                     ),
-                );
+                ]
             }),
-        );
-        out.push_ui(
-            cx,
-            shadcn::CardContent::build(|cx, out| {
-                out.push_ui(cx, body);
-            }),
-        );
+            shadcn::card_content(|cx| ui::children![cx; body]),
+        ]
     })
     .ui()
     .w_full()
-    .into_element(cx)
 }
 
 fn render_svg_panel(
-    cx: &mut UiCx<'_>,
+    _cx: &mut UiCx<'_>,
     theme: &ThemeSnapshot,
     st: fret_ui_assets::SvgFileState,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let status = if st.error.is_some() {
         "error"
     } else if st.bytes.is_some() {
@@ -251,12 +237,15 @@ fn render_svg_panel(
     } else {
         "missing"
     };
+    let border = ColorRef::Color(theme.color_token("border"));
+    let destructive = ColorRef::Color(theme.color_token("destructive"));
+    let foreground = theme.color_token("foreground");
 
-    let box_el = ui::container(|cx| {
+    let box_el = ui::container(move |cx| {
         if let Some(err) = st.error.clone() {
             ui::children![cx;
                 ui::text(format!("Failed to read SVG: {err}"))
-                    .text_color(ColorRef::Color(theme.color_token("destructive")))]
+                    .text_color(destructive)]
         } else if let Some(bytes) = st.bytes.clone() {
             let mut props = SvgIconProps::new(fret_ui::SvgSource::Bytes(bytes));
             props.layout = LayoutStyle {
@@ -268,20 +257,20 @@ fn render_svg_panel(
                 ..Default::default()
             };
             props.fit = fret_core::SvgFit::Contain;
-            props.color = theme.color_token("foreground");
+            props.color = foreground;
             ui::children![cx; cx.svg_icon_props(props)]
         } else {
             ui::children![cx; cx.spinner()]
         }
     })
     .border_1()
-    .border_color(ColorRef::Color(theme.color_token("border")))
+    .border_color(border)
     .rounded(Radius::Lg)
     .p(Space::N4)
     .w_px(Px(240.0))
     .h_px(Px(180.0));
 
-    let body = ui::v_flex(|cx| {
+    let body = ui::v_flex(move |cx| {
         ui::children![cx;
             ui::h_flex(|cx| {
                 ui::children![cx;
@@ -299,29 +288,21 @@ fn render_svg_panel(
     .gap(Space::N3)
     .items_start();
 
-    shadcn::Card::build(|cx, out| {
-        out.push_ui(
-            cx,
-            shadcn::CardHeader::build(|cx, out| {
-                out.push_ui(cx, shadcn::CardTitle::new("SVG icon from disk"));
-                out.push_ui(
-                    cx,
-                    shadcn::CardDescription::new(
+    shadcn::card(|cx| {
+        ui::children![cx;
+            shadcn::card_header(|cx| {
+                ui::children![cx;
+                    shadcn::card_title("SVG icon from disk"),
+                    shadcn::card_description(
                         "Loads `assets/demo/icon-search.svg` via SvgFileSource + UiAssetsReloadEpoch.",
                     ),
-                );
+                ]
             }),
-        );
-        out.push_ui(
-            cx,
-            shadcn::CardContent::build(|cx, out| {
-                out.push_ui(cx, body);
-            }),
-        );
+            shadcn::card_content(|cx| ui::children![cx; body]),
+        ]
     })
     .ui()
     .w_full()
-    .into_element(cx)
 }
 
 fn main() -> anyhow::Result<()> {

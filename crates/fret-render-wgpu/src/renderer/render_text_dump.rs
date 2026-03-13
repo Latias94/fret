@@ -144,13 +144,20 @@ struct JsonGlyphProbeDump {
 }
 
 #[derive(Debug, serde::Serialize)]
-struct JsonRenderTextDump {
+struct JsonRenderTextDump<'a> {
     schema_version: u32,
     frame_index: u64,
     viewport_size: [u32; 2],
     probe_px: Option<JsonProbeRect>,
+    text_draws: &'a [JsonTextDrawDump],
+    probe_hits: &'a [JsonGlyphProbeDump],
+}
+
+#[derive(Default)]
+pub(super) struct RenderTextDumpState {
     text_draws: Vec<JsonTextDrawDump>,
     probe_hits: Vec<JsonGlyphProbeDump>,
+    bytes: Vec<u8>,
 }
 
 fn atlas_kind_for_text_draw(kind: TextDrawKind) -> (JsonAtlasKind, GlyphQuadKind) {
@@ -178,10 +185,17 @@ fn uv_to_atlas_xywh(u0: f32, v0: f32, u1: f32, v1: f32, w: u32, h: u32) -> [u32;
     [x, y, ww, hh]
 }
 
-impl crate::renderer::Renderer {
+impl RenderTextDumpState {
+    fn clear_scratch(&mut self) {
+        self.text_draws.clear();
+        self.probe_hits.clear();
+        self.bytes.clear();
+    }
+
     #[cfg(not(target_arch = "wasm32"))]
     pub(super) fn maybe_dump_render_text_json(
-        &self,
+        &mut self,
+        text_system: &crate::text::TextSystem,
         frame_index: u64,
         viewport_size: (u32, u32),
         encoding: &SceneEncoding,
@@ -193,8 +207,7 @@ impl crate::renderer::Renderer {
         let probe_px = parse_env_probe_px("FRET_RENDER_TEXT_DUMP_PROBE_PX")
             .map(|(x, y, w, h)| JsonProbeRect { x, y, w, h });
 
-        let mut text_draws: Vec<JsonTextDrawDump> = Vec::new();
-        let mut probe_hits: Vec<JsonGlyphProbeDump> = Vec::new();
+        self.clear_scratch();
 
         for (ordered_draw_ix, draw) in encoding.ordered_draws.iter().enumerate() {
             let OrderedDraw::Text(draw) = draw else {
@@ -211,7 +224,7 @@ impl crate::renderer::Renderer {
             let vertices = &encoding.text_vertices[first..end];
             let bounds_px = JsonBoundsPx::from_vertices(vertices);
 
-            text_draws.push(JsonTextDrawDump {
+            self.text_draws.push(JsonTextDrawDump {
                 ordered_draw_ix,
                 atlas_kind: atlas_kind_json,
                 atlas_page: draw.atlas_page,
@@ -232,7 +245,7 @@ impl crate::renderer::Renderer {
                 continue;
             };
 
-            let (atlas_w, atlas_h) = self.text_system.debug_atlas_dims(atlas_kind);
+            let (atlas_w, atlas_h) = text_system.debug_atlas_dims(atlas_kind);
             if draw.vertex_count < 6 {
                 continue;
             }
@@ -256,7 +269,7 @@ impl crate::renderer::Renderer {
                 let u1 = glyph_vs[2].uv[0];
                 let v1 = glyph_vs[2].uv[1];
                 let atlas_xywh = uv_to_atlas_xywh(u0, v0, u1, v1, atlas_w, atlas_h);
-                let glyph = self.text_system.debug_lookup_glyph_atlas_entry(
+                let glyph = text_system.debug_lookup_glyph_atlas_entry(
                     atlas_kind,
                     draw.atlas_page,
                     atlas_xywh[0],
@@ -265,7 +278,7 @@ impl crate::renderer::Renderer {
                     atlas_xywh[3],
                 );
 
-                probe_hits.push(JsonGlyphProbeDump {
+                self.probe_hits.push(JsonGlyphProbeDump {
                     ordered_draw_ix,
                     atlas_kind: atlas_kind_json,
                     atlas_page: draw.atlas_page,
@@ -285,24 +298,91 @@ impl crate::renderer::Renderer {
             frame_index,
             viewport_size: [viewport_size.0, viewport_size.1],
             probe_px,
-            text_draws,
-            probe_hits,
+            text_draws: &self.text_draws,
+            probe_hits: &self.probe_hits,
         };
 
         let dir = dump_dir_from_env();
         let _ = std::fs::create_dir_all(&dir);
         let file = dir.join(format!("render_text.frame{frame_index}.json"));
-        if let Ok(bytes) = serde_json::to_vec_pretty(&dump) {
-            let _ = std::fs::write(file, bytes);
+        self.bytes.clear();
+        if serde_json::to_writer_pretty(&mut self.bytes, &dump).is_ok() {
+            let _ = std::fs::write(file, &self.bytes);
         }
     }
 
     #[cfg(target_arch = "wasm32")]
     pub(super) fn maybe_dump_render_text_json(
-        &self,
+        &mut self,
+        _text_system: &crate::text::TextSystem,
         _frame_index: u64,
         _viewport_size: (u32, u32),
         _encoding: &SceneEncoding,
     ) {
+    }
+}
+
+impl crate::renderer::Renderer {
+    pub(super) fn maybe_dump_render_text_json(
+        &mut self,
+        frame_index: u64,
+        viewport_size: (u32, u32),
+        encoding: &SceneEncoding,
+    ) {
+        let dump_state = &mut self.render_text_dump_state;
+        let text_system = &self.text_system;
+        dump_state.maybe_dump_render_text_json(text_system, frame_index, viewport_size, encoding);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn render_text_dump_state_clear_scratch_keeps_capacity() {
+        let mut state = RenderTextDumpState::default();
+        state.text_draws.push(JsonTextDrawDump {
+            ordered_draw_ix: 0,
+            atlas_kind: JsonAtlasKind::Mask,
+            atlas_page: 0,
+            paint_index: 0,
+            uniform_index: 0,
+            scissor: [0, 0, 1, 1],
+            first_vertex: 0,
+            vertex_count: 6,
+            bounds_px: None,
+        });
+        state.probe_hits.push(JsonGlyphProbeDump {
+            ordered_draw_ix: 0,
+            atlas_kind: JsonAtlasKind::Mask,
+            atlas_page: 0,
+            paint_index: 0,
+            uniform_index: 0,
+            vertex_ix: 0,
+            bounds_px: JsonBoundsPx {
+                min_x: 0.0,
+                min_y: 0.0,
+                max_x: 1.0,
+                max_y: 1.0,
+            },
+            uv: [0.0, 0.0, 1.0, 1.0],
+            atlas_xywh: [0, 0, 1, 1],
+            glyph: None,
+        });
+        state.bytes.extend_from_slice(&[1, 2, 3]);
+
+        let draws_cap = state.text_draws.capacity();
+        let hits_cap = state.probe_hits.capacity();
+        let bytes_cap = state.bytes.capacity();
+
+        state.clear_scratch();
+
+        assert!(state.text_draws.is_empty());
+        assert!(state.probe_hits.is_empty());
+        assert!(state.bytes.is_empty());
+        assert!(state.text_draws.capacity() >= draws_cap);
+        assert!(state.probe_hits.capacity() >= hits_cap);
+        assert!(state.bytes.capacity() >= bytes_cap);
     }
 }

@@ -85,7 +85,7 @@ fn dropdown_menu_escape_closes_and_restores_focus_to_trigger() {
 
     let build = move |open: Model<bool>| {
         move |cx: &mut ElementContext<'_, App>| {
-            vec![fret_ui_shadcn::DropdownMenu::new(open).into_element(
+            vec![fret_ui_shadcn::DropdownMenu::from_open(open).into_element(
                 cx,
                 |cx| {
                     fret_ui_shadcn::Button::new("Open")

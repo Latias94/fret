@@ -101,7 +101,7 @@ impl ShadcnResolver {
                 .collect()
         };
 
-        let model = Self::ensure_optional_arc_str_model(cx, default_value);
+        let model = Self::ensure_optional_arc_str_model(cx, key, default_value);
 
         let mut list = fret_ui_shadcn::TabsList::new();
         let mut contents: Vec<fret_ui_shadcn::TabsContent> = Vec::new();
@@ -226,13 +226,13 @@ impl ShadcnResolver {
 
         match kind {
             "multiple" => {
-                let model = Self::ensure_vec_arc_str_model(cx, default_values);
+                let model = Self::ensure_vec_arc_str_model(cx, key, default_values);
                 fret_ui_shadcn::Accordion::multiple(model)
                     .items(items)
                     .into_element(cx)
             }
             _ => {
-                let model = Self::ensure_optional_arc_str_model(cx, default_value);
+                let model = Self::ensure_optional_arc_str_model(cx, key, default_value);
                 fret_ui_shadcn::Accordion::single(model)
                     .collapsible(collapsible)
                     .items(items)

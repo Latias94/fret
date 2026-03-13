@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("vertical.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Axis;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -39,18 +40,20 @@ fn panel<H: UiHost>(
     ui::container_props(props, move |_cx| [body])
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let fractions = cx.local_model_keyed("fractions", || vec![0.25, 0.75]);
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let fractions =
+        cx.local_model_keyed("ui-gallery-resizable-vertical-fractions", || vec![0.25, 0.75]);
 
-    let group = shadcn::ResizablePanelGroup::new(fractions)
-        .axis(Axis::Vertical)
-        .test_id_prefix("ui-gallery-resizable-vertical")
-        .entries([
+    let group = shadcn::resizable_panel_group(cx, fractions, |cx| {
+        [
             shadcn::ResizablePanel::new([panel(cx, "Header").into_element(cx)]).into(),
             shadcn::ResizableHandle::new().into(),
             shadcn::ResizablePanel::new([panel(cx, "Content").into_element(cx)]).into(),
-        ])
-        .into_element(cx);
+        ]
+    })
+    .axis(Axis::Vertical)
+    .test_id_prefix("ui-gallery-resizable-vertical")
+    .into_element(cx);
 
     box_group(
         cx,

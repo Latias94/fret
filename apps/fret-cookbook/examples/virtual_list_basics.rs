@@ -413,25 +413,20 @@ impl View for VirtualListBasicsView {
         .gap(Space::N6)
         .w_full();
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(
-                cx,
-                shadcn::CardHeader::build(|cx, out| {
-                    out.push_ui(cx, shadcn::CardTitle::new("Virtual list basics"));
-                    out.push_ui(
-                        cx,
-                        shadcn::CardDescription::new(
+        let card = shadcn::card(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_header(|cx| {
+                    ui::children![
+                        cx;
+                        shadcn::card_title("Virtual list basics"),
+                        shadcn::card_description(
                             "Keyed virtualization + items_revision. Reorder the list and scroll to items without building 5,000 rows every frame.",
                         ),
-                    );
+                    ]
                 }),
-            );
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(cx, body);
-                }),
-            );
+                shadcn::card_content(|cx| ui::children![cx; body]),
+            ]
         })
         .ui()
         .w_full()

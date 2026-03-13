@@ -164,26 +164,26 @@ impl View for EffectsLayerBasicsView {
         })
         .gap(Space::N2);
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(
-                cx,
-                shadcn::CardHeader::build(|cx, out| {
-                    out.push_ui(cx, shadcn::CardTitle::new("Effects layer basics"));
-                    out.push_ui(
-                        cx,
-                        shadcn::CardDescription::new(
+        let card = shadcn::card(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_header(|cx| {
+                    ui::children![
+                        cx;
+                        shadcn::card_title("Effects layer basics"),
+                        shadcn::card_description(
                             "A minimal example showing `EffectLayer` + `EffectChain` (Pixelate, Blur).",
                         ),
-                    );
+                    ]
                 }),
-            );
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(cx, controls);
-                    out.push_ui(cx, ui::v_flex(|cx| ui::children![cx; preview]).gap(Space::N3));
+                shadcn::card_content(|cx| {
+                    ui::children![
+                        cx;
+                        controls,
+                        ui::v_flex(|cx| ui::children![cx; preview]).gap(Space::N3),
+                    ]
                 }),
-            );
+            ]
         })
         .ui()
         .w_full()

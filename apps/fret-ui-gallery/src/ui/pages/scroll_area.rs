@@ -15,7 +15,7 @@ pub(super) fn preview_scroll_area(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/scroll_area.rs` (ScrollArea, ScrollAreaRoot, ScrollAreaViewport, ScrollAreaScrollbar, ScrollAreaCorner).",
-        "ScrollArea already exposes both a compact builder and a Radix-shaped composable surface, so the main parity gap here is usage clarity rather than missing authoring APIs.",
+        "First-party docs now teach `scroll_area(...)` as the default compact helper, while `ScrollArea::new(...)` and the Radix-shaped composable parts remain explicit advanced seams.",
         "ScrollArea is for custom scrollbars + consistent styling; use native scrolling when you don't need custom chrome.",
         "Keep scroll region sizes explicit in docs to avoid layout drift.",
         "Horizontal rails are easiest to reason about when the child has a fixed width.",
@@ -30,7 +30,7 @@ pub(super) fn preview_scroll_area(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .description("Vertical scroll region with tags and separators.")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Usage", usage)
-                .description("Copyable minimal usage for `ScrollArea` with explicit viewport size.")
+                .description("Copyable minimal usage for `scroll_area(...)` with explicit viewport size.")
                 .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Scrollbar drag baseline", drag_baseline)
                 .description(

@@ -778,7 +778,7 @@ fn trailing_icon_touch_target_overlay<H: UiHost>(
             }
 
             let (test_id, a11y_label) =
-                cx.with_state(DerivedTrailingActionStrings::default, |st| {
+                cx.slot_state(DerivedTrailingActionStrings::default, |st| {
                     if st.base_test_id.as_deref() != chip_test_id.as_deref() {
                         st.base_test_id = chip_test_id.clone();
                         st.test_id = st

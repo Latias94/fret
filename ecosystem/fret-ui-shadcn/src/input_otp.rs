@@ -882,7 +882,7 @@ impl InputOtp {
                         })
                     });
 
-                let geom = cx.with_state_for(input_id, ActiveSlotRingGeometry::default, |st| {
+                let geom = cx.state_for(input_id, ActiveSlotRingGeometry::default, |st| {
                     if let Some(active_slot_geom) = active_slot_geom {
                         *st = active_slot_geom;
                     }

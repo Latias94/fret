@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Axis;
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_kit::IntoUiElement;
@@ -43,38 +44,39 @@ fn panel<H: UiHost>(
     ui::container_props(props, move |_cx| [body])
 }
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    h_fractions: Model<Vec<f32>>,
-    v_fractions: Model<Vec<f32>>,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let h_fractions = cx.local_model_keyed("ui-gallery-resizable-demo-h-fractions", || vec![0.5, 0.5]);
+    let v_fractions =
+        cx.local_model_keyed("ui-gallery-resizable-demo-v-fractions", || vec![0.25, 0.75]);
     let max_w_sm = LayoutRefinement::default().w_full().max_w(Px(384.0));
 
-    let nested_vertical = shadcn::ResizablePanelGroup::new(v_fractions)
-        .axis(Axis::Vertical)
-        .test_id_prefix("ui-gallery-resizable-demo.nested-vertical")
-        .entries([
+    let nested_vertical = shadcn::resizable_panel_group(cx, v_fractions, |cx| {
+        [
             shadcn::ResizablePanel::new([panel(cx, "Two", None).into_element(cx)]).into(),
             shadcn::ResizableHandle::new().into(),
             shadcn::ResizablePanel::new([panel(cx, "Three", None).into_element(cx)]).into(),
-        ])
-        .into_element(cx);
+        ]
+    })
+    .axis(Axis::Vertical)
+    .test_id_prefix("ui-gallery-resizable-demo.nested-vertical")
+    .into_element(cx);
 
-    let group = shadcn::ResizablePanelGroup::new(h_fractions)
-        .axis(Axis::Horizontal)
-        .test_id_prefix("ui-gallery-resizable-demo")
-        .entries([
+    let group = shadcn::resizable_panel_group(cx, h_fractions, |cx| {
+        [
             shadcn::ResizablePanel::new([panel(cx, "One", Some(Px(200.0))).into_element(cx)])
                 .into(),
             shadcn::ResizableHandle::new().into(),
             shadcn::ResizablePanel::new([nested_vertical]).into(),
-        ])
-        .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default()
-                .label("Debug:ui-gallery:resizable-panels")
-                .test_id("ui-gallery-resizable-panels"),
-        );
+        ]
+    })
+    .axis(Axis::Horizontal)
+    .test_id_prefix("ui-gallery-resizable-demo")
+    .into_element(cx)
+    .attach_semantics(
+        SemanticsDecoration::default()
+            .label("Debug:ui-gallery:resizable-panels")
+            .test_id("ui-gallery-resizable-panels"),
+    );
 
     box_group(
         cx,

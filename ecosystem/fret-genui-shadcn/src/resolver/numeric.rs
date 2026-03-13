@@ -50,7 +50,7 @@ impl ShadcnResolver {
             .unwrap_or(min)
             .clamp(min, max);
         let desired_values = vec![desired];
-        let model = Self::ensure_vec_f32_model(cx, desired_values.clone());
+        let model = Self::ensure_vec_f32_model(cx, key, desired_values.clone());
 
         let w_full = resolved_props
             .get("wFull")
@@ -89,7 +89,7 @@ impl ShadcnResolver {
                 last_desired: Option<f32>,
             }
             let mut sync_model_to: Option<Vec<f32>> = None;
-            cx.with_state(LastState::default, |st| {
+            cx.keyed_slot_state(key.clone(), LastState::default, |st| {
                 let desired_changed = st.last_desired.is_some_and(|v| v != desired);
                 st.last_desired = Some(desired);
                 if desired_changed {

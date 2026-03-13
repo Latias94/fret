@@ -197,11 +197,11 @@ where
     }
 
     fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let state: Arc<Mutex<AxisDragValueState>> = cx.with_state(
+        let state: Arc<Mutex<AxisDragValueState>> = cx.slot_state(
             || Arc::new(Mutex::new(AxisDragValueState::default())),
             |s| s.clone(),
         );
-        let focus_handoff: Arc<Mutex<NumericTextEntryFocusHandoffState>> = cx.with_state(
+        let focus_handoff: Arc<Mutex<NumericTextEntryFocusHandoffState>> = cx.slot_state(
             || Arc::new(Mutex::new(NumericTextEntryFocusHandoffState::default())),
             |s| s.clone(),
         );
@@ -211,7 +211,7 @@ where
         let error = error_model(cx);
         let focus_state = numeric_text_entry_focus_state(cx);
         let last_draft_text =
-            cx.with_state(|| Arc::new(Mutex::new(String::new())), |st| st.clone());
+            cx.slot_state(|| Arc::new(Mutex::new(String::new())), |st| st.clone());
 
         let value = cx
             .get_model_copied(&self.model, Invalidation::Paint)
@@ -848,40 +848,12 @@ fn emit_axis_drag_value_outcome(
     }
 }
 
+#[track_caller]
 fn draft_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
-    let draft = cx.with_state(|| None::<Model<String>>, |st| st.clone());
-    match draft {
-        Some(draft) => draft,
-        None => {
-            let draft = cx.app.models_mut().insert(String::new());
-            cx.with_state(
-                || None::<Model<String>>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some(draft.clone());
-                    }
-                },
-            );
-            draft
-        }
-    }
+    cx.local_model(String::new)
 }
 
+#[track_caller]
 fn error_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Option<Arc<str>>> {
-    let m = cx.with_state(|| None::<Model<Option<Arc<str>>>>, |st| st.clone());
-    match m {
-        Some(m) => m,
-        None => {
-            let m = cx.app.models_mut().insert(None::<Arc<str>>);
-            cx.with_state(
-                || None::<Model<Option<Arc<str>>>>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some(m.clone());
-                    }
-                },
-            );
-            m
-        }
-    }
+    cx.local_model(|| None::<Arc<str>>)
 }

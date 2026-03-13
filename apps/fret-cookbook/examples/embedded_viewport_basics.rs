@@ -467,21 +467,12 @@ fn view(
 
     let content = ui::v_flex(|cx| ui::children![cx; hint, viewport_panel]).gap(Space::N3);
 
-    let card = shadcn::Card::build(|cx, out| {
-        out.push_ui(
-            cx,
-            shadcn::CardHeader::build(|cx, out| {
-                out.push_ui(cx, header);
-                out.push_ui(cx, size_controls);
-                out.push_ui(cx, info);
-            }),
-        );
-        out.push_ui(
-            cx,
-            shadcn::CardContent::build(|cx, out| {
-                out.push_ui(cx, content);
-            }),
-        );
+    let card = shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| ui::children![cx; header, size_controls, info]),
+            shadcn::card_content(|cx| ui::children![cx; content]),
+        ]
     })
     .ui()
     .w_full()
@@ -506,9 +497,9 @@ fn main() -> anyhow::Result<()> {
         .with_main_window("cookbook-embedded-viewport-basics", (1120.0, 780.0))
         .setup(install_commands)
         .setup(shadcn::app::install)
+        .setup(fret_icons_lucide::app::install)
         .setup(fret_cookbook::install_cookbook_defaults)
-        .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
-        .with_lucide_icons();
+        .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096);
 
     #[cfg(feature = "cookbook-diag")]
     let builder = builder.with_default_diagnostics();

@@ -87,7 +87,7 @@ If you are unsure, start with `Layout` and tighten later.
 
 Dynamic lists should use stable keys:
 
-- Prefer `ui::keyed(id, |cx| ...)` for list rows.
+- Prefer `ui::for_each_keyed(cx, items, |item| id, |item| row)` for list rows.
 - If a list can insert/remove/reorder, assume it needs keys.
 
 ## Minimal `Cargo.toml`

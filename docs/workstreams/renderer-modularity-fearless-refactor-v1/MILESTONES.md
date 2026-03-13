@@ -1,6 +1,6 @@
 # Renderer Modularity (Fearless Refactor v1) — Milestones
 
-Status: In progress
+Status: Closed for v1
 
 Related:
 
@@ -10,10 +10,120 @@ Related:
 
 Current snapshot (2026-03-13):
 
+- The workstream is now closed for v1; all tracker items in `TODO.md` are resolved.
+- The latest closeout audit has landed:
+  - `docs/workstreams/renderer-modularity-fearless-refactor-v1/CLOSEOUT_AUDIT.md` closes the
+    remaining text, renderer-owner, export-tightening, gate, docs, and cleanup tracker items
+  - no new ADR was required for closeout because the relevant process/topology contracts already
+    remain covered by `docs/architecture.md` and
+    `docs/adr/0201-renderer-internals-modularization-and-gates-v1.md`
+- The latest closeout verification remains green:
+  - `python3 tools/check_layering.py`: passed
+  - `CARGO_TARGET_DIR=target-codex-render cargo check -p fret-render-wgpu --tests`: passed
+  - `CARGO_TARGET_DIR=target-codex-render cargo nextest run -p fret-render-wgpu -E 'test(requested_and_emitted_custom_effect_counters_track_all_versions) | test(degradation_counters_track_reason_and_kind_totals) | test(diff_segment_reports_tracks_shape_changes_and_pass_growth) | test(render_plan_dump_assembly_tracks_segment_passes_and_counts) | test(custom_effect_summaries_include_abi_and_input_counts) | test(target_usage_tracks_max_size) | test(encode_custom_effect_v3_pass_keeps_distinct_source_targets)'`: 7/7 passed
+  - `CARGO_TARGET_DIR=target-codex-render cargo nextest run -p fret-render-wgpu -E 'test(text_locale_changes_font_stack_key) | test(emoji_sequences_use_color_quads_when_color_font_is_available) | test(cjk_glyphs_populate_mask_or_subpixel_atlas_when_cjk_lite_font_is_available) | test(text_measure_matches_prepare_across_fractional_scale_factors)'`: 4/4 passed
+  - `CARGO_TARGET_DIR=target-codex-render cargo nextest run -p fret-render -p fret-render-wgpu -E 'test(facade_surface_snapshot_matches_v1_contract_buckets) | test(renderer_accepts_host_provided_gpu_topology)'`: 2/2 passed
 - The renderer stack is not a rewrite candidate; it is a staged modularization candidate.
 - The latest backend gates are green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 223/223 passed
   - `python3 tools/check_layering.py`: passed
+- The latest scene-encoding cache diagnostics split has landed:
+  - miss-reason diffing, trace display, and perf miss accounting now live under
+    `crates/fret-render-wgpu/src/renderer/scene_encoding_cache_diagnostics.rs`
+  - `crates/fret-render-wgpu/src/renderer/scene_encoding_cache.rs` now keeps the cache owner
+    flow plus delegation to that diagnostics companion module
+- The latest `CustomEffectV3` family-entrypoint split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_custom_v3.rs` now owns
+    the full `CustomEffectV3` recorder entrypoint, including availability/fallback checks,
+    prepared-input orchestration, param/meta upload, and final masked/unmasked dispatch
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+    `CustomEffectV3` recorder path at all
+- The latest `CustomEffectV2` family-entrypoint split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_custom_v2.rs` now owns
+    the full `CustomEffectV2` recorder entrypoint, including availability/fallback checks, param
+    and input-meta upload, filterable user-image fallback resolution, and masked/unmasked dispatch
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+    `CustomEffectV2` recorder path at all
+- The latest `CompositePremul` family-entrypoint split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_composite.rs` now owns
+    the `CompositePremul` recorder entrypoint, including source/mask lookup, uniform routing, quad
+    vertex selection, and final draw dispatch
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+    `CompositePremul` recorder path at all
+- The latest `ClipMask` family-entrypoint split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_clip_mask.rs` now owns
+    the `ClipMask` recorder entrypoint, including param upload, mask-target allocation, uniform
+    routing, and final triangle-pass dispatch
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+    `ClipMask` recorder path at all
+- The latest shared fullscreen-helper split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_shared.rs` now owns the
+    shared fullscreen parameter/texture helper flow plus `pack_effect_params_v1(...)`
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now keeps only the
+    remaining recorder family entrypoints
+- The latest `CustomEffectV1` family-entrypoint split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_custom_v1.rs` now owns
+    the `CustomEffectV1` recorder entrypoint, including availability/fallback checks, pipeline
+    preparation, parameter packing, and final fullscreen dispatch
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+    `CustomEffectV1` recorder path at all
+- The latest render-plan-dump-summary split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump_summary.rs` now owns custom-effect
+    summaries, target-usage summaries, custom-effect-v3 diagnostics summaries, and the summary
+    regression tests
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps JSON schema/pass
+    encoding, env-triggered dump emission, and dump scratch orchestration
+- The latest render-plan-dump-encode split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump_encode.rs` now owns per-pass,
+    postprocess, and effect-marker JSON schema encoding plus focused encoding tests
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps segment/count/
+    degradation assembly and final dump emission orchestration
+- The latest render-plan-dump diagnostics split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump_emit.rs` owns the
+    `FRET_RENDERPLAN_DUMP*` env gate plus final file emission
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump_assemble.rs` owns segment/count/
+    degradation scratch rebuild plus render-plan JSON assembly
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` keeps serialization and a thin
+    gate/assemble/emit orchestration shell
+- The latest render-plan-reporting-perf split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_reporting_perf.rs` now owns custom-effect
+    requested/emitted counter collection, render-plan degradation perf accumulation, and focused
+    reporting-perf tests
+  - `crates/fret-render-wgpu/src/renderer/render_plan_reporting.rs` now keeps owner orchestration,
+    segment-report rebuild/diff, and dump scheduling
+- The latest finishing audit has landed:
+  - `docs/workstreams/renderer-modularity-fearless-refactor-v1/FINISHING_AUDIT.md` now records
+    the v1 stop-point decision for
+    `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` and
+    `crates/fret-render-wgpu/src/renderer/services.rs`
+  - `RMFR-renderer-041`, `RMFR-renderer-042`, and `RMFR-renderer-043` are now closed for v1
+- The latest shader audit has landed:
+  - `docs/workstreams/renderer-modularity-fearless-refactor-v1/SHADERS_AUDIT.md` now records the
+    v1 stop-point decision for `crates/fret-render-wgpu/src/renderer/shaders.rs`
+  - `RMFR-shaders-050`, `RMFR-shaders-051`, and `RMFR-shaders-052` are now closed for v1
+- Shader audit verification remains green:
+  - `cargo nextest run -p fret-render-wgpu -E 'test(shaders_parse_as_wgsl) | test(shaders_validate_for_webgpu) | test(path_shader_wgsl_validates_under_naga)'`
+  - residual note: the conditional wasm/browser Tint guard in
+    `crates/fret-render-wgpu/src/renderer/tests.rs` remains available but was not rerun in this
+    native docs-closeout slice
+- The latest custom-effect service split has landed:
+  - `crates/fret-render-wgpu/src/renderer/services_custom_effects.rs` now owns custom-effect WGSL
+    validation, capability gating, registration/unregister flow, and the focused service tests
+  - `crates/fret-render-wgpu/src/renderer/material_effects.rs` now owns custom-effect
+    hash/dedup/refcount/index mutation helpers
+  - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` now owns custom-effect pipeline-cache
+    eviction via one explicit helper
+  - `crates/fret-render-wgpu/src/renderer/services.rs` now keeps text/path/SVG/material service
+    impls only
+- The latest SVG/material service split has landed:
+  - `crates/fret-render-wgpu/src/renderer/services_assets.rs` now owns `SvgService`,
+    `MaterialService`, sampled-material capability gating, and the focused material service test
+  - `crates/fret-render-wgpu/src/renderer/material_effects.rs` now owns material
+    register/unregister refcount/index mutation helpers plus a focused registry test
+  - `crates/fret-render-wgpu/src/renderer/svg/mod.rs` now owns raster-entry draining for one SVG,
+    and `crates/fret-render-wgpu/src/renderer/svg/cache.rs` now exposes
+    `unregister_svg_rasters(...)` for service-local cleanup
+  - `crates/fret-render-wgpu/src/renderer/services.rs` now keeps text/path service impls only
 - v1 start decisions are now locked:
   - no new renderer crates in v1,
   - `fret-render` stays the stable default facade,
@@ -409,6 +519,522 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu path_state_deduplicates_and_evicts_unreferenced_entries`
   - `cargo nextest run -p fret-render-wgpu render_plan_usage_detection_only_counts_path_msaa_batches`
   - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
+- The ninth renderer owner-state split has landed:
+  - render-plan reporting / dump state now lives under
+    `crates/fret-render-wgpu/src/renderer/render_plan_reporting.rs`
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns render-plan segment report
+    scratch, per-segment pass-count scratch, or render-plan JSON dump scratch directly
+  - `render_scene/plan_reporting.rs` now delegates to that owner instead of mutating loose
+    renderer scratch fields directly
+- Renderer render-plan reporting-state split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu diff_segment_reports_tracks_shape_changes_and_pass_growth`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
+- The tenth renderer owner-state split has landed:
+  - scene-encoding cache state now lives under
+    `crates/fret-render-wgpu/src/renderer/scene_encoding_cache.rs`
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns the scene-encoding cache shell
+    directly; cache key construction, hit/miss bookkeeping, and cache storage now sit behind the
+    owner
+  - `render_scene/encoding_cache.rs` now stays as a thin wrapper around owner-state bookkeeping
+    plus the actual `encode_scene_ops_into(...)` call
+- Renderer scene-encoding-state split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu miss_reasons_include_material_registry_and_budgets`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
+- The eleventh renderer owner-state split has landed:
+  - frame scratch state now lives under
+    `crates/fret-render-wgpu/src/renderer/frame_scratch.rs`
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns viewport-uniform scratch,
+    render-space scratch, plan-quad vertex scratch, or plan-quad base scratch directly
+  - render-scene frame bindings, render-space upload, quad-vertex upload, and execute paths now
+    query that owner instead of mutating loose renderer vectors directly
+- Renderer frame-scratch split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu quad_scratch_roundtrips_vertices_and_bases`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
+- The twelfth renderer owner-state split has landed:
+  - render-text dump state now lives under
+    `crates/fret-render-wgpu/src/renderer/render_text_dump.rs`
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns render-text dump scratch
+    directly; dump collection/output scratch now sits behind that owner
+  - `render_scene/execute.rs` now keeps only a thin bridge into that owner instead of relying on
+    dump-local transient allocations
+- Renderer render-text-dump split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu render_text_dump_state_clear_scratch_keeps_capacity`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
+- The thirteenth renderer owner-state split has landed:
+  - render-scene config state now lives under
+    `crates/fret-render-wgpu/src/renderer/render_scene_config.rs`
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns render-plan strict-clear
+    config, path MSAA requested samples, or debug postprocess knobs directly
+  - `config.rs`, `render_scene/frame_pipelines.rs`, `render_scene/debug_postprocess.rs`, and
+    `render_scene/execute.rs` now query that owner instead of reaching into loose renderer fields
+- Renderer render-scene-config split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu normalizes_path_msaa_samples_to_supported_shapes`
+  - `cargo nextest run -p fret-render-wgpu clamps_debug_knobs_and_rejects_zero_sized_scissors`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
+- The fourteenth renderer owner-state split has landed:
+  - geometry/upload state now lives under
+    `crates/fret-render-wgpu/src/renderer/geometry_upload.rs`
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns quad instance/path paint/text
+    paint ring buffers or viewport/text/path vertex upload rings directly
+  - `resources.rs`, `render_scene/uploads.rs`, and `pipelines/{quad,path,text}.rs` now query that
+    owner instead of building or reading loose renderer upload state directly
+- Renderer geometry-upload split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
+  - `cargo nextest run -p fret-render-wgpu gpu_text_linear_gradient_paint_varies_across_x`
+  - `cargo nextest run -p fret-render-wgpu path_material_paint_renders_and_is_not_degraded`
+  - `cargo nextest run -p fret-render-wgpu gpu_linear_gradient_smoke_conformance`
+- The fifteenth renderer owner-state split has landed:
+  - frame-binding state now lives under
+    `crates/fret-render-wgpu/src/renderer/frame_binding_state.rs`
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns `uniform_bind_group` or
+    `UniformResources` directly
+  - `render_scene/frame_bindings.rs`, `render_scene/render_space_upload.rs`, render-scene
+    recorders, and render-space dispatch sites now query that owner or thin `Renderer` accessors
+    instead of reaching into loose uniform state directly
+- Renderer frame-binding split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
+  - `cargo nextest run -p fret-render-wgpu gpu_text_linear_gradient_paint_varies_across_x`
+  - `cargo nextest run -p fret-render-wgpu path_material_paint_renders_and_is_not_degraded`
+  - `cargo nextest run -p fret-render-wgpu gpu_linear_gradient_smoke_conformance`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v1_can_read_render_space_in_fragment`
+- The sixteenth renderer execution-state split has landed:
+  - render-scene dispatch state now lives under
+    `crates/fret-render-wgpu/src/renderer/render_scene/dispatch_state.rs`
+  - `crates/fret-render-wgpu/src/renderer/render_scene/dispatch.rs` now keeps only resource
+    assembly plus thin delegation into that transient execution owner
+  - command encoder ownership, frame-target lifetime, pass-loop tracing, and finish-time target
+    release now flow through that owner instead of staying inline in `dispatch.rs`
+- Renderer render-scene-dispatch split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
+  - `cargo nextest run -p fret-render-wgpu gpu_text_linear_gradient_paint_varies_across_x`
+  - `cargo nextest run -p fret-render-wgpu path_material_paint_renders_and_is_not_degraded`
+  - `cargo nextest run -p fret-render-wgpu gpu_linear_gradient_smoke_conformance`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v1_can_read_render_space_in_fragment`
+- The seventeenth renderer execution-flow split has landed:
+  - render-scene executor lifecycle glue now lives under
+    `crates/fret-render-wgpu/src/renderer/render_scene/executor_lifecycle.rs`
+  - `crates/fret-render-wgpu/src/renderer/render_scene/executor.rs` now keeps only pass-record
+    dispatch while target write-epoch and `ReleaseTarget` glue route through helper methods
+  - write-epoch bumps and release-target pool handoff now share one helper seam instead of
+    repeating inline across every pass arm
+- Renderer render-scene-executor-lifecycle split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
+  - `cargo nextest run -p fret-render-wgpu gpu_text_linear_gradient_paint_varies_across_x`
+  - `cargo nextest run -p fret-render-wgpu path_material_paint_renders_and_is_not_degraded`
+  - `cargo nextest run -p fret-render-wgpu gpu_linear_gradient_smoke_conformance`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v1_can_read_render_space_in_fragment`
+- The eighteenth renderer recorder-facade split has landed:
+  - render-scene recorder execution facade now lives under
+    `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs`
+  - the `CustomEffectV3` path in
+    `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now routes
+    source/mask view lookup, pyramid reuse/scratch/cache, and destination intermediate allocation
+    through `RenderSceneExecutor` helper methods
+  - `recorders/effects.rs` no longer reaches directly into `Renderer` for
+    `custom_effect_v3_pyramid` or `intermediate_state.pool` on that path
+- Renderer recorder-facade split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
+  - `cargo nextest run -p fret-render-wgpu gpu_text_linear_gradient_paint_varies_across_x`
+  - `cargo nextest run -p fret-render-wgpu path_material_paint_renders_and_is_not_degraded`
+  - `cargo nextest run -p fret-render-wgpu gpu_linear_gradient_smoke_conformance`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v1_can_read_render_space_in_fragment`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_src_raw_is_chain_root_and_differs_from_src_after_prior_step`
+- The nineteenth renderer recorder-facade split has landed:
+  - the existing render-scene recorder execution facade in
+    `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs` now also fronts the
+    fullscreen blit and blur recorders
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/blit.rs` and `blur.rs` no longer
+    reach directly into frame-target helpers or `intermediate_state.pool` for source/mask view
+    lookup or destination color-target allocation
+  - fullscreen-style recorders now share the same executor-level access seam as the earlier
+    `CustomEffectV3` path
+- Renderer fullscreen-recorder-facade split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu gpu_filter_content_blur_is_scissored_and_preserves_outside_content`
+  - `cargo nextest run -p fret-render-wgpu gpu_backdrop_blur_is_scissored_and_preserves_ordering`
+  - `cargo nextest run -p fret-render-wgpu gpu_scissored_blur_preserves_outside_region`
+  - `cargo nextest run -p fret-render-wgpu gpu_offscreen_identity_blit_matches_direct`
+- The twentieth renderer recorder-facade split has landed:
+  - the existing render-scene recorder execution facade in
+    `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs` now also fronts the
+    `scale_nearest` and `path_clip_mask` recorders
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scale_nearest.rs` no longer
+    reaches directly into frame-target helpers or `intermediate_state.pool` for source/mask view
+    lookup or destination color-target allocation
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/path_clip_mask.rs` no longer
+    reaches directly into frame-target allocation or clip-path cache store/copy glue; that
+    ownership now routes through executor helpers while the draw pass stays local
+- Renderer scale-and-clip-recorder-facade split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu gpu_filter_content_pixelate_is_scissored_and_preserves_outside_content`
+  - `cargo nextest run -p fret-render-wgpu gpu_backdrop_pixelate_is_scissored_and_preserves_ordering`
+  - `cargo nextest run -p fret-render-wgpu gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite`
+  - `cargo nextest run -p fret-render-wgpu gpu_backdrop_pixelate_respects_rounded_clip_stack_on_writeback`
+- The twenty-first renderer recorder-facade split has landed:
+  - the existing render-scene recorder execution facade now also fronts the `backdrop_warp` and
+    `path_msaa` recorders
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/backdrop_warp.rs` no longer
+    reaches directly into frame-target helpers or `intermediate_state.pool` for source/mask view
+    lookup or destination color-target allocation
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/path_msaa.rs` no longer reaches
+    directly into frame-target helpers or `intermediate_state.pool` for pass target allocation;
+    the MSAA intermediate/composite draw flow stays local
+- Renderer backdrop-and-path-msaa-recorder-facade split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu gpu_backdrop_warp_is_scissored_and_preserves_ordering`
+  - `cargo nextest run -p fret-render-wgpu gpu_backdrop_warp_v2_image_map_is_scissored_and_preserves_ordering`
+  - `cargo nextest run -p fret-render-wgpu gpu_path_msaa_composite_vulkan_smoke`
+  - `cargo nextest run -p fret-render-wgpu vulkan_path_msaa_pipeline_is_visible_by_default`
+- The twenty-second renderer recorder-facade split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs` now allocates
+    the pass target in the recorder shell before delegating to `Renderer::record_scene_draw_range_pass(...)`
+  - the shared fullscreen param/texture helper flow in
+    `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now routes common
+    source/mask view lookup and destination target allocation through executor helpers instead of
+    touching frame-target helpers inline
+  - `Renderer::record_scene_draw_range_pass(...)` no longer depends on frame-target allocation
+    state, and shared fullscreen effect helpers now share the same recorder-access seam as the
+    recorder shells that call them
+- Renderer scene-draw-and-fullscreen-helper split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
+  - `cargo nextest run -p fret-render-wgpu gpu_text_linear_gradient_paint_varies_across_x`
+  - `cargo nextest run -p fret-render-wgpu path_material_paint_renders_and_is_not_degraded`
+  - `cargo nextest run -p fret-render-wgpu gpu_backdrop_color_adjust_is_scissored_and_preserves_ordering`
+  - `cargo nextest run -p fret-render-wgpu gpu_backdrop_color_adjust_brightness_is_a_multiplier_with_identity_1`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v1_can_read_render_space_in_fragment`
+- The twenty-third renderer recorder-facade split has landed:
+  - the existing render-scene recorder execution facade in
+    `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs` now also fronts the
+    remaining bespoke effect paths in
+    `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs`
+  - `CustomEffectV2`, `CompositePremul`, `ClipMask`, and the `CustomEffectV3` source-pyramid
+    fallback no longer reach directly into frame-target helpers or `intermediate_state.pool` for
+    color/mask source lookup or color/mask destination allocation
+  - current effect recorder target/view access in `recorders/effects.rs` is now uniformly routed
+    through `RenderSceneExecutor` helper methods while bind-group assembly and draw logic stay
+    local to each effect path
+- Renderer bespoke-effect-recorder-facade split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_can_sample_user_image_and_respects_sampling_hint`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_with_no_input_image_uses_fallback_texture_and_is_deterministic`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_rejects_non_filterable_input_format_by_falling_back`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_compiles_and_runs_in_masked_path`
+  - `cargo nextest run -p fret-render-wgpu gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite`
+  - `cargo nextest run -p fret-render-wgpu gpu_filter_content_blur_respects_rounded_clip_stack_on_composite`
+  - `cargo nextest run -p fret-render-wgpu gpu_backdrop_pixelate_respects_rounded_clip_stack_on_writeback`
+- The twenty-fourth renderer effects-binding split has landed:
+  - effect-family bind-group builders for `CustomEffectV2` and `CompositePremul` now live under
+    `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_bindings.rs`
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now reuses those
+    helpers instead of keeping the descriptor-heavy bind-group assembly inline for those paths
+  - pass-mode control flow, uniform bind-group selection, and draw execution stay in
+    `recorders/effects.rs`, so the slice only narrows assembly ownership without changing effect
+    semantics
+- Renderer effects-binding split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_can_sample_user_image_and_respects_sampling_hint`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_with_no_input_image_uses_fallback_texture_and_is_deterministic`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_compiles_and_runs_in_masked_path`
+  - `cargo nextest run -p fret-render-wgpu gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite`
+  - `cargo nextest run -p fret-render-wgpu gpu_filter_content_blur_respects_rounded_clip_stack_on_composite`
+  - `cargo nextest run -p fret-render-wgpu gpu_backdrop_pixelate_respects_rounded_clip_stack_on_writeback`
+- The twenty-fifth renderer custom-v3-binding split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_bindings.rs` now also
+    owns `CustomEffectV3` bind-group assembly and the unmasked / uniform-mask / texture-mask
+    pipeline selection for the main pass path
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now reuses that
+    helper surface and keeps `CustomEffectV3` focused on source preparation, pyramid reuse/build,
+    uniform routing, and pass execution
+  - the pyramid build blit/downsample chain remains local to the recorder in this slice, so the
+    change narrows main-pass assembly ownership without touching the effect algorithm
+- Renderer custom-v3-binding split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_src_raw_is_chain_root_and_differs_from_src_after_prior_step`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_backdrop_source_group_raw_snapshots_before_prior_backdrop_steps`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_pyramid_level1_differs_from_raw_near_an_unaligned_edge`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_rejects_non_filterable_user_image_formats_by_falling_back_and_counts_it`
+- The twenty-sixth renderer custom-v3-pyramid-build split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs` now owns the
+    `CustomEffectV3` pyramid build helper, including blit/downsample bind-group setup, scissor
+    projection, and pass-loop glue
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now reuses that
+    helper and keeps only pyramid reuse selection, scratch snapshot retrieval, and final pyramid
+    view choice in the recorder body
+  - the slice does not alter pyramid semantics; it only moves feature-local execution glue behind
+    the existing executor helper seam
+- Renderer custom-v3-pyramid-build split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_src_raw_is_chain_root_and_differs_from_src_after_prior_step`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_backdrop_source_group_raw_snapshots_before_prior_backdrop_steps`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_pyramid_level1_differs_from_raw_near_an_unaligned_edge`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_rejects_non_filterable_user_image_formats_by_falling_back_and_counts_it`
+- The twenty-seventh renderer custom-v3-source-prep split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs` now also owns
+    `CustomEffectV3` source-view preparation for `src`, `src_raw`, and final `src_pyramid`
+  - the helper reuses the earlier pyramid-build executor seam, so optional pyramid override
+    construction also stays outside the recorder body
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now consumes prepared
+    source views and keeps only user-image fallback selection, destination routing, and pass
+    execution for `CustomEffectV3`
+- Renderer custom-v3-source-prep split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_src_raw_is_chain_root_and_differs_from_src_after_prior_step`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_backdrop_source_group_raw_snapshots_before_prior_backdrop_steps`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_pyramid_level1_differs_from_raw_near_an_unaligned_edge`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_rejects_non_filterable_user_image_formats_by_falling_back_and_counts_it`
+- The twenty-eighth renderer custom-v3-user-image-prep split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs` now also owns
+    `CustomEffectV3` user-image fallback resolution, sampling-mode sampler choice, and
+    incompatible-image perf accounting
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now consumes prepared
+    `user0` / `user1` inputs and keeps the v3 path focused on destination routing and pass
+    execution
+  - the slice does not change fallback behavior; it only moves execution-time preparation behind
+    the existing executor helper seam
+- Renderer custom-v3-user-image-prep split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_src_raw_is_chain_root_and_differs_from_src_after_prior_step`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_backdrop_source_group_raw_snapshots_before_prior_backdrop_steps`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_pyramid_level1_differs_from_raw_near_an_unaligned_edge`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_rejects_non_filterable_user_image_formats_by_falling_back_and_counts_it`
+- The twenty-ninth renderer custom-v3-dispatch split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_custom_v3.rs` now owns
+    `CustomEffectV3` param/meta upload plus the final masked/unmasked dispatch flow
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now reuses that
+    helper module and keeps the v3 path focused on pipeline availability checks plus prepared-input
+    orchestration
+  - the slice does not change effect semantics; it only narrows the parent recorder body down to
+    orchestration
+- The thirtieth scene-encoding cache diagnostics split has landed:
+  - `crates/fret-render-wgpu/src/renderer/scene_encoding_cache_diagnostics.rs` now owns
+    scene-encoding miss-reason diffing, trace display, and perf miss accounting
+  - `crates/fret-render-wgpu/src/renderer/scene_encoding_cache.rs` now keeps only the cache owner
+    flow plus delegation to that diagnostics companion module
+  - the slice does not change cache-key semantics or reuse behavior; it only narrows the owner
+    module down to cache flow
+- The thirty-first renderer custom-v3-entrypoint split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_custom_v3.rs` now owns
+    the full `CustomEffectV3` recorder entrypoint, including availability/fallback checks and
+    prepared-input orchestration in addition to the previously extracted upload/dispatch flow
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+    `CustomEffectV3` recorder path at all, and `recorders/mod.rs` now re-exports that entrypoint
+    directly from the family-local module
+  - the slice does not change effect semantics; it only finishes the family-local ownership move
+- The thirty-second renderer custom-v2-entrypoint split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_custom_v2.rs` now owns
+    the full `CustomEffectV2` recorder entrypoint, including availability/fallback checks, param
+    and input-meta upload, filterable user-image fallback resolution, and masked/unmasked dispatch
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+    `CustomEffectV2` recorder path at all, and `recorders/mod.rs` now re-exports that entrypoint
+    directly from the family-local module
+  - the slice does not change effect semantics; it only finishes the family-local ownership move
+- The thirty-third renderer composite-entrypoint split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_composite.rs` now owns
+    the `CompositePremul` recorder entrypoint, including source/mask lookup, uniform routing, quad
+    vertex selection, and final draw dispatch
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+    `CompositePremul` recorder path at all, and `recorders/mod.rs` now re-exports that entrypoint
+    directly from the family-local module
+  - the slice does not change effect semantics; it only finishes the family-local ownership move
+- The thirty-fourth renderer clip-mask-entrypoint split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_clip_mask.rs` now owns
+    the `ClipMask` recorder entrypoint, including param upload, mask-target allocation, uniform
+    routing, and final triangle-pass dispatch
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+    `ClipMask` recorder path at all, and `recorders/mod.rs` now re-exports that entrypoint
+    directly from the family-local module
+  - the slice does not change effect semantics; it only finishes the family-local ownership move
+- The thirty-fifth renderer shared-fullscreen-helper split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_shared.rs` now owns the
+    shared fullscreen parameter/texture helper flow plus `pack_effect_params_v1(...)`
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now keeps only the
+    remaining recorder family entrypoints while `CustomEffectV2`/`CustomEffectV3` also import the
+    shared parameter packing helper from the dedicated module
+  - the slice does not change effect semantics; it only removes the last shared-helper bucket from
+    the parent recorder-family module
+- The thirty-sixth renderer custom-v1-entrypoint split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_custom_v1.rs` now owns
+    the `CustomEffectV1` recorder entrypoint, including availability/fallback blit checks,
+    custom pipeline preparation, shared parameter packing, and masked/unmasked dispatch
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+    `CustomEffectV1` recorder path at all, and `recorders/mod.rs` now re-exports that entrypoint
+    directly from the family-local module
+  - the slice does not change effect semantics; it only finishes the custom-effect family-local
+    ownership closure for v1/v2/v3 entrypoints
+- The thirty-seventh render-plan-dump-summary split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump_summary.rs` now owns custom-effect
+    summaries, target-usage summaries, custom-effect-v3 diagnostics summaries, and the focused
+    summary regression tests
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` no longer owns those diagnostics
+    rollups; it now keeps JSON schema/pass encoding plus env-triggered dump emission and scratch
+    orchestration
+  - the slice does not change render-plan dump semantics; it only moves diagnostics-only summary
+    ownership behind a companion module
+- The thirty-eighth render-plan-dump-encode split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump_encode.rs` now owns per-pass,
+    postprocess, and effect-marker JSON schema encoding plus the focused encoding regression test
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` no longer owns those encoders; it
+    now keeps segment/count/degradation assembly and final dump emission orchestration
+  - the slice does not change render-plan dump semantics; it only moves JSON encoding ownership
+    behind a companion module
+- The thirty-ninth custom-effect-service split has landed:
+  - `crates/fret-render-wgpu/src/renderer/services_custom_effects.rs` now owns custom-effect WGSL
+    validation/build flow, capability gating, register/unregister orchestration, and the focused
+    custom-effect service regression tests
+  - `crates/fret-render-wgpu/src/renderer/material_effects.rs` now owns custom-effect
+    hash/dedup/refcount/index mutation helpers
+  - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` now owns custom-effect pipeline-cache
+    eviction via `evict_custom_effect_pipelines(...)`
+  - `crates/fret-render-wgpu/src/renderer/services.rs` no longer owns custom-effect service impls
+    or cross-owner registry/pipeline mutation inline
+- Renderer custom-effect-service split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu sampled_material_registration_is_capability_gated`
+  - `cargo nextest run -p fret-render-wgpu custom_effect_wgsl_size_limit_is_enforced`
+  - `cargo nextest run -p fret-render-wgpu custom_effect_wgsl_empty_is_rejected`
+  - `cargo nextest run -p fret-render-wgpu custom_effect_wgsl_minimal_program_validates`
+  - `cargo nextest run -p fret-render-wgpu custom_effect_v2_wgsl_minimal_program_validates`
+  - `cargo nextest run -p fret-render-wgpu custom_effect_v3_wgsl_minimal_program_validates`
+  - `cargo nextest run -p fret-render-wgpu unregister_custom_effect_evicts_custom_effect_pipelines`
+- The fortieth SVG-material-service split has landed:
+  - `crates/fret-render-wgpu/src/renderer/services_assets.rs` now owns `SvgService`,
+    `MaterialService`, sampled-material capability gating, and the focused material service test
+  - `crates/fret-render-wgpu/src/renderer/material_effects.rs` now owns material
+    register/unregister refcount/index mutation helpers plus a focused registry test
+  - `crates/fret-render-wgpu/src/renderer/svg/mod.rs` now owns raster-entry draining for one SVG,
+    and `crates/fret-render-wgpu/src/renderer/svg/cache.rs` now exposes
+    `unregister_svg_rasters(...)` for service-local cleanup
+  - `crates/fret-render-wgpu/src/renderer/services.rs` now keeps text/path service impls only
+- Renderer svg-material-service split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu sampled_material_registration_is_capability_gated`
+  - `cargo nextest run -p fret-render-wgpu material_registry_deduplicates_and_tracks_refcounts`
+  - `cargo nextest run -p fret-render-wgpu registry_deduplicates_svg_bytes_and_tracks_refcounts`
+  - `cargo nextest run -p fret-render-wgpu gpu_dot_grid_material_smoke_conformance`
+  - `cargo nextest run -p fret-render-wgpu sampled_noise_material_uses_catalog_texture_layer`
+- The forty-first render-plan-dump-emit split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump_emit.rs` now owns the
+    `FRET_RENDERPLAN_DUMP*` env gate and final file emission
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps segment/count/
+    degradation scratch rebuild, JSON assembly, serialization, and a thin
+    gate/assemble/emit orchestration shell
+- Renderer render-plan-dump-emit split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu custom_effect_summaries_include_abi_and_input_counts`
+  - `cargo nextest run -p fret-render-wgpu custom_effect_v3_summary_tracks_pyramid_levels_min_max_sum`
+  - `cargo nextest run -p fret-render-wgpu target_usage_tracks_max_size`
+  - `cargo nextest run -p fret-render-wgpu encode_custom_effect_v3_pass_keeps_distinct_source_targets`
+- The forty-second render-plan-reporting-perf split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_reporting_perf.rs` now owns custom-effect
+    requested/emitted counter collection, render-plan degradation perf accumulation, and focused
+    reporting-perf tests
+  - `crates/fret-render-wgpu/src/renderer/render_plan_reporting.rs` now keeps the reporting owner
+    shell, segment-report rebuild/diff, and dump scheduling
+- Renderer render-plan-reporting-perf split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu requested_and_emitted_custom_effect_counters_track_all_versions`
+  - `cargo nextest run -p fret-render-wgpu degradation_counters_track_reason_and_kind_totals`
+  - `cargo nextest run -p fret-render-wgpu diff_segment_reports_tracks_shape_changes_and_pass_growth`
+- The forty-third render-plan-dump-assembly split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump_assemble.rs` now owns segment/count/
+    degradation scratch rebuild, render-plan JSON assembly, and a focused assembly regression test
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps serialization and a thin
+    gate/assemble/emit orchestration shell
+- Renderer render-plan-dump-assembly split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu render_plan_dump_assembly_tracks_segment_passes_and_counts`
+  - `cargo nextest run -p fret-render-wgpu custom_effect_summaries_include_abi_and_input_counts`
+  - `cargo nextest run -p fret-render-wgpu target_usage_tracks_max_size`
+  - `cargo nextest run -p fret-render-wgpu encode_custom_effect_v3_pass_keeps_distinct_source_targets`
+- Renderer custom-v3-dispatch split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_src_raw_is_chain_root_and_differs_from_src_after_prior_step`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_backdrop_source_group_raw_snapshots_before_prior_backdrop_steps`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_pyramid_level1_differs_from_raw_near_an_unaligned_edge`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_rejects_non_filterable_user_image_formats_by_falling_back_and_counts_it`
+- Renderer custom-v3-entrypoint split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_src_raw_is_chain_root_and_differs_from_src_after_prior_step`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_backdrop_source_group_raw_snapshots_before_prior_backdrop_steps`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_requested_but_skipped_under_tight_intermediate_budget`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_pyramid_level1_differs_from_raw_near_an_unaligned_edge`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_rejects_non_filterable_user_image_formats_by_falling_back_and_counts_it`
+- Renderer custom-v2-entrypoint split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_can_sample_user_image_and_respects_sampling_hint`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_with_no_input_image_uses_fallback_texture_and_is_deterministic`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_rejects_non_filterable_input_format_by_falling_back`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_compiles_and_runs_in_masked_path`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_requested_but_skipped_under_tight_intermediate_budget`
+- Renderer composite-entrypoint split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite`
+  - `cargo nextest run -p fret-render-wgpu gpu_filter_content_blur_respects_rounded_clip_stack_on_composite`
+  - `cargo nextest run -p fret-render-wgpu gpu_backdrop_pixelate_respects_rounded_clip_stack_on_writeback`
+  - `cargo nextest run -p fret-render-wgpu gpu_backdrop_blur_respects_rounded_clip_stack_on_writeback`
+- Renderer clip-mask-entrypoint split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_compiles_and_runs_in_masked_path`
+  - `cargo nextest run -p fret-render-wgpu gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite`
+  - `cargo nextest run -p fret-render-wgpu gpu_backdrop_pixelate_respects_rounded_clip_stack_on_writeback`
+- Renderer shared-fullscreen-helper split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu dither_compiles_to_pass`
+  - `cargo nextest run -p fret-render-wgpu noise_compiles_to_pass`
+  - `cargo nextest run -p fret-render-wgpu color_matrix_compiles_to_pass`
+  - `cargo nextest run -p fret-render-wgpu color_adjust_missing_scratch_increments_effect_degradations`
+  - `cargo nextest run -p fret-render-wgpu gpu_alpha_threshold_hard_and_soft`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v1_can_read_render_space_in_fragment`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_can_sample_user_image_and_respects_sampling_hint`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_src_raw_is_chain_root_and_differs_from_src_after_prior_step`
+- Renderer custom-v1-entrypoint split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v1_can_read_render_space_in_fragment`
+- Render-plan-dump-summary split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu custom_effect_summaries_include_abi_and_input_counts`
+  - `cargo nextest run -p fret-render-wgpu custom_effect_v3_summary_tracks_pyramid_levels_min_max_sum`
+  - `cargo nextest run -p fret-render-wgpu target_usage_tracks_max_size`
+- Render-plan-dump-encode split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu encode_custom_effect_v3_pass_keeps_distinct_source_targets`
+- Scene-encoding cache diagnostics split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu miss_reasons_include_material_registry_and_budgets`
+  - `cargo nextest run -p fret-render-wgpu record_scene_encoding_cache_frame_result_updates_perf_counters`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

@@ -1255,7 +1255,7 @@ fn install_hover_query_hooks_for_pressable<H: UiHost>(
     let delay_short_fired = cx.take_transient_for(id, KEY_HOVER_DELAY_SHORT_MET);
     let delay_normal_fired = cx.take_transient_for(id, KEY_HOVER_DELAY_NORMAL_MET);
 
-    let local = cx.with_state_for(id, HoverQueryDelayLocalState::default, |st| {
+    let local = cx.state_for(id, HoverQueryDelayLocalState::default, |st| {
         if stationary_fired {
             st.stationary_met = true;
         }
@@ -1408,7 +1408,7 @@ fn populate_pressable_drag_response<H: UiHost>(
     });
     if let Some((dragging, current, start)) = drag_snapshot {
         response.drag.dragging = dragging;
-        let (delta, total) = cx.with_state_for(id, DragReportState::default, |st| {
+        let (delta, total) = cx.state_for(id, DragReportState::default, |st| {
             let prev = st.last_position.unwrap_or(current);
             st.last_position = Some(current);
             (point_sub(current, prev), point_sub(current, start))
@@ -1418,7 +1418,7 @@ fn populate_pressable_drag_response<H: UiHost>(
             response.drag.total = total;
         }
     } else {
-        cx.with_state_for(id, DragReportState::default, |st| {
+        cx.state_for(id, DragReportState::default, |st| {
             st.last_position = None;
         });
     }
@@ -1618,7 +1618,7 @@ fn model_value_changed_for<H: UiHost, T>(
 where
     T: Clone + PartialEq + 'static,
 {
-    cx.with_state_for(
+    cx.state_for(
         id,
         || current.clone(),
         |previous| {
@@ -2512,7 +2512,7 @@ fn float_layer_bring_to_front_if_activated<H: UiHost>(
     let Some(marker) = cx.inherited_state::<FloatWindowLayerMarker>() else {
         return;
     };
-    cx.with_state_for(marker.layer, FloatWindowLayerZOrder::default, |st| {
+    cx.state_for(marker.layer, FloatWindowLayerZOrder::default, |st| {
         st.bring_to_front(window_id);
     });
 }
@@ -2918,7 +2918,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         let element = self.with_cx_mut(|cx| {
             cx.named(id, |cx| {
                 let layer_id = cx.root_id();
-                cx.with_state_for(
+                cx.state_for(
                     layer_id,
                     || FloatWindowLayerMarker { layer: layer_id },
                     |st| st.layer = layer_id,
@@ -2934,7 +2934,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     f(&mut ui);
                 }
 
-                let z_order = cx.with_state_for(layer_id, FloatWindowLayerZOrder::default, |st| {
+                let z_order = cx.state_for(layer_id, FloatWindowLayerZOrder::default, |st| {
                     for w in windows.iter() {
                         st.ensure_present(w.id);
                     }
@@ -3037,7 +3037,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             cx.named(id, |cx| {
                 let area_id = cx.root_id();
                 if let Some(marker) = cx.inherited_state::<FloatWindowLayerMarker>() {
-                    cx.with_state_for(marker.layer, FloatWindowLayerZOrder::default, |st| {
+                    cx.state_for(marker.layer, FloatWindowLayerZOrder::default, |st| {
                         st.ensure_present(area_id);
                     });
                 }
@@ -3062,7 +3062,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     .global::<WindowMetricsService>()
                     .and_then(|svc| svc.scale_factor(cx.window))
                     .unwrap_or(1.0);
-                let (position, test_id) = cx.with_state_for(
+                let (position, test_id) = cx.state_for(
                     area_id,
                     || FloatingAreaState {
                         position: initial_position,
@@ -3109,7 +3109,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     f(&mut ui, ctx);
                 }
 
-                let (final_position, final_test_id) = cx.with_state_for(
+                let (final_position, final_test_id) = cx.state_for(
                     area_id,
                     || FloatingAreaState {
                         position,
@@ -3348,7 +3348,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     };
 
                     let menu = cx.semantics_with_id(semantics, move |cx, menu_id| {
-                        cx.with_state_for(
+                        cx.state_for(
                             menu_id,
                             || ImUiMenuNavState {
                                 items: nav_items_for_state.clone(),
@@ -5452,7 +5452,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
                 let window_id = cx.root_id();
                 if let Some(marker) = cx.inherited_state::<FloatWindowLayerMarker>() {
-                    cx.with_state_for(marker.layer, FloatWindowLayerZOrder::default, |st| {
+                    cx.state_for(marker.layer, FloatWindowLayerZOrder::default, |st| {
                         st.ensure_present(window_id);
                     });
                 }
@@ -5498,7 +5498,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     None
                 };
 
-                let (position_after_drag, window_test_id) = cx.with_state_for(
+                let (position_after_drag, window_test_id) = cx.state_for(
                     window_id,
                     || FloatingAreaState {
                         position: initial_position,
@@ -5534,7 +5534,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     resize_top_right_test_id,
                     resize_bottom_left_test_id,
                     resize_corner_test_id,
-                ) = cx.with_state_for(
+                ) = cx.state_for(
                     window_id,
                     || FloatWindowState {
                         size: initial_size.unwrap_or_else(|| Size::new(Px(0.0), Px(0.0))),
@@ -5671,7 +5671,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 );
 
                 if position != position_after_drag {
-                    cx.with_state_for(
+                    cx.state_for(
                         window_id,
                         || FloatingAreaState {
                             position,

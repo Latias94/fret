@@ -14,7 +14,7 @@ missing default guideline).
 - **Events**: typed actions (unit + payload) bound in the UI tree.
 - **Derived state**: `cx.data().selector(...)` for memoized projections.
 - **Async state**: `cx.data().query(...)` for loading/error/cache lifecycle.
-- **Identity**: keyed lists via `ui::keyed(id, |cx| ...)`.
+- **Identity**: keyed lists via `ui::for_each_keyed(...)` by default.
 
 ## Default entrypoints (recommended)
 
@@ -24,7 +24,7 @@ missing default guideline).
 | 1-slot action write | `cx.actions().local_set/update` | Keeps the notify/dirty closure correct. |
 | Multi-slot LocalState transaction | `cx.actions().locals::<A>(|tx| ...)` | Hides `ModelStore` for LocalState-only coordination. |
 | Multi-slot payload transaction | `cx.actions().payload::<A>().locals(|tx, payload| ...)` | Use when one payload action updates multiple locals. |
-| Keyed row interactions | `payload_actions!` + `ui::keyed` | Bind payload via `.action_payload(id)`. |
+| Keyed row interactions | `payload_actions!` + `ui::for_each_keyed(...)` | Bind payload via `.action_payload(id)` inside the row helper. |
 | Derived values | `cx.data().selector(deps, compute)` | Prefer `DepsBuilder` with tracked locals/models. |
 | Async resources | `cx.data().query(key, policy, fetch)` | Put invalidation inputs into the key. |
 | App-only effects | `cx.actions().transient::<A>(...)` + `cx.effects().take_transient(...)` | Consume transients in `render()` when `&mut App` is required. |
@@ -68,12 +68,17 @@ cx.actions()
             .unwrap_or(false)
     });
 
-out.push_ui(cx, ui::keyed(row.id, |_cx| {
-    shadcn::Checkbox::from_checked(row.done)
-        .action(act::Toggle)
-        .action_payload(row.id)
-}));
+let rows = ui::v_flex(|cx| {
+    ui::for_each_keyed(cx, rows.iter(), |row| row.id, |row| {
+        shadcn::Checkbox::from_checked(row.done)
+            .action(act::Toggle)
+            .action_payload(row.id)
+    })
+});
 ```
+
+If a row helper genuinely needs the inner keyed child scope, drop to
+`ui::for_each_keyed_with_cx(...)` rather than reopening `*_build(...)` as the default story.
 
 ## Why this exists (product goal)
 

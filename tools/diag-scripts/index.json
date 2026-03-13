@@ -1533,6 +1533,26 @@
       "target_hints": []
     },
     {
+      "id": "hello-world-compare-idle-present-gate",
+      "path": "tools/diag-scripts/tooling/hello-world/hello-world-compare-idle-present-gate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "hello-world-compare-idle-present"
+      ],
+      "tags": [
+        "compare",
+        "gate",
+        "hello-world",
+        "idle",
+        "present"
+      ],
+      "target_hints": [
+        "Exploratory compare-demo idle-present probe; final apples-to-apples gate still needs a no-frame wait path."
+      ]
+    },
+    {
       "id": "image-heavy-memory-count-12-steady",
       "path": "tools/diag-scripts/tooling/images/image-heavy-memory-count-12-steady.json",
       "required_capabilities": [
@@ -2616,16 +2636,6 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-alert-dialog-least-destructive-initial-focus",
-      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-least-destructive-initial-focus.json",
-      "required_capabilities": [],
-      "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [],
-      "target_hints": []
-    },
-    {
       "id": "ui-gallery-alert-dialog-detached-trigger-focus-restore",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-detached-trigger-focus-restore.json",
       "required_capabilities": [
@@ -2634,13 +2644,17 @@
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
-      "tags": [
-        "alert_dialog",
-        "focus",
-        "overlay",
-        "shadcn",
-        "ui_gallery"
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-alert-dialog-least-destructive-initial-focus",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-least-destructive-initial-focus.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
       ],
+      "tags": [],
       "target_hints": []
     },
     {
@@ -2940,6 +2954,25 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-calendar-demo-code-tab-scroll-range",
+      "path": "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-demo-code-tab-scroll-range.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-scroll-extents-dom-parity"
+      ],
+      "tags": [
+        "calendar",
+        "regression",
+        "scroll",
+        "tabs",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-canvas-cull-torture-pan-zoom",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-canvas-cull-torture-pan-zoom.json",
       "required_capabilities": [],
@@ -2987,6 +3020,438 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-card-memory-retained-analysis",
+      "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-memory-retained-analysis.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-card-retained-analysis-navnone"
+      ],
+      "tags": [
+        "analysis",
+        "card",
+        "memory",
+        "nav-none",
+        "retained",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts UI Gallery on the card page with the nav list hidden, enables retained/debug snapshots, and captures a steady-state bundle for runtime-state attribution."
+      ]
+    },
+    {
+      "id": "ui-gallery-card-memory-steady",
+      "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-memory-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-card-section-memory-bisect",
+        "ui-gallery-memory-bisect"
+      ],
+      "tags": [
+        "card",
+        "memory",
+        "steady",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts UI Gallery on the card page, waits for steady state, then captures a bundle."
+      ]
+    },
+    {
+      "id": "ui-gallery-card-no-compositions-memory-steady",
+      "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-compositions-memory-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-card-section-memory-bisect"
+      ],
+      "tags": [
+        "bisect",
+        "card",
+        "compositions",
+        "memory",
+        "section",
+        "steady",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts UI Gallery on the card page with the Compositions section hidden and captures a steady-state bundle."
+      ]
+    },
+    {
+      "id": "ui-gallery-card-no-compositions-preview-only-memory-retained-analysis",
+      "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-compositions-preview-only-memory-retained-analysis.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-card-preview-retained-hotspots-navnone"
+      ],
+      "tags": [
+        "analysis",
+        "card",
+        "compositions",
+        "memory",
+        "nav-none",
+        "preview-only",
+        "retained",
+        "section",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts UI Gallery on the card page with the Compositions section hidden, all remaining card code tabs suppressed, and the nav list hidden so the Compositions section's retained contribution can be derived from preview-only analysis runs."
+      ]
+    },
+    {
+      "id": "ui-gallery-card-no-heavy-sections-memory-steady",
+      "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-heavy-sections-memory-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-card-section-memory-bisect"
+      ],
+      "tags": [
+        "bisect",
+        "card",
+        "heavy-sections",
+        "memory",
+        "section",
+        "steady",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts UI Gallery on the card page with Image + Compositions + Meeting Notes hidden and captures a steady-state bundle."
+      ]
+    },
+    {
+      "id": "ui-gallery-card-no-heavy-sections-preview-only-memory-retained-analysis",
+      "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-heavy-sections-preview-only-memory-retained-analysis.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-card-preview-retained-bisect-navnone"
+      ],
+      "tags": [
+        "analysis",
+        "card",
+        "heavy-sections",
+        "memory",
+        "nav-none",
+        "preview-only",
+        "retained",
+        "section",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts UI Gallery on the card page with Image + Compositions + Meeting Notes hidden, all remaining card code tabs suppressed, and the nav list hidden so the lighter preview-body half can be measured in retained-analysis mode."
+      ]
+    },
+    {
+      "id": "ui-gallery-card-no-heavy-sections-preview-only-memory-steady",
+      "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-heavy-sections-preview-only-memory-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-card-section-memory-bisect"
+      ],
+      "tags": [
+        "bisect",
+        "card",
+        "code-tabs",
+        "heavy-sections",
+        "memory",
+        "preview-only",
+        "section",
+        "steady",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts UI Gallery on the card page with Image + Compositions + Meeting Notes hidden and all remaining card code tabs hidden, then captures a steady-state bundle."
+      ]
+    },
+    {
+      "id": "ui-gallery-card-no-image-memory-steady",
+      "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-image-memory-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-card-section-memory-bisect"
+      ],
+      "tags": [
+        "bisect",
+        "card",
+        "image",
+        "memory",
+        "section",
+        "steady",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts UI Gallery on the card page with the Image section hidden and captures a steady-state bundle."
+      ]
+    },
+    {
+      "id": "ui-gallery-card-no-image-preview-only-memory-retained-analysis",
+      "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-image-preview-only-memory-retained-analysis.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-card-preview-retained-hotspots-navnone"
+      ],
+      "tags": [
+        "analysis",
+        "card",
+        "image",
+        "memory",
+        "nav-none",
+        "preview-only",
+        "retained",
+        "section",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts UI Gallery on the card page with the Image section hidden, all remaining card code tabs suppressed, and the nav list hidden so the Image section's retained contribution can be derived from preview-only analysis runs."
+      ]
+    },
+    {
+      "id": "ui-gallery-card-no-light-sections-memory-steady",
+      "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-light-sections-memory-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-card-section-memory-bisect"
+      ],
+      "tags": [
+        "bisect",
+        "card",
+        "light-sections",
+        "memory",
+        "section",
+        "steady",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts UI Gallery on the card page with Demo + Usage + Size + CardContent + RTL + Notes hidden and captures a steady-state bundle."
+      ]
+    },
+    {
+      "id": "ui-gallery-card-no-light-sections-preview-only-memory-retained-analysis",
+      "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-light-sections-preview-only-memory-retained-analysis.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-card-preview-retained-bisect-navnone"
+      ],
+      "tags": [
+        "analysis",
+        "card",
+        "light-sections",
+        "memory",
+        "nav-none",
+        "preview-only",
+        "retained",
+        "section",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts UI Gallery on the card page with Demo + Usage + Size + CardContent + RTL + Notes hidden, all remaining card code tabs suppressed, and the nav list hidden so the heavier preview-body half can be measured in retained-analysis mode."
+      ]
+    },
+    {
+      "id": "ui-gallery-card-no-light-sections-preview-only-memory-steady",
+      "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-light-sections-preview-only-memory-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-card-section-memory-bisect"
+      ],
+      "tags": [
+        "bisect",
+        "card",
+        "code-tabs",
+        "light-sections",
+        "memory",
+        "preview-only",
+        "section",
+        "steady",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts UI Gallery on the card page with Demo + Usage + Size + CardContent + RTL + Notes hidden and all remaining card code tabs hidden, then captures a steady-state bundle."
+      ]
+    },
+    {
+      "id": "ui-gallery-card-no-meeting-notes-memory-steady",
+      "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-meeting-notes-memory-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-card-section-memory-bisect"
+      ],
+      "tags": [
+        "bisect",
+        "card",
+        "meeting-notes",
+        "memory",
+        "section",
+        "steady",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts UI Gallery on the card page with the Meeting Notes section hidden and captures a steady-state bundle."
+      ]
+    },
+    {
+      "id": "ui-gallery-card-no-meeting-notes-preview-only-memory-retained-analysis",
+      "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-meeting-notes-preview-only-memory-retained-analysis.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-card-preview-retained-hotspots-navnone"
+      ],
+      "tags": [
+        "analysis",
+        "card",
+        "meeting-notes",
+        "memory",
+        "nav-none",
+        "preview-only",
+        "retained",
+        "section",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts UI Gallery on the card page with the Meeting Notes section hidden, all remaining card code tabs suppressed, and the nav list hidden so the Meeting Notes section's retained contribution can be derived from preview-only analysis runs."
+      ]
+    },
+    {
+      "id": "ui-gallery-card-page-shell-only-memory-steady",
+      "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-page-shell-only-memory-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-card-section-memory-bisect"
+      ],
+      "tags": [
+        "all-sections-hidden",
+        "bisect",
+        "card",
+        "memory",
+        "page-shell",
+        "steady",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts UI Gallery on the card page with all card sections hidden so only the shared page shell remains, then captures a steady-state bundle."
+      ]
+    },
+    {
+      "id": "ui-gallery-card-preview-only-memory-retained-analysis",
+      "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-preview-only-memory-retained-analysis.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-card-preview-retained-bisect-navnone",
+        "ui-gallery-card-preview-retained-hotspots-navnone",
+        "ui-gallery-card-retained-analysis-navnone"
+      ],
+      "tags": [
+        "analysis",
+        "card",
+        "memory",
+        "nav-none",
+        "preview-only",
+        "retained",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts UI Gallery on the card page with the nav list hidden and all card code tabs suppressed so the preview body can be measured in retained-analysis mode."
+      ]
+    },
+    {
+      "id": "ui-gallery-card-preview-only-memory-steady",
+      "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-preview-only-memory-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-card-section-memory-bisect"
+      ],
+      "tags": [
+        "bisect",
+        "card",
+        "code-tabs",
+        "memory",
+        "preview-only",
+        "steady",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts UI Gallery on the card page with all card code tabs hidden so each section renders preview-only content and captures a steady-state bundle."
+      ]
+    },
+    {
+      "id": "ui-gallery-card-scaffold-only-memory-retained-analysis",
+      "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-scaffold-only-memory-retained-analysis.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-card-retained-analysis-navnone"
+      ],
+      "tags": [
+        "analysis",
+        "card",
+        "memory",
+        "nav-none",
+        "retained",
+        "scaffold-only",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts UI Gallery on the card page with the nav list hidden and only the minimal card doc scaffold visible, then captures a retained-analysis bundle."
+      ]
+    },
+    {
+      "id": "ui-gallery-card-scaffold-only-memory-steady",
+      "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-scaffold-only-memory-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-card-section-memory-bisect"
+      ],
+      "tags": [
+        "all-sections-hidden",
+        "bisect",
+        "card",
+        "intro-hidden",
+        "memory",
+        "page-shell",
+        "steady",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts UI Gallery on the card page with all card sections and the card intro hidden so only the minimal doc scaffold remains, then captures a steady-state bundle."
+      ]
     },
     {
       "id": "ui-gallery-carousel-api-screenshot",
@@ -4380,6 +4845,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-data-table-default-recipe-smoke",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-default-recipe-smoke.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-data-table"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-data-table-guide-demo-checkbox-only-selection",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-guide-demo-checkbox-only-selection.json",
       "required_capabilities": [],
@@ -4687,7 +5162,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "ui-gallery"
+        "ui-gallery",
+        "ui-gallery-shadcn-conformance"
       ],
       "tags": [
         "dropdown_menu",
@@ -4706,7 +5182,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "ui-gallery"
+        "ui-gallery",
+        "ui-gallery-shadcn-conformance"
       ],
       "tags": [
         "dropdown_menu",
@@ -4715,6 +5192,54 @@
         "shadcn",
         "ui_gallery"
       ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-dropdown-menu-demo-open-screenshot-zinc-dark",
+      "path": "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-demo-open-screenshot-zinc-dark.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "dropdown-menu",
+        "screenshots",
+        "shadcn",
+        "ui-gallery",
+        "zinc-dark"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/dark.",
+        "Starts UI Gallery on the Dropdown Menu page.",
+        "Opens the demo menu and captures a screenshot."
+      ]
+    },
+    {
+      "id": "ui-gallery-dropdown-menu-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-docs-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-dropdown-menu-item-chrome-fill",
+      "path": "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-item-chrome-fill.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
       "target_hints": []
     },
     {
@@ -4736,6 +5261,26 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-dropdown-menu-submenu-open-smoke",
+      "path": "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-submenu-open-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "dropdown_menu",
+        "mouse",
+        "regression_pack",
+        "shadcn",
+        "submenu",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-dropdown-nonmodal-outside-press-focus-underlay",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay.json",
       "required_capabilities": [],
@@ -4750,9 +5295,7 @@
       "path": "tools/diag-scripts/ui-gallery/dropdown/ui-gallery-dropdown-open-select.json",
       "required_capabilities": [],
       "suite_memberships": [
-        "perf-ui-gallery",
-        "ui-gallery",
-        "ui-gallery-shadcn-conformance"
+        "perf-ui-gallery"
       ],
       "tags": [],
       "target_hints": []
@@ -4764,17 +5307,6 @@
       "suite_memberships": [
         "perf-ui-gallery-steady",
         "ui-gallery-overlay-steady"
-      ],
-      "tags": [],
-      "target_hints": []
-    },
-    {
-      "id": "ui-gallery-dropdown-submenu-underlay-dismiss",
-      "path": "tools/diag-scripts/ui-gallery/dropdown/ui-gallery-dropdown-submenu-underlay-dismiss.json",
-      "required_capabilities": [],
-      "suite_memberships": [
-        "ui-gallery",
-        "ui-gallery-shadcn-conformance"
       ],
       "tags": [],
       "target_hints": []
@@ -5617,6 +6149,26 @@
         "Navigates to the Menubar page.",
         "Opens the RTL \"file\" menu.",
         "Captures a screenshot to validate shortcut trailing alignment and submenu chevron mirroring."
+      ]
+    },
+    {
+      "id": "ui-gallery-minimal-root-memory-steady",
+      "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-minimal-root-memory-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-memory-bisect"
+      ],
+      "tags": [
+        "bisect",
+        "memory",
+        "minimal-root",
+        "steady",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Runs UI Gallery with BISECT_MINIMAL_ROOT and captures a steady-state bundle."
       ]
     },
     {
@@ -6483,6 +7035,68 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-simple-content-memory-retained-analysis",
+      "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-simple-content-memory-retained-analysis.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-card-retained-analysis-navnone"
+      ],
+      "tags": [
+        "analysis",
+        "bisect",
+        "memory",
+        "nav-none",
+        "retained",
+        "simple-content",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts UI Gallery on the card page with the nav list hidden and BISECT_SIMPLE_CONTENT enabled, then captures a retained-analysis bundle for the shared shell floor."
+      ]
+    },
+    {
+      "id": "ui-gallery-simple-content-memory-steady",
+      "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-simple-content-memory-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-memory-bisect"
+      ],
+      "tags": [
+        "bisect",
+        "memory",
+        "simple-content",
+        "steady",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts UI Gallery on the card page with BISECT_SIMPLE_CONTENT and captures a steady-state bundle."
+      ]
+    },
+    {
+      "id": "ui-gallery-simple-sidebar-memory-steady",
+      "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-simple-sidebar-memory-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-memory-bisect"
+      ],
+      "tags": [
+        "bisect",
+        "memory",
+        "simple-sidebar",
+        "steady",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts UI Gallery on the card page with BISECT_SIMPLE_SIDEBAR and captures a steady-state bundle."
+      ]
+    },
+    {
       "id": "ui-gallery-slider-set-value",
       "path": "tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-set-value.json",
       "required_capabilities": [],
@@ -6816,25 +7430,6 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-web-ime-harness-beforeinput-control-intents",
-      "path": "tools/diag-scripts/ui-gallery/text-ime/ui-gallery-web-ime-harness-beforeinput-control-intents.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
-      "suite_memberships": [],
-      "tags": [
-        "beforeinput",
-        "control_intents",
-        "ime",
-        "ui_gallery",
-        "web"
-      ],
-      "target_hints": [
-        "Run against the web UI Gallery harness page in a debug build.",
-        "Exercises synthetic beforeinput control intents without a physical keydown."
-      ]
-    },
-    {
       "id": "ui-gallery-tooltip-disabled-code-tab-scroll-range",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-disabled-code-tab-scroll-range.json",
       "required_capabilities": [
@@ -7158,70 +7753,6 @@
         "window"
       ],
       "target_hints": []
-    },
-    {
-      "id": "ui-gallery-workspace-shell-chrome-shadcn-screenshot",
-      "path": "tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-chrome-shadcn-screenshot.json",
-      "required_capabilities": [
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [],
-      "tags": [
-        "screenshots",
-        "shadcn",
-        "ui-gallery",
-        "workspace",
-        "workspace_shell"
-      ],
-      "target_hints": [
-        "Boots ui_gallery with the workspace_shell diag profile so the shell starts on the overlay page under zinc/dark with the tab strip enabled.",
-        "Waits for the workspace shell chrome surfaces without opening theme or settings UI.",
-        "Captures a screenshot + diagnostics bundle for the workspace frame/top bar/status bar/tabstrip proof surface."
-      ]
-    },
-    {
-      "id": "ui-gallery-workspace-shell-focus-command-scope-smoke",
-      "path": "tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-focus-command-scope-smoke.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
-      "suite_memberships": [],
-      "tags": [
-        "focus",
-        "keyboard",
-        "smoke",
-        "ui-gallery",
-        "workspace",
-        "workspace_shell"
-      ],
-      "target_hints": [
-        "Boots ui_gallery with the workspace_shell diag profile so the shell starts on the overlay page under zinc/dark with the tab strip enabled.",
-        "Focuses the workspace content surface, presses Ctrl+F6, and asserts focus moves into the active tab.",
-        "Presses Escape and asserts focus returns to the workspace content surface."
-      ]
-    },
-    {
-      "id": "ui-gallery-workspace-shell-tab-commands-smoke",
-      "path": "tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-tab-commands-smoke.json",
-      "required_capabilities": [
-        "diag.script_v2",
-        "diag.command_dispatch_trace"
-      ],
-      "suite_memberships": [],
-      "tags": [
-        "keyboard",
-        "smoke",
-        "tabs",
-        "ui-gallery",
-        "workspace",
-        "workspace_shell"
-      ],
-      "target_hints": [
-        "Boots ui_gallery with the workspace_shell diag profile so the shell starts on the overlay page under zinc/dark with the tab strip enabled.",
-        "Focuses the workspace content surface, then exercises next/previous/close tab commands from the workspace command scope.",
-        "Asserts the single-pane workspace layout mirror updates the selected tab and removes the closed tab."
-      ]
     },
     {
       "id": "workspace-shell-demo-file-tree-bounce-keep-alive",

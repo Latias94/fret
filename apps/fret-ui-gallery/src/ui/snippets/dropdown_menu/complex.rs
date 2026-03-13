@@ -37,7 +37,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .unwrap_or_default();
 
     super::preview_frame_with(cx, |cx| {
-        shadcn::DropdownMenu::new_controllable(cx, None, false).build_parts(
+        shadcn::DropdownMenu::uncontrolled(cx).build_parts(
             cx,
             shadcn::DropdownMenuTrigger::build(
                 shadcn::Button::new("Complex Menu")
@@ -49,17 +49,17 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .side_offset(Px(4.0))
                 // shadcn/ui docs: `DropdownMenuContent className="w-44"`.
                 .min_width(Px(176.0)),
-            |cx| {
+            |_cx| {
                 [
                     shadcn::DropdownMenuGroup::new([
                         shadcn::DropdownMenuLabel::new("File").into(),
                         shadcn::DropdownMenuItem::new("New File")
                             .leading_icon(IconId::new_static("lucide.file"))
-                            .trailing(shadcn::DropdownMenuShortcut::new("⌘N").into_element(cx))
+                            .shortcut("⌘N")
                             .into(),
                         shadcn::DropdownMenuItem::new("New Folder")
                             .leading_icon(IconId::new_static("lucide.folder"))
-                            .trailing(shadcn::DropdownMenuShortcut::new("⇧⌘N").into_element(cx))
+                            .shortcut("⇧⌘N")
                             .into(),
                         shadcn::DropdownMenuSub::new(
                             shadcn::DropdownMenuSubTrigger::new("Open Recent").refine(|item| {
@@ -110,11 +110,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         shadcn::DropdownMenuSeparator::new().into(),
                         shadcn::DropdownMenuItem::new("Save")
                             .leading_icon(IconId::new_static("lucide.save"))
-                            .trailing(shadcn::DropdownMenuShortcut::new("⌘S").into_element(cx))
+                            .shortcut("⌘S")
                             .into(),
                         shadcn::DropdownMenuItem::new("Export")
                             .leading_icon(IconId::new_static("lucide.download"))
-                            .trailing(shadcn::DropdownMenuShortcut::new("⇧⌘E").into_element(cx))
+                            .shortcut("⇧⌘E")
                             .into(),
                     ])
                     .into(),
@@ -193,7 +193,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         shadcn::DropdownMenuLabel::new("Account").into(),
                         shadcn::DropdownMenuItem::new("Profile")
                             .leading_icon(IconId::new_static("lucide.user"))
-                            .trailing(shadcn::DropdownMenuShortcut::new("⇧⌘P").into_element(cx))
+                            .shortcut("⇧⌘P")
                             .into(),
                         shadcn::DropdownMenuItem::new("Billing")
                             .leading_icon(IconId::new_static("lucide.credit-card"))
@@ -288,7 +288,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     shadcn::DropdownMenuSeparator::new().into(),
                     shadcn::DropdownMenuGroup::new([shadcn::DropdownMenuItem::new("Sign Out")
                         .leading_icon(IconId::new_static("lucide.log-out"))
-                        .trailing(shadcn::DropdownMenuShortcut::new("⇧⌘Q").into_element(cx))
+                        .shortcut("⇧⌘Q")
                         .variant(
                             fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
                         )

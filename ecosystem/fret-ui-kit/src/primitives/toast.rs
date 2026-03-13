@@ -133,7 +133,7 @@ impl ToastViewport {
             let id = cx.root_id();
             let store = OverlayController::toast_store(&mut *cx.app);
 
-            let config_changed = cx.with_state(ToastViewportConfigState::default, |st| {
+            let config_changed = cx.slot_state(ToastViewportConfigState::default, |st| {
                 let mut changed = false;
                 if st.max_toasts != self.max_toasts {
                     st.max_toasts = self.max_toasts;

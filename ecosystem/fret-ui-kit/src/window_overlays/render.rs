@@ -229,6 +229,7 @@ fn toast_stack_shift_output<H: UiHost>(
         toast_position_key(stack_position),
     );
     cx.keyed(stack_key, |cx| {
+        let stack_shift_state_slot = cx.slot_id();
         let mut current_targets_y: HashMap<ToastId, Px> = HashMap::with_capacity(count);
         let mut current_targets_scale: HashMap<ToastId, f32> = HashMap::with_capacity(count);
         for (idx, toast) in stack_toasts.iter().enumerate() {
@@ -236,8 +237,10 @@ fn toast_stack_shift_output<H: UiHost>(
             current_targets_scale.insert(toast.id, target_stack_scale[idx]);
         }
 
-        let snapshot: ToastStackShiftSnapshot =
-            cx.with_state(ToastStackShiftState::default, |st| {
+        let snapshot: ToastStackShiftSnapshot = cx.state_for(
+            stack_shift_state_slot,
+            ToastStackShiftState::default,
+            |st| {
                 if expanded {
                     st.active = false;
                     st.deltas_y.clear();
@@ -301,7 +304,8 @@ fn toast_stack_shift_output<H: UiHost>(
                     deltas_y: st.deltas_y.clone(),
                     deltas_scale: st.deltas_scale.clone(),
                 }
-            });
+            },
+        );
 
         let shift = cx.keyed(snapshot.generation, |cx| {
             crate::declarative::transition::drive_transition_with_durations_and_cubic_bezier_duration(
@@ -348,7 +352,7 @@ fn toast_stack_shift_output<H: UiHost>(
             out_scale.push((target_scale + delta_scale * (1.0 - local)).clamp(0.0, 2.0));
         }
 
-        cx.with_state(ToastStackShiftState::default, |st| {
+        cx.state_for(stack_shift_state_slot, ToastStackShiftState::default, |st| {
             st.last_visual_y.clear();
             st.last_visual_scale.clear();
             for idx in 0..count {
@@ -2030,7 +2034,7 @@ pub fn render<H: UiHost + 'static>(
                         let hovered = hovered || interacting;
                         let pause_timers = hovered || hotkey_expanded || window_unfocused;
 
-                        let was_paused = cx.with_state(ToastViewportPauseState::default, |st| {
+                        let was_paused = cx.slot_state(ToastViewportPauseState::default, |st| {
                             let was_paused = st.paused;
                             st.paused = pause_timers;
                             was_paused

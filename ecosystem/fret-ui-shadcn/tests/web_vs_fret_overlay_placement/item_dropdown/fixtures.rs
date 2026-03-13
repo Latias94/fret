@@ -124,7 +124,7 @@ fn build_item_dropdown_overlay(
         })
         .collect();
 
-    let dropdown = DropdownMenu::new(open.clone())
+    let dropdown = DropdownMenu::from_open(open.clone())
         // new-york-v4 item-dropdown: `DropdownMenuContent className="w-72"`.
         .min_width(Px(288.0))
         .align(DropdownMenuAlign::End)

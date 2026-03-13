@@ -26,6 +26,7 @@ struct ScrollAreaVisibilityDriverState {
     lease: Option<ContinuousFrames>,
 }
 
+#[track_caller]
 pub fn scrollbar_visibility<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     ty: ScrollAreaType,
@@ -33,11 +34,14 @@ pub fn scrollbar_visibility<H: UiHost>(
     handle: ScrollHandle,
     scroll_hide_delay_ticks: u64,
 ) -> ScrollAreaVisibilityOutput {
+    let driver_state_slot = cx.slot_id();
     let app_tick = cx.app.tick_id().0;
     let frame_tick = cx.frame_id.0;
 
-    let (out, start_lease, stop_lease) =
-        cx.with_state(ScrollAreaVisibilityDriverState::default, |st| {
+    let (out, start_lease, stop_lease) = cx.state_for(
+        driver_state_slot,
+        ScrollAreaVisibilityDriverState::default,
+        |st| {
             // Prefer the runner-owned monotonic clocks when they advance.
             // In unit tests these values may be left at `0`, so we fall back to "call count".
             if st.last_frame_tick != frame_tick {
@@ -82,17 +86,26 @@ pub fn scrollbar_visibility<H: UiHost>(
             let start_lease = out.animating && st.lease.is_none();
             let stop_lease = !out.animating && st.lease.is_some();
             (out, start_lease, stop_lease)
-        });
+        },
+    );
 
     if start_lease {
         let lease = cx.begin_continuous_frames();
-        cx.with_state(ScrollAreaVisibilityDriverState::default, |st| {
-            st.lease = Some(lease);
-        });
+        cx.state_for(
+            driver_state_slot,
+            ScrollAreaVisibilityDriverState::default,
+            |st| {
+                st.lease = Some(lease);
+            },
+        );
     } else if stop_lease {
-        cx.with_state(ScrollAreaVisibilityDriverState::default, |st| {
-            st.lease = None;
-        });
+        cx.state_for(
+            driver_state_slot,
+            ScrollAreaVisibilityDriverState::default,
+            |st| {
+                st.lease = None;
+            },
+        );
     }
 
     if out.animating {

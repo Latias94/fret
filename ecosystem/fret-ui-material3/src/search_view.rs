@@ -13,6 +13,7 @@ use fret_runtime::Model;
 use fret_ui::element::{AnyElement, ContainerProps, Length, Overflow, SemanticsDecoration};
 use fret_ui::elements::ElementContext;
 use fret_ui::{GlobalElementId, Theme, UiHost};
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
 use crate::SearchBar;
@@ -51,6 +52,38 @@ impl SearchView {
             window_margin: Px(12.0),
             max_height: Px(360.0),
         }
+    }
+
+    /// Creates a search view with controlled/uncontrolled open and query models.
+    ///
+    /// When `open` or `query` is `None`, the corresponding model is stored at the root call site
+    /// and initialized from the provided default.
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: Option<Model<bool>>,
+        default_open: bool,
+        query: Option<Model<String>>,
+        default_query: impl Into<String>,
+    ) -> Self {
+        let open = controllable_state::use_controllable_model(cx, open, || default_open).model();
+        let default_query = default_query.into();
+        let query = controllable_state::use_controllable_model(cx, query, || default_query).model();
+        Self::new(open, query)
+    }
+
+    /// Default teaching-surface constructor for a search view that owns its open and query models.
+    pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {
+        Self::new_controllable(cx, None, false, None, String::new())
+    }
+
+    /// Returns the resolved open model, including the internally owned model for uncontrolled use.
+    pub fn open_model(&self) -> Model<bool> {
+        self.open.clone()
+    }
+
+    /// Returns the resolved query model, including the internally owned model for uncontrolled use.
+    pub fn query_model(&self) -> Model<String> {
+        self.query.clone()
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -137,7 +170,7 @@ impl SearchView {
                         was_focused_input: bool,
                     }
 
-                    let focus_gained = cx.with_state(FrameState::default, |st| {
+                    let focus_gained = cx.slot_state(FrameState::default, |st| {
                         let focus_gained = focused_input && !st.was_focused_input;
                         st.was_focused_input = focused_input;
                         focus_gained
@@ -305,5 +338,96 @@ impl SearchView {
 
             bar
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::elements::with_element_cx;
+    use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+
+    use super::*;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        )
+    }
+
+    #[test]
+    fn search_view_new_controllable_uses_controlled_models_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let controlled_open = app.models_mut().insert(true);
+        let controlled_query = app.models_mut().insert(String::from("alpha"));
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-search-view-controlled",
+            |cx| {
+                let view = SearchView::new_controllable(
+                    cx,
+                    Some(controlled_open.clone()),
+                    false,
+                    Some(controlled_query.clone()),
+                    "",
+                );
+                assert_eq!(view.open_model(), controlled_open);
+                assert_eq!(view.query_model(), controlled_query);
+            },
+        );
+    }
+
+    #[test]
+    fn search_view_new_controllable_applies_default_open_and_query() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-search-view-defaults",
+            |cx| {
+                let view =
+                    SearchView::new_controllable(cx, None, true, None, String::from("hello"));
+                let open = cx
+                    .watch_model(&view.open_model())
+                    .layout()
+                    .copied()
+                    .unwrap_or(false);
+                let query = cx
+                    .watch_model(&view.query_model())
+                    .layout()
+                    .cloned()
+                    .unwrap_or_default();
+                assert!(open);
+                assert_eq!(query, "hello");
+            },
+        );
+    }
+
+    #[test]
+    fn search_view_uncontrolled_multiple_instances_do_not_share_open_or_query_models() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-search-view-uncontrolled-scope",
+            |cx| {
+                let a = SearchView::uncontrolled(cx);
+                let b = SearchView::uncontrolled(cx);
+                assert_ne!(a.open_model(), b.open_model());
+                assert_ne!(a.query_model(), b.query_model());
+            },
+        );
     }
 }

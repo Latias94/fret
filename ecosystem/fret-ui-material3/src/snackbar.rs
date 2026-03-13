@@ -204,7 +204,7 @@ impl SnackbarHost {
         cx.scope(|cx| {
             let id = cx.root_id();
 
-            let config_changed = cx.with_state(SnackbarHostConfigState::default, |st| {
+            let config_changed = cx.slot_state(SnackbarHostConfigState::default, |st| {
                 let max = Some(self.max_snackbars);
                 if st.max_snackbars == max {
                     return false;

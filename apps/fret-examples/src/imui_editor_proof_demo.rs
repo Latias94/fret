@@ -193,7 +193,7 @@ fn render_editor_name_assist_surface(
     dismissed_query_model: Model<String>,
     active_item_id_model: Model<Option<Arc<str>>>,
     accepted_label_model: Model<String>,
-) -> fret_ui::element::AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let items = editor_demo_name_assist_items(cx);
     TextAssistField::new(
         query_model,
@@ -548,7 +548,8 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                             parity_slider_model_for_surface.clone(),
                             parity_enabled_model_for_surface.clone(),
                             parity_shading_model_for_surface.clone(),
-                        )]
+                        )
+                        .into_element(cx)]
                     });
 
                     let parity_state_hint = fret_ui_kit::ui::text(
@@ -570,7 +571,8 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                             parity_slider_model_for_state.clone(),
                             parity_enabled_model_for_state.clone(),
                             parity_shading_model_for_state.clone(),
-                        )]
+                        )
+                        .into_element(cx)]
                     });
                     ui.separator();
 
@@ -906,6 +908,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                 editor_name_assist_accepted_model
                                                                     .clone(),
                                                             )
+                                                            .into_element(cx)
                                                         },
                                                         |_cx| None,
                                                     ));
@@ -1959,7 +1962,7 @@ fn render_authoring_parity_surface(
     slider_model: Model<f64>,
     enabled_model: Model<bool>,
     shading_model: Model<Option<Arc<str>>>,
-) -> fret_ui::element::AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let shading_items = authoring_parity_shading_items();
 
     fret_ui_kit::ui::h_flex_build(move |cx, out| {
@@ -1972,15 +1975,18 @@ fn render_authoring_parity_surface(
                 let enabled_model = enabled_model.clone();
                 let shading_model = shading_model.clone();
                 move |cx, out| {
-                    out.push(render_authoring_parity_declarative_group(
-                        cx,
-                        name_model,
-                        drag_value_model,
-                        slider_model,
-                        enabled_model,
-                        shading_model,
-                        shading_items,
-                    ));
+                    out.push(
+                        render_authoring_parity_declarative_group(
+                            cx,
+                            name_model,
+                            drag_value_model,
+                            slider_model,
+                            enabled_model,
+                            shading_model,
+                            shading_items,
+                        )
+                        .into_element(cx),
+                    );
                 }
             })
             .basis_0()
@@ -1990,15 +1996,18 @@ fn render_authoring_parity_surface(
 
         out.push(
             fret_ui_kit::ui::container_build(move |cx, out| {
-                out.push(render_authoring_parity_imui_group(
-                    cx,
-                    name_model,
-                    drag_value_model,
-                    slider_model,
-                    enabled_model,
-                    shading_model,
-                    shading_items,
-                ));
+                out.push(
+                    render_authoring_parity_imui_group(
+                        cx,
+                        name_model,
+                        drag_value_model,
+                        slider_model,
+                        enabled_model,
+                        shading_model,
+                        shading_items,
+                    )
+                    .into_element(cx),
+                );
             })
             .basis_0()
             .flex_1()
@@ -2016,7 +2025,7 @@ fn render_authoring_parity_shared_state(
     slider_model: Model<f64>,
     enabled_model: Model<bool>,
     shading_model: Model<Option<Arc<str>>>,
-) -> fret_ui::element::AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let name = cx
         .get_model_cloned(&name_model, fret_ui::Invalidation::Paint)
         .unwrap_or_default();
@@ -2083,7 +2092,7 @@ fn render_authoring_parity_declarative_group(
     enabled_model: Model<bool>,
     shading_model: Model<Option<Arc<str>>>,
     shading_items: Arc<[EnumSelectItem]>,
-) -> fret_ui::element::AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let fmt: NumericFormatFn<f64> = Arc::new(|v| Arc::from(format!("{v:.3}")));
     let parse: NumericParseFn<f64> = Arc::new(|s| s.trim().parse::<f64>().ok());
 
@@ -2222,7 +2231,7 @@ fn render_authoring_parity_imui_group(
     enabled_model: Model<bool>,
     shading_model: Model<Option<Arc<str>>>,
     shading_items: Arc<[EnumSelectItem]>,
-) -> fret_ui::element::AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let fmt: NumericFormatFn<f64> = Arc::new(|v| Arc::from(format!("{v:.3}")));
     let parse: NumericParseFn<f64> = Arc::new(|s| s.trim().parse::<f64>().ok());
 
@@ -2262,6 +2271,7 @@ fn render_authoring_parity_imui_group(
                                     }),
                                 );
                             })
+                            .into_element(cx)
                         },
                         |_cx| None,
                     ));
@@ -2296,6 +2306,7 @@ fn render_authoring_parity_imui_group(
                                     ),
                                 );
                             })
+                            .into_element(cx)
                         },
                         |_cx| None,
                     ));
@@ -2317,6 +2328,7 @@ fn render_authoring_parity_imui_group(
                                         )),
                                 );
                             })
+                            .into_element(cx)
                         },
                         |_cx| None,
                     ));
@@ -2339,6 +2351,7 @@ fn render_authoring_parity_imui_group(
                                     ),
                                 );
                             })
+                            .into_element(cx)
                         },
                         |_cx| None,
                     ));
@@ -2369,6 +2382,7 @@ fn render_authoring_parity_imui_group(
                                         }),
                                 );
                             })
+                            .into_element(cx)
                         },
                         |_cx| None,
                     ));
@@ -2379,10 +2393,14 @@ fn render_authoring_parity_imui_group(
         )
 }
 
-fn render_authoring_parity_imui_host<H: UiHost>(
+fn render_authoring_parity_imui_host<H, F>(
     cx: &mut ElementContext<'_, H>,
-    f: impl for<'cx, 'a> FnOnce(&mut fret_imui::ImUi<'cx, 'a, H>) + 'static,
-) -> fret_ui::element::AnyElement {
+    f: F,
+) -> impl IntoUiElement<H> + use<H, F>
+where
+    H: UiHost,
+    F: for<'cx, 'a> FnOnce(&mut fret_imui::ImUi<'cx, 'a, H>) + 'static,
+{
     fret_ui_kit::ui::container_build(move |cx, out| {
         fret_imui::imui_build(cx, out, f);
     })

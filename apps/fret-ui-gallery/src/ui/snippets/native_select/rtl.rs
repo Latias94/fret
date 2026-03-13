@@ -1,11 +1,16 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use std::sync::Arc;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
-        shadcn::NativeSelect::new_controllable(cx, None, None, None, false)
+        let value = cx.local_model_keyed("ui-gallery-native-select-rtl-value", || None::<Arc<str>>);
+        let open = cx.local_model_keyed("ui-gallery-native-select-rtl-open", || false);
+
+        shadcn::native_select(value, open)
             .placeholder("Choose language")
             .a11y_label("RTL native select")
             .trigger_test_id("ui-gallery-native-select-rtl-trigger")

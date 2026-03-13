@@ -4,6 +4,7 @@ use std::rc::Rc;
 use delinea::data::{Column, DataTable};
 use delinea::engine::window::DataWindow;
 use delinea::{Action, AxisKind, AxisPointerSpec, AxisPointerTrigger, AxisPointerType, AxisScale};
+use fret::shadcn::raw::prelude::{CachedSubtreeExt, CachedSubtreeProps};
 use fret::{advanced::prelude::*, shadcn};
 use fret_app::{CommandMeta, CommandScope};
 use fret_chart::ChartCanvas;
@@ -389,32 +390,29 @@ fn view(
         .h_full()
         .min_h(Px(420.0));
 
-    let card = shadcn::Card::build(|cx, out| {
-        out.push_ui(
-            cx,
-            shadcn::CardHeader::build(|cx, out| {
-                out.push_ui(cx, shadcn::CardTitle::new("Chart interactions basics"));
-                out.push_ui(
-                    cx,
-                    shadcn::CardDescription::new(
+    let card = shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Chart interactions basics"),
+                    shadcn::card_description(
                         "Minimal shared delinea engine + retained ChartCanvas. App-owned zoom + selection; axis pointer hover for exploration.",
                     ),
-                );
+                ]
             }),
-        );
-        out.push_ui(
-            cx,
-            shadcn::CardContent::build(|cx, out| {
-                out.push_ui(
-                    cx,
+            shadcn::card_content(|cx| {
+                ui::children![
+                    cx;
                     ui::v_flex(|cx| ui::children![cx; toolbar, canvas_shell])
                         .gap(Space::N3)
                         .w_full()
                         .h_full()
                         .min_w_0(),
-                );
+                ]
             }),
-        );
+        ]
     })
     .ui()
     .w_full()
@@ -505,9 +503,9 @@ fn main() -> anyhow::Result<()> {
         .with_command_default_keybindings()
         .setup(install_commands)
         .setup(shadcn::app::install)
+        .setup(fret_icons_lucide::app::install)
         .setup(fret_cookbook::install_cookbook_defaults)
-        .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
-        .with_lucide_icons();
+        .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096);
 
     #[cfg(feature = "cookbook-diag")]
     let builder = builder.with_default_diagnostics();

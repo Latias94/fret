@@ -44,7 +44,7 @@ impl Renderer {
             bind_group_layouts: &[
                 &self.globals.uniform_bind_group_layout,
                 self.text_system.atlas_bind_group_layout(),
-                self.text_paints.layout(),
+                self.geometry_upload_state.text_paints_layout(),
             ],
             immediate_size: 0,
         });
@@ -221,7 +221,7 @@ impl Renderer {
             bind_group_layouts: &[
                 &self.globals.uniform_bind_group_layout,
                 self.text_system.atlas_bind_group_layout(),
-                self.text_paints.layout(),
+                self.geometry_upload_state.text_paints_layout(),
             ],
             immediate_size: 0,
         });
@@ -341,7 +341,7 @@ impl Renderer {
             bind_group_layouts: &[
                 &self.globals.uniform_bind_group_layout,
                 self.text_system.atlas_bind_group_layout(),
-                self.text_paints.layout(),
+                self.geometry_upload_state.text_paints_layout(),
             ],
             immediate_size: 0,
         });

@@ -152,7 +152,10 @@ impl Renderer {
             &plan.passes,
         );
         plan.debug_validate();
-        if self.render_plan_strict_output_clear {
+        if self
+            .render_scene_config_state
+            .render_plan_strict_output_clear()
+        {
             plan.debug_validate_first_output_write_is_clear();
         }
         render_scene_span.record("plan_passes", plan.passes.len() as u64);
@@ -263,9 +266,10 @@ impl Renderer {
             self.finalize_frame_perf_after_dispatch(&mut frame_perf);
         }
 
-        self.plan_quad_vertex_bases_scratch = quad_vertex_bases;
+        self.frame_scratch_state
+            .store_plan_quad_bases(quad_vertex_bases);
 
-        self.scene_encoding_cache
+        self.scene_encoding_state
             .store_after_frame(key, cache_hit, encoding);
         cmd
     }

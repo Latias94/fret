@@ -281,13 +281,9 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
             .trigger_test_id("ui-gallery-navigation-menu-rtl-trigger-docs")
             .action(CMD_APP_OPEN);
 
-        shadcn::NavigationMenu::new(rtl_value.clone())
-            .list(shadcn::NavigationMenuList::new(vec![
-                getting_started,
-                components,
-                with_icon,
-                docs,
-            ]))
+        shadcn::navigation_menu(cx, rtl_value.clone(), |_cx| {
+            vec![getting_started, components, with_icon, docs]
+        })
             .viewport_test_id("ui-gallery-navigation-menu-rtl-viewport")
             .into_element(cx)
             .test_id("ui-gallery-navigation-menu-rtl")

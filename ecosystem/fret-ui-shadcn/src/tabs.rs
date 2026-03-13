@@ -376,7 +376,7 @@ fn tabs_shared_indicator<H: UiHost>(
             .unwrap_or(cx.bounds);
         let tab_bounds = selected_idx
             .and_then(|idx| {
-                cx.with_state_for(container_id, TabsListLayoutRuntime::default, |rt| {
+                cx.state_for(container_id, TabsListLayoutRuntime::default, |rt| {
                     rt.triggers.get(idx).copied()
                 })
             })
@@ -1998,7 +1998,7 @@ impl Tabs {
                         // stabilize this by reusing the previous frame's measured trigger width.
                         let vertical_trigger_width_px: Option<Px> =
                             if orientation == TabsOrientation::Vertical {
-                                let trigger_ids = cx.with_state_for(
+                                let trigger_ids = cx.state_for(
                                     list_container_id,
                                     TabsListLayoutRuntime::default,
                                     |rt| rt.triggers.clone(),
@@ -2297,7 +2297,7 @@ impl Tabs {
                                             cell.set(Some(id.0));
                                         }
 
-                                        cx.with_state_for(
+                                        cx.state_for(
                                             list_container_id,
                                             TabsListLayoutRuntime::default,
                                             |rt| {

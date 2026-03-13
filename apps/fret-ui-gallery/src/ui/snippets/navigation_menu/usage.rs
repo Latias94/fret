@@ -14,8 +14,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     );
     let docs = shadcn::NavigationMenuItem::new("docs", "Docs", std::iter::empty());
 
-    shadcn::NavigationMenu::new(value)
-        .list(shadcn::NavigationMenuList::new(vec![overview, docs]))
-        .into_element(cx)
+    shadcn::navigation_menu(cx, value, |_cx| vec![overview, docs]).into_element(cx)
 }
 // endregion: example

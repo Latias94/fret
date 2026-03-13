@@ -315,25 +315,18 @@ impl View for UndoBasicsView {
         })
         .gap(Space::N4);
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(
-                cx,
-                shadcn::CardHeader::build(|cx, out| {
-                    out.push_ui(cx, shadcn::CardTitle::new("Undo basics"));
-                    out.push_ui(
-                        cx,
-                        shadcn::CardDescription::new(
+        let card = shadcn::card(|cx| {
+            ui::children![cx;
+                shadcn::card_header(|cx| {
+                    ui::children![cx;
+                        shadcn::card_title("Undo basics"),
+                        shadcn::card_description(
                             "Shows an app-owned undo/redo history wired to edit.undo/edit.redo commands.",
                         ),
-                    );
+                    ]
                 }),
-            );
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(cx, content);
-                }),
-            );
+                shadcn::card_content(|cx| ui::children![cx; content]),
+            ]
         })
         .ui()
         .w_full()

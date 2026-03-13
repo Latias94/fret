@@ -4,6 +4,7 @@ const ADVANCED_RS: &str = include_str!("advanced.rs");
 const README: &str = include_str!("../README.md");
 const ACCORDION_RS: &str = include_str!("accordion.rs");
 const ALERT_RS: &str = include_str!("alert.rs");
+const AVATAR_RS: &str = include_str!("avatar.rs");
 const BADGE_RS: &str = include_str!("badge.rs");
 const BREADCRUMB_RS: &str = include_str!("breadcrumb.rs");
 const COLLAPSIBLE_RS: &str = include_str!("collapsible.rs");
@@ -22,16 +23,20 @@ const HOVER_CARD_RS: &str = include_str!("hover_card.rs");
 const INPUT_RS: &str = include_str!("input.rs");
 const INPUT_GROUP_RS: &str = include_str!("input_group.rs");
 const INPUT_OTP_RS: &str = include_str!("input_otp.rs");
+const ITEM_RS: &str = include_str!("item.rs");
 const KBD_RS: &str = include_str!("kbd.rs");
 const MENUBAR_RS: &str = include_str!("menubar.rs");
 const NAVIGATION_MENU_RS: &str = include_str!("navigation_menu.rs");
+const NATIVE_SELECT_RS: &str = include_str!("native_select.rs");
 const PAGINATION_RS: &str = include_str!("pagination.rs");
 const POPOVER_RS: &str = include_str!("popover.rs");
 const SEPARATOR_RS: &str = include_str!("separator.rs");
 const SHEET_RS: &str = include_str!("sheet.rs");
 const SLIDER_RS: &str = include_str!("slider.rs");
+const STATE_RS: &str = include_str!("state.rs");
 const TABLE_RS: &str = include_str!("table.rs");
 const TEXTAREA_RS: &str = include_str!("textarea.rs");
+const TEXT_EDIT_CONTEXT_MENU_RS: &str = include_str!("text_edit_context_menu.rs");
 const TOGGLE_RS: &str = include_str!("toggle.rs");
 const TOGGLE_GROUP_RS: &str = include_str!("toggle_group.rs");
 const TOOLTIP_RS: &str = include_str!("tooltip.rs");
@@ -41,6 +46,7 @@ const COMBOBOX_RS: &str = include_str!("combobox.rs");
 const PROGRESS_RS: &str = include_str!("progress.rs");
 const RADIO_GROUP_RS: &str = include_str!("radio_group.rs");
 const RESIZABLE_RS: &str = include_str!("resizable.rs");
+const SCROLL_AREA_RS: &str = include_str!("scroll_area.rs");
 const SWITCH_RS: &str = include_str!("switch.rs");
 const TABS_RS: &str = include_str!("tabs.rs");
 const UI_BUILDER_EXT_BREADCRUMB_RS: &str = include_str!("ui_builder_ext/breadcrumb.rs");
@@ -77,6 +83,26 @@ fn public_anyelement_signatures(source: &str) -> Vec<String> {
     }
 
     out
+}
+
+fn public_non_method_anyelement_signatures(source: &str) -> Vec<String> {
+    public_anyelement_signatures(source)
+        .into_iter()
+        .filter(|signature| {
+            ![
+                "(self",
+                "( self",
+                "(mut self",
+                "( mut self",
+                "(&self",
+                "( &self",
+                "(&mut self",
+                "( &mut self",
+            ]
+            .iter()
+            .any(|marker| signature.contains(marker))
+        })
+        .collect()
 }
 
 #[test]
@@ -374,6 +400,16 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             ][..],
         ),
         (
+            "avatar.rs",
+            AVATAR_RS,
+            &[
+                "pub fn avatar_sized<H: UiHost, I>( cx: &mut ElementContext<'_, H>, size: AvatarSize, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Avatar where I: IntoIterator<Item = AnyElement>,",
+            ][..],
+            &[
+                "pub fn avatar_sized<H: UiHost, I>( cx: &mut ElementContext<'_, H>, size: AvatarSize, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+            ][..],
+        ),
+        (
             "badge.rs",
             BADGE_RS,
             &[
@@ -432,6 +468,18 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             ][..],
         ),
         (
+            "item.rs",
+            ITEM_RS,
+            &[
+                "pub fn item_sized<H: UiHost, I>( cx: &mut ElementContext<'_, H>, size: ItemSize, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Item where I: IntoIterator<Item = AnyElement>,",
+                "pub fn item_group<H: UiHost>( cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>, ) -> ItemGroup",
+            ][..],
+            &[
+                "pub fn item_sized<H: UiHost, I>( cx: &mut ElementContext<'_, H>, size: ItemSize, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+                "pub fn item_group<H: UiHost>( cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>, ) -> AnyElement",
+            ][..],
+        ),
+        (
             "navigation_menu.rs",
             NAVIGATION_MENU_RS,
             &[
@@ -441,6 +489,16 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             &[
                 "pub fn navigation_menu<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = NavigationMenuItem>,",
                 "pub fn navigation_menu_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = NavigationMenuItem>,",
+            ][..],
+        ),
+        (
+            "native_select.rs",
+            NATIVE_SELECT_RS,
+            &[
+                "pub fn native_select(model: Model<Option<Arc<str>>>, open: Model<bool>) -> NativeSelect {",
+            ][..],
+            &[
+                "pub fn native_select<H: UiHost>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, open: Model<bool>, placeholder: Arc<str>, options: &[NativeSelectOption], optgroups: &[NativeSelectOptGroup], control_id: Option<ControlId>, test_id_prefix: Option<Arc<str>>, trigger_test_id: Option<Arc<str>>, a11y_label: Option<Arc<str>>, aria_invalid: bool, disabled: bool, size: NativeSelectSize, chrome: ChromeRefinement, layout: LayoutRefinement, ) -> AnyElement",
             ][..],
         ),
         (
@@ -481,6 +539,16 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             ][..],
             &[
                 "pub fn resizable_panel_group<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Vec<f32>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = ResizableEntry>,",
+            ][..],
+        ),
+        (
+            "scroll_area.rs",
+            SCROLL_AREA_RS,
+            &[
+                "pub fn scroll_area<H: UiHost, I>( cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ScrollArea where I: IntoIterator<Item = AnyElement>,",
+            ][..],
+            &[
+                "pub fn scroll_area<H: UiHost, I>( cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
             ][..],
         ),
         (
@@ -723,6 +791,47 @@ fn hover_card_root_promotes_typed_new_and_keeps_raw_root_seams_explicit() {
 }
 
 #[test]
+fn dropdown_menu_root_promotes_uncontrolled_builder_path_and_keeps_managed_open_seams_explicit() {
+    let normalized = normalize_ws(DROPDOWN_MENU_RS);
+    let required_markers = [
+        "pub fn from_open(open: Model<bool>) -> Self {",
+        "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {",
+        "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self {",
+        "pub fn build<H: UiHost, I>(",
+        "pub fn build_parts<H: UiHost, I>(",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "dropdown_menu.rs should promote `uncontrolled(...)` + `build(...)` / `build_parts(...)` for the default authoring path while keeping managed-open seams explicit"
+        );
+    }
+}
+
+#[test]
+fn context_menu_root_promotes_uncontrolled_builder_path_and_keeps_managed_open_seams_explicit() {
+    let normalized = normalize_ws(CONTEXT_MENU_RS);
+    let required_markers = [
+        "pub fn build<H: UiHost, T>(child: T) -> ContextMenuTriggerBuild<H, T>",
+        "pub fn from_open(open: Model<bool>) -> Self {",
+        "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {",
+        "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self {",
+        "pub fn build<H: UiHost, I>(",
+        "pub fn build_parts<H: UiHost, I>(",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "context_menu.rs should promote `uncontrolled(...)` + `build(...)` / `build_parts(...)` for the default authoring path while keeping managed-open seams explicit"
+        );
+    }
+}
+
+#[test]
 fn tooltip_root_promotes_typed_new_and_keeps_raw_root_seams_explicit() {
     let normalized = normalize_ws(TOOLTIP_RS);
     let required_markers = [
@@ -743,6 +852,34 @@ fn tooltip_root_promotes_typed_new_and_keeps_raw_root_seams_explicit() {
         assert!(
             !normalized.contains(&marker),
             "tooltip.rs reintroduced legacy `build(...)` after promoting the typed `new(...)` surface"
+        );
+    }
+}
+
+#[test]
+fn tooltip_content_helpers_prefer_typed_build_and_text_outputs_when_slot_scope_is_required() {
+    let normalized = normalize_ws(TOOLTIP_RS);
+    let required_markers = [
+        "pub fn build<H: UiHost, I, F, T>( cx: &mut ElementContext<'_, H>, f: F ) -> Self where F: FnOnce(&mut ElementContext<'_, H>) -> I, I: IntoIterator<Item = T>, T: IntoUiElement<H>,",
+        "pub fn text<H: UiHost, T>(text: T) -> impl IntoUiElement<H> + use<H, T> where T: Into<Arc<str>>,",
+    ];
+    let forbidden_markers = [
+        "pub fn with<H: UiHost>( cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>, ) -> AnyElement",
+        "pub fn text<H: UiHost>( cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>, ) -> AnyElement",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "tooltip.rs should expose typed content helper outputs while keeping slot-scoped child construction available"
+        );
+    }
+    for marker in forbidden_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            !normalized.contains(&marker),
+            "tooltip.rs reintroduced eager `AnyElement` helper surfaces for tooltip content authoring"
         );
     }
 }
@@ -953,6 +1090,36 @@ fn pagination_helpers_prefer_typed_wrapper_outputs_when_no_raw_slot_storage_is_r
 }
 
 #[test]
+fn state_helpers_prefer_typed_badge_outputs_when_no_runtime_landing_seam_is_required() {
+    let normalized = normalize_ws(STATE_RS);
+    let required_markers = [
+        "pub fn use_selector_badge<H, Deps, TValue>( cx: &mut ElementContext<'_, H>, variant: BadgeVariant, deps: impl FnOnce(&mut ElementContext<'_, H>) -> Deps, compute: impl FnOnce(&mut ElementContext<'_, H>) -> TValue, ) -> Badge where H: UiHost, Deps: Any + PartialEq, TValue: Any + Clone + ToString,",
+        "pub fn query_status_badge<H: UiHost, T>( _cx: &mut ElementContext<'_, H>, state: &QueryState<T>, ) -> Badge",
+        "pub fn query_error_alert<H: UiHost, T>( cx: &mut ElementContext<'_, H>, state: &QueryState<T>, ) -> Option<Alert>",
+    ];
+    let forbidden_markers = [
+        "pub fn use_selector_badge<H, Deps, TValue>( cx: &mut ElementContext<'_, H>, variant: BadgeVariant, deps: impl FnOnce(&mut ElementContext<'_, H>) -> Deps, compute: impl FnOnce(&mut ElementContext<'_, H>) -> TValue, ) -> AnyElement where H: UiHost, Deps: Any + PartialEq, TValue: Any + Clone + ToString,",
+        "pub fn query_status_badge<H: UiHost, T>( cx: &mut ElementContext<'_, H>, state: &QueryState<T>, ) -> AnyElement",
+        "pub fn query_error_alert<H: UiHost, T>( cx: &mut ElementContext<'_, H>, state: &QueryState<T>, ) -> Option<AnyElement>",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "state.rs should expose typed badge helper outputs where the public helper does not need to own a landing seam"
+        );
+    }
+    for marker in forbidden_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            !normalized.contains(&marker),
+            "state.rs reintroduced eager `AnyElement` helper outputs for badge-only state helpers"
+        );
+    }
+}
+
+#[test]
 fn kbd_icon_stays_an_explicit_raw_helper_for_kbd_child_lists() {
     assert!(
         KBD_RS.contains(
@@ -986,36 +1153,127 @@ fn kbd_icon_stays_an_explicit_raw_helper_for_kbd_child_lists() {
 }
 
 #[test]
-fn combobox_anchor_stays_an_explicit_raw_wrapper_until_anchor_storage_is_typed() {
+fn combobox_surface_uses_generic_popover_anchor_builder_not_combobox_specific_raw_alias() {
+    let combobox_normalized = normalize_ws(COMBOBOX_RS);
+    let popover_normalized = normalize_ws(POPOVER_RS);
+    let alias_marker =
+        normalize_ws("pub fn use_combobox_anchor(child: AnyElement) -> PopoverAnchor");
+
     assert!(
-        COMBOBOX_RS.contains(
-            "This intentionally stays raw because `PopoverAnchor::new(...)` stores a concrete landed child."
-        ),
-        "combobox.rs should keep the raw `use_combobox_anchor(...)` seam explicitly documented"
+        !combobox_normalized.contains(&alias_marker),
+        "combobox.rs should not reintroduce a combobox-specific raw anchor alias now that `PopoverAnchor::build(...)` exists"
+    );
+    assert!(
+        !LIB_RS.contains("use_combobox_anchor"),
+        "lib.rs should not re-export the removed combobox-specific anchor alias"
     );
 
-    let normalized = normalize_ws(COMBOBOX_RS);
-    let required_markers = ["pub fn use_combobox_anchor(child: AnyElement) -> PopoverAnchor"];
+    let required_markers = [
+        "pub fn build<H: UiHost, T>(child: T) -> PopoverAnchorBuild<H, T> where T: IntoUiElement<H>",
+        "pub fn into_anchor(self, cx: &mut ElementContext<'_, H>) -> PopoverAnchor",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            popover_normalized.contains(&marker),
+            "popover.rs should keep the generic builder-first anchor path available for combobox-style anchor overrides"
+        );
+    }
+}
+
+#[test]
+fn explicit_raw_or_bridge_public_anyelement_helpers_stay_small_and_reviewable() {
+    let mut hits = Vec::new();
+    for (label, source) in [
+        ("src/kbd.rs", KBD_RS),
+        ("src/text_edit_context_menu.rs", TEXT_EDIT_CONTEXT_MENU_RS),
+    ] {
+        for signature in public_non_method_anyelement_signatures(source) {
+            hits.push(format!("{label}: {signature}"));
+        }
+    }
+
+    assert_eq!(
+        hits,
+        vec![
+            String::from(
+                "src/kbd.rs: pub fn kbd_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: IconId) -> AnyElement"
+            ),
+            String::from(
+                "src/text_edit_context_menu.rs: pub fn text_edit_context_menu<H: UiHost, TTrigger>( cx: &mut ElementContext<'_, H>, open: Model<bool>, trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger, ) -> AnyElement where TTrigger: IntoUiElement<H>,"
+            ),
+            String::from(
+                "src/text_edit_context_menu.rs: pub fn text_selection_context_menu<H: UiHost, TTrigger>( cx: &mut ElementContext<'_, H>, open: Model<bool>, trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger, ) -> AnyElement where TTrigger: IntoUiElement<H>,"
+            ),
+            String::from(
+                "src/text_edit_context_menu.rs: pub fn text_edit_context_menu_controllable<H: UiHost, TTrigger>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger, ) -> AnyElement where TTrigger: IntoUiElement<H>,"
+            ),
+            String::from(
+                "src/text_edit_context_menu.rs: pub fn text_selection_context_menu_controllable<H: UiHost, TTrigger>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger, ) -> AnyElement where TTrigger: IntoUiElement<H>,"
+            ),
+        ],
+        "explicit raw/bridge helper entry points should remain small, reviewable, and opt-in"
+    );
+}
+
+#[test]
+fn text_edit_context_menu_helpers_keep_landing_seam_explicit_but_accept_typed_triggers() {
+    assert!(
+        TEXT_EDIT_CONTEXT_MENU_RS.contains(
+            "This intentionally stays `-> AnyElement` because `ContextMenu::build(...)` is itself the final"
+        ),
+        "text_edit_context_menu.rs should explicitly document that the family keeps `-> AnyElement` as a deliberate final wrapper seam"
+    );
+
+    let normalized = normalize_ws(TEXT_EDIT_CONTEXT_MENU_RS);
+    let required_markers = [
+        "pub fn text_edit_context_menu<H: UiHost, TTrigger>( cx: &mut ElementContext<'_, H>, open: Model<bool>, trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger, ) -> AnyElement where TTrigger: IntoUiElement<H>,",
+        "pub fn text_selection_context_menu<H: UiHost, TTrigger>( cx: &mut ElementContext<'_, H>, open: Model<bool>, trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger, ) -> AnyElement where TTrigger: IntoUiElement<H>,",
+        "pub fn text_edit_context_menu_controllable<H: UiHost, TTrigger>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger, ) -> AnyElement where TTrigger: IntoUiElement<H>,",
+        "pub fn text_selection_context_menu_controllable<H: UiHost, TTrigger>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger, ) -> AnyElement where TTrigger: IntoUiElement<H>,",
+    ];
     let forbidden_markers = [
-        "pub fn use_combobox_anchor<H: UiHost>(cx: &mut ElementContext<'_, H>, child: impl IntoUiElement<H>) -> PopoverAnchor",
-        "pub fn use_combobox_anchor<H: UiHost, T>(cx: &mut ElementContext<'_, H>, child: T) -> PopoverAnchor where T: IntoUiElement<H>",
-        "pub fn use_combobox_anchor(child: impl IntoUiElement<_>) -> PopoverAnchor",
+        "pub fn text_edit_context_menu<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Model<bool>, trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement, ) -> AnyElement",
+        "pub fn text_selection_context_menu<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Model<bool>, trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement, ) -> AnyElement",
+        "pub fn text_edit_context_menu_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement, ) -> AnyElement",
+        "pub fn text_selection_context_menu_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement, ) -> AnyElement",
     ];
 
     for marker in required_markers {
         let marker = normalize_ws(marker);
         assert!(
             normalized.contains(&marker),
-            "combobox.rs should keep the raw `use_combobox_anchor(...)` signature explicit"
+            "text_edit_context_menu.rs should keep the root landing seam explicit while letting callers stay on the typed trigger lane"
         );
     }
     for marker in forbidden_markers {
         let marker = normalize_ws(marker);
         assert!(
             !normalized.contains(&marker),
-            "combobox.rs should not pretend the anchor wrapper is typed while `PopoverAnchor::new(...)` still owns a raw landed child"
+            "text_edit_context_menu.rs reintroduced pre-landed `AnyElement` trigger requirements on the public helper surface"
         );
     }
+}
+
+#[test]
+fn legacy_public_anyelement_helper_inventory_is_explicit_until_promoted_or_deleted() {
+    let mut hits = Vec::new();
+    for (label, source) in [
+        ("src/combobox.rs", COMBOBOX_RS),
+        ("src/drawer.rs", DRAWER_RS),
+        ("src/menubar.rs", MENUBAR_RS),
+    ] {
+        for signature in public_non_method_anyelement_signatures(source) {
+            hits.push(format!("{label}: {signature}"));
+        }
+    }
+
+    assert_eq!(
+        hits,
+        Vec::<String>::new(),
+        "legacy module-local `-> AnyElement` helpers should stay empty once the old root helpers are deleted"
+    );
 }
 
 #[test]
@@ -1034,14 +1292,7 @@ fn thin_constructor_trial_modules_keep_public_anyelement_free_functions_explicit
         ("src/separator.rs", SEPARATOR_RS),
         ("src/switch.rs", SWITCH_RS),
     ] {
-        for signature in public_anyelement_signatures(source) {
-            if signature.contains("(self")
-                || signature.contains("( self")
-                || signature.contains("(mut self")
-                || signature.contains("( mut self")
-            {
-                continue;
-            }
+        for signature in public_non_method_anyelement_signatures(source) {
             hits.push(format!("{label}: {signature}"));
         }
     }

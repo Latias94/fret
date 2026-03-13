@@ -191,7 +191,7 @@ mod tests {
 
     #[track_caller]
     fn bump_root_scoped_counter<H: UiHost>(cx: &mut ElementContext<'_, H>) -> u32 {
-        cx.with_state(u32::default, |value| {
+        cx.root_state(u32::default, |value| {
             *value = value.saturating_add(1);
             *value
         })
@@ -218,16 +218,16 @@ mod tests {
     }
 
     #[test]
-    fn with_state_is_root_scoped_shared_slot_per_type() {
+    fn root_state_is_root_scoped_shared_slot_per_type() {
         let window = AppWindowId::default();
         let mut app = App::new();
 
         let first =
-            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "with-state", |cx| {
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "root-state", |cx| {
                 two_root_scoped_counters(cx)
             });
         let second =
-            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "with-state", |cx| {
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "root-state", |cx| {
                 two_root_scoped_counters(cx)
             });
 
@@ -240,20 +240,14 @@ mod tests {
         let window = AppWindowId::default();
         let mut app = App::new();
 
-        let first = fret_ui::elements::with_element_cx(
-            &mut app,
-            window,
-            bounds(),
-            "with-callsite-state",
-            |cx| two_callsite_scoped_counters(cx),
-        );
-        let second = fret_ui::elements::with_element_cx(
-            &mut app,
-            window,
-            bounds(),
-            "with-callsite-state",
-            |cx| two_callsite_scoped_counters(cx),
-        );
+        let first =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "slot-state", |cx| {
+                two_callsite_scoped_counters(cx)
+            });
+        let second =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "slot-state", |cx| {
+                two_callsite_scoped_counters(cx)
+            });
 
         assert_eq!(first, (1, 1));
         assert_eq!(second, (2, 2));

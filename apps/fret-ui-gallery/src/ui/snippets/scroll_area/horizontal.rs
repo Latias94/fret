@@ -45,7 +45,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .p_4()
     .into_element(cx);
 
-    let area = shadcn::ScrollArea::new([rail])
+    let area = shadcn::scroll_area(cx, |_cx| [rail])
         .axis(fret_ui::element::ScrollAxis::X)
         .viewport_test_id("ui-gallery-scroll-area-horizontal-viewport")
         .refine_layout(LayoutRefinement::default().w_full())

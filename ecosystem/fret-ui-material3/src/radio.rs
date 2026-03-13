@@ -325,6 +325,7 @@ impl RadioGroup {
     }
 }
 
+#[track_caller]
 fn roving_typeahead_prefix_arc_str_always_wrap<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     labels: Arc<[Arc<str>]>,
@@ -478,7 +479,7 @@ fn roving_typeahead_prefix_arc_str_always_wrap<H: UiHost>(
         }
     }
 
-    let handler = cx.with_state(
+    let handler = cx.slot_state(
         || make_state(labels.clone(), timeout_ticks),
         |state| {
             if state.timeout_ticks != timeout_ticks {
@@ -876,7 +877,7 @@ impl Radio {
                         }
 
                         let (dot_scale, dot_active) =
-                            cx.with_state_for(pressable_id, RadioDotRuntime::default, |rt| {
+                            cx.state_for(pressable_id, RadioDotRuntime::default, |rt| {
                                 let desired_dot = if checked { 1.0 } else { 0.0 };
                                 if (desired_dot - rt.dot_target).abs() > 1e-6 {
                                     rt.dot_target = desired_dot;

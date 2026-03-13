@@ -1,10 +1,15 @@
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
-use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use fret::{UiChild, UiCx};
+use fret_ui_shadcn::facade as shadcn;
+use std::sync::Arc;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    shadcn::NativeSelect::new_controllable(cx, None, None, None, false)
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let value = cx.local_model_keyed("ui-gallery-native-select-usage-value", || None::<Arc<str>>);
+    let open = cx.local_model_keyed("ui-gallery-native-select-usage-open", || false);
+
+    shadcn::native_select(value, open)
         .a11y_label("Native select")
         .placeholder("Select a fruit")
         .options([

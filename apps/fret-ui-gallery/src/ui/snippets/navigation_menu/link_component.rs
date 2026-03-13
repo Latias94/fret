@@ -7,8 +7,8 @@ use std::sync::Arc;
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let value = cx.local_model(|| None::<Arc<str>>);
 
-    shadcn::NavigationMenu::new(value)
-        .list(shadcn::NavigationMenuList::new([
+    shadcn::navigation_menu(cx, value, |_cx| {
+        [
             shadcn::NavigationMenuItem::new("docs", "Documentation", std::iter::empty())
                 .href("https://example.com/docs")
                 .target("_blank")
@@ -17,7 +17,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 // launching the browser during scripted runs.
                 .on_click("ui_gallery.app.open")
                 .trigger_test_id("ui-gallery-navigation-menu-link-component-docs"),
-        ]))
-        .into_element(cx)
+        ]
+    })
+    .into_element(cx)
 }
 // endregion: example

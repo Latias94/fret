@@ -10,9 +10,12 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    open: Model<bool>,
     last_action: Model<Arc<str>>,
 ) -> AnyElement {
+    let dropdown = material3::DropdownMenu::uncontrolled(cx)
+        .a11y_label("Material 3 Menu")
+        .test_id("ui-gallery-material3-menu");
+    let open = dropdown.open_model();
     let override_open = cx.local_model_keyed("override_open", || false);
 
     fn on_select(id: &'static str, last_action: Model<Arc<str>>) -> OnActivate {
@@ -44,53 +47,50 @@ pub fn render<H: UiHost>(
     };
 
     let last_action_for_entries = last_action.clone();
-    let dropdown = material3::DropdownMenu::new(open.clone())
-        .a11y_label("Material 3 Menu")
-        .test_id("ui-gallery-material3-menu")
-        .into_element(
-            cx,
-            move |cx| {
-                material3::Button::new("Open menu")
-                    .variant(material3::ButtonVariant::Outlined)
-                    .on_activate(toggle_open.clone())
-                    .test_id("ui-gallery-material3-menu-trigger")
-                    .into_element(cx)
-            },
-            move |_cx| {
-                vec![
-                    material3::MenuEntry::Item(
-                        material3::MenuItem::new("Cut")
-                            .test_id("ui-gallery-material3-menu-item-cut")
-                            .on_select(on_select(
-                                "material3.menu.cut",
-                                last_action_for_entries.clone(),
-                            )),
-                    ),
-                    material3::MenuEntry::Item(
-                        material3::MenuItem::new("Copy")
-                            .test_id("ui-gallery-material3-menu-item-copy")
-                            .on_select(on_select(
-                                "material3.menu.copy",
-                                last_action_for_entries.clone(),
-                            )),
-                    ),
-                    material3::MenuEntry::Item(
-                        material3::MenuItem::new("Paste")
-                            .test_id("ui-gallery-material3-menu-item-paste")
-                            .disabled(true),
-                    ),
-                    material3::MenuEntry::Separator,
-                    material3::MenuEntry::Item(
-                        material3::MenuItem::new("Settings")
-                            .test_id("ui-gallery-material3-menu-item-settings")
-                            .on_select(on_select(
-                                "material3.menu.settings",
-                                last_action_for_entries.clone(),
-                            )),
-                    ),
-                ]
-            },
-        );
+    let dropdown = dropdown.into_element(
+        cx,
+        move |cx| {
+            material3::Button::new("Open menu")
+                .variant(material3::ButtonVariant::Outlined)
+                .on_activate(toggle_open.clone())
+                .test_id("ui-gallery-material3-menu-trigger")
+                .into_element(cx)
+        },
+        move |_cx| {
+            vec![
+                material3::MenuEntry::Item(
+                    material3::MenuItem::new("Cut")
+                        .test_id("ui-gallery-material3-menu-item-cut")
+                        .on_select(on_select(
+                            "material3.menu.cut",
+                            last_action_for_entries.clone(),
+                        )),
+                ),
+                material3::MenuEntry::Item(
+                    material3::MenuItem::new("Copy")
+                        .test_id("ui-gallery-material3-menu-item-copy")
+                        .on_select(on_select(
+                            "material3.menu.copy",
+                            last_action_for_entries.clone(),
+                        )),
+                ),
+                material3::MenuEntry::Item(
+                    material3::MenuItem::new("Paste")
+                        .test_id("ui-gallery-material3-menu-item-paste")
+                        .disabled(true),
+                ),
+                material3::MenuEntry::Separator,
+                material3::MenuEntry::Item(
+                    material3::MenuItem::new("Settings")
+                        .test_id("ui-gallery-material3-menu-item-settings")
+                        .on_select(on_select(
+                            "material3.menu.settings",
+                            last_action_for_entries.clone(),
+                        )),
+                ),
+            ]
+        },
+    );
 
     let theme = cx.theme().clone();
     let override_style = material3::MenuStyle::default()
@@ -163,7 +163,15 @@ pub fn render<H: UiHost>(
     let card_default = shadcn::card(|cx| {
         ui::children![
             cx;
-            shadcn::card_header(|cx| ui::children![cx; shadcn::card_title("Default")]),
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Default"),
+                    shadcn::card_description(
+                        "Default root owns its open state via `DropdownMenu::uncontrolled(cx)`.",
+                    ),
+                ]
+            }),
             shadcn::card_content(move |_cx| vec![dropdown]),
         ]
     })
