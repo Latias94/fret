@@ -1356,6 +1356,35 @@ fn handle_pressable_drag_move_with_threshold(
     }
 }
 
+fn finish_pressable_drag_on_pointer_up(
+    host: &mut dyn fret_ui::action::UiPointerActionHost,
+    acx: fret_ui::action::ActionCx,
+    up: fret_ui::action::PointerUpCx,
+    active_item_model: &fret_runtime::Model<ImUiActiveItemState>,
+    long_press_signal_model: &fret_runtime::Model<LongPressSignalState>,
+    drag_kind: fret_runtime::DragKindId,
+) {
+    if up.button == MouseButton::Left {
+        let _ = host.update_model(active_item_model, |st| {
+            if st.active == Some(acx.target) {
+                st.active = None;
+            }
+        });
+        cancel_long_press_timer_for(host, long_press_signal_model);
+    }
+
+    if let Some(drag) = host.drag(up.pointer_id)
+        && drag.kind == drag_kind
+        && drag.source_window == acx.window
+    {
+        if drag.dragging {
+            host.record_transient_event(acx, KEY_DRAG_STOPPED);
+        }
+        host.cancel_drag(up.pointer_id);
+        host.notify(acx);
+    }
+}
+
 fn item_spacing_x_metric_ref() -> crate::MetricRef {
     crate::MetricRef::Token {
         key: crate::theme_tokens::metric::COMPONENT_IMUI_ITEM_SPACING_X_PX,
@@ -3874,25 +3903,14 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 }));
 
                 cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
-                    if up.button == MouseButton::Left {
-                        let _ = host.update_model(&active_item_model_for_up, |st| {
-                            if st.active == Some(acx.target) {
-                                st.active = None;
-                            }
-                        });
-                        cancel_long_press_timer_for(host, &long_press_signal_model_for_up);
-                    }
-
-                    if let Some(drag) = host.drag(up.pointer_id)
-                        && drag.kind == drag_kind_for_element(acx.target)
-                        && drag.source_window == acx.window
-                    {
-                        if drag.dragging {
-                            host.record_transient_event(acx, KEY_DRAG_STOPPED);
-                        }
-                        host.cancel_drag(up.pointer_id);
-                        host.notify(acx);
-                    }
+                    finish_pressable_drag_on_pointer_up(
+                        host,
+                        acx,
+                        up,
+                        &active_item_model_for_up,
+                        &long_press_signal_model_for_up,
+                        drag_kind_for_element(acx.target),
+                    );
 
                     if up.is_click && up.button == fret_core::MouseButton::Right {
                         let _ =
@@ -4102,25 +4120,14 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 }));
 
                 cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
-                    if up.button == MouseButton::Left {
-                        let _ = host.update_model(&active_item_model_for_up, |st| {
-                            if st.active == Some(acx.target) {
-                                st.active = None;
-                            }
-                        });
-                        cancel_long_press_timer_for(host, &long_press_signal_model_for_up);
-                    }
-
-                    if let Some(drag) = host.drag(up.pointer_id)
-                        && drag.kind == drag_kind_for_element(acx.target)
-                        && drag.source_window == acx.window
-                    {
-                        if drag.dragging {
-                            host.record_transient_event(acx, KEY_DRAG_STOPPED);
-                        }
-                        host.cancel_drag(up.pointer_id);
-                        host.notify(acx);
-                    }
+                    finish_pressable_drag_on_pointer_up(
+                        host,
+                        acx,
+                        up,
+                        &active_item_model_for_up,
+                        &long_press_signal_model_for_up,
+                        drag_kind_for_element(acx.target),
+                    );
 
                     if up.is_click && up.button == MouseButton::Right {
                         let _ =
