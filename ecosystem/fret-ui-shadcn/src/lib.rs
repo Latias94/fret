@@ -19,6 +19,18 @@
 //! environment or `UiServices`-boundary hooks, and treat the crate root as a raw escape hatch
 //! rather than the default app-facing namespace.
 //!
+//! Most thin public helper constructors now stay on the typed `IntoUiElement<H>` lane (for
+//! example `badge`, `checkbox`, `progress`, `switch`, `separator`, `input_group`, `input_otp`,
+//! `command`, the `card(...)` / `card_header(...)` / `card_content(...)` wrapper family, and the
+//! `table(...)` / `table_header(...)` / `table_body(...)` / `table_row(...)` helper family,
+//! `field_set(...)` / `field_group(...)` for grouped form authoring, and the
+//! `empty(...)` / `empty_header(...)` / `empty_media(...)` / `empty_content(...)` wrapper family,
+//! plus the `pagination(...)` / `pagination_content(...)` / `pagination_item(...)` /
+//! `pagination_link(...)` wrappers).
+//! Remaining raw escape hatches are intentionally rare and explicitly documented where the
+//! underlying storage still owns a concrete landed child (for example `kbd_icon(...)` and
+//! `use_combobox_anchor(...)`).
+//!
 //! ## Feature flags
 //!
 //! - `app-integration`: explicit app-surface helpers under `fret_ui_shadcn::app::{install, ...}`
@@ -704,5 +716,8 @@ pub mod prelude {
     pub use fret_ui::element::{AnyElement, TextProps};
     pub use fret_ui::{ElementContext, Invalidation, Theme, UiHost, UiTree};
     pub use fret_ui_kit::IntoUiElement;
-    pub use fret_ui_kit::declarative::{CachedSubtreeExt, CachedSubtreeProps};
+    pub use fret_ui_kit::declarative::{
+        CachedSubtreeExt, CachedSubtreeProps, UiElementA11yExt, UiElementKeyContextExt,
+        UiElementTestIdExt,
+    };
 }

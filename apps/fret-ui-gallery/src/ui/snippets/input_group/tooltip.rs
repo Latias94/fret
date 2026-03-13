@@ -34,14 +34,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     "Password must be at least 8 characters",
                 )]);
 
-                shadcn::Tooltip::new(
-                    cx,
-                    button,
-                    content,
-                )
-                .arrow(true)
-                .side(shadcn::TooltipSide::Top)
-                .into_element(cx)
+                shadcn::Tooltip::new(cx, button, content)
+                    .arrow(true)
+                    .side(shadcn::TooltipSide::Top)
+                    .into_element(cx)
             };
 
             let email_tooltip = {
@@ -60,14 +56,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     "We'll use this to send you notifications",
                 )]);
 
-                shadcn::Tooltip::new(
-                    cx,
-                    button,
-                    content,
-                )
-                .arrow(true)
-                .side(shadcn::TooltipSide::Top)
-                .into_element(cx)
+                shadcn::Tooltip::new(cx, button, content)
+                    .arrow(true)
+                    .side(shadcn::TooltipSide::Top)
+                    .into_element(cx)
             };
 
             let api_key_tooltip = {
@@ -86,14 +78,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     "Click for help with API keys",
                 )]);
 
-                shadcn::Tooltip::new(
-                    cx,
-                    button,
-                    content,
-                )
-                .arrow(true)
-                .side(shadcn::TooltipSide::Left)
-                .into_element(cx)
+                shadcn::Tooltip::new(cx, button, content)
+                    .arrow(true)
+                    .side(shadcn::TooltipSide::Left)
+                    .into_element(cx)
             };
 
             let password_group = shadcn::InputGroup::new(password)

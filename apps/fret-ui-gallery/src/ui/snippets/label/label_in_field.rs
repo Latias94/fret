@@ -13,7 +13,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         vec![
             shadcn::raw::typography::muted(
                 "For forms, prefer Field + FieldLabel for built-in description/error structure.",
-            ).into_element(cx),
+            )
+            .into_element(cx),
             shadcn::Field::new([
                 shadcn::FieldLabel::new("Work email")
                     .for_control(control_id)

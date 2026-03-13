@@ -25,15 +25,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             let save_trigger = shadcn::Button::new("Save")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm);
-            let save = shadcn::Tooltip::new(
-                cx,
-                save_trigger,
-                save_content,
-            )
-            .arrow(true)
-            .open_delay_frames(10)
-            .close_delay_frames(10)
-            .into_element(cx);
+            let save = shadcn::Tooltip::new(cx, save_trigger, save_content)
+                .arrow(true)
+                .open_delay_frames(10)
+                .close_delay_frames(10)
+                .into_element(cx);
 
             let print_content = shadcn::TooltipContent::with(cx, |cx| {
                 vec![
@@ -55,15 +51,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             let print_trigger = shadcn::Button::new("Print")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm);
-            let print = shadcn::Tooltip::new(
-                cx,
-                print_trigger,
-                print_content,
-            )
-            .arrow(true)
-            .open_delay_frames(10)
-            .close_delay_frames(10)
-            .into_element(cx);
+            let print = shadcn::Tooltip::new(cx, print_trigger, print_content)
+                .arrow(true)
+                .open_delay_frames(10)
+                .close_delay_frames(10)
+                .into_element(cx);
 
             vec![
                 shadcn::ButtonGroup::new([save.into(), print.into()])

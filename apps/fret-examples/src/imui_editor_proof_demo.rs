@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use fret::advanced::interop::embedded_viewport as embedded;
-use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret::view::ViewWindowState;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
 use fret_core::{Color, Corners, Edges, KeyCode, PanelKind, Px, SemanticsRole};
 use fret_docking::{
@@ -145,9 +145,7 @@ fn editor_text_assist_state_label(
     format!("Expanded ({visible_count} matches)")
 }
 
-fn editor_demo_name_assist_items(
-    cx: &mut ElementContext<'_, KernelApp>,
-) -> Arc<[TextAssistItem]> {
+fn editor_demo_name_assist_items(cx: &mut ElementContext<'_, KernelApp>) -> Arc<[TextAssistItem]> {
     named_demo_state(
         cx,
         "imui_editor_proof_demo.state.name_assist_items",
@@ -584,10 +582,9 @@ fn replay_editor_theme_preset_on_global_changes(
     _st: &mut ViewWindowState<ImUiEditorProofView>,
     changed: &[std::any::TypeId],
 ) {
-    let _ =
-        fret_ui_editor::theme::reapply_installed_editor_theme_preset_on_window_metrics_change(
-            app, changed,
-        );
+    let _ = fret_ui_editor::theme::reapply_installed_editor_theme_preset_on_window_metrics_change(
+        app, changed,
+    );
 }
 
 fn configure_imui_editor_proof_driver(
@@ -646,7 +643,11 @@ pub fn run() -> anyhow::Result<()> {
         .view_with_hooks::<ImUiEditorProofView>(configure_imui_editor_proof_driver)?
         .setup_with(move |app| {
             configure_single_window_caps_if_requested(app);
-            shadcn::app::install_with_theme(app, EDITOR_HOST_BASE_COLOR, EDITOR_HOST_DEFAULT_SCHEME);
+            shadcn::app::install_with_theme(
+                app,
+                EDITOR_HOST_BASE_COLOR,
+                EDITOR_HOST_DEFAULT_SCHEME,
+            );
             fret_ui_editor::theme::install_editor_theme_preset_v1(app, editor_preset);
             fret_icons_lucide::app::install(app);
             install_dock_panel_registry(app);

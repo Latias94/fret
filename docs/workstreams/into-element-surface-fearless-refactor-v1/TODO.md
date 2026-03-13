@@ -184,6 +184,15 @@ Implementation note on 2026-03-12:
 - `fret-ui-shadcn::prelude::*` now re-exports `IntoUiElement`, so direct-crate first-party
   shadcn examples do not need ad-hoc trait imports just to land typed helpers such as
   `shadcn::raw::typography::*`.
+- Verification update on 2026-03-13:
+  the remaining thin helper family (`checkbox`, `progress`, `switch`) now also stays on typed
+  `IntoUiElement<H>` outputs all the way through the current first-party teaching lane, with
+  `fret-ui-shadcn` crate docs calling out the rule explicitly, `fret_ui_shadcn::prelude::*`
+  also re-exporting `UiElementTestIdExt` / `UiElementA11yExt` / `UiElementKeyContextExt`, and the
+  affected UI Gallery snippets (`tooltip`, `input_group`, `kbd`, `label`, `typography`, selected
+  AI attachment hover-card examples) no longer re-teach eager helper landing just to attach
+  decoration or diagnostics hooks. Validation for the production surface: `cargo check -p
+  fret-ui-shadcn --lib`.
 - first-party docs/tests no longer need to mention the old scaffold name for ordinary authoring:
   `docs/first-hour.md` now teaches `IntoUiElement<H>`, and `fret-ui-ai` builder smoke tests
   (`elements/message.rs`, `elements/workflow/panel.rs`) now assert against the public

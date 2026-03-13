@@ -15,8 +15,7 @@ fn make_tooltip<H: UiHost>(
         shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(cx, content)]);
     shadcn::Tooltip::new(
         cx,
-        shadcn::Button::new(label)
-            .variant(shadcn::ButtonVariant::Outline),
+        shadcn::Button::new(label).variant(shadcn::ButtonVariant::Outline),
         tooltip_content,
     )
     .arrow(true)

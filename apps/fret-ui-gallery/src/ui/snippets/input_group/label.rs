@@ -39,14 +39,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     "We'll use this to send you notifications",
                 )]);
 
-                shadcn::Tooltip::new(
-                    cx,
-                    button,
-                    content,
-                )
-                .arrow(true)
-                .side(shadcn::TooltipSide::Top)
-                .into_element(cx)
+                shadcn::Tooltip::new(cx, button, content)
+                    .arrow(true)
+                    .side(shadcn::TooltipSide::Top)
+                    .into_element(cx)
             };
 
             let header = ui::h_flex(|cx| {

@@ -39,14 +39,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     let voice_tooltip_content =
         shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(cx, "Voice Mode")]);
-    let voice_tooltip = shadcn::Tooltip::new(
-        cx,
-        voice_button,
-        voice_tooltip_content,
-    )
-    .arrow(true)
-    .side(shadcn::TooltipSide::Top)
-    .into_element(cx);
+    let voice_tooltip = shadcn::Tooltip::new(cx, voice_button, voice_tooltip_content)
+        .arrow(true)
+        .side(shadcn::TooltipSide::Top)
+        .into_element(cx);
 
     let group = shadcn::InputGroup::new(message_value)
         .refine_layout(LayoutRefinement::default().w_full().min_w_0())

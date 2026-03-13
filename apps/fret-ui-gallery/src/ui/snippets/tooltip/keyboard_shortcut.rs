@@ -31,14 +31,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             ]);
 
             vec![
-                shadcn::Tooltip::new(
-                    cx,
-                    keyboard_trigger,
-                    keyboard_content,
-                )
-                .side(shadcn::TooltipSide::Top)
-                .into_element(cx)
-                .test_id("ui-gallery-tooltip-keyboard"),
+                shadcn::Tooltip::new(cx, keyboard_trigger, keyboard_content)
+                    .side(shadcn::TooltipSide::Top)
+                    .into_element(cx)
+                    .test_id("ui-gallery-tooltip-keyboard"),
             ]
         })
         .into_iter()

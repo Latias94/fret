@@ -25,14 +25,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             )]);
 
             vec![
-                shadcn::Tooltip::new(
-                    cx,
-                    disabled_trigger,
-                    tooltip_content,
-                )
-                .side(shadcn::TooltipSide::Top)
-                .into_element(cx)
-                .test_id("ui-gallery-tooltip-disabled"),
+                shadcn::Tooltip::new(cx, disabled_trigger, tooltip_content)
+                    .side(shadcn::TooltipSide::Top)
+                    .into_element(cx)
+                    .test_id("ui-gallery-tooltip-disabled"),
             ]
         })
         .into_iter()
