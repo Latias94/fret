@@ -67,9 +67,8 @@ fn ui_builder_overlay_roots_compile<H: UiHost>(
         |cx| DrawerContent::new(Vec::new()).into_element(cx),
     );
 
-    // Keep the compatibility alias covered here until `DropdownMenu::new` is removed.
     let _ = fret_ui_shadcn::DropdownMenuUiBuilderExt::into_element(
-        DropdownMenu::new(dropdown_menu_open.clone()).ui(),
+        DropdownMenu::from_open(dropdown_menu_open.clone()).ui(),
         cx,
         |cx| Button::new("trigger").into_element(cx),
         |_cx| Vec::<DropdownMenuEntry>::new(),
@@ -358,8 +357,7 @@ fn ui_builder_smoke_applies_supported_patches() {
     let _ = Popover::from_open(popover_open).ui().build();
     let _ = Sheet::new(sheet_open).ui().build();
     let _ = Drawer::new(drawer_open).ui().build();
-    // Keep the compatibility alias covered here until `DropdownMenu::new` is removed.
-    let _ = DropdownMenu::new(dropdown_menu_open).ui().build();
+    let _ = DropdownMenu::from_open(dropdown_menu_open).ui().build();
     let _ = ContextMenu::from_open(context_menu_open).ui().build();
     let _ = Menubar::new(Vec::new()).ui().px_2().build();
     let _ = Combobox::new(combobox_value, combobox_open)

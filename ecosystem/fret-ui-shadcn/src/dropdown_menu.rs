@@ -3163,11 +3163,6 @@ impl DropdownMenu {
         }
     }
 
-    /// Compatibility alias for call sites that still own the open model explicitly.
-    pub fn new(open: Model<bool>) -> Self {
-        Self::from_open(open)
-    }
-
     /// Default typed root constructor for the common uncontrolled dropdown-menu authoring path.
     ///
     /// This stores the internal `open` model at the root call site and starts closed.
@@ -3186,7 +3181,7 @@ impl DropdownMenu {
     ) -> Self {
         let open =
             fret_ui_kit::primitives::open_state::open_use_model(cx, open, || default_open).model();
-        Self::new(open)
+        Self::from_open(open)
     }
 
     pub fn align(mut self, align: DropdownMenuAlign) -> Self {
