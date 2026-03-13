@@ -134,6 +134,7 @@ Validation snapshot on 2026-03-13:
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app scroll_area_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app progress_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app chart_ -- --nocapture`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app combobox_ -- --nocapture`
 
 Implementation note on 2026-03-13:
 
@@ -227,11 +228,15 @@ Implementation note on 2026-03-13:
   now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and
   `apps/fret-ui-gallery/src/ui/pages/chart.rs` now routes those previews through
   `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the same UI Gallery top-level snippet cleanup now also covers the combobox family:
+  `apps/fret-ui-gallery/src/ui/snippets/combobox/{conformance_demo,basic,usage,label,auto_highlight,clear_button,groups,groups_with_separator,trigger_button,multiple_selection,custom_items,long_list,invalid,disabled,input_group,rtl}.rs`
+  now expose typed app-facing `render(...)` signatures, and
+  `apps/fret-ui-gallery/src/ui/pages/combobox.rs` now routes those previews through
+  `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
 - after `accordion` / `tabs` / `toggle` / `radio_group` / `slider` / `native_select` /
-  `resizable` / `navigation_menu` / `scroll_area` / `progress` / `chart`, the next default-app
-  UI Gallery app-facing queue should move to `combobox`, which is now the clearest remaining
-  page-local family still teaching top-level `UiCx -> AnyElement` returns across a complete
-  first-party surface.
+  `resizable` / `navigation_menu` / `scroll_area` / `progress` / `chart` / `combobox`, the next
+  default-app UI Gallery app-facing queue should move to `carousel`, which is now the clearest
+  remaining full page-local family still teaching top-level `UiCx -> AnyElement` returns.
 - `apps/fret-cookbook/examples/customv1_basics.rs` now keeps both advanced reusable helpers
   `panel_shell(...)` and `preview_content(...)` on `IntoUiElement<KernelApp>`-based signatures
   instead of returning raw `AnyElement` for non-raw composition.

@@ -227,11 +227,59 @@ fn combobox_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/combobox/usage.rs",
         ],
         &[
-            "pub fn render(cx: &mut UiCx<'_>) -> AnyElement",
-            "pub fn render(cx: &mut UiCx<'_>,",
-            "pub fn render(\n    cx: &mut UiCx<'_>,",
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "pub fn render(cx: &mut UiCx<'_>, value: Model<Option<Arc<str>>>, open: Model<bool>, query: Model<String>,) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/combobox",
+        &["-> AnyElement"],
+    );
+}
+
+#[test]
+fn combobox_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/combobox.rs",
+        &[
+            "DocSection::build(cx, \"Conformance Demo\", conformance_demo)",
+            "DocSection::build(cx, \"Basic\", basic)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Label Association\", label)",
+            "DocSection::build(cx, \"Auto Highlight\", auto_highlight)",
+            "DocSection::build(cx, \"Clear Button\", clear)",
+            "DocSection::build(cx, \"Groups\", groups)",
+            "DocSection::build(cx, \"Groups + Separator\", groups_with_separator)",
+            "DocSection::build(cx, \"Trigger Button\", trigger_button)",
+            "DocSection::build(cx, \"Multiple Selection\", multiple)",
+            "DocSection::build(cx, \"Extras: Custom Items\", custom_items)",
+            "DocSection::build(cx, \"Extras: Long List\", long_list)",
+            "DocSection::build(cx, \"Extras: Invalid\", invalid)",
+            "DocSection::build(cx, \"Extras: Disabled\", disabled)",
+            "DocSection::build(cx, \"Extras: Input Group\", input_group)",
+            "DocSection::build(cx, \"Extras: RTL\", rtl)",
+        ],
+        &[
+            "DocSection::new(\"Conformance Demo\", conformance_demo)",
+            "DocSection::new(\"Basic\", basic)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Label Association\", label)",
+            "DocSection::new(\"Auto Highlight\", auto_highlight)",
+            "DocSection::new(\"Clear Button\", clear)",
+            "DocSection::new(\"Groups\", groups)",
+            "DocSection::new(\"Groups + Separator\", groups_with_separator)",
+            "DocSection::new(\"Trigger Button\", trigger_button)",
+            "DocSection::new(\"Multiple Selection\", multiple)",
+            "DocSection::new(\"Extras: Custom Items\", custom_items)",
+            "DocSection::new(\"Extras: Long List\", long_list)",
+            "DocSection::new(\"Extras: Invalid\", invalid)",
+            "DocSection::new(\"Extras: Disabled\", disabled)",
+            "DocSection::new(\"Extras: Input Group\", input_group)",
+            "DocSection::new(\"Extras: RTL\", rtl)",
+        ],
     );
 }
 

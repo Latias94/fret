@@ -231,6 +231,14 @@ Execution note on 2026-03-13:
   `DocSection::build(cx, ...)`; the old `pub fn render(...) -> AnyElement` teaching pattern is now
   forbidden for that family by
   `ui_authoring_surface_default_app::{chart_snippets_prefer_ui_cx_on_the_default_app_surface,chart_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the next top-level snippet-family
+  move on the combobox lane:
+  `apps/fret-ui-gallery/src/ui/snippets/combobox/{conformance_demo,basic,usage,label,auto_highlight,clear_button,groups,groups_with_separator,trigger_button,multiple_selection,custom_items,long_list,invalid,disabled,input_group,rtl}.rs`
+  now expose typed app-facing `render(...)` signatures, while
+  `apps/fret-ui-gallery/src/ui/pages/combobox.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `-> AnyElement` teaching pattern is now forbidden for that
+  family by
+  `ui_authoring_surface_default_app::{combobox_snippets_prefer_ui_cx_on_the_default_app_surface,combobox_page_uses_typed_doc_sections_for_app_facing_snippets}`.
 - the cookbook advanced-example source gate now also records
   `apps/fret-cookbook/examples/customv1_basics.rs`,
   where `panel_shell(...)` and `preview_content(...)` now use `IntoUiElement<KernelApp>`-based

@@ -382,6 +382,14 @@ Exit criteria:
   `DocSection::build(cx, ...)`; the old `pub fn render(...) -> AnyElement` teaching pattern is now
   forbidden for that family by
   `ui_authoring_surface_default_app::{chart_snippets_prefer_ui_cx_on_the_default_app_surface,chart_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app top-level snippet cleanup now also records the
+  `combobox` family:
+  `apps/fret-ui-gallery/src/ui/snippets/combobox/{conformance_demo,basic,usage,label,auto_highlight,clear_button,groups,groups_with_separator,trigger_button,multiple_selection,custom_items,long_list,invalid,disabled,input_group,rtl}.rs`
+  now expose typed app-facing `render(...)` signatures, while
+  `apps/fret-ui-gallery/src/ui/pages/combobox.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `-> AnyElement` teaching pattern is now forbidden for that
+  family by
+  `ui_authoring_surface_default_app::{combobox_snippets_prefer_ui_cx_on_the_default_app_surface,combobox_page_uses_typed_doc_sections_for_app_facing_snippets}`.
 - the same first-party teaching sweep now also closes the remaining default-root drift on the
   `tabs` / `toggle` / `accordion` lane:
   `tabs/{usage,demo,disabled,extras,icons,line,list,rtl,vertical,vertical_line}.rs`,
@@ -402,7 +410,7 @@ Exit criteria:
   `apps/fret-cookbook/examples/simple_todo_v2_target.rs`, and the scaffold `simple-todo` / `todo`
   templates now all use that helper, and the scaffold README/tests teach it as the default
   first-party keyed-list story.
-- the next UI Gallery app-facing snippet batch is now `combobox`:
+- the next UI Gallery app-facing snippet batch is now `carousel`:
   it is the clearest remaining full first-party page-local family still teaching top-level
   `UiCx -> AnyElement` returns across a broad default-app surface.
 - M6 raw-seam inventory now has executable source gates in `surface_policy_tests.rs`:
