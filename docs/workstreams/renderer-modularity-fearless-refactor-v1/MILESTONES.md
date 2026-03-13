@@ -107,6 +107,16 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu gaussian_blur_radius_affects_pass_count`
   - `cargo nextest run -p fret-render-wgpu dither_compiles_to_pass`
   - `cargo nextest run -p fret-render-wgpu noise_compiles_to_pass`
+- The second renderer effect-planning split has landed:
+  - blur planning helper flow now lives under
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects/blur.rs`
+  - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns blur compile,
+    scissor inflation, or padded chain-scissor derivation helpers directly
+- Renderer blur-planning split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu gaussian_blur_radius_affects_pass_count`
+  - `cargo nextest run -p fret-render-wgpu custom_v3_sources_plan_honors_group_pyramid_choice_and_group_roi`
+  - `cargo nextest run -p fret-render-wgpu chain_applies_clip_only_on_final_step`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

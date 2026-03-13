@@ -139,6 +139,10 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns built-in effect
   budget gates, clip-mask target choice, or single-scratch/two-scratch pass-builder helpers
   directly.
+- Renderer blur planning helper flow now lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/blur.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns blur compile,
+  scissor inflation, or padded chain-scissor derivation helpers directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:
@@ -445,6 +449,11 @@ As of 2026-03-13:
   - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns built-in effect
     budget gates, clip-mask target choice, or single-scratch/two-scratch pass-builder helpers
     directly
+- The second renderer effect-planning split has landed:
+  - blur planning helper flow now lives under
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects/blur.rs`
+  - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns blur compile,
+    scissor inflation, or padded chain-scissor derivation helpers directly
 - The sixty-fourth internal text split has landed:
   - prepared-glyph normalized-coords presence checks now live behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`

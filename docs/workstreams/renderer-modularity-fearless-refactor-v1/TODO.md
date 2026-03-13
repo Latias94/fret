@@ -459,6 +459,10 @@ ID format:
     - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns built-in effect
       budget gates, clip-mask target choice, or single-scratch/two-scratch pass-builder helpers
       directly
+    - blur planning helper flow moved into
+      `crates/fret-render-wgpu/src/renderer/render_plan_effects/blur.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns blur compile,
+      scissor inflation, or padded chain-scissor derivation helpers directly
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG
@@ -622,11 +626,10 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: built-in effect helper flow now lives under
-    `crates/fret-render-wgpu/src/renderer/render_plan_effects/builtin.rs`, and
-    `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns built-in effect
-    budget gates, clip-mask target choice, or single-scratch/two-scratch pass-builder helpers
-    directly.
+  - Latest landed slice: blur planning helper flow now lives under
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects/blur.rs`, and
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns blur compile,
+    scissor inflation, or padded chain-scissor derivation helpers directly.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:
