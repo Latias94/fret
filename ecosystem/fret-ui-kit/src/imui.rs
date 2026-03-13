@@ -1460,6 +1460,28 @@ fn clear_active_item_on_left_pointer_up(
     host.notify(acx);
 }
 
+fn prepare_pressable_drag_on_pointer_down(
+    host: &mut dyn fret_ui::action::UiPointerActionHost,
+    acx: fret_ui::action::ActionCx,
+    down: fret_ui::action::PointerDownCx,
+    active_item_model: &fret_runtime::Model<ImUiActiveItemState>,
+    long_press_signal_model: &fret_runtime::Model<LongPressSignalState>,
+    drag_kind: fret_runtime::DragKindId,
+) {
+    if down.button != MouseButton::Left {
+        return;
+    }
+
+    let _ = host.update_model(active_item_model, |st| {
+        st.active = Some(acx.target);
+    });
+    arm_long_press_timer_for(host, acx, long_press_signal_model);
+
+    if host.drag(down.pointer_id).is_none() {
+        host.begin_drag_with_kind(down.pointer_id, drag_kind, acx.window, down.position);
+    }
+}
+
 fn item_spacing_x_metric_ref() -> crate::MetricRef {
     crate::MetricRef::Token {
         key: crate::theme_tokens::metric::COMPONENT_IMUI_ITEM_SPACING_X_PX,
@@ -3941,23 +3963,14 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 }
 
                 cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
-                    if down.button != MouseButton::Left {
-                        return PressablePointerDownResult::Continue;
-                    }
-
-                    let _ = host.update_model(&active_item_model_for_down, |st| {
-                        st.active = Some(acx.target);
-                    });
-                    arm_long_press_timer_for(host, acx, &long_press_signal_model_for_down);
-
-                    if host.drag(down.pointer_id).is_none() {
-                        host.begin_drag_with_kind(
-                            down.pointer_id,
-                            drag_kind_for_element(acx.target),
-                            acx.window,
-                            down.position,
-                        );
-                    }
+                    prepare_pressable_drag_on_pointer_down(
+                        host,
+                        acx,
+                        down,
+                        &active_item_model_for_down,
+                        &long_press_signal_model_for_down,
+                        drag_kind_for_element(acx.target),
+                    );
 
                     PressablePointerDownResult::Continue
                 }));
@@ -4128,23 +4141,14 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 }
 
                 cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
-                    if down.button != MouseButton::Left {
-                        return PressablePointerDownResult::Continue;
-                    }
-
-                    let _ = host.update_model(&active_item_model_for_down, |st| {
-                        st.active = Some(acx.target);
-                    });
-                    arm_long_press_timer_for(host, acx, &long_press_signal_model_for_down);
-
-                    if host.drag(down.pointer_id).is_none() {
-                        host.begin_drag_with_kind(
-                            down.pointer_id,
-                            drag_kind_for_element(acx.target),
-                            acx.window,
-                            down.position,
-                        );
-                    }
+                    prepare_pressable_drag_on_pointer_down(
+                        host,
+                        acx,
+                        down,
+                        &active_item_model_for_down,
+                        &long_press_signal_model_for_down,
+                        drag_kind_for_element(acx.target),
+                    );
 
                     PressablePointerDownResult::Continue
                 }));
