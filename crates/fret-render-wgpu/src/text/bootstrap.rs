@@ -5,13 +5,12 @@ use super::atlas_runtime_state::TextAtlasRuntimeState;
 use super::blob_state::TextBlobState;
 use super::face_cache::TextFaceCacheState;
 use super::frame_perf::TextFramePerfState;
+use super::layout_cache_state::TextLayoutCacheState;
 use super::pin_state::TextPinState;
 use super::quality::{TextQualitySettings, TextQualityState};
 use fret_render_text::fallback_policy::TextFallbackPolicyV1;
 use fret_render_text::font_stack::GenericFamilyInjectionState;
 use fret_render_text::font_trace::FontTraceState;
-use fret_render_text::measure::TextMeasureCaches;
-use std::collections::HashMap;
 
 const TEXT_ATLAS_WIDTH: u32 = 2048;
 const TEXT_ATLAS_HEIGHT: u32 = 2048;
@@ -78,8 +77,7 @@ pub(super) fn build_text_system(device: &wgpu::Device) -> TextSystem {
         generic_injections: GenericFamilyInjectionState::default(),
 
         blob_state: TextBlobState::new(),
-        shape_cache: HashMap::new(),
-        measure: TextMeasureCaches::new(),
+        layout_cache: TextLayoutCacheState::new(),
 
         atlas_runtime: TextAtlasRuntimeState::new(
             bootstrap.mask_atlas,

@@ -71,7 +71,7 @@ impl TextSystem {
                 .saturating_add(estimate_text_shape_heap_bytes(shape.as_ref()));
         };
 
-        for shape in self.shape_cache.values() {
+        for shape in self.layout_cache.shape_cache.values() {
             add_shape(shape);
         }
         for blob in self.blob_state.blobs.values() {
@@ -115,8 +115,8 @@ impl TextSystem {
             frame_texts_with_missing_glyphs: self.frame_perf.texts_with_missing_glyphs,
             blobs_live: self.blob_state.blobs.len() as u64,
             blob_cache_entries: self.blob_state.blob_cache.len() as u64,
-            shape_cache_entries: self.shape_cache.len() as u64,
-            measure_cache_buckets: self.measure.buckets_len() as u64,
+            shape_cache_entries: self.layout_cache.shape_cache.len() as u64,
+            measure_cache_buckets: self.layout_cache.measure.buckets_len() as u64,
             shape_cache_bytes_estimate_total,
             blob_paint_palette_bytes_estimate_total,
             blob_decorations_bytes_estimate_total,

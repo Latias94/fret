@@ -92,7 +92,7 @@ impl TextSystem {
             self.blob_state.blob_cache.remove(&key);
             if remove_shape {
                 let shape_key = fret_render_text::cache_keys::TextShapeKey::from_blob_key(&key);
-                self.shape_cache.remove(&shape_key);
+                self.layout_cache.shape_cache.remove(&shape_key);
             }
         }
         let _ = self.blob_state.blobs.remove(blob);

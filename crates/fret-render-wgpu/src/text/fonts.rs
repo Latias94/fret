@@ -112,8 +112,7 @@ impl TextSystem {
     fn reset_caches_for_font_change(&mut self) {
         self.frame_perf.cache_resets = self.frame_perf.cache_resets.saturating_add(1);
         self.blob_state.clear();
-        self.shape_cache.clear();
-        self.measure.clear();
+        self.layout_cache.clear();
         self.atlas_runtime.reset();
         self.pin_state.clear();
         self.face_cache.clear();

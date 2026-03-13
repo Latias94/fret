@@ -1,7 +1,6 @@
-use std::{collections::HashMap, sync::Arc};
-
 #[cfg(test)]
 use fret_render_text::cache_keys::TextBlobKey;
+#[cfg(test)]
 use fret_render_text::cache_keys::TextShapeKey;
 
 #[cfg(test)]
@@ -13,7 +12,6 @@ use fret_render_text::fallback_policy::TextFallbackPolicyV1;
 pub(crate) use fret_render_text::font_instance_key::FontFaceKey;
 use fret_render_text::font_stack::GenericFamilyInjectionState;
 use fret_render_text::font_trace::FontTraceState;
-use fret_render_text::measure::TextMeasureCaches;
 pub use fret_render_text::{
     FontCatalogEntryMetadata, SystemFontRescanResult, SystemFontRescanSeed,
 };
@@ -28,6 +26,7 @@ mod diagnostics;
 mod face_cache;
 mod fonts;
 mod frame_perf;
+mod layout_cache_state;
 mod measure;
 mod pin_state;
 mod prepare;
@@ -42,6 +41,7 @@ use self::atlas_runtime_state::TextAtlasRuntimeState;
 use self::blob_state::TextBlobState;
 use self::face_cache::TextFaceCacheState;
 use self::frame_perf::TextFramePerfState;
+use self::layout_cache_state::TextLayoutCacheState;
 use self::pin_state::TextPinState;
 pub use self::quality::TextQualitySettings;
 use self::quality::TextQualityState;
@@ -70,8 +70,7 @@ pub struct TextSystem {
     generic_injections: GenericFamilyInjectionState,
 
     blob_state: TextBlobState,
-    shape_cache: HashMap<TextShapeKey, Arc<TextShape>>,
-    measure: TextMeasureCaches,
+    layout_cache: TextLayoutCacheState,
 
     atlas_runtime: TextAtlasRuntimeState,
 

@@ -8,7 +8,7 @@ impl TextSystem {
         style: &TextStyle,
         constraints: TextConstraints,
     ) -> TextMetrics {
-        return self.measure.measure_plain(
+        return self.layout_cache.measure.measure_plain(
             &mut self.parley_shaper,
             text,
             style,
@@ -216,7 +216,7 @@ impl TextSystem {
         base_style: &TextStyle,
         constraints: TextConstraints,
     ) -> TextMetrics {
-        return self.measure.measure_attributed(
+        return self.layout_cache.measure.measure_attributed(
             &mut self.parley_shaper,
             rich,
             base_style,

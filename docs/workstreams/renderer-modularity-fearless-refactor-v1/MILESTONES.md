@@ -74,6 +74,10 @@ Current snapshot (2026-03-13):
   - text atlas runtime state under
     `crates/fret-render-wgpu/src/text/atlas_runtime_state.rs`
   - `text/mod.rs` no longer owns atlas textures/bind-group-layout fields directly
+- The latest `text/mod.rs` state-shell tightening slice has also moved:
+  - text layout-cache state under
+    `crates/fret-render-wgpu/src/text/layout_cache_state.rs`
+  - `text/mod.rs` no longer owns shape-cache/measure-cache fields directly
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals
@@ -342,6 +346,10 @@ Current snapshot (2026-03-13):
   - text atlas runtime state under
     `crates/fret-render-wgpu/src/text/atlas_runtime_state.rs`
   - `text/mod.rs` no longer owns atlas textures/bind-group-layout fields directly
+- The latest `text/mod.rs` state-shell tightening slice has also moved:
+  - text layout-cache state under
+    `crates/fret-render-wgpu/src/text/layout_cache_state.rs`
+  - `text/mod.rs` no longer owns shape-cache/measure-cache fields directly
 - The sixty-second internal `text/mod.rs` split has landed:
   - prepared-glyph scaler size clamp now lives behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
