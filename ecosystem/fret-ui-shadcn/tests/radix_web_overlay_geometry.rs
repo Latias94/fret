@@ -1972,7 +1972,7 @@ fn radix_web_context_menu_open_geometry_matches_fret() {
                                     |cx, _st| vec![fixed_size_container(cx, trigger_w, trigger_h)],
                                 );
 
-                                let menu = fret_ui_shadcn::ContextMenu::new(open)
+                                let menu = fret_ui_shadcn::ContextMenu::from_open(open)
                                     .min_width(Px(web_content_rect.w))
                                     .into_element(
                                         cx,
@@ -2114,7 +2114,7 @@ fn radix_web_context_menu_open_geometry_matches_fret() {
                                         },
                                     );
 
-                                    let menu = fret_ui_shadcn::ContextMenu::new(open)
+                                    let menu = fret_ui_shadcn::ContextMenu::from_open(open)
                                         .min_width(Px(web_content_rect.w))
                                         .into_element(
                                             cx,

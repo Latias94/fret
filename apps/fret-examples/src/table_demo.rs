@@ -592,7 +592,7 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                                                             })
                                                             .unwrap_or(false);
 
-                                                        vec![shadcn::ContextMenu::new(open).into_element(
+                                                        vec![shadcn::ContextMenu::from_open(open).into_element(
                                                             cx,
                                                             |cx| cx.text(label.clone()),
                                                             |_cx| {

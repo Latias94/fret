@@ -972,7 +972,7 @@ fn build_context_menu_demo<H: UiHost>(
         ContextMenuShortcut,
     };
 
-    ContextMenu::new(open)
+    ContextMenu::from_open(open)
         // new-york-v4 context-menu-demo: `ContextMenuContent className="w-52"`.
         .min_width(Px(208.0))
         // new-york-v4 context-menu-demo: `ContextMenuSubContent className="w-44"`.
@@ -8574,7 +8574,7 @@ fn assert_context_menu_demo_constrained_overlay_placement_matches(web_name: &str
             let checked_full_urls = cx.local_model_keyed("checked_full_urls", || false);
             let radio_person = cx.local_model_keyed("radio_person", || Some(Arc::from("pedro")));
 
-            fret_ui_shadcn::ContextMenu::new(open.clone())
+            fret_ui_shadcn::ContextMenu::from_open(open.clone())
                 // new-york-v4 context-menu-demo: `ContextMenuContent className="w-52"`.
                 .min_width(Px(208.0))
                 // new-york-v4 context-menu-demo: `ContextMenuSubContent className="w-44"`.
@@ -9371,7 +9371,7 @@ fn assert_context_menu_demo_constrained_scroll_state_matches(web_name: &str) {
             ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItemSpec, ContextMenuShortcut,
         };
 
-        ContextMenu::new(open.clone())
+        ContextMenu::from_open(open.clone())
             .min_width(Px(208.0))
             .submenu_min_width(Px(176.0))
             .into_element(
@@ -9561,7 +9561,7 @@ fn assert_context_menu_demo_wheel_scroll_matches_web_scrolled(web_name: &str, wh
             ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItemSpec, ContextMenuShortcut,
         };
 
-        let el = ContextMenu::new(open.clone())
+        let el = ContextMenu::from_open(open.clone())
             .min_width(Px(208.0))
             .submenu_min_width(Px(176.0))
             .into_element(

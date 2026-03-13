@@ -1803,7 +1803,7 @@ impl WorkspaceTabStrip {
 	                                                    let menu_test_id_base = tab_test_id
 	                                                        .as_ref()
 	                                                        .map(|id| Arc::<str>::from(format!("{id}.menu")));
-	                                                    ContextMenu::new(open).into_element(
+	                                                    ContextMenu::from_open(open).into_element(
 	                                                        cx,
 	                                                        |_cx| tab_element,
 	                                                        move |_cx| {

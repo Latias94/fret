@@ -1142,7 +1142,7 @@ impl ComponentsGalleryDriver {
                                                     );
 
                                                 let context_menu =
-                                                    shadcn::ContextMenu::new(context_menu_open.clone())
+                                                    shadcn::ContextMenu::from_open(context_menu_open.clone())
                                                         .into_element(
                                                             cx,
                                                             |cx| {

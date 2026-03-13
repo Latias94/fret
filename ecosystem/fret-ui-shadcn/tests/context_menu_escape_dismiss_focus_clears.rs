@@ -85,7 +85,7 @@ fn context_menu_escape_closes_and_clears_focus() {
 
     let build = move |open: Model<bool>| {
         move |cx: &mut ElementContext<'_, App>| {
-            vec![fret_ui_shadcn::ContextMenu::new(open).into_element(
+            vec![fret_ui_shadcn::ContextMenu::from_open(open).into_element(
                 cx,
                 |cx| {
                     fret_ui_shadcn::Button::new("Right click here")

@@ -5163,7 +5163,7 @@ mod tests {
             bounds,
             "context-menu",
             |cx| {
-                vec![ContextMenu::new(open).into_element(
+                vec![ContextMenu::from_open(open).into_element(
                     cx,
                     |cx| {
                         cx.container(
@@ -5223,7 +5223,7 @@ mod tests {
             "context-menu-test-id-prefix",
             move |cx| {
                 vec![
-                    ContextMenu::new(open.clone())
+                    ContextMenu::from_open(open.clone())
                         .test_id_prefix("ctx")
                         .into_element(
                             cx,
@@ -5284,7 +5284,7 @@ mod tests {
             "context-menu",
             move |cx| {
                 vec![
-                    ContextMenu::new(open)
+                    ContextMenu::from_open(open)
                         .on_dismiss_request(on_dismiss_request)
                         .into_element(
                             cx,
@@ -5345,44 +5345,51 @@ mod tests {
         app.set_frame_id(next_frame);
 
         OverlayController::begin_frame(app, window);
-        let root = fret_ui::declarative::render_root(
-            ui,
-            app,
-            services,
-            window,
-            bounds,
-            "context-menu-shift-f10",
-            |cx| {
-                vec![ContextMenu::new(open).disabled(disabled).into_element(
-                    cx,
-                    |cx| {
-                        cx.pressable(
-                            PressableProps {
-                                layout: {
-                                    let mut layout = LayoutStyle::default();
-                                    layout.size.width = Length::Px(Px(120.0));
-                                    layout.size.height = Length::Px(Px(40.0));
-                                    layout
+        let root =
+            fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "context-menu-shift-f10",
+                |cx| {
+                    vec![
+                        ContextMenu::from_open(open)
+                            .disabled(disabled)
+                            .into_element(
+                                cx,
+                                |cx| {
+                                    cx.pressable(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(120.0));
+                                                layout.size.height = Length::Px(Px(40.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: true,
+                                            a11y: PressableA11y {
+                                                role: Some(SemanticsRole::Button),
+                                                label: Some(Arc::from("Trigger")),
+                                                test_id: Some(Arc::from("trigger")),
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        |cx, _st| {
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
+                                        },
+                                    )
                                 },
-                                enabled: true,
-                                focusable: true,
-                                a11y: PressableA11y {
-                                    role: Some(SemanticsRole::Button),
-                                    label: Some(Arc::from("Trigger")),
-                                    test_id: Some(Arc::from("trigger")),
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            |cx, _st| {
-                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
-                            },
-                        )
-                    },
-                    |_cx| vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))],
-                )]
-            },
-        );
+                                |_cx| vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))],
+                            ),
+                    ]
+                },
+            );
         ui.set_root(root);
         OverlayController::render(ui, app, services, window, bounds);
         ui.request_semantics_snapshot();
@@ -5849,7 +5856,7 @@ mod tests {
                     },
                 );
 
-                let trigger = ContextMenu::new(open).into_element(
+                let trigger = ContextMenu::from_open(open).into_element(
                     cx,
                     |cx| {
                         cx.pressable(
@@ -5942,7 +5949,7 @@ mod tests {
                     },
                 );
 
-                let trigger = ContextMenu::new(open)
+                let trigger = ContextMenu::from_open(open)
                     .modal(modal)
                     .on_dismiss_request(on_dismiss_request.clone())
                     .into_element(
@@ -6037,7 +6044,7 @@ mod tests {
                     },
                 );
 
-                let trigger = ContextMenu::new(open).into_element(
+                let trigger = ContextMenu::from_open(open).into_element(
                     cx,
                     |cx| {
                         cx.pressable(
@@ -6130,7 +6137,7 @@ mod tests {
                     },
                 );
 
-                let trigger = ContextMenu::new(open)
+                let trigger = ContextMenu::from_open(open)
                     .on_dismiss_request(on_dismiss_request)
                     .into_element(
                         cx,
@@ -6231,7 +6238,7 @@ mod tests {
                 );
 
                 let trigger =
-                    ContextMenu::new(open)
+                    ContextMenu::from_open(open)
                         .on_open_auto_focus(on_open_auto_focus.clone())
                         .on_close_auto_focus(on_close_auto_focus.clone())
                         .into_element(
@@ -6294,7 +6301,7 @@ mod tests {
             bounds,
             "context-menu-submenu-arrow-right",
             move |cx| {
-                vec![ContextMenu::new(open).into_element(
+                vec![ContextMenu::from_open(open).into_element(
                     cx,
                     |cx| {
                         cx.pressable(

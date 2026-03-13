@@ -54,7 +54,7 @@ struct ContextMenuOverlayChromeCase {
 }
 
 fn build_context_menu_copy(cx: &mut ElementContext<'_, App>, open: &Model<bool>) -> AnyElement {
-    fret_ui_shadcn::ContextMenu::new(open.clone()).into_element(
+    fret_ui_shadcn::ContextMenu::from_open(open.clone()).into_element(
         cx,
         |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
         |_cx| {
@@ -71,7 +71,7 @@ fn build_context_menu_copy_with_demo_widths(
 ) -> AnyElement {
     use fret_ui_shadcn::{ContextMenu, ContextMenuEntry, ContextMenuItem};
 
-    ContextMenu::new(open.clone())
+    ContextMenu::from_open(open.clone())
         .min_width(Px(208.0))
         .submenu_min_width(Px(176.0))
         .into_element(
@@ -87,7 +87,7 @@ fn build_context_menu_more_tools_submenu(
 ) -> AnyElement {
     use fret_ui_shadcn::{Button, ContextMenu, ContextMenuEntry, ContextMenuItem};
 
-    ContextMenu::new(open.clone())
+    ContextMenu::from_open(open.clone())
         .min_width(Px(208.0))
         .submenu_min_width(Px(176.0))
         .into_element(
