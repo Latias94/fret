@@ -132,15 +132,16 @@ Evidence anchors:
 - `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/pending.rs`
 - `docs/workstreams/headless-dnd-fearless-refactor-v1/MANUAL_FORWARDING_INVENTORY.md`
 
-### 5) Keyboard sensor implementation and continuous auto-scroll driver semantics remain follow-on work
+### 5) Keyboard sensor and continuous auto-scroll driver implementations remain follow-on work
 
 The current stack keeps auto-scroll pure/data-only in the headless crate and does not ship a
 keyboard sensor yet. That matches ADR scope. A design note now exists for keyboard ownership and
-focus semantics, but both implementation lanes remain follow-on work rather than fully closed
-outcomes.
+focus semantics, and a second design note now exists for continuous auto-scroll driver extraction.
+Both implementation lanes remain follow-on work rather than fully closed outcomes.
 
 Evidence anchors:
 
+- `docs/workstreams/headless-dnd-fearless-refactor-v1/AUTO_SCROLL_DRIVER_DESIGN_NOTE.md`
 - `docs/workstreams/headless-dnd-fearless-refactor-v1/KEYBOARD_SENSOR_DESIGN_NOTE.md`
 - `ecosystem/fret-dnd/src/scroll.rs`
 - `docs/adr/0157-headless-dnd-v1-contract-surface.md`
@@ -158,7 +159,8 @@ Evidence anchors:
    - likely candidates: node graph typed drop zones and workspace/docking target filtering
 4. Revisit a small monitor/event surface only after two consumers can demonstrate the same observer
    need, as documented in `MONITOR_SURFACE_DECISION.md`.
-5. Implement keyboard sensor work from the design note, not as opportunistic API widening.
+5. Implement keyboard sensor and any shared continuous auto-scroll driver from the design notes,
+   not as opportunistic API widening.
 
 ## Gates run for this audit checkpoint
 

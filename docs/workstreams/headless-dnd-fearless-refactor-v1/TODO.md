@@ -125,7 +125,16 @@ This file tracks the execution checklist for `DESIGN.md`.
     - `crates/fret-ui/src/focus_visible.rs`
     - `crates/fret-ui/src/tree/commands.rs`
     - `repo-ref/dnd-kit/packages/dom/src/core/sensors/keyboard/KeyboardSensor.ts`
-- [ ] Continuous auto-scroll driver semantics in the integration layer.
+- [x] Continuous auto-scroll driver semantics in the integration layer.
+  - Decision: document the target driver contract now, but defer shared extraction until at least
+    two consumers converge on the same `DndUpdate.autoscroll`-driven interface.
+  - Evidence anchors:
+    - `docs/workstreams/headless-dnd-fearless-refactor-v1/AUTO_SCROLL_DRIVER_DESIGN_NOTE.md`
+    - `ecosystem/fret-ui-kit/src/dnd/types.rs`
+    - `ecosystem/fret-workspace/src/tab_strip/kernel.rs`
+    - `ecosystem/fret-workspace/src/tab_strip/mod.rs`
+    - `ecosystem/fret-docking/src/dock/space.rs`
+    - `ecosystem/fret-docking/src/dock/tests/drag.rs`
 - [ ] Multi-rect droppables only if at least two consumers require them.
 - [ ] Sortable group semantics beyond the current minimal insertion helpers.
 

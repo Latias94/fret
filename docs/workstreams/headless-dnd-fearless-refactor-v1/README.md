@@ -25,6 +25,8 @@ This directory contains:
   metadata
 - `MONITOR_SURFACE_DECISION.md`: v1 decision note for shared monitor/event-surface extraction
 - `KEYBOARD_SENSOR_DESIGN_NOTE.md`: follow-on ownership and behavior note for keyboard-driven DnD
+- `AUTO_SCROLL_DRIVER_DESIGN_NOTE.md`: follow-on ownership and extraction note for continuous
+  drag auto-scroll drivers
 
 Primary contract references:
 
