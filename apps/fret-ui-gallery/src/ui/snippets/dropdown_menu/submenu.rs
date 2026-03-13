@@ -21,14 +21,26 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 [shadcn::DropdownMenuGroup::new([
                     shadcn::DropdownMenuItem::new("Team").into(),
                     shadcn::DropdownMenuSub::new(
-                        shadcn::DropdownMenuSubTrigger::new("Invite users"),
+                        shadcn::DropdownMenuSubTrigger::new("Invite users").refine(|item| {
+                            item.test_id("ui-gallery-dropdown-menu-submenu-invite-users")
+                        }),
                         shadcn::DropdownMenuSubContent::new([
-                            shadcn::DropdownMenuItem::new("Email").into(),
+                            shadcn::DropdownMenuItem::new("Email")
+                                .test_id("ui-gallery-dropdown-menu-submenu-email")
+                                .into(),
                             shadcn::DropdownMenuItem::new("Message").into(),
                             shadcn::DropdownMenuSub::new(
-                                shadcn::DropdownMenuSubTrigger::new("More options"),
+                                shadcn::DropdownMenuSubTrigger::new("More options").refine(
+                                    |item| {
+                                        item.test_id(
+                                            "ui-gallery-dropdown-menu-submenu-more-options",
+                                        )
+                                    },
+                                ),
                                 shadcn::DropdownMenuSubContent::new([
-                                    shadcn::DropdownMenuItem::new("Calendly").into(),
+                                    shadcn::DropdownMenuItem::new("Calendly")
+                                        .test_id("ui-gallery-dropdown-menu-submenu-calendly")
+                                        .into(),
                                     shadcn::DropdownMenuItem::new("Slack").into(),
                                     shadcn::DropdownMenuSeparator::new().into(),
                                     shadcn::DropdownMenuItem::new("Webhook").into(),

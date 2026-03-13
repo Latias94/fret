@@ -5162,7 +5162,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "ui-gallery"
+        "ui-gallery",
+        "ui-gallery-shadcn-conformance"
       ],
       "tags": [
         "dropdown_menu",
@@ -5181,7 +5182,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "ui-gallery"
+        "ui-gallery",
+        "ui-gallery-shadcn-conformance"
       ],
       "tags": [
         "dropdown_menu",
@@ -5216,6 +5218,19 @@
       ]
     },
     {
+      "id": "ui-gallery-dropdown-menu-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-docs-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-dropdown-menu-item-chrome-fill",
       "path": "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-item-chrome-fill.json",
       "required_capabilities": [
@@ -5241,6 +5256,26 @@
         "rtl",
         "screenshots",
         "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-dropdown-menu-submenu-open-smoke",
+      "path": "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-submenu-open-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "dropdown_menu",
+        "mouse",
+        "regression_pack",
+        "shadcn",
+        "submenu",
         "ui_gallery"
       ],
       "target_hints": []

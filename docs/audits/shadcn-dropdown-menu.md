@@ -139,8 +139,14 @@ Notes on API mapping:
 - Interaction test: `dropdown_menu_disabled_blocks_arrow_key_open_from_trigger`
 - Interaction test: `dropdown_menu_disabled_hides_content_even_when_open_model_true`
   (ensures `pos_in_set`/`set_size` exclude separators).
+- Diag docs/demo/basic/submenu gates:
+  - `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-docs-smoke.json`
+  - `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-demo-click-profile-last-action.json`
+  - `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-basic-typeahead-billing.json`
+  - `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-submenu-open-smoke.json`
 - Interaction test: `dropdown_menu_submenu_opens_on_hover_and_closes_on_leave`
 - Keyboard test: `dropdown_menu_submenu_opens_on_arrow_right_without_pointer_move`
+- Keyboard test: `dropdown_menu_nested_submenu_opens_on_arrow_right_and_keeps_test_ids`
 - Direction test: `dropdown_menu_align_start_respects_direction_provider`
 - Web placement gate (root): `web_vs_fret_dropdown_menu_demo_overlay_placement_matches`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.open.json`).
