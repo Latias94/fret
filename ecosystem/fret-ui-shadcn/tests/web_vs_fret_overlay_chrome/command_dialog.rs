@@ -3,6 +3,25 @@ use super::*;
 #[path = "command_dialog/fixtures.rs"]
 mod fixtures;
 
+#[track_caller]
+fn build_shadcn_command_dialog_page(
+    cx: &mut ElementContext<'_, App>,
+    open: &Model<bool>,
+) -> AnyElement {
+    use fret_ui_shadcn::{Button, CommandDialog, CommandItem};
+
+    let query = cx.local_model_keyed("query", String::new);
+
+    let items = vec![
+        CommandItem::new("Calendar"),
+        CommandItem::new("Search Emoji"),
+        CommandItem::new("Calculator"),
+    ];
+
+    CommandDialog::new(open.clone(), query, items)
+        .into_element(cx, |cx| Button::new("Open").into_element(cx))
+}
+
 fn assert_command_dialog_focused_item_chrome_matches_web(web_theme_name: &str) {
     assert_command_dialog_focused_item_chrome_matches_web_named(
         "command-dialog.focus-first",
@@ -14,8 +33,6 @@ fn assert_command_dialog_focused_item_chrome_matches_web_named(
     web_name: &str,
     web_theme_name: &str,
 ) {
-    use fret_ui_shadcn::{Button, CommandDialog, CommandItem};
-
     let web = read_web_golden_open(web_name);
     let theme = web_theme_named(&web, web_theme_name);
     let expected = web_find_highlighted_listbox_option_chrome(theme, "command-item");
@@ -49,32 +66,7 @@ fn assert_command_dialog_focused_item_chrome_matches_web_named(
         bounds,
         FrameId(1),
         false,
-        |cx| {
-            #[derive(Default)]
-            struct Models {
-                query: Option<Model<String>>,
-            }
-
-            let existing = cx.with_state(Models::default, |st| st.query.clone());
-            let query = if let Some(existing) = existing {
-                existing
-            } else {
-                let model = cx.app.models_mut().insert(String::new());
-                cx.with_state(Models::default, |st| st.query = Some(model.clone()));
-                model
-            };
-
-            let items = vec![
-                CommandItem::new("Calendar"),
-                CommandItem::new("Search Emoji"),
-                CommandItem::new("Calculator"),
-            ];
-
-            vec![
-                CommandDialog::new(open.clone(), query, items)
-                    .into_element(cx, |cx| Button::new("Open").into_element(cx)),
-            ]
-        },
+        |cx| vec![build_shadcn_command_dialog_page(cx, &open)],
     );
 
     let _ = app.models_mut().update(&open, |v| *v = true);
@@ -89,32 +81,7 @@ fn assert_command_dialog_focused_item_chrome_matches_web_named(
             bounds,
             FrameId(2 + tick),
             tick + 1 == settle_frames,
-            |cx| {
-                #[derive(Default)]
-                struct Models {
-                    query: Option<Model<String>>,
-                }
-
-                let existing = cx.with_state(Models::default, |st| st.query.clone());
-                let query = if let Some(existing) = existing {
-                    existing
-                } else {
-                    let model = cx.app.models_mut().insert(String::new());
-                    cx.with_state(Models::default, |st| st.query = Some(model.clone()));
-                    model
-                };
-
-                let items = vec![
-                    CommandItem::new("Calendar"),
-                    CommandItem::new("Search Emoji"),
-                    CommandItem::new("Calculator"),
-                ];
-
-                vec![
-                    CommandDialog::new(open.clone(), query, items)
-                        .into_element(cx, |cx| Button::new("Open").into_element(cx)),
-                ]
-            },
+            |cx| vec![build_shadcn_command_dialog_page(cx, &open)],
         );
     }
 
@@ -134,32 +101,7 @@ fn assert_command_dialog_focused_item_chrome_matches_web_named(
             bounds,
             FrameId(2 + settle_frames),
             true,
-            |cx| {
-                #[derive(Default)]
-                struct Models {
-                    query: Option<Model<String>>,
-                }
-
-                let existing = cx.with_state(Models::default, |st| st.query.clone());
-                let query = if let Some(existing) = existing {
-                    existing
-                } else {
-                    let model = cx.app.models_mut().insert(String::new());
-                    cx.with_state(Models::default, |st| st.query = Some(model.clone()));
-                    model
-                };
-
-                let items = vec![
-                    CommandItem::new("Calendar"),
-                    CommandItem::new("Search Emoji"),
-                    CommandItem::new("Calculator"),
-                ];
-
-                vec![
-                    CommandDialog::new(open.clone(), query, items)
-                        .into_element(cx, |cx| Button::new("Open").into_element(cx)),
-                ]
-            },
+            |cx| vec![build_shadcn_command_dialog_page(cx, &open)],
         );
     }
 
@@ -172,32 +114,7 @@ fn assert_command_dialog_focused_item_chrome_matches_web_named(
         bounds,
         FrameId(3 + settle_frames),
         true,
-        |cx| {
-            #[derive(Default)]
-            struct Models {
-                query: Option<Model<String>>,
-            }
-
-            let existing = cx.with_state(Models::default, |st| st.query.clone());
-            let query = if let Some(existing) = existing {
-                existing
-            } else {
-                let model = cx.app.models_mut().insert(String::new());
-                cx.with_state(Models::default, |st| st.query = Some(model.clone()));
-                model
-            };
-
-            let items = vec![
-                CommandItem::new("Calendar"),
-                CommandItem::new("Search Emoji"),
-                CommandItem::new("Calculator"),
-            ];
-
-            vec![
-                CommandDialog::new(open.clone(), query, items)
-                    .into_element(cx, |cx| Button::new("Open").into_element(cx)),
-            ]
-        },
+        |cx| vec![build_shadcn_command_dialog_page(cx, &open)],
     );
 
     let (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
@@ -240,34 +157,4 @@ fn assert_command_dialog_focused_item_chrome_matches_web_named(
         expected.fg,
         0.03,
     );
-}
-
-fn build_shadcn_command_dialog_page(
-    cx: &mut ElementContext<'_, App>,
-    open: &Model<bool>,
-) -> AnyElement {
-    use fret_ui_shadcn::{Button, CommandDialog, CommandItem};
-
-    #[derive(Default)]
-    struct Models {
-        query: Option<Model<String>>,
-    }
-
-    let existing = cx.with_state(Models::default, |st| st.query.clone());
-    let query = if let Some(existing) = existing {
-        existing
-    } else {
-        let model = cx.app.models_mut().insert(String::new());
-        cx.with_state(Models::default, |st| st.query = Some(model.clone()));
-        model
-    };
-
-    let items = vec![
-        CommandItem::new("Calendar"),
-        CommandItem::new("Search Emoji"),
-        CommandItem::new("Calculator"),
-    ];
-
-    CommandDialog::new(open.clone(), query, items)
-        .into_element(cx, |cx| Button::new("Open").into_element(cx))
 }

@@ -17,44 +17,14 @@ struct DropdownMenuCheckboxesCase {
     recipe: DropdownMenuCheckboxesRecipe,
 }
 
+#[track_caller]
 fn build_dropdown_menu_checkboxes_demo_overlay(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    #[derive(Default)]
-    struct Models {
-        checked_status_bar: Option<Model<bool>>,
-        checked_activity_bar: Option<Model<bool>>,
-        checked_panel: Option<Model<bool>>,
-    }
-
-    let existing = cx.with_state(Models::default, |st| {
-        match (
-            st.checked_status_bar.as_ref(),
-            st.checked_activity_bar.as_ref(),
-            st.checked_panel.as_ref(),
-        ) {
-            (Some(a), Some(b), Some(c)) => Some((a.clone(), b.clone(), c.clone())),
-            _ => None,
-        }
-    });
-
-    let (checked_status_bar, checked_activity_bar, checked_panel) = if let Some(existing) = existing
-    {
-        existing
-    } else {
-        let checked_status_bar = cx.app.models_mut().insert(true);
-        let checked_activity_bar = cx.app.models_mut().insert(false);
-        let checked_panel = cx.app.models_mut().insert(false);
-
-        cx.with_state(Models::default, |st| {
-            st.checked_status_bar = Some(checked_status_bar.clone());
-            st.checked_activity_bar = Some(checked_activity_bar.clone());
-            st.checked_panel = Some(checked_panel.clone());
-        });
-
-        (checked_status_bar, checked_activity_bar, checked_panel)
-    };
+    let checked_status_bar = cx.local_model_keyed("checked_status_bar", || true);
+    let checked_activity_bar = cx.local_model_keyed("checked_activity_bar", || false);
+    let checked_panel = cx.local_model_keyed("checked_panel", || false);
 
     build_dropdown_menu_checkboxes_demo(
         cx,

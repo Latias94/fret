@@ -121,45 +121,16 @@ fn web_vs_fret_menubar_root_shadow_matches_web_dark() {
     assert_shadow_insets_match("menubar-demo", "dark", &expected, &candidates);
 }
 
+#[track_caller]
 fn build_shadcn_menubar_demo(cx: &mut ElementContext<'_, App>) -> AnyElement {
     use fret_ui_shadcn::{
         Menubar, MenubarCheckboxItem, MenubarEntry, MenubarItem, MenubarMenu, MenubarRadioGroup,
         MenubarRadioItemSpec, MenubarShortcut,
     };
 
-    #[derive(Default)]
-    struct Models {
-        view_bookmarks_bar: Option<Model<bool>>,
-        view_full_urls: Option<Model<bool>>,
-        profile_value: Option<Model<Option<Arc<str>>>>,
-    }
-
-    let existing = cx.with_state(Models::default, |st| {
-        match (
-            st.view_bookmarks_bar.as_ref(),
-            st.view_full_urls.as_ref(),
-            st.profile_value.as_ref(),
-        ) {
-            (Some(a), Some(b), Some(c)) => Some((a.clone(), b.clone(), c.clone())),
-            _ => None,
-        }
-    });
-
-    let (view_bookmarks_bar, view_full_urls, profile_value) = if let Some(existing) = existing {
-        existing
-    } else {
-        let view_bookmarks_bar = cx.app.models_mut().insert(false);
-        let view_full_urls = cx.app.models_mut().insert(true);
-        let profile_value = cx.app.models_mut().insert(Some(Arc::from("benoit")));
-
-        cx.with_state(Models::default, |st| {
-            st.view_bookmarks_bar = Some(view_bookmarks_bar.clone());
-            st.view_full_urls = Some(view_full_urls.clone());
-            st.profile_value = Some(profile_value.clone());
-        });
-
-        (view_bookmarks_bar, view_full_urls, profile_value)
-    };
+    let view_bookmarks_bar = cx.local_model_keyed("view_bookmarks_bar", || false);
+    let view_full_urls = cx.local_model_keyed("view_full_urls", || true);
+    let profile_value = cx.local_model_keyed("profile_value", || Some(Arc::from("benoit")));
 
     Menubar::new(vec![
         MenubarMenu::new("File").entries(vec![

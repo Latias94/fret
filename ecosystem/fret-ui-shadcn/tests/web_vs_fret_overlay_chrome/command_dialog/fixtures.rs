@@ -45,30 +45,7 @@ fn build_command_dialog_panel_chrome(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{Button, CommandDialog, CommandItem};
-
-    #[derive(Default)]
-    struct Models {
-        query: Option<Model<String>>,
-    }
-
-    let existing = cx.with_state(Models::default, |st| st.query.clone());
-    let query = if let Some(existing) = existing {
-        existing
-    } else {
-        let model = cx.app.models_mut().insert(String::new());
-        cx.with_state(Models::default, |st| st.query = Some(model.clone()));
-        model
-    };
-
-    let items = vec![
-        CommandItem::new("Calendar"),
-        CommandItem::new("Search Emoji"),
-        CommandItem::new("Calculator"),
-    ];
-
-    CommandDialog::new(open.clone(), query, items)
-        .into_element(cx, |cx| Button::new("Open").into_element(cx))
+    build_shadcn_command_dialog_page(cx, open)
 }
 
 #[test]
