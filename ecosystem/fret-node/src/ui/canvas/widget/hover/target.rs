@@ -11,4 +11,5 @@ pub(in super::super) fn hover_anchor_target_edge(
 }
 
 #[cfg(test)]
+#[path = "target_tests.rs"]
 mod tests;
