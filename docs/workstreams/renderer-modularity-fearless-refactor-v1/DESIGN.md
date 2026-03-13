@@ -247,6 +247,10 @@ For `Renderer` state-shell tightening, the same principle applies:
 - frame scratch state is the matching per-frame upload/build seam:
   viewport-uniform scratch, render-space scratch, and plan-quad scratch should move behind one
   owner so render-scene upload helpers stop depending on loose renderer vectors.
+- geometry upload state is the matching persistent upload/binding seam:
+  quad instance/path paint/text paint rings plus viewport/text/path vertex upload rings and their
+  bind-group layouts should move behind one owner so pipeline creation and render-scene uploads
+  stop depending on six loose `Renderer` fields.
 - render-text dump state is the matching diagnostics/export seam for text debugging:
   dump collection scratch and serialization scratch should move behind one owner so render-scene
   execution keeps only a thin bridge to `TextSystem`.

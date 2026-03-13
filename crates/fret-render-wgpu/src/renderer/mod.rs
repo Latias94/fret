@@ -31,6 +31,7 @@ mod diagnostics;
 mod frame_scratch;
 mod frame_targets;
 mod fullscreen;
+mod geometry_upload;
 mod intermediate_pool;
 mod material_effects;
 mod pipelines;
@@ -56,6 +57,7 @@ use clip_path_mask_cache::*;
 use diagnostics::*;
 use frame_scratch::*;
 use fullscreen::*;
+use geometry_upload::*;
 use gpu_effect_params::GpuEffectParams;
 use gpu_globals::GpuGlobals;
 use gpu_pipelines::GpuPipelines;
@@ -102,20 +104,9 @@ pub struct Renderer {
     textures: GpuTextures,
     effect_params: GpuEffectParams,
     pipelines: GpuPipelines,
+    geometry_upload_state: GeometryUploadState,
 
     custom_effect_v3_pyramid: v3_pyramid::CustomEffectV3PyramidState,
-
-    quad_instances: buffers::StorageRingBuffer<QuadInstance>,
-
-    path_paints: buffers::StorageRingBuffer<PaintGpu>,
-
-    text_paints: buffers::StorageRingBuffer<PaintGpu>,
-
-    viewport_vertices: buffers::RingBuffer<ViewportVertex>,
-
-    text_vertices: buffers::RingBuffer<TextVertex>,
-
-    path_vertices: buffers::RingBuffer<PathVertex>,
 
     text_system: TextSystem,
 

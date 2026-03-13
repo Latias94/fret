@@ -40,7 +40,7 @@ impl Renderer {
                 label: Some("fret quad pipeline layout"),
                 bind_group_layouts: &[
                     &self.globals.uniform_bind_group_layout,
-                    self.quad_instances.layout(),
+                    self.geometry_upload_state.quad_instances_layout(),
                 ],
                 immediate_size: 0,
             });

@@ -258,6 +258,10 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/render_scene_config.rs`, and
   `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns render-plan strict-clear config,
   path MSAA requested samples, or debug postprocess knobs directly.
+- Renderer geometry/upload owner state now also lives under
+  `crates/fret-render-wgpu/src/renderer/geometry_upload.rs`, and
+  `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns quad instance/path paint/text
+  paint ring buffers or viewport/text/path vertex upload rings directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

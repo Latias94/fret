@@ -471,6 +471,20 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu clamps_debug_knobs_and_rejects_zero_sized_scissors`
   - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
   - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
+- The fourteenth renderer owner-state split has landed:
+  - geometry/upload state now lives under
+    `crates/fret-render-wgpu/src/renderer/geometry_upload.rs`
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns quad instance/path paint/text
+    paint ring buffers or viewport/text/path vertex upload rings directly
+  - `resources.rs`, `render_scene/uploads.rs`, and `pipelines/{quad,path,text}.rs` now query that
+    owner instead of building or reading loose renderer upload state directly
+- Renderer geometry-upload split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
+  - `cargo nextest run -p fret-render-wgpu gpu_text_linear_gradient_paint_varies_across_x`
+  - `cargo nextest run -p fret-render-wgpu path_material_paint_renders_and_is_not_degraded`
+  - `cargo nextest run -p fret-render-wgpu gpu_linear_gradient_smoke_conformance`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

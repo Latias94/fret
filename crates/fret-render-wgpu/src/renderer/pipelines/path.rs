@@ -34,7 +34,7 @@ impl Renderer {
             label: Some("fret path pipeline layout"),
             bind_group_layouts: &[
                 &self.globals.uniform_bind_group_layout,
-                self.path_paints.layout(),
+                self.geometry_upload_state.path_paints_layout(),
             ],
             immediate_size: 0,
         });
@@ -134,7 +134,7 @@ impl Renderer {
             label: Some("fret path msaa pipeline layout"),
             bind_group_layouts: &[
                 &self.globals.uniform_bind_group_layout,
-                self.path_paints.layout(),
+                self.geometry_upload_state.path_paints_layout(),
             ],
             immediate_size: 0,
         });
