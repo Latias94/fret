@@ -54,7 +54,7 @@ fn fret_dropdown_menu_tracks_trigger_when_underlay_scrolls() {
                         ..Default::default()
                     },
                     move |cx| {
-                        let dropdown = DropdownMenu::new(open.clone());
+                        let dropdown = DropdownMenu::from_open(open.clone());
 
                         vec![dropdown.into_element(
                             cx,

@@ -20,13 +20,13 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         )])
         .into_element(cx);
 
-    let dropdown = shadcn::DropdownMenu::new(open)
+    let dropdown = shadcn::DropdownMenu::from_open(open)
         .align(shadcn::DropdownMenuAlign::End)
         .side_offset(Px(8.0))
         .align_offset(Px(-4.0))
-        .into_element_parts(
+        .build_parts(
             cx,
-            |_cx| shadcn::DropdownMenuTrigger::new(trigger),
+            shadcn::DropdownMenuTrigger::new(trigger),
             shadcn::DropdownMenuContent::new(),
             |_cx| {
                 vec![shadcn::DropdownMenuEntry::Group(

@@ -7,14 +7,11 @@ pub(in crate::ui) fn preview_menus(
     context_menu_open: Model<bool>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
-    let dropdown = shadcn::DropdownMenu::new(dropdown_open.clone()).into_element(
+    let dropdown = shadcn::DropdownMenu::from_open(dropdown_open.clone()).build(
         cx,
-        |cx| {
-            shadcn::Button::new("DropdownMenu")
-                .variant(shadcn::ButtonVariant::Outline)
-                .test_id("ui-gallery-menus-dropdown-trigger")
-                .into_element(cx)
-        },
+        shadcn::Button::new("DropdownMenu")
+            .variant(shadcn::ButtonVariant::Outline)
+            .test_id("ui-gallery-menus-dropdown-trigger"),
         |_cx| {
             vec![
                 shadcn::DropdownMenuEntry::Item(

@@ -24,7 +24,7 @@ fn build_breadcrumb_demo_ellipsis(
     use fret_ui_shadcn::breadcrumb::primitives as bc;
     use fret_ui_shadcn::{DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem};
 
-    let dropdown = DropdownMenu::new(open.clone()).align(DropdownMenuAlign::Start);
+    let dropdown = DropdownMenu::from_open(open.clone()).align(DropdownMenuAlign::Start);
 
     bc::Breadcrumb::new().into_element(cx, |cx| {
         vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
@@ -78,7 +78,7 @@ fn build_breadcrumb_dropdown_button(
     use fret_ui_shadcn::breadcrumb::primitives as bc;
     use fret_ui_shadcn::{DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem};
 
-    let dropdown = DropdownMenu::new(open.clone()).align(DropdownMenuAlign::Start);
+    let dropdown = DropdownMenu::from_open(open.clone()).align(DropdownMenuAlign::Start);
 
     bc::Breadcrumb::new().into_element(cx, |cx| {
         vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
@@ -166,7 +166,7 @@ fn build_breadcrumb_responsive_menu(
     use fret_ui_shadcn::breadcrumb::primitives as bc;
     use fret_ui_shadcn::{DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem};
 
-    let dropdown = DropdownMenu::new(open.clone()).align(DropdownMenuAlign::Start);
+    let dropdown = DropdownMenu::from_open(open.clone()).align(DropdownMenuAlign::Start);
 
     bc::Breadcrumb::new().into_element(cx, |cx| {
         vec![bc::BreadcrumbList::new().into_element(cx, |cx| {

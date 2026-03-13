@@ -184,30 +184,25 @@ impl OpenIn {
         let trigger = self.trigger;
         let controller_for_trigger = controller.clone();
         let controller_for_entries = controller.clone();
+        let trigger_element = cx.provide(controller_for_trigger.clone(), |cx| {
+            trigger.into_element_with_open(cx, open.clone())
+        });
 
-        DropdownMenu::new(open.clone())
+        DropdownMenu::from_open(open.clone())
             .modal(modal)
             .align(align)
             .side(side)
             .side_offset(side_offset)
             .min_width(min_width)
-            .into_element(
-                cx,
-                move |cx| {
-                    cx.provide(controller_for_trigger.clone(), |cx| {
-                        trigger.into_element_with_open(cx, open.clone())
-                    })
-                },
-                move |cx| {
-                    cx.provide(controller_for_entries.clone(), |cx| {
-                        let out = entries(cx);
-                        if out.is_empty() {
-                            return vec![OpenInChatGpt::new().into_entry(cx)];
-                        }
-                        out
-                    })
-                },
-            )
+            .build(cx, trigger_element, move |cx| {
+                cx.provide(controller_for_entries.clone(), |cx| {
+                    let out = entries(cx);
+                    if out.is_empty() {
+                        return vec![OpenInChatGpt::new().into_entry(cx)];
+                    }
+                    out
+                })
+            })
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {

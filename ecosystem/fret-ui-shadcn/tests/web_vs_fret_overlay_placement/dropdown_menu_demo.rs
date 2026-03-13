@@ -49,7 +49,7 @@ fn web_vs_fret_dropdown_menu_demo_cases_match_web_fixtures() {
                             DropdownMenuItem, DropdownMenuLabel, DropdownMenuShortcut,
                         };
 
-                        DropdownMenu::new(open.clone())
+                        DropdownMenu::from_open(open.clone())
                             // new-york-v4 dropdown-menu-demo: `DropdownMenuContent className="w-56"`.
                             .min_width(Px(224.0))
                             .into_element(

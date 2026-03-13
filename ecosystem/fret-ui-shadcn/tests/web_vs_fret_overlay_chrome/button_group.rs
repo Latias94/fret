@@ -30,7 +30,7 @@ fn build_shadcn_button_group_demo_dropdown_menu(
         )
     }
 
-    DropdownMenu::new(open.clone())
+    DropdownMenu::from_open(open.clone())
         .align(DropdownMenuAlign::End)
         // new-york-v4 button-group-demo: `DropdownMenuContent className="w-52"`.
         .min_width(Px(208.0))

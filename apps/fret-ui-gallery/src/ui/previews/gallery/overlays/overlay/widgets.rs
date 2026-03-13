@@ -81,16 +81,13 @@ fn overlay_reset(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement {
 fn dropdown(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement {
     let dropdown_open = models.dropdown_open.clone();
 
-    shadcn::DropdownMenu::new(dropdown_open.clone())
+    shadcn::DropdownMenu::from_open(dropdown_open.clone())
         .modal(false)
-        .into_element(
+        .build(
             cx,
-            |cx| {
-                shadcn::Button::new("DropdownMenu")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .test_id("ui-gallery-dropdown-trigger")
-                    .into_element(cx)
-            },
+            shadcn::Button::new("DropdownMenu")
+                .variant(shadcn::ButtonVariant::Outline)
+                .test_id("ui-gallery-dropdown-trigger"),
             |_cx| {
                 vec![
                     shadcn::DropdownMenuEntry::Item(

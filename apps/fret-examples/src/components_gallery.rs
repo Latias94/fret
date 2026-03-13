@@ -1109,7 +1109,7 @@ impl ComponentsGalleryDriver {
                                                 };
 
                                                 let dropdown =
-                                                    shadcn::DropdownMenu::new(dropdown_open.clone())
+                                                    shadcn::DropdownMenu::from_open(dropdown_open.clone())
                                                     .into_element(
                                                         cx,
                                                         |cx| {

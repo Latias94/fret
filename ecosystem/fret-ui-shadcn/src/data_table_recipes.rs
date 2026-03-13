@@ -913,20 +913,17 @@ impl<TData> DataTableToolbar<TData> {
 
                 let columns_button_label = self.columns_button_label.clone();
                 let cols_menu = self.show_columns_menu.then(|| {
-                    DropdownMenu::new(columns_open.clone())
+                    DropdownMenu::from_open(columns_open.clone())
                         .align(menu_align_inline_end)
-                        .into_element(
+                        .build(
                             cx,
-                            move |cx| {
-                                Button::new(columns_button_label.clone())
-                                    .variant(ButtonVariant::Outline)
-                                    .size(ButtonSize::Sm)
-                                    // Upstream shadcn: "Columns <ChevronDown />"
-                                    .trailing_icon(fret_icons::IconId::new_static(
-                                        "lucide.chevron-down",
-                                    ))
-                                    .into_element(cx)
-                            },
+                            Button::new(columns_button_label.clone())
+                                .variant(ButtonVariant::Outline)
+                                .size(ButtonSize::Sm)
+                                // Upstream shadcn: "Columns <ChevronDown />"
+                                .trailing_icon(fret_icons::IconId::new_static(
+                                    "lucide.chevron-down",
+                                )),
                             move |_cx| {
                                 let mut entries = Vec::new();
                                 entries.push(DropdownMenuEntry::Label(
@@ -975,16 +972,13 @@ impl<TData> DataTableToolbar<TData> {
 
                 let pinning_button_label = self.pinning_button_label.clone();
                 let pin_menu = self.show_pinning_menu.then(|| {
-                    DropdownMenu::new(pinning_open.clone())
+                    DropdownMenu::from_open(pinning_open.clone())
                         .align(menu_align_inline_end)
-                        .into_element(
+                        .build(
                             cx,
-                            move |cx| {
-                                Button::new(pinning_button_label.clone())
-                                    .variant(ButtonVariant::Outline)
-                                    .size(ButtonSize::Sm)
-                                    .into_element(cx)
-                            },
+                            Button::new(pinning_button_label.clone())
+                                .variant(ButtonVariant::Outline)
+                                .size(ButtonSize::Sm),
                             move |_cx| pin_items,
                         )
                 });
@@ -1688,15 +1682,12 @@ impl DataTablePagination {
         };
 
         let page_sizes = Arc::clone(&self.page_sizes);
-        let page_size_menu = DropdownMenu::new(page_size_open).into_element(
+        let page_size_menu = DropdownMenu::from_open(page_size_open).build(
             cx,
-            |cx| {
-                Button::new(Arc::from(format!("Rows per page: {current_size}")))
-                    .variant(ButtonVariant::Outline)
-                    .size(ButtonSize::Sm)
-                    .label_tabular_nums()
-                    .into_element(cx)
-            },
+            Button::new(Arc::from(format!("Rows per page: {current_size}")))
+                .variant(ButtonVariant::Outline)
+                .size(ButtonSize::Sm)
+                .label_tabular_nums(),
             move |_cx| {
                 vec![DropdownMenuEntry::RadioGroup({
                     let mut group = DropdownMenuRadioGroup::new(page_size_value);

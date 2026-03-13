@@ -455,7 +455,7 @@ fn web_vs_fret_layout_breadcrumb_dropdown_trigger_geometry() {
             use fret_ui_shadcn::breadcrumb::primitives as bc;
 
             let open: Model<bool> = cx.app.models_mut().insert(false);
-            let dropdown = fret_ui_shadcn::DropdownMenu::new(open)
+            let dropdown = fret_ui_shadcn::DropdownMenu::from_open(open)
                 .modal(false)
                 .align(fret_ui_shadcn::DropdownMenuAlign::Start);
 
@@ -657,7 +657,7 @@ fn web_vs_fret_layout_breadcrumb_demo_toggle_trigger_geometry() {
             use fret_ui_shadcn::breadcrumb::primitives as bc;
 
             let open: Model<bool> = cx.app.models_mut().insert(false);
-            let dropdown = fret_ui_shadcn::DropdownMenu::new(open)
+            let dropdown = fret_ui_shadcn::DropdownMenu::from_open(open)
                 .modal(false)
                 .align(fret_ui_shadcn::DropdownMenuAlign::Start);
 

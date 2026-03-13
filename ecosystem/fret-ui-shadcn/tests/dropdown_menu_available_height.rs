@@ -120,7 +120,7 @@ fn render_frame(
                 |_cx, _st| Vec::new(),
             );
 
-            let dropdown = DropdownMenu::new(open)
+            let dropdown = DropdownMenu::from_open(open)
                 .side(DropdownMenuSide::Top)
                 .window_margin(Px(0.0))
                 .side_offset(Px(4.0))

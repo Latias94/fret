@@ -94,7 +94,7 @@ fn dropdown_menu_arrow_down_enter_activates_item_and_closes() {
                 });
             });
 
-            vec![fret_ui_shadcn::DropdownMenu::new(open).into_element(
+            vec![fret_ui_shadcn::DropdownMenu::from_open(open).into_element(
                 cx,
                 |cx| {
                     fret_ui_shadcn::Button::new("Open")

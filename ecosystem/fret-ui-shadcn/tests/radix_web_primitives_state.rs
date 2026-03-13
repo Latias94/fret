@@ -797,7 +797,7 @@ fn radix_web_dropdown_menu_open_navigate_select_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::DropdownMenu::new(open.clone()).into_element(
+        fret_ui_shadcn::DropdownMenu::from_open(open.clone()).into_element(
             cx,
             |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
             |_cx| {
@@ -2334,7 +2334,7 @@ fn radix_web_dropdown_menu_submenu_hover_select_matches_fret() {
     let mut services = FakeServices;
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::DropdownMenu::new(open.clone()).into_element(
+        fret_ui_shadcn::DropdownMenu::from_open(open.clone()).into_element(
             cx,
             |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
             |_cx| {
@@ -3337,7 +3337,7 @@ fn radix_web_dropdown_menu_submenu_grace_corridor_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::DropdownMenu::new(open.clone()).into_element(
+        fret_ui_shadcn::DropdownMenu::from_open(open.clone()).into_element(
             cx,
             |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
             |_cx| {
@@ -3558,7 +3558,7 @@ fn radix_web_dropdown_menu_submenu_unsafe_leave_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::DropdownMenu::new(open.clone()).into_element(
+        fret_ui_shadcn::DropdownMenu::from_open(open.clone()).into_element(
             cx,
             |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
             |_cx| {
@@ -3772,7 +3772,7 @@ fn radix_web_dropdown_menu_submenu_keyboard_open_close_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::DropdownMenu::new(open.clone()).into_element(
+        fret_ui_shadcn::DropdownMenu::from_open(open.clone()).into_element(
             cx,
             |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
             |_cx| {
@@ -6154,7 +6154,7 @@ fn radix_web_dropdown_menu_submenu_arrowleft_escape_close_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::DropdownMenu::new(open.clone()).into_element(
+        fret_ui_shadcn::DropdownMenu::from_open(open.clone()).into_element(
             cx,
             |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
             |_cx| {
@@ -6759,7 +6759,7 @@ fn radix_web_dropdown_menu_outside_click_close_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::DropdownMenu::new(open.clone()).into_element(
+        fret_ui_shadcn::DropdownMenu::from_open(open.clone()).into_element(
             cx,
             |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
             |_cx| {
@@ -6938,7 +6938,7 @@ fn radix_web_dropdown_menu_submenu_outside_click_close_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::DropdownMenu::new(open.clone()).into_element(
+        fret_ui_shadcn::DropdownMenu::from_open(open.clone()).into_element(
             cx,
             |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
             |_cx| {

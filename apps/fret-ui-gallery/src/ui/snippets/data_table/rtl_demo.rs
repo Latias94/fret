@@ -309,12 +309,12 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                             .into_element(cx);
 
                         let payment_id = row.id.clone();
-                        shadcn::DropdownMenu::new(open)
+                        shadcn::DropdownMenu::from_open(open)
                             .align(shadcn::DropdownMenuAlign::End)
                             .side(shadcn::DropdownMenuSide::Bottom)
-                            .into_element(
+                            .build(
                                 cx,
-                                move |_cx| trigger,
+                                trigger,
                                 move |_cx| {
                                     vec![
                                         shadcn::DropdownMenuEntry::Label(

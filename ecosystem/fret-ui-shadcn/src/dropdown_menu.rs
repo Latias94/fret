@@ -5272,7 +5272,7 @@ mod tests {
                             vec![cx.container(ContainerProps::default(), |_cx| Vec::new())];
                         (props, children)
                     }));
-                let menu = DropdownMenu::new(open.clone()).build_parts(
+                let menu = DropdownMenu::from_open(open.clone()).build_parts(
                     cx,
                     trigger,
                     DropdownMenuContent::new(),
@@ -5377,7 +5377,7 @@ mod tests {
         let open = app.models_mut().insert(false);
 
         let content = DropdownMenuPortal::new(DropdownMenuContent::new().side_offset(Px(9.0)));
-        let menu = DropdownMenuContent::from(content).apply_to(DropdownMenu::new(open));
+        let menu = DropdownMenuContent::from(content).apply_to(DropdownMenu::from_open(open));
 
         assert_eq!(menu.side_offset, Px(9.0));
     }
@@ -5704,7 +5704,7 @@ mod tests {
             bounds,
             "dropdown-menu",
             move |cx| {
-                vec![DropdownMenu::new(open).into_element(
+                vec![DropdownMenu::from_open(open).into_element(
                     cx,
                     |cx| {
                         cx.container(
@@ -6097,7 +6097,7 @@ mod tests {
             "dropdown-menu",
             move |cx| {
                 let submenu_models_out = submenu_models_out.clone();
-                vec![DropdownMenu::new(open.clone()).into_element(
+                vec![DropdownMenu::from_open(open.clone()).into_element(
                     cx,
                     move |cx| {
                         let trigger = cx.container(
@@ -6172,7 +6172,7 @@ mod tests {
             "dropdown-menu",
             move |cx| {
                 let trigger_id_out = trigger_id_out_for_render.clone();
-                vec![DropdownMenu::new(open).into_element(
+                vec![DropdownMenu::from_open(open).into_element(
                     cx,
                     move |cx| {
                         let trigger = cx.container(
@@ -6239,38 +6239,45 @@ mod tests {
         app.set_frame_id(next_frame);
 
         OverlayController::begin_frame(app, window);
-        let root = fret_ui::declarative::render_root(
-            ui,
-            app,
-            services,
-            window,
-            bounds,
-            "dropdown-menu-trigger",
-            move |cx| {
-                vec![DropdownMenu::new(open).disabled(disabled).into_element(
-                    cx,
-                    |cx| {
-                        cx.pressable(
-                            PressableProps {
-                                layout: {
-                                    let mut layout = LayoutStyle::default();
-                                    layout.size.width = Length::Px(Px(120.0));
-                                    layout.size.height = Length::Px(Px(40.0));
-                                    layout
+        let root =
+            fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "dropdown-menu-trigger",
+                move |cx| {
+                    vec![
+                        DropdownMenu::from_open(open)
+                            .disabled(disabled)
+                            .into_element(
+                                cx,
+                                |cx| {
+                                    cx.pressable(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(120.0));
+                                                layout.size.height = Length::Px(Px(40.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: true,
+                                            ..Default::default()
+                                        },
+                                        |cx, _st| {
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
+                                        },
+                                    )
                                 },
-                                enabled: true,
-                                focusable: true,
-                                ..Default::default()
-                            },
-                            |cx, _st| {
-                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
-                            },
-                        )
-                    },
-                    move |_cx| entries,
-                )]
-            },
-        );
+                                move |_cx| entries,
+                            ),
+                    ]
+                },
+            );
         ui.set_root(root);
         OverlayController::render(ui, app, services, window, bounds);
         ui.request_semantics_snapshot();
@@ -6305,7 +6312,7 @@ mod tests {
                 // Radix `DropdownMenu` defaults to `modal=true`, which hides underlay content from
                 // the accessibility tree via `hideOthers(MenuContent)`. These tests assert trigger
                 // semantics while the menu is open, so we run with `modal=false`.
-                vec![DropdownMenu::new(open).modal(false).into_element(
+                vec![DropdownMenu::from_open(open).modal(false).into_element(
                     cx,
                     move |cx| {
                         cx.pressable_with_id_props(move |cx, _st, id| {
@@ -6389,7 +6396,7 @@ mod tests {
                                 // See `render_frame_focusable_trigger_capture_id`: we need a non-modal
                                 // menu so trigger semantics remain visible while open.
                                 vec![
-                                    DropdownMenu::new(open)
+                                    DropdownMenu::from_open(open)
                                         .modal(false)
                                         .arrow(false)
                                         .into_element(
@@ -6561,7 +6568,7 @@ mod tests {
                         ..Default::default()
                     },
                     |cx| {
-                        vec![DropdownMenu::new(open).into_element(
+                        vec![DropdownMenu::from_open(open).into_element(
                             cx,
                             |cx| {
                                 cx.container(
@@ -6618,7 +6625,7 @@ mod tests {
             "dropdown-menu-dismiss-handler",
             move |cx| {
                 vec![
-                    DropdownMenu::new(open)
+                    DropdownMenu::from_open(open)
                         .on_dismiss_request(on_dismiss_request)
                         .into_element(
                             cx,
@@ -6710,7 +6717,7 @@ mod tests {
                             },
                         );
 
-                        let dropdown_menu = DropdownMenu::new(open).into_element(
+                        let dropdown_menu = DropdownMenu::from_open(open).into_element(
                             cx,
                             {
                                 let trigger_id_out = trigger_id_out.clone();
@@ -6810,7 +6817,7 @@ mod tests {
                             |_cx, _st| Vec::new(),
                         );
 
-                        let dropdown_menu = DropdownMenu::new(open)
+                        let dropdown_menu = DropdownMenu::from_open(open)
                             .modal(false)
                             .on_dismiss_request(on_dismiss_request.clone())
                             .into_element(
@@ -7491,7 +7498,7 @@ mod tests {
             "dropdown-menu-avatar-trigger-semantics",
             move |cx| {
                 vec![
-                    DropdownMenu::new(open.clone())
+                    DropdownMenu::from_open(open.clone())
                         .modal(false)
                         .into_element_parts(
                             cx,

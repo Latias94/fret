@@ -33,7 +33,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             });
 
             let components_dropdown = bc::BreadcrumbItem::new().into_element(cx, |cx| {
-                let menu = shadcn::DropdownMenu::new(open.clone())
+                let menu = shadcn::DropdownMenu::from_open(open.clone())
                     .align(shadcn::DropdownMenuAlign::Start)
                     .into_element(
                         cx,

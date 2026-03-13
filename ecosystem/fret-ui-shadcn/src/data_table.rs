@@ -228,19 +228,16 @@ fn render_column_actions_menu<H: UiHost>(
 
         let column_id_for_items = column_id.clone();
         let state_for_items = state.clone();
-        DropdownMenu::new(open)
+        DropdownMenu::from_open(open)
             .align(DropdownMenuAlign::End)
             .side(DropdownMenuSide::Bottom)
-            .into_element(
+            .build(
                 cx,
-                |cx| {
-                    Button::new("")
-                        .a11y_label(trigger_label.clone())
-                        .variant(ButtonVariant::Ghost)
-                        .size(ButtonSize::IconXs)
-                        .icon(fret_icons::ids::ui::MORE_HORIZONTAL)
-                        .into_element(cx)
-                },
+                Button::new("")
+                    .a11y_label(trigger_label.clone())
+                    .variant(ButtonVariant::Ghost)
+                    .size(ButtonSize::IconXs)
+                    .icon(fret_icons::ids::ui::MORE_HORIZONTAL),
                 move |cx| {
                     wire_column_actions_command_handler(cx, state_for_items.clone());
 

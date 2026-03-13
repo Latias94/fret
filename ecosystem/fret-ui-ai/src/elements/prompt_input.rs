@@ -2269,7 +2269,7 @@ impl PromptInputActionMenu {
         let trigger = self.trigger;
         let entries = self.content.into_entries();
 
-        DropdownMenu::new(open.clone())
+        DropdownMenu::from_open(open.clone())
             .modal(modal)
             .align(align)
             .side(side)

@@ -89,7 +89,7 @@ fn build_mode_toggle_dropdown_menu(
         )
     }
 
-    DropdownMenu::new(open.clone())
+    DropdownMenu::from_open(open.clone())
         .align(DropdownMenuAlign::End)
         .into_element(
             cx,
