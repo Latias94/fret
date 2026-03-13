@@ -442,6 +442,11 @@ As of 2026-03-12:
     `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/*.wgsl`
   - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts the scale-nearest shader
     family inline
+- The eighty-ninth renderer shader split has landed:
+  - the `color_adjust`, `color_matrix`, and `alpha_threshold` WGSL sources now live under
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/*.wgsl`
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts those fullscreen effect
+    shader families inline
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
