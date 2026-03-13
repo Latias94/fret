@@ -1,8 +1,39 @@
 use super::*;
 
 mod activate;
+mod background_execution;
+mod connection_execution;
+mod connection_execution_conversion;
+mod connection_execution_insert;
+mod edge_execution;
 mod input;
+pub(in crate::ui::canvas::widget) mod item_builders;
+mod key_navigation;
+pub(in crate::ui::canvas::widget) mod opening;
 mod pointer;
+mod selection_activation;
+mod target_hit;
+mod target_selection;
+mod ui;
+
+pub(super) fn clear_context_menu(
+    interaction: &mut crate::ui::canvas::state::InteractionState,
+) -> bool {
+    ui::clear_context_menu(interaction)
+}
+
+pub(super) fn take_context_menu(
+    interaction: &mut crate::ui::canvas::state::InteractionState,
+) -> Option<ContextMenuState> {
+    ui::take_context_menu(interaction)
+}
+
+pub(super) fn restore_context_menu(
+    interaction: &mut crate::ui::canvas::state::InteractionState,
+    menu: ContextMenuState,
+) {
+    ui::restore_context_menu(interaction, menu);
+}
 
 pub(super) fn handle_context_menu_escape<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,

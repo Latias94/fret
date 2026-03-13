@@ -20,6 +20,7 @@ use uuid::Uuid;
 use crate::core::{CanvasPoint, Graph, NodeId};
 use crate::io::NodeGraphViewState;
 use crate::ops::GraphTransaction;
+use crate::ui::NodeGraphController;
 use crate::ui::edit_queue::NodeGraphEditQueue;
 use crate::ui::measured::MeasuredGeometryStore;
 use crate::ui::style::NodeGraphStyle;
@@ -255,6 +256,7 @@ pub struct NodeGraphPortalHost<P, C = PortalNoopCommandHandler> {
     cull_margin_px: f32,
 
     edits: Option<Model<NodeGraphEditQueue>>,
+    controller: Option<NodeGraphController>,
     focus_canvas: Option<fret_core::NodeId>,
     command_handler: C,
 
@@ -279,6 +281,7 @@ impl<P> NodeGraphPortalHost<P, PortalNoopCommandHandler> {
             render,
             cull_margin_px: DEFAULT_PORTAL_CULL_MARGIN_PX,
             edits: None,
+            controller: None,
             focus_canvas: None,
             command_handler: PortalNoopCommandHandler,
             last_published_nodes: Vec::new(),
@@ -287,8 +290,14 @@ impl<P> NodeGraphPortalHost<P, PortalNoopCommandHandler> {
 }
 
 impl<P, C> NodeGraphPortalHost<P, C> {
-    pub fn with_edit_queue(mut self, edits: Model<NodeGraphEditQueue>) -> Self {
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn with_edit_queue(mut self, edits: Model<NodeGraphEditQueue>) -> Self {
         self.edits = Some(edits);
+        self
+    }
+
+    pub fn with_controller(mut self, controller: NodeGraphController) -> Self {
+        self.controller = Some(controller);
         self
     }
 
@@ -312,6 +321,7 @@ impl<P, C> NodeGraphPortalHost<P, C> {
             render: self.render,
             cull_margin_px: self.cull_margin_px,
             edits: self.edits,
+            controller: self.controller,
             focus_canvas: self.focus_canvas,
             command_handler: handler,
             last_published_nodes: self.last_published_nodes,
@@ -380,9 +390,16 @@ where
                 true
             }
             PortalCommandOutcome::Commit(tx) => {
-                if let Some(edits) = &self.edits {
+                if let Some(controller) = &self.controller {
+                    let _ = controller.submit_transaction_and_sync_models(
+                        cx.app,
+                        &self.graph,
+                        &self.view_state,
+                        &tx,
+                    );
+                } else if let Some(edits) = &self.edits {
                     let _ = edits.update(cx.app, |q, _cx| {
-                        q.push(tx);
+                        q.push(tx.clone());
                     });
                 }
                 if let Some(canvas) = self.focus_canvas {

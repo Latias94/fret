@@ -34,20 +34,6 @@ enum OverlayPlacement {
     PanelBounds,
 }
 
-fn clamp_rect_to_bounds(mut rect: Rect, bounds: Rect) -> Rect {
-    let w = rect.size.width.0.max(0.0);
-    let h = rect.size.height.0.max(0.0);
-
-    let min_x = bounds.origin.x.0;
-    let min_y = bounds.origin.y.0;
-    let max_x = bounds.origin.x.0 + (bounds.size.width.0 - w).max(0.0);
-    let max_y = bounds.origin.y.0 + (bounds.size.height.0 - h).max(0.0);
-
-    rect.origin.x.0 = rect.origin.x.0.clamp(min_x, max_x);
-    rect.origin.y.0 = rect.origin.y.0.clamp(min_y, max_y);
-    rect
-}
-
 fn layout_hidden_child_and_release_focus<H: UiHost>(
     cx: &mut LayoutCx<'_, H>,
     child: fret_core::NodeId,

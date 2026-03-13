@@ -23,7 +23,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             snapshot.selected_groups = s.selected_groups.clone();
             snapshot.draw_order = s.draw_order.clone();
             snapshot.group_draw_order = s.group_draw_order.clone();
-            snapshot.interaction = s.interaction.clone();
+            snapshot.interaction = s.resolved_interaction_state();
         });
 
         let zoom = snapshot.zoom;

@@ -41,6 +41,8 @@ Defaults if unclear:
 - Start with a smallest deterministic script, run it with `--launch`, and leave a bounded share artifact plus a gate.
 - If the issue is on a first-party shadcn page, start from the existing UI Gallery script corpus and snippet/page `test_id` surfaces before inventing a new target.
 
+## Workflow
+
 ## Quick start (native, recommended)
 
 - Start here for run hygiene + bounded artifacts:

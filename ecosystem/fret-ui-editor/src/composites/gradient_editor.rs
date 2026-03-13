@@ -26,9 +26,10 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use super::property_row::PropertyRowOptions;
 use super::{PropertyGrid, PropertyGroup, PropertyRow};
 use crate::controls::{
-    ColorEdit, ColorEditOptions, DragValue, IconButton, IconButtonOptions, NumericFormatFn,
-    NumericParseFn, OnIconButtonActivate,
+    ColorEdit, ColorEditOptions, DragValue, DragValueOptions, IconButton, IconButtonOptions,
+    NumericFormatFn, NumericParseFn, OnIconButtonActivate,
 };
+use crate::primitives::input_group::derived_test_id;
 use crate::primitives::{EditorDensity, percent_0_1_format, percent_0_1_parse};
 
 pub type OnGradientStopAction =
@@ -156,6 +157,19 @@ impl GradientEditor {
             .as_ref()
             .and_then(|m| cx.get_model_copied(m, Invalidation::Paint))
             .unwrap_or(0.0);
+        let preview_test_id = options
+            .preview_test_id
+            .clone()
+            .or_else(|| derived_test_id(options.test_id.as_ref(), "preview"));
+        let stops_test_id = options
+            .stops_test_id
+            .clone()
+            .or_else(|| derived_test_id(options.test_id.as_ref(), "stops"));
+        let add_stop_test_id = options
+            .add_stop_test_id
+            .clone()
+            .or_else(|| derived_test_id(options.test_id.as_ref(), "add-stop"));
+        let angle_test_id = derived_test_id(options.test_id.as_ref(), "angle");
 
         let mut preview_stops: Vec<PreviewStop> = Vec::new();
         let mut stop_rows: Vec<(f64, GradientStopBinding)> = Vec::new();
@@ -195,7 +209,7 @@ impl GradientEditor {
                 .collect::<Vec<_>>()
                 .into(),
         );
-        if let Some(test_id) = options.preview_test_id.as_ref() {
+        if let Some(test_id) = preview_test_id.as_ref() {
             preview = preview.test_id(test_id.clone());
         }
 
@@ -208,18 +222,31 @@ impl GradientEditor {
                     let s = s.trim().trim_end_matches('°').trim();
                     s.parse::<f64>().ok()
                 });
-                PropertyRow::new().into_element(
-                    cx,
-                    |cx| cx.text("Angle"),
-                    |cx| DragValue::new(m, fmt, parse).into_element(cx),
-                    |_cx| None,
-                )
+                PropertyRow::new()
+                    .options(PropertyRowOptions {
+                        reset_slot_width: Some(Px(0.0)),
+                        status_slot_width: Some(Px(0.0)),
+                        ..Default::default()
+                    })
+                    .into_element(
+                        cx,
+                        |cx| cx.text("Angle"),
+                        |cx| {
+                            DragValue::new(m, fmt, parse)
+                                .options(DragValueOptions {
+                                    test_id: angle_test_id.clone(),
+                                    ..Default::default()
+                                })
+                                .into_element(cx)
+                        },
+                        |_cx| None,
+                    )
             });
 
-        let add_stop_test_id = options.add_stop_test_id.clone();
         let enabled = options.enabled;
         let can_add_stop = enabled && (stops.len() < MAX_STOPS);
 
+        let stops_test_id_for_rows = stops_test_id.clone();
         let mut stops_group = PropertyGroup::new("Stops").into_element(
             cx,
             move |cx| {
@@ -232,8 +259,6 @@ impl GradientEditor {
                         .options(IconButtonOptions {
                             enabled: can_add_stop,
                             focusable: false,
-                            width: Some(density.hit_thickness),
-                            height: Some(density.row_height),
                             icon_size: Some(Px(12.0)),
                             a11y_label: Some(Arc::from("Add stop")),
                             test_id: add_stop_test_id.clone(),
@@ -243,11 +268,20 @@ impl GradientEditor {
                 )
             },
             move |cx| {
+                let stops_test_id = stops_test_id_for_rows.clone();
                 vec![PropertyGrid::new().into_element(cx, move |cx, row_cx| {
                     let mut rows = Vec::new();
                     for (_pos, stop) in stop_rows.iter().cloned() {
+                        let stops_test_id = stops_test_id.clone();
                         rows.push(cx.keyed(("gradient_stop_row", stop.id), |cx| {
-                            stop_row(cx, density, enabled, stop, row_cx.row_options.clone())
+                            stop_row(
+                                cx,
+                                density,
+                                enabled,
+                                stops_test_id.clone(),
+                                stop,
+                                row_cx.row_options.clone(),
+                            )
                         }));
                     }
                     if rows.is_empty() {
@@ -258,7 +292,7 @@ impl GradientEditor {
             },
         );
 
-        if let Some(test_id) = options.stops_test_id.as_ref() {
+        if let Some(test_id) = stops_test_id.as_ref() {
             stops_group = stops_group.test_id(test_id.clone());
         }
 
@@ -293,6 +327,7 @@ fn stop_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     density: EditorDensity,
     enabled: bool,
+    stops_test_id: Option<Arc<str>>,
     stop: GradientStopBinding,
     row_options: PropertyRowOptions,
 ) -> AnyElement {
@@ -301,6 +336,17 @@ fn stop_row<H: UiHost>(
 
     let remove = stop.remove.clone();
     let stop_id = stop.id;
+    let row_test_id = stops_test_id
+        .as_ref()
+        .map(|base| Arc::<str>::from(format!("{}.stop.{}", base.as_ref(), stop_id)));
+    let position_test_id = derived_test_id(row_test_id.as_ref(), "position");
+    let color_test_id = derived_test_id(row_test_id.as_ref(), "color");
+    let remove_test_id = derived_test_id(row_test_id.as_ref(), "remove");
+
+    let mut row_options = row_options;
+    row_options.test_id = row_test_id.clone();
+    row_options.reset_slot_width = Some(Px(0.0));
+    row_options.status_slot_width = Some(density.affordance_extent());
 
     PropertyRow::new().options(row_options).into_element(
         cx,
@@ -325,12 +371,14 @@ fn stop_row<H: UiHost>(
                 },
                 move |cx| {
                     let pos = DragValue::new(stop.position.clone(), fmt.clone(), parse.clone())
+                        .options(DragValueOptions {
+                            test_id: position_test_id.clone(),
+                            ..Default::default()
+                        })
                         .into_element(cx);
                     let color = ColorEdit::new(stop.color.clone())
                         .options(ColorEditOptions {
-                            swatch_test_id: None,
-                            input_test_id: None,
-                            popup_test_id: None,
+                            test_id: color_test_id.clone(),
                             ..Default::default()
                         })
                         .into_element(cx);
@@ -348,10 +396,9 @@ fn stop_row<H: UiHost>(
                     .options(IconButtonOptions {
                         enabled,
                         focusable: false,
-                        width: Some(density.hit_thickness),
-                        height: Some(density.row_height),
                         icon_size: Some(Px(12.0)),
                         a11y_label: Some(Arc::from("Remove stop")),
+                        test_id: remove_test_id.clone(),
                         ..Default::default()
                     })
                     .into_element(cx),

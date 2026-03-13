@@ -14,6 +14,7 @@ use crate::ui::commands::{
     CMD_NODE_GRAPH_FRAME_ALL, CMD_NODE_GRAPH_FRAME_SELECTION, CMD_NODE_GRAPH_RESET_VIEW,
     CMD_NODE_GRAPH_TOGGLE_CONNECTION_MODE, CMD_NODE_GRAPH_ZOOM_IN, CMD_NODE_GRAPH_ZOOM_OUT,
 };
+use crate::ui::screen_space_placement::{AxisAlign, rect_in_bounds};
 
 use super::OverlayPlacement;
 
@@ -149,12 +150,14 @@ impl NodeGraphControlsOverlay {
 
         let (panel_w, panel_h) = self.panel_size_px();
 
-        let x = bounds.origin.x.0 + (bounds.size.width.0 - margin - panel_w).max(0.0);
-        let y = bounds.origin.y.0 + margin;
         let panel = match self.placement {
-            OverlayPlacement::FloatingInCanvas => Rect::new(
-                Point::new(Px(x), Px(y)),
+            OverlayPlacement::FloatingInCanvas => rect_in_bounds(
+                bounds,
                 Size::new(Px(panel_w), Px(panel_h)),
+                AxisAlign::End,
+                AxisAlign::Start,
+                margin,
+                Point::new(Px(0.0), Px(0.0)),
             ),
             OverlayPlacement::PanelBounds => bounds,
         };

@@ -6,8 +6,7 @@ pub(super) fn handle_edge_left_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
 ) -> bool {
     if canvas.interaction.edge_drag.take().is_some() {
         cx.release_pointer_capture();
-        cx.request_redraw();
-        cx.invalidate_self(Invalidation::Paint);
+        invalidate_paint(cx);
         return true;
     }
 

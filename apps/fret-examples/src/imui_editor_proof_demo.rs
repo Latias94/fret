@@ -1,37 +1,69 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use fret::advanced::interop::embedded_viewport as embedded;
-use fret::{FretApp, advanced::prelude::*, shadcn};
+use fret::interop::embedded_viewport as embedded;
+use fret::prelude::*;
+use fret::view::ViewWindowState;
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
-use fret_core::{Color, PanelKind, Px};
+use fret_core::{Color, Corners, Edges, KeyCode, Px, SemanticsRole};
 use fret_docking::{
-    DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx, DockPanelRegistryBuilder,
-    DockPanelRegistryService, ViewportPanel, runtime as dock_runtime,
+    DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, ViewportPanel,
+    runtime as dock_runtime,
 };
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{
     ActivationPolicy, FrameId, Model, PlatformCapabilities, TickId, WindowHoverDetectionQuality,
     WindowRole, WindowStyleRequest,
 };
+use fret_ui::action::{ActionCx, ActivateReason, OnActivate};
+use fret_ui::element::{
+    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, PressableA11y,
+    PressableProps, SizeStyle, TextProps,
+};
 use fret_ui_editor::composites::{
     GradientEditor, GradientEditorOptions, GradientStopBinding, InspectorPanel,
     InspectorPanelOptions, PropertyGrid, PropertyGroup, PropertyRow, PropertyRowReset,
 };
 use fret_ui_editor::controls::{
-    Checkbox, ColorEdit, ColorEditOptions, DragValue, EnumSelect, EnumSelectItem,
-    EnumSelectOptions, FieldStatus, FieldStatusBadge, NumericFormatFn, NumericParseFn,
-    NumericValidateFn, Slider, SliderOptions, TextField, TextFieldOptions, TransformEdit,
-    TransformEditOptions, Vec3Edit,
+    Checkbox, ColorEdit, ColorEditOptions, DragValue, EditorTextSelectionBehavior, EnumSelect,
+    EnumSelectItem, EnumSelectOptions, FieldStatus, FieldStatusBadge, NumericFormatFn,
+    NumericInput, NumericInputOptions, NumericParseFn, NumericValidateFn, Slider, SliderOptions,
+    TextField, TextFieldAssistiveSemantics, TextFieldMode, TextFieldOptions, TextFieldOutcome,
+    TransformEdit, TransformEditOptions, Vec3Edit, VecEditOptions,
 };
 use fret_ui_editor::imui as editor_imui;
 use fret_ui_editor::primitives::{percent_0_1_format, percent_0_1_parse};
 use fret_ui_editor::theme::EditorThemePresetV1;
+use fret_ui_kit::declarative::active_descendant::active_descendant_for_index;
+use fret_ui_kit::headless::text_assist::{
+    TextAssistController, TextAssistItem, TextAssistMatchMode, TextAssistMove,
+};
 
 const VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
 const AUX_LOGICAL_WINDOW_ID: &str = "aux";
 const ENV_SINGLE_WINDOW: &str = "FRET_IMUI_EDITOR_PROOF_SINGLE_WINDOW";
 const ENV_EDITOR_PRESET: &str = "FRET_IMUI_EDITOR_PRESET";
+const ENV_PROOF_LAYOUT: &str = "FRET_IMUI_EDITOR_PROOF_LAYOUT";
+const EDITOR_HOST_BASE_COLOR: shadcn::shadcn_themes::ShadcnBaseColor =
+    shadcn::shadcn_themes::ShadcnBaseColor::Slate;
+const EDITOR_HOST_DEFAULT_SCHEME: shadcn::shadcn_themes::ShadcnColorScheme =
+    shadcn::shadcn_themes::ShadcnColorScheme::Dark;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+enum ImUiEditorProofLayout {
+    #[default]
+    Full,
+    EditorReview,
+}
+
+impl ImUiEditorProofLayout {
+    const fn key(self) -> &'static str {
+        match self {
+            Self::Full => "full",
+            Self::EditorReview => "editor_review",
+        }
+    }
+}
 
 fn diag_enabled() -> bool {
     std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty() && v != "0")
@@ -46,6 +78,534 @@ fn selected_editor_theme_preset() -> EditorThemePresetV1 {
         "imgui_like_dense" => EditorThemePresetV1::ImguiLikeDense,
         _ => EditorThemePresetV1::Default,
     }
+}
+
+fn selected_proof_layout() -> ImUiEditorProofLayout {
+    let Some(raw) = std::env::var_os(ENV_PROOF_LAYOUT) else {
+        return ImUiEditorProofLayout::Full;
+    };
+
+    match raw.to_string_lossy().trim().to_ascii_lowercase().as_str() {
+        "editor_review" => ImUiEditorProofLayout::EditorReview,
+        _ => ImUiEditorProofLayout::Full,
+    }
+}
+
+fn authoring_parity_blend_slider_options(
+    id_source: &'static str,
+    test_id: &'static str,
+) -> SliderOptions {
+    SliderOptions {
+        id_source: Some(Arc::from(id_source)),
+        test_id: Some(Arc::from(test_id)),
+        // `percent_0_1_format(0)` already renders the `%` unit in the display label.
+        suffix: None,
+        ..Default::default()
+    }
+}
+
+fn edit_session_outcome_label(outcome: TextFieldOutcome) -> &'static str {
+    match outcome {
+        TextFieldOutcome::Committed => "Committed",
+        TextFieldOutcome::Canceled => "Canceled",
+    }
+}
+
+fn committed_line_count_label(text: &str) -> String {
+    let lines = text.lines().count();
+    let noun = if lines == 1 { "line" } else { "lines" };
+    format!("{lines} {noun} committed")
+}
+
+fn editor_text_assist_surface_expanded(
+    query: &str,
+    dismissed_query: &str,
+    visible_count: usize,
+) -> bool {
+    !query.trim().is_empty() && query != dismissed_query && visible_count > 0
+}
+
+fn editor_text_assist_state_label(
+    query: &str,
+    dismissed_query: &str,
+    visible_count: usize,
+) -> String {
+    if query.trim().is_empty() {
+        return "Collapsed".to_string();
+    }
+
+    if visible_count == 0 {
+        return "No matches".to_string();
+    }
+
+    if query == dismissed_query {
+        return "Collapsed".to_string();
+    }
+
+    format!("Expanded ({visible_count} matches)")
+}
+
+fn editor_demo_name_assist_items(cx: &mut ElementContext<'_, App>) -> Arc<[TextAssistItem]> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.state.name_assist_items",
+        |_cx| {
+            vec![
+                TextAssistItem::new("cube", "Cube").aliases(vec![Arc::from("box")]),
+                TextAssistItem::new("cylinder", "Cylinder"),
+                TextAssistItem::new("capsule", "Capsule"),
+                TextAssistItem::new("camera", "Camera").aliases(vec![Arc::from("cam")]),
+                TextAssistItem::new("curve-editor", "Curve Editor"),
+                TextAssistItem::new("directional-light", "Directional Light")
+                    .aliases(vec![Arc::from("dir light")]),
+            ]
+            .into()
+        },
+    )
+}
+
+fn build_editor_text_assist_controller(
+    items: &[TextAssistItem],
+    query: &str,
+    active_item_id: Option<&Arc<str>>,
+) -> TextAssistController {
+    let mut controller = TextAssistController::new(TextAssistMatchMode::Prefix);
+    controller.rebuild(items, query);
+    if let Some(active_item_id) = active_item_id {
+        controller.set_active_item_id(Some(active_item_id.clone()));
+    }
+    controller
+}
+
+fn commit_editor_text_assist_selection(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    action_cx: ActionCx,
+    query_model: &Model<String>,
+    dismissed_query_model: &Model<String>,
+    active_item_id_model: &Model<Option<Arc<str>>>,
+    accepted_label_model: &Model<String>,
+    item_id: Arc<str>,
+    label: Arc<str>,
+) {
+    let next_query = label.as_ref().to_string();
+    let _ = host.models_mut().update(query_model, |value| {
+        value.clear();
+        value.push_str(&next_query);
+    });
+    let _ = host.models_mut().update(dismissed_query_model, |value| {
+        value.clear();
+        value.push_str(&next_query);
+    });
+    let _ = host
+        .models_mut()
+        .update(active_item_id_model, |value| *value = Some(item_id));
+    let _ = host.models_mut().update(accepted_label_model, |value| {
+        value.clear();
+        value.push_str(&next_query);
+    });
+    host.request_redraw(action_cx.window);
+}
+
+fn render_editor_name_assist_surface(
+    cx: &mut ElementContext<'_, App>,
+    query_model: Model<String>,
+    dismissed_query_model: Model<String>,
+    active_item_id_model: Model<Option<Arc<str>>>,
+    accepted_label_model: Model<String>,
+) -> fret_ui::element::AnyElement {
+    let items = editor_demo_name_assist_items(cx);
+    let query = cx
+        .watch_model(&query_model)
+        .paint()
+        .cloned()
+        .unwrap_or_default();
+    let dismissed_query = cx
+        .watch_model(&dismissed_query_model)
+        .paint()
+        .cloned()
+        .unwrap_or_default();
+    let active_item_id = cx
+        .watch_model(&active_item_id_model)
+        .paint()
+        .cloned()
+        .unwrap_or(None);
+    let controller =
+        build_editor_text_assist_controller(items.as_ref(), &query, active_item_id.as_ref());
+    let visible_count = if query.trim().is_empty() {
+        0
+    } else {
+        controller.visible().len()
+    };
+    let expanded = editor_text_assist_surface_expanded(&query, &dismissed_query, visible_count);
+
+    let (surface_bg, surface_border, active_bg, active_fg, muted_fg, row_fg) = {
+        let theme = Theme::global(&*cx.app);
+        (
+            theme.color_token("card"),
+            theme.color_token("border"),
+            theme.color_token("accent"),
+            theme.color_token("accent-foreground"),
+            theme.color_token("muted-foreground"),
+            theme.color_token("foreground"),
+        )
+    };
+
+    let mut option_elements = Vec::new();
+    let option_rows: Vec<_> = controller
+        .visible()
+        .iter()
+        .enumerate()
+        .map(|(idx, entry)| {
+            let is_active = expanded
+                && controller
+                    .active_item_id()
+                    .is_some_and(|active| active == &entry.item_id);
+            let option_test_id = Arc::<str>::from(format!(
+                "imui-editor-proof.editor.object.name-assist.list.item.{}",
+                entry.item_id
+            ));
+            let query_model = query_model.clone();
+            let dismissed_query_model = dismissed_query_model.clone();
+            let active_item_id_model = active_item_id_model.clone();
+            let accepted_label_model = accepted_label_model.clone();
+            let item_id = entry.item_id.clone();
+            let label = entry.label.clone();
+            let label_for_activate = label.clone();
+            let label_for_text = label.clone();
+            let row = cx.pressable(
+                PressableProps {
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Auto,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    enabled: !entry.disabled,
+                    focusable: false,
+                    a11y: PressableA11y {
+                        role: Some(SemanticsRole::ListBoxOption),
+                        label: Some(entry.label.clone()),
+                        test_id: Some(option_test_id),
+                        selected: is_active,
+                        pos_in_set: Some((idx as u32) + 1),
+                        set_size: Some(controller.visible().len() as u32),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                move |cx, st| {
+                    let on_activate: OnActivate =
+                        Arc::new(move |host, action_cx, _reason: ActivateReason| {
+                            commit_editor_text_assist_selection(
+                                host,
+                                action_cx,
+                                &query_model,
+                                &dismissed_query_model,
+                                &active_item_id_model,
+                                &accepted_label_model,
+                                item_id.clone(),
+                                label_for_activate.clone(),
+                            );
+                        });
+                    cx.pressable_add_on_activate(on_activate);
+
+                    let hovered = st.hovered || st.hovered_raw;
+                    let row_bg = if is_active || hovered {
+                        Some(active_bg)
+                    } else {
+                        None
+                    };
+                    let row_label = if is_active || hovered {
+                        active_fg
+                    } else {
+                        row_fg
+                    };
+
+                    vec![cx.container(
+                        ContainerProps {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Auto,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            padding: Edges::symmetric(Px(10.0), Px(6.0)).into(),
+                            background: row_bg,
+                            corner_radii: Corners::all(Px(6.0)),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let mut props = TextProps::new(label_for_text.clone());
+                            props.color = Some(row_label);
+                            vec![cx.text_props(props).a11y_label(label_for_text.clone())]
+                        },
+                    )]
+                },
+            );
+            option_elements.push(row.id);
+            row
+        })
+        .collect();
+
+    let active_index = if expanded {
+        controller.active_match().and_then(|active| {
+            controller
+                .visible()
+                .iter()
+                .position(|entry| entry.item_id == active.item_id)
+        })
+    } else {
+        None
+    };
+
+    let listbox_id_out = std::rc::Rc::new(std::cell::Cell::new(
+        None::<fret_ui::elements::GlobalElementId>,
+    ));
+    let listbox = expanded.then(|| {
+        let listbox_id_out = listbox_id_out.clone();
+        cx.semantics_with_id(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::ListBox,
+                label: Some(Arc::from("Name history suggestions")),
+                test_id: Some(Arc::from(
+                    "imui-editor-proof.editor.object.name-assist.list",
+                )),
+                ..Default::default()
+            },
+            move |cx, id| {
+                listbox_id_out.set(Some(id));
+                vec![cx.container(
+                    ContainerProps {
+                        layout: LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Auto,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        padding: Edges::all(Px(4.0)).into(),
+                        background: Some(surface_bg),
+                        border: Edges::all(Px(1.0)),
+                        border_color: Some(surface_border),
+                        corner_radii: Corners::all(Px(8.0)),
+                        ..Default::default()
+                    },
+                    move |_cx| option_rows,
+                )]
+            },
+        )
+    });
+
+    let active_descendant = if expanded {
+        active_descendant_for_index(cx, &option_elements, active_index)
+    } else {
+        None
+    };
+    let controls_element = listbox_id_out.get().map(|element| element.0);
+
+    let query_model_for_surface = query_model.clone();
+    let root = cx.flex(
+        FlexProps {
+            layout: LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            gap: Px(6.0).into(),
+            padding: Edges::all(Px(0.0)).into(),
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
+            wrap: false,
+        },
+        move |cx| {
+            let mut children = vec![
+                TextField::new(query_model_for_surface.clone())
+                    .options(TextFieldOptions {
+                        id_source: Some(Arc::from("imui-editor-proof.editor.object.name-assist")),
+                        placeholder: Some(Arc::from("Type to search object history")),
+                        clear_button: true,
+                        buffered: false,
+                        selection_behavior: EditorTextSelectionBehavior::SelectAllOnFocus,
+                        assistive_semantics: TextFieldAssistiveSemantics {
+                            active_descendant,
+                            controls_element,
+                            expanded: Some(expanded),
+                        },
+                        test_id: Some(Arc::from("imui-editor-proof.editor.object.name-assist")),
+                        clear_test_id: Some(Arc::from(
+                            "imui-editor-proof.editor.object.name-assist.clear",
+                        )),
+                        ..Default::default()
+                    })
+                    .into_element(cx),
+            ];
+            if let Some(listbox) = listbox {
+                children.push(listbox);
+            } else if !query.trim().is_empty() && visible_count == 0 {
+                let mut props = TextProps::new("No matches");
+                props.color = Some(muted_fg);
+                children.push(
+                    cx.text_props(props)
+                        .test_id("imui-editor-proof.editor.object.name-assist.no-matches"),
+                );
+            }
+            children
+        },
+    );
+
+    let items_for_key = items.clone();
+    let query_model_for_key = query_model.clone();
+    let dismissed_query_model_for_key = dismissed_query_model.clone();
+    let active_item_id_model_for_key = active_item_id_model.clone();
+    let accepted_label_model_for_key = accepted_label_model.clone();
+    cx.key_add_on_key_down_capture_for(
+        root.id,
+        Arc::new(move |host, action_cx, down| {
+            if down.repeat || down.ime_composing {
+                return false;
+            }
+
+            let query = host
+                .models_mut()
+                .read(&query_model_for_key, Clone::clone)
+                .ok()
+                .unwrap_or_default();
+            let dismissed_query = host
+                .models_mut()
+                .read(&dismissed_query_model_for_key, Clone::clone)
+                .ok()
+                .unwrap_or_default();
+            let active_item_id = host
+                .models_mut()
+                .read(&active_item_id_model_for_key, Clone::clone)
+                .ok()
+                .unwrap_or(None);
+            let mut controller = build_editor_text_assist_controller(
+                items_for_key.as_ref(),
+                &query,
+                active_item_id.as_ref(),
+            );
+            let visible_count = if query.trim().is_empty() {
+                0
+            } else {
+                controller.visible().len()
+            };
+            let expanded =
+                editor_text_assist_surface_expanded(&query, &dismissed_query, visible_count);
+
+            let movement = match down.key {
+                KeyCode::ArrowDown => Some(TextAssistMove::Next),
+                KeyCode::ArrowUp => Some(TextAssistMove::Previous),
+                KeyCode::PageDown => Some(TextAssistMove::PageDown { amount: 4 }),
+                KeyCode::PageUp => Some(TextAssistMove::PageUp { amount: 4 }),
+                KeyCode::Home => Some(TextAssistMove::First),
+                KeyCode::End => Some(TextAssistMove::Last),
+                _ => None,
+            };
+
+            if let Some(movement) = movement {
+                if query.trim().is_empty() || visible_count == 0 {
+                    return false;
+                }
+
+                if query == dismissed_query {
+                    let _ = host
+                        .models_mut()
+                        .update(&dismissed_query_model_for_key, |value| {
+                            value.clear();
+                        });
+                }
+
+                controller.move_active(movement);
+                let next_active = controller.active_item_id().cloned();
+                let _ = host
+                    .models_mut()
+                    .update(&active_item_id_model_for_key, |value| *value = next_active);
+                host.request_redraw(action_cx.window);
+                return true;
+            }
+
+            match down.key {
+                KeyCode::Enter | KeyCode::NumpadEnter => {
+                    if !expanded {
+                        return false;
+                    }
+                    let Some(active) = controller.active_match() else {
+                        return false;
+                    };
+                    commit_editor_text_assist_selection(
+                        host,
+                        action_cx,
+                        &query_model_for_key,
+                        &dismissed_query_model_for_key,
+                        &active_item_id_model_for_key,
+                        &accepted_label_model_for_key,
+                        active.item_id.clone(),
+                        active.label.clone(),
+                    );
+                    true
+                }
+                KeyCode::Escape => {
+                    if !expanded {
+                        return false;
+                    }
+                    let _ = host
+                        .models_mut()
+                        .update(&dismissed_query_model_for_key, |value| {
+                            value.clear();
+                            value.push_str(&query);
+                        });
+                    host.request_redraw(action_cx.window);
+                    true
+                }
+                _ => false,
+            }
+        }),
+    );
+
+    root
+}
+
+fn replay_editor_theme_preset_on_global_changes(
+    app: &mut App,
+    window: AppWindowId,
+    _ui: &mut fret_ui::UiTree<App>,
+    _st: &mut ViewWindowState<ImUiEditorProofView>,
+    changed: &[std::any::TypeId],
+) {
+    let _ = fret_ui_editor::theme::sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metrics_change(
+        app,
+        changed,
+        |app| {
+            let _ = shadcn::sync_theme_from_environment(
+                app,
+                window,
+                EDITOR_HOST_BASE_COLOR,
+                EDITOR_HOST_DEFAULT_SCHEME,
+            );
+        },
+    );
+}
+
+fn configure_imui_editor_proof_driver(
+    driver: fret::UiAppDriver<ViewWindowState<ImUiEditorProofView>>,
+) -> fret::UiAppDriver<ViewWindowState<ImUiEditorProofView>> {
+    driver
+        .drive_embedded_viewport()
+        .dock_op(on_dock_op)
+        .window_create_spec(window_create_spec)
+        .window_created(window_created)
+        .before_close_window(before_close_window)
+        .on_global_changes(replay_editor_theme_preset_on_global_changes)
 }
 
 struct ImUiEditorProofView {
@@ -89,22 +649,12 @@ pub fn run() -> anyhow::Result<()> {
 
     FretApp::new("imui-editor-proof-demo")
         .window("imui_editor_proof_demo", (1120.0, 720.0))
-        .view_with_hooks::<ImUiEditorProofView>(|d| {
-            d.drive_embedded_viewport()
-                .dock_op(on_dock_op)
-                .window_create_spec(window_create_spec)
-                .window_created(window_created)
-                .before_close_window(before_close_window)
-        })?
-        .setup_with(move |app| {
+        .view_with_hooks::<ImUiEditorProofView>(configure_imui_editor_proof_driver)?
+        .init_app(move |app| {
             configure_single_window_caps_if_requested(app);
-            shadcn::themes::apply_shadcn_new_york(
-                app,
-                shadcn::themes::ShadcnBaseColor::Slate,
-                shadcn::themes::ShadcnColorScheme::Dark,
-            );
-            fret_ui_editor::theme::apply_editor_theme_preset_v1(app, editor_preset);
-            fret_icons_lucide::app::install(app);
+            shadcn::install_app_with_theme(app, EDITOR_HOST_BASE_COLOR, EDITOR_HOST_DEFAULT_SCHEME);
+            fret_ui_editor::theme::install_editor_theme_preset_v1(app, editor_preset);
+            fret_icons_lucide::install_app(app);
             install_dock_panel_registry(app);
         })
         .run()?;
@@ -168,6 +718,8 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
         .and_then(|svc| svc.inner_size(window));
     let single = single_window_mode_enabled();
     let editor_preset = selected_editor_theme_preset();
+    let proof_layout = selected_proof_layout();
+    let editor_review_layout = proof_layout == ImUiEditorProofLayout::EditorReview;
     let editor_preset_env = std::env::var_os(ENV_EDITOR_PRESET)
         .filter(|v| !v.is_empty())
         .map(|v| v.to_string_lossy().into_owned());
@@ -193,11 +745,21 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
     let editor_shading_model = editor_demo_shading_model(cx);
     let editor_base_color_model = editor_demo_base_color_model(cx);
     let editor_name_model = editor_demo_name_model(cx);
+    let editor_buffered_name_model = editor_demo_buffered_name_model(cx);
+    let editor_name_assist_model = editor_demo_name_assist_model(cx);
+    let editor_name_assist_dismissed_query_model =
+        editor_demo_name_assist_dismissed_query_model(cx);
+    let editor_name_assist_active_item_model = editor_demo_name_assist_active_item_model(cx);
+    let editor_name_assist_accepted_model = editor_demo_name_assist_accepted_model(cx);
+    let editor_password_model = editor_demo_password_model(cx);
+    let editor_password_outcome_model = editor_demo_password_outcome_model(cx);
     let editor_notes_model = editor_demo_notes_model(cx);
+    let editor_notes_outcome_model = editor_demo_notes_outcome_model(cx);
     let (editor_pos_x, editor_pos_y, editor_pos_z) = editor_demo_position_models(cx);
     let (editor_rot_x, editor_rot_y, editor_rot_z) = editor_demo_rotation_models(cx);
     let (editor_scl_x, editor_scl_y, editor_scl_z) = editor_demo_scale_models(cx);
     let editor_iterations_model = editor_demo_iterations_model(cx);
+    let editor_exposure_model = editor_demo_exposure_model(cx);
     let editor_search_model = editor_demo_search_model(cx);
     let editor_gradient_angle_model = editor_demo_gradient_angle_model(cx);
     let editor_gradient_stops_model = editor_demo_gradient_stops_model(cx);
@@ -223,128 +785,137 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
 
         let root = fret_ui_kit::ui::v_flex_build(move |cx, out| {
             fret_imui::imui_build(cx, out, |ui| {
-                let headline = fret_ui_kit::ui::text(format!(
-                        "imui editor-grade proof (M7): docking + multi-window + viewport surfaces (window={window:?})"
-                    ),
-                )
-                .font_semibold();
-                ui.add_ui(headline);
+                if !editor_review_layout {
+                    let headline = fret_ui_kit::ui::text(format!(
+                            "imui editor-grade proof (M7): docking + multi-window + viewport surfaces (window={window:?})"
+                        ),
+                    )
+                    .font_semibold();
+                    ui.add_ui(headline);
 
-                if single {
-                    let hint = fret_ui_kit::ui::text(format!(
-                            "single-window mode enabled ({ENV_SINGLE_WINDOW}=1): dock tear-off should degrade to in-window floating"
+                    if single {
+                        let hint = fret_ui_kit::ui::text(format!(
+                                "single-window mode enabled ({ENV_SINGLE_WINDOW}=1): dock tear-off should degrade to in-window floating"
+                            ),
+                        )
+                        .text_xs();
+                        ui.add_ui(hint);
+                    }
+
+                    let preset_line = match editor_preset_env.as_deref() {
+                        Some(raw) => fret_ui_kit::ui::text(format!(
+                            "editor preset: {} ({ENV_EDITOR_PRESET}={raw})",
+                            editor_preset.key()
+                        ))
+                        .text_xs(),
+                        None => fret_ui_kit::ui::text(format!(
+                            "editor preset: {} ({ENV_EDITOR_PRESET} unset)",
+                            editor_preset.key()
+                        ))
+                        .text_xs(),
+                    };
+                    ui.add_ui(preset_line);
+
+                    let layout_line = fret_ui_kit::ui::text(format!(
+                        "proof layout: {} ({ENV_PROOF_LAYOUT})",
+                        proof_layout.key()
+                    ))
+                    .text_xs();
+                    ui.add_ui(layout_line);
+
+                    let caps_line = fret_ui_kit::ui::text(format!(
+                            "caps: multi_window={} window_tear_off={} window_hover_detection={:?} window_inner_size={window_size:?}",
+                            caps.ui.multi_window, caps.ui.window_tear_off, caps.ui.window_hover_detection,
                         ),
                     )
                     .text_xs();
-                    ui.add_ui(hint);
-                }
+                    ui.add_ui(caps_line);
 
-                let preset_line = match editor_preset_env.as_deref() {
-                    Some(raw) => fret_ui_kit::ui::text(format!(
-                        "editor preset: {} ({ENV_EDITOR_PRESET}={raw})",
-                        editor_preset.key()
-                    ))
-                    .text_xs(),
-                    None => fret_ui_kit::ui::text(format!(
-                        "editor preset: {} ({ENV_EDITOR_PRESET} unset)",
-                        editor_preset.key()
-                    ))
-                    .text_xs(),
-                };
-                ui.add_ui(preset_line);
+                    let controls = fret_ui_kit::ui::h_flex_build(move |cx, out| {
+                        fret_imui::imui_build(cx, out, |ui| {
+                            if <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<App>>::button(
+                                ui,
+                                "Reset layout",
+                            )
+                            .clicked()
+                            {
+                                reset_dock_graph(ui.cx_mut().app, window);
+                                dock_runtime::request_dock_invalidation(ui.cx_mut().app, [window]);
+                            }
+                            if <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<App>>::button(
+                                ui,
+                                "Center floatings",
+                            )
+                            .clicked()
+                            {
+                                dock_runtime::recenter_in_window_floatings(ui.cx_mut().app, window);
+                            }
+                        });
+                    })
+                    .gap(fret_ui_kit::Space::N2);
+                    ui.add_ui(controls);
 
-                let caps_line = fret_ui_kit::ui::text(format!(
-                        "caps: multi_window={} window_tear_off={} window_hover_detection={:?} window_inner_size={window_size:?}",
-                        caps.ui.multi_window, caps.ui.window_tear_off, caps.ui.window_hover_detection,
-                    ),
-                )
-                .text_xs();
-                ui.add_ui(caps_line);
+                    let last_input_line =
+                        fret_ui_kit::ui::text(format!("last_input: {last_input}")).text_xs();
+                    ui.add_ui(last_input_line);
+                    ui.separator();
 
-                let controls = fret_ui_kit::ui::h_flex_build(move |cx, out| {
-                    fret_imui::imui_build(cx, out, |ui| {
-                        if <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<KernelApp>>::button(
-                            ui,
-                            "Reset layout",
-                        )
-                        .clicked()
-                        {
-                            reset_dock_graph(ui.cx_mut().app, window);
-                            dock_runtime::request_dock_invalidation(ui.cx_mut().app, [window]);
-                        }
-                        if <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<KernelApp>>::button(
-                            ui,
-                            "Center floatings",
-                        )
-                        .clicked()
-                        {
-                            dock_runtime::recenter_in_window_floatings(ui.cx_mut().app, window);
-                        }
+                    let parity_label = fret_ui_kit::ui::text(
+                        "authoring parity proof: shared models, left declarative, right imui adapters",
+                    )
+                    .text_xs();
+                    ui.add_ui(parity_label);
+
+                    let parity_hint = fret_ui_kit::ui::text(
+                        "edit either column and verify the paired control stays in sync under the same preset",
+                    )
+                    .text_xs();
+                    ui.add_ui(parity_hint);
+
+                    let parity_name_model_for_surface = parity_name_model.clone();
+                    let parity_drag_value_model_for_surface = parity_drag_value_model.clone();
+                    let parity_slider_model_for_surface = parity_slider_model.clone();
+                    let parity_enabled_model_for_surface = parity_enabled_model.clone();
+                    let parity_shading_model_for_surface = parity_shading_model.clone();
+                    ui.mount(move |cx| {
+                        vec![render_authoring_parity_surface(
+                            cx,
+                            parity_name_model_for_surface.clone(),
+                            parity_drag_value_model_for_surface.clone(),
+                            parity_slider_model_for_surface.clone(),
+                            parity_enabled_model_for_surface.clone(),
+                            parity_shading_model_for_surface.clone(),
+                        )]
                     });
-                })
-                .gap(fret_ui_kit::Space::N2);
-                ui.add_ui(controls);
 
-                let last_input_line =
-                    fret_ui_kit::ui::text(format!("last_input: {last_input}")).text_xs();
-                ui.add_ui(last_input_line);
-                ui.separator();
+                    let parity_state_hint = fret_ui_kit::ui::text(
+                        "shared state readout: use this to verify both columns mutate the same models",
+                    )
+                    .text_xs();
+                    ui.add_ui(parity_state_hint);
 
-                let parity_label = fret_ui_kit::ui::text(
-                    "authoring parity proof: shared models, left declarative, right imui adapters",
-                )
-                .text_xs();
-                ui.add_ui(parity_label);
+                    let parity_name_model_for_state = parity_name_model.clone();
+                    let parity_drag_value_model_for_state = parity_drag_value_model.clone();
+                    let parity_slider_model_for_state = parity_slider_model.clone();
+                    let parity_enabled_model_for_state = parity_enabled_model.clone();
+                    let parity_shading_model_for_state = parity_shading_model.clone();
+                    ui.mount(move |cx| {
+                        vec![render_authoring_parity_shared_state(
+                            cx,
+                            parity_name_model_for_state.clone(),
+                            parity_drag_value_model_for_state.clone(),
+                            parity_slider_model_for_state.clone(),
+                            parity_enabled_model_for_state.clone(),
+                            parity_shading_model_for_state.clone(),
+                        )]
+                    });
+                    ui.separator();
 
-                let parity_hint = fret_ui_kit::ui::text(
-                    "edit either column and verify the paired control stays in sync under the same preset",
-                )
-                .text_xs();
-                ui.add_ui(parity_hint);
-
-                let parity_name_model_for_surface = parity_name_model.clone();
-                let parity_drag_value_model_for_surface = parity_drag_value_model.clone();
-                let parity_slider_model_for_surface = parity_slider_model.clone();
-                let parity_enabled_model_for_surface = parity_enabled_model.clone();
-                let parity_shading_model_for_surface = parity_shading_model.clone();
-                ui.mount(move |cx| {
-                    vec![render_authoring_parity_surface(
-                        cx,
-                        parity_name_model_for_surface.clone(),
-                        parity_drag_value_model_for_surface.clone(),
-                        parity_slider_model_for_surface.clone(),
-                        parity_enabled_model_for_surface.clone(),
-                        parity_shading_model_for_surface.clone(),
-                    )]
-                });
-
-                let parity_state_hint = fret_ui_kit::ui::text(
-                    "shared state readout: use this to verify both columns mutate the same models",
-                )
-                .text_xs();
-                ui.add_ui(parity_state_hint);
-
-                let parity_name_model_for_state = parity_name_model.clone();
-                let parity_drag_value_model_for_state = parity_drag_value_model.clone();
-                let parity_slider_model_for_state = parity_slider_model.clone();
-                let parity_enabled_model_for_state = parity_enabled_model.clone();
-                let parity_shading_model_for_state = parity_shading_model.clone();
-                ui.mount(move |cx| {
-                    vec![render_authoring_parity_shared_state(
-                        cx,
-                        parity_name_model_for_state.clone(),
-                        parity_drag_value_model_for_state.clone(),
-                        parity_slider_model_for_state.clone(),
-                        parity_enabled_model_for_state.clone(),
-                        parity_shading_model_for_state.clone(),
-                    )]
-                });
-                ui.separator();
-
-                let editor_label =
-                    fret_ui_kit::ui::text("fret-ui-editor (M2): PropertyGroup + PropertyGrid + MiniSearchBox (filter)")
-                        .text_xs();
-                ui.add_ui(editor_label);
+                    let editor_label =
+                        fret_ui_kit::ui::text("fret-ui-editor (M2): PropertyGroup + PropertyGrid + MiniSearchBox (filter)")
+                            .text_xs();
+                    ui.add_ui(editor_label);
+                }
                 ui.mount(|cx| {
                     let fmt: NumericFormatFn<f64> =
                         Arc::new(|v| Arc::from(format!("{v:.3}")));
@@ -359,6 +930,18 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
 
                     vec![InspectorPanel::new(Some(editor_search_model.clone()))
                         .options(InspectorPanelOptions {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: if editor_review_layout {
+                                        Length::Fill
+                                    } else {
+                                        Length::Auto
+                                    },
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
                             test_id: Some(Arc::from("imui-editor-proof.editor.inspector")),
                             header_test_id: Some(Arc::from(
                                 "imui-editor-proof.editor.inspector.header",
@@ -392,6 +975,8 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                     material_show_all || matches("shadow") || matches("shadows");
 
                                 let advanced_show_all = matches("advanced");
+                                let show_exposure =
+                                    advanced_show_all || matches("exposure") || matches("validate");
                                 let show_iterations = advanced_show_all || matches("iterations");
                                 let show_position =
                                     advanced_show_all || matches("position") || matches("pos");
@@ -409,6 +994,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                     || show_shading_model
                                     || show_alpha_clip
                                     || show_cast_shadows
+                                    || show_exposure
                                     || show_iterations
                                     || show_position
                                     || show_transform;
@@ -453,6 +1039,8 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                     "Untitled",
                                                                 )),
                                                                 clear_button: true,
+                                                                selection_behavior:
+                                                                    EditorTextSelectionBehavior::SelectAllOnFocus,
                                                                 test_id: Some(Arc::from(
                                                                     "imui-editor-proof.editor.object.name",
                                                                 )),
@@ -471,12 +1059,340 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         PropertyRow::new().options(
                                                             row_cx.row_options.clone(),
                                                         ),
+                                                        |cx| cx.text("Buffered name"),
+                                                        |cx| {
+                                                            TextField::new(
+                                                                editor_buffered_name_model
+                                                                    .clone(),
+                                                            )
+                                                            .options(TextFieldOptions {
+                                                                id_source: Some(Arc::from(
+                                                                    "imui-editor-proof.editor.object.buffered-name",
+                                                                )),
+                                                                placeholder: Some(Arc::from(
+                                                                    "Buffered session",
+                                                                )),
+                                                                clear_button: true,
+                                                                test_id: Some(Arc::from(
+                                                                    "imui-editor-proof.editor.object.buffered-name",
+                                                                )),
+                                                                clear_test_id: Some(Arc::from(
+                                                                    "imui-editor-proof.editor.object.buffered-name.clear",
+                                                                )),
+                                                                ..Default::default()
+                                                            })
+                                                            .into_element(cx)
+                                                        },
+                                                        |_cx| None,
+                                                    ));
+
+                                                    rows.push(row_cx.row_with(
+                                                        cx,
+                                                        PropertyRow::new().options(
+                                                            row_cx.row_options.clone(),
+                                                        ),
+                                                        |cx| cx.text("Password"),
+                                                        |cx| {
+                                                            let outcome_model =
+                                                                editor_password_outcome_model
+                                                                    .clone();
+                                                            TextField::new(
+                                                                editor_password_model.clone(),
+                                                            )
+                                                            .on_outcome(Some(Arc::new(
+                                                                move |host, action_cx, outcome: TextFieldOutcome| {
+                                                                    let next = edit_session_outcome_label(outcome);
+                                                                    let _ = host.models_mut().update(
+                                                                        &outcome_model,
+                                                                        |text| {
+                                                                            text.clear();
+                                                                            text.push_str(next);
+                                                                        },
+                                                                    );
+                                                                    host.request_redraw(action_cx.window);
+                                                                },
+                                                            )))
+                                                            .options(TextFieldOptions {
+                                                                id_source: Some(Arc::from(
+                                                                    "imui-editor-proof.editor.object.password",
+                                                                )),
+                                                                placeholder: Some(Arc::from(
+                                                                    "Editor password",
+                                                                )),
+                                                                clear_button: true,
+                                                                mode: TextFieldMode::Password,
+                                                                test_id: Some(Arc::from(
+                                                                    "imui-editor-proof.editor.object.password",
+                                                                )),
+                                                                clear_test_id: Some(Arc::from(
+                                                                    "imui-editor-proof.editor.object.password.clear",
+                                                                )),
+                                                                ..Default::default()
+                                                            })
+                                                            .into_element(cx)
+                                                        },
+                                                        |_cx| None,
+                                                    ));
+
+                                                    rows.push(row_cx.row_with(
+                                                        cx,
+                                                        PropertyRow::new().options(
+                                                            row_cx.row_options.clone(),
+                                                        ),
+                                                        |cx| cx.text("Secret length"),
+                                                        |cx| {
+                                                            let committed = cx
+                                                                .watch_model(
+                                                                    &editor_password_model,
+                                                                )
+                                                                .paint()
+                                                                .cloned()
+                                                                .unwrap_or_default();
+                                                            let readout =
+                                                                format!("{} chars committed", committed.chars().count());
+                                                            cx.text(readout.clone())
+                                                                .test_id(
+                                                                    "imui-editor-proof.editor.object.password.committed-length",
+                                                                )
+                                                                .a11y_label(readout)
+                                                        },
+                                                        |_cx| None,
+                                                    ));
+
+                                                    rows.push(row_cx.row_with(
+                                                        cx,
+                                                        PropertyRow::new().options(
+                                                            row_cx.row_options.clone(),
+                                                        ),
+                                                        |cx| cx.text("Password outcome"),
+                                                        |cx| {
+                                                            let outcome = cx
+                                                                .watch_model(
+                                                                    &editor_password_outcome_model,
+                                                                )
+                                                                .paint()
+                                                                .cloned()
+                                                                .unwrap_or_default();
+                                                            cx.text(outcome.clone())
+                                                                .test_id(
+                                                                    "imui-editor-proof.editor.object.password.outcome",
+                                                                )
+                                                                .a11y_label(outcome)
+                                                        },
+                                                        |_cx| None,
+                                                    ));
+
+                                                    rows.push(row_cx.row_with(
+                                                        cx,
+                                                        PropertyRow::new().options(
+                                                            row_cx.row_options.clone(),
+                                                        ),
+                                                        |cx| cx.text("Committed"),
+                                                        |cx| {
+                                                            let committed = cx
+                                                                .watch_model(
+                                                                    &editor_buffered_name_model,
+                                                                )
+                                                                .paint()
+                                                                .cloned()
+                                                                .unwrap_or_default();
+                                                            cx.text(committed.clone())
+                                                                .test_id(
+                                                                    "imui-editor-proof.editor.object.buffered-name.committed",
+                                                                )
+                                                                .a11y_label(committed)
+                                                        },
+                                                        |_cx| None,
+                                                    ));
+
+                                                    rows.push(row_cx.row_with(
+                                                        cx,
+                                                        PropertyRow::new().options(
+                                                            row_cx.row_options.clone(),
+                                                        ),
+                                                        |cx| cx.text("Name assist"),
+                                                        |cx| {
+                                                            render_editor_name_assist_surface(
+                                                                cx,
+                                                                editor_name_assist_model.clone(),
+                                                                editor_name_assist_dismissed_query_model
+                                                                    .clone(),
+                                                                editor_name_assist_active_item_model
+                                                                    .clone(),
+                                                                editor_name_assist_accepted_model
+                                                                    .clone(),
+                                                            )
+                                                        },
+                                                        |_cx| None,
+                                                    ));
+
+                                                    rows.push(row_cx.row_with(
+                                                        cx,
+                                                        PropertyRow::new().options(
+                                                            row_cx.row_options.clone(),
+                                                        ),
+                                                        |cx| cx.text("Assist state"),
+                                                        |cx| {
+                                                            let query = cx
+                                                                .watch_model(&editor_name_assist_model)
+                                                                .paint()
+                                                                .cloned()
+                                                                .unwrap_or_default();
+                                                            let dismissed_query = cx
+                                                                .watch_model(
+                                                                    &editor_name_assist_dismissed_query_model,
+                                                                )
+                                                                .paint()
+                                                                .cloned()
+                                                                .unwrap_or_default();
+                                                            let active_item_id = cx
+                                                                .watch_model(
+                                                                    &editor_name_assist_active_item_model,
+                                                                )
+                                                                .paint()
+                                                                .cloned()
+                                                                .unwrap_or(None);
+                                                            let items = editor_demo_name_assist_items(cx);
+                                                            let controller = build_editor_text_assist_controller(
+                                                                items.as_ref(),
+                                                                &query,
+                                                                active_item_id.as_ref(),
+                                                            );
+                                                            let visible_count = if query.trim().is_empty() {
+                                                                0
+                                                            } else {
+                                                                controller.visible().len()
+                                                            };
+                                                            let state = editor_text_assist_state_label(
+                                                                &query,
+                                                                &dismissed_query,
+                                                                visible_count,
+                                                            );
+                                                            cx.text(state.clone())
+                                                                .test_id(
+                                                                    "imui-editor-proof.editor.object.name-assist.state",
+                                                                )
+                                                                .a11y_label(state)
+                                                        },
+                                                        |_cx| None,
+                                                    ));
+
+                                                    rows.push(row_cx.row_with(
+                                                        cx,
+                                                        PropertyRow::new().options(
+                                                            row_cx.row_options.clone(),
+                                                        ),
+                                                        |cx| cx.text("Active assist"),
+                                                        |cx| {
+                                                            let query = cx
+                                                                .watch_model(&editor_name_assist_model)
+                                                                .paint()
+                                                                .cloned()
+                                                                .unwrap_or_default();
+                                                            let dismissed_query = cx
+                                                                .watch_model(
+                                                                    &editor_name_assist_dismissed_query_model,
+                                                                )
+                                                                .paint()
+                                                                .cloned()
+                                                                .unwrap_or_default();
+                                                            let active_item_id = cx
+                                                                .watch_model(
+                                                                    &editor_name_assist_active_item_model,
+                                                                )
+                                                                .paint()
+                                                                .cloned()
+                                                                .unwrap_or(None);
+                                                            let items = editor_demo_name_assist_items(cx);
+                                                            let controller = build_editor_text_assist_controller(
+                                                                items.as_ref(),
+                                                                &query,
+                                                                active_item_id.as_ref(),
+                                                            );
+                                                            let visible_count = if query.trim().is_empty() {
+                                                                0
+                                                            } else {
+                                                                controller.visible().len()
+                                                            };
+                                                            let expanded = editor_text_assist_surface_expanded(
+                                                                &query,
+                                                                &dismissed_query,
+                                                                visible_count,
+                                                            );
+                                                            let active_label = if expanded {
+                                                                controller
+                                                                    .active_match()
+                                                                    .map(|entry| entry.label.as_ref().to_string())
+                                                                    .unwrap_or_else(|| "None".to_string())
+                                                            } else {
+                                                                "None".to_string()
+                                                            };
+                                                            cx.text(active_label.clone())
+                                                                .test_id(
+                                                                    "imui-editor-proof.editor.object.name-assist.active",
+                                                                )
+                                                                .a11y_label(active_label)
+                                                        },
+                                                        |_cx| None,
+                                                    ));
+
+                                                    rows.push(row_cx.row_with(
+                                                        cx,
+                                                        PropertyRow::new().options(
+                                                            row_cx.row_options.clone(),
+                                                        ),
+                                                        |cx| cx.text("Accepted assist"),
+                                                        |cx| {
+                                                            let accepted = cx
+                                                                .watch_model(
+                                                                    &editor_name_assist_accepted_model,
+                                                                )
+                                                                .paint()
+                                                                .cloned()
+                                                                .unwrap_or_default();
+                                                            let readout = if accepted.trim().is_empty() {
+                                                                "None".to_string()
+                                                            } else {
+                                                                accepted
+                                                            };
+                                                            cx.text(readout.clone())
+                                                                .test_id(
+                                                                    "imui-editor-proof.editor.object.name-assist.accepted",
+                                                                )
+                                                                .a11y_label(readout)
+                                                        },
+                                                        |_cx| None,
+                                                    ));
+
+                                                    rows.push(row_cx.row_with(
+                                                        cx,
+                                                        PropertyRow::new().options(
+                                                            row_cx.row_options.clone(),
+                                                        ),
                                                         |cx| cx.text("Notes"),
                                                         |cx| {
+                                                            let outcome_model =
+                                                                editor_notes_outcome_model.clone();
                                                             TextField::new(
                                                                 editor_notes_model.clone(),
                                                             )
+                                                            .on_outcome(Some(Arc::new(
+                                                                move |host, action_cx, outcome: TextFieldOutcome| {
+                                                                    let next = edit_session_outcome_label(outcome);
+                                                                    let _ = host.models_mut().update(
+                                                                        &outcome_model,
+                                                                        |text| {
+                                                                            text.clear();
+                                                                            text.push_str(next);
+                                                                        },
+                                                                    );
+                                                                    host.request_redraw(action_cx.window);
+                                                                },
+                                                            )))
                                                             .options(TextFieldOptions {
+                                                                id_source: Some(Arc::from(
+                                                                    "imui-editor-proof.editor.object.notes",
+                                                                )),
                                                                 multiline: true,
                                                                 min_height: Some(Px(96.0)),
                                                                 clear_button: true,
@@ -493,6 +1409,54 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
+                                                    rows.push(row_cx.row_with(
+                                                        cx,
+                                                        PropertyRow::new().options(
+                                                            row_cx.row_options.clone(),
+                                                        ),
+                                                        |cx| cx.text("Notes committed"),
+                                                        |cx| {
+                                                            let committed = cx
+                                                                .watch_model(
+                                                                    &editor_notes_model,
+                                                                )
+                                                                .paint()
+                                                                .cloned()
+                                                                .unwrap_or_default();
+                                                            let readout =
+                                                                committed_line_count_label(&committed);
+                                                            cx.text(readout.clone())
+                                                                .test_id(
+                                                                    "imui-editor-proof.editor.object.notes.committed-lines",
+                                                                )
+                                                                .a11y_label(readout)
+                                                        },
+                                                        |_cx| None,
+                                                    ));
+
+                                                    rows.push(row_cx.row_with(
+                                                        cx,
+                                                        PropertyRow::new().options(
+                                                            row_cx.row_options.clone(),
+                                                        ),
+                                                        |cx| cx.text("Notes outcome"),
+                                                        |cx| {
+                                                            let outcome = cx
+                                                                .watch_model(
+                                                                    &editor_notes_outcome_model,
+                                                                )
+                                                                .paint()
+                                                                .cloned()
+                                                                .unwrap_or_default();
+                                                            cx.text(outcome.clone())
+                                                                .test_id(
+                                                                    "imui-editor-proof.editor.object.notes.outcome",
+                                                                )
+                                                                .a11y_label(outcome)
+                                                        },
+                                                        |_cx| None,
+                                                    ));
+
                                                     rows
                                                 },
                                             )]
@@ -500,6 +1464,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                     ),
                             );
 
+                            let material_validate = validate.clone();
                             out.push(
                                 PropertyGroup::new("Material")
                                     .options(fret_ui_editor::composites::PropertyGroupOptions {
@@ -520,7 +1485,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                         move |cx| {
                                             let fmt = fmt.clone();
                                             let parse = parse.clone();
-                                            let validate = validate.clone();
+                                            let validate = material_validate.clone();
                                             vec![PropertyGrid::new().into_element(
                                                 cx,
                                                 move |cx, row_cx| {
@@ -559,8 +1524,15 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                     parse.clone(),
                                                                 )
                                                                 .validate(Some(validate.clone()))
+                                                                .options(
+                                                                    fret_ui_editor::controls::DragValueOptions {
+                                                                        test_id: Some(Arc::from(
+                                                                            "imui-editor-proof.editor.drag-value-demo",
+                                                                        )),
+                                                                        ..Default::default()
+                                                                    },
+                                                                )
                                                                 .into_element(cx)
-                                                                .test_id("imui-editor-proof.editor.drag-value-demo")
                                                             },
                                                             |cx| {
                                                                 Some(
@@ -937,6 +1909,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                     ),
                             );
 
+                            let advanced_validate = validate.clone();
                             out.push(
                                 PropertyGroup::new("Advanced")
                                     .options(fret_ui_editor::composites::PropertyGroupOptions {
@@ -955,6 +1928,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                         cx,
                                         |_cx| None,
                                         move |cx| {
+                                            let validate = advanced_validate.clone();
                                             let fmt_f64: fret_ui_editor::controls::NumericFormatFn<f64> =
                                                 Arc::new(|v| Arc::from(format!("{v:.3}")));
                                             let parse_f64: fret_ui_editor::controls::NumericParseFn<f64> =
@@ -1009,10 +1983,13 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                     fmt_f64.clone(),
                                                                     parse_f64.clone(),
                                                                 )
+                                                                .options(VecEditOptions {
+                                                                    test_id: Some(Arc::from(
+                                                                        "imui-editor-proof.editor.advanced.position",
+                                                                    )),
+                                                                    ..Default::default()
+                                                                })
                                                                 .into_element(cx)
-                                                                .test_id(
-                                                                    "imui-editor-proof.editor.advanced.position",
-                                                                )
                                                             },
                                                             |_cx| None,
                                                         ));
@@ -1142,8 +2119,15 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                             fmt_i32.clone(),
                                                                             parse_i32.clone(),
                                                                         )
+                                                                        .options(
+                                                                            fret_ui_editor::controls::DragValueOptions {
+                                                                                test_id: Some(Arc::from(
+                                                                                    "imui-editor-proof.editor.advanced.iterations",
+                                                                                )),
+                                                                                ..Default::default()
+                                                                            },
+                                                                        )
                                                                         .into_element(cx)
-                                                                        .test_id("imui-editor-proof.editor.advanced.iterations")
                                                                     },
                                                                     |cx| {
                                                                         Some(
@@ -1153,6 +2137,54 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                             .into_element(cx),
                                                                         )
                                                                     },
+                                                                ),
+                                                        );
+                                                    }
+
+                                                    if show_exposure {
+                                                        let model_for_reset =
+                                                            editor_exposure_model.clone();
+                                                        let on_reset = Arc::new(
+                                                            move |host: &mut dyn fret_ui::action::UiActionHost,
+                                                                  action_cx: fret_ui::action::ActionCx| {
+                                                                let _ = host.models_mut().update(
+                                                                    &model_for_reset,
+                                                                    |v| *v = 0.75,
+                                                                );
+                                                                host.request_redraw(action_cx.window);
+                                                            },
+                                                        );
+
+                                                        rows.push(
+                                                            PropertyRow::new()
+                                                                .options(row_cx.row_options.clone())
+                                                                .reset(Some(
+                                                                    PropertyRowReset::new(on_reset).options(
+                                                                        fret_ui_editor::composites::PropertyRowResetOptions {
+                                                                            test_id: Some(Arc::from("imui-editor-proof.editor.advanced.exposure.reset")),
+                                                                            ..Default::default()
+                                                                        },
+                                                                    ),
+                                                                ))
+                                                                .into_element(
+                                                                    cx,
+                                                                    |cx| cx.text("Exposure"),
+                                                                    |cx| {
+                                                                        NumericInput::new(
+                                                                            editor_exposure_model.clone(),
+                                                                            fmt_f64.clone(),
+                                                                            parse_f64.clone(),
+                                                                        )
+                                                                        .validate(Some(validate.clone()))
+                                                                        .options(NumericInputOptions {
+                                                                            test_id: Some(Arc::from(
+                                                                                "imui-editor-proof.editor.advanced.exposure",
+                                                                            )),
+                                                                            ..Default::default()
+                                                                        })
+                                                                        .into_element(cx)
+                                                                    },
+                                                                    |_cx| None,
                                                                 ),
                                                         );
                                                     }
@@ -1183,17 +2215,19 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                             },
                         )]
                 });
-                ui.separator();
+                if !editor_review_layout {
+                    ui.separator();
 
-                fret_docking::imui::dock_space_with(
-                    ui,
-                    fret_docking::imui::DockSpaceImUiOptions {
-                        test_id: dock_test_id,
-                        tab_drag_anchor_test_id,
-                        ..Default::default()
-                    },
-                    move |app, window| ensure_dock_graph(app, window),
-                );
+                    fret_docking::imui::dock_space_with(
+                        ui,
+                        fret_docking::imui::DockSpaceImUiOptions {
+                            test_id: dock_test_id,
+                            tab_drag_anchor_test_id,
+                            ..Default::default()
+                        },
+                        move |app, window| ensure_dock_graph(app, window),
+                    );
+                }
             });
         })
         .size_full();
@@ -1362,6 +2396,8 @@ fn render_authoring_parity_declarative_group(
                             TextField::new(name_model.clone())
                                 .options(TextFieldOptions {
                                     clear_button: true,
+                                    selection_behavior:
+                                        EditorTextSelectionBehavior::SelectAllOnFocus,
                                     test_id: Some(Arc::from(
                                         "imui-editor-proof.authoring.declarative.name",
                                     )),
@@ -1385,6 +2421,8 @@ fn render_authoring_parity_declarative_group(
                                     id_source: Some(Arc::from(
                                         "authoring-parity.declarative.drag-value",
                                     )),
+                                    prefix: Some(Arc::from("$")),
+                                    suffix: Some(Arc::from("ms")),
                                     test_id: Some(Arc::from(
                                         "imui-editor-proof.authoring.declarative.value",
                                     )),
@@ -1403,15 +2441,10 @@ fn render_authoring_parity_declarative_group(
                             Slider::new(slider_model.clone(), 0.0, 1.0)
                                 .format(percent_0_1_format(0))
                                 .parse(percent_0_1_parse())
-                                .options(SliderOptions {
-                                    id_source: Some(Arc::from(
-                                        "authoring-parity.declarative.slider",
-                                    )),
-                                    test_id: Some(Arc::from(
-                                        "imui-editor-proof.authoring.declarative.blend",
-                                    )),
-                                    ..Default::default()
-                                })
+                                .options(authoring_parity_blend_slider_options(
+                                    "authoring-parity.declarative.slider",
+                                    "imui-editor-proof.authoring.declarative.blend",
+                                ))
                                 .into_element(cx)
                         },
                         |_cx| None,
@@ -1500,6 +2533,8 @@ fn render_authoring_parity_imui_group(
                                     ui,
                                     TextField::new(name_model.clone()).options(TextFieldOptions {
                                         clear_button: true,
+                                        selection_behavior:
+                                            EditorTextSelectionBehavior::SelectAllOnFocus,
                                         test_id: Some(Arc::from(
                                             "imui-editor-proof.authoring.imui.name",
                                         )),
@@ -1534,6 +2569,8 @@ fn render_authoring_parity_imui_group(
                                             id_source: Some(Arc::from(
                                                 "authoring-parity.imui.drag-value",
                                             )),
+                                            prefix: Some(Arc::from("$")),
+                                            suffix: Some(Arc::from("ms")),
                                             test_id: Some(Arc::from(
                                                 "imui-editor-proof.authoring.imui.value",
                                             )),
@@ -1557,15 +2594,10 @@ fn render_authoring_parity_imui_group(
                                     Slider::new(slider_model.clone(), 0.0, 1.0)
                                         .format(percent_0_1_format(0))
                                         .parse(percent_0_1_parse())
-                                        .options(SliderOptions {
-                                            id_source: Some(Arc::from(
-                                                "authoring-parity.imui.slider",
-                                            )),
-                                            test_id: Some(Arc::from(
-                                                "imui-editor-proof.authoring.imui.blend",
-                                            )),
-                                            ..Default::default()
-                                        }),
+                                        .options(authoring_parity_blend_slider_options(
+                                            "authoring-parity.imui.slider",
+                                            "imui-editor-proof.authoring.imui.blend",
+                                        )),
                                 );
                             })
                         },
@@ -1814,6 +2846,12 @@ fn editor_demo_iterations_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Mo
     })
 }
 
+fn editor_demo_exposure_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<f64> {
+    named_demo_state(cx, "imui_editor_proof_demo.model.exposure", |cx| {
+        cx.app.models_mut().insert(0.75_f64)
+    })
+}
+
 fn editor_demo_search_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
     named_demo_state(cx, "imui_editor_proof_demo.model.search", |cx| {
         cx.app.models_mut().insert(String::new())
@@ -1826,11 +2864,71 @@ fn editor_demo_name_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<St
     })
 }
 
+fn editor_demo_buffered_name_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
+    named_demo_state(cx, "imui_editor_proof_demo.model.buffered_name", |cx| {
+        cx.app.models_mut().insert("Buffered Cube".to_string())
+    })
+}
+
+fn editor_demo_name_assist_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
+    named_demo_state(cx, "imui_editor_proof_demo.model.name_assist", |cx| {
+        cx.app.models_mut().insert(String::new())
+    })
+}
+
+fn editor_demo_name_assist_dismissed_query_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<String> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.model.name_assist_dismissed_query",
+        |cx| cx.app.models_mut().insert(String::new()),
+    )
+}
+
+fn editor_demo_name_assist_active_item_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<Option<Arc<str>>> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.model.name_assist_active_item",
+        |cx| cx.app.models_mut().insert(None::<Arc<str>>),
+    )
+}
+
+fn editor_demo_name_assist_accepted_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<String> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.model.name_assist_accepted",
+        |cx| cx.app.models_mut().insert(String::new()),
+    )
+}
+
+fn editor_demo_password_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
+    named_demo_state(cx, "imui_editor_proof_demo.model.password", |cx| {
+        cx.app.models_mut().insert("secret42".to_string())
+    })
+}
+
+fn editor_demo_password_outcome_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
+    named_demo_state(cx, "imui_editor_proof_demo.model.password_outcome", |cx| {
+        cx.app.models_mut().insert("Idle".to_string())
+    })
+}
+
 fn editor_demo_notes_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
     named_demo_state(cx, "imui_editor_proof_demo.model.notes", |cx| {
         cx.app
             .models_mut()
             .insert("Multiline TextField (v1)\n- uses TextArea\n- clear affordance\n".to_string())
+    })
+}
+
+fn editor_demo_notes_outcome_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
+    named_demo_state(cx, "imui_editor_proof_demo.model.notes_outcome", |cx| {
+        cx.app.models_mut().insert("Idle".to_string())
     })
 }
 
@@ -2143,4 +3241,59 @@ fn before_close_window(app: &mut KernelApp, closing_window: AppWindowId) -> bool
         .unwrap_or(closing_window);
     let _ = dock_runtime::handle_dock_before_close_window(app, closing_window, target_window);
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn authoring_parity_blend_slider_uses_formatter_percent_without_extra_suffix() {
+        let format = percent_0_1_format(0);
+        assert_eq!(format(0.75).as_ref(), "75%");
+
+        let declarative = authoring_parity_blend_slider_options(
+            "authoring-parity.declarative.slider",
+            "imui-editor-proof.authoring.declarative.blend",
+        );
+        assert!(declarative.suffix.is_none());
+        assert_eq!(
+            declarative.id_source.as_deref(),
+            Some("authoring-parity.declarative.slider")
+        );
+        assert_eq!(
+            declarative.test_id.as_deref(),
+            Some("imui-editor-proof.authoring.declarative.blend")
+        );
+
+        let imui = authoring_parity_blend_slider_options(
+            "authoring-parity.imui.slider",
+            "imui-editor-proof.authoring.imui.blend",
+        );
+        assert!(imui.suffix.is_none());
+        assert_eq!(
+            imui.id_source.as_deref(),
+            Some("authoring-parity.imui.slider")
+        );
+        assert_eq!(
+            imui.test_id.as_deref(),
+            Some("imui-editor-proof.authoring.imui.blend")
+        );
+    }
+
+    #[test]
+    fn committed_line_count_label_tracks_multiline_readout() {
+        assert_eq!(
+            committed_line_count_label(
+                "Multiline TextField (v1)\n- uses TextArea\n- clear affordance\n"
+            ),
+            "3 lines committed"
+        );
+        assert_eq!(
+            committed_line_count_label("Line A\nLine B"),
+            "2 lines committed"
+        );
+        assert_eq!(committed_line_count_label("Solo"), "1 line committed");
+        assert_eq!(committed_line_count_label(""), "0 lines committed");
+    }
 }

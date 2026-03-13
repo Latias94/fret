@@ -16,29 +16,24 @@ pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvas
     };
 
     let Some(pointer_id) = cx.pointer_id else {
-        canvas.interaction.pending_insert_node_drag = None;
-        cx.release_pointer_capture();
-        return false;
+        return super::session::abort_pending_insert_node_drag(&mut canvas.interaction, cx);
     };
     if pending.pointer_id != pointer_id {
         return false;
     }
 
     if !buttons.left {
-        canvas.interaction.pending_insert_node_drag = None;
-        if let Some(window) = cx.window {
-            let dnd = ui_dnd::dnd_service_model_global(cx.app);
-            ui_dnd::clear_pointer(cx.app.models_mut(), &dnd, window, drag_kind, pointer_id);
-        }
-        cx.release_pointer_capture();
-        return false;
+        return super::session::abort_pending_insert_node_drag_and_clear_dnd(
+            &mut canvas.interaction,
+            cx,
+            drag_kind,
+            pointer_id,
+        );
     }
 
     if cx.window.is_none() {
         // Can't start an internal drag without a window id.
-        canvas.interaction.pending_insert_node_drag = None;
-        cx.release_pointer_capture();
-        return false;
+        return super::session::abort_pending_insert_node_drag(&mut canvas.interaction, cx);
     }
 
     let Some(window) = cx.window else {
@@ -97,10 +92,6 @@ pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvas
         drag.dragging = true;
     }
 
-    canvas.interaction.searcher = None;
-    canvas.interaction.pending_insert_node_drag = None;
-    cx.release_pointer_capture();
-    cx.request_redraw();
-    cx.invalidate_self(Invalidation::Paint);
+    super::session::finish_pending_insert_node_drag(&mut canvas.interaction, cx);
     true
 }

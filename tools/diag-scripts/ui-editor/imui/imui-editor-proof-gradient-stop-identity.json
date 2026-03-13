@@ -1,0 +1,240 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "imui-editor-proof-gradient-stop-identity",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui_editor", "imui", "gradient", "identity", "regression"],
+    "target_hints": [
+      "Uses the Gradient group in imui_editor_proof_demo.",
+      "Proves repeated stop rows keep edit state and bound values attached to stable stop ids across add/remove churn."
+    ]
+  },
+  "window": "lowest_id",
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.gradient.stops.stop.1" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.gradient.stops.stop.2" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.gradient.stops.stop.2.position.value"
+        },
+        "text": "100%"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.gradient.stops.stop.2.color.swatch"
+        },
+        "text": "#3373F2"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "imui-editor-proof.editor.gradient.stops.stop.2.position"
+      },
+      "click_count": 2
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.gradient.stops.stop.2.position.typing.input"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.gradient.stops.stop.2.position.typing.input"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "imui-editor-proof.editor.gradient.stops.stop.2.position.typing.input"
+      }
+    },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    {
+      "type": "type_text_into",
+      "target": {
+        "kind": "test_id",
+        "id": "imui-editor-proof.editor.gradient.stops.stop.2.position.typing.input"
+      },
+      "text": "75%"
+    },
+    { "type": "press_key", "key": "enter" },
+
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "imui-editor-proof.editor.gradient.stops.stop.1.remove"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.gradient.stops.stop.1" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.gradient.stops.stop.2.position.value"
+        },
+        "text": "75%"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.gradient.stops.stop.2.color.swatch"
+        },
+        "text": "#3373F2"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.gradient.add-stop" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.gradient.stops.stop.3" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.gradient.stops.stop.3.position.value"
+        },
+        "text": "50%"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.gradient.stops.stop.2.position.value"
+        },
+        "text": "75%"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "imui-editor-proof.editor.gradient.stops.stop.2.position"
+      },
+      "click_count": 2
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "imui-editor-proof.editor.gradient.stops.stop.2.position.typing.input"
+      }
+    },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    {
+      "type": "type_text_into",
+      "target": {
+        "kind": "test_id",
+        "id": "imui-editor-proof.editor.gradient.stops.stop.2.position.typing.input"
+      },
+      "text": "80%"
+    },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.gradient.stops.stop.2.position.value"
+        },
+        "text": "80%"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.gradient.stops.stop.3.position.value"
+        },
+        "text": "50%"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "capture_bundle",
+      "label": "imui-editor-proof-gradient-stop-identity"
+    }
+  ]
+}

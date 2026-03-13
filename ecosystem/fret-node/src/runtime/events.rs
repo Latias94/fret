@@ -24,11 +24,15 @@ pub struct NodeGraphStoreSnapshot<'a> {
     pub history: &'a crate::ops::GraphHistory,
 }
 
-/// View-state change events.
+/// View-state projection change events.
 ///
 /// These are the B-layer equivalent of XyFlow's selection/viewport updates (which are embedded in
 /// their node/edge arrays). In fret-node, view-state is intentionally separate from the serialized
 /// graph document.
+///
+/// Only viewport/selection changes are surfaced here. Other persisted view-state fields such as
+/// draw order, interaction config, and runtime tuning are observable through selector
+/// subscriptions on [`NodeGraphStoreSnapshot`].
 #[derive(Debug, Clone)]
 pub enum ViewChange {
     Viewport {

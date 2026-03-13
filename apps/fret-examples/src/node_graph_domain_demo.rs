@@ -24,12 +24,13 @@ use fret_node::runtime::changes::NodeGraphChanges;
 use fret_node::runtime::events::ViewChange;
 use fret_node::runtime::store::NodeGraphStore;
 use fret_node::types::TypeDesc;
+use fret_node::ui::advanced::{NodeGraphControllerTransportExt as _, NodeGraphEditQueue};
 use fret_node::ui::canvas::RejectNonFiniteTx;
 use fret_node::ui::style::NodeGraphStyle;
 use fret_node::ui::{
     EdgeMarker, EdgeRenderHint, EdgeRouteKind, EdgeTypeKey, InsertNodeCandidate,
     MeasuredGeometryStore, NodeGraphA11yFocusedEdge, NodeGraphA11yFocusedNode,
-    NodeGraphA11yFocusedPort, NodeGraphCanvas, NodeGraphEdgeTypes, NodeGraphEditQueue,
+    NodeGraphA11yFocusedPort, NodeGraphCanvas, NodeGraphController, NodeGraphEdgeTypes,
     NodeGraphEditor, NodeGraphInternalsStore, NodeGraphNodeTypes, NodeGraphOverlayHost,
     NodeGraphOverlayState, NodeGraphPortalHost, NodeGraphPortalNodeLayout, NodeGraphPresenter,
     PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalNumberEditor,
@@ -45,6 +46,7 @@ use fret_app::install_command_default_keybindings_into_keymap;
 #[derive(Clone)]
 struct NodeGraphDemoModels {
     store: fret_runtime::Model<NodeGraphStore>,
+    controller: NodeGraphController,
     graph: fret_runtime::Model<Graph>,
     view: fret_runtime::Model<NodeGraphViewState>,
     edits: fret_runtime::Model<NodeGraphEditQueue>,
@@ -760,10 +762,9 @@ impl NodeGraphDomainDemoDriver {
 
         let graph = models.graph.clone();
         let view = models.view.clone();
-        let edits = models.edits.clone();
         let overlays = models.overlays.clone();
         let group_rename_text = models.group_rename_text.clone();
-        let store = models.store.clone();
+        let controller = models.controller.clone();
         let style = NodeGraphStyle::from_theme(Theme::global(app));
 
         let edge_types = NodeGraphEdgeTypes::new()
@@ -813,13 +814,12 @@ impl NodeGraphDomainDemoDriver {
 
         let presenter = DemoTypedPresenter::default();
         let canvas = NodeGraphCanvas::new(graph.clone(), view)
-            .with_store(store)
+            .with_controller(controller.clone())
             .with_middleware(RejectNonFiniteTx)
             .with_presenter(presenter)
             .with_style(style.clone())
             .with_edge_types(edge_types)
             .with_callbacks(DomainDemoCallbacks::default())
-            .with_edit_queue(edits.clone())
             .with_overlay_state(overlays.clone())
             .with_internals_store(internals.clone())
             .with_close_command(CommandId::new("node_graph_domain_demo.close"));
@@ -832,12 +832,12 @@ impl NodeGraphDomainDemoDriver {
 
         let overlay_host = NodeGraphOverlayHost::new(
             graph,
-            edits,
             overlays,
             group_rename_text.clone(),
             canvas_node,
             style.clone(),
-        );
+        )
+        .with_controller(controller.clone());
         let overlay_node = ui.create_node_retained(overlay_host);
         let rename_input_node = ui.create_node_retained(BoundTextInput::new(group_rename_text));
         ui.set_children(overlay_node, vec![rename_input_node]);
@@ -888,7 +888,7 @@ impl NodeGraphDomainDemoDriver {
             node_types.into_portal_renderer(),
         )
         .with_cull_margin_px(style.paint.render_cull_margin_px)
-        .with_edit_queue(models.edits.clone())
+        .with_controller(models.controller.clone())
         .with_canvas_focus_target(canvas_node)
         .with_command_handler(PortalNumberEditHandler::new(
             portal_root,
@@ -1097,10 +1097,13 @@ pub fn run() -> anyhow::Result<()> {
     let view = app.models_mut().insert(store_value.view_state().clone());
     let store = app.models_mut().insert(store_value);
     let edits = app.models_mut().insert(NodeGraphEditQueue::default());
+    let controller =
+        NodeGraphController::new(store.clone()).bind_edit_queue_transport(edits.clone());
     let overlays = app.models_mut().insert(NodeGraphOverlayState::default());
     let group_rename_text = app.models_mut().insert(String::new());
     app.set_global(NodeGraphDemoModels {
         store,
+        controller,
         graph,
         view,
         edits,

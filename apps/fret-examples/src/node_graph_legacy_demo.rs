@@ -51,7 +51,7 @@ use fret_node::schema::{
     NodeKindMigrateError, NodeKindMigrator, NodeRegistry, NodeSchema, PortDecl,
 };
 use fret_node::ui::canvas::RejectNonFiniteTx;
-use fret_node::ui::declarative::NodeGraphSurfacePaintOnlyProps;
+use fret_node::ui::declarative::NodeGraphSurfaceBinding;
 use fret_node::ui::presenter::{
     EdgeMarker, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, NodeGraphContextMenuItem,
     NodeGraphPresenter, PortAnchorHint,
@@ -2478,18 +2478,12 @@ fn handle_command(
 
         // Keep the standalone graph/view models in sync with the store so declarative surfaces
         // that are not store-backed (e.g. paint-only skeleton) observe demo commands.
-        let next_graph_for_models = next_graph.clone();
-        let next_view_for_models = next_view.clone();
-
-        let _ = models.store.update(app, |store, _cx| {
-            store.replace_graph(next_graph);
-            store.replace_view_state(next_view);
-            store.clear_history();
-        });
-        let _ = models
-            .graph
-            .update(app, |g, _cx| *g = next_graph_for_models);
-        let _ = models.view.update(app, |v, _cx| *v = next_view_for_models);
+        let binding = NodeGraphSurfaceBinding::from_models(
+            models.graph.clone(),
+            models.view.clone(),
+            fret_node::ui::NodeGraphController::new(models.store.clone()),
+        );
+        let _ = binding.replace_document(app, next_graph, next_view);
 
         app.request_redraw(window);
         return;
@@ -2547,11 +2541,15 @@ fn render(
                         )
                     }
                     NodeGraphDemoDeclarativeMode::PaintOnly => {
-                        let props = NodeGraphSurfacePaintOnlyProps::new(
+                        let controller =
+                            fret_node::ui::NodeGraphController::new(models.store.clone());
+                        let binding = NodeGraphSurfaceBinding::from_models(
                             models.graph.clone(),
                             models.view.clone(),
+                            controller,
                         );
-                        fret_node::ui::declarative::node_graph_surface_paint_only(cx, props)
+                        let props = binding.surface_props();
+                        fret_node::ui::declarative::node_graph_surface(cx, props)
                     }
                 };
                 vec![surface]

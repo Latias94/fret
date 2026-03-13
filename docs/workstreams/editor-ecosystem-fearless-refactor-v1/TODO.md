@@ -1,7 +1,14 @@
-# Editor Ecosystem Fearless Refactor v1 - TODO
+# Editor ecosystem fearless refactor v1 - TODO
 
 Tracking doc: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/DESIGN.md`
+
 Milestones: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/MILESTONES.md`
+
+Component-system baseline:
+`docs/workstreams/editor-ecosystem-fearless-refactor-v1/EDITOR_COMPONENT_SYSTEM.md`
+
+Interaction contract:
+`docs/workstreams/editor-ecosystem-fearless-refactor-v1/EDITOR_INTERACTION_CONTRACT.md`
 
 ## Status legend
 
@@ -10,141 +17,224 @@ Milestones: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/MILESTONES.m
 - `[x]` Done
 - `[?]` Needs ownership decision
 
-## M0 - Contracts and documentation
+## Phase A - Boundary freeze and document reset
 
-- [x] `EER-DOC-001` Create the directory workstream with `DESIGN.md`, `TODO.md`, and `MILESTONES.md`.
-- [x] `EER-ADR-002` Add a boundary ADR for editor/workspace token namespaces and skinning ownership.
-- [x] `EER-DOC-003` Update workstream and ADR indexes so the new documents are discoverable.
-- [x] `EER-AUDIT-004` Add a compact ownership table covering `fret-imui`, `fret-ui-editor`,
-      `fret-workspace`, `fret-docking`, and `apps/fret-editor`.
-- [x] `EER-DOC-005` Add a parity matrix for imgui/egui outcomes vs Fret layering and ownership.
+- [x] `EER-DOC-100` Add a directory-level README that distinguishes primary documents from
+      supporting notes.
+- [x] `EER-DOC-101` Rewrite the design doc around the current ownership baseline and execution
+      intent instead of keeping a large orchestration narrative.
+- [x] `EER-DOC-102` Reset milestones/TODO so they are forward-looking rather than a mixed archive of
+      already-landed bring-up tasks.
+- [x] `EER-DOC-103` Add an editor component-system note covering design language, density, state
+      model, and preset strategy.
+- [ ] `EER-DOC-104` Decide whether `PARITY_MATRIX.md` should stay as a short orchestration snapshot
+      or be folded into `docs/workstreams/ui-editor-egui-imgui-gap-v1.md`.
+- [x] `EER-DOC-105` Publish a short standalone conventions note for `id_source`, `test_id`,
+      response semantics, and loop-built widget state.
 
-## M1 - Ownership and extraction audit
+## Phase B - Foundation closure before component growth
 
-- [x] `EER-LAYER-010` Audit `apps/fret-editor` modules and classify each as:
-      app-specific, extract-now, or incubate-longer.
-- [x] `EER-LAYER-011` Produce a first extraction shortlist for reusable editor surfaces:
-      `inspector_protocol`, `property_edit`, `viewport_tools`, `viewport_overlays`, or none.
-- [x] `EER-LAYER-012` Write an extraction rubric:
-      second consumer, app-model independence, stable ownership, proof surface.
-- [x] `EER-WORKSPACE-013` Reconcile `fret-workspace` vs `fret-docking` ownership for tabstrip/shell chrome.
-      Decision: keep shell-owned `workspace.tabstrip.*` for non-dock-aware shell chrome, keep
-      dock-aware drop/tab-insert visuals in `component.docking.*`, and align them by adapter-side
-      seeding rather than crate coupling.
-      Evidence: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/TOKEN_INVENTORY.md`,
-      `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs`, and
-      `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-chrome-shadcn-screenshot.json`.
-- [x] `EER-LAYER-014` Confirm which editor-facing protocols stay deliberately app-owned even after the refactor.
+- [~] `EER-BASE-110` Fix the default editor baseline visual hierarchy:
+      field chrome, contrast bands, separators, label/readout clarity, and group hierarchy.
+      Recent progress: trailing affordances now use a shared row-height-square baseline, property-row
+      reset actions keep subtle idle chrome, and field-status badges now use short labels plus
+      border-defined semantic tones instead of raw filled pills. Default inspector hierarchy tokens
+      now also give property groups taller headers, stronger header/body contrast, and a bit more
+      panel/content separation. `InspectorPanel` now renders its own header band/separator instead
+      of letting search/toolbar chrome visually merge into the first section.
+      Remaining work: separators, group hierarchy, and the final balance between neutral default and
+      editor-specific contrast still need another screenshot-driven pass.
+- [~] `EER-BASE-111` Finish `EditorWidgetVisuals` convergence for the existing starter-set controls
+      before promoting more components.
+      Shared field-state grammar now routes joined text fields/search boxes, numeric inputs,
+      drag-value / slider typing paths, axis drag values, and enum-select triggers through the same
+      editor-owned `EditorWidgetVisuals` baseline, and numeric typing now also uses the same
+      row-height line box as the surrounding non-typing affordances so editor rows stop visibly
+      jumping when scrub/value displays switch into text-entry mode. Remaining work: extend that
+      convergence to the remaining secondary widgets and keep pruning residual per-control chrome
+      heuristics.
+- [~] `EER-BASE-112` Define and land inspector/property layout grammar:
+      shared `InspectorLayoutMetrics` now feed `PropertyRow`, `PropertyGrid`,
+      `PropertyGridVirtualized`, `PropertyGroup`, and `InspectorPanel`, and the row grammar is now
+      explicit (`label -> value -> reset slot -> status/actions slot`). Trailing affordances now
+      converge on a row-height-square baseline across property-row reset buttons, joined-input
+      clear/remove segments, and gradient-row icon actions.
+      Remaining work: tune wide-inspector slack, badge/status lane balance, and any dense-mode
+      overrides from screenshot review rather than ad-hoc per-demo tweaks.
+- [x] `EER-BASE-113` Make typed-edit, focus, active, and invalid states visually explicit across
+      numeric, text, and select-like controls.
+      `EditorWidgetVisuals` now owns a shared semantic layer for typed-edit and invalid field
+      states, joined text-like controls default to a stronger editing treatment while focused, and
+      numeric/drag/slider typing paths plus enum-select triggers now reuse the same control-state
+      grammar instead of hand-tuned per-widget error/focus chrome. The promoted default screenshot
+      proof (`r25`) now shows a more explicit typed-edit tint and a shared invalid frame treatment
+      on the review-only inspector surface.
+- [~] `EER-BASE-114` Clean up proof-surface composition so overview / typing / error screenshots are
+      directly reviewable instead of relying on accidental window placement or hidden states.
+      `imui_editor_proof_demo` now exposes `FRET_IMUI_EDITOR_PROOF_LAYOUT=editor_review`, and the
+      default screenshot proof script uses that mode to capture inspector-only baseline states.
+      The full-layout authoring parity surface now also has a focused affordance screenshot proof
+      via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-authoring-affordances-screenshots-default.json`,
+      which pins populated text-field clear buttons plus percent slider readouts on the proof
+      surface where the original visual regressions showed up.
+      Remaining work: keep these compositions stable while token/layout cleanup continues and
+      extend the same review discipline to adjacent proof surfaces.
+- [x] `EER-BASE-115` Add screenshot/diag coverage for the neutral default editor baseline.
+      The default screenshot proof now exists via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-default.json`,
+      and the latest review-only capture covers overview / typing / validation states on the editor
+      inspector surface. The script is rerun-safe inside one session, and the launched
+      `fretboard diag run --session-auto --launch --pack --ai-packet --include-screenshots`
+      workflow now exits cleanly after success instead of waiting for a redundant post-pass dump.
+- [~] `EER-BASE-119` Make editor-owned baseline theming resilient to host/theme resets:
+      `fret-ui-editor::theme` now exposes a shared "host sync first, editor preset replay second"
+      helper for `WindowMetricsService`-driven theme resets, and `imui_editor_proof_demo` now uses
+      that path instead of hand-rolling a local replay hook. Remaining work: apply the same helper
+      pattern to adjacent promoted editor/workspace surfaces and decide how much of this should be
+      lifted into broader app-integration guidance.
+- [x] `EER-BASE-116` Decide whether `imgui_like_dense` should get matching screenshot proof coverage
+      now or only after the default baseline is acceptable.
+      Decision: yes. The dense preset now has matching overview / typing / validation screenshot
+      proof coverage via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-imgui-like-dense.json`.
+- [~] `EER-BASE-117` Close baseline editor text/numeric policy where visuals and interaction are
+      coupled:
+      Enter/Escape semantics, selection defaults, clear affordances, affix behavior, and error
+      presentation.
+      Recent progress: editor numeric text-entry now defaults to a select-all-equivalent
+      replace-on-first-edit policy on focus, `DragValue` / `Slider` typing paths can opt through
+      the same shared setting instead of hand-rolling their own draft replacement behavior,
+      double-click typing now uses a shared delayed focus handoff so nested numeric text inputs are
+      reliably focusable before the first edit, and `AxisDragValue` typing now clears stale
+      validation state while the user edits and exposes the same trailing error affordance class as
+      the other joined numeric editors. Text-like controls now also expose a lightweight shared
+      policy split: `TextField` can opt into select-all-on-focus without inheriting search-box
+      Escape behavior, while `MiniSearchBox` defaults to select-all-on-focus and still routes
+      Escape-clear through the runtime text-input cancel command instead of a widget-local key
+      hook. Buffered `TextField` now also runs as an editor session baseline on both single-line
+      and multiline surfaces: typing stays in a local draft, blur commits by default, Escape
+      restores the pre-edit value, single-line Enter commits explicitly, and multiline
+      `Ctrl/Cmd+Enter` commits explicitly while plain Enter stays newline insertion. The proof
+      surface now exposes stable committed-value / committed-line-count / outcome readouts so diag
+      can prove draft-vs-committed behavior directly without conflating it with search-box
+      semantics, and no-op focus/blur cycles no longer emit misleading commit/cancel outcomes. The
+      same control also exposes password-mode rendering, a commit/cancel outcome hook, and
+      assistive semantics placeholders for future completion/history surfaces while keeping that
+      policy in the ecosystem layer. Authoring-parity percent sliders now also treat
+      `percent_0_1_format(0)` as the sole `%` source, and the shared icon-button segment now
+      centers trailing clear affordance icons so proof-surface text/numeric controls stop drifting
+      on obvious visual seams.
+      Remaining work: lift the new completion/history proof into reusable `fret-ui-kit`
+      focus/overlay/active-descendant glue, decide on the formal popup/list-surface abstraction
+      for editor completion/history, decide where editor surfaces should opt into
+      `BlurBehavior::Cancel` / `PreserveDraft`, and keep tightening multiline/editor proof coverage
+      before new promoted components land.
+- [ ] `EER-BASE-118` Do not promote new reusable editor components until `EER-BASE-110` through
+      `EER-BASE-117` are in materially better shape.
 
-## M2 - Authoring convergence (`imui` vs declarative)
+## Phase C - Editor starter kit closure
 
-- [~] `EER-IMUI-020` Implement a real `fret-ui-editor::imui` facade over declarative controls.
-      Current status: a first thin adapter surface now exists in
-      `ecosystem/fret-ui-editor/src/imui.rs` for `TextField`, `Checkbox`, `DragValue`, `Slider`,
-      and `EnumSelect`; remaining editor controls still need to be surfaced.
-- [ ] `EER-IMUI-021` Audit editor controls for duplicate implementations and collapse them to one source of truth.
-- [~] `EER-IMUI-022` Define stable authoring conventions for:
-      `id_source`, `test_id`, response semantics, and loop-built widget state.
-      Current status: the proof demo now uses explicit `id_source` separation for repeated parity
-      controls and stable `test_id` anchors across both authoring frontends, but the conventions
-      note is not yet written as a standalone reference.
-- [x] `EER-IMUI-023` Add side-by-side examples showing the same editor control used from declarative and `imui`.
-- [~] `EER-IMUI-024` Ensure editor-specific token reads and widget visuals are identical across authoring frontends.
-      Current status: both parity columns now resolve through the same `fret-ui-editor` widgets and
-      the same `EditorThemePresetV1` patch path inside `imui_editor_proof_demo`, but the broader
-      control-set audit is still pending.
-- [x] `EER-IMUI-025` Draft an imgui-like preset using `editor.*` / `workspace.*` tokens rather than a new widget fork.
-- [x] `EER-IMUI-026` Apply the imgui-like preset to a proof surface and validate that declarative and `imui` paths still share widget behavior.
-      Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs`,
-      `ecosystem/fret-ui-editor/tests/imui_adapter_smoke.rs`, and
-      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-authoring-parity-shared-models.json`.
-      Latest evidence (2026-03-09): the promoted native diagnostics run passes with
-      `FRET_IMUI_EDITOR_PRESET=imgui_like_dense cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-editor-proof-authoring-parity-shared-models.json --launch -- target/debug/imui_editor_proof_demo.exe`.
+- [~] `EER-IMUI-120` Keep expanding `fret-ui-editor::imui` only as a thin facade over declarative
+      controls; do not allow a second implementation tree to form.
+- [ ] `EER-EDITOR-121` Close `DragValue` for real editor workflows:
+      prefix/suffix, clamp policy, step, decimals policy, unit helpers, and consistent commit/cancel.
+- [~] `EER-EDITOR-122` Close editor-grade text input policy beyond the baseline layer:
+      password mode, completion/history hook placeholders, and richer editing hooks.
+      Recent progress: buffered `TextField` now covers both single-line and multiline edit sessions
+      instead of direct model mutation, with default blur commit, multiline `Ctrl/Cmd+Enter`
+      explicit commit, Escape cancel/revert, password-mode rendering for single-line fields, an
+      explicit commit/cancel outcome hook, and assistive semantics placeholders for future
+      completion/history surfaces. The first dedicated reusable landing zone for that next step now
+      also exists as `fret-ui-headless::text_assist` (re-exported by `fret-ui-kit::headless`),
+      which holds query/filter/highlight/navigation math without coupling editor visuals to a
+      specific popup or recipe. `imui_editor_proof_demo` now also exercises that seam with a
+      minimal `Name assist` completion/history surface: the input keeps focus, a controlled
+      listbox is exposed through assistive semantics, Arrow/Home/Page navigation is handled by
+      outer editor policy glue, and Enter accepts the active suggestion on the promoted proof
+      surface. The remaining work is now about lifting that proof into reusable
+      `fret-ui-kit` focus/overlay/active-descendant glue, deciding the formal popup/list
+      abstraction, deciding where specialized blur policies belong, and adding richer editor
+      integrations above the shared baseline rather than re-litigating commit/cancel semantics.
+- [ ] `EER-EDITOR-123` Freeze the v1 reusable starter set:
+      `TextField`, `Checkbox`, `DragValue`, `Slider`, `EnumSelect`, `ColorEdit`, `VecNEdit`,
+      `TransformEdit`, `PropertyGrid`, and `InspectorPanel`.
+- [ ] `EER-EDITOR-124` Ensure every promoted reusable control first lands as a declarative
+      implementation and only then gains optional `imui` sugar.
+- [ ] `EER-EDITOR-125` Promote one proof surface that exercises the starter set under shared state
+      and stable diagnostics anchors.
 
-## M3 - Editor starter set and workspace shell baseline
+## Phase D - Shell, adapters, and extraction
 
-- [ ] `EER-EDITOR-030` Freeze the reusable editor starter set for v1:
-      numeric editing, property surfaces, enum/select, text field, checkbox, slider, vec/transform, panel recipes.
-- [ ] `EER-EDITOR-031` Audit remaining capability gaps vs ImGui/egui outcomes:
-      widget visuals, spacing/density, edit-session consistency, text input richness, DnD affordances.
-- [ ] `EER-WORKSPACE-032` Define the reusable workspace shell starter set in `fret-workspace`:
-      frame, top bar, status bar, pane headers, command scope, shell layout helpers.
-- [ ] `EER-WORKSPACE-033` Decide whether shell tabstrip recipes live directly in `fret-workspace`,
-      wrap `fret-docking`, or both with explicit scope boundaries.
-- [ ] `EER-DOCK-034` Keep docking-only chrome and drag/drop affordances in `fret-docking`
-      and document the adapter seam to workspace shells.
+- [ ] `EER-SHELL-120` Freeze the reusable `fret-workspace` shell starter set:
+      frame, top bar, status bar, pane chrome, shell tabstrip, command scope, focus coordination.
+- [ ] `EER-SHELL-121` Keep shell tabstrip and docking tab/drop chrome aligned through adapter
+      seeding/aliasing rather than crate coupling.
+- [ ] `EER-THEME-122` Audit the editor proof preset so it stops mutating shared component/palette
+      keys whenever editor-owned families are sufficient.
+- [ ] `EER-THEME-123` Decide whether `workspace.tab.*` also needs adapter-side seeding or should
+      remain fallback-first for v1.
+- [ ] `EER-EXTRACT-124` Decide whether to introduce a future inspector/property protocol crate or
+      explicitly defer extraction until a second consumer exists.
+- [ ] `EER-EXTRACT-125` Rebase reusable viewport tool logic onto `fret-viewport-tooling` /
+      `fret-gizmo` before any new extraction is attempted.
 
-## M4 - Theme/token and skinning adapters
+## Gates and migration evidence
 
-- [x] `EER-THEME-040` Inventory current editor/workspace/docking token families and identify collisions or overlaps.
-      Evidence: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/TOKEN_INVENTORY.md`.
-- [x] `EER-THEME-041` Publish the initial namespace plan for `editor.*`, `workspace.*`, and docking-owned tokens.
-      Evidence: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/TOKEN_INVENTORY.md`.
-- [x] `EER-THEME-042` Decide where shadcn-aligned seeding lives:
-      in `fret-ui-shadcn`, a dedicated adapter crate, or a small preset module.
-      Current decision: keep stable namespace seeding in adapter crates such as
-      `fret-ui-shadcn`; keep owner-local proof presets optional; do not create a dedicated
-      editor/workspace adapter crate yet.
-      Latest evidence: `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs` now seeds the first
-      workspace shell families directly from the adapter side.
-- [x] `EER-THEME-043` Define the adapter rule for future Material-style skins:
-      one-way seeding/aliasing only, no reverse dependency.
-      Evidence: ADR 0316 plus
-      `docs/workstreams/editor-ecosystem-fearless-refactor-v1/TOKEN_INVENTORY.md`.
-- [x] `EER-THEME-044` Add missing-token fallback and diagnostics checks for the new namespaces per ADR 0270.
-      Evidence: `ecosystem/fret-workspace/src/theme_tokens.rs`,
-      `ecosystem/fret-workspace/src/frame.rs`, and
-      `ecosystem/fret-workspace/src/tab_strip/theme.rs`.
-- [x] `EER-THEME-045` Document whether workspace shell and docking should share visual presets via aliasing,
-      not via crate coupling.
-      Current decision: align shell and docking visuals by adapter aliasing/seeding, not by moving
-      docking-owned chrome into `fret-workspace`.
-
-## M5 - Proof harnesses, gates, and migration evidence
-
-- [~] `EER-PROOF-050` Choose the canonical proof surfaces for this workstream:
-      `imui_editor_proof_demo`, a workspace shell demo, and `apps/fret-editor`.
-      Current status: `imui_editor_proof_demo` remains the authoring proof surface, `ui_gallery`
-      is now the promoted workspace-shell proof surface for shadcn shell chrome, and the
-      `apps/fret-editor` proof path is still pending.
-- [~] `EER-PROOF-051` Add focused gates for:
-      edit session commit/cancel,
-      workspace shell focus/command scope,
-      and theme token fallback on editor/workspace namespaces.
-      Current status: authoring parity is now covered by
-      `ecosystem/fret-ui-editor/tests/imui_adapter_smoke.rs` and the promoted diagnostics script,
-      workspace token fallback is now covered by
-      `ecosystem/fret-workspace/src/theme_tokens.rs` unit tests, workspace shell shadcn chrome now
-      has a screenshot gate in
-      `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-chrome-shadcn-screenshot.json`,
-      and workspace-shell focus/command-scope now has a dedicated smoke gate in
-      `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-focus-command-scope-smoke.json`
-      backed by the `ui_gallery` single-pane `WorkspaceCommandScope` + `WorkspacePaneContentFocusTarget`
-      wiring, while workspace-shell tab command mirroring now has a dedicated smoke gate in
-      `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-tab-commands-smoke.json`
-      that locks `workspace.tab.next`, `workspace.tab.prev`, and `workspace.tab.close` against the
-      mirrored single-pane `WorkspaceWindowLayout` with the default MRU cycling semantics from
-      `fret-workspace`; the `ui_gallery` workspace-shell scripts now self-seed a shared
-      `workspace_shell` diagnostics profile via `meta.env_defaults`, and
-      `apps/fret-ui-gallery/src/driver/render_flow.rs` now carries a focused Rust regression test
-      for the layout-to-model mirror ordering; edit-session commit/cancel coverage still remains open.
-- [~] `EER-PROOF-052` Add evidence anchors that point from each proof/gate back to the owning crate.
-      Current status: the `imui` proof surface and the `ui_gallery` workspace-shell proof surface
-      now both have anchored code + gate evidence, but the `apps/fret-editor` side still needs the
-      same crate-to-proof mapping.
-- [ ] `EER-MIGRATE-053` Write a short migration guide for moving app-local editor widgets into ecosystem crates.
-- [ ] `EER-CLEANUP-054` Delete or quarantine any duplicated editor widget implementations left after convergence.
+- [x] `EER-GATE-130` Add focused edit-session commit/cancel coverage for numeric editing.
+      Numeric-input validation/commit coverage exists via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-numeric-input-validation.json`, and
+      Escape/cancel coverage now exists via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-numeric-input-escape-cancel.json`.
+      Replace-on-first-edit plus affix/search regression coverage now also exists via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-text-numeric-baseline-policy.json`,
+      which now also covers buffered single-line `TextField` draft/commit/cancel behavior,
+      password-mode outcome hooks, opt-in text-field select-all-on-focus, and search-box refocus
+      replacement, and models the first numeric typed edit as paired `press_key` + `type_text`
+      steps so the gate matches the real keydown-plus-text-input path. Multiline buffered
+      text-session coverage now also exists via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-text-field-multiline-session-policy.json`,
+      which proves blur commit, explicit `Ctrl/Cmd+Enter` commit, and Escape cancel against the
+      promoted proof readouts.
+- [x] `EER-GATE-131` Add state-identity regression coverage for loop-built or repeated controls.
+      Repeated gradient-stop rows now have focused identity coverage via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-identity.json`, which
+      proves edited stop values remain attached to stable stop ids across remove-first/add-new row
+      churn instead of drifting with visual row order.
+- [~] `EER-GATE-132` Keep `imui_editor_proof_demo` and the promoted workspace-shell proof surfaces
+      as the primary evidence anchors for this workstream.
+      `imui_editor_proof_demo` now also carries the promoted `Name assist` text-assist/history
+      proof, and
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-history.json` locks the
+      expanded/collapsed state readouts, input-owned listbox semantics, keyboard navigation, and
+      Enter-accept path on the same proof surface that already hosts buffered text-session
+      evidence. Remaining work: add a second consumer before extracting more formal kit-level
+      popup/focus glue.
+- [~] `EER-GATE-133` Keep screenshot coverage tied to actual baseline-review states, not just
+      arbitrary captures.
+      The neutral default baseline now has a screenshot proof via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-default.json`;
+      the full authoring parity surface now also has a focused screenshot proof via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-authoring-affordances-screenshots-default.json`.
+      Their next job is to drive token/layout cleanup, not just exist, and to stay aligned with the
+      new shared inspector lane grammar plus the authoring proof surfaces where clear-affordance
+      and affix regressions tend to show up first.
+- [x] `EER-GATE-136` Close the screenshot-runner finalization gap for editor typed-edit proof.
+      The default baseline script now resets the proof search field up front so repeated runs do
+      not strand the next session in a filtered state, the launched `diag run` command exits
+      promptly after `stage=passed`, and the typed-edit screenshot proof no longer emits repeated
+      `global access while leased` / nested lease noise on the promoted `test_id`-driven path.
+- [ ] `EER-MIGRATE-134` Write a short migration note for promoting app-local editor surfaces into
+      ecosystem crates.
+- [ ] `EER-CLEANUP-135` Delete or quarantine any duplicated editor widget implementations left after
+      convergence.
 
 ## Open questions
 
-- [x] `EER-Q-060` Should shadcn/editor adapters live inside `fret-ui-shadcn` first, or in a dedicated
-      `fret-ui-editor-*` adapter crate once the surface stabilizes?
-      Decision: start inside `fret-ui-shadcn` for v1 and only revisit a dedicated adapter crate
-      after the namespace surface stabilizes and a second adapter consumer justifies the split.
-- [ ] `EER-Q-061` Which `apps/fret-editor` protocols are reusable enough to extract now, and which still encode
-      product-specific assumptions?
-- [x] `EER-Q-062` Do workspace shell token families need a stable `workspace.tabstrip.*` namespace, or should
-      dock-aware tabstrip chrome remain docking-owned with aliasing from presets?
-      Decision: keep a stable shell-owned `workspace.tabstrip.*` family for non-dock-aware
-      tabstrip chrome, keep dock-graph-aware tab/drop chrome docking-owned, and align the two by
-      preset aliasing/seeding rather than crate coupling.
+- [x] `EER-Q-140` Should design-system seeding start inside adapter crates such as `fret-ui-shadcn`
+      rather than in editor/workspace owner crates?
+      Decision: yes for v1; keep owner-local proof presets optional and avoid reverse dependencies.
+- [ ] `EER-Q-141` Which exact `apps/fret-editor` protocols are reusable enough to justify a future
+      dedicated protocol crate?
+- [ ] `EER-Q-142` Should the default reusable editor baseline stay strictly neutral, or should it
+      intentionally bias a bit more toward the current `imgui_like_dense` hand-feel?

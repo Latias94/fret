@@ -2,8 +2,8 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use crate::util::{
-    read_pick_result, read_pick_result_run_id, read_script_result, read_script_result_run_id,
-    touch, write_json_value,
+    advance_target_run_id, read_pick_result, read_pick_result_run_id, read_script_result,
+    read_script_result_run_id, touch, write_json_value,
 };
 
 #[derive(Debug, Clone)]
@@ -91,9 +91,7 @@ pub(crate) fn run_script_and_wait(
 
         if let Some(result) = read_script_result(script_result_path) {
             let run_id = result.get("run_id").and_then(|v| v.as_u64()).unwrap_or(0);
-            if target_run_id.is_none() && run_id > prev_run_id {
-                target_run_id = Some(run_id);
-            }
+            advance_target_run_id(prev_run_id, &mut target_run_id, run_id);
 
             if Some(run_id) == target_run_id {
                 let stage = result
@@ -215,9 +213,7 @@ pub(crate) fn run_pick_and_wait(
 
         if let Some(result) = read_pick_result(pick_result_path) {
             let run_id = result.get("run_id").and_then(|v| v.as_u64()).unwrap_or(0);
-            if target_run_id.is_none() && run_id > prev_run_id {
-                target_run_id = Some(run_id);
-            }
+            advance_target_run_id(prev_run_id, &mut target_run_id, run_id);
 
             if Some(run_id) == target_run_id {
                 let stage = result

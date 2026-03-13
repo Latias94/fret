@@ -11,7 +11,11 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     use fret_core::Px;
     use fret_icons::IconId;
     use fret_node::io::NodeGraphViewState;
-    use fret_node::ui::{NodeGraphCanvas, NodeGraphEditor, NodeGraphViewQueue};
+    use fret_node::runtime::store::NodeGraphStore;
+    use fret_node::ui::advanced::{NodeGraphControllerTransportExt as _, NodeGraphViewQueue};
+    use fret_node::ui::{
+        NodeGraphCanvas, NodeGraphController, NodeGraphEditor, NodeGraphSurfaceBinding,
+    };
     use fret_node::{
         CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
         PortCapacity, PortDirection, PortId, PortKey, PortKind,
@@ -27,6 +31,11 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         Space,
     };
 
+    #[derive(Default)]
+    struct HarnessState {
+        binding: Option<NodeGraphSurfaceBinding>,
+        bounds: Option<Model<Option<fret_core::Rect>>>,
+    }
     fn build_demo_graph(graph_id: GraphId) -> Graph {
         let mut g = Graph::new(graph_id);
 
@@ -210,7 +219,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             z0
         };
 
-        // Invert `fret_node::ui::viewport_helper::pan_for_center`:
+        // Invert the node-graph viewport centering math used by the advanced viewport helper:
         // pan.x = w / (2*z) - center.x  =>  center.x = w / (2*z) - pan.x
         let center = CanvasPoint {
             x: w / (2.0 * z0) - pan.x,
@@ -261,10 +270,35 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         }
     }
 
-    let graph = cx.local_model_keyed("graph", || build_demo_graph(GraphId::from_u128(42)));
-    let view = cx.local_model_keyed("view", NodeGraphViewState::default);
-    let view_queue = cx.local_model_keyed("view_queue", NodeGraphViewQueue::default);
-    let bounds = cx.local_model_keyed("bounds", || None::<fret_core::Rect>);
+    let existing = cx.with_state(HarnessState::default, |st| {
+        match (st.binding.clone(), st.bounds.clone()) {
+            (Some(binding), Some(bounds)) => Some((binding, bounds)),
+            _ => None,
+        }
+    });
+
+    let (binding, bounds) = if let Some(existing) = existing {
+        existing
+    } else {
+        let graph_value = build_demo_graph(GraphId::from_u128(42));
+        let graph = cx.app.models_mut().insert(graph_value.clone());
+        let view = cx.app.models_mut().insert(NodeGraphViewState::default());
+        let view_queue = cx.app.models_mut().insert(NodeGraphViewQueue::default());
+        let store = cx.app.models_mut().insert(NodeGraphStore::new(
+            graph_value,
+            NodeGraphViewState::default(),
+        ));
+        let controller = NodeGraphController::new(store).bind_view_queue_transport(view_queue);
+        let binding = NodeGraphSurfaceBinding::from_models(graph, view, controller);
+        let bounds = cx.app.models_mut().insert(None);
+
+        cx.with_state(HarnessState::default, |st| {
+            st.binding = Some(binding.clone());
+            st.bounds = Some(bounds.clone());
+        });
+
+        (binding, bounds)
+    };
 
     let max_w = LayoutRefinement::default()
         .w_full()
@@ -272,18 +306,14 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .min_w_0();
 
     let zoom_in: OnActivate = Arc::new({
-        let view = view.clone();
-        let view_queue = view_queue.clone();
+        let binding = binding.clone();
         let bounds = bounds.clone();
         move |host, _cx, _reason| {
             let Some(bounds) = host.models_mut().read(&bounds, |b| *b).ok().flatten() else {
                 return;
             };
 
-            let (pan, zoom) = host
-                .models_mut()
-                .read(&view, |st| (st.pan, st.zoom))
-                .unwrap_or((CanvasPoint::default(), 1.0));
+            let (pan, zoom) = binding.viewport(host);
             let next_zoom = {
                 let z = if zoom.is_finite() && zoom > 0.0 {
                     zoom
@@ -293,25 +323,19 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 (z * 1.10).min(4.0)
             };
             let (pan, zoom) = zoom_around_view_center(bounds, pan, zoom, next_zoom);
-            let _ = host.models_mut().update(&view_queue, |q| {
-                q.push_set_viewport(pan, zoom);
-            });
+            let _ = binding.set_viewport(host, pan, zoom);
         }
     });
 
     let zoom_out: OnActivate = Arc::new({
-        let view = view.clone();
-        let view_queue = view_queue.clone();
+        let binding = binding.clone();
         let bounds = bounds.clone();
         move |host, _cx, _reason| {
             let Some(bounds) = host.models_mut().read(&bounds, |b| *b).ok().flatten() else {
                 return;
             };
 
-            let (pan, zoom) = host
-                .models_mut()
-                .read(&view, |st| (st.pan, st.zoom))
-                .unwrap_or((CanvasPoint::default(), 1.0));
+            let (pan, zoom) = binding.viewport(host);
             let next_zoom = {
                 let z = if zoom.is_finite() && zoom > 0.0 {
                     zoom
@@ -321,32 +345,25 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 (z / 1.10).max(0.15)
             };
             let (pan, zoom) = zoom_around_view_center(bounds, pan, zoom, next_zoom);
-            let _ = host.models_mut().update(&view_queue, |q| {
-                q.push_set_viewport(pan, zoom);
-            });
+            let _ = binding.set_viewport(host, pan, zoom);
         }
     });
 
     let fit_view: OnActivate = Arc::new({
-        let graph = graph.clone();
-        let view_queue = view_queue.clone();
+        let binding = binding.clone();
         move |host, _cx, _reason| {
-            let nodes = host
-                .models_mut()
-                .read(&graph, |g| g.nodes.keys().copied().collect::<Vec<_>>())
+            let nodes = binding
+                .graph_snapshot(host)
+                .map(|graph| graph.nodes.keys().copied().collect::<Vec<_>>())
                 .unwrap_or_default();
-            let _ = host.models_mut().update(&view_queue, |q| {
-                q.push_frame_nodes(nodes);
-            });
+            let _ = binding.fit_view_nodes(host, nodes);
         }
     });
 
     let reset_view: OnActivate = Arc::new({
-        let view_queue = view_queue.clone();
+        let binding = binding.clone();
         move |host, _cx, _reason| {
-            let _ = host.models_mut().update(&view_queue, |q| {
-                q.push_set_viewport(CanvasPoint::default(), 1.0);
-            });
+            let _ = binding.set_viewport(host, CanvasPoint::default(), 1.0);
         }
     });
 
@@ -424,9 +441,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     });
 
     let stage = cx.container(stage_props, move |cx| {
-        let graph = graph.clone();
-        let view = view.clone();
-        let view_queue = view_queue.clone();
+        let binding = binding.clone();
         let bounds = bounds.clone();
 
         let mut layout = LayoutStyle::default();
@@ -437,8 +452,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 
             let editor = ui.create_node_retained(NodeGraphEditor::new());
-            let canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
-                .with_view_queue(view_queue.clone())
+            let canvas = NodeGraphCanvas::new(binding.graph_model(), binding.view_state_model())
+                .with_controller(binding.controller())
                 .with_fit_view_on_mount();
             let canvas_node = ui.create_node_retained(canvas);
             let bounds_node = ui.create_node_retained(BoundsRecorder::new(bounds.clone()));

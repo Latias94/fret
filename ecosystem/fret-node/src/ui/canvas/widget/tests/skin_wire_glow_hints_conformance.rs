@@ -72,7 +72,7 @@ fn skin_wire_glow_selected_emits_push_effect_drop_shadow() {
         s.pan = CanvasPoint::default();
         s.zoom = 1.0;
         s.selected_edges = vec![edge_id];
-        s.interaction.only_render_visible_elements = false;
+        s.runtime_tuning.only_render_visible_elements = false;
         s.interaction.frame_view_duration_ms = 0;
     });
 

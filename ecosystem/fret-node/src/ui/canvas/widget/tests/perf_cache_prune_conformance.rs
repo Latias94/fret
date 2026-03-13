@@ -245,9 +245,9 @@ fn paint_cache_prune_releases_old_path_and_text_entries() {
     let (graph, view) = insert_graph_view(&mut host, make_graph_chain_edges(220, 80.0));
 
     let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.paint_cache_prune.max_age_frames = 2;
+        s.runtime_tuning.paint_cache_prune.max_age_frames = 2;
         // Use a large entry budget so this test is primarily driven by max_age eviction.
-        s.interaction.paint_cache_prune.max_entries = 10_000;
+        s.runtime_tuning.paint_cache_prune.max_entries = 10_000;
     });
 
     let mut canvas =

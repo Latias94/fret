@@ -466,6 +466,133 @@ fn run_script_over_transport_streams_incremental_script_result_updates() {
 }
 
 #[test]
+fn run_script_over_transport_reuses_existing_filesystem_bundle_after_pass() {
+    let root = std::env::temp_dir().join(format!(
+        "fret-diag-script-existing-bundle-{}-{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis(),
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root).expect("create temp root");
+
+    let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
+        schema_version: 1,
+        capabilities: vec!["script_v2".to_string()],
+        runner_kind: None,
+        runner_version: None,
+        hints: None,
+    };
+    crate::util::write_json_value(
+        &root.join("capabilities.json"),
+        &serde_json::to_value(caps).expect("capabilities json"),
+    )
+    .expect("write capabilities.json");
+
+    let cfg = crate::transport::FsDiagTransportConfig {
+        out_dir: root.clone(),
+        trigger_path: root.join("trigger.touch"),
+        script_path: root.join("runtime.script.json"),
+        script_trigger_path: root.join("runtime.script.touch"),
+        script_result_path: root.join("runtime.script.result.json"),
+        script_result_trigger_path: root.join("runtime.script.result.touch"),
+        pick_trigger_path: root.join("pick.touch"),
+        pick_result_path: root.join("pick.result.json"),
+        pick_result_trigger_path: root.join("pick.result.touch"),
+        inspect_path: root.join("inspect.json"),
+        inspect_trigger_path: root.join("inspect.touch"),
+        screenshots_request_path: root.join("screenshots.request.json"),
+        screenshots_trigger_path: root.join("screenshots.touch"),
+        screenshots_result_path: root.join("screenshots.result.json"),
+        screenshots_result_trigger_path: root.join("screenshots.result.touch"),
+    };
+
+    let runtime_cfg = cfg.clone();
+    std::thread::spawn(move || {
+        let deadline = Instant::now() + Duration::from_secs(2);
+        while Instant::now() < deadline {
+            if runtime_cfg.script_trigger_path.is_file() {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
+
+        let bundle_dir_name = "captured-bundle";
+        let bundle_dir = runtime_cfg.out_dir.join(bundle_dir_name);
+        let _ = std::fs::create_dir_all(&bundle_dir);
+        let _ = std::fs::write(
+            bundle_dir.join("bundle.schema2.json"),
+            br#"{ "schema_version": 2, "windows": [] }"#,
+        );
+
+        let passed = fret_diag_protocol::UiScriptResultV1 {
+            schema_version: 1,
+            run_id: 7,
+            updated_unix_ms: crate::util::now_unix_ms(),
+            window: None,
+            stage: fret_diag_protocol::UiScriptStageV1::Passed,
+            step_index: Some(0),
+            reason_code: None,
+            reason: None,
+            evidence: None,
+            last_bundle_dir: Some(bundle_dir_name.to_string()),
+            last_bundle_artifact: Some(fret_diag_protocol::UiArtifactStatsV1 {
+                schema_version: 1,
+                bundle_json_bytes: Some(37),
+                window_count: 0,
+                event_count: 0,
+                snapshot_count: 0,
+                max_snapshots: 0,
+                dump_max_snapshots: None,
+            }),
+        };
+        let _ = crate::util::write_json_value(
+            &runtime_cfg.script_result_path,
+            &serde_json::to_value(passed).unwrap_or_else(|_| serde_json::json!({})),
+        );
+        let _ = crate::util::touch(&runtime_cfg.script_result_trigger_path);
+    });
+
+    let connected = connect_filesystem_tooling(&cfg, &root.join("ready.touch"), false, 5_000, 5)
+        .expect("connect fs tooling");
+
+    let tool_script_result_path = root.join("tool.script.result.json");
+    let capabilities_check_path = root.join("check.capabilities.json");
+    let script_json = serde_json::json!({
+        "schema_version": 2,
+        "steps": [],
+    });
+
+    let (result, bundle_path) = run_script_over_transport(
+        &root,
+        &connected,
+        script_json,
+        true,
+        false,
+        None,
+        None,
+        750,
+        5,
+        &tool_script_result_path,
+        &capabilities_check_path,
+    )
+    .expect("run_script_over_transport");
+
+    assert!(matches!(
+        result.stage,
+        fret_diag_protocol::UiScriptStageV1::Passed
+    ));
+    assert_eq!(result.last_bundle_dir.as_deref(), Some("captured-bundle"));
+    assert_eq!(
+        bundle_path,
+        Some(root.join("captured-bundle").join("bundle.schema2.json"))
+    );
+    assert!(root.join("7").join("bundle.schema2.json").is_file());
+}
+
+#[test]
 fn diag_poke_wait_record_run_writes_run_id_manifest() {
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -797,6 +924,243 @@ fn run_script_over_transport_retouches_in_filesystem_mode_to_avoid_baseline_race
         saw_retouch.load(Ordering::Relaxed),
         "expected tooling retouch to advance script stamp"
     );
+}
+
+#[test]
+fn run_script_over_transport_prefers_newer_run_id_after_retouch() {
+    let root = std::env::temp_dir().join(format!(
+        "fret-diag-script-retouch-supersede-{}-{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis(),
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root).expect("create temp root");
+
+    let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
+        schema_version: 1,
+        capabilities: vec!["script_v2".to_string()],
+        runner_kind: None,
+        runner_version: None,
+        hints: None,
+    };
+    crate::util::write_json_value(
+        &root.join("capabilities.json"),
+        &serde_json::to_value(caps).expect("capabilities json"),
+    )
+    .expect("write capabilities.json");
+
+    let cfg = crate::transport::FsDiagTransportConfig {
+        out_dir: root.clone(),
+        trigger_path: root.join("trigger.touch"),
+        script_path: root.join("runtime.script.json"),
+        script_trigger_path: root.join("runtime.script.touch"),
+        script_result_path: root.join("runtime.script.result.json"),
+        script_result_trigger_path: root.join("runtime.script.result.touch"),
+        pick_trigger_path: root.join("pick.touch"),
+        pick_result_path: root.join("pick.result.json"),
+        pick_result_trigger_path: root.join("pick.result.touch"),
+        inspect_path: root.join("inspect.json"),
+        inspect_trigger_path: root.join("inspect.touch"),
+        screenshots_request_path: root.join("screenshots.request.json"),
+        screenshots_trigger_path: root.join("screenshots.touch"),
+        screenshots_result_path: root.join("screenshots.result.json"),
+        screenshots_result_trigger_path: root.join("screenshots.result.touch"),
+    };
+
+    let runtime_cfg = cfg.clone();
+    std::thread::spawn(move || {
+        fn read_stamp(path: &Path) -> Option<u64> {
+            let s = std::fs::read_to_string(path).ok()?;
+            s.lines().last()?.trim().parse::<u64>().ok()
+        }
+
+        let deadline = Instant::now() + Duration::from_secs(3);
+        let mut first_stamp: Option<u64> = None;
+        while Instant::now() < deadline {
+            let Some(stamp) = read_stamp(&runtime_cfg.script_trigger_path) else {
+                std::thread::sleep(Duration::from_millis(5));
+                continue;
+            };
+
+            match first_stamp {
+                None => first_stamp = Some(stamp),
+                Some(prev) if stamp > prev => {
+                    let running = fret_diag_protocol::UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id: 1,
+                        updated_unix_ms: crate::util::now_unix_ms(),
+                        window: None,
+                        stage: fret_diag_protocol::UiScriptStageV1::Running,
+                        step_index: Some(0),
+                        reason_code: None,
+                        reason: None,
+                        evidence: None,
+                        last_bundle_dir: None,
+                        last_bundle_artifact: None,
+                    };
+                    let _ = crate::util::write_json_value(
+                        &runtime_cfg.script_result_path,
+                        &serde_json::to_value(running).unwrap_or_else(|_| serde_json::json!({})),
+                    );
+                    let _ = crate::util::touch(&runtime_cfg.script_result_trigger_path);
+
+                    std::thread::sleep(Duration::from_millis(25));
+
+                    let passed = fret_diag_protocol::UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id: 2,
+                        updated_unix_ms: crate::util::now_unix_ms(),
+                        window: None,
+                        stage: fret_diag_protocol::UiScriptStageV1::Passed,
+                        step_index: Some(0),
+                        reason_code: None,
+                        reason: None,
+                        evidence: None,
+                        last_bundle_dir: None,
+                        last_bundle_artifact: None,
+                    };
+                    let _ = crate::util::write_json_value(
+                        &runtime_cfg.script_result_path,
+                        &serde_json::to_value(passed).unwrap_or_else(|_| serde_json::json!({})),
+                    );
+                    let _ = crate::util::touch(&runtime_cfg.script_result_trigger_path);
+                    break;
+                }
+                _ => {}
+            }
+
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    });
+
+    let connected = connect_filesystem_tooling(&cfg, &root.join("ready.touch"), false, 5_000, 5)
+        .expect("connect fs tooling");
+
+    let tool_script_result_path = root.join("tool.script.result.json");
+    let capabilities_check_path = root.join("check.capabilities.json");
+    let script_json = serde_json::json!({
+        "schema_version": 2,
+        "steps": [],
+    });
+
+    let (result, _bundle_path) = run_script_over_transport(
+        &root,
+        &connected,
+        script_json,
+        false,
+        false,
+        None,
+        None,
+        5_000,
+        5,
+        &tool_script_result_path,
+        &capabilities_check_path,
+    )
+    .expect("run_script_over_transport");
+
+    assert_eq!(result.run_id, 2, "expected newer superseding run_id");
+    assert!(matches!(
+        result.stage,
+        fret_diag_protocol::UiScriptStageV1::Passed
+    ));
+    assert!(root.join("2").join("script.result.json").is_file());
+}
+
+#[test]
+fn run_script_and_wait_prefers_newer_run_id_after_retouch() {
+    let root = std::env::temp_dir().join(format!(
+        "fret-diag-script-runtime-supersede-{}-{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis(),
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root).expect("create temp root");
+
+    let src = root.join("script.json");
+    std::fs::write(
+        &src,
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "schema_version": 2,
+            "steps": [],
+        }))
+        .expect("serialize script"),
+    )
+    .expect("write script");
+
+    let script_path = root.join("runtime.script.json");
+    let script_trigger_path = root.join("runtime.script.touch");
+    let script_result_path = root.join("runtime.script.result.json");
+    let script_result_trigger_path = root.join("runtime.script.result.touch");
+
+    let runtime_script_trigger_path = script_trigger_path.clone();
+    let runtime_script_result_path = script_result_path.clone();
+    let runtime_script_result_trigger_path = script_result_trigger_path.clone();
+    std::thread::spawn(move || {
+        fn read_stamp(path: &Path) -> Option<u64> {
+            let s = std::fs::read_to_string(path).ok()?;
+            s.lines().last()?.trim().parse::<u64>().ok()
+        }
+
+        let deadline = Instant::now() + Duration::from_secs(3);
+        let mut first_stamp: Option<u64> = None;
+        while Instant::now() < deadline {
+            let Some(stamp) = read_stamp(&runtime_script_trigger_path) else {
+                std::thread::sleep(Duration::from_millis(5));
+                continue;
+            };
+
+            match first_stamp {
+                None => first_stamp = Some(stamp),
+                Some(prev) if stamp > prev => {
+                    let running = serde_json::json!({
+                        "schema_version": 1,
+                        "run_id": 1,
+                        "updated_unix_ms": crate::util::now_unix_ms(),
+                        "stage": "running",
+                        "step_index": 0
+                    });
+                    let _ = crate::util::write_json_value(&runtime_script_result_path, &running);
+                    let _ = crate::util::touch(&runtime_script_result_trigger_path);
+
+                    std::thread::sleep(Duration::from_millis(25));
+
+                    let passed = serde_json::json!({
+                        "schema_version": 1,
+                        "run_id": 2,
+                        "updated_unix_ms": crate::util::now_unix_ms(),
+                        "stage": "passed",
+                        "step_index": 0
+                    });
+                    let _ = crate::util::write_json_value(&runtime_script_result_path, &passed);
+                    let _ = crate::util::touch(&runtime_script_result_trigger_path);
+                    break;
+                }
+                _ => {}
+            }
+
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    });
+
+    let result = crate::stats::run_script_and_wait(
+        &src,
+        &script_path,
+        &script_trigger_path,
+        &script_result_path,
+        &script_result_trigger_path,
+        5_000,
+        5,
+    )
+    .expect("run_script_and_wait");
+
+    assert_eq!(result.run_id, 2, "expected newer superseding run_id");
+    assert_eq!(result.stage.as_deref(), Some("passed"));
 }
 
 #[test]

@@ -1,3 +1,6 @@
+mod activate;
+mod checks;
+
 use super::prelude::*;
 
 pub(in super::super) fn handle_pending_edge_insert_drag_move<
@@ -9,24 +12,12 @@ pub(in super::super) fn handle_pending_edge_insert_drag_move<
     snapshot: &ViewSnapshot,
     position: Point,
 ) -> bool {
-    if canvas.interaction.edge_insert_drag.is_some() {
-        return false;
-    }
-    let Some(pending) = canvas.interaction.pending_edge_insert_drag.clone() else {
-        return false;
+    let pending = match checks::prepare_pending_edge_insert_drag_move(canvas, snapshot, position) {
+        checks::PendingEdgeInsertDragMovePrep::NotHandled => return false,
+        checks::PendingEdgeInsertDragMovePrep::Handled => return true,
+        checks::PendingEdgeInsertDragMovePrep::Ready(pending) => pending,
     };
 
-    let threshold_screen = snapshot.interaction.connection_drag_threshold.max(0.0);
-    if !exceeds_drag_threshold(pending.start_pos, position, threshold_screen, snapshot.zoom) {
-        return true;
-    }
-
-    canvas.interaction.pending_edge_insert_drag = None;
-    canvas.interaction.edge_insert_drag = Some(EdgeInsertDrag {
-        edge: pending.edge,
-        pos: position,
-    });
-    cx.request_redraw();
-    cx.invalidate_self(Invalidation::Paint);
+    activate::activate_pending_edge_insert_drag(canvas, cx, pending, position);
     true
 }

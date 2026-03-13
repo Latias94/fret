@@ -11,15 +11,20 @@ use std::sync::{Arc, Mutex};
 
 use crate::controls::numeric_input::{
     NumericFormatFn, NumericInput, NumericInputErrorDisplay, NumericInputOptions,
-    NumericInputOutcome, NumericParseFn, NumericValidateFn,
+    NumericInputOutcome, NumericInputSelectionBehavior, NumericParseFn, NumericValidateFn,
 };
 use crate::primitives::EditorTokenKeys;
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
-    editor_input_group_divider, editor_input_group_frame, editor_input_group_segment,
+    derived_test_id, editor_input_group_divider, editor_input_group_frame,
+    editor_input_group_segment,
+};
+use crate::primitives::numeric_text_entry::{
+    NumericTextEntryFocusHandoffState, arm_numeric_text_entry_focus_handoff,
+    sync_numeric_text_entry_focus_handoff,
 };
 use crate::primitives::style::EditorStyle;
-use crate::primitives::visuals::EditorFrameState;
+use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
 use fret_core::text::{TextOverflow, TextWrap};
 use fret_core::{
     Axis, Corners, CursorIcon, Edges, MouseButton, PointerId, Px, TextAlign, TextStyle,
@@ -51,6 +56,27 @@ fn mix(a: fret_core::Color, b: fret_core::Color, t: f32) -> fret_core::Color {
 fn alpha_mul(mut c: fret_core::Color, mul: f32) -> fret_core::Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
+}
+
+fn compose_affixed_value_text(
+    value: &Arc<str>,
+    prefix: Option<&Arc<str>>,
+    suffix: Option<&Arc<str>>,
+) -> Arc<str> {
+    match (prefix, suffix) {
+        (None, None) => value.clone(),
+        _ => {
+            let mut out = String::new();
+            if let Some(prefix) = prefix {
+                out.push_str(prefix);
+            }
+            out.push_str(value);
+            if let Some(suffix) = suffix {
+                out.push_str(suffix);
+            }
+            Arc::from(out)
+        }
+    }
 }
 
 fn quantize_value(min: f64, max: f64, clamp: bool, step: Option<f64>, v: f64) -> f64 {
@@ -126,7 +152,6 @@ enum SliderMode {
 struct SliderState {
     mode: SliderMode,
     slider_id: Option<fret_ui::GlobalElementId>,
-    input_id: Option<fret_ui::GlobalElementId>,
     dragging: bool,
     pointer_id: Option<PointerId>,
 }
@@ -136,7 +161,6 @@ impl Default for SliderState {
         Self {
             mode: SliderMode::Slide,
             slider_id: None,
-            input_id: None,
             dragging: false,
             pointer_id: None,
         }
@@ -147,6 +171,9 @@ impl Default for SliderState {
 pub struct SliderOptions {
     pub layout: LayoutStyle,
     pub enabled: bool,
+    pub prefix: Option<Arc<str>>,
+    pub suffix: Option<Arc<str>>,
+    pub selection_behavior: NumericInputSelectionBehavior,
     pub clamp: bool,
     /// Quantize to a step size in value space (e.g. `0.01` for normalized floats).
     pub step: Option<f64>,
@@ -180,6 +207,9 @@ impl Default for SliderOptions {
                 ..Default::default()
             },
             enabled: true,
+            prefix: None,
+            suffix: None,
+            selection_behavior: NumericInputSelectionBehavior::ReplaceAllOnFocus,
             clamp: true,
             step: None,
             show_value: true,
@@ -318,6 +348,12 @@ where
             || Arc::new(Mutex::new(SliderState::default())),
             |s| s.clone(),
         );
+        let focus_handoff_state_id = cx.named("slider.focus_handoff.state", |cx| cx.root_id());
+        let focus_handoff: Arc<Mutex<NumericTextEntryFocusHandoffState>> = cx.with_state_for(
+            focus_handoff_state_id,
+            || Arc::new(Mutex::new(NumericTextEntryFocusHandoffState::default())),
+            |s| s.clone(),
+        );
 
         let mode = state.lock().unwrap_or_else(|e| e.into_inner()).mode;
         let typing = mode == SliderMode::Typing;
@@ -345,6 +381,10 @@ where
         let show_value = self.options.show_value;
         let value_width = self.options.value_width;
         let allow_typing = self.options.allow_typing;
+        let prefix = self.options.prefix.clone();
+        let suffix = self.options.suffix.clone();
+        let typing_test_id = derived_test_id(self.options.test_id.as_ref(), "typing");
+        let value_display_test_id = derived_test_id(self.options.test_id.as_ref(), "value_display");
 
         let interactive_enabled = enabled && !typing;
 
@@ -355,8 +395,11 @@ where
 
         let format = self.format.clone();
         let value_text = (format)(T::from_f64(value_f));
+        let value_display_text =
+            compose_affixed_value_text(&value_text, prefix.as_ref(), suffix.as_ref());
 
         let state_for_slider = state.clone();
+        let focus_handoff_for_slider = focus_handoff.clone();
         let mut slider_el = cx.pressable(
             PressableProps {
                 enabled: interactive_enabled,
@@ -375,6 +418,7 @@ where
                 }
 
                 let state_for_down = state_for_slider.clone();
+                let focus_handoff_for_down = focus_handoff_for_slider.clone();
                 let model_for_down = model_for_change.clone();
                 cx.pressable_add_on_pointer_down(Arc::new(move |host, action_cx, down| {
                     if !interactive_enabled {
@@ -385,8 +429,11 @@ where
                         st.mode = SliderMode::Typing;
                         st.dragging = false;
                         st.pointer_id = None;
-                        if let Some(input_id) = st.input_id {
-                            host.request_focus(input_id);
+                        {
+                            let mut handoff = focus_handoff_for_down
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            arm_numeric_text_entry_focus_handoff(&mut handoff);
                         }
                         host.request_redraw(action_cx.window);
                         return PressablePointerDownResult::SkipDefaultAndStopPropagation;
@@ -556,6 +603,7 @@ where
                         pressed,
                         focused,
                         open: false,
+                        semantic: EditorFrameSemanticState::default(),
                     },
                     move |cx, frame_visuals| {
                         let track = cx.flex(
@@ -658,7 +706,7 @@ where
                         );
 
                         let value_el = if show_value {
-                            let value_text_el = cx.text_props(TextProps {
+                            let mut value_text_el = cx.text_props(TextProps {
                                 layout: LayoutStyle {
                                     size: SizeStyle {
                                         width: Length::Fill,
@@ -667,7 +715,7 @@ where
                                     },
                                     ..Default::default()
                                 },
-                                text: value_text.clone(),
+                                text: value_display_text.clone(),
                                 style: Some(typography::as_control_text(TextStyle {
                                     size: frame.text_px,
                                     line_height: Some(density.row_height),
@@ -679,6 +727,11 @@ where
                                 align: TextAlign::End,
                                 ink_overflow: Default::default(),
                             });
+                            if let Some(test_id) = value_display_test_id.as_ref() {
+                                value_text_el = value_text_el
+                                    .test_id(test_id.clone())
+                                    .a11y_label(value_display_text.clone());
+                            }
 
                             let value_seg = editor_input_group_segment(
                                 cx,
@@ -788,13 +841,19 @@ where
         };
 
         let state_for_input = state.clone();
+        let input_focus_target: Arc<Mutex<Option<fret_ui::GlobalElementId>>> =
+            Arc::new(Mutex::new(None));
         let input = NumericInput::new(self.model.clone(), format, parse_for_input)
             .validate(validate_for_input)
+            .focus_target(input_focus_target.clone())
             .options(NumericInputOptions {
                 layout: input_layout,
                 enabled: enabled && typing,
                 focusable: enabled && typing,
-                test_id: self.options.test_id.clone(),
+                prefix: self.options.prefix.clone(),
+                suffix: self.options.suffix.clone(),
+                selection_behavior: self.options.selection_behavior,
+                test_id: typing_test_id,
                 // Avoid growing the row height when a commit-time validation error occurs.
                 // A small trailing status icon keeps the inspector layout stable.
                 error_display: NumericInputErrorDisplay::TrailingIcon,
@@ -817,11 +876,47 @@ where
             })))
             .into_element(cx);
 
+        if let Some(input_id) = input_focus_target
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .as_ref()
+            .copied()
         {
-            let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
-            st.input_id = Some(input.id);
+            let is_focused = cx.is_focused_element(input_id);
+            sync_numeric_text_entry_focus_handoff(
+                cx,
+                input.id,
+                &focus_handoff,
+                typing,
+                input_id,
+                is_focused,
+            );
         }
 
         cx.container(Default::default(), move |_cx| vec![slider_el, input])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use super::compose_affixed_value_text;
+
+    #[test]
+    fn compose_affixed_value_text_keeps_plain_value_when_no_affix() {
+        let value = Arc::<str>::from("12.0");
+        assert_eq!(compose_affixed_value_text(&value, None, None), value);
+    }
+
+    #[test]
+    fn compose_affixed_value_text_joins_prefix_and_suffix_without_extra_spacing() {
+        let value = Arc::<str>::from("12.0");
+        let prefix = Arc::<str>::from("$");
+        let suffix = Arc::<str>::from("px");
+        assert_eq!(
+            compose_affixed_value_text(&value, Some(&prefix), Some(&suffix)).as_ref(),
+            "$12.0px"
+        );
     }
 }

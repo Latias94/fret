@@ -79,7 +79,7 @@ fn only_render_visible_elements_controls_render_culling_work() {
         let _ = view.update(&mut host, |s, _cx| {
             s.pan = crate::core::CanvasPoint::default();
             s.zoom = 1.0;
-            s.interaction.only_render_visible_elements = true;
+            s.runtime_tuning.only_render_visible_elements = true;
             s.interaction.frame_view_duration_ms = 0;
         });
 
@@ -103,7 +103,7 @@ fn only_render_visible_elements_controls_render_culling_work() {
         let _ = view.update(&mut host, |s, _cx| {
             s.pan = crate::core::CanvasPoint::default();
             s.zoom = 1.0;
-            s.interaction.only_render_visible_elements = false;
+            s.runtime_tuning.only_render_visible_elements = false;
             s.interaction.frame_view_duration_ms = 0;
         });
 

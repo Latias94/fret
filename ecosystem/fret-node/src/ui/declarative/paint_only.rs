@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use fret_canvas::view::{
-    DEFAULT_WHEEL_ZOOM_BASE, DEFAULT_WHEEL_ZOOM_STEP, PanZoom2D, screen_rect_to_canvas_rect,
-    wheel_zoom_factor,
-};
+use fret_canvas::view::{DEFAULT_WHEEL_ZOOM_BASE, DEFAULT_WHEEL_ZOOM_STEP, PanZoom2D};
 use fret_canvas::wires as canvas_wires;
 use fret_core::scene::{
     ColorSpace, DashPatternV1, GradientStop, LinearGradient, MAX_STOPS, Paint, PaintBindingV1,
@@ -14,56 +11,168 @@ use fret_core::{
     StrokeJoinV1, StrokeStyleV2,
 };
 use fret_runtime::Model;
-use fret_ui::action::{
-    OnKeyDown, OnPinchGesture, OnPointerCancel, OnPointerDown, OnPointerMove, OnPointerUp, OnWheel,
-};
 use fret_ui::canvas::{CanvasKey, CanvasPainter};
-use fret_ui::element::{
-    AnyElement, CanvasProps, ColumnProps, ContainerProps, LayoutQueryRegionProps, LayoutStyle,
-    Length, PointerRegionProps, PositionStyle, SemanticsDecoration, SemanticsProps, SpacingEdges,
-    SpacingLength, TextProps,
-};
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::element::{AnyElement, CanvasProps, Length, PointerRegionProps, SemanticsProps};
+use fret_ui::{ElementContext, Invalidation, UiHost};
 
 use crate::core::Graph;
 use crate::io::NodeGraphViewState;
+use crate::ops::{GraphTransaction, graph_diff};
 use crate::ui::canvas::{CanvasGeometry, CanvasSpatialDerived};
 use crate::ui::declarative::view_reducer::{
-    apply_fit_view_to_canvas_rect, apply_pan_by_screen_delta, apply_zoom_about_screen_point,
-    view_from_state,
+    apply_pan_by_screen_delta, apply_zoom_about_screen_point, view_from_state,
 };
 use crate::ui::geometry_overrides::NodeGraphGeometryOverridesRef;
 use crate::ui::paint_overrides::{NodeGraphPaintOverridesMap, NodeGraphPaintOverridesRef};
 use crate::ui::presenter::DefaultNodeGraphPresenter;
 use crate::ui::style::NodeGraphStyle;
+use crate::ui::{
+    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphController, NodeGraphPresenter,
+    NodeGraphSurfaceBinding,
+};
 
-#[derive(Debug, Default, Clone)]
-struct PortalBoundsStore {
-    /// Last-known bounds for portal node subtrees, mapped into canvas space under the current view.
-    nodes_canvas_bounds: std::collections::BTreeMap<crate::core::NodeId, Rect>,
-    /// Counter for diagnostics gates (fit-to-portals triggered).
-    fit_to_portals_count: u64,
-    /// Diagnostics-only: when true, a Ctrl+9 fit-to-portals request is armed and will be applied
-    /// once portal bounds arrive via `LayoutQueryRegion` (frame-lagged by contract).
-    pending_fit_to_portals: bool,
-}
+#[path = "paint_only/cache.rs"]
+mod cache;
+#[path = "paint_only/diag.rs"]
+mod diag;
+#[path = "paint_only/hover_anchor.rs"]
+mod hover_anchor;
+#[path = "paint_only/input_handlers.rs"]
+mod input_handlers;
+#[path = "paint_only/overlay_elements.rs"]
+mod overlay_elements;
+#[path = "paint_only/overlays.rs"]
+mod overlays;
+#[path = "paint_only/pointer_down.rs"]
+mod pointer_down;
+#[path = "paint_only/pointer_move.rs"]
+mod pointer_move;
+#[path = "paint_only/pointer_session.rs"]
+mod pointer_session;
+#[path = "paint_only/portal_measurement.rs"]
+mod portal_measurement;
+#[path = "paint_only/portals.rs"]
+mod portals;
+#[path = "paint_only/selection.rs"]
+mod selection;
+#[path = "paint_only/semantics.rs"]
+mod semantics;
+#[path = "paint_only/surface_content.rs"]
+mod surface_content;
+#[path = "paint_only/surface_frame.rs"]
+mod surface_frame;
+#[path = "paint_only/surface_math.rs"]
+mod surface_math;
+#[path = "paint_only/surface_models.rs"]
+mod surface_models;
+#[path = "paint_only/surface_shell.rs"]
+mod surface_shell;
+#[path = "paint_only/surface_support.rs"]
+mod surface_support;
+#[path = "paint_only/transactions.rs"]
+mod transactions;
+
+use self::cache::{
+    DerivedGeometryCacheState, EdgePaintCacheState, NodePaintCacheState, NodeRectDraw,
+    canvas_viewport_rect, declarative_presenter_revision, paint_debug_grid_cached,
+    paint_edges_cached, paint_nodes_cached, sync_derived_cache, sync_edges_cache, sync_grid_cache,
+    sync_nodes_cache,
+};
+#[cfg(test)]
+use self::cache::{derived_geometry_cache_key, edges_cache_key, grid_cache_key, nodes_cache_key};
+use self::diag::{
+    DeclarativeDiagKeyAction, DeclarativeKeyboardZoomAction,
+    handle_declarative_diag_key_action_host, handle_declarative_escape_key_action_host,
+    handle_declarative_keyboard_zoom_action_host,
+};
+#[cfg(test)]
+use self::hover_anchor::resolve_hover_tooltip_anchor;
+use self::hover_anchor::{HoverAnchorStore, sync_hover_anchor_store_in_models};
+use self::input_handlers::{
+    KeyHandlerParams, PinchHandlerParams, PointerDownHandlerParams, PointerFinishHandlerParams,
+    PointerMoveHandlerParams, WheelHandlerParams, build_key_down_capture_handler,
+    build_pinch_handler, build_pointer_cancel_handler, build_pointer_down_handler,
+    build_pointer_move_handler, build_pointer_up_handler, build_wheel_handler,
+};
+use self::overlays::{
+    HoverTooltipOverlayParams, push_hover_tooltip_overlay_if_needed,
+    push_marquee_overlay_if_active, push_overlay_layer_if_needed,
+};
+use self::pointer_down::{
+    begin_left_pointer_down_action_host, begin_pan_pointer_down_action_host,
+    read_left_pointer_down_snapshot_action_host,
+};
+use self::pointer_move::{
+    MarqueePointerMoveOutcome, handle_marquee_pointer_move_action_host,
+    handle_node_drag_pointer_move_action_host, update_hovered_node_pointer_move_action_host,
+};
+use self::pointer_session::{
+    escape_cancel_declarative_interactions_action_host,
+    handle_declarative_pointer_cancel_action_host, handle_declarative_pointer_up_action_host,
+    invalidate_notify_and_redraw_pointer_action_host, notify_and_redraw_action_host,
+};
+use self::portal_measurement::{
+    PortalBoundsStore, PortalMeasuredGeometryFlushOutcome, PortalMeasuredGeometryState,
+    flush_portal_measured_geometry_state, record_portal_measured_node_size_in_state,
+    sync_portal_canvas_bounds_in_models,
+};
+#[cfg(test)]
+use self::portals::collect_portal_label_infos_for_visible_subset;
+use self::portals::{apply_pending_fit_to_portals, host_visible_portal_labels};
+use self::selection::{
+    build_click_selection_preview_nodes, build_marquee_preview_selected_nodes,
+    commit_marquee_selection_action_host, commit_pending_selection_action_host,
+    effective_selected_nodes_for_paint,
+};
+use self::semantics::{
+    SurfaceSemanticsParams, build_surface_semantics_value, collect_edge_paint_diagnostics,
+    collect_portal_diagnostics,
+};
+use self::surface_content::{SurfaceRegionChildrenParams, build_surface_region_children};
+use self::surface_frame::{
+    PrepareSurfaceFrameParams, PreparedPaintOnlySurfaceFrame, prepare_surface_frame,
+};
+use self::surface_math::{
+    hit_test_node_at_point, marquee_rect_screen, node_drag_commit_delta, node_drag_contains,
+    node_drag_delta_canvas, pointer_crossed_threshold, quantize_f32, rect_approx_eq,
+    rect_contains_rect, rect_from_points, rect_union, rects_intersect,
+};
+use self::surface_models::{PaintOnlySurfaceModels, use_paint_only_surface_models};
+use self::surface_shell::{SurfaceShellParams, build_surface_shell};
+use self::surface_support::{
+    authoritative_surface_boundary_snapshot, mouse_buttons_contains, stable_hash_u64,
+    sync_authoritative_surface_boundary_in_models, use_uncontrolled_model,
+};
+use self::transactions::{
+    build_node_drag_transaction, commit_graph_transaction, commit_node_drag_transaction,
+    update_view_state_action_host, update_view_state_ui_host,
+};
+
+#[cfg(test)]
+use self::diag::{DeclarativeDiagViewPreset, apply_declarative_diag_view_preset_action_host};
+#[cfg(test)]
+use self::diag::{
+    build_diag_normalize_visible_node_transaction, build_diag_nudge_visible_node_transaction,
+};
+#[cfg(test)]
+use self::pointer_down::{LeftPointerDownOutcome, LeftPointerDownSnapshot};
+
+#[cfg(test)]
+use self::pointer_move::NodeDragPointerMoveOutcome;
+#[cfg(test)]
+use self::pointer_session::{
+    LeftPointerReleaseOutcome, NodeDragReleaseOutcome, complete_left_pointer_release_action_host,
+    complete_node_drag_release_action_host, handle_marquee_left_pointer_release_action_host,
+    handle_node_drag_left_pointer_release_action_host,
+    handle_pending_selection_left_pointer_release_action_host,
+    pointer_cancel_declarative_interactions_action_host,
+};
 
 #[derive(Debug, Default, Clone, Copy)]
 struct PortalDebugFlags {
     /// Diagnostics-only: when true, disable portal hosting and clear `PortalBoundsStore` so overlay
     /// consumers can exercise their fallback paths.
     disable_portals: bool,
-}
-
-#[derive(Debug, Default, Clone)]
-struct HoverAnchorStore {
-    /// Last-known hovered node id (paint-only).
-    hovered_id: Option<crate::core::NodeId>,
-    /// Best-effort hovered node bounds in canvas space.
-    ///
-    /// This is independent of portal hosting caps so hover-driven overlays remain stable even when
-    /// portals are throttled.
-    hovered_canvas_bounds: Option<Rect>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -84,9 +193,8 @@ impl Default for NodeGraphWheelZoomConfig {
 }
 
 #[derive(Clone)]
-pub struct NodeGraphSurfacePaintOnlyProps {
-    pub graph: Model<Graph>,
-    pub view_state: Model<NodeGraphViewState>,
+pub struct NodeGraphSurfaceProps {
+    binding: NodeGraphSurfaceBinding,
 
     pub pointer_region: PointerRegionProps,
     pub canvas: CanvasProps,
@@ -100,6 +208,12 @@ pub struct NodeGraphSurfacePaintOnlyProps {
     ///
     /// Changes must bump `revision()` on the provider (see `ui/paint_overrides.rs`).
     pub paint_overrides: Option<NodeGraphPaintOverridesRef>,
+
+    /// Optional measured geometry store shared with declarative portal subtrees.
+    ///
+    /// When present, derived geometry is built through `MeasuredNodeGraphPresenter`, and hosted
+    /// portal subtrees may publish measured node sizes back into the same store.
+    pub measured_geometry: Option<Arc<MeasuredGeometryStore>>,
 
     /// When true, host a lightweight portal layer that renders node labels as normal element
     /// subtrees positioned in screen space (semantic zoom).
@@ -123,19 +237,19 @@ pub struct NodeGraphSurfacePaintOnlyProps {
     pub test_id: Option<Arc<str>>,
 }
 
-impl NodeGraphSurfacePaintOnlyProps {
-    pub fn new(graph: Model<Graph>, view_state: Model<NodeGraphViewState>) -> Self {
+impl NodeGraphSurfaceProps {
+    pub fn new(binding: NodeGraphSurfaceBinding) -> Self {
         let mut pointer_region = PointerRegionProps::default();
         pointer_region.layout.size.width = Length::Fill;
         pointer_region.layout.size.height = Length::Fill;
 
         Self {
-            graph,
-            view_state,
+            binding,
             pointer_region,
             canvas: CanvasProps::default(),
             geometry_overrides: None,
             paint_overrides: None,
+            measured_geometry: None,
             portals_enabled: true,
             portal_max_nodes: 32,
             cull_margin_screen_px: 256.0,
@@ -147,6 +261,10 @@ impl NodeGraphSurfacePaintOnlyProps {
             test_id: None,
         }
     }
+
+    pub fn binding(&self) -> NodeGraphSurfaceBinding {
+        self.binding.clone()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -156,66 +274,87 @@ struct DragState {
 }
 
 #[derive(Debug, Clone)]
+/// Local surface-state for marquee preview/arming; never persisted into `NodeGraphViewState`.
 struct MarqueeDragState {
     start_screen: Point,
     current_screen: Point,
     active: bool,
     toggle: bool,
     base_selected_nodes: Arc<[crate::core::NodeId]>,
+    preview_selected_nodes: Arc<[crate::core::NodeId]>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum NodeDragPhase {
+    Armed,
+    Active,
+    Canceled,
 }
 
 #[derive(Debug, Clone)]
+/// Local surface-state for node-drag preview/arming; committed graph edits still flow through
+/// controller/store transactions.
 struct NodeDragState {
     start_screen: Point,
     current_screen: Point,
-    active: bool,
-    canceled: bool,
+    phase: NodeDragPhase,
     nodes_sorted: Arc<[crate::core::NodeId]>,
 }
 
-#[track_caller]
-fn use_uncontrolled_model<T: Clone + 'static, H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    default_value: impl FnOnce() -> T,
-) -> Model<T> {
-    struct UncontrolledModelState<T> {
-        model: Option<Model<T>>,
+impl NodeDragState {
+    fn is_armed(&self) -> bool {
+        matches!(self.phase, NodeDragPhase::Armed)
     }
 
-    impl<T> Default for UncontrolledModelState<T> {
-        fn default() -> Self {
-            Self { model: None }
+    fn is_active(&self) -> bool {
+        matches!(self.phase, NodeDragPhase::Active)
+    }
+
+    fn is_canceled(&self) -> bool {
+        matches!(self.phase, NodeDragPhase::Canceled)
+    }
+
+    fn is_live(&self) -> bool {
+        !self.is_canceled()
+    }
+
+    fn activate(&mut self, current_screen: Point) -> bool {
+        if !self.is_armed() {
+            return false;
         }
+        self.phase = NodeDragPhase::Active;
+        self.current_screen = current_screen;
+        true
     }
 
-    let model = cx.with_state(UncontrolledModelState::<T>::default, |st| st.model.clone());
-    if let Some(model) = model {
-        return model;
+    fn cancel(&mut self) {
+        self.phase = NodeDragPhase::Canceled;
     }
 
-    let model = cx.app.models_mut().insert(default_value());
-    cx.with_state(UncontrolledModelState::<T>::default, |st| {
-        st.model = Some(model.clone());
-    });
-    model
-}
-
-fn mouse_buttons_contains(buttons: fret_core::MouseButtons, button: MouseButton) -> bool {
-    match button {
-        MouseButton::Left => buttons.left,
-        MouseButton::Right => buttons.right,
-        MouseButton::Middle => buttons.middle,
-        MouseButton::Back | MouseButton::Forward | MouseButton::Other(_) => false,
+    fn update_active_position(&mut self, current_screen: Point) -> bool {
+        if !self.is_active() || self.current_screen == current_screen {
+            return false;
+        }
+        self.current_screen = current_screen;
+        true
     }
 }
 
-fn stable_hash_u64(seed: u64, value: &impl std::hash::Hash) -> u64 {
-    use std::hash::{Hash, Hasher};
+#[derive(Debug, Clone)]
+/// Local click-selection preview that should only override paint until commit/cancel time.
+struct PendingSelectionState {
+    nodes: Arc<[crate::core::NodeId]>,
+    clear_edges: bool,
+    clear_groups: bool,
+}
 
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    seed.hash(&mut hasher);
-    value.hash(&mut hasher);
-    hasher.finish()
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct AuthoritativeSurfaceBoundarySnapshot {
+    graph_id: crate::core::GraphId,
+    graph_rev: u64,
+    selected_nodes_hash: u64,
+    selected_edges_hash: u64,
+    selected_groups_hash: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -263,988 +402,6 @@ struct GridPaintCacheKeyV2 {
     grid_a_bits: u32,
 }
 
-fn quantize_f32(value: f32, scale: f32) -> i32 {
-    if !value.is_finite() || !scale.is_finite() || scale <= 0.0 {
-        return 0;
-    }
-    (value * scale)
-        .round()
-        .clamp(i32::MIN as f32, i32::MAX as f32) as i32
-}
-
-fn grid_cache_key(bounds: Rect, view: PanZoom2D, style: &NodeGraphStyle) -> CanvasKey {
-    let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0);
-    let bg = style.paint.background;
-    let grid = style.paint.grid_minor_color;
-
-    // Quantize to avoid cache churn due to float noise while remaining sensitive to real changes.
-    // - bounds: device-independent UI px (layout space)
-    // - zoom: scale factor (unitless)
-    // - grid indices: snapped to step boundaries (avoid per-pixel pan churn)
-    let step = 64.0f32;
-    let (ix0, ix1, iy0, iy1) = if bounds.size.width.0.is_finite()
-        && bounds.size.height.0.is_finite()
-        && bounds.size.width.0 > 0.0
-        && bounds.size.height.0 > 0.0
-        && step.is_finite()
-        && step > 0.0
-    {
-        let tl = view.screen_to_canvas(bounds, bounds.origin);
-        let br = view.screen_to_canvas(
-            bounds,
-            Point::new(
-                Px(bounds.origin.x.0 + bounds.size.width.0),
-                Px(bounds.origin.y.0 + bounds.size.height.0),
-            ),
-        );
-        let x0 = tl.x.0.min(br.x.0);
-        let x1 = tl.x.0.max(br.x.0);
-        let y0 = tl.y.0.min(br.y.0);
-        let y1 = tl.y.0.max(br.y.0);
-        if x0.is_finite() && x1.is_finite() && y0.is_finite() && y1.is_finite() {
-            (
-                (x0 / step).floor() as i32 - 1,
-                (x1 / step).ceil() as i32 + 1,
-                (y0 / step).floor() as i32 - 1,
-                (y1 / step).ceil() as i32 + 1,
-            )
-        } else {
-            (0, 0, 0, 0)
-        }
-    } else {
-        (0, 0, 0, 0)
-    };
-    let v = GridPaintCacheKeyV2 {
-        bounds_x_q: quantize_f32(bounds.origin.x.0, 8.0),
-        bounds_y_q: quantize_f32(bounds.origin.y.0, 8.0),
-        bounds_w_q: quantize_f32(bounds.size.width.0, 8.0),
-        bounds_h_q: quantize_f32(bounds.size.height.0, 8.0),
-        zoom_q: quantize_f32(zoom, 4096.0),
-        ix0,
-        ix1,
-        iy0,
-        iy1,
-        bg_r_bits: bg.r.to_bits(),
-        bg_g_bits: bg.g.to_bits(),
-        bg_b_bits: bg.b.to_bits(),
-        bg_a_bits: bg.a.to_bits(),
-        grid_r_bits: grid.r.to_bits(),
-        grid_g_bits: grid.g.to_bits(),
-        grid_b_bits: grid.b.to_bits(),
-        grid_a_bits: grid.a.to_bits(),
-    };
-
-    // Namespace the key so future paint-only variants can coexist safely.
-    CanvasKey::from_hash(&("fret-node.grid.paint-only.v2", v))
-}
-
-#[derive(Debug, Clone)]
-struct DerivedGeometryCacheState {
-    key: Option<CanvasKey>,
-    rebuilds: u64,
-    geom: Option<Arc<CanvasGeometry>>,
-    index: Option<Arc<CanvasSpatialDerived>>,
-}
-
-impl Default for DerivedGeometryCacheState {
-    fn default() -> Self {
-        Self {
-            key: None,
-            rebuilds: 0,
-            geom: None,
-            index: None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct DerivedGeometryCacheKeyV2 {
-    graph_rev: u64,
-    zoom_q: i32,
-    node_origin_x_q: i32,
-    node_origin_y_q: i32,
-    draw_order_hash: u64,
-    geometry_tokens_fingerprint: u64,
-    geometry_overrides_rev: u64,
-    cell_size_screen_bits: u32,
-    min_cell_size_screen_bits: u32,
-    edge_aabb_pad_screen_bits: u32,
-    edge_interaction_width_bits: u32,
-    wire_width_bits: u32,
-}
-
-fn derived_geometry_cache_key(
-    graph_rev: u64,
-    zoom: f32,
-    node_origin: crate::io::NodeGraphNodeOrigin,
-    draw_order: &[crate::core::NodeId],
-    interaction: &crate::io::NodeGraphInteractionState,
-    style: &NodeGraphStyle,
-    geometry_overrides_rev: u64,
-    max_edge_interaction_width_override_px: f32,
-) -> CanvasKey {
-    let zoom = PanZoom2D::sanitize_zoom(zoom, 1.0);
-    let origin = node_origin.normalized();
-
-    let tuning = interaction.spatial_index;
-    let max_edge_interaction_width_override_px = if max_edge_interaction_width_override_px
-        .is_finite()
-        && max_edge_interaction_width_override_px >= 0.0
-    {
-        max_edge_interaction_width_override_px
-    } else {
-        0.0
-    };
-    let edge_aabb_pad_screen_px = tuning
-        .edge_aabb_pad_screen_px
-        .max(interaction.edge_interaction_width)
-        .max(max_edge_interaction_width_override_px)
-        .max(style.geometry.wire_width)
-        .max(0.0);
-
-    let v = DerivedGeometryCacheKeyV2 {
-        graph_rev,
-        zoom_q: quantize_f32(zoom, 4096.0),
-        node_origin_x_q: quantize_f32(origin.x, 4096.0),
-        node_origin_y_q: quantize_f32(origin.y, 4096.0),
-        draw_order_hash: stable_hash_u64(1, &draw_order),
-        geometry_tokens_fingerprint: style.geometry.fingerprint(),
-        geometry_overrides_rev,
-        cell_size_screen_bits: tuning.cell_size_screen_px.to_bits(),
-        min_cell_size_screen_bits: tuning.min_cell_size_screen_px.to_bits(),
-        edge_aabb_pad_screen_bits: edge_aabb_pad_screen_px.to_bits(),
-        edge_interaction_width_bits: interaction.edge_interaction_width.to_bits(),
-        wire_width_bits: style.geometry.wire_width.to_bits(),
-    };
-
-    CanvasKey::from_hash(&("fret-node.derived-geometry.paint-only.v2", v))
-}
-
-fn build_debug_grid_ops(
-    bounds: Rect,
-    view: PanZoom2D,
-    style: &NodeGraphStyle,
-) -> Arc<Vec<fret_core::SceneOp>> {
-    let mut ops = Vec::<fret_core::SceneOp>::new();
-
-    // Background fill (debug baseline).
-    ops.push(fret_core::SceneOp::Quad {
-        order: DrawOrder(0),
-        rect: bounds,
-        background: fret_core::scene::Paint::Solid(style.paint.background).into(),
-        border: fret_core::Edges::default(),
-        border_paint: fret_core::scene::Paint::TRANSPARENT.into(),
-        corner_radii: fret_core::Corners::default(),
-    });
-
-    let Some(transform) = view.render_transform(bounds) else {
-        return Arc::new(ops);
-    };
-
-    // Mirror `CanvasPainter::with_transform` behavior: avoid pushing invalid or identity transforms.
-    let push_transform = {
-        let is_finite = transform.a.is_finite()
-            && transform.b.is_finite()
-            && transform.c.is_finite()
-            && transform.d.is_finite()
-            && transform.tx.is_finite()
-            && transform.ty.is_finite();
-        is_finite && transform != fret_core::Transform2D::IDENTITY
-    };
-
-    if push_transform {
-        ops.push(fret_core::SceneOp::PushTransform { transform });
-    }
-
-    // Draw a lightweight infinite grid in canvas space.
-    // This is intentionally simple (paint-only skeleton) and will be replaced by the node-graph
-    // style-driven cached grid tiles in later milestones.
-    let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
-    let step = 64.0f32;
-    let thickness = (1.0 / zoom).max(0.25 / zoom);
-
-    let tl = view.screen_to_canvas(bounds, bounds.origin);
-    let br = view.screen_to_canvas(
-        bounds,
-        Point::new(
-            Px(bounds.origin.x.0 + bounds.size.width.0),
-            Px(bounds.origin.y.0 + bounds.size.height.0),
-        ),
-    );
-
-    let x0 = tl.x.0.min(br.x.0);
-    let x1 = tl.x.0.max(br.x.0);
-    let y0 = tl.y.0.min(br.y.0);
-    let y1 = tl.y.0.max(br.y.0);
-
-    let ix0 = (x0 / step).floor() as i32 - 1;
-    let ix1 = (x1 / step).ceil() as i32 + 1;
-    let iy0 = (y0 / step).floor() as i32 - 1;
-    let iy1 = (y1 / step).ceil() as i32 + 1;
-
-    // Snap the painted extents to the computed grid indices so small pans do not require
-    // rebuilding the cached ops (the transform already accounts for pan/zoom).
-    let x0 = ix0 as f32 * step;
-    let x1 = ix1 as f32 * step;
-    let y0 = iy0 as f32 * step;
-    let y1 = iy1 as f32 * step;
-
-    let max_lines = 400i32;
-    let x_lines = (ix1 - ix0).clamp(0, max_lines);
-    let y_lines = (iy1 - iy0).clamp(0, max_lines);
-
-    let grid_paint: fret_core::scene::PaintBindingV1 =
-        fret_core::scene::Paint::Solid(style.paint.grid_minor_color).into();
-
-    for i in 0..x_lines {
-        let x = (ix0 + i) as f32 * step;
-        let rect = Rect::new(
-            Point::new(Px(x - 0.5 * thickness), Px(y0)),
-            fret_core::Size::new(Px(thickness), Px(y1 - y0)),
-        );
-        ops.push(fret_core::SceneOp::Quad {
-            order: DrawOrder(1),
-            rect,
-            background: grid_paint,
-            border: fret_core::Edges::default(),
-            border_paint: fret_core::scene::Paint::TRANSPARENT.into(),
-            corner_radii: fret_core::Corners::default(),
-        });
-    }
-
-    for i in 0..y_lines {
-        let y = (iy0 + i) as f32 * step;
-        let rect = Rect::new(
-            Point::new(Px(x0), Px(y - 0.5 * thickness)),
-            fret_core::Size::new(Px(x1 - x0), Px(thickness)),
-        );
-        ops.push(fret_core::SceneOp::Quad {
-            order: DrawOrder(1),
-            rect,
-            background: grid_paint,
-            border: fret_core::Edges::default(),
-            border_paint: fret_core::scene::Paint::TRANSPARENT.into(),
-            corner_radii: fret_core::Corners::default(),
-        });
-    }
-
-    if push_transform {
-        ops.push(fret_core::SceneOp::PopTransform);
-    }
-
-    Arc::new(ops)
-}
-
-fn paint_debug_grid_cached(
-    p: &mut CanvasPainter<'_>,
-    view: PanZoom2D,
-    ops: Option<Arc<Vec<fret_core::SceneOp>>>,
-    style: &NodeGraphStyle,
-) {
-    if let Some(ops) = ops {
-        for op in ops.iter().copied() {
-            p.scene().push(op);
-        }
-        return;
-    }
-
-    // Fallback path: build-and-paint without storing any cache. This keeps the surface functional
-    // in the very first frames before bounds are known to the element.
-    let bounds = p.bounds();
-    let ops = build_debug_grid_ops(bounds, view, style);
-    for op in ops.iter().copied() {
-        p.scene().push(op);
-    }
-}
-
-#[derive(Debug, Clone)]
-struct EdgePaintCacheState {
-    key: Option<CanvasKey>,
-    rebuilds: u64,
-    draws: Option<Arc<Vec<EdgePathDraw>>>,
-}
-
-impl Default for EdgePaintCacheState {
-    fn default() -> Self {
-        Self {
-            key: None,
-            rebuilds: 0,
-            draws: None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct EdgePaintCacheKeyV3 {
-    graph_rev: u64,
-    zoom_q: i32,
-    node_origin_x_q: i32,
-    node_origin_y_q: i32,
-    draw_order_hash: u64,
-    derived_geometry_key: u64,
-}
-
-#[derive(Debug, Clone)]
-struct EdgePathDraw {
-    edge: crate::core::EdgeId,
-    from: crate::core::PortId,
-    to: crate::core::PortId,
-    key: u64,
-    commands: Box<[PathCommand]>,
-    bbox: Rect,
-    color: Color,
-}
-
-#[derive(Debug, Clone)]
-struct NodePaintCacheState {
-    key: Option<CanvasKey>,
-    rebuilds: u64,
-    draws: Option<Arc<Vec<NodeRectDraw>>>,
-}
-
-impl Default for NodePaintCacheState {
-    fn default() -> Self {
-        Self {
-            key: None,
-            rebuilds: 0,
-            draws: None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct NodePaintCacheKeyV3 {
-    graph_rev: u64,
-    zoom_q: i32,
-    node_origin_x_q: i32,
-    node_origin_y_q: i32,
-    draw_order_hash: u64,
-    derived_geometry_key: u64,
-}
-
-#[derive(Debug, Clone)]
-struct NodeRectDraw {
-    id: crate::core::NodeId,
-    rect: Rect,
-}
-
-#[derive(Debug, Clone)]
-struct PortalLabelInfo {
-    id: crate::core::NodeId,
-    left: Px,
-    top: Px,
-    width: Px,
-    height: Px,
-    label: Arc<str>,
-    ports_in: u32,
-    ports_out: u32,
-    selected: bool,
-    hovered: bool,
-}
-
-fn rect_contains_point(rect: Rect, p: Point) -> bool {
-    let x0 = rect.origin.x.0;
-    let y0 = rect.origin.y.0;
-    let x1 = x0 + rect.size.width.0;
-    let y1 = y0 + rect.size.height.0;
-    p.x.0 >= x0 && p.x.0 <= x1 && p.y.0 >= y0 && p.y.0 <= y1
-}
-
-fn rect_from_points(a: Point, b: Point) -> Rect {
-    let x0 = a.x.0.min(b.x.0);
-    let x1 = a.x.0.max(b.x.0);
-    let y0 = a.y.0.min(b.y.0);
-    let y1 = a.y.0.max(b.y.0);
-    Rect::new(
-        Point::new(Px(x0), Px(y0)),
-        fret_core::Size::new(Px((x1 - x0).max(0.0)), Px((y1 - y0).max(0.0))),
-    )
-}
-
-fn rects_intersect(a: Rect, b: Rect) -> bool {
-    let ax0 = a.origin.x.0;
-    let ay0 = a.origin.y.0;
-    let ax1 = ax0 + a.size.width.0;
-    let ay1 = ay0 + a.size.height.0;
-
-    let bx0 = b.origin.x.0;
-    let by0 = b.origin.y.0;
-    let bx1 = bx0 + b.size.width.0;
-    let by1 = by0 + b.size.height.0;
-
-    ax0 <= bx1 && ax1 >= bx0 && ay0 <= by1 && ay1 >= by0
-}
-
-fn rect_approx_eq(a: Rect, b: Rect, eps: f32) -> bool {
-    (a.origin.x.0 - b.origin.x.0).abs() <= eps
-        && (a.origin.y.0 - b.origin.y.0).abs() <= eps
-        && (a.size.width.0 - b.size.width.0).abs() <= eps
-        && (a.size.height.0 - b.size.height.0).abs() <= eps
-}
-
-fn rect_union(a: Rect, b: Rect) -> Rect {
-    let x0 = a.origin.x.0.min(b.origin.x.0);
-    let y0 = a.origin.y.0.min(b.origin.y.0);
-    let x1 = (a.origin.x.0 + a.size.width.0).max(b.origin.x.0 + b.size.width.0);
-    let y1 = (a.origin.y.0 + a.size.height.0).max(b.origin.y.0 + b.size.height.0);
-    Rect::new(
-        Point::new(Px(x0), Px(y0)),
-        fret_core::Size::new(Px((x1 - x0).max(0.0)), Px((y1 - y0).max(0.0))),
-    )
-}
-
-fn rect_contains_rect(outer: Rect, inner: Rect) -> bool {
-    let ox0 = outer.origin.x.0;
-    let oy0 = outer.origin.y.0;
-    let ox1 = ox0 + outer.size.width.0;
-    let oy1 = oy0 + outer.size.height.0;
-
-    let ix0 = inner.origin.x.0;
-    let iy0 = inner.origin.y.0;
-    let ix1 = ix0 + inner.size.width.0;
-    let iy1 = iy0 + inner.size.height.0;
-
-    ix0 >= ox0 && ix1 <= ox1 && iy0 >= oy0 && iy1 <= oy1
-}
-
-fn marquee_rect_screen(m: &MarqueeDragState) -> Rect {
-    rect_from_points(m.start_screen, m.current_screen)
-}
-
-fn node_drag_delta_canvas(view: PanZoom2D, drag: &NodeDragState) -> (f32, f32) {
-    let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
-    let dx = (drag.current_screen.x.0 - drag.start_screen.x.0) / zoom;
-    let dy = (drag.current_screen.y.0 - drag.start_screen.y.0) / zoom;
-    (dx, dy)
-}
-
-fn node_drag_contains(drag: &NodeDragState, id: crate::core::NodeId) -> bool {
-    drag.nodes_sorted.binary_search(&id).is_ok()
-}
-
-fn hit_test_node_at_point(
-    view: PanZoom2D,
-    bounds: Rect,
-    node_click_distance_screen_px: f32,
-    geom: &CanvasGeometry,
-    index: &CanvasSpatialDerived,
-    pos_screen: Point,
-    scratch: &mut Vec<crate::core::NodeId>,
-) -> Option<crate::core::NodeId> {
-    let z = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
-    let radius_canvas = (node_click_distance_screen_px.max(0.0) / z).max(0.0);
-    let pos_canvas = view.screen_to_canvas(bounds, pos_screen);
-
-    let query = Rect::new(
-        Point::new(
-            Px(pos_canvas.x.0 - radius_canvas),
-            Px(pos_canvas.y.0 - radius_canvas),
-        ),
-        fret_core::Size::new(Px(2.0 * radius_canvas), Px(2.0 * radius_canvas)),
-    );
-
-    scratch.clear();
-    index.query_nodes_in_rect(query, scratch);
-
-    let mut best: Option<(u32, crate::core::NodeId)> = None;
-    for id in scratch.iter().copied() {
-        let Some(node) = geom.nodes.get(&id) else {
-            continue;
-        };
-        if !rect_contains_point(node.rect, pos_canvas) {
-            continue;
-        }
-        let rank = geom.node_rank.get(&id).copied().unwrap_or(0);
-        match best {
-            None => best = Some((rank, id)),
-            Some((cur, _)) if rank >= cur => best = Some((rank, id)),
-            _ => {}
-        }
-    }
-    best.map(|(_, id)| id)
-}
-
-fn edges_cache_key(
-    graph_rev: u64,
-    zoom: f32,
-    node_origin: crate::io::NodeGraphNodeOrigin,
-    draw_order_hash: u64,
-    derived_geometry_key: u64,
-) -> CanvasKey {
-    let zoom = PanZoom2D::sanitize_zoom(zoom, 1.0);
-    let origin = node_origin.normalized();
-    let v = EdgePaintCacheKeyV3 {
-        graph_rev,
-        zoom_q: quantize_f32(zoom, 4096.0),
-        node_origin_x_q: quantize_f32(origin.x, 4096.0),
-        node_origin_y_q: quantize_f32(origin.y, 4096.0),
-        draw_order_hash,
-        derived_geometry_key,
-    };
-    CanvasKey::from_hash(&("fret-node.edges.paint-only.v3", v))
-}
-
-fn nodes_cache_key(
-    graph_rev: u64,
-    zoom: f32,
-    node_origin: crate::io::NodeGraphNodeOrigin,
-    draw_order_hash: u64,
-    derived_geometry_key: u64,
-) -> CanvasKey {
-    let zoom = PanZoom2D::sanitize_zoom(zoom, 1.0);
-    let origin = node_origin.normalized();
-    let v = NodePaintCacheKeyV3 {
-        graph_rev,
-        zoom_q: quantize_f32(zoom, 4096.0),
-        node_origin_x_q: quantize_f32(origin.x, 4096.0),
-        node_origin_y_q: quantize_f32(origin.y, 4096.0),
-        draw_order_hash,
-        derived_geometry_key,
-    };
-    CanvasKey::from_hash(&("fret-node.nodes.paint-only.v3", v))
-}
-
-fn canvas_viewport_rect(bounds: Rect, view: PanZoom2D, margin_screen_px: f32) -> Option<Rect> {
-    let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
-    let margin_canvas = (margin_screen_px / zoom).max(0.0);
-
-    let tl = view.screen_to_canvas(
-        bounds,
-        Point::new(
-            Px(bounds.origin.x.0 - margin_screen_px),
-            Px(bounds.origin.y.0 - margin_screen_px),
-        ),
-    );
-    let br = view.screen_to_canvas(
-        bounds,
-        Point::new(
-            Px(bounds.origin.x.0 + bounds.size.width.0 + margin_screen_px),
-            Px(bounds.origin.y.0 + bounds.size.height.0 + margin_screen_px),
-        ),
-    );
-
-    // Expand in canvas space as well to compensate for quantization and FP noise.
-    let x0 = tl.x.0.min(br.x.0) - margin_canvas;
-    let x1 = tl.x.0.max(br.x.0) + margin_canvas;
-    let y0 = tl.y.0.min(br.y.0) - margin_canvas;
-    let y1 = tl.y.0.max(br.y.0) + margin_canvas;
-
-    if !x0.is_finite() || !x1.is_finite() || !y0.is_finite() || !y1.is_finite() {
-        return None;
-    }
-
-    Some(Rect::new(
-        Point::new(Px(x0), Px(y0)),
-        fret_core::Size::new(Px((x1 - x0).max(0.0)), Px((y1 - y0).max(0.0))),
-    ))
-}
-
-fn build_edges_draws_paint_only(
-    graph: &Graph,
-    graph_rev: u64,
-    zoom: f32,
-    geom: &CanvasGeometry,
-    style: &NodeGraphStyle,
-) -> Arc<Vec<EdgePathDraw>> {
-    let mut out = Vec::<EdgePathDraw>::new();
-    out.reserve(graph.edges.len().min(4096));
-
-    let zoom = PanZoom2D::sanitize_zoom(zoom, 1.0).max(1.0e-6);
-
-    for (edge_id, edge) in &graph.edges {
-        let Some(p0) = geom.port_center(edge.from) else {
-            continue;
-        };
-        let Some(p1) = geom.port_center(edge.to) else {
-            continue;
-        };
-
-        let (ctrl1, ctrl2) = canvas_wires::wire_ctrl_points(p0, p1, zoom);
-
-        let min_x = p0.x.0.min(p1.x.0).min(ctrl1.x.0).min(ctrl2.x.0);
-        let max_x = p0.x.0.max(p1.x.0).max(ctrl1.x.0).max(ctrl2.x.0);
-        let min_y = p0.y.0.min(p1.y.0).min(ctrl1.y.0).min(ctrl2.y.0);
-        let max_y = p0.y.0.max(p1.y.0).max(ctrl1.y.0).max(ctrl2.y.0);
-        let mut bbox = Rect::new(
-            Point::new(Px(min_x), Px(min_y)),
-            fret_core::Size::new(Px((max_x - min_x).max(0.0)), Px((max_y - min_y).max(0.0))),
-        );
-        let pad = style
-            .geometry
-            .wire_width
-            .max(style.paint.wire_interaction_width)
-            / zoom;
-        let pad = pad.max(0.0);
-        bbox = Rect::new(
-            Point::new(Px(bbox.origin.x.0 - pad), Px(bbox.origin.y.0 - pad)),
-            fret_core::Size::new(
-                Px((bbox.size.width.0 + 2.0 * pad).max(0.0)),
-                Px((bbox.size.height.0 + 2.0 * pad).max(0.0)),
-            ),
-        );
-
-        let commands: Box<[PathCommand]> = vec![
-            PathCommand::MoveTo(p0),
-            PathCommand::CubicTo {
-                ctrl1,
-                ctrl2,
-                to: p1,
-            },
-        ]
-        .into_boxed_slice();
-
-        // Stable hosted path key: edge identity + graph model revision.
-        let path_key = CanvasKey::from_hash(&("fret-node.edge-path.v1", graph_rev, edge_id)).0;
-        let color = match edge.kind {
-            crate::core::EdgeKind::Data => style.paint.wire_color_data,
-            crate::core::EdgeKind::Exec => style.paint.wire_color_exec,
-        };
-
-        out.push(EdgePathDraw {
-            edge: *edge_id,
-            from: edge.from,
-            to: edge.to,
-            key: path_key,
-            commands,
-            bbox,
-            color,
-        });
-    }
-
-    Arc::new(out)
-}
-
-fn scale_dash_pattern_screen_px_to_canvas_units(
-    pattern: DashPatternV1,
-    zoom: f32,
-) -> Option<DashPatternV1> {
-    if !zoom.is_finite() || zoom <= 0.0 {
-        return None;
-    }
-
-    let dash = pattern.dash.0 / zoom;
-    let gap = pattern.gap.0 / zoom;
-    let phase = pattern.phase.0 / zoom;
-    let period = dash + gap;
-    if !dash.is_finite() || !gap.is_finite() || !phase.is_finite() || dash <= 0.0 || period <= 0.0 {
-        return None;
-    }
-
-    Some(DashPatternV1::new(Px(dash), Px(gap), Px(phase)))
-}
-
-fn paint_edges_cached(
-    p: &mut CanvasPainter<'_>,
-    view: PanZoom2D,
-    margin_screen_px: f32,
-    draws: Option<Arc<Vec<EdgePathDraw>>>,
-    geom: Option<Arc<CanvasGeometry>>,
-    node_drag: Option<&NodeDragState>,
-    style_tokens: &NodeGraphStyle,
-    paint_overrides: Option<&dyn crate::ui::paint_overrides::NodeGraphPaintOverrides>,
-) {
-    let Some(draws) = draws else {
-        return;
-    };
-    let geom = geom.unwrap_or_else(|| Arc::new(CanvasGeometry::default()));
-
-    let bounds = p.bounds();
-    let Some(cull) = canvas_viewport_rect(bounds, view, margin_screen_px) else {
-        return;
-    };
-    let Some(transform) = view.render_transform(bounds) else {
-        return;
-    };
-
-    let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
-    let raster_scale_factor = p.scale_factor() * zoom;
-    let base_stroke_width = (style_tokens.geometry.wire_width / zoom).max(0.0);
-
-    p.with_transform(transform, |p| {
-        let drag_active = node_drag.is_some_and(|d| d.active && !d.canceled);
-        let (ddx, ddy) = node_drag
-            .filter(|_| drag_active)
-            .map(|d| node_drag_delta_canvas(view, d))
-            .unwrap_or((0.0, 0.0));
-
-        for d in draws.iter() {
-            let mut paint: fret_core::scene::PaintBindingV1 = d.color.into();
-            let mut stroke_width_mul = 1.0_f32;
-            let mut dash: Option<DashPatternV1> = None;
-
-            if let Some(o) = paint_overrides
-                .and_then(|p| p.edge_paint_override(d.edge))
-                .map(|o| o.normalized())
-            {
-                if let Some(m) = o.stroke_width_mul {
-                    if m.is_finite() && m > 0.0 {
-                        stroke_width_mul = m;
-                    }
-                }
-                dash = o
-                    .dash
-                    .and_then(|p| scale_dash_pattern_screen_px_to_canvas_units(p, zoom));
-                if let Some(paint_override) = o.stroke_paint {
-                    paint = paint_override;
-                }
-            }
-
-            let stroke_width = (base_stroke_width * stroke_width_mul).max(0.0);
-            let style = PathStyle::StrokeV2(StrokeStyleV2 {
-                width: Px(stroke_width),
-                join: StrokeJoinV1::Round,
-                cap: StrokeCapV1::Round,
-                miter_limit: 4.0,
-                dash,
-            });
-
-            let mut affected_by_drag = false;
-            if drag_active {
-                let from_node = geom.ports.get(&d.from).map(|h| h.node);
-                let to_node = geom.ports.get(&d.to).map(|h| h.node);
-                affected_by_drag = from_node
-                    .is_some_and(|id| node_drag.is_some_and(|drag| node_drag_contains(drag, id)))
-                    || to_node.is_some_and(|id| {
-                        node_drag.is_some_and(|drag| node_drag_contains(drag, id))
-                    });
-            }
-
-            if affected_by_drag {
-                let Some(mut p0) = geom.port_center(d.from) else {
-                    continue;
-                };
-                let Some(mut p1) = geom.port_center(d.to) else {
-                    continue;
-                };
-                if let Some(from) = geom.ports.get(&d.from) {
-                    if node_drag.is_some_and(|drag| node_drag_contains(drag, from.node)) {
-                        p0 = Point::new(Px(p0.x.0 + ddx), Px(p0.y.0 + ddy));
-                    }
-                }
-                if let Some(to) = geom.ports.get(&d.to) {
-                    if node_drag.is_some_and(|drag| node_drag_contains(drag, to.node)) {
-                        p1 = Point::new(Px(p1.x.0 + ddx), Px(p1.y.0 + ddy));
-                    }
-                }
-
-                let (ctrl1, ctrl2) = canvas_wires::wire_ctrl_points(p0, p1, zoom);
-                let commands: Box<[PathCommand]> = vec![
-                    PathCommand::MoveTo(p0),
-                    PathCommand::CubicTo {
-                        ctrl1,
-                        ctrl2,
-                        to: p1,
-                    },
-                ]
-                .into_boxed_slice();
-
-                let min_x = p0.x.0.min(p1.x.0).min(ctrl1.x.0).min(ctrl2.x.0);
-                let max_x = p0.x.0.max(p1.x.0).max(ctrl1.x.0).max(ctrl2.x.0);
-                let min_y = p0.y.0.min(p1.y.0).min(ctrl1.y.0).min(ctrl2.y.0);
-                let max_y = p0.y.0.max(p1.y.0).max(ctrl1.y.0).max(ctrl2.y.0);
-                let mut bbox = Rect::new(
-                    Point::new(Px(min_x), Px(min_y)),
-                    fret_core::Size::new(
-                        Px((max_x - min_x).max(0.0)),
-                        Px((max_y - min_y).max(0.0)),
-                    ),
-                );
-                let pad = style_tokens
-                    .geometry
-                    .wire_width
-                    .max(style_tokens.paint.wire_interaction_width)
-                    / zoom;
-                let pad = pad.max(0.0);
-                bbox = Rect::new(
-                    Point::new(Px(bbox.origin.x.0 - pad), Px(bbox.origin.y.0 - pad)),
-                    fret_core::Size::new(
-                        Px((bbox.size.width.0 + 2.0 * pad).max(0.0)),
-                        Px((bbox.size.height.0 + 2.0 * pad).max(0.0)),
-                    ),
-                );
-
-                if !rects_intersect(cull, bbox) {
-                    continue;
-                }
-
-                let key = CanvasKey::from_hash(&(
-                    "fret-node.edge-path.drag.v1",
-                    d.edge,
-                    quantize_f32(ddx, 1024.0),
-                    quantize_f32(ddy, 1024.0),
-                ))
-                .0;
-                p.path_paint(
-                    key,
-                    DrawOrder(2),
-                    Point::new(Px(0.0), Px(0.0)),
-                    &commands,
-                    style,
-                    paint,
-                    raster_scale_factor,
-                );
-            } else {
-                if !rects_intersect(cull, d.bbox) {
-                    continue;
-                }
-                p.path_paint(
-                    d.key,
-                    DrawOrder(2),
-                    Point::new(Px(0.0), Px(0.0)),
-                    &d.commands,
-                    style,
-                    paint,
-                    raster_scale_factor,
-                );
-            }
-        }
-    });
-}
-
-fn build_nodes_draws_paint_only(graph: &Graph, zoom: f32) -> Arc<Vec<NodeRectDraw>> {
-    // Paint-only geometry approximation:
-    // - Use semantic sizes (`node.size`) when available, otherwise a stable default.
-    // - Apply semantic zoom sizing: canvas-space size scales by `1/zoom` so screen size is stable.
-    const DEFAULT_NODE_W_LOGICAL: f32 = 220.0;
-    const DEFAULT_NODE_H_LOGICAL: f32 = 140.0;
-
-    let mut draws = Vec::<NodeRectDraw>::new();
-    draws.reserve(graph.nodes.len().min(4096));
-
-    let zoom = PanZoom2D::sanitize_zoom(zoom, 1.0).max(1.0e-6);
-    let inv_zoom = 1.0 / zoom;
-
-    for (id, node) in &graph.nodes {
-        if node.hidden {
-            continue;
-        }
-        let logical_size = node.size.unwrap_or(crate::core::CanvasSize {
-            width: DEFAULT_NODE_W_LOGICAL,
-            height: DEFAULT_NODE_H_LOGICAL,
-        });
-        let w = logical_size.width * inv_zoom;
-        let h = logical_size.height * inv_zoom;
-        if !w.is_finite() || !h.is_finite() || w <= 0.0 || h <= 0.0 {
-            continue;
-        }
-        let rect = Rect::new(
-            Point::new(Px(node.pos.x), Px(node.pos.y)),
-            fret_core::Size::new(Px(w), Px(h)),
-        );
-        draws.push(NodeRectDraw { id: *id, rect });
-    }
-
-    Arc::new(draws)
-}
-
-fn paint_nodes_cached(
-    p: &mut CanvasPainter<'_>,
-    view: PanZoom2D,
-    margin_screen_px: f32,
-    draws: Option<Arc<Vec<NodeRectDraw>>>,
-    style_tokens: &NodeGraphStyle,
-    hovered_node: Option<crate::core::NodeId>,
-    selected_nodes: &[crate::core::NodeId],
-    node_drag: Option<&NodeDragState>,
-    paint_overrides: Option<&dyn crate::ui::paint_overrides::NodeGraphPaintOverrides>,
-) {
-    let Some(draws) = draws else {
-        return;
-    };
-
-    let bounds = p.bounds();
-    let Some(cull) = canvas_viewport_rect(bounds, view, margin_screen_px) else {
-        return;
-    };
-    let Some(transform) = view.render_transform(bounds) else {
-        return;
-    };
-
-    let fill = fret_core::scene::Paint::Solid(style_tokens.paint.node_background).into();
-    let transparent_fill = fret_core::scene::Paint::Solid(Color {
-        a: 0.0,
-        ..style_tokens.paint.node_background
-    })
-    .into();
-    let border_base = style_tokens.paint.node_border;
-    let border_hover = Color {
-        a: 0.75,
-        ..style_tokens.paint.node_border_selected
-    };
-    let border_selected = style_tokens.paint.node_border_selected;
-    let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
-    let border_w = (1.0 / zoom).max(0.0);
-    let corner_r = (style_tokens.paint.node_corner_radius / zoom).max(0.0);
-    let border = fret_core::Edges::all(Px(border_w));
-    let no_border = fret_core::Edges::all(Px(0.0));
-    let corner_radii = fret_core::Corners::all(Px(corner_r));
-
-    p.with_transform(transform, |p| {
-        let drag_active = node_drag.is_some_and(|d| d.active && !d.canceled);
-        let (ddx, ddy) = node_drag
-            .filter(|_| drag_active)
-            .map(|d| node_drag_delta_canvas(view, d))
-            .unwrap_or((0.0, 0.0));
-
-        for d in draws.iter() {
-            let mut rect = d.rect;
-            if drag_active && node_drag.is_some_and(|drag| node_drag_contains(drag, d.id)) {
-                rect = Rect::new(
-                    Point::new(Px(rect.origin.x.0 + ddx), Px(rect.origin.y.0 + ddy)),
-                    rect.size,
-                );
-            }
-
-            if !rects_intersect(cull, rect) {
-                continue;
-            }
-            let selected = selected_nodes.iter().any(|id| *id == d.id);
-            let hovered = hovered_node.is_some_and(|id| id == d.id);
-            let border_color = if selected {
-                border_selected
-            } else if hovered {
-                border_hover
-            } else {
-                border_base
-            };
-            let mut background = fill;
-            let mut border_paint = fret_core::scene::Paint::Solid(border_color).into();
-
-            if let Some(o) = paint_overrides
-                .and_then(|p| p.node_paint_override(d.id))
-                .map(|o| o.normalized())
-            {
-                if let Some(paint) = o.body_background {
-                    background = paint;
-                }
-                if let Some(paint) = o.border_paint {
-                    border_paint = paint;
-                }
-            }
-
-            // Paint node background *below* wires, but keep the node border above wires.
-            // This avoids the common “wire looks truncated” artifact when wires are drawn behind
-            // a solid node quad in the paint-only skeleton.
-            p.scene().push(fret_core::SceneOp::Quad {
-                order: DrawOrder(1),
-                rect,
-                background,
-                border: no_border,
-                border_paint: transparent_fill,
-                corner_radii,
-            });
-            p.scene().push(fret_core::SceneOp::Quad {
-                order: DrawOrder(3),
-                rect,
-                background: transparent_fill,
-                border,
-                border_paint,
-                corner_radii,
-            });
-        }
-    });
-}
-
 /// Paint-only declarative node-graph surface skeleton.
 ///
 /// Notes:
@@ -1253,17 +410,17 @@ fn paint_nodes_cached(
 /// - Escape cancel clears the local pan-drag state, but cannot currently release pointer capture
 ///   from a key hook (see workstream contract gap log).
 #[track_caller]
-pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
+pub fn node_graph_surface<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
-    props: NodeGraphSurfacePaintOnlyProps,
+    props: NodeGraphSurfaceProps,
 ) -> AnyElement {
-    let NodeGraphSurfacePaintOnlyProps {
-        graph,
-        view_state,
+    let NodeGraphSurfaceProps {
+        binding,
         pointer_region,
         canvas,
         geometry_overrides,
         paint_overrides,
+        measured_geometry,
         portals_enabled,
         portal_max_nodes,
         cull_margin_screen_px,
@@ -1274,2184 +431,3941 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
         pinch_zoom_speed,
         test_id,
     } = props;
+    let graph = binding.graph_model();
+    let view_state = binding.view_state_model();
+    let controller = binding.controller();
 
-    // Drag state is internal to the surface and stored in element state (uncontrolled model).
-    let drag: Model<Option<DragState>> = use_uncontrolled_model(cx, || None);
+    let PaintOnlySurfaceModels {
+        drag,
+        marquee_drag,
+        node_drag,
+        pending_selection,
+        hovered_node,
+        hit_scratch,
+        diag_paint_overrides,
+        diag_paint_overrides_enabled,
+        grid_cache,
+        derived_cache,
+        edges_cache,
+        nodes_cache,
+        portal_bounds_store,
+        portal_measured_geometry_state,
+        portal_debug_flags,
+        hover_anchor_store,
+        authoritative_surface_boundary,
+    } = use_paint_only_surface_models(cx);
 
-    // Marquee selection drag state is internal to the surface (paint-only baseline).
-    let marquee_drag: Model<Option<MarqueeDragState>> = use_uncontrolled_model(cx, || None);
+    let prepared_frame = prepare_surface_frame(
+        cx,
+        PrepareSurfaceFrameParams {
+            graph: &graph,
+            view_state: &view_state,
+            surface_models: &PaintOnlySurfaceModels {
+                drag: drag.clone(),
+                marquee_drag: marquee_drag.clone(),
+                node_drag: node_drag.clone(),
+                pending_selection: pending_selection.clone(),
+                hovered_node: hovered_node.clone(),
+                hit_scratch: hit_scratch.clone(),
+                diag_paint_overrides: diag_paint_overrides.clone(),
+                diag_paint_overrides_enabled: diag_paint_overrides_enabled.clone(),
+                grid_cache: grid_cache.clone(),
+                derived_cache: derived_cache.clone(),
+                edges_cache: edges_cache.clone(),
+                nodes_cache: nodes_cache.clone(),
+                portal_bounds_store: portal_bounds_store.clone(),
+                portal_measured_geometry_state: portal_measured_geometry_state.clone(),
+                portal_debug_flags: portal_debug_flags.clone(),
+                hover_anchor_store: hover_anchor_store.clone(),
+                authoritative_surface_boundary: authoritative_surface_boundary.clone(),
+            },
+            geometry_overrides: geometry_overrides.clone(),
+            paint_overrides: paint_overrides.clone(),
+            measured_geometry: measured_geometry.clone(),
+            cull_margin_screen_px,
+            test_id,
+        },
+    );
 
-    // Node dragging preview state (paint-only baseline).
-    let node_drag: Model<Option<NodeDragState>> = use_uncontrolled_model(cx, || None);
-
-    // Hover state is internal and intentionally not persisted in view state.
-    let hovered_node: Model<Option<crate::core::NodeId>> = use_uncontrolled_model(cx, || None);
-    // Scratch vec used by hit tests to avoid per-event allocations.
-    let hit_scratch: Model<Vec<crate::core::NodeId>> = use_uncontrolled_model(cx, Vec::new);
-
-    // Diagnostics-only: an internal paint overrides map so `diag.script_v2` can toggle a paint-only
-    // revision bump without demo-specific command routing.
-    let diag_paint_overrides: Model<Arc<NodeGraphPaintOverridesMap>> =
-        use_uncontrolled_model(cx, || Arc::new(NodeGraphPaintOverridesMap::default()));
-    let diag_paint_overrides_enabled: Model<bool> = use_uncontrolled_model(cx, || false);
-
-    // Grid paint cache is a paint-only implementation detail. It uses a deterministic key so we can
-    // gate steady-state behavior via diagnostics (no rebuild churn when view is stable).
-    let grid_cache: Model<GridPaintCacheState> =
-        use_uncontrolled_model(cx, GridPaintCacheState::default);
-
-    // Derived geometry cache shared by node/edge builders.
-    let derived_cache: Model<DerivedGeometryCacheState> =
-        use_uncontrolled_model(cx, DerivedGeometryCacheState::default);
-
-    // Edges paint cache is another paint-only implementation detail. Unlike the grid, it stores
-    // precomputed path commands rather than prepared `PathId`s so hosted caches can manage
-    // lifetime/budgets (ADR 0141 / ADR 0161 direction).
-    let edges_cache: Model<EdgePaintCacheState> =
-        use_uncontrolled_model(cx, EdgePaintCacheState::default);
-
-    // Node chrome cache (paint-only baseline).
-    let nodes_cache: Model<NodePaintCacheState> =
-        use_uncontrolled_model(cx, NodePaintCacheState::default);
-
-    // Optional, internal store for hosting portal subtrees and harvesting their last-known bounds.
-    // This is intentionally local state (not part of `NodeGraphViewState`) while we iterate on the
-    // declarative surface strategy.
-    let portal_bounds_store: Model<PortalBoundsStore> =
-        use_uncontrolled_model(cx, PortalBoundsStore::default);
-
-    // Diagnostics-only toggles for portal hosting.
-    let portal_debug_flags: Model<PortalDebugFlags> =
-        use_uncontrolled_model(cx, PortalDebugFlags::default);
-
-    // Hover anchor store used by overlays that should not depend on portal hosting caps.
-    let hover_anchor_store: Model<HoverAnchorStore> =
-        use_uncontrolled_model(cx, HoverAnchorStore::default);
-
-    // Always observe the graph model so changes can invalidate the surface even when we don't need
-    // to clone it on steady-state frames.
-    cx.observe_model(&graph, Invalidation::Paint);
-
-    // These models affect portal positioning, so treat them as layout-invalidating in a cached view.
-    let drag_value = cx
-        .get_model_copied(&drag, Invalidation::Layout)
-        .unwrap_or(None);
-    let panning = drag_value.is_some();
-
-    let marquee_value = cx
-        .get_model_cloned(&marquee_drag, Invalidation::Layout)
-        .unwrap_or(None);
-    let marquee_active = marquee_value.as_ref().is_some_and(|m| m.active);
-
-    let node_drag_value = cx
-        .get_model_cloned(&node_drag, Invalidation::Layout)
-        .unwrap_or(None);
-    let node_drag_armed = node_drag_value.as_ref().is_some_and(|d| !d.canceled);
-    let node_dragging = node_drag_value
-        .as_ref()
-        .is_some_and(|d| d.active && !d.canceled);
-
-    let view_value = cx
-        .get_model_cloned(&view_state, Invalidation::Layout)
-        .unwrap_or_default();
-    let view_for_paint = view_from_state(&view_value);
-    let theme = Theme::global(&*cx.app).snapshot();
-    let style_tokens = NodeGraphStyle::from_snapshot(theme.clone());
-    let diag_keys_enabled = std::env::var("FRET_DIAG")
-        .ok()
-        .is_some_and(|v| !v.trim().is_empty() && v.trim() != "0");
-    let geometry_overrides = geometry_overrides.as_deref();
-    let geometry_overrides_rev = geometry_overrides.map(|o| o.revision()).unwrap_or(0);
-    let max_edge_interaction_width_override_px = geometry_overrides
-        .map(|o| o.max_edge_interaction_width_override_px())
-        .filter(|w| w.is_finite() && *w >= 0.0)
-        .unwrap_or(0.0);
-    let diag_paint_overrides_value = cx
-        .get_model_cloned(&diag_paint_overrides, Invalidation::Paint)
-        .unwrap_or_else(|| Arc::new(NodeGraphPaintOverridesMap::default()));
-    let diag_paint_overrides_ref: NodeGraphPaintOverridesRef = diag_paint_overrides_value.clone();
-    let paint_overrides_ref =
-        paint_overrides.or_else(|| diag_keys_enabled.then_some(diag_paint_overrides_ref));
-    let paint_overrides = paint_overrides_ref.as_deref();
-    let paint_overrides_rev = paint_overrides.map(|o| o.revision()).unwrap_or(0);
-
-    let graph_rev = graph.revision(&*cx.app).unwrap_or(0);
-    let draw_order_hash = stable_hash_u64(2, &view_value.draw_order);
-    let node_origin = view_value.interaction.node_origin;
-
-    // Attempt to rebuild the cached grid ops when the view/bounds key changes.
-    // Bounds are initially learned from pointer hooks (and optionally from `last_bounds_for_element`).
-    let mut grid_cache_value = cx
-        .get_model_cloned(&grid_cache, Invalidation::Paint)
-        .unwrap_or_default();
-
-    if grid_cache_value.bounds.size.width.0 > 0.0
-        && grid_cache_value.bounds.size.height.0 > 0.0
-        && grid_cache_value.bounds.size.width.0.is_finite()
-        && grid_cache_value.bounds.size.height.0.is_finite()
-    {
-        let key = grid_cache_key(grid_cache_value.bounds, view_for_paint, &style_tokens);
-        if grid_cache_value.key != Some(key) {
-            let ops = build_debug_grid_ops(grid_cache_value.bounds, view_for_paint, &style_tokens);
-            let _ = cx.app.models_mut().update(&grid_cache, |st| {
-                st.key = Some(key);
-                st.rebuilds = st.rebuilds.saturating_add(1);
-                st.ops = Some(ops.clone());
-            });
-            grid_cache_value.key = Some(key);
-            grid_cache_value.rebuilds = grid_cache_value.rebuilds.saturating_add(1);
-            grid_cache_value.ops = Some(ops);
-        }
-    }
-
-    let grid_cached = grid_cache_value.ops.is_some();
-
-    // Attempt to rebuild derived geometry + spatial index when their key changes.
-    let mut derived_cache_value = cx
-        .get_model_cloned(&derived_cache, Invalidation::Paint)
-        .unwrap_or_default();
-    {
-        let key = derived_geometry_cache_key(
-            graph_rev,
-            view_for_paint.zoom,
-            node_origin,
-            &view_value.draw_order,
-            &view_value.interaction,
-            &style_tokens,
-            geometry_overrides_rev,
-            max_edge_interaction_width_override_px,
-        );
-
-        if derived_cache_value.key != Some(key) {
-            let (geom, index) = cx
-                .read_model_ref(&graph, Invalidation::Paint, |graph_value| {
-                    let zoom = PanZoom2D::sanitize_zoom(view_for_paint.zoom, 1.0);
-                    let z = zoom.max(1.0e-6);
-
-                    let mut presenter = DefaultNodeGraphPresenter::default();
-                    let geom = CanvasGeometry::build_with_presenter(
-                        graph_value,
-                        &view_value.draw_order,
-                        &style_tokens,
-                        zoom,
-                        node_origin,
-                        &mut presenter,
-                        geometry_overrides,
-                    );
-
-                    let tuning = view_value.interaction.spatial_index;
-                    let edge_aabb_pad_screen_px = tuning
-                        .edge_aabb_pad_screen_px
-                        .max(view_value.interaction.edge_interaction_width)
-                        .max(max_edge_interaction_width_override_px)
-                        .max(style_tokens.geometry.wire_width)
-                        .max(0.0);
-                    let cell_size_canvas = (tuning.cell_size_screen_px / z)
-                        .max(tuning.min_cell_size_screen_px / z)
-                        .max(1.0);
-                    let max_hit_pad_canvas = (edge_aabb_pad_screen_px / z).max(0.0);
-
-                    let index = CanvasSpatialDerived::build(
-                        graph_value,
-                        &geom,
-                        zoom,
-                        max_hit_pad_canvas,
-                        cell_size_canvas,
-                    );
-
-                    (Arc::new(geom), Arc::new(index))
-                })
-                .unwrap_or_else(|_| {
-                    (
-                        Arc::new(CanvasGeometry::default()),
-                        Arc::new(CanvasSpatialDerived::empty()),
-                    )
-                });
-
-            let _ = cx.app.models_mut().update(&derived_cache, |st| {
-                st.key = Some(key);
-                st.rebuilds = st.rebuilds.saturating_add(1);
-                st.geom = Some(geom.clone());
-                st.index = Some(index.clone());
-            });
-
-            derived_cache_value.key = Some(key);
-            derived_cache_value.rebuilds = derived_cache_value.rebuilds.saturating_add(1);
-            derived_cache_value.geom = Some(geom);
-            derived_cache_value.index = Some(index);
-        }
-    }
-
-    let geom_cached = derived_cache_value.geom.is_some();
-
-    // Attempt to rebuild cached node chrome draw data when the graph/zoom key changes.
-    let mut nodes_cache_value = cx
-        .get_model_cloned(&nodes_cache, Invalidation::Paint)
-        .unwrap_or_default();
-    {
-        let derived_geometry_key = derived_cache_value.key.as_ref().map(|k| k.0).unwrap_or(0);
-        let key = nodes_cache_key(
-            graph_rev,
-            view_for_paint.zoom,
-            node_origin,
-            draw_order_hash,
-            derived_geometry_key,
-        );
-        if nodes_cache_value.key != Some(key) {
-            let draws = if let Some(geom) = derived_cache_value.geom.as_deref() {
-                let mut out = Vec::<NodeRectDraw>::new();
-                out.reserve(geom.order.len().min(4096));
-                for id in geom.order.iter().copied() {
-                    let Some(node) = geom.nodes.get(&id) else {
-                        continue;
-                    };
-                    out.push(NodeRectDraw {
-                        id,
-                        rect: node.rect,
-                    });
-                }
-                Arc::new(out)
-            } else {
-                cx.read_model_ref(&graph, Invalidation::Paint, |graph_value| {
-                    build_nodes_draws_paint_only(graph_value, view_for_paint.zoom)
-                })
-                .unwrap_or_else(|_| Arc::new(Vec::new()))
-            };
-            let _ = cx.app.models_mut().update(&nodes_cache, |st| {
-                st.key = Some(key);
-                st.rebuilds = st.rebuilds.saturating_add(1);
-                st.draws = Some(draws.clone());
-            });
-            nodes_cache_value.key = Some(key);
-            nodes_cache_value.rebuilds = nodes_cache_value.rebuilds.saturating_add(1);
-            nodes_cache_value.draws = Some(draws);
-        }
-    }
-
-    let nodes_cached = nodes_cache_value.draws.is_some();
-
-    // Attempt to rebuild cached edges draw data when the graph/zoom key changes.
-    let mut edges_cache_value = cx
-        .get_model_cloned(&edges_cache, Invalidation::Paint)
-        .unwrap_or_default();
-    {
-        let derived_geometry_key = derived_cache_value.key.as_ref().map(|k| k.0).unwrap_or(0);
-        let key = edges_cache_key(
-            graph_rev,
-            view_for_paint.zoom,
-            node_origin,
-            draw_order_hash,
-            derived_geometry_key,
-        );
-        if edges_cache_value.key != Some(key) {
-            let geom_for_edges = derived_cache_value
-                .geom
-                .clone()
-                .unwrap_or_else(|| Arc::new(CanvasGeometry::default()));
-            let draws = cx
-                .read_model_ref(&graph, Invalidation::Paint, |graph_value| {
-                    build_edges_draws_paint_only(
-                        graph_value,
-                        graph_rev,
-                        view_for_paint.zoom,
-                        &geom_for_edges,
-                        &style_tokens,
-                    )
-                })
-                .unwrap_or_else(|_| Arc::new(Vec::new()));
-            let _ = cx.app.models_mut().update(&edges_cache, |st| {
-                st.key = Some(key);
-                st.rebuilds = st.rebuilds.saturating_add(1);
-                st.draws = Some(draws.clone());
-            });
-            edges_cache_value.key = Some(key);
-            edges_cache_value.rebuilds = edges_cache_value.rebuilds.saturating_add(1);
-            edges_cache_value.draws = Some(draws);
-        }
-    }
-
-    let edges_cached = edges_cache_value.draws.is_some();
-    let hovered_node_value = cx
-        .get_model_copied(&hovered_node, Invalidation::Paint)
-        .unwrap_or(None);
-    let hovered = hovered_node_value.is_some();
-    let selected_nodes_len = view_value.selected_nodes.len();
-    let portal_fit_count = cx
-        .app
-        .models()
-        .read(&portal_bounds_store, |st| st.fit_to_portals_count)
-        .unwrap_or(0);
-    let portal_fit_pending = cx
-        .app
-        .models()
-        .read(&portal_bounds_store, |st| st.pending_fit_to_portals)
-        .unwrap_or(false);
-    let portal_union = cx
-        .app
-        .models()
-        .read(&portal_bounds_store, |st| {
-            let mut out: Option<Rect> = None;
-            for rect in st.nodes_canvas_bounds.values().copied() {
-                out = Some(match out {
-                    Some(prev) => rect_union(prev, rect),
-                    None => rect,
-                });
-            }
-            out
-        })
-        .ok()
-        .flatten();
-    let (portal_union_w, portal_union_h) = portal_union
-        .map(|r| (r.size.width.0, r.size.height.0))
-        .unwrap_or((0.0, 0.0));
-    let portal_bounds_entries = cx
-        .app
-        .models()
-        .read(&portal_bounds_store, |st| st.nodes_canvas_bounds.len())
-        .unwrap_or(0);
-    let portals_disabled = cx
-        .get_model_copied(&portal_debug_flags, Invalidation::Paint)
-        .unwrap_or_default()
-        .disable_portals;
-
-    // Lightweight observability for “wires missing/truncated” reports:
-    // estimate how many edges are drawn vs culled in the paint-only surface.
-    //
-    // Note: This is an approximation based on cached edge draws + best-effort bounds tracking
-    // (grid cache bounds). It is intended for diagnostics gating, not as a correctness oracle.
-    let (
-        edges_paint_total,
-        edges_paint_drawn,
-        edges_paint_culled,
-        edges_paint_dragged,
-        edges_paint_missing_ports,
-    ) = edges_cache_value
-        .draws
-        .as_deref()
-        .map(|draws| {
-            let mut total: u32 = draws.len() as u32;
-            let mut drawn: u32 = 0;
-            let mut culled: u32 = 0;
-            let mut dragged: u32 = 0;
-            let mut missing_ports: u32 = 0;
-
-            let bounds = grid_cache_value.bounds;
-            let view = PanZoom2D {
-                pan: Point::new(Px(view_value.pan.x), Px(view_value.pan.y)),
-                zoom: view_value.zoom,
-            };
-            let Some(cull) = canvas_viewport_rect(bounds, view, cull_margin_screen_px) else {
-                return (total, drawn, culled, dragged, missing_ports);
-            };
-
-            let drag_active = node_drag_value
-                .as_ref()
-                .is_some_and(|d| d.active && !d.canceled);
-            let geom = derived_cache_value.geom.as_deref();
-
-            for d in draws.iter() {
-                let mut affected_by_drag = false;
-                if drag_active {
-                    let from_node = geom.and_then(|g| g.ports.get(&d.from)).map(|h| h.node);
-                    let to_node = geom.and_then(|g| g.ports.get(&d.to)).map(|h| h.node);
-                    affected_by_drag = from_node.is_some_and(|id| {
-                        node_drag_value
-                            .as_ref()
-                            .is_some_and(|drag| node_drag_contains(drag, id))
-                    }) || to_node.is_some_and(|id| {
-                        node_drag_value
-                            .as_ref()
-                            .is_some_and(|drag| node_drag_contains(drag, id))
-                    });
-                }
-
-                if affected_by_drag {
-                    dragged += 1;
-                    let ok_from = geom.and_then(|g| g.port_center(d.from)).is_some();
-                    let ok_to = geom.and_then(|g| g.port_center(d.to)).is_some();
-                    if ok_from && ok_to {
-                        drawn += 1;
-                    } else {
-                        missing_ports += 1;
-                    }
-                    continue;
-                }
-
-                if !rects_intersect(cull, d.bbox) {
-                    culled += 1;
-                } else {
-                    drawn += 1;
-                }
-            }
-
-            // Keep `total` consistent even if the vec length exceeds u32 (shouldn't in practice).
-            if draws.len() > (u32::MAX as usize) {
-                total = u32::MAX;
-            }
-            (total, drawn, culled, dragged, missing_ports)
-        })
-        .unwrap_or((0, 0, 0, 0, 0));
-    let edges_paint_ok =
-        edges_paint_total > 0 && edges_paint_drawn > 0 && edges_paint_missing_ports == 0;
-    let semantics_value: Arc<str> = Arc::from(format!(
-        "panning {panning}; marquee_active:{marquee_active}; node_drag_armed:{node_drag_armed}; node_dragging:{node_dragging}; hovered_node:{hovered}; selected_nodes:{selected_nodes_len}; grid_cached:{grid_cached}; grid_rebuilds:{}; geom_cached:{geom_cached}; geom_rebuilds:{}; nodes_cached:{nodes_cached}; nodes_rebuilds:{}; edges_cached:{edges_cached}; edges_rebuilds:{}; edges_paint_total:{edges_paint_total}; edges_paint_drawn:{edges_paint_drawn}; edges_paint_culled:{edges_paint_culled}; edges_paint_dragged:{edges_paint_dragged}; edges_paint_missing_ports:{edges_paint_missing_ports}; edges_paint_ok:{edges_paint_ok}; paint_overrides_rev:{paint_overrides_rev}; view_pan:{:.2},{:.2}; view_zoom:{:.4}; portal_fit_count:{portal_fit_count}; portal_fit_pending:{portal_fit_pending}; portal_union_wh:{portal_union_w:.2}x{portal_union_h:.2}; portal_bounds_entries:{portal_bounds_entries}; portals_disabled:{portals_disabled};",
-        grid_cache_value.rebuilds,
-        derived_cache_value.rebuilds,
-        nodes_cache_value.rebuilds,
-        edges_cache_value.rebuilds,
-        view_value.pan.x,
-        view_value.pan.y,
-        view_value.zoom
-    ));
-    let test_id = test_id.unwrap_or_else(|| Arc::<str>::from("node_graph.canvas"));
+    let view_for_paint = prepared_frame.view_for_paint;
+    let theme = prepared_frame.theme;
+    let style_tokens = prepared_frame.style_tokens;
+    let diag_keys_enabled = prepared_frame.diag_keys_enabled;
+    let diag_paint_overrides_value = prepared_frame.diag_paint_overrides_value;
+    let paint_overrides_ref = prepared_frame.paint_overrides_ref;
+    let panning = prepared_frame.panning;
+    let marquee_value = prepared_frame.marquee_value;
+    let marquee_active = prepared_frame.marquee_active;
+    let node_drag_value = prepared_frame.node_drag_value;
+    let node_dragging = prepared_frame.node_dragging;
+    let grid_cache_value = prepared_frame.grid_cache_value;
+    let derived_cache_value = prepared_frame.derived_cache_value;
+    let nodes_cache_value = prepared_frame.nodes_cache_value;
+    let edges_cache_value = prepared_frame.edges_cache_value;
+    let hovered_node_value = prepared_frame.hovered_node_value;
+    let effective_selected_nodes = prepared_frame.effective_selected_nodes;
+    let portals_disabled = prepared_frame.portals_disabled;
+    let semantics_value = prepared_frame.semantics_value;
+    let test_id = prepared_frame.test_id;
 
     cx.semantics_with_id(
         SemanticsProps {
-            test_id: Some(test_id),
-            value: Some(semantics_value),
+            test_id: Some(test_id.clone()),
+            value: Some(semantics_value.clone()),
             // Make the surface focusable so keyboard actions can route here after pointer-down.
             focusable: true,
             ..Default::default()
         },
         move |cx, element| {
-            // Opportunistically learn bounds from the last recorded geometry. This is best-effort:
-            // pointer hooks also stamp bounds (more immediate), but this helps keep resize behavior
-            // roughly correct during the paint-only milestone.
-            if let Some(bounds) = cx.last_bounds_for_element(element) {
-                let _ = cx.app.models_mut().update(&grid_cache, |st| {
-                    if st.bounds != bounds {
-                        st.bounds = bounds;
-                    }
-                });
-            }
-
-            let drag_escape = drag.clone();
-            let marquee_escape = marquee_drag.clone();
-            let node_drag_escape = node_drag.clone();
-            let graph_debug = graph.clone();
-            let view_zoom_kb = view_state.clone();
-            let view_escape = view_state.clone();
-            let portal_bounds_for_fit = portal_bounds_store.clone();
-            let portal_debug_for_keys = portal_debug_flags.clone();
-            let diag_keys_enabled = diag_keys_enabled;
-            let diag_paint_overrides_for_keys = diag_paint_overrides_value.clone();
-            let diag_paint_overrides_enabled_for_keys = diag_paint_overrides_enabled.clone();
-            let on_key_down_capture: OnKeyDown = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiFocusActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      key: fret_ui::action::KeyDownCx| {
-                    if key.repeat || key.ime_composing {
-                        return false;
-                    }
-
-                    if key.key == fret_core::KeyCode::Escape {
-                        let drag_active = host
-                            .models_mut()
-                            .read(&drag_escape, |st| *st)
-                            .ok()
-                            .flatten();
-                        let marquee = host
-                            .models_mut()
-                            .read(&marquee_escape, |st| st.clone())
-                            .ok()
-                            .flatten();
-                        let marquee_active = marquee.is_some();
-                        let node_drag_active = host
-                            .models_mut()
-                            .read(&node_drag_escape, |st| st.is_some())
-                            .ok()
-                            .unwrap_or(false);
-
-                        if drag_active.is_none() && !marquee_active && !node_drag_active {
-                            return false;
-                        }
-
-                        let _ = host.models_mut().update(&drag_escape, |st| *st = None);
-                        if let Some(marquee) = marquee {
-                            let base_selected = marquee.base_selected_nodes.clone();
-                            let _ = host.models_mut().update(&view_escape, |state| {
-                                state.selected_nodes.clear();
-                                state.selected_nodes.extend(base_selected.iter().copied());
-                            });
-                        }
-                        let _ = host.models_mut().update(&marquee_escape, |st| *st = None);
-                        let _ = host.models_mut().update(&node_drag_escape, |st| {
-                            if let Some(st) = st.as_mut() {
-                                st.canceled = true;
-                                st.active = false;
-                            }
-                        });
-                        host.request_redraw(action_cx.window);
-                        return true;
-                    }
-
-                    if !(key.modifiers.ctrl || key.modifiers.meta) {
-                        return false;
-                    }
-
-                    if diag_keys_enabled && key.key == fret_core::KeyCode::Digit3 {
-                        // Diagnostics-only: a deterministic graph mutation to validate that
-                        // geometry caches rebuild on graph revision changes (without relying on
-                        // demo command routing).
-                        let _ = host.models_mut().update(&graph_debug, |g| {
-                            for node in g.nodes.values_mut() {
-                                if node.hidden {
-                                    continue;
-                                }
-                                node.pos.x += 1.0;
-                                break;
-                            }
-                        });
-                        host.request_redraw(action_cx.window);
-                        return true;
-                    }
-
-                    if diag_keys_enabled && key.key == fret_core::KeyCode::Digit4 {
-                        // Diagnostics-only: normalize the graph/view so scripted hit tests can be
-                        // deterministic without relying on demo-specific command routing.
-                        //
-                        // - Move one visible node to (0,0) with a stable size.
-                        // - Hide all other nodes to avoid ambiguity.
-                        // - Set a deterministic pan so the node center lands at window center for
-                        //   the demo's default 980x720 config.
-                        let _ = host.models_mut().update(&graph_debug, |g| {
-                            let mut first: Option<crate::core::NodeId> = None;
-                            for (id, node) in g.nodes.iter() {
-                                if !node.hidden {
-                                    first = Some(*id);
-                                    break;
-                                }
-                            }
-                            let Some(first) = first else {
-                                return;
-                            };
-
-                            for (id, node) in g.nodes.iter_mut() {
-                                if *id == first {
-                                    node.hidden = false;
-                                    node.pos.x = 0.0;
-                                    node.pos.y = 0.0;
-                                    node.size = Some(crate::core::CanvasSize {
-                                        width: 220.0,
-                                        height: 140.0,
-                                    });
-                                } else {
-                                    node.hidden = true;
-                                }
-                            }
-                        });
-
-                        let _ = host.models_mut().update(&view_zoom_kb, |s| {
-                            s.pan.x = 380.0;
-                            s.pan.y = 290.0;
-                            s.zoom = 1.0;
-                            // `diag.script_v2` cannot currently synthesize pointer-modifier combos,
-                            // so enable selection-on-drag to make marquee tests deterministic.
-                            s.interaction.selection_on_drag = true;
-                            s.selected_nodes.clear();
-                            s.selected_edges.clear();
-                            s.selected_groups.clear();
-                        });
-
-                        host.request_redraw(action_cx.window);
-                        return true;
-                    }
-
-                    if diag_keys_enabled && key.key == fret_core::KeyCode::Digit5 {
-                        // Diagnostics-only: place the normalized node slightly away from the canvas
-                        // center so scripted marquee selection can start from the center (empty
-                        // space) and intersect the node via a deterministic drag.
-                        let _ = host.models_mut().update(&graph_debug, |g| {
-                            let mut first: Option<crate::core::NodeId> = None;
-                            for (id, node) in g.nodes.iter() {
-                                if !node.hidden {
-                                    first = Some(*id);
-                                    break;
-                                }
-                            }
-                            let Some(first) = first else {
-                                return;
-                            };
-
-                            for (id, node) in g.nodes.iter_mut() {
-                                if *id == first {
-                                    node.hidden = false;
-                                    node.pos.x = 0.0;
-                                    node.pos.y = 0.0;
-                                    node.size = Some(crate::core::CanvasSize {
-                                        width: 220.0,
-                                        height: 140.0,
-                                    });
-                                } else {
-                                    node.hidden = true;
-                                }
-                            }
-                        });
-
-                        let _ = host.models_mut().update(&view_zoom_kb, |s| {
-                            // Shift pan.x so the node no longer covers the canvas center.
-                            s.pan.x = 540.0;
-                            s.pan.y = 290.0;
-                            s.zoom = 1.0;
-                            s.interaction.selection_on_drag = true;
-                            // Use partial selection so the scripted drag only needs to intersect.
-                            s.interaction.selection_mode =
-                                crate::io::NodeGraphSelectionMode::Partial;
-                            s.selected_nodes.clear();
-                            s.selected_edges.clear();
-                            s.selected_groups.clear();
-                        });
-
-                        host.request_redraw(action_cx.window);
-                        return true;
-                    }
-
-                    if diag_keys_enabled && key.key == fret_core::KeyCode::Digit9 {
-                        // Portal bounds are frame-lagged by contract and canvas bounds are only
-                        // learned after layout. Arm a pending fit request and let the paint pass
-                        // apply it deterministically once the prerequisites are available.
-                        let _ = host.models_mut().update(&portal_bounds_for_fit, |st| {
-                            st.pending_fit_to_portals = true;
-                        });
-                        host.request_redraw(action_cx.window);
-                        return true;
-                    }
-
-                    if diag_keys_enabled && key.key == fret_core::KeyCode::Digit8 {
-                        let _ = host.models_mut().update(&portal_debug_for_keys, |st| {
-                            st.disable_portals = true;
-                        });
-                        // Ensure consumers don't keep using stale portal bounds.
-                        let _ = host.models_mut().update(&portal_bounds_for_fit, |st| {
-                            st.nodes_canvas_bounds.clear();
-                            st.pending_fit_to_portals = false;
-                        });
-                        host.request_redraw(action_cx.window);
-                        return true;
-                    }
-
-                    if diag_keys_enabled && key.key == fret_core::KeyCode::Digit7 {
-                        let _ = host.models_mut().update(&portal_debug_for_keys, |st| {
-                            st.disable_portals = false;
-                        });
-                        host.request_redraw(action_cx.window);
-                        return true;
-                    }
-
-                    if diag_keys_enabled && key.key == fret_core::KeyCode::Digit6 {
-                        let enable_next = host
-                            .models_mut()
-                            .read(&diag_paint_overrides_enabled_for_keys, |st| *st)
-                            .ok()
-                            .unwrap_or(false);
-                        let enable_next = !enable_next;
-                        let _ = host
-                            .models_mut()
-                            .update(&diag_paint_overrides_enabled_for_keys, |st| {
-                                *st = enable_next;
-                            });
-
-                        let (edge_id, _node_id) = host
-                            .models_mut()
-                            .read(&graph_debug, |g| {
-                                let edge = g.edges.keys().next().copied();
-                                let node = g
-                                    .nodes
-                                    .iter()
-                                    .find_map(|(id, n)| (!n.hidden).then_some(*id));
-                                (edge, node)
-                            })
-                            .ok()
-                            .unwrap_or((None, None));
-
-                        if let Some(edge_id) = edge_id {
-                            if enable_next {
-                                let mut stops =
-                                    [GradientStop::new(0.0, Color::TRANSPARENT); MAX_STOPS];
-                                stops[0] =
-                                    GradientStop::new(0.0, Color::from_srgb_hex_rgb(0xff_3b_30));
-                                stops[1] =
-                                    GradientStop::new(1.0, Color::from_srgb_hex_rgb(0x34_c7_59));
-                                let gradient = LinearGradient {
-                                    start: Point::new(Px(0.0), Px(0.0)),
-                                    end: Point::new(Px(240.0), Px(0.0)),
-                                    tile_mode: TileMode::Clamp,
-                                    color_space: ColorSpace::Srgb,
-                                    stop_count: 2,
-                                    stops,
-                                };
-                                let paint = PaintBindingV1::with_eval_space(
-                                    Paint::LinearGradient(gradient),
-                                    PaintEvalSpaceV1::ViewportPx,
-                                );
-                                diag_paint_overrides_for_keys.set_edge_override(
-                                    edge_id,
-                                    Some(
-                                        crate::ui::paint_overrides::EdgePaintOverrideV1 {
-                                            dash: Some(DashPatternV1::new(
-                                                Px(8.0),
-                                                Px(4.0),
-                                                Px(0.0),
-                                            )),
-                                            stroke_width_mul: Some(1.6),
-                                            stroke_paint: Some(paint),
-                                        }
-                                        .normalized(),
-                                    ),
-                                );
-                            } else {
-                                diag_paint_overrides_for_keys.set_edge_override(edge_id, None);
-                            }
-                        }
-
-                        host.request_redraw(action_cx.window);
-                        return true;
-                    }
-
-                    const KB_ZOOM_STEP_MUL: f32 = 1.1;
-                    let (factor, reset) = match key.key {
-                        fret_core::KeyCode::Equal | fret_core::KeyCode::NumpadAdd => {
-                            (KB_ZOOM_STEP_MUL, false)
-                        }
-                        fret_core::KeyCode::Minus | fret_core::KeyCode::NumpadSubtract => {
-                            (1.0 / KB_ZOOM_STEP_MUL, false)
-                        }
-                        // Diagnostics-friendly fallbacks (only digits are guaranteed to parse in
-                        // `diag.script_v2` key synthesis today).
-                        fret_core::KeyCode::Digit1 => (KB_ZOOM_STEP_MUL, false),
-                        fret_core::KeyCode::Digit2 => (1.0 / KB_ZOOM_STEP_MUL, false),
-                        fret_core::KeyCode::Digit0 | fret_core::KeyCode::Numpad0 => (1.0, true),
-                        _ => return false,
-                    };
-
-                    let _ = host.models_mut().update(&view_zoom_kb, |state| {
-                        let zoom = PanZoom2D::sanitize_zoom(state.zoom, 1.0);
-                        let new_zoom = if reset {
-                            1.0
-                        } else {
-                            (zoom * factor).clamp(min_zoom, max_zoom)
-                        };
-                        state.zoom = new_zoom;
-                    });
-
-                    host.request_redraw(action_cx.window);
-                    true
-                },
-            );
-            cx.key_on_key_down_capture_for(element, on_key_down_capture);
-
-            let view_pan_down = view_state.clone();
-            let drag_start = drag.clone();
-            let marquee_start = marquee_drag.clone();
-            let node_drag_start = node_drag.clone();
-            let grid_cache_bounds = grid_cache.clone();
-            let focus_target = element;
-            let derived_cache_for_down = derived_cache.clone();
-            let hovered_for_down = hovered_node.clone();
-            let hit_scratch_for_down = hit_scratch.clone();
-            let on_pointer_down: OnPointerDown = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      down: fret_ui::action::PointerDownCx| {
-                    host.request_focus(focus_target);
-
-                    let bounds = host.bounds();
-                    let _ = host.models_mut().update(&grid_cache_bounds, |st| {
-                        if st.bounds != bounds {
-                            st.bounds = bounds;
-                        }
-                    });
-
-                    if down.button == pan_button {
-                        host.capture_pointer();
-                        let _ = host.models_mut().update(&marquee_start, |st| *st = None);
-                        let _ = host.models_mut().update(&node_drag_start, |st| *st = None);
-                        let _ = host.models_mut().update(&drag_start, |st| {
-                            *st = Some(DragState {
-                                button: down.button,
-                                last_pos: down.position,
-                            });
-                        });
-                        host.notify(action_cx);
-                        host.request_redraw(action_cx.window);
-                        return true;
-                    }
-
-                    if down.button == MouseButton::Left {
-                        let (interaction, base_selection, node_click_distance_screen_px, view) =
-                            host.models_mut()
-                                .read(&view_pan_down, |s| {
-                                    (
-                                        s.interaction.clone(),
-                                        s.selected_nodes.clone(),
-                                        s.interaction.node_click_distance,
-                                        view_from_state(s),
-                                    )
-                                })
-                                .ok()
-                                .unwrap_or((
-                                    Default::default(),
-                                    Vec::new(),
-                                    6.0,
-                                    PanZoom2D::default(),
-                                ));
-
-                        let (geom, index) = host
-                            .models_mut()
-                            .read(&derived_cache_for_down, |st| {
-                                (st.geom.clone(), st.index.clone())
-                            })
-                            .ok()
-                            .unwrap_or((None, None));
-
-                        let hit = if let (Some(geom), Some(index)) =
-                            (geom.as_deref(), index.as_deref())
-                        {
-                            host.models_mut()
-                                .update(&hit_scratch_for_down, |scratch| {
-                                    hit_test_node_at_point(
-                                        view,
-                                        bounds,
-                                        node_click_distance_screen_px,
-                                        geom,
-                                        index,
-                                        down.position,
-                                        scratch,
-                                    )
-                                })
-                                .ok()
-                                .flatten()
-                        } else {
-                            None
-                        };
-
-                        let multi = interaction.multi_selection_key.is_pressed(down.modifiers);
-                        let selection_box_armed = interaction.selection_on_drag
-                            || interaction.selection_key.is_pressed(down.modifiers);
-
-                        if let Some(hit) = hit {
-                            let _ = host.models_mut().update(&marquee_start, |st| *st = None);
-                            let _ = host.models_mut().update(&node_drag_start, |st| *st = None);
-                            let _ = host
-                                .models_mut()
-                                .update(&hovered_for_down, |h| *h = Some(hit));
-                            if interaction.elements_selectable {
-                                let _ = host.models_mut().update(&view_pan_down, |state| {
-                                    let already_selected =
-                                        state.selected_nodes.iter().any(|id| *id == hit);
-                                    if multi {
-                                        if let Some(ix) =
-                                            state.selected_nodes.iter().position(|id| *id == hit)
-                                        {
-                                            state.selected_nodes.remove(ix);
-                                        } else {
-                                            state.selected_nodes.push(hit);
-                                        }
-                                    } else if !already_selected {
-                                        state.selected_nodes.clear();
-                                        state.selected_nodes.push(hit);
-                                    }
-                                });
-                            }
-
-                            if interaction.nodes_draggable
-                                && interaction.elements_selectable
-                                && !multi
-                            {
-                                let mut nodes = if base_selection.iter().any(|id| *id == hit) {
-                                    base_selection.clone()
-                                } else {
-                                    vec![hit]
-                                };
-                                nodes.sort();
-                                nodes.dedup();
-                                let _ = host.models_mut().update(&node_drag_start, |st| {
-                                    *st = Some(NodeDragState {
-                                        start_screen: down.position,
-                                        current_screen: down.position,
-                                        active: false,
-                                        canceled: false,
-                                        nodes_sorted: Arc::from(nodes.into_boxed_slice()),
-                                    });
-                                });
-                            }
-
-                            host.notify(action_cx);
-                            host.request_redraw(action_cx.window);
-                            return true;
-                        }
-
-                        let _ = host.models_mut().update(&hovered_for_down, |h| *h = None);
-                        let _ = host.models_mut().update(&node_drag_start, |st| *st = None);
-
-                        if selection_box_armed && interaction.elements_selectable {
-                            host.capture_pointer();
-                            let base_selected_nodes: Arc<[crate::core::NodeId]> = if multi {
-                                Arc::from(base_selection.into_boxed_slice())
-                            } else {
-                                Arc::from([])
-                            };
-
-                            let _ = host.models_mut().update(&marquee_start, |st| {
-                                *st = Some(MarqueeDragState {
-                                    start_screen: down.position,
-                                    current_screen: down.position,
-                                    active: false,
-                                    toggle: multi,
-                                    base_selected_nodes,
-                                });
-                            });
-
-                            if !multi {
-                                let _ = host.models_mut().update(&view_pan_down, |state| {
-                                    state.selected_nodes.clear();
-                                    state.selected_edges.clear();
-                                    state.selected_groups.clear();
-                                });
-                            }
-
-                            host.notify(action_cx);
-                            host.request_redraw(action_cx.window);
-                            return true;
-                        }
-
-                        // Clicking empty space clears selection (unless multi-selection modifier is held).
-                        if interaction.elements_selectable && !multi {
-                            let _ = host.models_mut().update(&view_pan_down, |state| {
-                                state.selected_nodes.clear();
-                                state.selected_edges.clear();
-                                state.selected_groups.clear();
-                            });
-                            host.notify(action_cx);
-                            host.request_redraw(action_cx.window);
-                            return true;
-                        }
-
-                        host.notify(action_cx);
-                        host.request_redraw(action_cx.window);
-                        return true;
-                    }
-
-                    false
-                },
-            );
-
-            let view_pan = view_state.clone();
-            let drag_move = drag.clone();
-            let marquee_move = marquee_drag.clone();
-            let node_drag_move = node_drag.clone();
-            let grid_cache_bounds = grid_cache.clone();
-            let derived_cache_for_hover = derived_cache.clone();
-            let hovered_for_hover = hovered_node.clone();
-            let hit_scratch_for_hover = hit_scratch.clone();
-            let on_pointer_move: OnPointerMove = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      mv: fret_ui::action::PointerMoveCx| {
-                    let bounds = host.bounds();
-                    let _ = host.models_mut().update(&grid_cache_bounds, |st| {
-                        if st.bounds != bounds {
-                            st.bounds = bounds;
-                        }
-                    });
-
-                    let drag = host.models_mut().read(&drag_move, |st| *st).ok().flatten();
-                    let Some(mut drag) = drag else {
-                        let node_drag = host
-                            .models_mut()
-                            .read(&node_drag_move, |st| st.clone())
-                            .ok()
-                            .flatten();
-                        if let Some(node_drag) = node_drag {
-                            if !mouse_buttons_contains(mv.buttons, MouseButton::Left) {
-                                return false;
-                            }
-
-                            if node_drag.canceled {
-                                let _ = host.models_mut().update(&hovered_for_hover, |h| *h = None);
-                                return false;
-                            }
-
-                            let interaction = host
-                                .models_mut()
-                                .read(&view_pan, |s| s.interaction.clone())
-                                .ok()
-                                .unwrap_or_default();
-                            let threshold = interaction.node_drag_threshold.max(0.0);
-                            let dx = mv.position.x.0 - node_drag.start_screen.x.0;
-                            let dy = mv.position.y.0 - node_drag.start_screen.y.0;
-                            let dist2 = dx * dx + dy * dy;
-                            let threshold2 = threshold * threshold;
-                            let should_activate = dist2 >= threshold2;
-                            if should_activate && !node_drag.active {
-                                host.capture_pointer();
-                            }
-
-                            let mut needs_redraw = false;
-                            let _ = host.models_mut().update(&node_drag_move, |st| {
-                                if let Some(st) = st.as_mut() {
-                                    if should_activate && !st.active {
-                                        st.active = true;
-                                        st.current_screen = mv.position;
-                                        needs_redraw = true;
-                                    }
-                                    if st.active {
-                                        if st.current_screen != mv.position {
-                                            st.current_screen = mv.position;
-                                            needs_redraw = true;
-                                        }
-                                    }
-                                }
-                            });
-
-                            let _ = host.models_mut().update(&hovered_for_hover, |h| *h = None);
-                            if needs_redraw {
-                                // Node dragging moves portals (layout) and the canvas chrome (paint).
-                                host.invalidate(Invalidation::Layout);
-                                host.notify(action_cx);
-                                host.request_redraw(action_cx.window);
-                            }
-                            return needs_redraw;
-                        }
-
-                        let marquee = host
-                            .models_mut()
-                            .read(&marquee_move, |st| st.clone())
-                            .ok()
-                            .flatten();
-                        if let Some(marquee) = marquee {
-                            let (interaction, view) = host
-                                .models_mut()
-                                .read(&view_pan, |s| (s.interaction.clone(), view_from_state(s)))
-                                .ok()
-                                .unwrap_or((Default::default(), PanZoom2D::default()));
-
-                            if !interaction.elements_selectable {
-                                let _ = host.models_mut().update(&marquee_move, |st| *st = None);
-                                host.release_pointer_capture();
-                                host.request_redraw(action_cx.window);
-                                return true;
-                            }
-
-                            let threshold = interaction.node_click_distance.max(0.0);
-                            let dx = mv.position.x.0 - marquee.start_screen.x.0;
-                            let dy = mv.position.y.0 - marquee.start_screen.y.0;
-                            let dist2 = dx * dx + dy * dy;
-                            let threshold2 = threshold * threshold;
-                            let should_activate = dist2 >= threshold2;
-                            let active_now = marquee.active || should_activate;
-
-                            let _ = host.models_mut().update(&marquee_move, |st| {
-                                if let Some(st) = st.as_mut() {
-                                    if should_activate {
-                                        st.active = true;
-                                    }
-                                    if st.active {
-                                        st.current_screen = mv.position;
-                                    }
-                                }
-                            });
-
-                            if active_now {
-                                let (geom, index) = host
-                                    .models_mut()
-                                    .read(&derived_cache_for_hover, |st| {
-                                        (st.geom.clone(), st.index.clone())
-                                    })
-                                    .ok()
-                                    .unwrap_or((None, None));
-
-                                if let (Some(geom), Some(index)) =
-                                    (geom.as_deref(), index.as_deref())
-                                {
-                                    let start_canvas =
-                                        view.screen_to_canvas(bounds, marquee.start_screen);
-                                    let cur_canvas = view.screen_to_canvas(bounds, mv.position);
-                                    let rect_canvas = rect_from_points(start_canvas, cur_canvas);
-                                    let selection_mode = interaction.selection_mode;
-
-                                    if marquee.toggle {
-                                        let mut candidates = Vec::<crate::core::NodeId>::new();
-                                        index.query_nodes_in_rect(rect_canvas, &mut candidates);
-                                        candidates.retain(|id| {
-                                            let Some(node) = geom.nodes.get(id) else {
-                                                return false;
-                                            };
-                                            match selection_mode {
-                                                crate::io::NodeGraphSelectionMode::Full => {
-                                                    rect_contains_rect(rect_canvas, node.rect)
-                                                }
-                                                crate::io::NodeGraphSelectionMode::Partial => {
-                                                    rects_intersect(rect_canvas, node.rect)
-                                                }
-                                            }
-                                        });
-
-                                        let base_selected = marquee.base_selected_nodes.clone();
-                                        let _ = host.models_mut().update(&view_pan, |state| {
-                                            state.selected_nodes.clear();
-                                            state
-                                                .selected_nodes
-                                                .extend(base_selected.iter().copied());
-                                            for id in candidates.iter().copied() {
-                                                if let Some(ix) = state
-                                                    .selected_nodes
-                                                    .iter()
-                                                    .position(|v| *v == id)
-                                                {
-                                                    state.selected_nodes.remove(ix);
-                                                } else {
-                                                    state.selected_nodes.push(id);
-                                                }
-                                            }
-                                        });
-                                    } else {
-                                        let _ = host.models_mut().update(&view_pan, |state| {
-                                            state.selected_nodes.clear();
-                                            index.query_nodes_in_rect(
-                                                rect_canvas,
-                                                &mut state.selected_nodes,
-                                            );
-                                            state.selected_nodes.retain(|id| {
-                                                let Some(node) = geom.nodes.get(id) else {
-                                                    return false;
-                                                };
-                                                match selection_mode {
-                                                    crate::io::NodeGraphSelectionMode::Full => {
-                                                        rect_contains_rect(rect_canvas, node.rect)
-                                                    }
-                                                    crate::io::NodeGraphSelectionMode::Partial => {
-                                                        rects_intersect(rect_canvas, node.rect)
-                                                    }
-                                                }
-                                            });
-                                        });
-                                    }
-                                }
-                            }
-
-                            let _ = host.models_mut().update(&hovered_for_hover, |h| *h = None);
-                            host.notify(action_cx);
-                            host.request_redraw(action_cx.window);
-                            return true;
-                        }
-
-                        let node_click_distance_screen_px = host
-                            .models_mut()
-                            .read(&view_pan, |s| s.interaction.node_click_distance)
-                            .ok()
-                            .unwrap_or(6.0);
-                        let view = host
-                            .models_mut()
-                            .read(&view_pan, |s| view_from_state(s))
-                            .ok()
-                            .unwrap_or_default();
-
-                        let (geom, index) = host
-                            .models_mut()
-                            .read(&derived_cache_for_hover, |st| {
-                                (st.geom.clone(), st.index.clone())
-                            })
-                            .ok()
-                            .unwrap_or((None, None));
-
-                        let hit = if let (Some(geom), Some(index)) =
-                            (geom.as_deref(), index.as_deref())
-                        {
-                            host.models_mut()
-                                .update(&hit_scratch_for_hover, |scratch| {
-                                    hit_test_node_at_point(
-                                        view,
-                                        bounds,
-                                        node_click_distance_screen_px,
-                                        geom,
-                                        index,
-                                        mv.position,
-                                        scratch,
-                                    )
-                                })
-                                .ok()
-                                .flatten()
-                        } else {
-                            None
-                        };
-
-                        let changed = host
-                            .models_mut()
-                            .update(&hovered_for_hover, |h| {
-                                if *h == hit {
-                                    false
-                                } else {
-                                    *h = hit;
-                                    true
-                                }
-                            })
-                            .ok()
-                            .unwrap_or(false);
-
-                        if changed {
-                            host.invalidate(Invalidation::Paint);
-                            host.notify(action_cx);
-                            host.request_redraw(action_cx.window);
-                        }
-                        return changed;
-                    };
-                    if !mouse_buttons_contains(mv.buttons, drag.button) {
-                        return false;
-                    }
-
-                    let dx = mv.position.x.0 - drag.last_pos.x.0;
-                    let dy = mv.position.y.0 - drag.last_pos.y.0;
-                    if !dx.is_finite() || !dy.is_finite() {
-                        return false;
-                    }
-
-                    let _ = host.models_mut().update(&view_pan, |state| {
-                        apply_pan_by_screen_delta(state, dx, dy);
-                    });
-
-                    drag.last_pos = mv.position;
-                    let _ = host.models_mut().update(&drag_move, |st| {
-                        if let Some(st) = st.as_mut() {
-                            *st = drag;
-                        }
-                    });
-
-                    // Panning repositions portals (layout) and changes world mapping (hit-test + paint).
-                    host.invalidate(Invalidation::Layout);
-                    host.notify(action_cx);
-                    host.request_redraw(action_cx.window);
-                    true
-                },
-            );
-
-            let drag_end = drag.clone();
-            let marquee_end = marquee_drag.clone();
-            let node_drag_end = node_drag.clone();
-            let graph_commit = graph.clone();
-            let view_commit = view_state.clone();
-            let on_pointer_up: OnPointerUp = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      up: fret_ui::action::PointerUpCx| {
-                    if up.button != pan_button {
-                        if up.button != MouseButton::Left {
-                            return false;
-                        }
-
-                        let node_drag = host
-                            .models_mut()
-                            .read(&node_drag_end, |st| st.clone())
-                            .ok()
-                            .flatten();
-                        if let Some(node_drag) = node_drag {
-                            let view = host
-                                .models_mut()
-                                .read(&view_commit, |s| view_from_state(s))
-                                .ok()
-                                .unwrap_or_default();
-                            let (dx, dy) = node_drag_delta_canvas(view, &node_drag);
-                            let commit = node_drag.active
-                                && !node_drag.canceled
-                                && dx.is_finite()
-                                && dy.is_finite();
-
-                            if commit && (dx.abs() > 1.0e-9 || dy.abs() > 1.0e-9) {
-                                let nodes = node_drag.nodes_sorted.clone();
-                                let _ = host.models_mut().update(&graph_commit, |g| {
-                                    for id in nodes.iter().copied() {
-                                        let Some(node) = g.nodes.get_mut(&id) else {
-                                            continue;
-                                        };
-                                        node.pos.x += dx;
-                                        node.pos.y += dy;
-                                    }
-                                });
-                            }
-
-                            host.release_pointer_capture();
-                            let _ = host.models_mut().update(&node_drag_end, |st| *st = None);
-                            host.invalidate(Invalidation::Layout);
-                            host.notify(action_cx);
-                            host.request_redraw(action_cx.window);
-                            return true;
-                        }
-
-                        let active = host
-                            .models_mut()
-                            .read(&marquee_end, |st| st.is_some())
-                            .ok()
-                            .unwrap_or(false);
-                        if !active {
-                            return false;
-                        }
-
-                        host.release_pointer_capture();
-                        let _ = host.models_mut().update(&marquee_end, |st| *st = None);
-                        host.invalidate(Invalidation::Layout);
-                        host.notify(action_cx);
-                        host.request_redraw(action_cx.window);
-                        return true;
-                    }
-
-                    host.release_pointer_capture();
-                    let _ = host.models_mut().update(&drag_end, |st| *st = None);
-                    host.invalidate(Invalidation::Layout);
-                    host.notify(action_cx);
-                    host.request_redraw(action_cx.window);
-                    true
-                },
-            );
-
-            let drag_cancel = drag.clone();
-            let marquee_cancel = marquee_drag.clone();
-            let node_drag_cancel = node_drag.clone();
-            let view_cancel = view_state.clone();
-            let on_pointer_cancel: OnPointerCancel = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      _cancel: fret_ui::action::PointerCancelCx| {
-                    let marquee = host
-                        .models_mut()
-                        .read(&marquee_cancel, |st| st.clone())
-                        .ok()
-                        .flatten();
-                    host.release_pointer_capture();
-                    let _ = host.models_mut().update(&drag_cancel, |st| *st = None);
-                    if let Some(marquee) = marquee {
-                        let base_selected = marquee.base_selected_nodes.clone();
-                        let _ = host.models_mut().update(&view_cancel, |state| {
-                            state.selected_nodes.clear();
-                            state.selected_nodes.extend(base_selected.iter().copied());
-                        });
-                    }
-                    let _ = host.models_mut().update(&marquee_cancel, |st| *st = None);
-                    let _ = host.models_mut().update(&node_drag_cancel, |st| *st = None);
-                    host.invalidate(Invalidation::Layout);
-                    host.notify(action_cx);
-                    host.request_redraw(action_cx.window);
-                    true
-                },
-            );
-
-            let view_zoom = view_state.clone();
-            let grid_cache_bounds = grid_cache.clone();
-            let on_wheel: OnWheel = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      wheel: fret_ui::action::WheelCx| {
-                    if !(wheel.modifiers.ctrl || wheel.modifiers.meta) {
-                        return false;
-                    }
-
-                    let Some(factor) = wheel_zoom_factor(
-                        wheel.delta.y.0,
-                        wheel_zoom.base,
-                        wheel_zoom.step,
-                        wheel_zoom.speed,
-                    ) else {
-                        return false;
-                    };
-
-                    let bounds = host.bounds();
-                    let _ = host.models_mut().update(&grid_cache_bounds, |st| {
-                        if st.bounds != bounds {
-                            st.bounds = bounds;
-                        }
-                    });
-                    let _ = host.models_mut().update(&view_zoom, |state| {
-                        let zoom = PanZoom2D::sanitize_zoom(state.zoom, 1.0);
-                        let new_zoom = (zoom * factor).clamp(min_zoom, max_zoom);
-                        apply_zoom_about_screen_point(
-                            state,
-                            bounds,
-                            wheel.position,
-                            new_zoom,
-                            min_zoom,
-                            max_zoom,
-                        );
-                    });
-
-                    host.invalidate(Invalidation::Layout);
-                    host.notify(action_cx);
-                    host.request_redraw(action_cx.window);
-                    true
-                },
-            );
-
-            let view_pinch = view_state.clone();
-            let grid_cache_bounds = grid_cache.clone();
-            let on_pinch: OnPinchGesture = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      pinch: fret_ui::action::PinchGestureCx| {
-                    if !pinch.delta.is_finite() {
-                        return false;
-                    }
-                    let delta = pinch.delta * pinch_zoom_speed;
-                    if delta.abs() <= 1.0e-9 {
-                        return false;
-                    }
-
-                    let bounds = host.bounds();
-                    let _ = host.models_mut().update(&grid_cache_bounds, |st| {
-                        if st.bounds != bounds {
-                            st.bounds = bounds;
-                        }
-                    });
-                    let _ = host.models_mut().update(&view_pinch, |state| {
-                        let zoom = PanZoom2D::sanitize_zoom(state.zoom, 1.0);
-                        let factor = (1.0 + delta).max(1.0e-6);
-                        let new_zoom = (zoom * factor).clamp(min_zoom, max_zoom);
-                        apply_zoom_about_screen_point(
-                            state,
-                            bounds,
-                            pinch.position,
-                            new_zoom,
-                            min_zoom,
-                            max_zoom,
-                        );
-                    });
-
-                    host.invalidate(Invalidation::Layout);
-                    host.notify(action_cx);
-                    host.request_redraw(action_cx.window);
-                    true
-                },
-            );
-
-            vec![cx.pointer_region(pointer_region, move |cx| {
-                cx.pointer_region_on_pointer_down(on_pointer_down);
-                cx.pointer_region_on_pointer_move(on_pointer_move);
-                cx.pointer_region_on_pointer_up(on_pointer_up);
-                cx.pointer_region_on_pointer_cancel(on_pointer_cancel);
-                cx.pointer_region_on_wheel(on_wheel);
-                cx.pointer_region_on_pinch_gesture(on_pinch);
-
-                let view_for_paint = view_for_paint;
-                let grid_ops = grid_cache_value.ops.clone();
-                let node_draws = nodes_cache_value.draws.clone();
-                let edge_draws = edges_cache_value.draws.clone();
-                let geom_for_paint = derived_cache_value.geom.clone();
-                let style_tokens = style_tokens.clone();
-                let hovered_node_value = hovered_node_value;
-                let selected_nodes = view_value.selected_nodes.clone();
-                let marquee_value = marquee_value.clone();
-                let node_drag_value = node_drag_value.clone();
-                let hover_anchor_store = hover_anchor_store.clone();
-                let portals_disabled = portals_disabled;
-
-                // Clone values needed by the paint closure so the originals remain available for
-                // portal hosting below.
-                let node_draws_for_paint = node_draws.clone();
-                let edge_draws_for_paint = edge_draws.clone();
-                let style_tokens_for_paint = style_tokens.clone();
-                let selected_nodes_for_paint = selected_nodes.clone();
-                let node_drag_for_paint = node_drag_value.clone();
-                let paint_overrides_for_paint = paint_overrides_ref.clone();
-                // Ensure canvas paint-cache invalidation tracks interactive state changes even when
-                // the surface rerenders outside the canvas node (e.g. portal layout updates).
-                let graph_model_id = graph.id();
-                let view_state_model_id = view_state.id();
-                let hovered_node_model_id = hovered_node.id();
-                let node_drag_model_id = node_drag.clone().id();
-                let marquee_drag_model_id = marquee_drag.clone().id();
-                let canvas = cx.canvas(canvas, move |p| {
-                    // Declare paint dependencies for paint-cache invalidation. Without this, the
-                    // canvas node can replay cached ops while portals update, which reads as
-                    // "drag not following" (chrome decouples from labels).
-                    p.observe_model_id(graph_model_id, Invalidation::Paint);
-                    p.observe_model_id(view_state_model_id, Invalidation::Paint);
-                    p.observe_model_id(hovered_node_model_id, Invalidation::Paint);
-                    p.observe_model_id(node_drag_model_id, Invalidation::Paint);
-                    p.observe_model_id(marquee_drag_model_id, Invalidation::Paint);
-
-                    paint_debug_grid_cached(p, view_for_paint, grid_ops.clone(), &style_tokens_for_paint);
-                    paint_nodes_cached(
-                        p,
+            build_surface_shell(
+                cx,
+                element,
+                SurfaceShellParams {
+                    graph: graph.clone(),
+                    view_state: view_state.clone(),
+                    controller: controller.clone(),
+                    pointer_region,
+                    canvas,
+                    measured_geometry_present: measured_geometry.is_some(),
+                    portals_enabled,
+                    portal_max_nodes,
+                    cull_margin_screen_px,
+                    pan_button,
+                    min_zoom,
+                    max_zoom,
+                    wheel_zoom,
+                    pinch_zoom_speed,
+                    surface_models: PaintOnlySurfaceModels {
+                        drag: drag.clone(),
+                        marquee_drag: marquee_drag.clone(),
+                        node_drag: node_drag.clone(),
+                        pending_selection: pending_selection.clone(),
+                        hovered_node: hovered_node.clone(),
+                        hit_scratch: hit_scratch.clone(),
+                        diag_paint_overrides: diag_paint_overrides.clone(),
+                        diag_paint_overrides_enabled: diag_paint_overrides_enabled.clone(),
+                        grid_cache: grid_cache.clone(),
+                        derived_cache: derived_cache.clone(),
+                        edges_cache: edges_cache.clone(),
+                        nodes_cache: nodes_cache.clone(),
+                        portal_bounds_store: portal_bounds_store.clone(),
+                        portal_measured_geometry_state: portal_measured_geometry_state.clone(),
+                        portal_debug_flags: portal_debug_flags.clone(),
+                        hover_anchor_store: hover_anchor_store.clone(),
+                        authoritative_surface_boundary: authoritative_surface_boundary.clone(),
+                    },
+                    prepared_frame: PreparedPaintOnlySurfaceFrame {
                         view_for_paint,
-                        cull_margin_screen_px,
-                        node_draws_for_paint.clone(),
-                        &style_tokens_for_paint,
+                        theme: theme.clone(),
+                        style_tokens: style_tokens.clone(),
+                        diag_keys_enabled,
+                        diag_paint_overrides_value: diag_paint_overrides_value.clone(),
+                        paint_overrides_ref: paint_overrides_ref.clone(),
+                        panning,
+                        marquee_value: marquee_value.clone(),
+                        marquee_active,
+                        node_drag_value: node_drag_value.clone(),
+                        node_dragging,
+                        grid_cache_value: grid_cache_value.clone(),
+                        derived_cache_value: derived_cache_value.clone(),
+                        nodes_cache_value: nodes_cache_value.clone(),
+                        edges_cache_value: edges_cache_value.clone(),
                         hovered_node_value,
-                        selected_nodes_for_paint.as_slice(),
-                        node_drag_for_paint.as_ref(),
-                        paint_overrides_for_paint.as_deref(),
-                    );
-                    paint_edges_cached(
-                        p,
-                        view_for_paint,
-                        cull_margin_screen_px,
-                        edge_draws_for_paint.clone(),
-                        geom_for_paint.clone(),
-                        node_drag_for_paint.as_ref(),
-                        &style_tokens_for_paint,
-                        paint_overrides_for_paint.as_deref(),
-                    );
-                });
-
-                let mut out: Vec<AnyElement> = Vec::new();
-                out.push(canvas);
-                let mut overlay_children: Vec<AnyElement> = Vec::new();
-                let mut hovered_portal_hosted: bool = false;
-
-                if portals_enabled && portal_max_nodes > 0 && !portals_disabled {
-                    // Portals are positioned in screen space (semantic zoom) and gated off from
-                    // hit-testing so the surface-level pointer region remains the sole input
-                    // router during this milestone.
-                    let bounds = grid_cache_value.bounds;
-                    let view = view_for_paint;
-                    let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
-
-                    if bounds.size.width.0.is_finite()
-                        && bounds.size.height.0.is_finite()
-                        && bounds.size.width.0 > 0.0
-                        && bounds.size.height.0 > 0.0
-                    {
-                        let cull_canvas = canvas_viewport_rect(bounds, view, cull_margin_screen_px);
-
-                        let drag_active = node_drag_value
-                            .as_ref()
-                            .is_some_and(|d| d.active && !d.canceled);
-                        let (ddx, ddy) = node_drag_value
-                            .as_ref()
-                            .filter(|_| drag_active)
-                            .map(|d| node_drag_delta_canvas(view, d))
-                            .unwrap_or((0.0, 0.0));
-
-                        let hovered = hovered_node_value;
-                        let selected = selected_nodes.clone();
-                        let dragged_nodes = node_drag_value
-                            .as_ref()
-                            .filter(|d| d.active && !d.canceled)
-                            .map(|d| d.nodes_sorted.clone());
-
-                        let portal_bounds_store = portal_bounds_store.clone();
-                        let portal_infos: Vec<PortalLabelInfo> = cx
-                            .read_model_ref(&graph, Invalidation::Paint, |graph_value| {
-                                let Some(draws) = node_draws.as_deref() else {
-                                    return Vec::new();
-                                };
-
-                                let mut infos: Vec<PortalLabelInfo> = Vec::new();
-                                for d in draws.iter() {
-                                    if infos.len() >= portal_max_nodes {
-                                        break;
-                                    }
-
-                                    if let Some(cull) = cull_canvas
-                                        && !rects_intersect(cull, d.rect)
-                                    {
-                                        continue;
-                                    }
-
-                                    let mut origin_canvas = d.rect.origin;
-                                    if drag_active
-                                        && let Some(nodes) = dragged_nodes.as_deref()
-                                        && nodes.binary_search(&d.id).is_ok()
-                                    {
-                                        origin_canvas = Point::new(
-                                            Px(origin_canvas.x.0 + ddx),
-                                            Px(origin_canvas.y.0 + ddy),
-                                        );
-                                    }
-
-                                    let origin_screen =
-                                        view.canvas_to_screen(bounds, origin_canvas);
-                                    let left = Px(origin_screen.x.0 - bounds.origin.x.0);
-                                    let top = Px(origin_screen.y.0 - bounds.origin.y.0);
-                                    let width = Px((d.rect.size.width.0 * zoom).max(0.0));
-
-                                    if !left.0.is_finite()
-                                        || !top.0.is_finite()
-                                        || !width.0.is_finite()
-                                    {
-                                        continue;
-                                    }
-
-                                    let label: Arc<str> = graph_value
-                                        .nodes
-                                        .get(&d.id)
-                                        .map(|n| Arc::<str>::from(n.kind.0.as_str()))
-                                        .unwrap_or_else(|| Arc::<str>::from("node"));
-
-                                    let (ports_in, ports_out) = graph_value
-                                        .nodes
-                                        .get(&d.id)
-                                        .map(|n| {
-                                            let mut ports_in = 0u32;
-                                            let mut ports_out = 0u32;
-                                            for pid in n.ports.iter() {
-                                                let Some(port) = graph_value.ports.get(pid) else {
-                                                    continue;
-                                                };
-                                                match port.dir {
-                                                    crate::core::PortDirection::In => ports_in += 1,
-                                                    crate::core::PortDirection::Out => {
-                                                        ports_out += 1
-                                                    }
-                                                }
-                                            }
-                                            (ports_in, ports_out)
-                                        })
-                                        .unwrap_or((0, 0));
-
-                                    let selected = selected.iter().any(|id| *id == d.id);
-                                    let hovered = hovered.is_some_and(|id| id == d.id);
-
-                                    infos.push(PortalLabelInfo {
-                                        id: d.id,
-                                        left,
-                                        top,
-                                        width,
-                                        height: Px(38.0),
-                                        label,
-                                        ports_in,
-                                        ports_out,
-                                        selected,
-                                        hovered,
-                                    });
-                                }
-
-                                infos
-                            })
-                            .unwrap_or_default();
-
-                        if !portal_infos.is_empty() {
-                            hovered_portal_hosted = hovered_node_value
-                                .is_some_and(|id| portal_infos.iter().any(|p| p.id == id));
-
-                            // Best-effort prune for nodes that are no longer hosted this frame. Bounds are
-                            // frame-lagged by contract, so removals may trail unmount by one frame.
-                            let visible: std::collections::BTreeSet<crate::core::NodeId> =
-                                portal_infos.iter().map(|p| p.id).collect();
-                            let should_prune = cx
-                                .app
-                                .models()
-                                .read(&portal_bounds_store, |st| {
-                                    st.nodes_canvas_bounds
-                                        .keys()
-                                        .any(|id| !visible.contains(id))
-                                })
-                                .unwrap_or(false);
-                            if should_prune {
-                                let _ = cx.app.models_mut().update(&portal_bounds_store, |st| {
-                                    st.nodes_canvas_bounds.retain(|id, _| visible.contains(id));
-                                });
-                                cx.request_frame();
-                            }
-
-                            for (ordinal, info) in portal_infos.iter().cloned().enumerate() {
-                                let style_tokens = style_tokens.clone();
-                                let theme = theme.clone();
-                                let portal_bounds_store = portal_bounds_store.clone();
-                                overlay_children.push(cx.keyed(
-                                    ("fret-node.portal-label.v1", info.id),
-                                    move |cx| {
-                                        let bounds = bounds;
-                                        let view = view;
-                                        let mut query = LayoutQueryRegionProps {
-                                            name: Some("fret-node.portal.node_label.v1".into()),
-                                            ..Default::default()
-                                        };
-                                        // Make the query region itself the absolutely positioned item.
-                                        // Otherwise, the region's bounds would not include its absolute
-                                        // descendants, and harvested portal bounds would collapse to 0x0.
-                                        query.layout.position = PositionStyle::Absolute;
-                                        query.layout.inset.left = Some(info.left).into();
-                                        query.layout.inset.top = Some(info.top).into();
-                                        query.layout.size.width = Length::Px(info.width);
-                                        query.layout.size.height = Length::Px(info.height);
-
-                                        cx.layout_query_region_with_id(query, move |cx, element| {
-                                            let visual_bounds = cx
-                                                .last_visual_bounds_for_element(element)
-                                                .or_else(|| cx.last_bounds_for_element(element));
-
-                                            if let Some(visual_bounds) = visual_bounds {
-                                                let canvas_bounds = screen_rect_to_canvas_rect(
-                                                    bounds,
-                                                    view,
-                                                    visual_bounds,
-                                                );
-
-                                                let should_update = cx
-                                                    .app
-                                                    .models()
-                                                    .read(&portal_bounds_store, |st| {
-                                                        let Some(prev) =
-                                                            st.nodes_canvas_bounds.get(&info.id)
-                                                        else {
-                                                            return true;
-                                                        };
-                                                        !rect_approx_eq(*prev, canvas_bounds, 0.25)
-                                                    })
-                                                    .unwrap_or(true);
-
-                                                if should_update {
-                                                    let _ = cx.app.models_mut().update(
-                                                        &portal_bounds_store,
-                                                        |st| {
-                                                            st.nodes_canvas_bounds
-                                                                .insert(info.id, canvas_bounds);
-                                                        },
-                                                    );
-                                                    cx.request_frame();
-                                                }
-                                            }
-
-                                            let mut p = ContainerProps::default();
-                                            p.layout.size.width = Length::Fill;
-                                            p.layout.size.height = Length::Fill;
-                                            p.padding =
-                                                SpacingEdges::all(SpacingLength::Px(Px(4.0)));
-                                            p.snap_to_device_pixels = true;
-                                            p.background = Some(Color {
-                                                a: if info.selected {
-                                                    0.98
-                                                } else if info.hovered {
-                                                    0.95
-                                                } else {
-                                                    0.92
-                                                },
-                                                ..style_tokens.paint.node_background
-                                            });
-                                            p.border = fret_core::Edges::all(Px(1.0));
-                                            p.border_color = Some(Color {
-                                                a: 0.35,
-                                                ..style_tokens.paint.node_border
-                                            });
-
-                                            let header_color = theme.color_token("card-foreground");
-                                            let ports_color = theme.color_token("muted-foreground");
-
-                                            let header = {
-                                                let mut props = TextProps::new(info.label.clone());
-                                                props.color = Some(header_color);
-                                                cx.text_props(props).attach_semantics(
-                                                    SemanticsDecoration::default().test_id(
-                                                        Arc::<str>::from(format!(
-                                                            "node_graph.portal.node.{ordinal}.header"
-                                                        )),
-                                                    ),
-                                                )
-                                            };
-                                            let ports = {
-                                                let mut props = TextProps::new(Arc::<str>::from(
-                                                    format!(
-                                                        "in:{} out:{}",
-                                                        info.ports_in, info.ports_out
-                                                    ),
-                                                ));
-                                                props.color = Some(ports_color);
-                                                cx.text_props(props).attach_semantics(
-                                                    SemanticsDecoration::default().test_id(
-                                                        Arc::<str>::from(format!(
-                                                            "node_graph.portal.node.{ordinal}.ports"
-                                                        )),
-                                                    ),
-                                                )
-                                            };
-
-                                            vec![
-                                                cx.container(p, move |cx| {
-                                                    let mut col = ColumnProps::default();
-                                                    col.layout.size.width = Length::Fill;
-                                                    col.layout.size.height = Length::Fill;
-                                                    col.gap = SpacingLength::Px(Px(2.0));
-                                                    vec![cx.column(col, move |_cx| {
-                                                        vec![header, ports]
-                                                    })]
-                                                })
-                                                .attach_semantics(
-                                                    SemanticsDecoration::default()
-                                                        .test_id(Arc::<str>::from(format!(
-                                                            "node_graph.portal.node.{ordinal}"
-                                                        )))
-                                                        .value(Arc::<str>::from(format!(
-                                                            "node_id={}; ports_in={} ports_out={}",
-                                                            info.id.0,
-                                                            info.ports_in,
-                                                            info.ports_out
-                                                        ))),
-                                                ),
-                                            ]
-                                        })
-                                    },
-                                ));
-                            }
-                        }
-                    }
-                }
-
-                // Keep a best-effort hovered bounds record independent of portal hosting caps.
-                if let Some(hovered_id) = hovered_node_value {
-                    if let Some(draws) = node_draws.as_deref()
-                        && let Some(draw) = draws.iter().find(|d| d.id == hovered_id)
-                    {
-                        let mut rect = draw.rect;
-                        let drag_active = node_drag_value
-                            .as_ref()
-                            .is_some_and(|d| d.active && !d.canceled);
-                        if drag_active
-                            && node_drag_value
-                                .as_ref()
-                                .is_some_and(|d| node_drag_contains(d, hovered_id))
-                        {
-                            let (ddx, ddy) =
-                                node_drag_delta_canvas(view_for_paint, node_drag_value.as_ref().unwrap());
-                            rect.origin = Point::new(Px(rect.origin.x.0 + ddx), Px(rect.origin.y.0 + ddy));
-                        }
-
-                        let should_update = cx
-                            .app
-                            .models()
-                            .read(&hover_anchor_store, |st| {
-                                if st.hovered_id != Some(hovered_id) {
-                                    return true;
-                                }
-                                let Some(prev) = st.hovered_canvas_bounds else {
-                                    return true;
-                                };
-                                !rect_approx_eq(prev, rect, 0.25)
-                            })
-                            .unwrap_or(true);
-
-                        if should_update {
-                            let _ = cx.app.models_mut().update(&hover_anchor_store, |st| {
-                                st.hovered_id = Some(hovered_id);
-                                st.hovered_canvas_bounds = Some(rect);
-                            });
-                            cx.request_frame();
-                        }
-                    }
-                } else {
-                    let should_clear = cx
-                        .app
-                        .models()
-                        .read(&hover_anchor_store, |st| st.hovered_id.is_some())
-                        .unwrap_or(false);
-                    if should_clear {
-                        let _ = cx.app.models_mut().update(&hover_anchor_store, |st| {
-                            st.hovered_id = None;
-                            st.hovered_canvas_bounds = None;
-                        });
-                        cx.request_frame();
-                    }
-                }
-
-                // Hover tooltip is an incremental declarative overlay example. It consumes the
-                // retained-like hover state computed from paint-only hit tests, but renders the
-                // chrome as a normal element subtree (screen-space, semantic zoom).
-                //
-                // Positioning prefers `PortalBoundsStore` so this milestone demonstrates the full
-                // bounds-query loop (host subtree → harvest bounds → consume bounds).
-                // Keep this diagnostics-only. When portals are hosted, avoid duplicating portal
-                // label content: the tooltip should focus on debug details (anchor source, ids).
-                if diag_keys_enabled
-                    && !panning
-                    && !marquee_active
-                    && !node_dragging
-                {
-                    if let Some(hovered_id) = hovered_node_value {
-                        let bounds = grid_cache_value.bounds;
-                        let view = view_for_paint;
-                        let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
-
-                        if bounds.size.width.0.is_finite()
-                            && bounds.size.height.0.is_finite()
-                            && bounds.size.width.0 > 0.0
-                            && bounds.size.height.0 > 0.0
-                        {
-                            let portal_canvas_bounds = if portals_disabled {
-                                None
-                            } else {
-                                cx.app
-                                    .models()
-                                    .read(&portal_bounds_store, |st| {
-                                        st.nodes_canvas_bounds.get(&hovered_id).copied()
-                                    })
-                                    .ok()
-                                    .flatten()
-                            };
-
-                            let anchor_canvas_bounds = cx
-                                .app
-                                .models()
-                                .read(&hover_anchor_store, |st| {
-                                    if st.hovered_id == Some(hovered_id) {
-                                        st.hovered_canvas_bounds
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .ok()
-                                .flatten();
-
-                            let tooltip_origin_screen_width_source: Option<(Point, Px, Arc<str>)> =
-                                if let Some(portal_canvas_bounds) = portal_canvas_bounds {
-                                    Some((
-                                        view.canvas_to_screen(bounds, portal_canvas_bounds.origin),
-                                        Px((portal_canvas_bounds.size.width.0 * zoom).max(0.0)),
-                                        Arc::<str>::from("portal_bounds_store"),
-                                    ))
-                                } else if let Some(anchor_canvas_bounds) = anchor_canvas_bounds {
-                                    Some((
-                                        view.canvas_to_screen(bounds, anchor_canvas_bounds.origin),
-                                        Px((anchor_canvas_bounds.size.width.0 * zoom).max(0.0)),
-                                        Arc::<str>::from("hover_anchor_store"),
-                                    ))
-                                } else {
-                                    None
-                                };
-
-                            if let Some((origin_screen, width, source)) =
-                                tooltip_origin_screen_width_source
-                            {
-                                let left = Px(origin_screen.x.0 - bounds.origin.x.0);
-                                let mut top = Px(origin_screen.y.0 - bounds.origin.y.0 - 30.0);
-                                if top.0 < 0.0 {
-                                    top = Px(origin_screen.y.0 - bounds.origin.y.0 + 6.0);
-                                }
-
-                                if left.0.is_finite()
-                                    && top.0.is_finite()
-                                    && width.0.is_finite()
-                                    && width.0 > 0.0
-                                {
-                                    let hovered_label = cx
-                                        .read_model_ref(&graph, Invalidation::Paint, |g| {
-                                            g.nodes
-                                                .get(&hovered_id)
-                                                .map(|n| Arc::<str>::from(n.kind.0.as_str()))
-                                        })
-                                        .ok()
-                                        .flatten()
-                                        .unwrap_or_else(|| Arc::<str>::from("node"));
-
-                                    let (ports_in, ports_out) = cx
-                                        .read_model_ref(&graph, Invalidation::Paint, |g| {
-                                            g.nodes.get(&hovered_id).map(|n| {
-                                                let mut ports_in = 0u32;
-                                                let mut ports_out = 0u32;
-                                                for pid in n.ports.iter() {
-                                                    let Some(port) = g.ports.get(pid) else {
-                                                        continue;
-                                                    };
-                                                    match port.dir {
-                                                        crate::core::PortDirection::In => {
-                                                            ports_in += 1
-                                                        }
-                                                        crate::core::PortDirection::Out => {
-                                                            ports_out += 1
-                                                        }
-                                                    }
-                                                }
-                                                (ports_in, ports_out)
-                                            })
-                                        })
-                                        .ok()
-                                        .flatten()
-                                        .unwrap_or((0, 0));
-
-                                    let style_tokens = style_tokens.clone();
-                                    overlay_children.push(cx.keyed(
-                                        ("fret-node.portal.tooltip.v1", hovered_id),
-                                        move |cx| {
-                                            let mut p = ContainerProps::default();
-                                            p.layout.position = PositionStyle::Absolute;
-                                            p.layout.inset.left = Some(left).into();
-                                            p.layout.inset.top = Some(top).into();
-                                            p.layout.size.width = Length::Px(width);
-                                            p.layout.size.height = Length::Px(Px(30.0));
-                                            p.padding =
-                                                SpacingEdges::all(SpacingLength::Px(Px(4.0)));
-                                            p.snap_to_device_pixels = true;
-                                            p.background = Some(Color {
-                                                a: 0.26,
-                                                ..style_tokens.paint.node_background
-                                            });
-                                            p.border = fret_core::Edges::all(Px(1.0));
-                                            p.border_color = Some(Color {
-                                                a: 0.35,
-                                                ..style_tokens.paint.node_border
-                                            });
-
-                                            let source_for_text = source.clone();
-                                            cx.container(p, move |cx| {
-                                                let mut col = ColumnProps::default();
-                                                col.layout.size.width = Length::Fill;
-                                                col.layout.size.height = Length::Fill;
-                                                col.gap = SpacingLength::Px(Px(2.0));
-                                                vec![cx.column(col, move |cx| {
-                                                    let mut lines: Vec<AnyElement> = vec![
-                                                        cx.text(Arc::<str>::from(format!(
-                                                            "id:{}",
-                                                            hovered_id.0
-                                                        ))),
-                                                        cx.text(Arc::<str>::from(format!(
-                                                            "source:{source_for_text}"
-                                                        ))),
-                                                    ];
-
-                                                    // Only include the label/port summary when it won't read as
-                                                    // "duplicated text" over a hosted portal label.
-                                                    if !hovered_portal_hosted {
-                                                        lines.push(cx.text(hovered_label.clone()));
-                                                        lines.push(cx.text(Arc::<str>::from(
-                                                            format!("in:{} out:{}", ports_in, ports_out),
-                                                        )));
-                                                    }
-                                                    lines
-                                                })]
-                                            })
-                                            .attach_semantics(
-                                                SemanticsDecoration::default()
-                                                    .test_id("node_graph.portal.tooltip")
-                                                    .value(Arc::<str>::from(format!(
-                                                        "source={source}; node_id={}; ports_in={} ports_out={}",
-                                                        hovered_id.0, ports_in, ports_out
-                                                    ))),
-                                            )
-                                        },
-                                    ));
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Diagnostics-only: if Ctrl+9 was pressed before portal bounds arrived, apply the
-                // fit request once we have harvested at least one portal rect.
-                //
-                // This keeps scripted gates deterministic without requiring arbitrary sleeps.
-                let pending_fit = cx
-                    .app
-                    .models()
-                    .read(&portal_bounds_store, |st| st.pending_fit_to_portals)
-                    .unwrap_or(false);
-                if pending_fit && portals_enabled && !portals_disabled {
-                    let bounds = grid_cache_value.bounds;
-                    let bounds_valid = bounds.size.width.0.is_finite()
-                        && bounds.size.height.0.is_finite()
-                        && bounds.size.width.0 > 0.0
-                        && bounds.size.height.0 > 0.0;
-                    let target = cx
-                        .app
-                        .models()
-                        .read(&portal_bounds_store, |st| {
-                            let mut out: Option<Rect> = None;
-                            for rect in st.nodes_canvas_bounds.values().copied() {
-                                out = Some(match out {
-                                    Some(prev) => rect_union(prev, rect),
-                                    None => rect,
-                                });
-                            }
-                            out
-                        })
-                        .ok()
-                        .flatten();
-
-                    if bounds_valid && let Some(target) = target {
-                        let applied = cx
-                            .app
-                            .models_mut()
-                            .update(&view_state, |state| {
-                                apply_fit_view_to_canvas_rect(
-                                    state, bounds, target, 24.0, min_zoom, max_zoom,
-                                )
-                            })
-                            .ok()
-                            .unwrap_or(false);
-
-                        if applied {
-                            let _ = cx.app.models_mut().update(&portal_bounds_store, |st| {
-                                st.fit_to_portals_count = st.fit_to_portals_count.saturating_add(1);
-                                st.pending_fit_to_portals = false;
-                            });
-                            // Ensure the semantics `value` string updates promptly for script gates.
-                            cx.request_frame();
-                        }
-                    }
-
-                    // Keep polling until bounds are available, but only while the request is armed.
-                    let still_pending = cx
-                        .app
-                        .models()
-                        .read(&portal_bounds_store, |st| st.pending_fit_to_portals)
-                        .unwrap_or(false);
-                    if still_pending {
-                        cx.request_frame();
-                    }
-                }
-
-                // Marquee chrome must render above portals, so keep it as a normal overlay element
-                // instead of drawing it in the canvas paint pass.
-                if let Some(marquee) = marquee_value.as_ref()
-                    && marquee.active
-                {
-                    let bounds = grid_cache_value.bounds;
-                    let rect = marquee_rect_screen(marquee);
-                    if bounds.size.width.0.is_finite()
-                        && bounds.size.height.0.is_finite()
-                        && bounds.size.width.0 > 0.0
-                        && bounds.size.height.0 > 0.0
-                        && rect.size.width.0 > 0.0
-                        && rect.size.height.0 > 0.0
-                    {
-                        // Clamp to bounds to avoid accidental giant rects in scripted input.
-                        let x0 = rect.origin.x.0.max(bounds.origin.x.0);
-                        let y0 = rect.origin.y.0.max(bounds.origin.y.0);
-                        let x1 = (rect.origin.x.0 + rect.size.width.0)
-                            .min(bounds.origin.x.0 + bounds.size.width.0);
-                        let y1 = (rect.origin.y.0 + rect.size.height.0)
-                            .min(bounds.origin.y.0 + bounds.size.height.0);
-                        let rect = Rect::new(
-                            Point::new(Px(x0), Px(y0)),
-                            fret_core::Size::new(Px((x1 - x0).max(0.0)), Px((y1 - y0).max(0.0))),
-                        );
-
-                        if rect.size.width.0 > 0.0 && rect.size.height.0 > 0.0 {
-                            let left = Px(rect.origin.x.0 - bounds.origin.x.0);
-                            let top = Px(rect.origin.y.0 - bounds.origin.y.0);
-
-                            let mut p = ContainerProps::default();
-                            p.layout.position = PositionStyle::Absolute;
-                            p.layout.inset.left = Some(left).into();
-                            p.layout.inset.top = Some(top).into();
-                            p.layout.size.width = Length::Px(rect.size.width);
-                            p.layout.size.height = Length::Px(rect.size.height);
-                            p.background = Some(style_tokens.paint.marquee_fill);
-                            p.border = fret_core::Edges::all(Px(style_tokens
-                                .paint
-                                .marquee_border_width
-                                .max(0.0)));
-                            p.border_color = Some(style_tokens.paint.marquee_border);
-                            p.snap_to_device_pixels = true;
-
-                            overlay_children.push(
-                                cx.keyed("fret-node.marquee.overlay.v1", move |cx| {
-                                    cx.container(p, |_cx| std::iter::empty())
-                                }),
-                            );
-                        }
-                    }
-                }
-
-                if !overlay_children.is_empty() {
-                    let mut layer = ContainerProps::default();
-                    layer.layout = LayoutStyle::default();
-                    layer.layout.size.width = Length::Fill;
-                    layer.layout.size.height = Length::Fill;
-                    layer.layout.position = PositionStyle::Relative;
-
-                    out.push(cx.hit_test_gate(false, move |cx| {
-                        vec![cx.container(layer, move |_cx| overlay_children)]
-                    }));
-                }
-
-                out
-            })]
+                        effective_selected_nodes: effective_selected_nodes.clone(),
+                        portals_disabled,
+                        semantics_value: semantics_value.clone(),
+                        test_id: test_id.clone(),
+                    },
+                },
+            )
         },
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use std::any::Any;
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    use std::sync::Arc;
+
+    use fret_canvas::view::PanZoom2D;
+    use fret_core::{
+        AppWindowId, Modifiers, MouseButton, MouseButtons, Point, PointerId, PointerType, Px, Rect,
+    };
+    use fret_runtime::{
+        ClipboardToken, DragKindId, DragSession, Effect, Model, ModelStore, ShareSheetToken,
+        TickId, TimerToken,
+    };
+    use fret_ui::action::UiActionHost;
+
+    use super::hover_anchor::{HoverTooltipAnchorSource, hovered_canvas_anchor_rect_for_surface};
+
+    use super::overlay_elements::{
+        build_hover_tooltip_overlay_spec, clamp_marquee_overlay_rect_to_bounds,
+    };
+    use super::{
+        AuthoritativeSurfaceBoundarySnapshot, DeclarativeDiagKeyAction, DeclarativeDiagViewPreset,
+        DeclarativeKeyboardZoomAction, DerivedGeometryCacheState, DragState, HoverAnchorStore,
+        Invalidation, LeftPointerDownOutcome, LeftPointerDownSnapshot, LeftPointerReleaseOutcome,
+        MarqueeDragState, MarqueePointerMoveOutcome, NodeDragPhase, NodeDragPointerMoveOutcome,
+        NodeDragReleaseOutcome, NodeDragState, NodeRectDraw, PendingSelectionState,
+        PortalBoundsStore, PortalDebugFlags, PortalMeasuredGeometryState,
+        apply_declarative_diag_view_preset_action_host, authoritative_surface_boundary_snapshot,
+        begin_left_pointer_down_action_host, begin_pan_pointer_down_action_host,
+        build_click_selection_preview_nodes, build_diag_normalize_visible_node_transaction,
+        build_diag_nudge_visible_node_transaction, build_marquee_preview_selected_nodes,
+        build_node_drag_transaction, collect_portal_label_infos_for_visible_subset,
+        commit_graph_transaction, commit_marquee_selection_action_host,
+        commit_node_drag_transaction, commit_pending_selection_action_host,
+        complete_left_pointer_release_action_host, complete_node_drag_release_action_host,
+        derived_geometry_cache_key, edges_cache_key, effective_selected_nodes_for_paint,
+        escape_cancel_declarative_interactions_action_host, flush_portal_measured_geometry_state,
+        grid_cache_key, handle_declarative_diag_key_action_host,
+        handle_declarative_keyboard_zoom_action_host,
+        handle_declarative_pointer_cancel_action_host, handle_declarative_pointer_up_action_host,
+        handle_marquee_left_pointer_release_action_host, handle_marquee_pointer_move_action_host,
+        handle_node_drag_left_pointer_release_action_host,
+        handle_node_drag_pointer_move_action_host,
+        handle_pending_selection_left_pointer_release_action_host, node_drag_commit_delta,
+        nodes_cache_key, pointer_cancel_declarative_interactions_action_host,
+        pointer_crossed_threshold, record_portal_measured_node_size_in_state,
+        resolve_hover_tooltip_anchor, stable_hash_u64,
+        sync_authoritative_surface_boundary_in_models, sync_hover_anchor_store_in_models,
+        sync_portal_canvas_bounds_in_models, update_hovered_node_pointer_move_action_host,
+        view_from_state,
+    };
+    use crate::core::{
+        CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Group,
+        GroupId, Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey,
+        PortKind,
+    };
+    use crate::io::NodeGraphViewState;
+    use crate::ops::GraphOp;
+    use crate::runtime::callbacks::{
+        NodeGraphCommitCallbacks, NodeGraphGestureCallbacks, NodeGraphViewCallbacks,
+        SelectionChange, install_callbacks,
+    };
+    use crate::runtime::changes::NodeGraphChanges;
+    use crate::runtime::store::NodeGraphStore;
+    use crate::ui::measured::MEASURED_GEOMETRY_EPSILON_PX;
+    use crate::ui::paint_overrides::{NodeGraphPaintOverrides, NodeGraphPaintOverridesMap};
+    use crate::ui::{MeasuredGeometryStore, NodeGraphController};
+    use serde_json::Value;
+
+    #[derive(Default)]
+    struct TestActionHostImpl {
+        models: ModelStore,
+        effects: Vec<Effect>,
+        next_timer_token: u64,
+        next_clipboard_token: u64,
+        next_share_sheet_token: u64,
+        redraw_requests: Vec<AppWindowId>,
+        notifications: Vec<fret_ui::action::ActionCx>,
+        invalidations: Vec<Invalidation>,
+        capture_pointer_count: usize,
+        release_pointer_capture_count: usize,
+        requested_focus: Vec<fret_ui::GlobalElementId>,
+        cursor_icons: Vec<fret_core::CursorIcon>,
+        prevented_defaults: Vec<fret_runtime::DefaultAction>,
+        bounds: Rect,
+    }
+
+    impl UiActionHost for TestActionHostImpl {
+        fn models_mut(&mut self) -> &mut ModelStore {
+            &mut self.models
+        }
+
+        fn push_effect(&mut self, effect: Effect) {
+            self.effects.push(effect);
+        }
+
+        fn request_redraw(&mut self, window: AppWindowId) {
+            self.redraw_requests.push(window);
+        }
+
+        fn notify(&mut self, cx: fret_ui::action::ActionCx) {
+            self.notifications.push(cx);
+        }
+
+        fn next_timer_token(&mut self) -> TimerToken {
+            self.next_timer_token = self.next_timer_token.saturating_add(1);
+            TimerToken(self.next_timer_token)
+        }
+
+        fn next_clipboard_token(&mut self) -> ClipboardToken {
+            self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
+            ClipboardToken(self.next_clipboard_token)
+        }
+
+        fn next_share_sheet_token(&mut self) -> ShareSheetToken {
+            self.next_share_sheet_token = self.next_share_sheet_token.saturating_add(1);
+            ShareSheetToken(self.next_share_sheet_token)
+        }
+
+        fn record_pending_action_payload(
+            &mut self,
+            _cx: fret_ui::action::ActionCx,
+            _action: &fret_runtime::ActionId,
+            _payload: Box<dyn Any + Send + Sync>,
+        ) {
+        }
+    }
+
+    impl fret_ui::action::UiFocusActionHost for TestActionHostImpl {
+        fn request_focus(&mut self, target: fret_ui::GlobalElementId) {
+            self.requested_focus.push(target);
+        }
+    }
+
+    impl fret_ui::action::UiDragActionHost for TestActionHostImpl {
+        fn begin_drag_with_kind(
+            &mut self,
+            _pointer_id: PointerId,
+            _kind: DragKindId,
+            _source_window: AppWindowId,
+            _start: Point,
+        ) {
+        }
+
+        fn begin_cross_window_drag_with_kind(
+            &mut self,
+            _pointer_id: PointerId,
+            _kind: DragKindId,
+            _source_window: AppWindowId,
+            _start: Point,
+        ) {
+        }
+
+        fn drag(&self, _pointer_id: PointerId) -> Option<&DragSession> {
+            None
+        }
+
+        fn drag_mut(&mut self, _pointer_id: PointerId) -> Option<&mut DragSession> {
+            None
+        }
+
+        fn cancel_drag(&mut self, _pointer_id: PointerId) {}
+    }
+
+    impl fret_ui::action::UiPointerActionHost for TestActionHostImpl {
+        fn bounds(&self) -> Rect {
+            self.bounds
+        }
+
+        fn capture_pointer(&mut self) {
+            self.capture_pointer_count = self.capture_pointer_count.saturating_add(1);
+        }
+
+        fn release_pointer_capture(&mut self) {
+            self.release_pointer_capture_count =
+                self.release_pointer_capture_count.saturating_add(1);
+        }
+
+        fn set_cursor_icon(&mut self, icon: fret_core::CursorIcon) {
+            self.cursor_icons.push(icon);
+        }
+
+        fn prevent_default(&mut self, action: fret_runtime::DefaultAction) {
+            self.prevented_defaults.push(action);
+        }
+
+        fn invalidate(&mut self, invalidation: Invalidation) {
+            self.invalidations.push(invalidation);
+        }
+    }
+
+    fn test_pointer_move(
+        position: Point,
+        buttons: MouseButtons,
+        modifiers: Modifiers,
+    ) -> fret_ui::action::PointerMoveCx {
+        fret_ui::action::PointerMoveCx {
+            pointer_id: PointerId::default(),
+            position,
+            position_local: position,
+            position_window: Some(position),
+            tick_id: TickId(0),
+            pixels_per_point: 1.0,
+            velocity_window: None,
+            buttons,
+            modifiers,
+            pointer_type: PointerType::Mouse,
+        }
+    }
+
+    fn test_pointer_down(
+        button: MouseButton,
+        position: Point,
+        modifiers: Modifiers,
+    ) -> fret_ui::action::PointerDownCx {
+        fret_ui::action::PointerDownCx {
+            pointer_id: PointerId::default(),
+            position,
+            position_local: position,
+            position_window: Some(position),
+            tick_id: TickId(0),
+            pixels_per_point: 1.0,
+            button,
+            modifiers,
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+            hit_is_text_input: false,
+            hit_is_pressable: false,
+            hit_pressable_target: None,
+        }
+    }
+
+    fn test_action_cx() -> fret_ui::action::ActionCx {
+        fret_ui::action::ActionCx {
+            window: AppWindowId::default(),
+            target: fret_ui::GlobalElementId(1),
+        }
+    }
+
+    fn test_pointer_up(
+        button: MouseButton,
+        position: Point,
+        modifiers: Modifiers,
+    ) -> fret_ui::action::PointerUpCx {
+        fret_ui::action::PointerUpCx {
+            pointer_id: PointerId::default(),
+            position,
+            position_local: position,
+            position_window: Some(position),
+            tick_id: TickId(0),
+            pixels_per_point: 1.0,
+            velocity_window: None,
+            button,
+            modifiers,
+            is_click: false,
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+            down_hit_pressable_target: None,
+        }
+    }
+
+    fn test_pointer_cancel() -> fret_ui::action::PointerCancelCx {
+        fret_ui::action::PointerCancelCx {
+            pointer_id: PointerId::default(),
+            position: None,
+            position_local: None,
+            position_window: None,
+            tick_id: TickId(0),
+            pixels_per_point: 1.0,
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            reason: fret_core::PointerCancelReason::LeftWindow,
+        }
+    }
+
+    fn test_node(pos: CanvasPoint) -> Node {
+        Node {
+            kind: NodeKindKey::new("test.node"),
+            kind_version: 1,
+            pos,
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
+            parent: None,
+            extent: None,
+            expand_parent: None,
+            size: None,
+            hidden: false,
+            collapsed: false,
+            ports: Vec::new(),
+            data: Value::Null,
+        }
+    }
+
+    fn test_marquee_geometry() -> (Graph, crate::ui::canvas::CanvasGeometry, NodeId, NodeId) {
+        let mut graph = Graph::new(GraphId::from_u128(91));
+        let node_a = NodeId::from_u128(9101);
+        let node_b = NodeId::from_u128(9102);
+        let mut node_a_value = test_node(CanvasPoint { x: 0.0, y: 0.0 });
+        node_a_value.size = Some(CanvasSize {
+            width: 100.0,
+            height: 60.0,
+        });
+        let mut node_b_value = test_node(CanvasPoint { x: 140.0, y: 0.0 });
+        node_b_value.size = Some(CanvasSize {
+            width: 100.0,
+            height: 60.0,
+        });
+        graph.nodes.insert(node_a, node_a_value);
+        graph.nodes.insert(node_b, node_b_value);
+
+        let draw_order = vec![node_a, node_b];
+        let style = crate::ui::style::NodeGraphStyle::default();
+        let mut presenter = crate::ui::presenter::DefaultNodeGraphPresenter::default();
+        let geom = crate::ui::canvas::CanvasGeometry::build_with_presenter(
+            &graph,
+            &draw_order,
+            &style,
+            1.0,
+            crate::io::NodeGraphNodeOrigin::default(),
+            &mut presenter,
+            None,
+        );
+        (graph, geom, node_a, node_b)
+    }
+
+    #[test]
+    fn build_node_drag_transaction_uses_set_node_pos_ops() {
+        let mut graph = Graph::new(GraphId::from_u128(1));
+        let node_a = NodeId::from_u128(11);
+        let node_b = NodeId::from_u128(22);
+        let missing = NodeId::from_u128(33);
+        graph
+            .nodes
+            .insert(node_a, test_node(CanvasPoint { x: 10.0, y: 20.0 }));
+        graph
+            .nodes
+            .insert(node_b, test_node(CanvasPoint { x: -5.0, y: 7.5 }));
+
+        let tx = build_node_drag_transaction(&graph, &[node_a, missing, node_b], 12.0, -4.5);
+
+        assert_eq!(tx.label.as_deref(), Some("Move Nodes"));
+        assert_eq!(tx.ops.len(), 2);
+        assert!(matches!(
+            tx.ops[0],
+            GraphOp::SetNodePos {
+                id,
+                from: CanvasPoint { x: 10.0, y: 20.0 },
+                to: CanvasPoint { x: 22.0, y: 15.5 },
+            } if id == node_a
+        ));
+        assert!(matches!(
+            tx.ops[1],
+            GraphOp::SetNodePos {
+                id,
+                from: CanvasPoint { x: -5.0, y: 7.5 },
+                to: CanvasPoint { x: 7.0, y: 3.0 },
+            } if id == node_b
+        ));
+    }
+
+    #[test]
+    fn build_node_drag_transaction_returns_empty_for_noops() {
+        let mut graph = Graph::new(GraphId::from_u128(2));
+        let node = NodeId::from_u128(44);
+        graph
+            .nodes
+            .insert(node, test_node(CanvasPoint { x: 3.0, y: 9.0 }));
+
+        let tx = build_node_drag_transaction(&graph, &[node], 0.0, 0.0);
+
+        assert!(tx.is_empty());
+        assert_eq!(tx.label, None);
+    }
+
+    #[test]
+    fn build_diag_nudge_visible_node_transaction_uses_set_node_pos() {
+        let mut graph = Graph::new(GraphId::from_u128(3));
+        let hidden = NodeId::from_u128(55);
+        let visible = NodeId::from_u128(66);
+        let mut hidden_node = test_node(CanvasPoint { x: 1.0, y: 2.0 });
+        hidden_node.hidden = true;
+        graph.nodes.insert(hidden, hidden_node);
+        graph
+            .nodes
+            .insert(visible, test_node(CanvasPoint { x: 10.0, y: 20.0 }));
+
+        let tx = build_diag_nudge_visible_node_transaction(&graph);
+
+        assert_eq!(tx.label.as_deref(), Some("Diag Nudge Visible Node"));
+        assert_eq!(tx.ops.len(), 1);
+        assert!(matches!(
+            tx.ops[0],
+            GraphOp::SetNodePos {
+                id,
+                from: CanvasPoint { x: 10.0, y: 20.0 },
+                to: CanvasPoint { x: 11.0, y: 20.0 },
+            } if id == visible
+        ));
+    }
+
+    #[test]
+    fn build_diag_normalize_visible_node_transaction_hides_other_nodes() {
+        let mut graph = Graph::new(GraphId::from_u128(4));
+        let first = NodeId::from_u128(77);
+        let other = NodeId::from_u128(88);
+        graph
+            .nodes
+            .insert(first, test_node(CanvasPoint { x: 10.0, y: 20.0 }));
+        graph
+            .nodes
+            .insert(other, test_node(CanvasPoint { x: -5.0, y: 7.5 }));
+
+        let tx = build_diag_normalize_visible_node_transaction(&graph);
+
+        assert_eq!(tx.label.as_deref(), Some("Diag Normalize Visible Node"));
+        assert!(tx.ops.iter().any(|op| matches!(
+            op,
+            GraphOp::SetNodePos {
+                id,
+                from: CanvasPoint { x: 10.0, y: 20.0 },
+                to: CanvasPoint { x: 0.0, y: 0.0 },
+            } if *id == first
+        )));
+        assert!(tx.ops.iter().any(|op| matches!(
+            op,
+            GraphOp::SetNodeSize {
+                id,
+                from,
+                to: Some(CanvasSize {
+                    width: 220.0,
+                    height: 140.0,
+                }),
+            } if *id == first && from.is_none()
+        )));
+        assert!(tx.ops.iter().any(|op| matches!(
+            op,
+            GraphOp::SetNodeHidden {
+                id,
+                from: false,
+                to: true,
+            } if *id == other
+        )));
+    }
+
+    #[test]
+    fn commit_graph_transaction_syncs_graph_and_view_models_through_controller() {
+        let mut host = TestActionHostImpl::default();
+        let mut graph_value = Graph::new(GraphId::from_u128(5));
+        let node = NodeId::from_u128(99);
+        graph_value
+            .nodes
+            .insert(node, test_node(CanvasPoint { x: 10.0, y: 20.0 }));
+        let graph = host.models.insert(graph_value.clone());
+        let view_state = host.models.insert(NodeGraphViewState::default());
+        let store = host.models.insert(NodeGraphStore::new(
+            graph_value,
+            NodeGraphViewState::default(),
+        ));
+        let controller = NodeGraphController::new(store.clone());
+
+        let tx = host
+            .models
+            .read(&graph, |graph| {
+                build_node_drag_transaction(graph, &[node], 5.0, -2.0)
+            })
+            .expect("build transaction");
+
+        assert!(commit_graph_transaction(
+            &mut host,
+            &graph,
+            &view_state,
+            &controller,
+            &tx,
+        ));
+
+        let graph_pos = host
+            .models
+            .read(&graph, |graph| graph.nodes.get(&node).map(|node| node.pos))
+            .ok()
+            .flatten()
+            .expect("graph node pos");
+        let store_pos = host
+            .models
+            .read(&store, |store| {
+                store.graph().nodes.get(&node).map(|node| node.pos)
+            })
+            .ok()
+            .flatten()
+            .expect("store node pos");
+        let synced_zoom = host
+            .models
+            .read(&view_state, |state| state.zoom)
+            .expect("view-state model readable");
+
+        assert_eq!(graph_pos, CanvasPoint { x: 15.0, y: 18.0 });
+        assert_eq!(store_pos, CanvasPoint { x: 15.0, y: 18.0 });
+        assert_eq!(synced_zoom, 1.0);
+    }
+
+    #[test]
+    fn commit_node_drag_transaction_notifies_store_callbacks_through_controller() {
+        #[derive(Clone)]
+        struct Recorder {
+            commits: Rc<RefCell<Vec<(Option<String>, usize)>>>,
+        }
+
+        impl NodeGraphCommitCallbacks for Recorder {
+            fn on_graph_commit(
+                &mut self,
+                committed: &crate::ops::GraphTransaction,
+                changes: &NodeGraphChanges,
+            ) {
+                self.commits
+                    .borrow_mut()
+                    .push((committed.label.clone(), changes.nodes.len()));
+            }
+        }
+
+        impl NodeGraphViewCallbacks for Recorder {}
+
+        impl NodeGraphGestureCallbacks for Recorder {}
+
+        let mut host = TestActionHostImpl::default();
+        let mut graph_value = Graph::new(GraphId::from_u128(6));
+        let node = NodeId::from_u128(199);
+        graph_value
+            .nodes
+            .insert(node, test_node(CanvasPoint { x: 10.0, y: 20.0 }));
+        let graph = host.models.insert(graph_value.clone());
+        let view_state = host.models.insert(NodeGraphViewState::default());
+        let store = host.models.insert(NodeGraphStore::new(
+            graph_value,
+            NodeGraphViewState::default(),
+        ));
+        let controller = NodeGraphController::new(store.clone());
+        let commits: Rc<RefCell<Vec<(Option<String>, usize)>>> = Rc::new(RefCell::new(Vec::new()));
+        let _callbacks_token = host
+            .models
+            .update(&store, |store| {
+                install_callbacks(
+                    store,
+                    Recorder {
+                        commits: commits.clone(),
+                    },
+                )
+            })
+            .expect("install callbacks");
+
+        let tx = host
+            .models
+            .read(&graph, |graph| {
+                build_node_drag_transaction(graph, &[node], 5.0, -2.0)
+            })
+            .expect("build transaction");
+
+        assert!(commit_node_drag_transaction(
+            &mut host,
+            &graph,
+            &view_state,
+            &controller,
+            &tx,
+        ));
+
+        let callback_commits = commits.borrow();
+        assert_eq!(callback_commits.len(), 1);
+        assert_eq!(callback_commits[0].0.as_deref(), Some("Move Node"));
+        assert_eq!(callback_commits[0].1, 1);
+    }
+
+    #[test]
+    fn declarative_node_drag_commit_supports_undo_and_redo_through_controller() {
+        let node_a = NodeId::from_u128(601);
+        let node_b = NodeId::from_u128(602);
+        let mut fixture = DeclarativeControllerFixture::new_two_nodes(
+            601,
+            node_a,
+            CanvasPoint { x: 10.0, y: 20.0 },
+            node_b,
+            CanvasPoint { x: 40.0, y: 20.0 },
+            NodeGraphViewState::default(),
+        );
+
+        let tx = fixture
+            .host
+            .models
+            .read(&fixture.graph, |graph| {
+                build_node_drag_transaction(graph, &[node_a], 5.0, -2.0)
+            })
+            .expect("build transaction");
+
+        assert!(commit_node_drag_transaction(
+            &mut fixture.host,
+            &fixture.graph,
+            &fixture.view_state,
+            &fixture.controller,
+            &tx,
+        ));
+
+        let committed_pos = fixture
+            .host
+            .models
+            .read(&fixture.graph, |graph| {
+                graph.nodes.get(&node_a).map(|node| node.pos)
+            })
+            .ok()
+            .flatten()
+            .expect("graph node pos after commit");
+        assert_eq!(committed_pos, CanvasPoint { x: 15.0, y: 18.0 });
+
+        let undo = fixture
+            .controller
+            .undo_and_sync_models_action_host(
+                &mut fixture.host,
+                &fixture.graph,
+                &fixture.view_state,
+            )
+            .unwrap()
+            .expect("did undo");
+        assert!(!undo.committed.ops.is_empty());
+
+        let undone_pos = fixture
+            .host
+            .models
+            .read(&fixture.graph, |graph| {
+                graph.nodes.get(&node_a).map(|node| node.pos)
+            })
+            .ok()
+            .flatten()
+            .expect("graph node pos after undo");
+        let store_flags = fixture
+            .host
+            .models
+            .read(&fixture.store, |store| (store.can_undo(), store.can_redo()))
+            .ok()
+            .expect("history flags after undo");
+        assert_eq!(undone_pos, CanvasPoint { x: 10.0, y: 20.0 });
+        assert_eq!(store_flags, (false, true));
+
+        let redo = fixture
+            .controller
+            .redo_and_sync_models_action_host(
+                &mut fixture.host,
+                &fixture.graph,
+                &fixture.view_state,
+            )
+            .unwrap()
+            .expect("did redo");
+        assert!(!redo.committed.ops.is_empty());
+
+        let redone_pos = fixture
+            .host
+            .models
+            .read(&fixture.graph, |graph| {
+                graph.nodes.get(&node_a).map(|node| node.pos)
+            })
+            .ok()
+            .flatten()
+            .expect("graph node pos after redo");
+        let store_flags = fixture
+            .host
+            .models
+            .read(&fixture.store, |store| (store.can_undo(), store.can_redo()))
+            .ok()
+            .expect("history flags after redo");
+        assert_eq!(redone_pos, CanvasPoint { x: 15.0, y: 18.0 });
+        assert_eq!(store_flags, (true, false));
+    }
+
+    #[derive(Debug, Default, Clone, PartialEq, Eq)]
+    struct DeclarativeCallbackTrace {
+        commit_labels: Vec<Option<String>>,
+        selection_changes: Vec<SelectionChange>,
+    }
+
+    #[derive(Clone)]
+    struct DeclarativeCallbackRecorder {
+        trace: Rc<RefCell<DeclarativeCallbackTrace>>,
+    }
+
+    impl NodeGraphCommitCallbacks for DeclarativeCallbackRecorder {
+        fn on_graph_commit(
+            &mut self,
+            committed: &crate::ops::GraphTransaction,
+            _changes: &NodeGraphChanges,
+        ) {
+            self.trace
+                .borrow_mut()
+                .commit_labels
+                .push(committed.label.clone());
+        }
+    }
+
+    impl NodeGraphViewCallbacks for DeclarativeCallbackRecorder {
+        fn on_selection_change(&mut self, sel: SelectionChange) {
+            self.trace.borrow_mut().selection_changes.push(sel);
+        }
+    }
+
+    impl NodeGraphGestureCallbacks for DeclarativeCallbackRecorder {}
+
+    fn install_declarative_callback_trace(
+        host: &mut TestActionHostImpl,
+        store: &Model<NodeGraphStore>,
+    ) -> Rc<RefCell<DeclarativeCallbackTrace>> {
+        let trace: Rc<RefCell<DeclarativeCallbackTrace>> =
+            Rc::new(RefCell::new(DeclarativeCallbackTrace::default()));
+        let _callbacks_token = host
+            .models
+            .update(store, |store| {
+                install_callbacks(
+                    store,
+                    DeclarativeCallbackRecorder {
+                        trace: trace.clone(),
+                    },
+                )
+            })
+            .expect("install callbacks");
+        trace
+    }
+
+    struct DeclarativeControllerFixture {
+        host: TestActionHostImpl,
+        graph: Model<Graph>,
+        view_state: Model<NodeGraphViewState>,
+        store: Model<NodeGraphStore>,
+        controller: NodeGraphController,
+    }
+
+    impl DeclarativeControllerFixture {
+        fn new_two_nodes(
+            graph_id: u128,
+            node_a: NodeId,
+            node_a_pos: CanvasPoint,
+            node_b: NodeId,
+            node_b_pos: CanvasPoint,
+            initial_view: NodeGraphViewState,
+        ) -> Self {
+            let mut host = TestActionHostImpl::default();
+            let mut graph_value = Graph::new(GraphId::from_u128(graph_id));
+            graph_value.nodes.insert(node_a, test_node(node_a_pos));
+            graph_value.nodes.insert(node_b, test_node(node_b_pos));
+            let graph = host.models.insert(graph_value.clone());
+            let view_state = host.models.insert(initial_view.clone());
+            let store = host
+                .models
+                .insert(NodeGraphStore::new(graph_value, initial_view));
+            let controller = NodeGraphController::new(store.clone());
+            Self {
+                host,
+                graph,
+                view_state,
+                store,
+                controller,
+            }
+        }
+
+        fn install_trace(&mut self) -> Rc<RefCell<DeclarativeCallbackTrace>> {
+            install_declarative_callback_trace(&mut self.host, &self.store)
+        }
+    }
+
+    fn assert_single_selection_change(
+        trace: &Rc<RefCell<DeclarativeCallbackTrace>>,
+        expected_nodes: Vec<NodeId>,
+    ) {
+        let got = trace.borrow();
+        assert!(got.commit_labels.is_empty());
+        assert_eq!(
+            got.selection_changes,
+            vec![SelectionChange {
+                nodes: expected_nodes,
+                edges: Vec::new(),
+                groups: Vec::new(),
+            }]
+        );
+    }
+
+    fn assert_pointer_session_finished(
+        host: &TestActionHostImpl,
+        action_cx: fret_ui::action::ActionCx,
+    ) {
+        assert_eq!(host.release_pointer_capture_count, 1);
+        assert_eq!(host.invalidations, vec![Invalidation::Layout]);
+        assert_eq!(host.notifications, vec![action_cx]);
+        assert_eq!(host.redraw_requests, vec![action_cx.window]);
+    }
+
+    #[test]
+    fn commit_pending_selection_action_host_notifies_selection_callbacks_through_controller() {
+        let node_a = NodeId::from_u128(9801);
+        let node_b = NodeId::from_u128(9802);
+        let initial_view = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            ..Default::default()
+        };
+        let mut fixture = DeclarativeControllerFixture::new_two_nodes(
+            7,
+            node_a,
+            CanvasPoint { x: 0.0, y: 0.0 },
+            node_b,
+            CanvasPoint { x: 40.0, y: 20.0 },
+            initial_view,
+        );
+        let trace = fixture.install_trace();
+        let pending = PendingSelectionState {
+            nodes: Arc::from([node_b]),
+            clear_edges: false,
+            clear_groups: false,
+        };
+
+        assert!(commit_pending_selection_action_host(
+            &mut fixture.host,
+            &fixture.view_state,
+            &fixture.controller,
+            &pending,
+        ));
+
+        assert_single_selection_change(&trace, vec![node_b]);
+    }
+
+    #[test]
+    fn commit_marquee_selection_action_host_notifies_selection_callbacks_through_controller() {
+        let node_a = NodeId::from_u128(9901);
+        let node_b = NodeId::from_u128(9902);
+        let edge = EdgeId::new();
+        let group = GroupId::new();
+        let initial_view = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            selected_edges: vec![edge],
+            selected_groups: vec![group],
+            ..Default::default()
+        };
+        let mut fixture = DeclarativeControllerFixture::new_two_nodes(
+            8,
+            node_a,
+            CanvasPoint { x: 0.0, y: 0.0 },
+            node_b,
+            CanvasPoint { x: 60.0, y: 20.0 },
+            initial_view,
+        );
+        let trace = fixture.install_trace();
+        let marquee = MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(0.0), Px(0.0)),
+            active: true,
+            toggle: false,
+            base_selected_nodes: Arc::from([node_a]),
+            preview_selected_nodes: Arc::from([node_b]),
+        };
+
+        assert!(commit_marquee_selection_action_host(
+            &mut fixture.host,
+            &fixture.view_state,
+            &fixture.controller,
+            &marquee,
+        ));
+
+        assert_single_selection_change(&trace, vec![node_b]);
+    }
+
+    #[test]
+    fn handle_declarative_pointer_up_action_host_left_release_finishes_pointer_session_when_handled()
+     {
+        let action_cx = test_action_cx();
+        let node_a = NodeId::from_u128(9935);
+        let node_b = NodeId::from_u128(9936);
+        let initial_view = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            ..Default::default()
+        };
+        let mut fixture = DeclarativeControllerFixture::new_two_nodes(
+            120,
+            node_a,
+            CanvasPoint { x: 0.0, y: 0.0 },
+            node_b,
+            CanvasPoint { x: 40.0, y: 20.0 },
+            initial_view,
+        );
+        let drag = fixture.host.models.insert(None::<DragState>);
+        let marquee = fixture.host.models.insert(None::<MarqueeDragState>);
+        let node_drag = fixture.host.models.insert(Some(NodeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(12.0), Px(0.0)),
+            phase: NodeDragPhase::Armed,
+            nodes_sorted: Arc::from([node_b]),
+        }));
+        let pending = fixture.host.models.insert(Some(PendingSelectionState {
+            nodes: Arc::from([node_b]),
+            clear_edges: false,
+            clear_groups: false,
+        }));
+        let trace = fixture.install_trace();
+
+        assert!(handle_declarative_pointer_up_action_host(
+            &mut fixture.host,
+            action_cx,
+            test_pointer_up(
+                MouseButton::Left,
+                Point::new(Px(12.0), Px(0.0)),
+                Modifiers::default(),
+            ),
+            MouseButton::Middle,
+            &drag,
+            &marquee,
+            &node_drag,
+            &pending,
+            &fixture.graph,
+            &fixture.view_state,
+            &fixture.controller,
+        ));
+        assert_pointer_session_finished(&fixture.host, action_cx);
+        assert_single_selection_change(&trace, vec![node_b]);
+    }
+
+    #[test]
+    fn handle_declarative_pointer_up_action_host_ignores_non_left_non_pan_buttons() {
+        let mut host = TestActionHostImpl::default();
+        let action_cx = test_action_cx();
+        let drag = host.models.insert(Some(DragState {
+            button: MouseButton::Middle,
+            last_pos: Point::new(Px(3.0), Px(4.0)),
+        }));
+        let marquee = host.models.insert(None::<MarqueeDragState>);
+        let node_drag = host.models.insert(None::<NodeDragState>);
+        let pending = host.models.insert(None::<PendingSelectionState>);
+        let graph = host.models.insert(Graph::new(GraphId::from_u128(121)));
+        let view_value = NodeGraphViewState::default();
+        let view_state = host.models.insert(view_value.clone());
+        let store = host.models.insert(NodeGraphStore::new(
+            Graph::new(GraphId::from_u128(121)),
+            view_value,
+        ));
+        let controller = NodeGraphController::new(store);
+
+        assert!(!handle_declarative_pointer_up_action_host(
+            &mut host,
+            action_cx,
+            test_pointer_up(
+                MouseButton::Right,
+                Point::new(Px(0.0), Px(0.0)),
+                Modifiers::default(),
+            ),
+            MouseButton::Middle,
+            &drag,
+            &marquee,
+            &node_drag,
+            &pending,
+            &graph,
+            &view_state,
+            &controller,
+        ));
+        assert!(
+            host.models
+                .read(&drag, |state| state.is_some())
+                .expect("drag readable")
+        );
+        assert_eq!(host.release_pointer_capture_count, 0);
+        assert!(host.invalidations.is_empty());
+        assert!(host.notifications.is_empty());
+        assert!(host.redraw_requests.is_empty());
+    }
+
+    #[test]
+    fn handle_declarative_pointer_up_action_host_pan_release_clears_drag_and_finishes_session() {
+        let mut host = TestActionHostImpl::default();
+        let action_cx = test_action_cx();
+        let drag = host.models.insert(Some(DragState {
+            button: MouseButton::Middle,
+            last_pos: Point::new(Px(3.0), Px(4.0)),
+        }));
+        let marquee = host.models.insert(None::<MarqueeDragState>);
+        let node_drag = host.models.insert(None::<NodeDragState>);
+        let pending = host.models.insert(None::<PendingSelectionState>);
+        let graph = host.models.insert(Graph::new(GraphId::from_u128(122)));
+        let view_value = NodeGraphViewState::default();
+        let view_state = host.models.insert(view_value.clone());
+        let store = host.models.insert(NodeGraphStore::new(
+            Graph::new(GraphId::from_u128(122)),
+            view_value,
+        ));
+        let controller = NodeGraphController::new(store);
+
+        assert!(handle_declarative_pointer_up_action_host(
+            &mut host,
+            action_cx,
+            test_pointer_up(
+                MouseButton::Middle,
+                Point::new(Px(0.0), Px(0.0)),
+                Modifiers::default(),
+            ),
+            MouseButton::Middle,
+            &drag,
+            &marquee,
+            &node_drag,
+            &pending,
+            &graph,
+            &view_state,
+            &controller,
+        ));
+        assert!(
+            host.models
+                .read(&drag, |state| state.is_none())
+                .expect("drag readable")
+        );
+        assert_pointer_session_finished(&host, action_cx);
+    }
+
+    #[test]
+    fn handle_declarative_pointer_cancel_action_host_finishes_session_even_without_transients() {
+        let mut host = TestActionHostImpl::default();
+        let action_cx = test_action_cx();
+        let drag = host.models.insert(None::<DragState>);
+        let marquee = host.models.insert(None::<MarqueeDragState>);
+        let node_drag = host.models.insert(None::<NodeDragState>);
+        let pending = host.models.insert(None::<PendingSelectionState>);
+
+        assert!(handle_declarative_pointer_cancel_action_host(
+            &mut host,
+            action_cx,
+            test_pointer_cancel(),
+            &drag,
+            &marquee,
+            &node_drag,
+            &pending,
+        ));
+        assert_pointer_session_finished(&host, action_cx);
+    }
+
+    #[test]
+    fn complete_left_pointer_release_action_host_pending_selection_clears_transient_and_notifies_selection()
+     {
+        let node_a = NodeId::from_u128(9941);
+        let node_b = NodeId::from_u128(9942);
+        let initial_view = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            ..Default::default()
+        };
+        let mut fixture = DeclarativeControllerFixture::new_two_nodes(
+            10,
+            node_a,
+            CanvasPoint { x: 0.0, y: 0.0 },
+            node_b,
+            CanvasPoint { x: 40.0, y: 20.0 },
+            initial_view,
+        );
+        let node_drag = fixture.host.models.insert(None::<NodeDragState>);
+        let marquee = fixture.host.models.insert(None::<MarqueeDragState>);
+        let pending = fixture.host.models.insert(Some(PendingSelectionState {
+            nodes: Arc::from([node_b]),
+            clear_edges: false,
+            clear_groups: false,
+        }));
+        let trace = fixture.install_trace();
+
+        let outcome = complete_left_pointer_release_action_host(
+            &mut fixture.host,
+            &node_drag,
+            &pending,
+            &marquee,
+            &fixture.graph,
+            &fixture.view_state,
+            &fixture.controller,
+        );
+
+        assert_eq!(
+            outcome,
+            LeftPointerReleaseOutcome::PendingSelection {
+                selection_committed: true,
+            }
+        );
+        assert!(
+            fixture
+                .host
+                .models
+                .read(&pending, |state| state.is_none())
+                .expect("pending readable")
+        );
+        assert_single_selection_change(&trace, vec![node_b]);
+    }
+
+    #[test]
+    fn complete_left_pointer_release_action_host_inactive_toggle_marquee_skips_selection_commit() {
+        let node_a = NodeId::from_u128(9943);
+        let node_b = NodeId::from_u128(9944);
+        let initial_view = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            ..Default::default()
+        };
+        let mut fixture = DeclarativeControllerFixture::new_two_nodes(
+            11,
+            node_a,
+            CanvasPoint { x: 0.0, y: 0.0 },
+            node_b,
+            CanvasPoint { x: 40.0, y: 20.0 },
+            initial_view,
+        );
+        let node_drag = fixture.host.models.insert(None::<NodeDragState>);
+        let marquee = fixture.host.models.insert(Some(MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(5.0), Px(5.0)),
+            active: false,
+            toggle: true,
+            base_selected_nodes: Arc::from([node_a]),
+            preview_selected_nodes: Arc::from([node_b]),
+        }));
+        let pending = fixture.host.models.insert(None::<PendingSelectionState>);
+        let trace = fixture.install_trace();
+
+        let outcome = complete_left_pointer_release_action_host(
+            &mut fixture.host,
+            &node_drag,
+            &pending,
+            &marquee,
+            &fixture.graph,
+            &fixture.view_state,
+            &fixture.controller,
+        );
+
+        assert_eq!(
+            outcome,
+            LeftPointerReleaseOutcome::Marquee {
+                selection_committed: false,
+            }
+        );
+        assert!(
+            fixture
+                .host
+                .models
+                .read(&marquee, |state| state.is_none())
+                .expect("marquee readable")
+        );
+        let got = trace.borrow();
+        assert!(got.commit_labels.is_empty());
+        assert!(got.selection_changes.is_empty());
+    }
+
+    #[test]
+    fn complete_left_pointer_release_action_host_none_when_no_left_release_state_exists() {
+        let mut host = TestActionHostImpl::default();
+        let graph = host.models.insert(Graph::new(GraphId::from_u128(12)));
+        let view_value = NodeGraphViewState::default();
+        let view_state = host.models.insert(view_value.clone());
+        let store = host.models.insert(NodeGraphStore::new(
+            Graph::new(GraphId::from_u128(12)),
+            view_value,
+        ));
+        let controller = NodeGraphController::new(store);
+        let node_drag = host.models.insert(None::<NodeDragState>);
+        let marquee = host.models.insert(None::<MarqueeDragState>);
+        let pending = host.models.insert(None::<PendingSelectionState>);
+
+        let outcome = complete_left_pointer_release_action_host(
+            &mut host,
+            &node_drag,
+            &pending,
+            &marquee,
+            &graph,
+            &view_state,
+            &controller,
+        );
+
+        assert_eq!(outcome, LeftPointerReleaseOutcome::None);
+    }
+
+    #[test]
+    fn handle_node_drag_left_pointer_release_action_host_clears_drag_and_pending_selection() {
+        let node_a = NodeId::from_u128(9945);
+        let node_b = NodeId::from_u128(9946);
+        let initial_view = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            ..Default::default()
+        };
+        let mut fixture = DeclarativeControllerFixture::new_two_nodes(
+            13,
+            node_a,
+            CanvasPoint { x: 0.0, y: 0.0 },
+            node_b,
+            CanvasPoint { x: 40.0, y: 20.0 },
+            initial_view,
+        );
+        let node_drag = fixture.host.models.insert(Some(NodeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(12.0), Px(0.0)),
+            phase: NodeDragPhase::Armed,
+            nodes_sorted: Arc::from([node_b]),
+        }));
+        let pending = fixture.host.models.insert(Some(PendingSelectionState {
+            nodes: Arc::from([node_b]),
+            clear_edges: false,
+            clear_groups: false,
+        }));
+        let trace = fixture.install_trace();
+
+        let outcome = handle_node_drag_left_pointer_release_action_host(
+            &mut fixture.host,
+            &node_drag,
+            &pending,
+            &fixture.graph,
+            &fixture.view_state,
+            &fixture.controller,
+        );
+
+        assert_eq!(
+            outcome,
+            Some(LeftPointerReleaseOutcome::NodeDrag(
+                NodeDragReleaseOutcome {
+                    selection_committed: true,
+                    drag_committed: false,
+                }
+            ))
+        );
+        assert!(
+            fixture
+                .host
+                .models
+                .read(&node_drag, |state| state.is_none())
+                .expect("node drag readable")
+        );
+        assert!(
+            fixture
+                .host
+                .models
+                .read(&pending, |state| state.is_none())
+                .expect("pending readable")
+        );
+        assert_single_selection_change(&trace, vec![node_b]);
+    }
+
+    #[test]
+    fn handle_pending_selection_left_pointer_release_action_host_commits_and_clears_pending_only() {
+        let mut host = TestActionHostImpl::default();
+        let node_a = NodeId::from_u128(9947);
+        let node_b = NodeId::from_u128(9948);
+        let view_value = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            ..Default::default()
+        };
+        let view_state = host.models.insert(view_value.clone());
+        let mut graph_value = Graph::new(GraphId::from_u128(9947));
+        graph_value
+            .nodes
+            .insert(node_a, test_node(CanvasPoint { x: 0.0, y: 0.0 }));
+        graph_value
+            .nodes
+            .insert(node_b, test_node(CanvasPoint { x: 40.0, y: 20.0 }));
+        let store = host
+            .models
+            .insert(NodeGraphStore::new(graph_value, view_value));
+        let controller = NodeGraphController::new(store);
+        let pending = host.models.insert(Some(PendingSelectionState {
+            nodes: Arc::from([node_b]),
+            clear_edges: true,
+            clear_groups: true,
+        }));
+
+        let outcome = handle_pending_selection_left_pointer_release_action_host(
+            &mut host,
+            &pending,
+            &view_state,
+            &controller,
+        );
+
+        assert_eq!(
+            outcome,
+            Some(LeftPointerReleaseOutcome::PendingSelection {
+                selection_committed: true,
+            })
+        );
+        assert!(
+            host.models
+                .read(&pending, |state| state.is_none())
+                .expect("pending readable")
+        );
+        assert_eq!(
+            host.models
+                .read(&view_state, |state| state.selected_nodes.clone())
+                .expect("view state readable"),
+            vec![node_b]
+        );
+    }
+
+    #[test]
+    fn handle_marquee_left_pointer_release_action_host_clears_pending_and_marquee_without_commit() {
+        let mut host = TestActionHostImpl::default();
+        let node_a = NodeId::from_u128(9949);
+        let node_b = NodeId::from_u128(9950);
+        let view_value = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            ..Default::default()
+        };
+        let view_state = host.models.insert(view_value.clone());
+        let store = host.models.insert(NodeGraphStore::new(
+            Graph::new(GraphId::from_u128(9949)),
+            view_value,
+        ));
+        let controller = NodeGraphController::new(store);
+        let marquee = host.models.insert(Some(MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(4.0), Px(4.0)),
+            active: false,
+            toggle: true,
+            base_selected_nodes: Arc::from([node_a]),
+            preview_selected_nodes: Arc::from([node_b]),
+        }));
+        let pending = host.models.insert(Some(PendingSelectionState {
+            nodes: Arc::from([node_b]),
+            clear_edges: false,
+            clear_groups: false,
+        }));
+
+        let outcome = handle_marquee_left_pointer_release_action_host(
+            &mut host,
+            &marquee,
+            &pending,
+            &view_state,
+            &controller,
+        );
+
+        assert_eq!(
+            outcome,
+            Some(LeftPointerReleaseOutcome::Marquee {
+                selection_committed: false,
+            })
+        );
+        assert!(
+            host.models
+                .read(&marquee, |state| state.is_none())
+                .expect("marquee readable")
+        );
+        assert!(
+            host.models
+                .read(&pending, |state| state.is_none())
+                .expect("pending readable")
+        );
+        assert_eq!(
+            host.models
+                .read(&view_state, |state| state.selected_nodes.clone())
+                .expect("view state readable"),
+            vec![node_a]
+        );
+    }
+
+    #[test]
+    fn complete_node_drag_release_action_host_selection_only_release_notifies_selection_without_drag_commit()
+     {
+        let mut host = TestActionHostImpl::default();
+        let node_a = NodeId::from_u128(9951);
+        let node_b = NodeId::from_u128(9952);
+        let mut graph_value = Graph::new(GraphId::from_u128(9));
+        graph_value
+            .nodes
+            .insert(node_a, test_node(CanvasPoint { x: 0.0, y: 0.0 }));
+        graph_value
+            .nodes
+            .insert(node_b, test_node(CanvasPoint { x: 40.0, y: 20.0 }));
+        let graph = host.models.insert(graph_value.clone());
+        let initial_view = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            ..Default::default()
+        };
+        let view_state = host.models.insert(initial_view.clone());
+        let store = host
+            .models
+            .insert(NodeGraphStore::new(graph_value, initial_view.clone()));
+        let controller = NodeGraphController::new(store.clone());
+        let trace = install_declarative_callback_trace(&mut host, &store);
+        let node_drag = NodeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(12.0), Px(0.0)),
+            phase: NodeDragPhase::Armed,
+            nodes_sorted: Arc::from([node_b]),
+        };
+        let pending = PendingSelectionState {
+            nodes: Arc::from([node_b]),
+            clear_edges: false,
+            clear_groups: false,
+        };
+
+        let outcome = complete_node_drag_release_action_host(
+            &mut host,
+            &graph,
+            &view_state,
+            &controller,
+            &node_drag,
+            Some(&pending),
+        );
+
+        assert!(outcome.selection_committed);
+        assert!(!outcome.drag_committed);
+        let got = trace.borrow();
+        assert!(got.commit_labels.is_empty());
+        assert_eq!(
+            got.selection_changes,
+            vec![SelectionChange {
+                nodes: vec![node_b],
+                edges: Vec::new(),
+                groups: Vec::new(),
+            }]
+        );
+    }
+
+    #[test]
+    fn escape_cancel_declarative_interactions_action_host_handles_pending_selection_only() {
+        let mut host = TestActionHostImpl::default();
+        let drag = host.models.insert(None::<DragState>);
+        let marquee = host.models.insert(None::<MarqueeDragState>);
+        let node_drag = host.models.insert(None::<NodeDragState>);
+        let pending = host.models.insert(Some(PendingSelectionState {
+            nodes: Arc::from([NodeId::from_u128(9961)]),
+            clear_edges: true,
+            clear_groups: true,
+        }));
+
+        assert!(escape_cancel_declarative_interactions_action_host(
+            &mut host, &drag, &marquee, &node_drag, &pending,
+        ));
+        assert!(
+            host.models
+                .read(&pending, |state| state.is_none())
+                .expect("pending readable")
+        );
+    }
+
+    #[test]
+    fn begin_pan_pointer_down_action_host_clears_transients_and_starts_drag() {
+        let mut host = TestActionHostImpl::default();
+        let drag = host.models.insert(None::<DragState>);
+        let marquee = host.models.insert(Some(MarqueeDragState {
+            start_screen: Point::new(Px(1.0), Px(2.0)),
+            current_screen: Point::new(Px(3.0), Px(4.0)),
+            active: false,
+            toggle: false,
+            base_selected_nodes: Arc::from([]),
+            preview_selected_nodes: Arc::from([]),
+        }));
+        let node_drag = host.models.insert(Some(NodeDragState {
+            start_screen: Point::new(Px(5.0), Px(6.0)),
+            current_screen: Point::new(Px(7.0), Px(8.0)),
+            phase: NodeDragPhase::Armed,
+            nodes_sorted: Arc::from([NodeId::from_u128(9966)]),
+        }));
+        let down = test_pointer_down(
+            MouseButton::Middle,
+            Point::new(Px(10.0), Px(11.0)),
+            Modifiers::default(),
+        );
+
+        assert!(begin_pan_pointer_down_action_host(
+            &mut host, &drag, &marquee, &node_drag, down,
+        ));
+        assert!(
+            host.models
+                .read(&marquee, |state| state.is_none())
+                .expect("marquee readable")
+        );
+        assert!(
+            host.models
+                .read(&node_drag, |state| state.is_none())
+                .expect("node drag readable")
+        );
+        host.models
+            .read(&drag, |state| {
+                let state = state.expect("drag armed");
+                assert_eq!(state.button, MouseButton::Middle);
+                assert_eq!(state.last_pos, Point::new(Px(10.0), Px(11.0)));
+            })
+            .expect("drag readable");
+    }
+
+    #[test]
+    fn begin_left_pointer_down_action_host_hit_node_selectable_arms_pending_selection_and_drag() {
+        let mut host = TestActionHostImpl::default();
+        let marquee = host.models.insert(Some(MarqueeDragState {
+            start_screen: Point::new(Px(1.0), Px(2.0)),
+            current_screen: Point::new(Px(3.0), Px(4.0)),
+            active: false,
+            toggle: false,
+            base_selected_nodes: Arc::from([]),
+            preview_selected_nodes: Arc::from([]),
+        }));
+        let node_drag = host.models.insert(None::<NodeDragState>);
+        let pending = host.models.insert(None::<PendingSelectionState>);
+        let hovered = host.models.insert(None::<NodeId>);
+        let hit = NodeId::from_u128(9967);
+        let snapshot = LeftPointerDownSnapshot {
+            interaction: crate::io::NodeGraphInteractionConfig {
+                elements_selectable: true,
+                nodes_draggable: true,
+                ..Default::default()
+            },
+            base_selection: vec![NodeId::from_u128(9968)],
+            hit: Some(hit),
+        };
+        let down = test_pointer_down(
+            MouseButton::Left,
+            Point::new(Px(12.0), Px(13.0)),
+            Modifiers::default(),
+        );
+
+        let outcome = begin_left_pointer_down_action_host(
+            &mut host, &marquee, &node_drag, &pending, &hovered, down, &snapshot,
+        );
+
+        assert_eq!(
+            outcome,
+            LeftPointerDownOutcome::HitNode {
+                capture_pointer: true,
+            }
+        );
+        assert!(outcome.capture_pointer());
+        assert_eq!(
+            host.models
+                .read(&hovered, |state| *state)
+                .expect("hovered readable"),
+            Some(hit)
+        );
+        host.models
+            .read(&pending, |state| {
+                let state = state.as_ref().expect("pending armed");
+                assert_eq!(state.nodes.as_ref(), &[hit]);
+                assert!(!state.clear_edges);
+                assert!(!state.clear_groups);
+            })
+            .expect("pending readable");
+        host.models
+            .read(&node_drag, |state| {
+                let state = state.as_ref().expect("node drag armed");
+                assert_eq!(state.phase, NodeDragPhase::Armed);
+                assert_eq!(state.nodes_sorted.as_ref(), &[hit]);
+            })
+            .expect("node drag readable");
+        assert!(
+            host.models
+                .read(&marquee, |state| state.is_none())
+                .expect("marquee readable")
+        );
+    }
+
+    #[test]
+    fn begin_left_pointer_down_action_host_empty_space_arms_marquee() {
+        let mut host = TestActionHostImpl::default();
+        let marquee = host.models.insert(None::<MarqueeDragState>);
+        let node_drag = host.models.insert(Some(NodeDragState {
+            start_screen: Point::new(Px(1.0), Px(1.0)),
+            current_screen: Point::new(Px(2.0), Px(2.0)),
+            phase: NodeDragPhase::Armed,
+            nodes_sorted: Arc::from([NodeId::from_u128(9969)]),
+        }));
+        let pending = host.models.insert(Some(PendingSelectionState {
+            nodes: Arc::from([NodeId::from_u128(9970)]),
+            clear_edges: false,
+            clear_groups: false,
+        }));
+        let hovered = host.models.insert(Some(NodeId::from_u128(9971)));
+        let snapshot = LeftPointerDownSnapshot {
+            interaction: crate::io::NodeGraphInteractionConfig {
+                elements_selectable: true,
+                selection_on_drag: true,
+                ..Default::default()
+            },
+            base_selection: vec![NodeId::from_u128(9972)],
+            hit: None,
+        };
+        let down = test_pointer_down(
+            MouseButton::Left,
+            Point::new(Px(20.0), Px(21.0)),
+            Modifiers::default(),
+        );
+
+        let outcome = begin_left_pointer_down_action_host(
+            &mut host, &marquee, &node_drag, &pending, &hovered, down, &snapshot,
+        );
+
+        assert_eq!(outcome, LeftPointerDownOutcome::Marquee);
+        assert!(outcome.capture_pointer());
+        assert_eq!(
+            host.models
+                .read(&hovered, |state| *state)
+                .expect("hovered readable"),
+            None
+        );
+        assert!(
+            host.models
+                .read(&node_drag, |state| state.is_none())
+                .expect("node drag readable")
+        );
+        assert!(
+            host.models
+                .read(&pending, |state| state.is_none())
+                .expect("pending readable")
+        );
+        host.models
+            .read(&marquee, |state| {
+                let state = state.as_ref().expect("marquee armed");
+                assert_eq!(state.start_screen, Point::new(Px(20.0), Px(21.0)));
+                assert_eq!(state.preview_selected_nodes.len(), 0);
+            })
+            .expect("marquee readable");
+    }
+
+    #[test]
+    fn begin_left_pointer_down_action_host_empty_space_clear_arms_pending_clear() {
+        let mut host = TestActionHostImpl::default();
+        let marquee = host.models.insert(None::<MarqueeDragState>);
+        let node_drag = host.models.insert(None::<NodeDragState>);
+        let pending = host.models.insert(None::<PendingSelectionState>);
+        let hovered = host.models.insert(Some(NodeId::from_u128(9973)));
+        let snapshot = LeftPointerDownSnapshot {
+            interaction: crate::io::NodeGraphInteractionConfig {
+                elements_selectable: true,
+                ..Default::default()
+            },
+            base_selection: Vec::new(),
+            hit: None,
+        };
+        let down = test_pointer_down(
+            MouseButton::Left,
+            Point::new(Px(30.0), Px(31.0)),
+            Modifiers::default(),
+        );
+
+        let outcome = begin_left_pointer_down_action_host(
+            &mut host, &marquee, &node_drag, &pending, &hovered, down, &snapshot,
+        );
+
+        assert_eq!(outcome, LeftPointerDownOutcome::EmptySpaceClear);
+        assert!(outcome.capture_pointer());
+        assert_eq!(
+            host.models
+                .read(&hovered, |state| *state)
+                .expect("hovered readable"),
+            None
+        );
+        host.models
+            .read(&pending, |state| {
+                let state = state.as_ref().expect("pending clear armed");
+                assert!(state.nodes.is_empty());
+                assert!(state.clear_edges);
+                assert!(state.clear_groups);
+            })
+            .expect("pending readable");
+    }
+
+    #[test]
+    fn handle_node_drag_pointer_move_action_host_activation_commits_pending_selection_and_requests_capture()
+     {
+        let mut host = TestActionHostImpl::default();
+        let view_value = NodeGraphViewState {
+            interaction: crate::io::NodeGraphInteractionConfig {
+                node_drag_threshold: 4.0,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let view_state = host.models.insert(view_value.clone());
+        let mut graph_value = Graph::new(GraphId::from_u128(9973));
+        graph_value.nodes.insert(
+            NodeId::from_u128(9974),
+            test_node(CanvasPoint { x: 0.0, y: 0.0 }),
+        );
+        graph_value.nodes.insert(
+            NodeId::from_u128(9975),
+            test_node(CanvasPoint { x: 40.0, y: 20.0 }),
+        );
+        let store = host
+            .models
+            .insert(NodeGraphStore::new(graph_value, view_value));
+        let controller = NodeGraphController::new(store);
+        let node_drag = host.models.insert(Some(NodeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(0.0), Px(0.0)),
+            phase: NodeDragPhase::Armed,
+            nodes_sorted: Arc::from([NodeId::from_u128(9974)]),
+        }));
+        let pending = host.models.insert(Some(PendingSelectionState {
+            nodes: Arc::from([NodeId::from_u128(9975)]),
+            clear_edges: false,
+            clear_groups: false,
+        }));
+        let hovered = host.models.insert(Some(NodeId::from_u128(9976)));
+        let mv = test_pointer_move(
+            Point::new(Px(10.0), Px(0.0)),
+            MouseButtons {
+                left: true,
+                right: false,
+                middle: false,
+            },
+            Modifiers::default(),
+        );
+
+        let outcome = handle_node_drag_pointer_move_action_host(
+            &mut host,
+            &node_drag,
+            &pending,
+            &hovered,
+            &view_state,
+            &controller,
+            mv,
+        );
+
+        assert_eq!(
+            outcome,
+            Some(NodeDragPointerMoveOutcome {
+                capture_pointer: true,
+                needs_layout_redraw: true,
+            })
+        );
+        assert!(
+            host.models
+                .read(&pending, |state| state.is_none())
+                .expect("pending readable")
+        );
+        assert_eq!(
+            host.models
+                .read(&hovered, |state| *state)
+                .expect("hovered readable"),
+            None
+        );
+        host.models
+            .read(&view_state, |state| {
+                assert_eq!(state.selected_nodes, vec![NodeId::from_u128(9975)]);
+            })
+            .expect("view readable");
+        host.models
+            .read(&node_drag, |state| {
+                let state = state.as_ref().expect("node drag readable");
+                assert!(state.is_active());
+                assert_eq!(state.current_screen, Point::new(Px(10.0), Px(0.0)));
+            })
+            .expect("node drag readable");
+    }
+
+    #[test]
+    fn handle_node_drag_pointer_move_action_host_canceled_session_clears_hover_without_redraw() {
+        let mut host = TestActionHostImpl::default();
+        let view_value = NodeGraphViewState::default();
+        let view_state = host.models.insert(view_value.clone());
+        let store = host.models.insert(NodeGraphStore::new(
+            Graph::new(GraphId::from_u128(9976)),
+            view_value,
+        ));
+        let controller = NodeGraphController::new(store);
+        let node_drag = host.models.insert(Some(NodeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(0.0), Px(0.0)),
+            phase: NodeDragPhase::Canceled,
+            nodes_sorted: Arc::from([NodeId::from_u128(9977)]),
+        }));
+        let pending = host.models.insert(None::<PendingSelectionState>);
+        let hovered = host.models.insert(Some(NodeId::from_u128(9978)));
+        let mv = test_pointer_move(
+            Point::new(Px(2.0), Px(0.0)),
+            MouseButtons {
+                left: true,
+                right: false,
+                middle: false,
+            },
+            Modifiers::default(),
+        );
+
+        let outcome = handle_node_drag_pointer_move_action_host(
+            &mut host,
+            &node_drag,
+            &pending,
+            &hovered,
+            &view_state,
+            &controller,
+            mv,
+        );
+
+        assert_eq!(
+            outcome,
+            Some(NodeDragPointerMoveOutcome {
+                capture_pointer: false,
+                needs_layout_redraw: false,
+            })
+        );
+        assert_eq!(
+            host.models
+                .read(&hovered, |state| *state)
+                .expect("hovered readable"),
+            None
+        );
+    }
+
+    #[test]
+    fn handle_marquee_pointer_move_action_host_non_selectable_clears_session_without_touching_hover()
+     {
+        let mut host = TestActionHostImpl::default();
+        let view_state = host.models.insert(NodeGraphViewState {
+            interaction: crate::io::NodeGraphInteractionConfig {
+                elements_selectable: false,
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+        let marquee = host.models.insert(Some(MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(0.0), Px(0.0)),
+            active: false,
+            toggle: false,
+            base_selected_nodes: Arc::from([]),
+            preview_selected_nodes: Arc::from([]),
+        }));
+        let hovered = host.models.insert(Some(NodeId::from_u128(9979)));
+        let derived_cache = host.models.insert(DerivedGeometryCacheState::default());
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(200.0)),
+        );
+        let mv = test_pointer_move(
+            Point::new(Px(10.0), Px(10.0)),
+            MouseButtons::default(),
+            Modifiers::default(),
+        );
+
+        let outcome = handle_marquee_pointer_move_action_host(
+            &mut host,
+            &marquee,
+            &hovered,
+            &view_state,
+            &derived_cache,
+            mv,
+            bounds,
+        );
+
+        assert_eq!(
+            outcome,
+            Some(MarqueePointerMoveOutcome::ReleaseCaptureRedrawOnly)
+        );
+        assert!(
+            host.models
+                .read(&marquee, |state| state.is_none())
+                .expect("marquee readable")
+        );
+        assert_eq!(
+            host.models
+                .read(&hovered, |state| *state)
+                .expect("hovered readable"),
+            Some(NodeId::from_u128(9979))
+        );
+    }
+
+    #[test]
+    fn handle_marquee_pointer_move_action_host_updates_preview_and_clears_hover() {
+        let mut host = TestActionHostImpl::default();
+        let (graph, geom, node_a, _node_b) = test_marquee_geometry();
+        let spatial = crate::ui::canvas::CanvasSpatialDerived::build(&graph, &geom, 1.0, 0.0, 64.0);
+        let derived_cache = host.models.insert(DerivedGeometryCacheState {
+            key: None,
+            rebuilds: 1,
+            geom: Some(Arc::new(geom)),
+            index: Some(Arc::new(spatial)),
+        });
+        let view_state = host.models.insert(NodeGraphViewState {
+            interaction: crate::io::NodeGraphInteractionConfig {
+                elements_selectable: true,
+                selection_mode: crate::io::NodeGraphSelectionMode::Partial,
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+        let marquee = host.models.insert(Some(MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(0.0), Px(0.0)),
+            active: false,
+            toggle: false,
+            base_selected_nodes: Arc::from([]),
+            preview_selected_nodes: Arc::from([]),
+        }));
+        let hovered = host.models.insert(Some(NodeId::from_u128(9980)));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(200.0)),
+        );
+        let mv = test_pointer_move(
+            Point::new(Px(80.0), Px(40.0)),
+            MouseButtons::default(),
+            Modifiers::default(),
+        );
+
+        let outcome = handle_marquee_pointer_move_action_host(
+            &mut host,
+            &marquee,
+            &hovered,
+            &view_state,
+            &derived_cache,
+            mv,
+            bounds,
+        );
+
+        assert_eq!(outcome, Some(MarqueePointerMoveOutcome::NotifyRedraw));
+        assert_eq!(
+            host.models
+                .read(&hovered, |state| *state)
+                .expect("hovered readable"),
+            None
+        );
+        host.models
+            .read(&marquee, |state| {
+                let state = state.as_ref().expect("marquee readable");
+                assert!(state.active);
+                assert_eq!(state.current_screen, Point::new(Px(80.0), Px(40.0)));
+                assert_eq!(state.preview_selected_nodes.as_ref(), &[node_a]);
+            })
+            .expect("marquee readable");
+    }
+
+    #[test]
+    fn update_hovered_node_pointer_move_action_host_sets_hit_node_from_geometry() {
+        let mut host = TestActionHostImpl::default();
+        let (graph, geom, _node_a, node_b) = test_marquee_geometry();
+        let spatial = crate::ui::canvas::CanvasSpatialDerived::build(&graph, &geom, 1.0, 0.0, 64.0);
+        let derived_cache = host.models.insert(DerivedGeometryCacheState {
+            key: None,
+            rebuilds: 1,
+            geom: Some(Arc::new(geom)),
+            index: Some(Arc::new(spatial)),
+        });
+        let view_state = host.models.insert(NodeGraphViewState::default());
+        let hovered = host.models.insert(None::<NodeId>);
+        let hit_scratch = host.models.insert(Vec::<NodeId>::new());
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(200.0)),
+        );
+        let mv = test_pointer_move(
+            Point::new(Px(160.0), Px(20.0)),
+            MouseButtons::default(),
+            Modifiers::default(),
+        );
+
+        assert!(update_hovered_node_pointer_move_action_host(
+            &mut host,
+            &hovered,
+            &view_state,
+            &derived_cache,
+            &hit_scratch,
+            mv,
+            bounds,
+        ));
+        assert_eq!(
+            host.models
+                .read(&hovered, |state| *state)
+                .expect("hovered readable"),
+            Some(node_b)
+        );
+    }
+
+    #[test]
+    fn declarative_diag_key_action_from_key_gates_on_diag_toggle() {
+        assert_eq!(
+            DeclarativeDiagKeyAction::from_key(false, fret_core::KeyCode::Digit3),
+            None
+        );
+        assert_eq!(
+            DeclarativeDiagKeyAction::from_key(true, fret_core::KeyCode::Digit3),
+            Some(DeclarativeDiagKeyAction::NudgeVisibleNode)
+        );
+        assert_eq!(
+            DeclarativeKeyboardZoomAction::from_key(fret_core::KeyCode::Digit0),
+            Some(DeclarativeKeyboardZoomAction::Reset)
+        );
+    }
+
+    #[test]
+    fn apply_declarative_diag_view_preset_action_host_offset_partial_marquee_clears_selection() {
+        let mut host = TestActionHostImpl::default();
+        let view_value = NodeGraphViewState {
+            zoom: 2.5,
+            selected_nodes: vec![NodeId::from_u128(9964)],
+            selected_edges: vec![EdgeId::new()],
+            selected_groups: vec![GroupId::new()],
+            ..Default::default()
+        };
+        let view_state = host.models.insert(view_value.clone());
+        let store = host.models.insert(NodeGraphStore::new(
+            Graph::new(GraphId::from_u128(9964)),
+            view_value,
+        ));
+        let controller = NodeGraphController::new(store);
+
+        assert!(apply_declarative_diag_view_preset_action_host(
+            &mut host,
+            &view_state,
+            &controller,
+            DeclarativeDiagViewPreset::OffsetPartialMarquee,
+        ));
+        host.models
+            .read(&view_state, |state| {
+                assert_eq!(state.pan.x, 540.0);
+                assert_eq!(state.pan.y, 290.0);
+                assert_eq!(state.zoom, 1.0);
+                assert!(state.interaction.selection_on_drag);
+                assert_eq!(
+                    state.interaction.selection_mode,
+                    crate::io::NodeGraphSelectionMode::Partial
+                );
+                assert!(state.selected_nodes.is_empty());
+                assert!(state.selected_edges.is_empty());
+                assert!(state.selected_groups.is_empty());
+            })
+            .expect("view readable");
+    }
+
+    #[test]
+    fn handle_declarative_diag_key_action_host_disable_portals_clears_pending_fit_and_bounds() {
+        let mut host = TestActionHostImpl::default();
+        let graph = host.models.insert(Graph::default());
+        let view_value = NodeGraphViewState::default();
+        let view_state = host.models.insert(view_value.clone());
+        let store = host.models.insert(NodeGraphStore::new(
+            Graph::new(GraphId::from_u128(9965)),
+            view_value,
+        ));
+        let controller = NodeGraphController::new(store);
+        let mut portal_bounds_state = PortalBoundsStore::default();
+        portal_bounds_state.pending_fit_to_portals = true;
+        portal_bounds_state.nodes_canvas_bounds.insert(
+            NodeId::from_u128(9965),
+            Rect::new(
+                Point::new(Px(1.0), Px(2.0)),
+                fret_core::Size::new(Px(3.0), Px(4.0)),
+            ),
+        );
+        let portal_bounds = host.models.insert(portal_bounds_state);
+        let portal_debug = host.models.insert(PortalDebugFlags::default());
+        let diag_paint_overrides_enabled = host.models.insert(false);
+        let diag_paint_overrides = Arc::new(NodeGraphPaintOverridesMap::default());
+
+        assert!(handle_declarative_diag_key_action_host(
+            &mut host,
+            DeclarativeDiagKeyAction::DisablePortals,
+            &graph,
+            &view_state,
+            &controller,
+            &portal_bounds,
+            &portal_debug,
+            &diag_paint_overrides,
+            &diag_paint_overrides_enabled,
+        ));
+        assert!(
+            host.models
+                .read(&portal_debug, |state| state.disable_portals)
+                .expect("portal debug readable")
+        );
+        host.models
+            .read(&portal_bounds, |state| {
+                assert!(!state.pending_fit_to_portals);
+                assert!(state.nodes_canvas_bounds.is_empty());
+            })
+            .expect("portal bounds readable");
+    }
+
+    #[test]
+    fn handle_declarative_keyboard_zoom_action_host_reset_normalizes_zoom() {
+        let mut host = TestActionHostImpl::default();
+        let view_value = NodeGraphViewState {
+            zoom: 2.5,
+            ..Default::default()
+        };
+        let view_state = host.models.insert(view_value.clone());
+        let store = host.models.insert(NodeGraphStore::new(
+            Graph::new(GraphId::from_u128(9966)),
+            view_value,
+        ));
+        let controller = NodeGraphController::new(store);
+
+        assert!(handle_declarative_keyboard_zoom_action_host(
+            &mut host,
+            DeclarativeKeyboardZoomAction::Reset,
+            &view_state,
+            &controller,
+            0.1,
+            8.0,
+        ));
+        assert_eq!(
+            host.models
+                .read(&view_state, |state| state.zoom)
+                .expect("view readable"),
+            1.0
+        );
+    }
+
+    #[test]
+    fn handle_declarative_diag_key_action_host_toggle_paint_overrides_sets_first_edge_override() {
+        let mut host = TestActionHostImpl::default();
+        let edge_id = EdgeId::new();
+        let mut graph_value = Graph::new(GraphId::new());
+        graph_value.edges.insert(
+            edge_id,
+            crate::core::Edge {
+                kind: crate::core::EdgeKind::Data,
+                from: crate::core::PortId::new(),
+                to: crate::core::PortId::new(),
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+        let graph = host.models.insert(graph_value);
+        let view_value = NodeGraphViewState::default();
+        let view_state = host.models.insert(view_value.clone());
+        let store = host.models.insert(NodeGraphStore::new(
+            Graph::new(GraphId::from_u128(9967)),
+            view_value,
+        ));
+        let controller = NodeGraphController::new(store);
+        let portal_bounds = host.models.insert(PortalBoundsStore::default());
+        let portal_debug = host.models.insert(PortalDebugFlags::default());
+        let diag_paint_overrides_enabled = host.models.insert(false);
+        let diag_paint_overrides = Arc::new(NodeGraphPaintOverridesMap::default());
+
+        assert!(handle_declarative_diag_key_action_host(
+            &mut host,
+            DeclarativeDiagKeyAction::TogglePaintOverrides,
+            &graph,
+            &view_state,
+            &controller,
+            &portal_bounds,
+            &portal_debug,
+            &diag_paint_overrides,
+            &diag_paint_overrides_enabled,
+        ));
+        assert!(
+            host.models
+                .read(&diag_paint_overrides_enabled, |state| *state)
+                .expect("flag readable")
+        );
+        assert!(diag_paint_overrides.edge_paint_override(edge_id).is_some());
+    }
+
+    #[test]
+    fn escape_cancel_declarative_interactions_action_host_ignores_already_canceled_node_drag() {
+        let mut host = TestActionHostImpl::default();
+        let drag = host.models.insert(None::<DragState>);
+        let marquee = host.models.insert(None::<MarqueeDragState>);
+        let node_drag = host.models.insert(Some(NodeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(4.0), Px(0.0)),
+            phase: NodeDragPhase::Canceled,
+            nodes_sorted: Arc::from([NodeId::from_u128(9962)]),
+        }));
+        let pending = host.models.insert(None::<PendingSelectionState>);
+
+        assert!(!escape_cancel_declarative_interactions_action_host(
+            &mut host, &drag, &marquee, &node_drag, &pending,
+        ));
+        assert!(
+            host.models
+                .read(&node_drag, |state| {
+                    state.as_ref().is_some_and(NodeDragState::is_canceled)
+                })
+                .expect("node drag readable")
+        );
+    }
+
+    #[test]
+    fn pointer_cancel_declarative_interactions_action_host_clears_already_canceled_node_drag() {
+        let mut host = TestActionHostImpl::default();
+        let drag = host.models.insert(None::<DragState>);
+        let marquee = host.models.insert(None::<MarqueeDragState>);
+        let node_drag = host.models.insert(Some(NodeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(4.0), Px(0.0)),
+            phase: NodeDragPhase::Canceled,
+            nodes_sorted: Arc::from([NodeId::from_u128(9963)]),
+        }));
+        let pending = host.models.insert(None::<PendingSelectionState>);
+
+        assert!(pointer_cancel_declarative_interactions_action_host(
+            &mut host, &drag, &marquee, &node_drag, &pending,
+        ));
+        assert!(
+            host.models
+                .read(&node_drag, |state| state.is_none())
+                .expect("node drag readable")
+        );
+    }
+
+    #[test]
+    fn pointer_cancel_declarative_interactions_action_host_clears_transients_without_callbacks() {
+        let mut host = TestActionHostImpl::default();
+        let drag = host.models.insert(Some(DragState {
+            button: MouseButton::Left,
+            last_pos: Point::new(Px(2.0), Px(3.0)),
+        }));
+        let marquee = host.models.insert(Some(MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(10.0), Px(10.0)),
+            active: true,
+            toggle: false,
+            base_selected_nodes: Arc::from([]),
+            preview_selected_nodes: Arc::from([]),
+        }));
+        let node_drag = host.models.insert(Some(NodeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(8.0), Px(0.0)),
+            phase: NodeDragPhase::Active,
+            nodes_sorted: Arc::from([NodeId::from_u128(9971)]),
+        }));
+        let pending = host.models.insert(Some(PendingSelectionState {
+            nodes: Arc::from([NodeId::from_u128(9972)]),
+            clear_edges: false,
+            clear_groups: false,
+        }));
+
+        assert!(pointer_cancel_declarative_interactions_action_host(
+            &mut host, &drag, &marquee, &node_drag, &pending,
+        ));
+        assert!(
+            host.models
+                .read(&drag, |state| state.is_none())
+                .expect("drag readable")
+        );
+        assert!(
+            host.models
+                .read(&marquee, |state| state.is_none())
+                .expect("marquee readable")
+        );
+        assert!(
+            host.models
+                .read(&node_drag, |state| state.is_none())
+                .expect("node drag readable")
+        );
+        assert!(
+            host.models
+                .read(&pending, |state| state.is_none())
+                .expect("pending readable")
+        );
+    }
+
+    #[test]
+    fn build_click_selection_preview_nodes_single_click_replaces_base_selection() {
+        let node_a = NodeId::from_u128(9401);
+        let node_b = NodeId::from_u128(9402);
+
+        let preview = build_click_selection_preview_nodes(&[node_a], node_b, false);
+
+        assert_eq!(preview.as_ref(), &[node_b]);
+    }
+
+    #[test]
+    fn build_click_selection_preview_nodes_multi_click_toggles_hit_membership() {
+        let node_a = NodeId::from_u128(9501);
+        let node_b = NodeId::from_u128(9502);
+
+        let added = build_click_selection_preview_nodes(&[node_a], node_b, true);
+        let removed = build_click_selection_preview_nodes(&[node_a, node_b], node_b, true);
+
+        assert_eq!(added.as_ref(), &[node_a, node_b]);
+        assert_eq!(removed.as_ref(), &[node_a]);
+    }
+
+    #[test]
+    fn commit_pending_selection_action_host_preserves_edges_and_groups_when_not_requested() {
+        let mut host = TestActionHostImpl::default();
+        let node_a = NodeId::from_u128(9601);
+        let node_b = NodeId::from_u128(9602);
+        let edge = EdgeId::new();
+        let group = GroupId::new();
+        let view_value = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            selected_edges: vec![edge],
+            selected_groups: vec![group],
+            ..Default::default()
+        };
+        let view_state = host.models.insert(view_value.clone());
+        let mut graph_value = Graph::new(GraphId::from_u128(9601));
+        let from_port = PortId::new();
+        let to_port = PortId::new();
+        let mut node_a_value = test_node(CanvasPoint { x: 0.0, y: 0.0 });
+        node_a_value.ports = vec![from_port];
+        let mut node_b_value = test_node(CanvasPoint { x: 40.0, y: 20.0 });
+        node_b_value.ports = vec![to_port];
+        graph_value.nodes.insert(node_a, node_a_value);
+        graph_value.nodes.insert(node_b, node_b_value);
+        graph_value.ports.insert(
+            from_port,
+            Port {
+                node: node_a,
+                key: PortKey::new("out"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+        graph_value.ports.insert(
+            to_port,
+            Port {
+                node: node_b,
+                key: PortKey::new("in"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+        graph_value.edges.insert(
+            edge,
+            Edge {
+                kind: EdgeKind::Data,
+                from: from_port,
+                to: to_port,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+        graph_value.groups.insert(
+            group,
+            Group {
+                title: "test group".into(),
+                rect: CanvasRect {
+                    origin: CanvasPoint { x: 0.0, y: 0.0 },
+                    size: CanvasSize {
+                        width: 1.0,
+                        height: 1.0,
+                    },
+                },
+                color: None,
+            },
+        );
+        let store = host
+            .models
+            .insert(NodeGraphStore::new(graph_value, view_value));
+        let controller = NodeGraphController::new(store);
+        let pending = PendingSelectionState {
+            nodes: Arc::from([node_b]),
+            clear_edges: false,
+            clear_groups: false,
+        };
+
+        assert!(commit_pending_selection_action_host(
+            &mut host,
+            &view_state,
+            &controller,
+            &pending,
+        ));
+
+        let selection = host
+            .models
+            .read(&view_state, |state| {
+                (
+                    state.selected_nodes.clone(),
+                    state.selected_edges.clone(),
+                    state.selected_groups.clone(),
+                )
+            })
+            .expect("read view state");
+        assert_eq!(selection.0, vec![node_b]);
+        assert_eq!(selection.1, vec![edge]);
+        assert_eq!(selection.2, vec![group]);
+    }
+
+    #[test]
+    fn commit_pending_selection_action_host_can_clear_all_selection_kinds() {
+        let mut host = TestActionHostImpl::default();
+        let node = NodeId::from_u128(9701);
+        let other = NodeId::from_u128(9702);
+        let edge = EdgeId::new();
+        let group = GroupId::new();
+        let view_value = NodeGraphViewState {
+            selected_nodes: vec![node],
+            selected_edges: vec![edge],
+            selected_groups: vec![group],
+            ..Default::default()
+        };
+        let view_state = host.models.insert(view_value.clone());
+        let mut graph_value = Graph::new(GraphId::from_u128(9701));
+        let from_port = PortId::new();
+        let to_port = PortId::new();
+        let mut node_value = test_node(CanvasPoint { x: 0.0, y: 0.0 });
+        node_value.ports = vec![from_port];
+        let mut other_value = test_node(CanvasPoint { x: 40.0, y: 20.0 });
+        other_value.ports = vec![to_port];
+        graph_value.nodes.insert(node, node_value);
+        graph_value.nodes.insert(other, other_value);
+        graph_value.ports.insert(
+            from_port,
+            Port {
+                node,
+                key: PortKey::new("out"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+        graph_value.ports.insert(
+            to_port,
+            Port {
+                node: other,
+                key: PortKey::new("in"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+        graph_value.edges.insert(
+            edge,
+            Edge {
+                kind: EdgeKind::Data,
+                from: from_port,
+                to: to_port,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+        graph_value.groups.insert(
+            group,
+            Group {
+                title: "test group".into(),
+                rect: CanvasRect {
+                    origin: CanvasPoint { x: 0.0, y: 0.0 },
+                    size: CanvasSize {
+                        width: 1.0,
+                        height: 1.0,
+                    },
+                },
+                color: None,
+            },
+        );
+        let store = host
+            .models
+            .insert(NodeGraphStore::new(graph_value, view_value));
+        let controller = NodeGraphController::new(store);
+        let pending = PendingSelectionState {
+            nodes: Arc::from([]),
+            clear_edges: true,
+            clear_groups: true,
+        };
+
+        assert!(commit_pending_selection_action_host(
+            &mut host,
+            &view_state,
+            &controller,
+            &pending,
+        ));
+
+        let selection = host
+            .models
+            .read(&view_state, |state| {
+                (
+                    state.selected_nodes.clone(),
+                    state.selected_edges.clone(),
+                    state.selected_groups.clone(),
+                )
+            })
+            .expect("read view state");
+        assert!(selection.0.is_empty());
+        assert!(selection.1.is_empty());
+        assert!(selection.2.is_empty());
+    }
+
+    fn test_node_drag_state(phase: NodeDragPhase, current_screen: Point) -> NodeDragState {
+        NodeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen,
+            phase,
+            nodes_sorted: Arc::from([NodeId::from_u128(9800)]),
+        }
+    }
+
+    #[test]
+    fn node_drag_phase_activation_crosses_threshold() {
+        let mut drag = test_node_drag_state(NodeDragPhase::Armed, Point::new(Px(0.0), Px(0.0)));
+        let next = Point::new(Px(6.0), Px(8.0));
+
+        assert!(pointer_crossed_threshold(drag.start_screen, next, 10.0));
+        assert!(drag.activate(next));
+        assert!(drag.is_active());
+        assert_eq!(drag.current_screen, next);
+    }
+
+    #[test]
+    fn canceled_node_drag_does_not_produce_commit_delta() {
+        let view = PanZoom2D::default();
+        let mut drag = test_node_drag_state(NodeDragPhase::Armed, Point::new(Px(12.0), Px(0.0)));
+
+        assert!(drag.activate(Point::new(Px(12.0), Px(0.0))));
+        drag.cancel();
+
+        assert!(drag.is_canceled());
+        assert_eq!(node_drag_commit_delta(view, &drag), None);
+    }
+
+    #[test]
+    fn active_node_drag_with_non_zero_delta_produces_commit_delta() {
+        let view = PanZoom2D {
+            pan: Point::new(Px(0.0), Px(0.0)),
+            zoom: 2.0,
+        };
+        let drag = test_node_drag_state(NodeDragPhase::Active, Point::new(Px(8.0), Px(-6.0)));
+
+        assert_eq!(node_drag_commit_delta(view, &drag), Some((4.0, -3.0)));
+    }
+
+    #[test]
+    fn armed_node_drag_release_keeps_drag_commit_local() {
+        let view = PanZoom2D::default();
+        let drag = test_node_drag_state(NodeDragPhase::Armed, Point::new(Px(14.0), Px(0.0)));
+
+        assert_eq!(node_drag_commit_delta(view, &drag), None);
+    }
+
+    #[test]
+    fn build_marquee_preview_selected_nodes_non_toggle_uses_current_candidates() {
+        let (graph, geom, node_a, node_b) = test_marquee_geometry();
+        let spatial = crate::ui::canvas::CanvasSpatialDerived::build(&graph, &geom, 1.0, 0.0, 64.0);
+        let marquee = MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(0.0), Px(0.0)),
+            active: true,
+            toggle: false,
+            base_selected_nodes: Arc::from([node_b]),
+            preview_selected_nodes: Arc::from([]),
+        };
+        let rect = Rect::new(
+            Point::new(Px(-10.0), Px(-10.0)),
+            fret_core::Size::new(Px(120.0), Px(80.0)),
+        );
+
+        let preview = build_marquee_preview_selected_nodes(
+            &marquee,
+            rect,
+            crate::io::NodeGraphSelectionMode::Partial,
+            &geom,
+            &spatial,
+        );
+
+        assert_eq!(preview.as_ref(), &[node_a]);
+    }
+
+    #[test]
+    fn build_marquee_preview_selected_nodes_toggle_flips_against_base_selection() {
+        let (graph, geom, node_a, node_b) = test_marquee_geometry();
+        let spatial = crate::ui::canvas::CanvasSpatialDerived::build(&graph, &geom, 1.0, 0.0, 64.0);
+        let marquee = MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(0.0), Px(0.0)),
+            active: true,
+            toggle: true,
+            base_selected_nodes: Arc::from([node_a]),
+            preview_selected_nodes: Arc::from([]),
+        };
+        let rect = Rect::new(
+            Point::new(Px(-10.0), Px(-10.0)),
+            fret_core::Size::new(Px(260.0), Px(80.0)),
+        );
+
+        let preview = build_marquee_preview_selected_nodes(
+            &marquee,
+            rect,
+            crate::io::NodeGraphSelectionMode::Partial,
+            &geom,
+            &spatial,
+        );
+
+        assert_eq!(preview.as_ref(), &[node_b]);
+    }
+
+    #[test]
+    fn effective_selected_nodes_for_paint_prefers_active_marquee_preview() {
+        let node_a = NodeId::from_u128(9001);
+        let node_b = NodeId::from_u128(9002);
+        let node_c = NodeId::from_u128(9003);
+        let view_state = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            ..NodeGraphViewState::default()
+        };
+        let pending = PendingSelectionState {
+            nodes: Arc::from([node_b]),
+            clear_edges: true,
+            clear_groups: true,
+        };
+        let marquee = MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(10.0), Px(10.0)),
+            active: true,
+            toggle: false,
+            base_selected_nodes: Arc::from([]),
+            preview_selected_nodes: Arc::from([node_c]),
+        };
+
+        let effective =
+            effective_selected_nodes_for_paint(&view_state, Some(&marquee), Some(&pending));
+
+        assert_eq!(effective, vec![node_c]);
+    }
+
+    #[test]
+    fn effective_selected_nodes_for_paint_falls_back_from_inactive_marquee_to_pending_then_view() {
+        let node_a = NodeId::from_u128(9011);
+        let node_b = NodeId::from_u128(9012);
+        let view_state = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            ..NodeGraphViewState::default()
+        };
+        let pending = PendingSelectionState {
+            nodes: Arc::from([node_b]),
+            clear_edges: false,
+            clear_groups: false,
+        };
+        let inactive_marquee = MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(10.0), Px(10.0)),
+            active: false,
+            toggle: false,
+            base_selected_nodes: Arc::from([]),
+            preview_selected_nodes: Arc::from([NodeId::from_u128(9013)]),
+        };
+
+        let from_pending = effective_selected_nodes_for_paint(
+            &view_state,
+            Some(&inactive_marquee),
+            Some(&pending),
+        );
+        let from_view = effective_selected_nodes_for_paint(&view_state, None, None);
+
+        assert_eq!(from_pending, vec![node_b]);
+        assert_eq!(from_view, vec![node_a]);
+    }
+
+    #[test]
+    fn collect_portal_label_infos_for_visible_subset_uses_dragged_rect_for_visibility() {
+        let node = NodeId::from_u128(9101);
+        let mut graph = Graph::new(GraphId::from_u128(9100));
+        graph
+            .nodes
+            .insert(node, test_node(CanvasPoint { x: 200.0, y: 0.0 }));
+        let draws = vec![NodeRectDraw {
+            id: node,
+            rect: Rect::new(
+                Point::new(Px(200.0), Px(0.0)),
+                fret_core::Size::new(Px(40.0), Px(20.0)),
+            ),
+        }];
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(100.0), Px(100.0)),
+        );
+        let view = PanZoom2D::default();
+        let cull = Some(Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(100.0), Px(100.0)),
+        ));
+        let drag = NodeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(-160.0), Px(0.0)),
+            phase: NodeDragPhase::Active,
+            nodes_sorted: Arc::from([node]),
+        };
+
+        let infos = collect_portal_label_infos_for_visible_subset(
+            &graph,
+            Some(draws.as_slice()),
+            bounds,
+            view,
+            cull,
+            8,
+            Some(node),
+            &[node],
+            Some(&drag),
+        );
+
+        assert_eq!(infos.len(), 1);
+        assert_eq!(infos[0].id, node);
+        assert_eq!(infos[0].left, Px(40.0));
+        assert!(infos[0].selected);
+        assert!(infos[0].hovered);
+    }
+
+    #[test]
+    fn collect_portal_label_infos_for_visible_subset_respects_draw_order_and_cap() {
+        let node_a = NodeId::from_u128(9111);
+        let node_b = NodeId::from_u128(9112);
+        let node_c = NodeId::from_u128(9113);
+        let mut graph = Graph::new(GraphId::from_u128(9110));
+        graph
+            .nodes
+            .insert(node_a, test_node(CanvasPoint { x: 0.0, y: 0.0 }));
+        graph
+            .nodes
+            .insert(node_b, test_node(CanvasPoint { x: 10.0, y: 0.0 }));
+        graph
+            .nodes
+            .insert(node_c, test_node(CanvasPoint { x: 20.0, y: 0.0 }));
+        let draws = vec![
+            NodeRectDraw {
+                id: node_b,
+                rect: Rect::new(
+                    Point::new(Px(10.0), Px(0.0)),
+                    fret_core::Size::new(Px(20.0), Px(20.0)),
+                ),
+            },
+            NodeRectDraw {
+                id: node_a,
+                rect: Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    fret_core::Size::new(Px(20.0), Px(20.0)),
+                ),
+            },
+            NodeRectDraw {
+                id: node_c,
+                rect: Rect::new(
+                    Point::new(Px(20.0), Px(0.0)),
+                    fret_core::Size::new(Px(20.0), Px(20.0)),
+                ),
+            },
+        ];
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(200.0), Px(100.0)),
+        );
+
+        let infos = collect_portal_label_infos_for_visible_subset(
+            &graph,
+            Some(draws.as_slice()),
+            bounds,
+            PanZoom2D::default(),
+            None,
+            2,
+            None,
+            &[node_a],
+            None,
+        );
+
+        assert_eq!(
+            infos.iter().map(|info| info.id).collect::<Vec<_>>(),
+            vec![node_b, node_a]
+        );
+        assert!(!infos[0].selected);
+        assert!(infos[1].selected);
+    }
+
+    #[test]
+    fn sync_portal_canvas_bounds_in_models_ignores_epsilon_churn() {
+        let mut host = TestActionHostImpl::default();
+        let node = NodeId::from_u128(9121);
+        let portal_bounds = host.models.insert(PortalBoundsStore::default());
+        let initial = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            fret_core::Size::new(Px(30.0), Px(40.0)),
+        );
+        assert!(sync_portal_canvas_bounds_in_models(
+            &mut host.models,
+            &portal_bounds,
+            node,
+            initial,
+        ));
+
+        let near = Rect::new(
+            Point::new(Px(10.1), Px(20.1)),
+            fret_core::Size::new(Px(30.1), Px(40.1)),
+        );
+        assert!(!sync_portal_canvas_bounds_in_models(
+            &mut host.models,
+            &portal_bounds,
+            node,
+            near,
+        ));
+        assert!(sync_portal_canvas_bounds_in_models(
+            &mut host.models,
+            &portal_bounds,
+            node,
+            Rect::new(
+                Point::new(Px(12.0), Px(24.0)),
+                fret_core::Size::new(Px(30.0), Px(40.0)),
+            ),
+        ));
+    }
+
+    #[test]
+    fn sync_hover_anchor_store_in_models_tracks_dragged_hovered_node_rect() {
+        let mut models = ModelStore::default();
+        let hover_anchor = models.insert(HoverAnchorStore::default());
+        let node = NodeId::from_u128(9407);
+        let draws = vec![NodeRectDraw {
+            id: node,
+            rect: Rect::new(
+                Point::new(Px(10.0), Px(20.0)),
+                fret_core::Size::new(Px(120.0), Px(60.0)),
+            ),
+        }];
+        let drag = NodeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(40.0), Px(-20.0)),
+            phase: NodeDragPhase::Active,
+            nodes_sorted: Arc::from([node]),
+        };
+        let view = PanZoom2D {
+            pan: Point::new(Px(0.0), Px(0.0)),
+            zoom: 2.0,
+        };
+
+        assert!(sync_hover_anchor_store_in_models(
+            &mut models,
+            &hover_anchor,
+            Some(node),
+            Some(draws.as_slice()),
+            view,
+            Some(&drag),
+        ));
+
+        let stored = models.read(&hover_anchor, |st| st.clone()).unwrap();
+        assert_eq!(stored.hovered_id, Some(node));
+        assert_eq!(
+            stored.hovered_canvas_bounds,
+            Some(Rect::new(
+                Point::new(Px(30.0), Px(10.0)),
+                fret_core::Size::new(Px(120.0), Px(60.0)),
+            ))
+        );
+    }
+
+    #[test]
+    fn build_hover_tooltip_overlay_spec_flips_below_anchor_when_needed() {
+        let bounds = Rect::new(
+            Point::new(Px(100.0), Px(200.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        );
+        let spec = build_hover_tooltip_overlay_spec(
+            bounds,
+            NodeId::from_u128(9410),
+            super::hover_anchor::HoverTooltipAnchor {
+                origin_screen: Point::new(Px(120.0), Px(205.0)),
+                width_screen: Px(240.0),
+                source: HoverTooltipAnchorSource::PortalBoundsStore,
+            },
+            true,
+            Arc::<str>::from("node"),
+            2,
+            3,
+        )
+        .expect("spec");
+
+        assert_eq!(spec.left, Px(20.0));
+        assert_eq!(spec.top, Px(11.0));
+        assert_eq!(spec.width, Px(240.0));
+        assert!(spec.hide_label_summary);
+    }
+
+    #[test]
+    fn clamp_marquee_overlay_rect_to_bounds_clamps_and_rejects_empty_rects() {
+        let bounds = Rect::new(
+            Point::new(Px(100.0), Px(100.0)),
+            fret_core::Size::new(Px(200.0), Px(160.0)),
+        );
+        let clamped = clamp_marquee_overlay_rect_to_bounds(
+            bounds,
+            Rect::new(
+                Point::new(Px(50.0), Px(80.0)),
+                fret_core::Size::new(Px(180.0), Px(90.0)),
+            ),
+        )
+        .expect("clamped");
+        assert_eq!(
+            clamped,
+            Rect::new(
+                Point::new(Px(100.0), Px(100.0)),
+                fret_core::Size::new(Px(130.0), Px(70.0)),
+            )
+        );
+        assert_eq!(
+            clamp_marquee_overlay_rect_to_bounds(
+                bounds,
+                Rect::new(
+                    Point::new(Px(10.0), Px(10.0)),
+                    fret_core::Size::new(Px(20.0), Px(20.0)),
+                ),
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn resolve_hover_tooltip_anchor_prefers_dragged_portal_bounds_over_stale_hover_anchor() {
+        let node = NodeId::from_u128(9408);
+        let draws = vec![NodeRectDraw {
+            id: node,
+            rect: Rect::new(
+                Point::new(Px(10.0), Px(20.0)),
+                fret_core::Size::new(Px(120.0), Px(60.0)),
+            ),
+        }];
+        let drag = NodeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(40.0), Px(-20.0)),
+            phase: NodeDragPhase::Active,
+            nodes_sorted: Arc::from([node]),
+        };
+        let bounds = Rect::new(
+            Point::new(Px(100.0), Px(200.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        );
+        let view = PanZoom2D {
+            pan: Point::new(Px(0.0), Px(0.0)),
+            zoom: 2.0,
+        };
+        let dragged_portal =
+            hovered_canvas_anchor_rect_for_surface(node, Some(draws.as_slice()), view, Some(&drag))
+                .expect("dragged rect");
+        let stale_hover = draws[0].rect;
+
+        let anchor = resolve_hover_tooltip_anchor(
+            bounds,
+            view,
+            false,
+            Some(dragged_portal),
+            Some(stale_hover),
+        )
+        .expect("anchor resolved");
+
+        assert_eq!(anchor.source, HoverTooltipAnchorSource::PortalBoundsStore);
+        assert_eq!(
+            anchor.origin_screen,
+            view.canvas_to_screen(bounds, dragged_portal.origin)
+        );
+        assert_eq!(anchor.width_screen, Px(240.0));
+    }
+
+    #[test]
+    fn resolve_hover_tooltip_anchor_prefers_portal_bounds_when_available() {
+        let bounds = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        );
+        let view = PanZoom2D {
+            pan: Point::new(Px(0.0), Px(0.0)),
+            zoom: 2.0,
+        };
+        let portal = Rect::new(
+            Point::new(Px(30.0), Px(40.0)),
+            fret_core::Size::new(Px(120.0), Px(60.0)),
+        );
+        let hover = Rect::new(
+            Point::new(Px(100.0), Px(200.0)),
+            fret_core::Size::new(Px(80.0), Px(50.0)),
+        );
+
+        let anchor = resolve_hover_tooltip_anchor(bounds, view, false, Some(portal), Some(hover))
+            .expect("anchor resolved");
+
+        assert_eq!(anchor.source, HoverTooltipAnchorSource::PortalBoundsStore);
+        assert_eq!(
+            anchor.origin_screen,
+            view.canvas_to_screen(bounds, portal.origin)
+        );
+        assert_eq!(anchor.width_screen, Px(240.0));
+    }
+
+    #[test]
+    fn resolve_hover_tooltip_anchor_falls_back_to_hover_anchor_when_portals_disabled() {
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(640.0), Px(480.0)),
+        );
+        let view = PanZoom2D {
+            pan: Point::new(Px(16.0), Px(-8.0)),
+            zoom: 1.5,
+        };
+        let portal = Rect::new(
+            Point::new(Px(30.0), Px(40.0)),
+            fret_core::Size::new(Px(120.0), Px(60.0)),
+        );
+        let hover = Rect::new(
+            Point::new(Px(22.0), Px(18.0)),
+            fret_core::Size::new(Px(40.0), Px(30.0)),
+        );
+
+        let anchor = resolve_hover_tooltip_anchor(bounds, view, true, Some(portal), Some(hover))
+            .expect("anchor resolved");
+
+        assert_eq!(anchor.source, HoverTooltipAnchorSource::HoverAnchorStore);
+        assert_eq!(
+            anchor.origin_screen,
+            view.canvas_to_screen(bounds, hover.origin)
+        );
+        assert_eq!(anchor.width_screen, Px(60.0));
+    }
+
+    #[test]
+    fn resolve_hover_tooltip_anchor_rejects_non_positive_width() {
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(640.0), Px(480.0)),
+        );
+        let view = PanZoom2D::default();
+        let hover = Rect::new(
+            Point::new(Px(22.0), Px(18.0)),
+            fret_core::Size::new(Px(0.0), Px(30.0)),
+        );
+
+        assert_eq!(
+            resolve_hover_tooltip_anchor(bounds, view, true, None, Some(hover)),
+            None
+        );
+    }
+
+    #[test]
+    fn derived_geometry_cache_key_changes_when_presenter_revision_changes() {
+        let node = NodeId::from_u128(9401);
+        let view_state = NodeGraphViewState {
+            draw_order: vec![node],
+            ..NodeGraphViewState::default()
+        };
+        let interaction = view_state.resolved_interaction_state();
+        let style = crate::ui::style::NodeGraphStyle::default();
+
+        let derived_a = derived_geometry_cache_key(
+            91,
+            view_state.zoom,
+            view_state.interaction.node_origin,
+            &view_state.draw_order,
+            &interaction,
+            &style,
+            7,
+            0,
+            0.0,
+        );
+        let derived_b = derived_geometry_cache_key(
+            91,
+            view_state.zoom,
+            view_state.interaction.node_origin,
+            &view_state.draw_order,
+            &interaction,
+            &style,
+            8,
+            0,
+            0.0,
+        );
+
+        assert_ne!(derived_a, derived_b);
+    }
+
+    #[test]
+    fn record_portal_measured_node_size_in_state_ignores_epsilon_churn() {
+        let mut models = ModelStore::default();
+        let state = models.insert(PortalMeasuredGeometryState::default());
+        let node = NodeId::from_u128(9402);
+
+        assert!(record_portal_measured_node_size_in_state(
+            &mut models,
+            &state,
+            node,
+            (200.0, 120.0),
+        ));
+        assert!(!record_portal_measured_node_size_in_state(
+            &mut models,
+            &state,
+            node,
+            (
+                200.0 + MEASURED_GEOMETRY_EPSILON_PX * 0.5,
+                120.0 + MEASURED_GEOMETRY_EPSILON_PX * 0.5,
+            ),
+        ));
+        assert!(record_portal_measured_node_size_in_state(
+            &mut models,
+            &state,
+            node,
+            (
+                200.0 + MEASURED_GEOMETRY_EPSILON_PX * 2.0,
+                120.0 + MEASURED_GEOMETRY_EPSILON_PX * 2.0,
+            ),
+        ));
+
+        let pending = models
+            .read(&state, |st| st.pending_node_sizes_px.get(&node).copied())
+            .unwrap();
+        assert_eq!(
+            pending,
+            Some((
+                200.0 + MEASURED_GEOMETRY_EPSILON_PX * 2.0,
+                120.0 + MEASURED_GEOMETRY_EPSILON_PX * 2.0,
+            ))
+        );
+    }
+
+    #[test]
+    fn flush_portal_measured_geometry_state_publishes_pending_node_size_to_store() {
+        let mut graph = Graph::new(GraphId::from_u128(9403));
+        let node = NodeId::from_u128(9404);
+        graph
+            .nodes
+            .insert(node, test_node(CanvasPoint { x: 0.0, y: 0.0 }));
+
+        let measured = MeasuredGeometryStore::new();
+        let initial_revision = measured.revision();
+        let mut state = PortalMeasuredGeometryState::default();
+        state.pending_node_sizes_px.insert(node, (320.0, 180.0));
+
+        let outcome = flush_portal_measured_geometry_state(
+            &graph,
+            &crate::ui::style::NodeGraphStyle::default(),
+            &measured,
+            &mut state,
+        );
+
+        assert!(outcome.store_changed);
+        assert!(outcome.state_changed);
+        assert!(measured.revision() > initial_revision);
+        assert_eq!(measured.node_size_px(node), Some((320.0, 180.0)));
+        assert_eq!(state.published_nodes, vec![node]);
+        assert!(state.pending_node_sizes_px.is_empty());
+    }
+
+    #[test]
+    fn flush_portal_measured_geometry_state_skips_explicit_size_nodes() {
+        let mut graph = Graph::new(GraphId::from_u128(9405));
+        let node = NodeId::from_u128(9406);
+        let mut value = test_node(CanvasPoint { x: 0.0, y: 0.0 });
+        value.size = Some(CanvasSize {
+            width: 160.0,
+            height: 90.0,
+        });
+        graph.nodes.insert(node, value);
+
+        let measured = MeasuredGeometryStore::new();
+        let initial_revision = measured.revision();
+        let mut state = PortalMeasuredGeometryState::default();
+        state.pending_node_sizes_px.insert(node, (320.0, 180.0));
+
+        let outcome = flush_portal_measured_geometry_state(
+            &graph,
+            &crate::ui::style::NodeGraphStyle::default(),
+            &measured,
+            &mut state,
+        );
+
+        assert!(!outcome.store_changed);
+        assert!(outcome.state_changed);
+        assert_eq!(measured.revision(), initial_revision);
+        assert_eq!(measured.node_size_px(node), None);
+        assert!(state.published_nodes.is_empty());
+        assert!(state.pending_node_sizes_px.is_empty());
+    }
+
+    #[test]
+    fn authoritative_selection_changes_keep_paint_cache_keys_stable() {
+        let node_a = NodeId::from_u128(9014);
+        let node_b = NodeId::from_u128(9015);
+        let edge = EdgeId::from_u128(9016);
+        let group = GroupId::from_u128(9017);
+        let base_view = NodeGraphViewState {
+            pan: CanvasPoint { x: 120.0, y: -48.0 },
+            zoom: 1.75,
+            selected_nodes: vec![node_a],
+            selected_edges: vec![edge],
+            selected_groups: vec![group],
+            draw_order: vec![node_a, node_b],
+            ..NodeGraphViewState::default()
+        };
+        let selection_only_view = NodeGraphViewState {
+            selected_nodes: vec![node_b],
+            selected_edges: Vec::new(),
+            selected_groups: Vec::new(),
+            ..base_view.clone()
+        };
+        let style = crate::ui::style::NodeGraphStyle::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(1280.0), Px(720.0)),
+        );
+        let graph_rev = 41;
+
+        let grid_a = grid_cache_key(bounds, view_from_state(&base_view), &style);
+        let grid_b = grid_cache_key(bounds, view_from_state(&selection_only_view), &style);
+        let interaction_a = base_view.resolved_interaction_state();
+        let interaction_b = selection_only_view.resolved_interaction_state();
+        let derived_a = derived_geometry_cache_key(
+            graph_rev,
+            base_view.zoom,
+            base_view.interaction.node_origin,
+            &base_view.draw_order,
+            &interaction_a,
+            &style,
+            0,
+            0,
+            0.0,
+        );
+        let derived_b = derived_geometry_cache_key(
+            graph_rev,
+            selection_only_view.zoom,
+            selection_only_view.interaction.node_origin,
+            &selection_only_view.draw_order,
+            &interaction_b,
+            &style,
+            0,
+            0,
+            0.0,
+        );
+        let draw_order_hash_a = stable_hash_u64(2, &base_view.draw_order);
+        let draw_order_hash_b = stable_hash_u64(2, &selection_only_view.draw_order);
+        let nodes_a = nodes_cache_key(
+            graph_rev,
+            base_view.zoom,
+            base_view.interaction.node_origin,
+            draw_order_hash_a,
+            derived_a.0,
+        );
+        let nodes_b = nodes_cache_key(
+            graph_rev,
+            selection_only_view.zoom,
+            selection_only_view.interaction.node_origin,
+            draw_order_hash_b,
+            derived_b.0,
+        );
+        let edges_a = edges_cache_key(
+            graph_rev,
+            base_view.zoom,
+            base_view.interaction.node_origin,
+            draw_order_hash_a,
+            derived_a.0,
+        );
+        let edges_b = edges_cache_key(
+            graph_rev,
+            selection_only_view.zoom,
+            selection_only_view.interaction.node_origin,
+            draw_order_hash_b,
+            derived_b.0,
+        );
+
+        assert_eq!(grid_a, grid_b);
+        assert_eq!(derived_a, derived_b);
+        assert_eq!(nodes_a, nodes_b);
+        assert_eq!(edges_a, edges_b);
+    }
+
+    #[test]
+    fn authoritative_graph_replacement_invalidates_only_graph_dependent_paint_cache_keys() {
+        let node_a = NodeId::from_u128(9018);
+        let node_b = NodeId::from_u128(9019);
+        let view_state = NodeGraphViewState {
+            pan: CanvasPoint { x: -96.0, y: 24.0 },
+            zoom: 0.85,
+            draw_order: vec![node_a, node_b],
+            ..NodeGraphViewState::default()
+        };
+        let style = crate::ui::style::NodeGraphStyle::default();
+        let bounds = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            fret_core::Size::new(Px(1024.0), Px(768.0)),
+        );
+        let interaction = view_state.resolved_interaction_state();
+        let draw_order_hash = stable_hash_u64(2, &view_state.draw_order);
+
+        let grid_before = grid_cache_key(bounds, view_from_state(&view_state), &style);
+        let derived_before = derived_geometry_cache_key(
+            73,
+            view_state.zoom,
+            view_state.interaction.node_origin,
+            &view_state.draw_order,
+            &interaction,
+            &style,
+            0,
+            0,
+            0.0,
+        );
+        let nodes_before = nodes_cache_key(
+            73,
+            view_state.zoom,
+            view_state.interaction.node_origin,
+            draw_order_hash,
+            derived_before.0,
+        );
+        let edges_before = edges_cache_key(
+            73,
+            view_state.zoom,
+            view_state.interaction.node_origin,
+            draw_order_hash,
+            derived_before.0,
+        );
+
+        let grid_after = grid_cache_key(bounds, view_from_state(&view_state), &style);
+        let derived_after = derived_geometry_cache_key(
+            74,
+            view_state.zoom,
+            view_state.interaction.node_origin,
+            &view_state.draw_order,
+            &interaction,
+            &style,
+            0,
+            0,
+            0.0,
+        );
+        let nodes_after = nodes_cache_key(
+            74,
+            view_state.zoom,
+            view_state.interaction.node_origin,
+            draw_order_hash,
+            derived_after.0,
+        );
+        let edges_after = edges_cache_key(
+            74,
+            view_state.zoom,
+            view_state.interaction.node_origin,
+            draw_order_hash,
+            derived_after.0,
+        );
+
+        assert_eq!(grid_before, grid_after);
+        assert_ne!(derived_before, derived_after);
+        assert_ne!(nodes_before, nodes_after);
+        assert_ne!(edges_before, edges_after);
+    }
+
+    #[test]
+    fn sync_authoritative_surface_boundary_in_models_clears_graph_scoped_transients_on_graph_change()
+     {
+        let mut host = TestActionHostImpl::default();
+        let node_a = NodeId::from_u128(9021);
+        let node_b = NodeId::from_u128(9022);
+        let previous_view = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            ..NodeGraphViewState::default()
+        };
+        let boundary = host
+            .models
+            .insert(Some(authoritative_surface_boundary_snapshot(
+                GraphId::from_u128(9020),
+                3,
+                &previous_view,
+            )));
+        let drag = host.models.insert(Some(DragState {
+            button: MouseButton::Middle,
+            last_pos: Point::new(Px(3.0), Px(4.0)),
+        }));
+        let marquee = host.models.insert(Some(MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(8.0), Px(8.0)),
+            active: true,
+            toggle: false,
+            base_selected_nodes: Arc::from([]),
+            preview_selected_nodes: Arc::from([node_a]),
+        }));
+        let node_drag = host.models.insert(Some(test_node_drag_state(
+            NodeDragPhase::Active,
+            Point::new(Px(16.0), Px(0.0)),
+        )));
+        let pending = host.models.insert(Some(PendingSelectionState {
+            nodes: Arc::from([node_b]),
+            clear_edges: false,
+            clear_groups: false,
+        }));
+        let hovered = host.models.insert(Some(node_a));
+        let hover_anchor = host.models.insert(HoverAnchorStore {
+            hovered_id: Some(node_a),
+            hovered_canvas_bounds: Some(Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                fret_core::Size::new(Px(100.0), Px(40.0)),
+            )),
+        });
+        let mut portal_bounds_state = PortalBoundsStore::default();
+        portal_bounds_state.fit_to_portals_count = 7;
+        portal_bounds_state.pending_fit_to_portals = true;
+        portal_bounds_state.nodes_canvas_bounds.insert(
+            node_a,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                fret_core::Size::new(Px(20.0), Px(20.0)),
+            ),
+        );
+        let portal_bounds = host.models.insert(portal_bounds_state);
+
+        let next_view = NodeGraphViewState {
+            selected_nodes: vec![node_b],
+            ..NodeGraphViewState::default()
+        };
+
+        assert!(sync_authoritative_surface_boundary_in_models(
+            &mut host.models,
+            &boundary,
+            authoritative_surface_boundary_snapshot(GraphId::from_u128(9020), 4, &next_view),
+            &drag,
+            &marquee,
+            &node_drag,
+            &pending,
+            &hovered,
+            &hover_anchor,
+            &portal_bounds,
+        ));
+        assert!(
+            host.models
+                .read(&drag, |state| state.is_none())
+                .expect("drag readable")
+        );
+        assert!(
+            host.models
+                .read(&marquee, |state| state.is_none())
+                .expect("marquee readable")
+        );
+        assert!(
+            host.models
+                .read(&node_drag, |state| state.is_none())
+                .expect("node drag readable")
+        );
+        assert!(
+            host.models
+                .read(&pending, |state| state.is_none())
+                .expect("pending readable")
+        );
+        assert!(
+            host.models
+                .read(&hovered, |state| state.is_none())
+                .expect("hovered readable")
+        );
+        host.models
+            .read(&hover_anchor, |state| {
+                assert_eq!(state.hovered_id, None);
+                assert_eq!(state.hovered_canvas_bounds, None);
+            })
+            .expect("hover anchor readable");
+        host.models
+            .read(&portal_bounds, |state| {
+                assert_eq!(state.fit_to_portals_count, 7);
+                assert!(!state.pending_fit_to_portals);
+                assert!(state.nodes_canvas_bounds.is_empty());
+            })
+            .expect("portal bounds readable");
+    }
+
+    #[test]
+    fn sync_authoritative_surface_boundary_in_models_keeps_pan_and_hover_on_selection_only_change()
+    {
+        let mut host = TestActionHostImpl::default();
+        let node_a = NodeId::from_u128(9031);
+        let node_b = NodeId::from_u128(9032);
+        let previous_view = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            ..NodeGraphViewState::default()
+        };
+        let boundary = host
+            .models
+            .insert(Some(AuthoritativeSurfaceBoundarySnapshot {
+                graph_id: GraphId::from_u128(9030),
+                graph_rev: 9,
+                selected_nodes_hash: stable_hash_u64(17, &previous_view.selected_nodes),
+                selected_edges_hash: stable_hash_u64(19, &previous_view.selected_edges),
+                selected_groups_hash: stable_hash_u64(23, &previous_view.selected_groups),
+            }));
+        let drag = host.models.insert(Some(DragState {
+            button: MouseButton::Middle,
+            last_pos: Point::new(Px(11.0), Px(12.0)),
+        }));
+        let marquee = host.models.insert(Some(MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(8.0), Px(8.0)),
+            active: true,
+            toggle: false,
+            base_selected_nodes: Arc::from([node_a]),
+            preview_selected_nodes: Arc::from([node_b]),
+        }));
+        let node_drag = host.models.insert(Some(test_node_drag_state(
+            NodeDragPhase::Armed,
+            Point::new(Px(5.0), Px(0.0)),
+        )));
+        let pending = host.models.insert(Some(PendingSelectionState {
+            nodes: Arc::from([node_b]),
+            clear_edges: false,
+            clear_groups: false,
+        }));
+        let hovered = host.models.insert(Some(node_a));
+        let hover_bounds = Rect::new(
+            Point::new(Px(10.0), Px(10.0)),
+            fret_core::Size::new(Px(40.0), Px(20.0)),
+        );
+        let hover_anchor = host.models.insert(HoverAnchorStore {
+            hovered_id: Some(node_a),
+            hovered_canvas_bounds: Some(hover_bounds),
+        });
+        let mut portal_bounds_state = PortalBoundsStore::default();
+        portal_bounds_state.fit_to_portals_count = 5;
+        portal_bounds_state.pending_fit_to_portals = true;
+        portal_bounds_state
+            .nodes_canvas_bounds
+            .insert(node_a, hover_bounds);
+        let portal_bounds = host.models.insert(portal_bounds_state);
+
+        let next_view = NodeGraphViewState {
+            selected_nodes: vec![node_b],
+            ..NodeGraphViewState::default()
+        };
+
+        assert!(sync_authoritative_surface_boundary_in_models(
+            &mut host.models,
+            &boundary,
+            authoritative_surface_boundary_snapshot(GraphId::from_u128(9030), 9, &next_view),
+            &drag,
+            &marquee,
+            &node_drag,
+            &pending,
+            &hovered,
+            &hover_anchor,
+            &portal_bounds,
+        ));
+        assert!(
+            host.models
+                .read(&drag, |state| state.is_some())
+                .expect("drag readable")
+        );
+        assert!(
+            host.models
+                .read(&marquee, |state| state.is_none())
+                .expect("marquee readable")
+        );
+        assert!(
+            host.models
+                .read(&node_drag, |state| state.is_none())
+                .expect("node drag readable")
+        );
+        assert!(
+            host.models
+                .read(&pending, |state| state.is_none())
+                .expect("pending readable")
+        );
+        assert_eq!(
+            host.models
+                .read(&hovered, |state| *state)
+                .expect("hovered readable"),
+            Some(node_a)
+        );
+        host.models
+            .read(&hover_anchor, |state| {
+                assert_eq!(state.hovered_id, Some(node_a));
+                assert_eq!(state.hovered_canvas_bounds, Some(hover_bounds));
+            })
+            .expect("hover anchor readable");
+        host.models
+            .read(&portal_bounds, |state| {
+                assert_eq!(state.fit_to_portals_count, 5);
+                assert!(state.pending_fit_to_portals);
+                assert_eq!(state.nodes_canvas_bounds.get(&node_a), Some(&hover_bounds));
+            })
+            .expect("portal bounds readable");
+    }
+
+    #[test]
+    fn commit_marquee_selection_action_host_clears_edges_and_groups_for_non_toggle() {
+        let mut host = TestActionHostImpl::default();
+        let node_a = NodeId::from_u128(9201);
+        let node_b = NodeId::from_u128(9202);
+        let edge = EdgeId::new();
+        let group = GroupId::new();
+        let view_value = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            selected_edges: vec![edge],
+            selected_groups: vec![group],
+            ..Default::default()
+        };
+        let view_state = host.models.insert(view_value.clone());
+        let mut graph_value = Graph::new(GraphId::from_u128(9201));
+        let from_port = PortId::new();
+        let to_port = PortId::new();
+        let mut node_a_value = test_node(CanvasPoint { x: 0.0, y: 0.0 });
+        node_a_value.ports = vec![from_port];
+        let mut node_b_value = test_node(CanvasPoint { x: 40.0, y: 20.0 });
+        node_b_value.ports = vec![to_port];
+        graph_value.nodes.insert(node_a, node_a_value);
+        graph_value.nodes.insert(node_b, node_b_value);
+        graph_value.ports.insert(
+            from_port,
+            Port {
+                node: node_a,
+                key: PortKey::new("out"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+        graph_value.ports.insert(
+            to_port,
+            Port {
+                node: node_b,
+                key: PortKey::new("in"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+        graph_value.edges.insert(
+            edge,
+            Edge {
+                kind: EdgeKind::Data,
+                from: from_port,
+                to: to_port,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+        graph_value.groups.insert(
+            group,
+            Group {
+                title: "test group".into(),
+                rect: CanvasRect {
+                    origin: CanvasPoint { x: 0.0, y: 0.0 },
+                    size: CanvasSize {
+                        width: 1.0,
+                        height: 1.0,
+                    },
+                },
+                color: None,
+            },
+        );
+        let store = host
+            .models
+            .insert(NodeGraphStore::new(graph_value, view_value));
+        let controller = NodeGraphController::new(store);
+        let marquee = MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(0.0), Px(0.0)),
+            active: true,
+            toggle: false,
+            base_selected_nodes: Arc::from([node_a]),
+            preview_selected_nodes: Arc::from([node_b]),
+        };
+
+        assert!(commit_marquee_selection_action_host(
+            &mut host,
+            &view_state,
+            &controller,
+            &marquee,
+        ));
+
+        let selection = host
+            .models
+            .read(&view_state, |state| {
+                (
+                    state.selected_nodes.clone(),
+                    state.selected_edges.clone(),
+                    state.selected_groups.clone(),
+                )
+            })
+            .expect("read view state");
+        assert_eq!(selection.0, vec![node_b]);
+        assert!(selection.1.is_empty());
+        assert!(selection.2.is_empty());
+    }
+
+    #[test]
+    fn commit_marquee_selection_action_host_preserves_edges_and_groups_for_toggle() {
+        let mut host = TestActionHostImpl::default();
+        let node_a = NodeId::from_u128(9301);
+        let node_b = NodeId::from_u128(9302);
+        let edge = EdgeId::new();
+        let group = GroupId::new();
+        let view_value = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            selected_edges: vec![edge],
+            selected_groups: vec![group],
+            ..Default::default()
+        };
+        let view_state = host.models.insert(view_value.clone());
+        let mut graph_value = Graph::new(GraphId::from_u128(9301));
+        let from_port = PortId::new();
+        let to_port = PortId::new();
+        let mut node_a_value = test_node(CanvasPoint { x: 0.0, y: 0.0 });
+        node_a_value.ports = vec![from_port];
+        let mut node_b_value = test_node(CanvasPoint { x: 40.0, y: 20.0 });
+        node_b_value.ports = vec![to_port];
+        graph_value.nodes.insert(node_a, node_a_value);
+        graph_value.nodes.insert(node_b, node_b_value);
+        graph_value.ports.insert(
+            from_port,
+            Port {
+                node: node_a,
+                key: PortKey::new("out"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+        graph_value.ports.insert(
+            to_port,
+            Port {
+                node: node_b,
+                key: PortKey::new("in"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+        graph_value.edges.insert(
+            edge,
+            Edge {
+                kind: EdgeKind::Data,
+                from: from_port,
+                to: to_port,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+        graph_value.groups.insert(
+            group,
+            Group {
+                title: "test group".into(),
+                rect: CanvasRect {
+                    origin: CanvasPoint { x: 0.0, y: 0.0 },
+                    size: CanvasSize {
+                        width: 1.0,
+                        height: 1.0,
+                    },
+                },
+                color: None,
+            },
+        );
+        let store = host
+            .models
+            .insert(NodeGraphStore::new(graph_value, view_value));
+        let controller = NodeGraphController::new(store);
+        let marquee = MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(0.0), Px(0.0)),
+            active: true,
+            toggle: true,
+            base_selected_nodes: Arc::from([node_a]),
+            preview_selected_nodes: Arc::from([node_b]),
+        };
+
+        assert!(commit_marquee_selection_action_host(
+            &mut host,
+            &view_state,
+            &controller,
+            &marquee,
+        ));
+
+        let selection = host
+            .models
+            .read(&view_state, |state| {
+                (
+                    state.selected_nodes.clone(),
+                    state.selected_edges.clone(),
+                    state.selected_groups.clone(),
+                )
+            })
+            .expect("read view state");
+        assert_eq!(selection.0, vec![node_b]);
+        assert_eq!(selection.1, vec![edge]);
+        assert_eq!(selection.2, vec![group]);
+    }
 }

@@ -12,9 +12,12 @@ use crate::core::{
     CanvasPoint, CanvasSize, Graph, GraphId, Node, NodeId, NodeKindKey, Symbol, SymbolId,
 };
 use crate::core::{SYMBOL_REF_NODE_KIND, symbol_ref_node_data};
+use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphTransaction};
+use crate::runtime::store::NodeGraphStore;
+use crate::ui::edit_queue::NodeGraphEditQueue;
 use crate::ui::{
-    NodeGraphBlackboardOverlay, NodeGraphEditQueue, NodeGraphEditor, NodeGraphOverlayHost,
+    NodeGraphBlackboardOverlay, NodeGraphController, NodeGraphEditor, NodeGraphOverlayHost,
     NodeGraphOverlayState, NodeGraphStyle,
 };
 
@@ -66,14 +69,13 @@ fn blackboard_overlay_is_hit_test_transparent_outside_panel() {
     ui.set_window(AppWindowId::default());
 
     let (graph, view) = insert_graph_view(&mut host, Graph::new(GraphId::new()));
-    let edits = host.models.insert(NodeGraphEditQueue::default());
     let overlays = host.models.insert(NodeGraphOverlayState::default());
     let style = NodeGraphStyle::default();
 
     let underlay_downs = Arc::new(AtomicUsize::new(0));
     let underlay = ui.create_node_retained(PointerDownCounter::new(underlay_downs.clone()));
 
-    let overlay = NodeGraphBlackboardOverlay::new(graph, view, edits, overlays, underlay, style);
+    let overlay = NodeGraphBlackboardOverlay::new(graph, view, overlays, underlay, style);
     let overlay_node = ui.create_node_retained(overlay);
 
     let editor = ui.create_node_retained(NodeGraphEditor::new());
@@ -111,8 +113,8 @@ fn blackboard_overlay_enter_defaults_to_add_symbol_when_focused() {
     let style = NodeGraphStyle::default();
 
     let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
-    let overlay =
-        NodeGraphBlackboardOverlay::new(graph, view, edits.clone(), overlays, underlay, style);
+    let overlay = NodeGraphBlackboardOverlay::new(graph, view, overlays, underlay, style)
+        .with_edit_queue(edits.clone());
     let overlay_node = ui.create_node_retained(overlay);
 
     let editor = ui.create_node_retained(NodeGraphEditor::new());
@@ -141,6 +143,97 @@ fn blackboard_overlay_enter_defaults_to_add_symbol_when_focused() {
     assert!(
         matches!(&pending[0].ops[0], GraphOp::AddSymbol { .. }),
         "expected AddSymbol op"
+    );
+}
+
+#[test]
+fn blackboard_add_symbol_prefers_controller_over_raw_edit_queue() {
+    let mut host = TestUiHostImpl::default();
+    let mut services = NullServices::default();
+    let mut ui = UiTree::<TestUiHostImpl>::default();
+    ui.set_window(AppWindowId::default());
+
+    let graph_value = Graph::new(GraphId::new());
+    let (graph, view) = insert_graph_view(&mut host, graph_value.clone());
+    let store = host.models.insert(NodeGraphStore::new(
+        graph_value,
+        NodeGraphViewState::default(),
+    ));
+    let edits = host.models.insert(NodeGraphEditQueue::default());
+    let overlays = host.models.insert(NodeGraphOverlayState::default());
+    let controller = NodeGraphController::new(store.clone());
+    let style = NodeGraphStyle::default();
+
+    let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
+    let overlay = NodeGraphBlackboardOverlay::new(graph.clone(), view, overlays, underlay, style)
+        .with_edit_queue(edits.clone())
+        .with_controller(controller);
+    let overlay_node = ui.create_node_retained(overlay);
+
+    let editor = ui.create_node_retained(NodeGraphEditor::new());
+    ui.set_children(editor, vec![underlay, overlay_node]);
+    ui.set_root(editor);
+    ui.layout_all(&mut host, &mut services, bounds(), 1.0);
+
+    ui.set_focus(Some(overlay_node));
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::KeyDown {
+            key: fret_core::KeyCode::Enter,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    let queued = edits
+        .read_ref(&host, |q| q.pending.clone())
+        .ok()
+        .unwrap_or_default();
+    assert!(
+        queued.is_empty(),
+        "expected controller-first path to avoid pushing into the raw edit queue"
+    );
+
+    let graph_symbols = graph
+        .read_ref(&host, |g| g.symbols.clone())
+        .ok()
+        .unwrap_or_default();
+    assert_eq!(
+        graph_symbols.len(),
+        1,
+        "expected synced graph model to include the new symbol"
+    );
+    let added_symbol = graph_symbols
+        .values()
+        .next()
+        .expect("expected one symbol after controller-backed add");
+    assert_eq!(added_symbol.name, "Symbol");
+
+    let store_symbols = store
+        .read_ref(&host, |store| store.graph().symbols.clone())
+        .ok()
+        .unwrap_or_default();
+    assert_eq!(
+        store_symbols.len(),
+        graph_symbols.len(),
+        "expected controller-backed add to update the store"
+    );
+    let (store_symbol_id, store_symbol) = store_symbols
+        .iter()
+        .next()
+        .expect("expected store to contain the new symbol");
+    let (graph_symbol_id, graph_symbol) = graph_symbols
+        .iter()
+        .next()
+        .expect("expected graph model to contain the new symbol");
+    assert_eq!(
+        store_symbol_id, graph_symbol_id,
+        "expected controller-backed add to keep store and graph symbol ids aligned"
+    );
+    assert_eq!(
+        store_symbol.name, graph_symbol.name,
+        "expected controller-backed add to sync the symbol payload back into the retained graph model"
     );
 }
 
@@ -177,8 +270,8 @@ fn blackboard_overlay_can_insert_symbol_ref_for_selected_symbol() {
     });
 
     let canvas = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
-    let overlay =
-        NodeGraphBlackboardOverlay::new(graph, view, edits.clone(), overlays, canvas, style);
+    let overlay = NodeGraphBlackboardOverlay::new(graph, view, overlays, canvas, style)
+        .with_edit_queue(edits.clone());
     let overlay_node = ui.create_node_retained(overlay);
 
     let editor = ui.create_node_retained(NodeGraphEditor::new());
@@ -291,8 +384,8 @@ fn blackboard_overlay_delete_removes_symbol_ref_nodes_before_removing_symbol() {
     });
 
     let canvas = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
-    let overlay =
-        NodeGraphBlackboardOverlay::new(graph, view, edits.clone(), overlays, canvas, style);
+    let overlay = NodeGraphBlackboardOverlay::new(graph, view, overlays, canvas, style)
+        .with_edit_queue(edits.clone());
     let overlay_node = ui.create_node_retained(overlay);
 
     let editor = ui.create_node_retained(NodeGraphEditor::new());
@@ -379,21 +472,15 @@ fn blackboard_overlay_rename_action_opens_symbol_rename_overlay() {
     let blackboard = NodeGraphBlackboardOverlay::new(
         graph.clone(),
         view,
-        edits.clone(),
         overlays.clone(),
         canvas,
         style.clone(),
     );
     let blackboard_node = ui.create_node_retained(blackboard);
 
-    let overlay_host = NodeGraphOverlayHost::new(
-        graph,
-        edits.clone(),
-        overlays.clone(),
-        rename_text,
-        canvas,
-        style,
-    );
+    let overlay_host =
+        NodeGraphOverlayHost::new(graph, overlays.clone(), rename_text, canvas, style)
+            .with_edit_queue(edits.clone());
     let overlay_host_node = ui.create_node_retained(overlay_host);
     let overlay_child =
         ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
@@ -488,21 +575,15 @@ fn blackboard_overlay_rename_action_then_enter_commits_symbol_rename() {
     let blackboard = NodeGraphBlackboardOverlay::new(
         graph.clone(),
         view,
-        edits.clone(),
         overlays.clone(),
         canvas,
         style.clone(),
     );
     let blackboard_node = ui.create_node_retained(blackboard);
 
-    let overlay_host = NodeGraphOverlayHost::new(
-        graph,
-        edits.clone(),
-        overlays.clone(),
-        rename_text.clone(),
-        canvas,
-        style,
-    );
+    let overlay_host =
+        NodeGraphOverlayHost::new(graph, overlays.clone(), rename_text.clone(), canvas, style)
+            .with_edit_queue(edits.clone());
     let overlay_host_node = ui.create_node_retained(overlay_host);
     let overlay_child =
         ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
@@ -629,21 +710,15 @@ fn blackboard_overlay_rename_action_then_escape_cancels_without_transaction() {
     let blackboard = NodeGraphBlackboardOverlay::new(
         graph.clone(),
         view,
-        edits.clone(),
         overlays.clone(),
         canvas,
         style.clone(),
     );
     let blackboard_node = ui.create_node_retained(blackboard);
 
-    let overlay_host = NodeGraphOverlayHost::new(
-        graph,
-        edits.clone(),
-        overlays.clone(),
-        rename_text.clone(),
-        canvas,
-        style,
-    );
+    let overlay_host =
+        NodeGraphOverlayHost::new(graph, overlays.clone(), rename_text.clone(), canvas, style)
+            .with_edit_queue(edits.clone());
     let overlay_host_node = ui.create_node_retained(overlay_host);
     let overlay_child =
         ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
@@ -764,21 +839,15 @@ fn blackboard_overlay_rename_action_then_enter_unchanged_closes_without_transact
     let blackboard = NodeGraphBlackboardOverlay::new(
         graph.clone(),
         view,
-        edits.clone(),
         overlays.clone(),
         canvas,
         style.clone(),
     );
     let blackboard_node = ui.create_node_retained(blackboard);
 
-    let overlay_host = NodeGraphOverlayHost::new(
-        graph,
-        edits.clone(),
-        overlays.clone(),
-        rename_text,
-        canvas,
-        style,
-    );
+    let overlay_host =
+        NodeGraphOverlayHost::new(graph, overlays.clone(), rename_text, canvas, style)
+            .with_edit_queue(edits.clone());
     let overlay_host_node = ui.create_node_retained(overlay_host);
     let overlay_child =
         ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));

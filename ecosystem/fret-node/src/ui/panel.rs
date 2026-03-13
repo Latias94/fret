@@ -8,6 +8,8 @@ use fret_core::{Point, Px, Rect, Size};
 use fret_ui::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 use fret_ui::{UiHost, retained_bridge::*};
 
+use crate::ui::screen_space_placement::{AxisAlign, rect_in_bounds};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NodeGraphPanelPosition {
     TopLeft,
@@ -32,6 +34,20 @@ pub enum NodeGraphPanelSize {
     Fill,
     /// Fixed size in window-space logical pixels.
     Fixed(Size),
+}
+
+fn panel_position_alignments(position: NodeGraphPanelPosition) -> (AxisAlign, AxisAlign) {
+    match position {
+        NodeGraphPanelPosition::TopLeft => (AxisAlign::Start, AxisAlign::Start),
+        NodeGraphPanelPosition::TopCenter => (AxisAlign::Center, AxisAlign::Start),
+        NodeGraphPanelPosition::TopRight => (AxisAlign::End, AxisAlign::Start),
+        NodeGraphPanelPosition::LeftCenter => (AxisAlign::Start, AxisAlign::Center),
+        NodeGraphPanelPosition::Center => (AxisAlign::Center, AxisAlign::Center),
+        NodeGraphPanelPosition::RightCenter => (AxisAlign::End, AxisAlign::Center),
+        NodeGraphPanelPosition::BottomLeft => (AxisAlign::Start, AxisAlign::End),
+        NodeGraphPanelPosition::BottomCenter => (AxisAlign::Center, AxisAlign::End),
+        NodeGraphPanelPosition::BottomRight => (AxisAlign::End, AxisAlign::End),
+    }
 }
 
 /// A window-space overlay panel that positions its child within `bounds`.
@@ -72,49 +88,9 @@ impl NodeGraphPanel {
         self
     }
 
-    fn clamp_rect_to_bounds(mut rect: Rect, bounds: Rect) -> Rect {
-        let w = rect.size.width.0.max(0.0);
-        let h = rect.size.height.0.max(0.0);
-
-        let min_x = bounds.origin.x.0;
-        let min_y = bounds.origin.y.0;
-        let max_x = bounds.origin.x.0 + (bounds.size.width.0 - w).max(0.0);
-        let max_y = bounds.origin.y.0 + (bounds.size.height.0 - h).max(0.0);
-
-        rect.origin.x.0 = rect.origin.x.0.clamp(min_x, max_x);
-        rect.origin.y.0 = rect.origin.y.0.clamp(min_y, max_y);
-        rect
-    }
-
     fn positioned_rect(&self, bounds: Rect, size: Size) -> Rect {
-        let m = self.margin_px.max(0.0);
-        let w = size.width.0.max(0.0);
-        let h = size.height.0.max(0.0);
-
-        let left = bounds.origin.x.0 + m;
-        let right = bounds.origin.x.0 + (bounds.size.width.0 - m - w).max(0.0);
-        let top = bounds.origin.y.0 + m;
-        let bottom = bounds.origin.y.0 + (bounds.size.height.0 - m - h).max(0.0);
-        let center_x = bounds.origin.x.0 + 0.5 * (bounds.size.width.0 - w);
-        let center_y = bounds.origin.y.0 + 0.5 * (bounds.size.height.0 - h);
-
-        let (x, y) = match self.position {
-            NodeGraphPanelPosition::TopLeft => (left, top),
-            NodeGraphPanelPosition::TopCenter => (center_x, top),
-            NodeGraphPanelPosition::TopRight => (right, top),
-            NodeGraphPanelPosition::LeftCenter => (left, center_y),
-            NodeGraphPanelPosition::Center => (center_x, center_y),
-            NodeGraphPanelPosition::RightCenter => (right, center_y),
-            NodeGraphPanelPosition::BottomLeft => (left, bottom),
-            NodeGraphPanelPosition::BottomCenter => (center_x, bottom),
-            NodeGraphPanelPosition::BottomRight => (right, bottom),
-        };
-
-        let rect = Rect::new(
-            Point::new(Px(x + self.offset.x.0), Px(y + self.offset.y.0)),
-            size,
-        );
-        Self::clamp_rect_to_bounds(rect, bounds)
+        let (align_x, align_y) = panel_position_alignments(self.position);
+        rect_in_bounds(bounds, size, align_x, align_y, self.margin_px, self.offset)
     }
 
     fn resolve_child_size<H: UiHost>(

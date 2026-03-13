@@ -7,7 +7,7 @@ use std::panic::Location;
 use std::sync::{Arc, Mutex};
 
 use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Color, Edges, KeyCode, Px, TextAlign, TextStyle};
+use fret_core::{Color, Edges, KeyCode, Px, SemanticsInvalid, TextAlign, TextStyle};
 use fret_runtime::Model;
 use fret_ui::action::{
     ActionCx, OnActivate, PointerDownCx, PressablePointerDownResult, UiActionHost,
@@ -21,16 +21,26 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, Size};
 
-use crate::controls::numeric_input::{NumericFormatFn, NumericParseFn, NumericValidateFn};
+use crate::controls::numeric_input::{
+    NumericFormatFn, NumericInputSelectionBehavior, NumericParseFn, NumericValidateFn,
+};
+use crate::primitives::EditorTokenKeys;
 use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
-    EditorInputGroupFrameOverrides, editor_axis_segment, editor_icon_button_segment,
-    editor_input_group_divider, editor_input_group_frame, editor_input_group_frame_with_overrides,
-    editor_input_group_inset, editor_input_group_row,
+    EditorInputGroupFrameOverrides, derived_test_id, editor_axis_segment,
+    editor_icon_button_segment, editor_icon_segment, editor_input_group_divider,
+    editor_input_group_frame, editor_input_group_frame_with_overrides, editor_input_group_inset,
+    editor_input_group_row, editor_text_segment,
+};
+use crate::primitives::numeric_text_entry::{
+    NumericTextEntryFocusHandoffState, arm_numeric_text_entry_focus_handoff,
+    clear_numeric_error_when_draft_changes, handle_numeric_text_entry_replace_key,
+    numeric_text_entry_focus_state, sync_numeric_text_entry_focus,
+    sync_numeric_text_entry_focus_handoff,
 };
 use crate::primitives::style::EditorStyle;
-use crate::primitives::visuals::EditorFrameState;
+use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
 use crate::primitives::{DragValueCore, DragValueCoreOptions};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,7 +61,6 @@ pub struct AxisDragValueResetAction {
 struct AxisDragValueState {
     mode: AxisDragValueMode,
     scrub_id: Option<fret_ui::GlobalElementId>,
-    input_id: Option<fret_ui::GlobalElementId>,
     seen_input_focus: bool,
 }
 
@@ -60,7 +69,6 @@ impl Default for AxisDragValueState {
         Self {
             mode: AxisDragValueMode::Scrub,
             scrub_id: None,
-            input_id: None,
             seen_input_focus: false,
         }
     }
@@ -69,6 +77,8 @@ impl Default for AxisDragValueState {
 #[derive(Clone)]
 pub struct AxisDragValueOptions {
     pub layout: LayoutStyle,
+    pub prefix: Option<Arc<str>>,
+    pub suffix: Option<Arc<str>>,
     /// Explicit identity source for internal state (scrub/typing focus restore, draft string).
     ///
     /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
@@ -78,6 +88,7 @@ pub struct AxisDragValueOptions {
     pub enabled: bool,
     pub focusable: bool,
     pub size: Size,
+    pub selection_behavior: NumericInputSelectionBehavior,
 }
 
 impl Default for AxisDragValueOptions {
@@ -96,12 +107,15 @@ impl Default for AxisDragValueOptions {
                 },
                 ..Default::default()
             },
+            prefix: None,
+            suffix: None,
             id_source: None,
             test_id: None,
             reset: None,
             enabled: true,
             focusable: true,
             size: Size::Small,
+            selection_behavior: NumericInputSelectionBehavior::ReplaceAllOnFocus,
         }
     }
 }
@@ -174,9 +188,16 @@ where
             || Arc::new(Mutex::new(AxisDragValueState::default())),
             |s| s.clone(),
         );
+        let focus_handoff: Arc<Mutex<NumericTextEntryFocusHandoffState>> = cx.with_state(
+            || Arc::new(Mutex::new(NumericTextEntryFocusHandoffState::default())),
+            |s| s.clone(),
+        );
 
         let draft = draft_model(cx);
         let error = error_model(cx);
+        let focus_state = numeric_text_entry_focus_state(cx);
+        let last_draft_text =
+            cx.with_state(|| Arc::new(Mutex::new(String::new())), |st| st.clone());
 
         let value = cx
             .get_model_copied(&self.model, Invalidation::Paint)
@@ -186,6 +207,30 @@ where
 
         let mode = state.lock().unwrap_or_else(|e| e.into_inner()).mode;
         let typing = mode == AxisDragValueMode::Typing;
+        let prefix = self.options.prefix.clone();
+        let suffix = self.options.suffix.clone();
+        let reset_action = self.options.reset.clone();
+        let scrub_test_id = self.options.test_id.clone();
+        let typing_test_id = derived_test_id(self.options.test_id.as_ref(), "typing");
+        let scrub_axis_test_id = derived_test_id(scrub_test_id.as_ref(), "axis");
+        let scrub_value_test_id = derived_test_id(scrub_test_id.as_ref(), "value");
+        let scrub_prefix_test_id = derived_test_id(scrub_test_id.as_ref(), "prefix");
+        let scrub_suffix_test_id = derived_test_id(scrub_test_id.as_ref(), "suffix");
+        let typing_axis_test_id = derived_test_id(typing_test_id.as_ref(), "axis");
+        let typing_input_test_id = derived_test_id(typing_test_id.as_ref(), "input");
+        let typing_prefix_test_id = derived_test_id(typing_test_id.as_ref(), "prefix");
+        let typing_suffix_test_id = derived_test_id(typing_test_id.as_ref(), "suffix");
+        let typing_error_icon_test_id = derived_test_id(typing_test_id.as_ref(), "error");
+        let explicit_reset_test_id = reset_action
+            .as_ref()
+            .and_then(|reset| reset.test_id.clone());
+        let scrub_reset_test_id = explicit_reset_test_id
+            .clone()
+            .or_else(|| derived_test_id(scrub_test_id.as_ref(), "reset"));
+        let typing_reset_test_id = explicit_reset_test_id
+            .as_ref()
+            .map(|id| Arc::<str>::from(format!("{}.typing", id.as_ref())))
+            .or_else(|| derived_test_id(typing_test_id.as_ref(), "reset"));
 
         let (density, frame_chrome, (text_style, input_chrome)) = {
             let theme = Theme::global(&*cx.app);
@@ -219,8 +264,10 @@ where
         let axis_label = self.axis_label.clone();
         let axis_tint = self.axis_tint;
         let enabled_for_paint = self.options.enabled;
-        let reset_action = self.options.reset.clone();
         let state_for_scrub_record = state.clone();
+        let focus_handoff_for_double_click = focus_handoff.clone();
+        let prefix_for_scrub = prefix.clone();
+        let suffix_for_scrub = suffix.clone();
         let scrub = DragValueCore::new(value, on_change_live)
             .a11y_label(value_text.clone())
             .options(scrub_opts)
@@ -232,6 +279,7 @@ where
                 st.scrub_id = Some(scrub_id);
 
                 let state_for_double_click = state_for_scrub_record.clone();
+                let focus_handoff_for_double_click = focus_handoff_for_double_click.clone();
                 cx.pressable_add_on_pointer_down(Arc::new(
                     move |host, action_cx, down: PointerDownCx| {
                         if down.click_count < 2 {
@@ -242,8 +290,11 @@ where
                             .unwrap_or_else(|e| e.into_inner());
                         st.mode = AxisDragValueMode::Typing;
                         st.seen_input_focus = false;
-                        if let Some(input_id) = st.input_id {
-                            host.request_focus(input_id);
+                        {
+                            let mut handoff = focus_handoff_for_double_click
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            arm_numeric_text_entry_focus_handoff(&mut handoff);
                         }
                         host.request_redraw(action_cx.window);
                         PressablePointerDownResult::SkipDefaultAndStopPropagation
@@ -252,7 +303,7 @@ where
 
                 let divider = frame_chrome.border;
 
-                vec![editor_input_group_frame(
+                let mut scrub_frame = editor_input_group_frame(
                     cx,
                     LayoutStyle {
                         size: SizeStyle {
@@ -271,15 +322,26 @@ where
                         pressed: resp.dragging || resp.pressed,
                         focused: resp.focused || cx.is_focused_element(scrub_id),
                         open: false,
+                        semantic: EditorFrameSemanticState::default(),
                     },
                     move |cx, visuals| {
-                        let axis = editor_axis_segment(
+                        let affix_color = {
+                            let theme = Theme::global(&*cx.app);
+                            theme
+                                .color_by_key("muted-foreground")
+                                .or_else(|| theme.color_by_key("muted_foreground"))
+                                .unwrap_or_else(|| theme.color_token("foreground"))
+                        };
+                        let mut axis = editor_axis_segment(
                             cx,
                             density,
                             axis_label.clone(),
                             axis_tint,
                             visuals.bg,
                         );
+                        if let Some(test_id) = scrub_axis_test_id.as_ref() {
+                            axis = axis.test_id(test_id.clone()).a11y_label(axis_label.clone());
+                        }
                         let sep = editor_input_group_divider(cx, divider);
                         let value_text_el = cx.text_props(TextProps {
                             layout: LayoutStyle {
@@ -302,10 +364,46 @@ where
                             align: TextAlign::Start,
                             ink_overflow: Default::default(),
                         });
-                        let value =
+                        let mut value =
                             editor_input_group_inset(cx, frame_chrome.padding, value_text_el);
+                        if let Some(test_id) = scrub_value_test_id.as_ref() {
+                            value = value
+                                .test_id(test_id.clone())
+                                .a11y_label(value_text_for_scrub.clone());
+                        }
 
-                        let mut segments = vec![axis, sep, value];
+                        let mut segments = vec![axis, sep];
+                        if let Some(prefix) = prefix_for_scrub.clone() {
+                            let mut segment = editor_text_segment(
+                                cx,
+                                density,
+                                frame_chrome.text_px,
+                                prefix.clone(),
+                                affix_color,
+                                frame_chrome.padding,
+                            );
+                            if let Some(test_id) = scrub_prefix_test_id.as_ref() {
+                                segment = segment.test_id(test_id.clone()).a11y_label(prefix);
+                            }
+                            segments.push(segment);
+                            segments.push(editor_input_group_divider(cx, divider));
+                        }
+                        segments.push(value);
+                        if let Some(suffix) = suffix_for_scrub.clone() {
+                            segments.push(editor_input_group_divider(cx, divider));
+                            let mut segment = editor_text_segment(
+                                cx,
+                                density,
+                                frame_chrome.text_px,
+                                suffix.clone(),
+                                affix_color,
+                                frame_chrome.padding,
+                            );
+                            if let Some(test_id) = scrub_suffix_test_id.as_ref() {
+                                segment = segment.test_id(test_id.clone()).a11y_label(suffix);
+                            }
+                            segments.push(segment);
+                        }
                         if let Some(reset) = reset_action.clone() {
                             segments.push(editor_input_group_divider(cx, divider));
                             segments.push(editor_icon_button_segment(
@@ -315,14 +413,18 @@ where
                                 reset.a11y_label.clone(),
                                 reset.icon,
                                 Some(Px(12.0)),
-                                reset.test_id.clone(),
+                                scrub_reset_test_id.clone(),
                                 reset.on_activate.clone(),
                             ));
                         }
 
                         vec![editor_input_group_row(cx, Px(0.0), segments)]
                     },
-                )]
+                );
+                if let Some(test_id) = scrub_test_id.as_ref() {
+                    scrub_frame = scrub_frame.test_id(test_id.clone());
+                }
+                vec![scrub_frame]
             });
 
         let input_group_layout = if typing {
@@ -336,8 +438,14 @@ where
         let validate = self.validate.clone();
         let model_for_commit = self.model.clone();
         let state_for_input = state.clone();
+        let focus_state_for_keys = focus_state.clone();
         let error_for_keys = error.clone();
         let draft_for_keys = draft.clone();
+        let last_draft_text_for_keys = last_draft_text.clone();
+        let has_error = cx
+            .get_model_cloned(&error, Invalidation::Paint)
+            .unwrap_or(None)
+            .is_some();
 
         let mut props = TextInputProps::new(draft.clone());
         props.layout = LayoutStyle {
@@ -351,7 +459,8 @@ where
         };
         props.enabled = self.options.enabled && typing;
         props.focusable = self.options.focusable && typing;
-        props.test_id = self.options.test_id.clone();
+        props.test_id = typing_input_test_id.clone();
+        props.a11y_invalid = has_error.then_some(SemanticsInvalid::True);
 
         // Joined field: the frame is drawn by the input group. Keep the inner text input transparent
         // and borderless to avoid double chrome.
@@ -377,11 +486,6 @@ where
         let input_id = input.id;
         let is_focused = cx.is_focused_element(input_id);
 
-        {
-            let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
-            st.input_id = Some(input_id);
-        }
-
         // Drive mode transitions from focus: if the user clicks away after the input actually
         // became focused, return to scrub mode.
         if typing {
@@ -393,40 +497,112 @@ where
             }
         }
 
+        sync_numeric_text_entry_focus(
+            cx,
+            &focus_state,
+            is_focused,
+            &value_text,
+            &draft,
+            &error,
+            self.options.selection_behavior,
+        );
+        sync_numeric_text_entry_focus_handoff(
+            cx,
+            input_id,
+            &focus_handoff,
+            typing,
+            input_id,
+            is_focused,
+        );
+
         if !is_focused {
-            let _ = cx
-                .app
-                .models_mut()
-                .update(&draft, |s| *s = value_text.as_ref().to_string());
-            let _ = cx.app.models_mut().update(&error, |e| *e = None);
+            let mut last = last_draft_text.lock().unwrap_or_else(|e| e.into_inner());
+            *last = value_text.as_ref().to_string();
         }
 
         cx.key_add_on_key_down_capture_for(
             input_id,
             Arc::new(
-                move |host: &mut dyn UiFocusActionHost, action_cx: ActionCx, down| match down.key {
-                    KeyCode::Enter | KeyCode::NumpadEnter => {
-                        let text = host
-                            .models_mut()
-                            .read(&draft_for_keys, |s| s.clone())
-                            .unwrap_or_default();
-                        if let Some(v) = (parse)(&text) {
-                            if let Some(validate) = validate.as_ref() {
-                                if let Some(msg) = validate(v) {
-                                    let _ = host
-                                        .models_mut()
-                                        .update(&error_for_keys, |e| *e = Some(msg));
-                                    host.request_redraw(action_cx.window);
-                                    return true;
-                                }
-                            }
+                move |host: &mut dyn UiFocusActionHost, action_cx: ActionCx, down| {
+                    if let Some(consumed) = handle_numeric_text_entry_replace_key(
+                        host,
+                        action_cx,
+                        down,
+                        &focus_state_for_keys,
+                        &draft_for_keys,
+                        &error_for_keys,
+                    ) {
+                        if consumed {
+                            return true;
+                        }
+                    }
 
-                            let _ = host.models_mut().update(&model_for_commit, |m| *m = v);
-                            let formatted = (format)(v);
+                    match down.key {
+                        KeyCode::Enter | KeyCode::NumpadEnter => {
+                            let text = host
+                                .models_mut()
+                                .read(&draft_for_keys, |s| s.clone())
+                                .unwrap_or_default();
+                            if let Some(v) = (parse)(&text) {
+                                if let Some(validate) = validate.as_ref() {
+                                    if let Some(msg) = validate(v) {
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&error_for_keys, |e| *e = Some(msg));
+                                        let mut last = last_draft_text_for_keys
+                                            .lock()
+                                            .unwrap_or_else(|e| e.into_inner());
+                                        *last = text;
+                                        host.request_redraw(action_cx.window);
+                                        return true;
+                                    }
+                                }
+
+                                let _ = host.models_mut().update(&model_for_commit, |m| *m = v);
+                                let formatted = (format)(v);
+                                let _ = host.models_mut().update(&draft_for_keys, |s| {
+                                    *s = formatted.as_ref().to_string()
+                                });
+                                let _ = host.models_mut().update(&error_for_keys, |e| *e = None);
+                                let mut last = last_draft_text_for_keys
+                                    .lock()
+                                    .unwrap_or_else(|e| e.into_inner());
+                                *last = formatted.as_ref().to_string();
+
+                                let mut st =
+                                    state_for_input.lock().unwrap_or_else(|e| e.into_inner());
+                                st.mode = AxisDragValueMode::Scrub;
+                                if let Some(scrub_id) = st.scrub_id {
+                                    host.request_focus(scrub_id);
+                                }
+                                host.request_redraw(action_cx.window);
+                                true
+                            } else {
+                                let _ = host.models_mut().update(&error_for_keys, |e| {
+                                    *e = Some(Arc::from("Invalid number"))
+                                });
+                                let mut last = last_draft_text_for_keys
+                                    .lock()
+                                    .unwrap_or_else(|e| e.into_inner());
+                                *last = text;
+                                host.request_redraw(action_cx.window);
+                                true
+                            }
+                        }
+                        KeyCode::Escape => {
+                            let current = host
+                                .models_mut()
+                                .get_copied(&model_for_commit)
+                                .unwrap_or_default();
+                            let formatted = (format)(current);
                             let _ = host
                                 .models_mut()
                                 .update(&draft_for_keys, |s| *s = formatted.as_ref().to_string());
                             let _ = host.models_mut().update(&error_for_keys, |e| *e = None);
+                            let mut last = last_draft_text_for_keys
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            *last = formatted.as_ref().to_string();
 
                             let mut st = state_for_input.lock().unwrap_or_else(|e| e.into_inner());
                             st.mode = AxisDragValueMode::Scrub;
@@ -435,51 +611,26 @@ where
                             }
                             host.request_redraw(action_cx.window);
                             true
-                        } else {
-                            let _ = host.models_mut().update(&error_for_keys, |e| {
-                                *e = Some(Arc::from("Invalid number"))
-                            });
-                            host.request_redraw(action_cx.window);
-                            true
                         }
+                        _ => false,
                     }
-                    KeyCode::Escape => {
-                        let current = host
-                            .models_mut()
-                            .get_copied(&model_for_commit)
-                            .unwrap_or_default();
-                        let formatted = (format)(current);
-                        let _ = host
-                            .models_mut()
-                            .update(&draft_for_keys, |s| *s = formatted.as_ref().to_string());
-                        let _ = host.models_mut().update(&error_for_keys, |e| *e = None);
-
-                        let mut st = state_for_input.lock().unwrap_or_else(|e| e.into_inner());
-                        st.mode = AxisDragValueMode::Scrub;
-                        if let Some(scrub_id) = st.scrub_id {
-                            host.request_focus(scrub_id);
-                        }
-                        host.request_redraw(action_cx.window);
-                        true
-                    }
-                    _ => false,
                 },
             ),
         );
 
-        let has_error = cx
-            .get_model_cloned(&error, Invalidation::Paint)
-            .unwrap_or(None)
-            .is_some();
+        clear_numeric_error_when_draft_changes(cx, is_focused, &draft, &error, &last_draft_text);
 
         let typing_field = {
-            let theme = Theme::global(&*cx.app);
             let divider = frame_chrome.border;
-            let error_border = theme.color_token("destructive");
             let reset_action = self.options.reset.clone();
             let enabled_for_paint = self.options.enabled;
+            let prefix = prefix.clone();
+            let suffix = suffix.clone();
+            let axis_label = self.axis_label.clone();
+            let axis_tint = self.axis_tint;
+            let error_icon_test_id = typing_error_icon_test_id.clone();
 
-            editor_input_group_frame_with_overrides(
+            let mut typing_frame = editor_input_group_frame_with_overrides(
                 cx,
                 input_group_layout,
                 density,
@@ -490,25 +641,87 @@ where
                     pressed: false,
                     focused: is_focused,
                     open: false,
+                    semantic: EditorFrameSemanticState {
+                        typing: true,
+                        invalid: has_error,
+                    },
                 },
-                EditorInputGroupFrameOverrides {
-                    bg: None,
-                    border: has_error.then_some(error_border),
-                },
+                EditorInputGroupFrameOverrides::none(),
                 move |cx, visuals| {
-                    let axis = editor_axis_segment(
-                        cx,
-                        density,
-                        self.axis_label.clone(),
-                        self.axis_tint,
-                        visuals.bg,
-                    );
+                    let affix_color = {
+                        let theme = Theme::global(&*cx.app);
+                        theme
+                            .color_by_key("muted-foreground")
+                            .or_else(|| theme.color_by_key("muted_foreground"))
+                            .unwrap_or_else(|| theme.color_token("foreground"))
+                    };
+                    let mut axis =
+                        editor_axis_segment(cx, density, axis_label.clone(), axis_tint, visuals.bg);
+                    if let Some(test_id) = typing_axis_test_id.as_ref() {
+                        axis = axis.test_id(test_id.clone()).a11y_label(axis_label.clone());
+                    }
                     let sep = editor_input_group_divider(cx, divider);
 
                     // Wrap the text input so the group padding applies, without adding its own padding.
                     let input_wrap = editor_input_group_inset(cx, frame_chrome.padding, input);
 
-                    let mut segments = vec![axis, sep, input_wrap];
+                    let mut segments = vec![axis, sep];
+                    if let Some(prefix) = prefix.clone() {
+                        let mut segment = editor_text_segment(
+                            cx,
+                            density,
+                            frame_chrome.text_px,
+                            prefix.clone(),
+                            affix_color,
+                            frame_chrome.padding,
+                        );
+                        if let Some(test_id) = typing_prefix_test_id.as_ref() {
+                            segment = segment.test_id(test_id.clone()).a11y_label(prefix);
+                        }
+                        segments.push(segment);
+                        segments.push(editor_input_group_divider(cx, divider));
+                    }
+                    segments.push(input_wrap);
+                    if let Some(suffix) = suffix.clone() {
+                        segments.push(editor_input_group_divider(cx, divider));
+                        let mut segment = editor_text_segment(
+                            cx,
+                            density,
+                            frame_chrome.text_px,
+                            suffix.clone(),
+                            affix_color,
+                            frame_chrome.padding,
+                        );
+                        if let Some(test_id) = typing_suffix_test_id.as_ref() {
+                            segment = segment.test_id(test_id.clone()).a11y_label(suffix);
+                        }
+                        segments.push(segment);
+                    }
+                    if has_error {
+                        let error_border = {
+                            let theme = Theme::global(&*cx.app);
+                            theme
+                                .color_by_key(EditorTokenKeys::CONTROL_INVALID_BORDER)
+                                .or_else(|| {
+                                    theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_BORDER)
+                                })
+                                .or_else(|| theme.color_by_key(EditorTokenKeys::CONTROL_INVALID_FG))
+                                .or_else(|| theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
+                                .unwrap_or_else(|| theme.color_token("destructive"))
+                        };
+                        segments.push(editor_input_group_divider(cx, divider));
+                        let mut icon = editor_icon_segment(
+                            cx,
+                            density,
+                            fret_icons::ids::ui::STATUS_FAILED,
+                            Some(Px(12.0)),
+                            Some(fret_ui_kit::ColorRef::Color(error_border)),
+                        );
+                        if let Some(test_id) = error_icon_test_id.as_ref() {
+                            icon = icon.test_id(test_id.clone());
+                        }
+                        segments.push(icon);
+                    }
                     if let Some(reset) = reset_action {
                         segments.push(editor_input_group_divider(cx, divider));
                         segments.push(editor_icon_button_segment(
@@ -518,14 +731,18 @@ where
                             reset.a11y_label,
                             reset.icon,
                             Some(Px(12.0)),
-                            reset.test_id,
+                            typing_reset_test_id.clone(),
                             reset.on_activate,
                         ));
                     }
 
                     vec![editor_input_group_row(cx, Px(0.0), segments)]
                 },
-            )
+            );
+            if let Some(test_id) = typing_test_id.as_ref() {
+                typing_frame = typing_frame.test_id(test_id.clone());
+            }
+            typing_frame
         };
 
         // Render both: scrub stays mounted so focus can restore, typing stays mounted so focus

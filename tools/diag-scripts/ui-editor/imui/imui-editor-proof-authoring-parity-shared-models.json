@@ -46,7 +46,7 @@
       "timeout_frames": 240
     },
     {
-      "type": "type_text_into",
+      "type": "set_text_value",
       "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.declarative.name" },
       "text": "Parity Probe"
     },

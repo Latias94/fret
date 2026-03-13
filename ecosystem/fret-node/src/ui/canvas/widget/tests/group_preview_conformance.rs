@@ -414,7 +414,7 @@ fn group_drag_preview_cache_reuses_geometry_across_preview_rev_updates() {
 
     // If the base spatial index key changes, the preview cache must be invalidated and rebuilt.
     let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.spatial_index.edge_aabb_pad_screen_px = 200.0;
+        s.runtime_tuning.spatial_index.edge_aabb_pad_screen_px = 200.0;
     });
     let snapshot1 = canvas.sync_view_state(&mut host);
     let _ = canvas.canvas_derived(&host, &snapshot1);

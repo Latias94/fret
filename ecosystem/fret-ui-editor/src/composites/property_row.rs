@@ -2,7 +2,7 @@
 use std::sync::Arc;
 
 use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Corners, Edges, Px, TextAlign, TextStyle};
+use fret_core::{Axis, Corners, Edges, FontWeight, Px, TextAlign, TextStyle};
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexItemStyle, FlexProps, LayoutStyle, Length,
@@ -11,8 +11,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::typography;
 
-use crate::primitives::EditorTokenKeys;
-use crate::primitives::style::EditorStyle;
+use crate::primitives::inspector_layout::InspectorLayoutMetrics;
 use crate::primitives::visuals::{editor_icon_button_bg, editor_icon_button_border};
 
 pub type OnPropertyRowReset = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx) + 'static>;
@@ -62,6 +61,10 @@ pub struct PropertyRowOptions {
     pub layout: LayoutStyle,
     pub label_width: Option<Px>,
     pub gap: Option<Px>,
+    pub trailing_gap: Option<Px>,
+    pub value_max_width: Option<Px>,
+    pub status_slot_width: Option<Px>,
+    pub reset_slot_width: Option<Px>,
     pub variant: PropertyRowLayoutVariant,
     pub auto_stack_below: Option<Px>,
     /// Explicit identity source for internal policy state (auto layout heuristics).
@@ -85,6 +88,10 @@ impl Default for PropertyRowOptions {
             },
             label_width: None,
             gap: None,
+            trailing_gap: None,
+            value_max_width: None,
+            status_slot_width: None,
+            reset_slot_width: None,
             variant: PropertyRowLayoutVariant::Row,
             auto_stack_below: None,
             id_source: None,
@@ -157,15 +164,29 @@ impl PropertyRow {
     ) -> AnyElement {
         let bounds = cx.layout_query_bounds(cx.root_id(), Invalidation::Layout);
 
-        let (density, gap, reset_fg, auto_below) = {
+        let has_reset_slot = self
+            .reset
+            .as_ref()
+            .is_some_and(|reset| reset.options.enabled);
+
+        let (
+            density,
+            affordance_extent,
+            gap,
+            trailing_gap,
+            reset_fg,
+            auto_below,
+            label_w,
+            value_max_w,
+            status_slot_w,
+            reset_slot_w,
+        ) = {
             let theme = Theme::global(&*cx.app);
-            let style = EditorStyle::resolve(theme);
-            let density = style.density;
-            let gap = self
-                .options
-                .gap
-                .or_else(|| theme.metric_by_key(EditorTokenKeys::PROPERTY_COLUMN_GAP))
-                .unwrap_or(Px(8.0));
+            let metrics = InspectorLayoutMetrics::resolve(theme);
+            let density = metrics.density;
+            let affordance_extent = density.affordance_extent();
+            let gap = self.options.gap.unwrap_or(metrics.column_gap);
+            let trailing_gap = self.options.trailing_gap.unwrap_or(metrics.trailing_gap);
             let reset_fg = theme
                 .color_by_key("muted-foreground")
                 .or_else(|| theme.color_by_key("muted_foreground"))
@@ -173,9 +194,43 @@ impl PropertyRow {
             let auto_below = self
                 .options
                 .auto_stack_below
-                .unwrap_or(style.property_auto_stack_below);
+                .unwrap_or(metrics.auto_stack_below);
+            let label_w = self.options.label_width.unwrap_or(metrics.label_width);
+            let value_max_w = self
+                .options
+                .value_max_width
+                .unwrap_or(metrics.value_max_width);
+            let status_slot_w = self
+                .options
+                .status_slot_width
+                .unwrap_or(metrics.status_slot_width);
+            let status_slot_w = if status_slot_w.0 > 0.0 {
+                status_slot_w.max(affordance_extent)
+            } else {
+                status_slot_w
+            };
+            let reset_slot_w = self
+                .options
+                .reset_slot_width
+                .unwrap_or(metrics.reset_slot_width);
+            let reset_slot_w = if has_reset_slot {
+                reset_slot_w.max(affordance_extent)
+            } else {
+                reset_slot_w
+            };
 
-            (density, gap, reset_fg, auto_below)
+            (
+                density,
+                affordance_extent,
+                gap,
+                trailing_gap,
+                reset_fg,
+                auto_below,
+                label_w,
+                value_max_w,
+                status_slot_w,
+                reset_slot_w,
+            )
         };
 
         let variant = match self.options.variant {
@@ -187,7 +242,6 @@ impl PropertyRow {
                 .unwrap_or(PropertyRowLayoutVariant::Row),
         };
 
-        let label_w = self.options.label_width.unwrap_or(Px(160.0));
         let mut layout = self.options.layout;
         if layout.size.min_height.is_none() {
             layout.size.min_height = Some(Length::Px(density.row_height));
@@ -207,15 +261,15 @@ impl PropertyRow {
                 PressableProps {
                     layout: LayoutStyle {
                         size: SizeStyle {
-                            width: Length::Px(density.hit_thickness),
-                            height: Length::Px(density.hit_thickness),
+                            width: Length::Px(affordance_extent),
+                            height: Length::Px(affordance_extent),
                             ..Default::default()
                         },
                         flex: FlexItemStyle {
                             order: 0,
                             grow: 0.0,
                             shrink: 0.0,
-                            basis: Length::Px(density.hit_thickness),
+                            basis: Length::Px(affordance_extent),
                             align_self: None,
                         },
                         ..Default::default()
@@ -238,9 +292,23 @@ impl PropertyRow {
                     let theme = Theme::global(&*cx.app);
                     let hovered = st.hovered || st.hovered_raw;
                     let pressed = st.pressed;
-                    let bg = editor_icon_button_bg(theme, true, hovered, pressed);
-                    let border = editor_icon_button_border(theme, true, hovered, pressed);
-                    let border_width = if border.is_some() { Px(1.0) } else { Px(0.0) };
+                    let mut idle_bg = theme
+                        .color_by_key("muted")
+                        .unwrap_or_else(|| theme.color_token("background"));
+                    idle_bg.a = (idle_bg.a * 0.35).clamp(0.0, 1.0);
+                    let idle_border = theme
+                        .color_by_key("border")
+                        .or_else(|| theme.color_by_key("component.text_field.border"))
+                        .unwrap_or(reset_fg);
+                    let bg =
+                        editor_icon_button_bg(theme, true, hovered, pressed).unwrap_or(idle_bg);
+                    let border = editor_icon_button_border(theme, true, hovered, pressed)
+                        .unwrap_or(idle_border);
+                    let fg = if hovered || pressed {
+                        theme.color_token("foreground")
+                    } else {
+                        reset_fg
+                    };
 
                     vec![cx.container(
                         ContainerProps {
@@ -252,9 +320,9 @@ impl PropertyRow {
                                 },
                                 ..Default::default()
                             },
-                            background: bg,
-                            border: Edges::all(border_width),
-                            border_color: border,
+                            background: Some(bg),
+                            border: Edges::all(Px(1.0)),
+                            border_color: Some(border),
                             corner_radii: Corners::all(Px(6.0)),
                             ..Default::default()
                         },
@@ -271,11 +339,12 @@ impl PropertyRow {
                                 text: glyph.clone(),
                                 style: Some(typography::as_control_text(TextStyle {
                                     // Keep this conservative: allow the theme's defaults to dominate.
-                                    size: Px(12.0),
-                                    line_height: Some(density.hit_thickness),
+                                    size: Px(11.0),
+                                    weight: FontWeight::SEMIBOLD,
+                                    line_height: Some(affordance_extent),
                                     ..Default::default()
                                 })),
-                                color: Some(reset_fg),
+                                color: Some(fg),
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
                                 align: TextAlign::Center,
@@ -328,8 +397,8 @@ impl PropertyRow {
                         |cx| vec![label(cx)],
                     );
 
-                    let value = cx.container(
-                        ContainerProps {
+                    let body = cx.flex(
+                        FlexProps {
                             layout: LayoutStyle {
                                 size: SizeStyle {
                                     width: Length::Fill,
@@ -341,29 +410,111 @@ impl PropertyRow {
                                     order: 0,
                                     grow: 1.0,
                                     shrink: 1.0,
-                                    basis: Length::Fill,
+                                    basis: Length::Px(Px(0.0)),
                                     align_self: None,
                                 },
-                                overflow: Overflow::Clip,
                                 ..Default::default()
                             },
-                            ..Default::default()
+                            direction: Axis::Horizontal,
+                            gap: SpacingLength::Px(trailing_gap),
+                            padding: Edges::all(Px(0.0)).into(),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Center,
+                            wrap: false,
                         },
-                        |cx| vec![value(cx)],
+                        move |cx| {
+                            let value = cx.container(
+                                ContainerProps {
+                                    layout: LayoutStyle {
+                                        size: SizeStyle {
+                                            width: Length::Fill,
+                                            height: Length::Auto,
+                                            min_height: Some(Length::Px(density.row_height)),
+                                            max_width: Some(Length::Px(value_max_w)),
+                                            ..Default::default()
+                                        },
+                                        flex: FlexItemStyle {
+                                            order: 0,
+                                            grow: 1.0,
+                                            shrink: 1.0,
+                                            basis: Length::Px(Px(0.0)),
+                                            align_self: None,
+                                        },
+                                        overflow: Overflow::Clip,
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                |cx| vec![value(cx)],
+                            );
+
+                            let reset_slot = cx.flex(
+                                FlexProps {
+                                    layout: LayoutStyle {
+                                        size: SizeStyle {
+                                            width: Length::Px(reset_slot_w),
+                                            height: Length::Auto,
+                                            min_height: Some(Length::Px(density.row_height)),
+                                            ..Default::default()
+                                        },
+                                        flex: FlexItemStyle {
+                                            order: 0,
+                                            grow: 0.0,
+                                            shrink: 0.0,
+                                            basis: Length::Px(reset_slot_w),
+                                            align_self: None,
+                                        },
+                                        overflow: Overflow::Clip,
+                                        ..Default::default()
+                                    },
+                                    direction: Axis::Horizontal,
+                                    gap: SpacingLength::Px(Px(0.0)),
+                                    padding: Edges::all(Px(0.0)).into(),
+                                    justify: MainAlign::End,
+                                    align: CrossAlign::Center,
+                                    wrap: false,
+                                },
+                                move |_cx| reset_el.into_iter().collect::<Vec<_>>(),
+                            );
+
+                            let action_slot = cx.flex(
+                                FlexProps {
+                                    layout: LayoutStyle {
+                                        size: SizeStyle {
+                                            width: Length::Px(status_slot_w),
+                                            height: Length::Auto,
+                                            min_height: Some(Length::Px(density.row_height)),
+                                            ..Default::default()
+                                        },
+                                        flex: FlexItemStyle {
+                                            order: 0,
+                                            grow: 0.0,
+                                            shrink: 0.0,
+                                            basis: Length::Px(status_slot_w),
+                                            align_self: None,
+                                        },
+                                        overflow: Overflow::Clip,
+                                        ..Default::default()
+                                    },
+                                    direction: Axis::Horizontal,
+                                    gap: SpacingLength::Px(Px(0.0)),
+                                    padding: Edges::all(Px(0.0)).into(),
+                                    justify: MainAlign::End,
+                                    align: CrossAlign::Center,
+                                    wrap: false,
+                                },
+                                move |cx| actions(cx).into_iter().collect::<Vec<_>>(),
+                            );
+
+                            vec![value, reset_slot, action_slot]
+                        },
                     );
 
-                    let mut out = vec![label, value];
-                    if let Some(reset) = reset_el {
-                        out.push(reset);
-                    }
-                    if let Some(actions) = actions(cx) {
-                        out.push(actions);
-                    }
-                    out
+                    vec![label, body]
                 },
             ),
             PropertyRowLayoutVariant::Column => {
-                let header_gap = Px(6.0);
+                let header_gap = trailing_gap;
                 let stack_gap = Px(density.padding_y.0.max(4.0));
 
                 cx.flex(
@@ -420,14 +571,65 @@ impl PropertyRow {
                                     |cx| vec![label(cx)],
                                 );
 
-                                let mut out = vec![label];
-                                if let Some(reset) = reset_el {
-                                    out.push(reset);
-                                }
-                                if let Some(actions) = actions(cx) {
-                                    out.push(actions);
-                                }
-                                out
+                                let reset_slot = cx.flex(
+                                    FlexProps {
+                                        layout: LayoutStyle {
+                                            size: SizeStyle {
+                                                width: Length::Px(reset_slot_w),
+                                                height: Length::Auto,
+                                                min_height: Some(Length::Px(density.row_height)),
+                                                ..Default::default()
+                                            },
+                                            flex: FlexItemStyle {
+                                                order: 0,
+                                                grow: 0.0,
+                                                shrink: 0.0,
+                                                basis: Length::Px(reset_slot_w),
+                                                align_self: None,
+                                            },
+                                            overflow: Overflow::Clip,
+                                            ..Default::default()
+                                        },
+                                        direction: Axis::Horizontal,
+                                        gap: SpacingLength::Px(Px(0.0)),
+                                        padding: Edges::all(Px(0.0)).into(),
+                                        justify: MainAlign::End,
+                                        align: CrossAlign::Center,
+                                        wrap: false,
+                                    },
+                                    move |_cx| reset_el.into_iter().collect::<Vec<_>>(),
+                                );
+
+                                let action_slot = cx.flex(
+                                    FlexProps {
+                                        layout: LayoutStyle {
+                                            size: SizeStyle {
+                                                width: Length::Px(status_slot_w),
+                                                height: Length::Auto,
+                                                min_height: Some(Length::Px(density.row_height)),
+                                                ..Default::default()
+                                            },
+                                            flex: FlexItemStyle {
+                                                order: 0,
+                                                grow: 0.0,
+                                                shrink: 0.0,
+                                                basis: Length::Px(status_slot_w),
+                                                align_self: None,
+                                            },
+                                            overflow: Overflow::Clip,
+                                            ..Default::default()
+                                        },
+                                        direction: Axis::Horizontal,
+                                        gap: SpacingLength::Px(Px(0.0)),
+                                        padding: Edges::all(Px(0.0)).into(),
+                                        justify: MainAlign::End,
+                                        align: CrossAlign::Center,
+                                        wrap: false,
+                                    },
+                                    move |cx| actions(cx).into_iter().collect::<Vec<_>>(),
+                                );
+
+                                vec![label, reset_slot, action_slot]
                             },
                         );
 
@@ -438,6 +640,7 @@ impl PropertyRow {
                                         width: Length::Fill,
                                         height: Length::Auto,
                                         min_height: Some(Length::Px(density.row_height)),
+                                        max_width: Some(Length::Px(value_max_w)),
                                         ..Default::default()
                                     },
                                     ..Default::default()

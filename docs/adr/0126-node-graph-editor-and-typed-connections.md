@@ -824,15 +824,21 @@ Persistence:
 - `fret-node` provides optional IO helpers for the default JSON shape:
   - `NodeGraphViewStateFileV1` and `default_project_view_state_path` in `ecosystem/fret-node/src/io/mod.rs`.
 
-On-disk shape (locked, v1):
+On-disk shape (locked, v2 wrapper):
 
 - JSON file stored at one of the default locations above.
 - Wrapper object to allow future evolution without breaking older files:
-  - `{ "graph_id": "<uuid>", "state_version": 1, "state": { ... } }`
-- Backward compatibility: loaders may also accept a plain `state` root object when `graph_id` is
-  supplied out-of-band by the caller (mirrors `DockLayoutFileV1`’s wrapper tolerance).
+  - `{ "graph_id": "<uuid>", "state_version": 2, "state": { ... }, "interaction": { ... }, "runtime_tuning": { ... } }`
+- `state` stores the pure view payload only (camera, selection, draw order), while `interaction`
+  and `runtime_tuning` are wrapper-owned fields.
+- Backward compatibility:
+  - loaders still accept a plain `NodeGraphViewState` root object when `graph_id` is supplied
+    out-of-band by the caller (mirrors `DockLayoutFileV1`'s wrapper tolerance),
+  - loaders accept older wrapped files where `state` still embeds `interaction`,
+  - older combined `interaction` payloads are migrated at load time into
+    `NodeGraphInteractionConfig` plus `NodeGraphRuntimeTuning`.
 
-View-state schema (locked, v1):
+View-state schema (locked, v2 wrapper):
 
 - All fields are optional unless stated otherwise; missing fields must default to the behavior
   described below.
@@ -841,8 +847,11 @@ View-state schema (locked, v1):
 - `state.zoom`: `f32` (default `1.0`).
 - `state.selected_nodes`: `Vec<NodeId>` (optional).
 - `state.selected_edges`: `Vec<EdgeId>` (optional).
+- `state.selected_groups`: `Vec<GroupId>` (optional).
 - `state.draw_order`: `Vec<NodeId>` (optional).
-- `state.interaction` (optional): editor interaction tuning and policy overrides (per-user/per-project):
+- `state.group_draw_order`: `Vec<GroupId>` (optional).
+- `interaction` (optional): editor interaction tuning and policy overrides (per-user/per-project),
+  including connection, selection, navigation, and camera behavior such as:
   - `connection_mode`: `"strict" | "loose"` (default `"strict"`).
   - `connection_radius`: `f32` (screen px; only used for `"loose"`; default `16`).
   - `reconnect_radius`: `f32` (screen px; default `10`).
@@ -856,6 +865,8 @@ View-state schema (locked, v1):
     - `on_node_focus`: `bool` (default `false`).
     - `speed`: `f32` (screen px/s; default `900`).
     - `margin`: `f32` (screen px; default `24`).
+- `runtime_tuning` (optional): runtime-heavy tuning that remains separate from pure persisted view
+  semantics, including spatial-index knobs, visibility culling, and paint-cache pruning.
 
 Graph asset on-disk shape (locked, v1):
 

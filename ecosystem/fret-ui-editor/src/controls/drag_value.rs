@@ -10,11 +10,19 @@ use std::sync::{Arc, Mutex};
 
 use crate::controls::numeric_input::{
     NumericFormatFn, NumericInput, NumericInputErrorDisplay, NumericInputOptions,
-    NumericInputOutcome, NumericParseFn, NumericValidateFn,
+    NumericInputOutcome, NumericInputSelectionBehavior, NumericParseFn, NumericValidateFn,
 };
 use crate::primitives::drag_value_core::DragValueScalar;
+use crate::primitives::input_group::{
+    derived_test_id, editor_input_group_divider, editor_input_group_inset, editor_input_group_row,
+    editor_text_segment,
+};
+use crate::primitives::numeric_text_entry::{
+    NumericTextEntryFocusHandoffState, arm_numeric_text_entry_focus_handoff,
+    sync_numeric_text_entry_focus_handoff,
+};
 use crate::primitives::style::EditorStyle;
-use crate::primitives::visuals::{EditorFrameState, EditorWidgetVisuals};
+use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
 use crate::primitives::{DragValueCore, DragValueCoreOptions};
 use fret_core::text::{TextOverflow, TextWrap};
 use fret_core::{Corners, Edges, Px, TextAlign, TextStyle};
@@ -37,7 +45,6 @@ enum DragValueMode {
 struct DragValueState {
     mode: DragValueMode,
     scrub_id: Option<fret_ui::GlobalElementId>,
-    input_id: Option<fret_ui::GlobalElementId>,
 }
 
 impl Default for DragValueState {
@@ -45,7 +52,6 @@ impl Default for DragValueState {
         Self {
             mode: DragValueMode::Scrub,
             scrub_id: None,
-            input_id: None,
         }
     }
 }
@@ -53,6 +59,9 @@ impl Default for DragValueState {
 #[derive(Debug, Clone)]
 pub struct DragValueOptions {
     pub layout: LayoutStyle,
+    pub prefix: Option<Arc<str>>,
+    pub suffix: Option<Arc<str>>,
+    pub selection_behavior: NumericInputSelectionBehavior,
     /// Explicit identity source for internal state (scrub/typing focus restore).
     ///
     /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
@@ -78,6 +87,9 @@ impl Default for DragValueOptions {
                 },
                 ..Default::default()
             },
+            prefix: None,
+            suffix: None,
+            selection_behavior: NumericInputSelectionBehavior::ReplaceAllOnFocus,
             id_source: None,
             test_id: None,
         }
@@ -140,6 +152,10 @@ where
             || Arc::new(Mutex::new(DragValueState::default())),
             |s| s.clone(),
         );
+        let focus_handoff: Arc<Mutex<NumericTextEntryFocusHandoffState>> = cx.with_state(
+            || Arc::new(Mutex::new(NumericTextEntryFocusHandoffState::default())),
+            |s| s.clone(),
+        );
 
         let value = cx
             .get_model_copied(&self.model, Invalidation::Paint)
@@ -149,6 +165,13 @@ where
         let mode = state.lock().unwrap_or_else(|e| e.into_inner()).mode;
 
         let typing = mode == DragValueMode::Typing;
+        let prefix = self.options.prefix.clone();
+        let suffix = self.options.suffix.clone();
+        let scrub_test_id = self.options.test_id.clone();
+        let typing_test_id = derived_test_id(self.options.test_id.as_ref(), "typing");
+        let prefix_test_id = derived_test_id(scrub_test_id.as_ref(), "prefix");
+        let suffix_test_id = derived_test_id(scrub_test_id.as_ref(), "suffix");
+        let value_test_id = derived_test_id(scrub_test_id.as_ref(), "value");
 
         let (density, scrub_chrome) = {
             let theme = Theme::global(&*cx.app);
@@ -173,6 +196,7 @@ where
         scrub_opts.scrub_on_double_click = false;
 
         let state_for_scrub_record = state.clone();
+        let focus_handoff_for_double_click = focus_handoff.clone();
         let scrub = DragValueCore::new(value, on_change_live)
             .a11y_label(value_text.clone())
             .options(scrub_opts)
@@ -185,6 +209,7 @@ where
                 st.scrub_id = Some(scrub_id);
 
                 let state_for_double_click = state_for_scrub_record.clone();
+                let focus_handoff_for_double_click = focus_handoff_for_double_click.clone();
                 cx.pressable_add_on_pointer_down(Arc::new(
                     move |host, action_cx, down: PointerDownCx| {
                         if down.click_count < 2 {
@@ -195,8 +220,11 @@ where
                             .lock()
                             .unwrap_or_else(|e| e.into_inner());
                         st.mode = DragValueMode::Typing;
-                        if let Some(input_id) = st.input_id {
-                            host.request_focus(input_id);
+                        {
+                            let mut handoff = focus_handoff_for_double_click
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            arm_numeric_text_entry_focus_handoff(&mut handoff);
                         }
                         host.request_redraw(action_cx.window);
                         PressablePointerDownResult::SkipDefaultAndStopPropagation
@@ -212,10 +240,11 @@ where
                         pressed: resp.dragging || resp.pressed,
                         focused: resp.focused || cx.is_focused_element(scrub_id),
                         open: false,
+                        semantic: EditorFrameSemanticState::default(),
                     },
                 );
 
-                vec![cx.container(
+                let mut scrub_frame = cx.container(
                     ContainerProps {
                         layout: LayoutStyle {
                             size: SizeStyle {
@@ -234,7 +263,13 @@ where
                         ..Default::default()
                     },
                     move |cx| {
-                        vec![cx.text_props(TextProps {
+                        let theme = Theme::global(&*cx.app);
+                        let affix_color = theme
+                            .color_by_key("muted-foreground")
+                            .or_else(|| theme.color_by_key("muted_foreground"))
+                            .unwrap_or_else(|| theme.color_token("foreground"));
+                        let divider = visuals.border;
+                        let value_text_el = cx.text_props(TextProps {
                             layout: LayoutStyle {
                                 size: SizeStyle {
                                     width: Length::Fill,
@@ -254,9 +289,53 @@ where
                             overflow: TextOverflow::Ellipsis,
                             align: TextAlign::Start,
                             ink_overflow: Default::default(),
-                        })]
+                        });
+                        let mut value =
+                            editor_input_group_inset(cx, scrub_chrome.padding, value_text_el);
+                        if let Some(test_id) = value_test_id.as_ref() {
+                            value = value
+                                .test_id(test_id.clone())
+                                .a11y_label(value_text.clone());
+                        }
+                        let mut segments = Vec::new();
+                        if let Some(prefix) = prefix.clone() {
+                            let mut segment = editor_text_segment(
+                                cx,
+                                density,
+                                scrub_chrome.text_px,
+                                prefix.clone(),
+                                affix_color,
+                                scrub_chrome.padding,
+                            );
+                            if let Some(test_id) = prefix_test_id.as_ref() {
+                                segment = segment.test_id(test_id.clone()).a11y_label(prefix);
+                            }
+                            segments.push(segment);
+                            segments.push(editor_input_group_divider(cx, divider));
+                        }
+                        segments.push(value);
+                        if let Some(suffix) = suffix.clone() {
+                            segments.push(editor_input_group_divider(cx, divider));
+                            let mut segment = editor_text_segment(
+                                cx,
+                                density,
+                                scrub_chrome.text_px,
+                                suffix.clone(),
+                                affix_color,
+                                scrub_chrome.padding,
+                            );
+                            if let Some(test_id) = suffix_test_id.as_ref() {
+                                segment = segment.test_id(test_id.clone()).a11y_label(suffix);
+                            }
+                            segments.push(segment);
+                        }
+                        vec![editor_input_group_row(cx, Px(0.0), segments)]
                     },
-                )]
+                );
+                if let Some(test_id) = scrub_test_id.as_ref() {
+                    scrub_frame = scrub_frame.test_id(test_id.clone());
+                }
+                vec![scrub_frame]
             });
 
         let mut input_layout = self.options.layout;
@@ -265,13 +344,19 @@ where
         }
 
         let state_for_input = state.clone();
+        let input_focus_target: Arc<Mutex<Option<fret_ui::GlobalElementId>>> =
+            Arc::new(Mutex::new(None));
         let input = NumericInput::new(self.model.clone(), self.format.clone(), self.parse.clone())
             .validate(self.validate.clone())
+            .focus_target(input_focus_target.clone())
             .options(NumericInputOptions {
                 layout: input_layout,
                 enabled: typing,
                 focusable: typing,
-                test_id: self.options.test_id.clone(),
+                prefix: self.options.prefix.clone(),
+                suffix: self.options.suffix.clone(),
+                selection_behavior: self.options.selection_behavior,
+                test_id: typing_test_id,
                 // Avoid growing the row height when a commit-time validation error occurs.
                 // A small trailing status icon keeps the inspector layout stable.
                 error_display: NumericInputErrorDisplay::TrailingIcon,
@@ -291,9 +376,21 @@ where
             })))
             .into_element(cx);
 
+        if let Some(input_id) = input_focus_target
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .as_ref()
+            .copied()
         {
-            let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
-            st.input_id = Some(input.id);
+            let is_focused = cx.is_focused_element(input_id);
+            sync_numeric_text_entry_focus_handoff(
+                cx,
+                input.id,
+                &focus_handoff,
+                typing,
+                input_id,
+                is_focused,
+            );
         }
 
         // Render both: scrub stays mounted so focus can restore, input stays mounted so focus

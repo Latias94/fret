@@ -25,6 +25,7 @@ pub use fret_ui_headless::select_item_aligned;
 pub use fret_ui_headless::slider;
 pub use fret_ui_headless::snap_points;
 pub use fret_ui_headless::table;
+pub use fret_ui_headless::text_assist;
 pub use fret_ui_headless::tooltip_delay_group;
 pub use fret_ui_headless::tooltip_intent;
 pub use fret_ui_headless::transition;

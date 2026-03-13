@@ -23,6 +23,7 @@ use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, OverlayController, OverlayPresence, OverlayRequest, Size};
 
 use crate::primitives::chrome::resolve_editor_text_field_style;
+use crate::primitives::input_group::derived_test_id;
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 #[derive(Debug, Clone)]
@@ -131,6 +132,21 @@ impl ColorEdit {
             .get_model_copied(&self.model, Invalidation::Paint)
             .unwrap_or(Color::TRANSPARENT);
         let current_hex = format_hex(current, self.options.show_alpha);
+        let input_test_id = self
+            .options
+            .input_test_id
+            .clone()
+            .or_else(|| derived_test_id(self.options.test_id.as_ref(), "input"));
+        let swatch_test_id = self
+            .options
+            .swatch_test_id
+            .clone()
+            .or_else(|| derived_test_id(self.options.test_id.as_ref(), "swatch"));
+        let popup_test_id = self
+            .options
+            .popup_test_id
+            .clone()
+            .or_else(|| derived_test_id(self.options.test_id.as_ref(), "popup"));
 
         let input = {
             let (chrome, text_style) = {
@@ -156,7 +172,7 @@ impl ColorEdit {
             };
             props.enabled = self.options.enabled;
             props.focusable = self.options.focusable;
-            props.test_id = self.options.input_test_id.clone();
+            props.test_id = input_test_id.clone();
             props.chrome = chrome;
             props.text_style = text_style;
 
@@ -212,7 +228,29 @@ impl ColorEdit {
                 }),
             );
 
-            input
+            cx.pointer_region(
+                PointerRegionProps {
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Auto,
+                            min_height: Some(Length::Px(density.row_height)),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    enabled: self.options.enabled && self.options.focusable,
+                    capture_phase_pointer_moves: false,
+                },
+                move |cx| {
+                    cx.pointer_region_on_pointer_down(Arc::new(move |host, action_cx, _down| {
+                        host.request_focus(input_id);
+                        host.request_redraw(action_cx.window);
+                        false
+                    }));
+                    vec![input]
+                },
+            )
         };
 
         let swatch = {
@@ -278,19 +316,14 @@ impl ColorEdit {
                 },
             );
 
-            if let Some(test_id) = self.options.swatch_test_id.as_ref() {
+            if let Some(test_id) = swatch_test_id.as_ref() {
                 swatch = swatch.test_id(test_id.clone());
             }
+            swatch = swatch.a11y_value(current_hex.clone());
             swatch
         };
 
-        request_popup_overlay(
-            cx,
-            swatch.id,
-            open.clone(),
-            popup_padding,
-            self.options.popup_test_id.clone(),
-        );
+        request_popup_overlay(cx, swatch.id, open.clone(), popup_padding, popup_test_id);
 
         let error_msg = cx
             .get_model_cloned(&error, Invalidation::Paint)

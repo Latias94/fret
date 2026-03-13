@@ -196,6 +196,8 @@ Current implementation note:
   `tools/diag-scripts/ui-editor/imui/imui-editor-proof-authoring-parity-shared-models.json`
 - the promoted launched diagnostics run now passes with
   `FRET_IMUI_EDITOR_PRESET=imgui_like_dense` against `target/debug/imui_editor_proof_demo.exe`
+- matching dense screenshot proof coverage now exists via
+  `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-imgui-like-dense.json`
 - the current `imui` enum-select proof path uses per-item `test_id`s and `click_stable` with
   `stable_frames: 1`, because the popup item can stop being hit-testable after an extra
   stabilization frame in this proof surface
@@ -204,10 +206,9 @@ Current implementation note:
 
 ### Phase 2
 
-- add one or two focused proof pages:
-  - editor controls under the preset
-  - workspace shell under the preset
-- add screenshots / diag gates for high-signal surfaces
+- keep the editor-control screenshot proof paired with the default preset baseline
+- add one focused workspace-shell proof page under the preset
+- extend screenshots / diag gates only where the preset meaningfully differs from default
 
 ### Phase 3
 

@@ -16,7 +16,7 @@ pub use crate::interaction::{
 pub const GRAPH_FILE_VERSION: u32 = 1;
 
 /// Editor view-state format version (v1).
-pub const VIEW_STATE_VERSION: u32 = 1;
+pub const VIEW_STATE_VERSION: u32 = 2;
 
 /// Default project-scoped view-state path for a graph.
 ///
@@ -143,6 +143,42 @@ pub enum GraphFileError {
     InconsistentGraphId,
 }
 
+/// Pure persisted view-state payload.
+///
+/// This excludes interaction policy and runtime tuning so persistence boundaries can evolve without
+/// forcing every in-memory/runtime consumer to change in the same step.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NodeGraphPureViewState {
+    #[serde(default)]
+    pub pan: crate::core::CanvasPoint,
+    #[serde(default = "default_zoom")]
+    pub zoom: f32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub selected_nodes: Vec<NodeId>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub selected_edges: Vec<EdgeId>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub selected_groups: Vec<GroupId>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub draw_order: Vec<NodeId>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub group_draw_order: Vec<GroupId>,
+}
+
+impl Default for NodeGraphPureViewState {
+    fn default() -> Self {
+        Self {
+            pan: crate::core::CanvasPoint::default(),
+            zoom: default_zoom(),
+            selected_nodes: Vec::new(),
+            selected_edges: Vec::new(),
+            selected_groups: Vec::new(),
+            draw_order: Vec::new(),
+            group_draw_order: Vec::new(),
+        }
+    }
+}
+
 /// Node graph editor view-state.
 ///
 /// This is intentionally separate from graph semantics and may be stored per-user/per-project.
@@ -170,9 +206,16 @@ pub struct NodeGraphViewState {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub group_draw_order: Vec<GroupId>,
 
-    /// Optional interaction tuning (snap, connection mode, auto-pan, etc.).
-    #[serde(default, skip_serializing_if = "NodeGraphInteractionState::is_default")]
-    pub interaction: NodeGraphInteractionState,
+    /// Persisted interaction configuration for editor behavior.
+    #[serde(
+        default,
+        skip_serializing_if = "NodeGraphInteractionConfig::is_default"
+    )]
+    pub interaction: NodeGraphInteractionConfig,
+
+    /// Runtime-heavy tuning tracked separately from pure view semantics.
+    #[serde(default, skip_serializing_if = "NodeGraphRuntimeTuning::is_default")]
+    pub runtime_tuning: NodeGraphRuntimeTuning,
 }
 
 impl Default for NodeGraphViewState {
@@ -185,12 +228,50 @@ impl Default for NodeGraphViewState {
             selected_groups: Vec::new(),
             draw_order: Vec::new(),
             group_draw_order: Vec::new(),
-            interaction: NodeGraphInteractionState::default(),
+            interaction: NodeGraphInteractionConfig::default(),
+            runtime_tuning: NodeGraphRuntimeTuning::default(),
         }
     }
 }
 
 impl NodeGraphViewState {
+    /// Rebuilds the in-memory view state from persisted pure-view data plus config/tuning.
+    pub fn from_parts(
+        state: NodeGraphPureViewState,
+        interaction: NodeGraphInteractionConfig,
+        runtime_tuning: NodeGraphRuntimeTuning,
+    ) -> Self {
+        Self {
+            pan: state.pan,
+            zoom: state.zoom,
+            selected_nodes: state.selected_nodes,
+            selected_edges: state.selected_edges,
+            selected_groups: state.selected_groups,
+            draw_order: state.draw_order,
+            group_draw_order: state.group_draw_order,
+            interaction,
+            runtime_tuning,
+        }
+    }
+
+    /// Extracts the pure persisted view-state payload.
+    pub fn pure_view_state(&self) -> NodeGraphPureViewState {
+        NodeGraphPureViewState {
+            pan: self.pan,
+            zoom: self.zoom,
+            selected_nodes: self.selected_nodes.clone(),
+            selected_edges: self.selected_edges.clone(),
+            selected_groups: self.selected_groups.clone(),
+            draw_order: self.draw_order.clone(),
+            group_draw_order: self.group_draw_order.clone(),
+        }
+    }
+
+    /// Resolves the persisted interaction parts into the runtime interaction state used by the UI.
+    pub fn resolved_interaction_state(&self) -> NodeGraphInteractionState {
+        NodeGraphInteractionState::from_parts(&self.interaction, &self.runtime_tuning)
+    }
+
     /// Removes stale IDs (selection / draw order) that no longer exist in the target graph.
     pub fn sanitize_for_graph(&mut self, graph: &Graph) {
         let visible_node = |id: &NodeId| graph.nodes.get(id).is_some_and(|n| !n.hidden);
@@ -545,339 +626,386 @@ pub enum NodeGraphViewportEase {
     CubicInOut,
 }
 
-/// Optional interaction tuning persisted as part of editor view state.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct NodeGraphInteractionState {
-    /// Global master switch for selecting graph elements (nodes/edges/groups).
-    #[serde(default = "default_elements_selectable")]
-    pub elements_selectable: bool,
-
-    /// Whether nodes can be dragged with pointer interactions (XyFlow `nodesDraggable`).
-    #[serde(default = "default_nodes_draggable")]
-    pub nodes_draggable: bool,
-
-    /// Whether nodes can create/accept connections via editor interactions (XyFlow
-    /// `nodesConnectable`).
-    #[serde(default = "default_nodes_connectable")]
-    pub nodes_connectable: bool,
-
-    /// Whether nodes can be deleted via editor interactions (XyFlow `nodesDeletable`).
-    #[serde(default = "default_nodes_deletable")]
-    pub nodes_deletable: bool,
-
-    /// Whether edges can be selected via pointer/keyboard.
-    #[serde(default = "default_edges_selectable")]
-    pub edges_selectable: bool,
-
-    /// Whether edges can be deleted via editor interactions (XyFlow `edgesDeletable`).
-    #[serde(default = "default_edges_deletable")]
-    pub edges_deletable: bool,
-
-    /// Whether edges can be focused via keyboard navigation.
-    #[serde(default = "default_edges_focusable")]
-    pub edges_focusable: bool,
-
-    /// Whether edges can be reconnected by dragging edge update anchors.
-    #[serde(default = "default_edges_reconnectable")]
-    pub edges_reconnectable: bool,
-
-    /// Connection targeting strategy.
-    #[serde(default)]
-    pub connection_mode: NodeGraphConnectionMode,
-
-    /// Target search radius in screen pixels for loose connection mode.
-    #[serde(default = "default_connection_radius")]
-    pub connection_radius: f32,
-
-    /// Reconnect anchor hit radius in screen pixels.
-    #[serde(default = "default_reconnect_radius")]
-    pub reconnect_radius: f32,
-
-    /// Whether dropping an edge reconnect drag on empty canvas disconnects the edge.
-    ///
-    /// This matches common editor expectations (ShaderGraph/Blueprint) where dragging an edge end
-    /// away from a port and releasing disconnects it.
-    #[serde(default)]
-    pub reconnect_on_drop_empty: bool,
-
-    /// Edge hit slop width in screen pixels (independent from wire stroke thickness).
-    #[serde(default = "default_edge_interaction_width")]
-    pub edge_interaction_width: f32,
-
-    /// Subdivision count used for Bezier wire hit-testing (higher is more accurate, but slower).
-    #[serde(default = "default_bezier_hit_test_steps")]
-    pub bezier_hit_test_steps: u8,
-
-    /// Spatial index tuning for hit-testing and culling.
+/// Persisted runtime-heavy tuning for the node graph editor.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct NodeGraphRuntimeTuning {
     #[serde(default = "default_spatial_index_tuning")]
     pub spatial_index: NodeGraphSpatialIndexTuning,
-
-    /// Whether to only process/render elements near the visible viewport (XyFlow
-    /// `onlyRenderVisibleElements`).
-    ///
-    /// Note: Fret's canvas is always clipped to the viewport, but this flag controls whether we
-    /// cull work (geometry queries, render data collection) to a padded viewport rect.
     #[serde(default = "default_only_render_visible_elements")]
     pub only_render_visible_elements: bool,
-
-    /// Whether selected nodes should be drawn on top of non-selected nodes (XyFlow
-    /// `elevateNodesOnSelect`).
-    #[serde(default = "default_elevate_nodes_on_select")]
-    pub elevate_nodes_on_select: bool,
-
-    /// Whether selected edges should be drawn on top of non-selected edges (XyFlow
-    /// `elevateEdgesOnSelect`).
-    ///
-    /// Note: when disabled, the canvas may choose to forego static edge caches so that selection
-    /// styling can still be applied without changing the edge z-order.
-    #[serde(default = "default_elevate_edges_on_select")]
-    pub elevate_edges_on_select: bool,
-
-    /// Paint-cache pruning tuning for long-lived graphs.
     #[serde(default = "default_paint_cache_prune_tuning")]
     pub paint_cache_prune: NodeGraphPaintCachePruneTuning,
+}
 
-    /// Snap nodes to a grid during move/resize interactions.
+impl NodeGraphRuntimeTuning {
+    pub fn is_default(this: &Self) -> bool {
+        this == &Self::default()
+    }
+}
+
+impl Default for NodeGraphRuntimeTuning {
+    fn default() -> Self {
+        Self {
+            spatial_index: default_spatial_index_tuning(),
+            only_render_visible_elements: default_only_render_visible_elements(),
+            paint_cache_prune: default_paint_cache_prune_tuning(),
+        }
+    }
+}
+
+/// Persisted interaction configuration stored alongside view state.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NodeGraphInteractionConfig {
+    #[serde(default = "default_elements_selectable")]
+    pub elements_selectable: bool,
+    #[serde(default = "default_nodes_draggable")]
+    pub nodes_draggable: bool,
+    #[serde(default = "default_nodes_connectable")]
+    pub nodes_connectable: bool,
+    #[serde(default = "default_nodes_deletable")]
+    pub nodes_deletable: bool,
+    #[serde(default = "default_edges_selectable")]
+    pub edges_selectable: bool,
+    #[serde(default = "default_edges_deletable")]
+    pub edges_deletable: bool,
+    #[serde(default = "default_edges_focusable")]
+    pub edges_focusable: bool,
+    #[serde(default = "default_edges_reconnectable")]
+    pub edges_reconnectable: bool,
+    #[serde(default)]
+    pub connection_mode: NodeGraphConnectionMode,
+    #[serde(default = "default_connection_radius")]
+    pub connection_radius: f32,
+    #[serde(default = "default_reconnect_radius")]
+    pub reconnect_radius: f32,
+    #[serde(default)]
+    pub reconnect_on_drop_empty: bool,
+    #[serde(default = "default_edge_interaction_width")]
+    pub edge_interaction_width: f32,
+    #[serde(default = "default_bezier_hit_test_steps")]
+    pub bezier_hit_test_steps: u8,
+    #[serde(default = "default_elevate_nodes_on_select")]
+    pub elevate_nodes_on_select: bool,
+    #[serde(default = "default_elevate_edges_on_select")]
+    pub elevate_edges_on_select: bool,
     #[serde(default)]
     pub snap_to_grid: bool,
-
-    /// Snap grid size in canvas units.
     #[serde(default = "default_snap_grid")]
     pub snap_grid: CanvasSize,
-
-    /// Show alignment guides and snap node moves to them.
     #[serde(default = "default_snaplines")]
     pub snaplines: bool,
-
-    /// Snaplines threshold in screen pixels.
     #[serde(default = "default_snaplines_threshold")]
     pub snaplines_threshold: f32,
-
-    /// Enables panning the canvas via wheel / touchpad scroll (XyFlow `panOnScroll`).
     #[serde(default = "default_pan_on_scroll")]
     pub pan_on_scroll: bool,
-
-    /// Configures which mouse buttons may pan the canvas via drag (XyFlow `panOnDrag`).
     #[serde(default = "default_pan_on_drag_buttons")]
     pub pan_on_drag: NodeGraphPanOnDragButtons,
-
-    /// Select multiple elements with a selection box without holding down Shift.
-    ///
-    /// This matches XyFlow's `selectionOnDrag`.
     #[serde(default)]
     pub selection_on_drag: bool,
-
-    /// Selection behavior for marquee selection (XyFlow `selectionMode`).
     #[serde(default)]
     pub selection_mode: NodeGraphSelectionMode,
-
-    /// How to select edges when marquee-selecting nodes (XyFlow behavior).
-    ///
-    /// Backward compatibility: this field accepts either:
-    /// - a bool (`true` => `connected`, `false` => `none`), or
-    /// - a snake_case string (`none`, `connected`, `both_endpoints`).
     #[serde(
         default = "default_box_select_edges",
         alias = "box_select_connected_edges"
     )]
     pub box_select_edges: NodeGraphBoxSelectEdges,
-
-    /// Modifier used to activate selection box interactions (XyFlow `selectionKeyCode`).
-    ///
-    /// Default: Shift.
     #[serde(default = "default_selection_key")]
     pub selection_key: NodeGraphModifierKey,
-
-    /// Modifier used to toggle/add to the current selection (XyFlow `multiSelectionKeyCode`).
-    ///
-    /// Default: Ctrl/Cmd.
     #[serde(default = "default_multi_selection_key")]
     pub multi_selection_key: NodeGraphModifierKey,
-
-    /// Key used to delete the current selection (XyFlow `deleteKeyCode`).
-    ///
-    /// Default: Backspace.
     #[serde(default)]
     pub delete_key: NodeGraphDeleteKey,
-
-    /// Nudge step mode for keyboard arrow movement (screen px vs snap grid step).
     #[serde(default)]
     pub nudge_step_mode: NodeGraphNudgeStepMode,
-
-    /// Base nudge step in screen pixels when `nudge_step_mode` is `screen_px`.
     #[serde(default = "default_nudge_step_px")]
     pub nudge_step_px: f32,
-
-    /// Fast nudge step in screen pixels when `nudge_step_mode` is `screen_px`.
     #[serde(default = "default_nudge_fast_step_px")]
     pub nudge_fast_step_px: f32,
-
-    /// Disable keyboard-driven accessibility and focus traversal (XyFlow `disableKeyboardA11y`).
-    ///
-    /// When enabled, the canvas will avoid handling keyboard a11y navigation such as:
-    /// - Tab-based focus traversal (nodes / edges),
-    /// - Arrow-key nudging for selected nodes.
-    ///
-    /// Editor shortcuts such as delete/copy/paste are still handled.
-    /// Overlay UIs (searcher, context menus) still receive keyboard events, and Escape can still
-    /// cancel in-progress interactions.
     #[serde(default)]
     pub disable_keyboard_a11y: bool,
-
-    /// Background click distance threshold in screen pixels (XyFlow `paneClickDistance`).
-    ///
-    /// This controls when a background drag transitions from a "click" into an interaction
-    /// (marquee selection / panning / context menu suppression).
     #[serde(default = "default_pane_click_distance")]
     pub pane_click_distance: f32,
-
-    /// Optional key code that activates panning while held down (XyFlow `panActivationKeyCode`).
-    ///
-    /// This is gated by `space_to_pan` for backward compatibility.
-    ///
-    /// Default: `Some("Space")`.
     #[serde(
         default = "default_pan_activation_key_code",
         skip_serializing_if = "Option::is_none"
     )]
     pub pan_activation_key_code: Option<NodeGraphKeyCode>,
-
-    /// Enables panning the canvas by holding an activation key and dragging with the left mouse.
-    ///
-    /// This matches XyFlow's default "space-to-pan" editor affordance. The actual key is
-    /// configured by `pan_activation_key_code` (default: Space). The name is kept for backward
-    /// compatibility with early fret-node APIs.
     #[serde(default = "default_space_to_pan")]
     pub space_to_pan: bool,
-
-    /// Wheel panning speed multiplier.
     #[serde(default = "default_pan_on_scroll_speed")]
     pub pan_on_scroll_speed: f32,
-
-    /// Limits the direction of panning when `pan_on_scroll` is enabled (XyFlow `panOnScrollMode`).
     #[serde(default)]
     pub pan_on_scroll_mode: NodeGraphPanOnScrollMode,
-
-    /// Optional inertial panning when finishing a pan gesture.
     #[serde(default)]
     pub pan_inertia: NodeGraphPanInertiaTuning,
-
-    /// Whether wheel zoom is enabled at all.
     #[serde(default = "default_zoom_on_scroll")]
     pub zoom_on_scroll: bool,
-
-    /// Wheel zoom speed multiplier.
     #[serde(default = "default_zoom_on_scroll_speed")]
     pub zoom_on_scroll_speed: f32,
-
-    /// Whether pinch gesture zoom is enabled (XyFlow `zoomOnPinch`).
     #[serde(default = "default_zoom_on_pinch")]
     pub zoom_on_pinch: bool,
-
-    /// Pinch gesture zoom speed multiplier.
     #[serde(default = "default_zoom_on_pinch_speed")]
     pub zoom_on_pinch_speed: f32,
-
-    /// Whether double-click zoom is enabled (XyFlow `zoomOnDoubleClick`).
     #[serde(default = "default_zoom_on_double_click")]
     pub zoom_on_double_click: bool,
-
-    /// Duration (ms) for view framing / fit-view style commands.
-    ///
-    /// Lightweight parity knob for XyFlow's `fitViewOptions.duration`.
     #[serde(default = "default_frame_view_duration_ms")]
     pub frame_view_duration_ms: u32,
-
-    /// Interpolation style for view framing / fit-view style commands.
-    ///
-    /// Lightweight parity knob for XyFlow's `fitViewOptions.interpolate`.
     #[serde(default)]
     pub frame_view_interpolate: NodeGraphViewportInterpolate,
-
-    /// Optional easing curve for view framing / fit-view style commands.
-    ///
-    /// Parity knob for XyFlow's `fitViewOptions.ease`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub frame_view_ease: Option<NodeGraphViewportEase>,
-
-    /// Optional extra padding when framing nodes (XyFlow `fitViewOptions.padding`).
-    ///
-    /// This is a fraction of the current viewport size (0.0 .. 0.45 recommended). When set to
-    /// `0.0`, the framing logic falls back to its legacy fixed pixel margin.
     #[serde(default = "default_frame_view_padding")]
     pub frame_view_padding: f32,
-
-    /// Whether double-clicking a wire inserts a reroute node (ShaderGraph-style).
-    ///
-    /// This is separate from `zoom_on_double_click`: zoom only applies when the double click hits
-    /// the background, while reroute insertion applies when the double click hits an edge.
     #[serde(default = "default_reroute_on_edge_double_click")]
     pub reroute_on_edge_double_click: bool,
-
-    /// Whether Alt-dragging a wire opens the insert-node picker on release (ShaderGraph-style).
-    ///
-    /// This is intentionally disabled by default to preserve XyFlow-like semantics.
     #[serde(default = "default_edge_insert_on_alt_drag")]
     pub edge_insert_on_alt_drag: bool,
-
-    /// Modifier requirement for wheel zoom (XyFlow `zoomActivationKey`).
     #[serde(default)]
     pub zoom_activation_key: NodeGraphZoomActivationKey,
-
-    /// Drag threshold in screen pixels before a node drag starts.
     #[serde(default = "default_node_drag_threshold")]
     pub node_drag_threshold: f32,
-
-    /// Where node dragging can start (XyFlow `node.dragHandle` mental model).
     #[serde(default)]
     pub node_drag_handle_mode: NodeGraphDragHandleMode,
-
-    /// Click tolerance in screen pixels for node selection gestures.
-    ///
-    /// When a pointer-down on a node does not exceed this distance before pointer-up, the action
-    /// is treated as a click (useful for modifier-based selection toggles).
-    ///
-    /// This is similar to XyFlow's `nodeClickDistance` (d3-drag `clickDistance`).
     #[serde(default = "default_node_click_distance")]
     pub node_click_distance: f32,
-
-    /// Drag threshold in screen pixels before a connection drag starts.
     #[serde(default = "default_connection_drag_threshold")]
     pub connection_drag_threshold: f32,
-
-    /// Enables click-to-connect behavior (XyFlow `connectOnClick`).
-    ///
-    /// When enabled, a click on a port handle starts a connection preview; the next handle click
-    /// attempts to create a connection and ends the click-connect session (regardless of validity).
     #[serde(default)]
     pub connect_on_click: bool,
-
-    /// Auto-pan configuration.
     #[serde(default)]
     pub auto_pan: NodeGraphAutoPanTuning,
-
-    /// Optional bounds for panning the viewport (XyFlow `translateExtent`).
-    ///
-    /// This is expressed in canvas coordinates and constrains the visible viewport rectangle
-    /// (in canvas space) to stay within this extent.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub translate_extent: Option<CanvasRect>,
-
-    /// Optional bounds for moving/resizing nodes (XyFlow `nodeExtent`).
-    ///
-    /// This is expressed in canvas coordinates and constrains node rectangles to stay within the
-    /// extent. Parent groups may further constrain movement.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub node_extent: Option<CanvasRect>,
-
-    /// Node origin (anchor) used to interpret `Node.pos` (XyFlow `nodeOrigin`).
     #[serde(default)]
     pub node_origin: NodeGraphNodeOrigin,
 }
 
-impl NodeGraphInteractionState {
-    fn is_default(this: &Self) -> bool {
+impl NodeGraphInteractionConfig {
+    pub fn is_default(this: &Self) -> bool {
         this == &Self::default()
+    }
+}
+
+impl Default for NodeGraphInteractionConfig {
+    fn default() -> Self {
+        NodeGraphInteractionState::default().config()
+    }
+}
+
+/// Resolved runtime interaction state assembled from persisted config and runtime tuning.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NodeGraphInteractionState {
+    pub elements_selectable: bool,
+    pub nodes_draggable: bool,
+    pub nodes_connectable: bool,
+    pub nodes_deletable: bool,
+    pub edges_selectable: bool,
+    pub edges_deletable: bool,
+    pub edges_focusable: bool,
+    pub edges_reconnectable: bool,
+    pub connection_mode: NodeGraphConnectionMode,
+    pub connection_radius: f32,
+    pub reconnect_radius: f32,
+    pub reconnect_on_drop_empty: bool,
+    pub edge_interaction_width: f32,
+    pub bezier_hit_test_steps: u8,
+    pub spatial_index: NodeGraphSpatialIndexTuning,
+    pub only_render_visible_elements: bool,
+    pub elevate_nodes_on_select: bool,
+    pub elevate_edges_on_select: bool,
+    pub paint_cache_prune: NodeGraphPaintCachePruneTuning,
+    pub snap_to_grid: bool,
+    pub snap_grid: CanvasSize,
+    pub snaplines: bool,
+    pub snaplines_threshold: f32,
+    pub pan_on_scroll: bool,
+    pub pan_on_drag: NodeGraphPanOnDragButtons,
+    pub selection_on_drag: bool,
+    pub selection_mode: NodeGraphSelectionMode,
+    pub box_select_edges: NodeGraphBoxSelectEdges,
+    pub selection_key: NodeGraphModifierKey,
+    pub multi_selection_key: NodeGraphModifierKey,
+    pub delete_key: NodeGraphDeleteKey,
+    pub nudge_step_mode: NodeGraphNudgeStepMode,
+    pub nudge_step_px: f32,
+    pub nudge_fast_step_px: f32,
+    pub disable_keyboard_a11y: bool,
+    pub pane_click_distance: f32,
+    pub pan_activation_key_code: Option<NodeGraphKeyCode>,
+    pub space_to_pan: bool,
+    pub pan_on_scroll_speed: f32,
+    pub pan_on_scroll_mode: NodeGraphPanOnScrollMode,
+    pub pan_inertia: NodeGraphPanInertiaTuning,
+    pub zoom_on_scroll: bool,
+    pub zoom_on_scroll_speed: f32,
+    pub zoom_on_pinch: bool,
+    pub zoom_on_pinch_speed: f32,
+    pub zoom_on_double_click: bool,
+    pub frame_view_duration_ms: u32,
+    pub frame_view_interpolate: NodeGraphViewportInterpolate,
+    pub frame_view_ease: Option<NodeGraphViewportEase>,
+    pub frame_view_padding: f32,
+    pub reroute_on_edge_double_click: bool,
+    pub edge_insert_on_alt_drag: bool,
+    pub zoom_activation_key: NodeGraphZoomActivationKey,
+    pub node_drag_threshold: f32,
+    pub node_drag_handle_mode: NodeGraphDragHandleMode,
+    pub node_click_distance: f32,
+    pub connection_drag_threshold: f32,
+    pub connect_on_click: bool,
+    pub auto_pan: NodeGraphAutoPanTuning,
+    pub translate_extent: Option<CanvasRect>,
+    pub node_extent: Option<CanvasRect>,
+    pub node_origin: NodeGraphNodeOrigin,
+}
+
+impl NodeGraphInteractionState {
+    pub fn from_parts(
+        config: &NodeGraphInteractionConfig,
+        runtime_tuning: &NodeGraphRuntimeTuning,
+    ) -> Self {
+        Self {
+            elements_selectable: config.elements_selectable,
+            nodes_draggable: config.nodes_draggable,
+            nodes_connectable: config.nodes_connectable,
+            nodes_deletable: config.nodes_deletable,
+            edges_selectable: config.edges_selectable,
+            edges_deletable: config.edges_deletable,
+            edges_focusable: config.edges_focusable,
+            edges_reconnectable: config.edges_reconnectable,
+            connection_mode: config.connection_mode,
+            connection_radius: config.connection_radius,
+            reconnect_radius: config.reconnect_radius,
+            reconnect_on_drop_empty: config.reconnect_on_drop_empty,
+            edge_interaction_width: config.edge_interaction_width,
+            bezier_hit_test_steps: config.bezier_hit_test_steps,
+            spatial_index: runtime_tuning.spatial_index,
+            only_render_visible_elements: runtime_tuning.only_render_visible_elements,
+            elevate_nodes_on_select: config.elevate_nodes_on_select,
+            elevate_edges_on_select: config.elevate_edges_on_select,
+            paint_cache_prune: runtime_tuning.paint_cache_prune,
+            snap_to_grid: config.snap_to_grid,
+            snap_grid: config.snap_grid,
+            snaplines: config.snaplines,
+            snaplines_threshold: config.snaplines_threshold,
+            pan_on_scroll: config.pan_on_scroll,
+            pan_on_drag: config.pan_on_drag,
+            selection_on_drag: config.selection_on_drag,
+            selection_mode: config.selection_mode,
+            box_select_edges: config.box_select_edges,
+            selection_key: config.selection_key,
+            multi_selection_key: config.multi_selection_key,
+            delete_key: config.delete_key,
+            nudge_step_mode: config.nudge_step_mode,
+            nudge_step_px: config.nudge_step_px,
+            nudge_fast_step_px: config.nudge_fast_step_px,
+            disable_keyboard_a11y: config.disable_keyboard_a11y,
+            pane_click_distance: config.pane_click_distance,
+            pan_activation_key_code: config.pan_activation_key_code,
+            space_to_pan: config.space_to_pan,
+            pan_on_scroll_speed: config.pan_on_scroll_speed,
+            pan_on_scroll_mode: config.pan_on_scroll_mode,
+            pan_inertia: config.pan_inertia.clone(),
+            zoom_on_scroll: config.zoom_on_scroll,
+            zoom_on_scroll_speed: config.zoom_on_scroll_speed,
+            zoom_on_pinch: config.zoom_on_pinch,
+            zoom_on_pinch_speed: config.zoom_on_pinch_speed,
+            zoom_on_double_click: config.zoom_on_double_click,
+            frame_view_duration_ms: config.frame_view_duration_ms,
+            frame_view_interpolate: config.frame_view_interpolate,
+            frame_view_ease: config.frame_view_ease,
+            frame_view_padding: config.frame_view_padding,
+            reroute_on_edge_double_click: config.reroute_on_edge_double_click,
+            edge_insert_on_alt_drag: config.edge_insert_on_alt_drag,
+            zoom_activation_key: config.zoom_activation_key,
+            node_drag_threshold: config.node_drag_threshold,
+            node_drag_handle_mode: config.node_drag_handle_mode,
+            node_click_distance: config.node_click_distance,
+            connection_drag_threshold: config.connection_drag_threshold,
+            connect_on_click: config.connect_on_click,
+            auto_pan: config.auto_pan.clone(),
+            translate_extent: config.translate_extent,
+            node_extent: config.node_extent,
+            node_origin: config.node_origin,
+        }
+    }
+
+    pub fn config(&self) -> NodeGraphInteractionConfig {
+        NodeGraphInteractionConfig {
+            elements_selectable: self.elements_selectable,
+            nodes_draggable: self.nodes_draggable,
+            nodes_connectable: self.nodes_connectable,
+            nodes_deletable: self.nodes_deletable,
+            edges_selectable: self.edges_selectable,
+            edges_deletable: self.edges_deletable,
+            edges_focusable: self.edges_focusable,
+            edges_reconnectable: self.edges_reconnectable,
+            connection_mode: self.connection_mode,
+            connection_radius: self.connection_radius,
+            reconnect_radius: self.reconnect_radius,
+            reconnect_on_drop_empty: self.reconnect_on_drop_empty,
+            edge_interaction_width: self.edge_interaction_width,
+            bezier_hit_test_steps: self.bezier_hit_test_steps,
+            elevate_nodes_on_select: self.elevate_nodes_on_select,
+            elevate_edges_on_select: self.elevate_edges_on_select,
+            snap_to_grid: self.snap_to_grid,
+            snap_grid: self.snap_grid,
+            snaplines: self.snaplines,
+            snaplines_threshold: self.snaplines_threshold,
+            pan_on_scroll: self.pan_on_scroll,
+            pan_on_drag: self.pan_on_drag,
+            selection_on_drag: self.selection_on_drag,
+            selection_mode: self.selection_mode,
+            box_select_edges: self.box_select_edges,
+            selection_key: self.selection_key,
+            multi_selection_key: self.multi_selection_key,
+            delete_key: self.delete_key,
+            nudge_step_mode: self.nudge_step_mode,
+            nudge_step_px: self.nudge_step_px,
+            nudge_fast_step_px: self.nudge_fast_step_px,
+            disable_keyboard_a11y: self.disable_keyboard_a11y,
+            pane_click_distance: self.pane_click_distance,
+            pan_activation_key_code: self.pan_activation_key_code,
+            space_to_pan: self.space_to_pan,
+            pan_on_scroll_speed: self.pan_on_scroll_speed,
+            pan_on_scroll_mode: self.pan_on_scroll_mode,
+            pan_inertia: self.pan_inertia.clone(),
+            zoom_on_scroll: self.zoom_on_scroll,
+            zoom_on_scroll_speed: self.zoom_on_scroll_speed,
+            zoom_on_pinch: self.zoom_on_pinch,
+            zoom_on_pinch_speed: self.zoom_on_pinch_speed,
+            zoom_on_double_click: self.zoom_on_double_click,
+            frame_view_duration_ms: self.frame_view_duration_ms,
+            frame_view_interpolate: self.frame_view_interpolate,
+            frame_view_ease: self.frame_view_ease,
+            frame_view_padding: self.frame_view_padding,
+            reroute_on_edge_double_click: self.reroute_on_edge_double_click,
+            edge_insert_on_alt_drag: self.edge_insert_on_alt_drag,
+            zoom_activation_key: self.zoom_activation_key,
+            node_drag_threshold: self.node_drag_threshold,
+            node_drag_handle_mode: self.node_drag_handle_mode,
+            node_click_distance: self.node_click_distance,
+            connection_drag_threshold: self.connection_drag_threshold,
+            connect_on_click: self.connect_on_click,
+            auto_pan: self.auto_pan.clone(),
+            translate_extent: self.translate_extent,
+            node_extent: self.node_extent,
+            node_origin: self.node_origin,
+        }
+    }
+
+    pub fn runtime_tuning(&self) -> NodeGraphRuntimeTuning {
+        NodeGraphRuntimeTuning {
+            spatial_index: self.spatial_index,
+            only_render_visible_elements: self.only_render_visible_elements,
+            paint_cache_prune: self.paint_cache_prune,
+        }
+    }
+
+    pub fn split(&self) -> (NodeGraphInteractionConfig, NodeGraphRuntimeTuning) {
+        (self.config(), self.runtime_tuning())
     }
 }
 
@@ -1187,7 +1315,10 @@ pub enum NodeGraphViewStateFileError {
     InconsistentGraphId,
 }
 
-/// View-state persistence file (v1).
+/// View-state persistence file helper.
+///
+/// The type name is historical, but the emitted on-disk wrapper now follows `state_version = 2` and
+/// stores pure view-state separately from persisted interaction config and runtime tuning.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeGraphViewStateFileV1 {
     /// Graph id.
@@ -1222,21 +1353,64 @@ impl NodeGraphViewStateFileV1 {
             source,
         })?;
 
-        match serde_json::from_slice::<Self>(&bytes) {
-            Ok(v) => {
-                if v.graph_id != graph_id {
-                    return Err(NodeGraphViewStateFileError::InconsistentGraphId);
-                }
-                Ok(v)
+        let root: serde_json::Value = serde_json::from_slice(&bytes).map_err(|source| {
+            NodeGraphViewStateFileError::Parse {
+                path: path.display().to_string(),
+                source,
             }
-            Err(new_err) => match serde_json::from_slice::<NodeGraphViewState>(&bytes) {
-                Ok(state) => Ok(Self::new(graph_id, state)),
-                Err(_old_err) => Err(NodeGraphViewStateFileError::Parse {
+        })?;
+
+        if root.get("graph_id").is_some() && root.get("state").is_some() {
+            #[derive(Deserialize)]
+            struct WrappedViewStateFile {
+                graph_id: GraphId,
+                state_version: u32,
+                state: serde_json::Value,
+                #[serde(default)]
+                interaction: Option<serde_json::Value>,
+                #[serde(default)]
+                runtime_tuning: Option<serde_json::Value>,
+            }
+
+            let wrapped: WrappedViewStateFile = serde_json::from_value(root).map_err(|source| {
+                NodeGraphViewStateFileError::Parse {
                     path: path.display().to_string(),
-                    source: new_err,
-                }),
-            },
+                    source,
+                }
+            })?;
+            if wrapped.graph_id != graph_id {
+                return Err(NodeGraphViewStateFileError::InconsistentGraphId);
+            }
+            let state = if wrapped.state_version >= 2
+                || wrapped.interaction.is_some()
+                || wrapped.runtime_tuning.is_some()
+            {
+                parse_wrapped_view_state_json_values(
+                    wrapped.state,
+                    wrapped.interaction,
+                    wrapped.runtime_tuning,
+                )
+            } else {
+                parse_view_state_json_value(wrapped.state)
+            }
+            .map_err(|source| NodeGraphViewStateFileError::Parse {
+                path: path.display().to_string(),
+                source,
+            })?;
+            return Ok(Self {
+                graph_id: wrapped.graph_id,
+                state_version: wrapped.state_version,
+                state,
+            });
         }
+
+        let state = parse_view_state_json_value(root).map_err(|source| {
+            NodeGraphViewStateFileError::Parse {
+                path: path.display().to_string(),
+                source,
+            }
+        })?;
+        Ok(Self::new(graph_id, state))
     }
 
     /// Loads the JSON file if it exists.
@@ -1262,7 +1436,14 @@ impl NodeGraphViewStateFileV1 {
                 }
             })?;
         }
-        let bytes = serde_json::to_vec_pretty(self).map_err(|source| {
+        let persisted = PersistedNodeGraphViewStateFileV2 {
+            graph_id: self.graph_id,
+            state_version: VIEW_STATE_VERSION,
+            state: self.state.pure_view_state(),
+            interaction: self.state.interaction.clone(),
+            runtime_tuning: self.state.runtime_tuning,
+        };
+        let bytes = serde_json::to_vec_pretty(&persisted).map_err(|source| {
             NodeGraphViewStateFileError::Serialize {
                 path: path.display().to_string(),
                 source,
@@ -1273,6 +1454,74 @@ impl NodeGraphViewStateFileV1 {
             source,
         })
     }
+}
+
+#[derive(Serialize, Deserialize)]
+struct PersistedNodeGraphViewStateFileV2 {
+    graph_id: GraphId,
+    state_version: u32,
+    state: NodeGraphPureViewState,
+    #[serde(
+        default,
+        skip_serializing_if = "NodeGraphInteractionConfig::is_default"
+    )]
+    interaction: NodeGraphInteractionConfig,
+    #[serde(default, skip_serializing_if = "NodeGraphRuntimeTuning::is_default")]
+    runtime_tuning: NodeGraphRuntimeTuning,
+}
+
+fn parse_wrapped_view_state_json_values(
+    state: serde_json::Value,
+    interaction: Option<serde_json::Value>,
+    runtime_tuning: Option<serde_json::Value>,
+) -> Result<NodeGraphViewState, serde_json::Error> {
+    let state: NodeGraphPureViewState = serde_json::from_value(state)?;
+    let (interaction, migrated_runtime_tuning) = parse_interaction_config_json_value(interaction)?;
+    let runtime_tuning = if let Some(value) = runtime_tuning {
+        serde_json::from_value(value)?
+    } else {
+        migrated_runtime_tuning
+    };
+    Ok(NodeGraphViewState::from_parts(
+        state,
+        interaction,
+        runtime_tuning,
+    ))
+}
+
+fn parse_interaction_config_json_value(
+    value: Option<serde_json::Value>,
+) -> Result<(NodeGraphInteractionConfig, NodeGraphRuntimeTuning), serde_json::Error> {
+    let Some(value) = value else {
+        return Ok((
+            NodeGraphInteractionConfig::default(),
+            NodeGraphRuntimeTuning::default(),
+        ));
+    };
+    match serde_json::from_value::<NodeGraphInteractionConfig>(value.clone()) {
+        Ok(config) => Ok((config, NodeGraphRuntimeTuning::default())),
+        Err(config_err) => match serde_json::from_value::<NodeGraphInteractionState>(value) {
+            Ok(legacy) => Ok(legacy.split()),
+            Err(_) => Err(config_err),
+        },
+    }
+}
+
+fn parse_view_state_json_value(
+    value: serde_json::Value,
+) -> Result<NodeGraphViewState, serde_json::Error> {
+    let mut state: NodeGraphViewState = serde_json::from_value(value.clone())?;
+    if !NodeGraphRuntimeTuning::is_default(&state.runtime_tuning) {
+        return Ok(state);
+    }
+
+    let Some(legacy_interaction_value) = value.get("interaction").cloned() else {
+        return Ok(state);
+    };
+    let legacy_interaction: NodeGraphInteractionState =
+        serde_json::from_value(legacy_interaction_value)?;
+    state.runtime_tuning = legacy_interaction.runtime_tuning();
+    Ok(state)
 }
 
 #[cfg(test)]
@@ -1288,20 +1537,50 @@ mod tests {
         let graph_id = GraphId::new();
         let path = temp_path("view_state_roundtrip", graph_id);
 
-        let state = NodeGraphViewState {
+        let mut state = NodeGraphViewState {
             pan: crate::core::CanvasPoint { x: 12.5, y: -3.0 },
             zoom: 1.25,
             ..NodeGraphViewState::default()
         };
+        state.interaction.selection_on_drag = true;
+        state.runtime_tuning.only_render_visible_elements = false;
 
         let file = NodeGraphViewStateFileV1::new(graph_id, state.clone());
         file.save_json(&path).unwrap();
+
+        let root: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        assert_eq!(root.get("state_version").and_then(|v| v.as_u64()), Some(2));
+        assert!(
+            root.get("state")
+                .and_then(|v| v.get("interaction"))
+                .is_none()
+        );
+        assert!(
+            root.get("state")
+                .and_then(|v| v.get("runtime_tuning"))
+                .is_none()
+        );
+        assert_eq!(
+            root.get("interaction")
+                .and_then(|v| v.get("selection_on_drag"))
+                .and_then(|v| v.as_bool()),
+            Some(true)
+        );
+        assert_eq!(
+            root.get("runtime_tuning")
+                .and_then(|v| v.get("only_render_visible_elements"))
+                .and_then(|v| v.as_bool()),
+            Some(false)
+        );
 
         let loaded = NodeGraphViewStateFileV1::load_json(&path, graph_id).unwrap();
         assert_eq!(loaded.graph_id, graph_id);
         assert_eq!(loaded.state.pan.x, state.pan.x);
         assert_eq!(loaded.state.pan.y, state.pan.y);
         assert_eq!(loaded.state.zoom, state.zoom);
+        assert!(loaded.state.interaction.selection_on_drag);
+        assert!(!loaded.state.runtime_tuning.only_render_visible_elements);
 
         let _ = std::fs::remove_file(&path);
     }
@@ -1325,6 +1604,70 @@ mod tests {
         assert_eq!(loaded.state.pan.x, state.pan.x);
         assert_eq!(loaded.state.pan.y, state.pan.y);
         assert_eq!(loaded.state.zoom, state.zoom);
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn interaction_state_split_roundtrips_runtime_tuning() {
+        let mut interaction = NodeGraphInteractionState::default();
+        interaction.selection_on_drag = true;
+        interaction.only_render_visible_elements = false;
+        interaction.spatial_index.edge_aabb_pad_screen_px = 123.0;
+        interaction.paint_cache_prune.max_entries = 4_096;
+
+        let (config, runtime_tuning) = interaction.split();
+        assert!(config.selection_on_drag);
+        assert!(!runtime_tuning.only_render_visible_elements);
+        assert_eq!(runtime_tuning.spatial_index.edge_aabb_pad_screen_px, 123.0);
+        assert_eq!(runtime_tuning.paint_cache_prune.max_entries, 4_096);
+
+        let rebuilt = NodeGraphInteractionState::from_parts(&config, &runtime_tuning);
+        assert_eq!(rebuilt, interaction);
+    }
+
+    #[test]
+    fn view_state_file_migrates_legacy_runtime_tuning_from_interaction() {
+        let graph_id = GraphId::new();
+        let path = temp_path("view_state_legacy_runtime_tuning", graph_id);
+
+        let mut legacy_interaction = NodeGraphInteractionState::default();
+        legacy_interaction.selection_on_drag = true;
+        legacy_interaction.only_render_visible_elements = false;
+        legacy_interaction.spatial_index.edge_aabb_pad_screen_px = 222.0;
+        legacy_interaction.paint_cache_prune.max_age_frames = 9;
+
+        let state_json = serde_json::json!({
+            "pan": { "x": 3.0, "y": 4.0 },
+            "zoom": 1.5,
+            "interaction": serde_json::to_value(&legacy_interaction).unwrap()
+        });
+        std::fs::write(&path, serde_json::to_vec_pretty(&state_json).unwrap()).unwrap();
+
+        let loaded = NodeGraphViewStateFileV1::load_json(&path, graph_id).unwrap();
+        assert_eq!(loaded.state.pan.x, 3.0);
+        assert_eq!(loaded.state.pan.y, 4.0);
+        assert_eq!(loaded.state.zoom, 1.5);
+        assert!(loaded.state.interaction.selection_on_drag);
+        assert!(!loaded.state.runtime_tuning.only_render_visible_elements);
+        assert_eq!(
+            loaded
+                .state
+                .runtime_tuning
+                .spatial_index
+                .edge_aabb_pad_screen_px,
+            222.0
+        );
+        assert_eq!(
+            loaded.state.runtime_tuning.paint_cache_prune.max_age_frames,
+            9
+        );
+
+        let resolved = loaded.state.resolved_interaction_state();
+        assert!(resolved.selection_on_drag);
+        assert!(!resolved.only_render_visible_elements);
+        assert_eq!(resolved.spatial_index.edge_aabb_pad_screen_px, 222.0);
+        assert_eq!(resolved.paint_cache_prune.max_age_frames, 9);
 
         let _ = std::fs::remove_file(&path);
     }

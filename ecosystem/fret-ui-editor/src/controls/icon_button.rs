@@ -77,9 +77,10 @@ impl IconButton {
             let theme = Theme::global(&*cx.app);
             EditorDensity::resolve(theme)
         };
+        let affordance_extent = density.affordance_extent();
 
-        let w = self.options.width.unwrap_or(density.hit_thickness);
-        let h = self.options.height.unwrap_or(density.hit_thickness);
+        let w = self.options.width.unwrap_or(affordance_extent);
+        let h = self.options.height.unwrap_or(affordance_extent);
         let radius = self.options.corner_radius.unwrap_or(Px(6.0));
         let icon_size = self.options.icon_size.or(Some(density.icon_size));
 

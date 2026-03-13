@@ -23,8 +23,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 NodeGraphConnectionMode::Loose => "connection mode: loose",
             },
         );
-        cx.request_redraw();
-        cx.invalidate_self(Invalidation::Paint);
-        true
+        super::command_ui::finish_command_paint(cx)
     }
 }

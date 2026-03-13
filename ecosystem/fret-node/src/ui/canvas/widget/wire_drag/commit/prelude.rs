@@ -10,9 +10,8 @@ pub(super) use crate::runtime::callbacks::ConnectEndOutcome;
 pub(super) use crate::ui::presenter::InsertNodeCandidate;
 
 pub(super) use crate::ui::canvas::conversion;
-pub(super) use crate::ui::canvas::searcher::SEARCHER_MAX_VISIBLE_ROWS;
 pub(super) use crate::ui::canvas::state::{
-    ContextMenuTarget, LastConversionContext, SearcherState, ViewSnapshot, WireDrag, WireDragKind,
+    ContextMenuTarget, LastConversionContext, ViewSnapshot, WireDrag, WireDragKind,
 };
 
 pub(super) use super::{

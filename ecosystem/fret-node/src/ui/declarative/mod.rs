@@ -6,7 +6,8 @@
 
 mod paint_only;
 mod view_reducer;
-pub use paint_only::{NodeGraphSurfacePaintOnlyProps, node_graph_surface_paint_only};
+pub use super::binding::NodeGraphSurfaceBinding;
+pub use paint_only::{NodeGraphSurfaceProps, node_graph_surface};
 
 #[cfg(feature = "compat-retained-canvas")]
 mod compat_retained;

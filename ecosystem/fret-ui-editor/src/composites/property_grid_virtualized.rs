@@ -14,7 +14,8 @@ use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::composites::property_row::{PropertyRowLayoutVariant, PropertyRowOptions};
-use crate::primitives::{EditorDensity, EditorTokenKeys};
+use crate::primitives::EditorDensity;
+use crate::primitives::inspector_layout::InspectorLayoutMetrics;
 
 #[derive(Debug, Clone)]
 pub struct PropertyGridVirtualizedOptions {
@@ -112,17 +113,18 @@ impl PropertyGridVirtualized {
     ) -> AnyElement {
         let (density, row_cx, row_gap) = {
             let theme = Theme::global(&*cx.app);
-            let density = EditorDensity::resolve(theme);
-            let column_gap = self
-                .options
-                .column_gap
-                .or_else(|| theme.metric_by_key(EditorTokenKeys::PROPERTY_COLUMN_GAP))
-                .unwrap_or(Px(8.0));
-            let row_gap = self.options.row_gap.unwrap_or(Px(4.0));
+            let metrics = InspectorLayoutMetrics::resolve(theme);
+            let density = metrics.density;
+            let column_gap = self.options.column_gap.unwrap_or(metrics.column_gap);
+            let row_gap = self.options.row_gap.unwrap_or(metrics.row_gap);
 
             let row_options = PropertyRowOptions {
                 label_width: self.options.label_width,
                 gap: Some(column_gap),
+                trailing_gap: Some(metrics.trailing_gap),
+                value_max_width: Some(metrics.value_max_width),
+                status_slot_width: Some(metrics.status_slot_width),
+                reset_slot_width: Some(metrics.reset_slot_width),
                 variant: PropertyRowLayoutVariant::Auto,
                 ..Default::default()
             };

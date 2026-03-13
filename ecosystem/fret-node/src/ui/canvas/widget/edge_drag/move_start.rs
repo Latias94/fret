@@ -49,8 +49,7 @@ pub(super) fn handle_edge_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
         .unwrap_or(false);
     if !endpoint_allowed {
         canvas.interaction.edge_drag = None;
-        cx.request_redraw();
-        cx.invalidate_self(Invalidation::Paint);
+        invalidate_paint(cx);
         return true;
     }
 
@@ -67,7 +66,6 @@ pub(super) fn handle_edge_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     });
     canvas.emit_connect_start(snapshot, &kind);
 
-    cx.request_redraw();
-    cx.invalidate_self(Invalidation::Paint);
+    invalidate_paint(cx);
     true
 }

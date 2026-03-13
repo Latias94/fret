@@ -6,9 +6,12 @@ use fret_ui::{UiHost, retained_bridge::*};
 
 use crate::core::{GroupId, SymbolId};
 use crate::ops::{GraphOp, GraphTransaction};
-use crate::ui::{NodeGraphEditQueue, NodeGraphStyle};
+use crate::ui::controller::NodeGraphController;
+use crate::ui::edit_queue::NodeGraphEditQueue;
+use crate::ui::screen_space_placement::clamp_rect_to_bounds;
+use crate::ui::style::NodeGraphStyle;
 
-use super::{clamp_rect_to_bounds, layout_hidden_child_and_release_focus};
+use super::layout_hidden_child_and_release_focus;
 
 fn group_rename_size_at(style: &NodeGraphStyle) -> Size {
     let w = style.paint.context_menu_width.max(40.0);
@@ -50,7 +53,8 @@ pub struct SymbolRenameOverlay {
 /// - child 0: a `BoundTextInput` bound to `group_rename_text`.
 pub struct NodeGraphOverlayHost {
     graph: Model<crate::Graph>,
-    edits: Model<NodeGraphEditQueue>,
+    edits: Option<Model<NodeGraphEditQueue>>,
+    controller: Option<NodeGraphController>,
     overlays: Model<NodeGraphOverlayState>,
     group_rename_text: Model<String>,
     canvas_node: fret_core::NodeId,
@@ -65,7 +69,6 @@ pub struct NodeGraphOverlayHost {
 impl NodeGraphOverlayHost {
     pub fn new(
         graph: Model<crate::Graph>,
-        edits: Model<NodeGraphEditQueue>,
         overlays: Model<NodeGraphOverlayState>,
         group_rename_text: Model<String>,
         canvas_node: fret_core::NodeId,
@@ -73,7 +76,8 @@ impl NodeGraphOverlayHost {
     ) -> Self {
         Self {
             graph,
-            edits,
+            edits: None,
+            controller: None,
             overlays,
             group_rename_text,
             canvas_node,
@@ -82,6 +86,30 @@ impl NodeGraphOverlayHost {
             last_opened_symbol: None,
             group_rename_bounds: None,
             active: false,
+        }
+    }
+
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn with_edit_queue(mut self, edits: Model<NodeGraphEditQueue>) -> Self {
+        self.edits = Some(edits);
+        self
+    }
+
+    pub fn with_controller(mut self, controller: NodeGraphController) -> Self {
+        self.controller = Some(controller);
+        self
+    }
+
+    fn submit_transaction<H: UiHost>(&self, host: &mut H, tx: &GraphTransaction) {
+        if let Some(controller) = &self.controller {
+            let _ = controller.submit_transaction_and_sync_graph_model(host, &self.graph, tx);
+            return;
+        }
+
+        if let Some(edits) = &self.edits {
+            let _ = edits.update(host, |q, _cx| {
+                q.push(tx.clone());
+            });
         }
     }
 
@@ -136,9 +164,7 @@ impl NodeGraphOverlayHost {
                 to,
             }],
         };
-        let _ = self.edits.update(host, |q, _cx| {
-            q.push(tx);
-        });
+        self.submit_transaction(host, &tx);
     }
 
     fn commit_symbol_rename<H: UiHost>(&mut self, host: &mut H, symbol: SymbolId) {
@@ -166,9 +192,7 @@ impl NodeGraphOverlayHost {
                 to,
             }],
         };
-        let _ = self.edits.update(host, |q, _cx| {
-            q.push(tx);
-        });
+        self.submit_transaction(host, &tx);
     }
 }
 

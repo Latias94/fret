@@ -1,29 +1,11 @@
-use crate::ui::canvas::widget::paint_render_data::RenderData;
+#[path = "build_state/init.rs"]
+mod init;
+#[path = "build_state/ops.rs"]
+mod ops;
+#[path = "build_state/step.rs"]
+mod step;
+
 use crate::ui::canvas::widget::*;
-
-fn extend_clip_stack_ops(ops: &mut Vec<SceneOp>, tmp: &[SceneOp]) {
-    if tmp.is_empty() {
-        return;
-    }
-
-    match ops.pop() {
-        Some(SceneOp::PopClip) => {
-            ops.extend_from_slice(tmp);
-            ops.push(SceneOp::PopClip);
-        }
-        Some(other) => {
-            ops.push(other);
-            ops.extend_from_slice(tmp);
-        }
-        None => {
-            ops.extend_from_slice(tmp);
-        }
-    }
-
-    if !matches!(ops.last(), Some(SceneOp::PopClip)) {
-        ops.push(SceneOp::PopClip);
-    }
-}
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn init_edges_build_state<H: UiHost>(
@@ -36,23 +18,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cull_rect: Rect,
         zoom: f32,
     ) -> EdgesBuildState {
-        let render_edges: RenderData = self.collect_render_data(
-            host,
-            snapshot,
-            Arc::clone(geom),
-            Arc::clone(index),
-            Some(cull_rect),
-            zoom,
-            None,
-            false,
-            false,
-            true,
-        );
-        EdgesBuildState {
-            ops: vec![SceneOp::PushClipRect { rect: clip_rect }, SceneOp::PopClip],
-            edges: render_edges.edges,
-            next_edge: 0,
-        }
+        init::init_edges_build_state(
+            self, host, snapshot, geom, index, clip_rect, cull_rect, zoom,
+        )
     }
 
     pub(super) fn init_edge_labels_build_state<H: UiHost>(
@@ -66,24 +34,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cull_rect: Rect,
         zoom: f32,
     ) -> EdgeLabelsBuildState {
-        let render_edges: RenderData = self.collect_render_data(
-            host,
-            snapshot,
-            Arc::clone(geom),
-            Arc::clone(index),
-            Some(cull_rect),
-            zoom,
-            None,
-            false,
-            false,
-            true,
-        );
-        EdgeLabelsBuildState {
-            key,
-            ops: vec![SceneOp::PushClipRect { rect: clip_rect }, SceneOp::PopClip],
-            edges: render_edges.edges,
-            next_edge: 0,
-        }
+        init::init_edge_labels_build_state(
+            self, host, snapshot, geom, index, key, clip_rect, cull_rect, zoom,
+        )
     }
 
     pub(super) fn paint_edges_build_state_step<H: UiHost>(
@@ -97,21 +50,17 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         wire_budget: &mut WorkBudget,
         marker_budget: &mut WorkBudget,
     ) -> bool {
-        let (next_edge, skipped) = self.paint_edges_cached_budgeted(
+        step::paint_edges_build_state_step(
+            self,
             tmp,
             host,
             services,
-            &state.edges,
             zoom,
             scale_factor,
-            state.next_edge,
+            state,
             wire_budget,
             marker_budget,
-        );
-        state.next_edge = next_edge;
-
-        extend_clip_stack_ops(&mut state.ops, tmp.ops());
-        skipped || state.next_edge < state.edges.len()
+        )
     }
 
     pub(super) fn paint_edge_labels_build_state_step<H: UiHost>(
@@ -125,20 +74,16 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         state: &mut EdgeLabelsBuildState,
         budget: &mut WorkBudget,
     ) -> bool {
-        let (next_edge, skipped) = self.paint_edge_labels_static_budgeted_cached(
+        step::paint_edge_labels_build_state_step(
+            self,
             tmp,
             host,
             services,
             scale_factor,
-            &state.edges,
-            bezier_steps,
             zoom,
-            state.next_edge,
+            bezier_steps,
+            state,
             budget,
-        );
-        state.next_edge = next_edge;
-
-        extend_clip_stack_ops(&mut state.ops, tmp.ops());
-        skipped || state.next_edge < state.edges.len()
+        )
     }
 }

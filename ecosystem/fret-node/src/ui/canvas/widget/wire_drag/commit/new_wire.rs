@@ -151,34 +151,22 @@ pub(super) fn commit_new_wire<H: UiHost, M: NodeGraphCanvasMiddleware>(
                     candidates: candidates.clone(),
                 });
 
-                let rows = crate::ui::canvas::searcher::build_rows_flat(&candidates, "");
-                let visible = rows.len().min(SEARCHER_MAX_VISIBLE_ROWS);
-                let origin = canvas.clamp_searcher_origin(
-                    Point::new(Px(convert_at.x), Px(convert_at.y)),
-                    visible,
+                let invoked_at = Point::new(Px(convert_at.x), Px(convert_at.y));
+
+                canvas.install_searcher_overlay(super::super::super::build_searcher_state(
+                    canvas,
+                    invoked_at,
                     bounds,
                     snapshot,
-                );
-                let active_row = NodeGraphCanvasWith::<M>::searcher_first_selectable_row(&rows)
-                    .min(rows.len().saturating_sub(1));
-
-                canvas.interaction.context_menu = None;
-                canvas.interaction.searcher = Some(SearcherState {
-                    origin,
-                    invoked_at: Point::new(Px(convert_at.x), Px(convert_at.y)),
-                    target: ContextMenuTarget::ConnectionConvertPicker {
+                    ContextMenuTarget::ConnectionConvertPicker {
                         from,
                         to: target,
                         at: convert_at,
                     },
-                    query: String::new(),
                     candidates,
-                    recent_kinds: canvas.interaction.recent_kinds.clone(),
-                    rows,
-                    hovered_row: None,
-                    active_row,
-                    scroll: 0,
-                });
+                    canvas.interaction.recent_kinds.clone(),
+                    super::super::super::SearcherRowsMode::Flat,
+                ));
             }
             Outcome::Reject(sev, msg) => {
                 connect_end_outcome = ConnectEndOutcome::Rejected;

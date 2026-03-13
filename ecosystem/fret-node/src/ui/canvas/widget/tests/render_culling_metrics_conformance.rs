@@ -18,7 +18,7 @@ fn render_metrics_report_culling_reduction_when_enabled() {
         let _ = view.update(&mut host, |s, _cx| {
             s.pan = crate::core::CanvasPoint::default();
             s.zoom = 1.0;
-            s.interaction.only_render_visible_elements = true;
+            s.runtime_tuning.only_render_visible_elements = true;
             s.interaction.frame_view_duration_ms = 0;
         });
 
@@ -31,7 +31,7 @@ fn render_metrics_report_culling_reduction_when_enabled() {
         let _ = view.update(&mut host, |s, _cx| {
             s.pan = crate::core::CanvasPoint::default();
             s.zoom = 1.0;
-            s.interaction.only_render_visible_elements = false;
+            s.runtime_tuning.only_render_visible_elements = false;
             s.interaction.frame_view_duration_ms = 0;
         });
 

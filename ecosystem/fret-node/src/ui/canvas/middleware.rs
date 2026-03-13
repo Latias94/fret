@@ -9,6 +9,11 @@ use crate::ops::GraphTransaction;
 use crate::rules::{Diagnostic, DiagnosticSeverity, DiagnosticTarget};
 use crate::ui::style::NodeGraphStyle;
 
+mod middleware_chain;
+mod middleware_validation;
+pub use middleware_chain::NodeGraphCanvasMiddlewareChain;
+pub use middleware_validation::{RejectInvalidSizeTx, RejectNonFiniteTx};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NodeGraphCanvasEventOutcome {
     NotHandled,
@@ -71,118 +76,3 @@ pub trait NodeGraphCanvasMiddleware: 'static {
 pub struct NoopNodeGraphCanvasMiddleware;
 
 impl NodeGraphCanvasMiddleware for NoopNodeGraphCanvasMiddleware {}
-
-#[derive(Debug, Clone)]
-pub struct NodeGraphCanvasMiddlewareChain<A, B> {
-    pub first: A,
-    pub second: B,
-}
-
-impl<A, B> NodeGraphCanvasMiddlewareChain<A, B> {
-    pub fn new(first: A, second: B) -> Self {
-        Self { first, second }
-    }
-}
-
-impl<A, B> NodeGraphCanvasMiddleware for NodeGraphCanvasMiddlewareChain<A, B>
-where
-    A: NodeGraphCanvasMiddleware,
-    B: NodeGraphCanvasMiddleware,
-{
-    fn handle_event<H: UiHost>(
-        &mut self,
-        cx: &mut EventCx<'_, H>,
-        ctx: &NodeGraphCanvasMiddlewareCx<'_>,
-        event: &Event,
-    ) -> NodeGraphCanvasEventOutcome {
-        match self.first.handle_event(cx, ctx, event) {
-            NodeGraphCanvasEventOutcome::NotHandled => self.second.handle_event(cx, ctx, event),
-            other => other,
-        }
-    }
-
-    fn handle_command<H: UiHost>(
-        &mut self,
-        cx: &mut CommandCx<'_, H>,
-        ctx: &NodeGraphCanvasMiddlewareCx<'_>,
-        command: &CommandId,
-    ) -> NodeGraphCanvasCommandOutcome {
-        match self.first.handle_command(cx, ctx, command) {
-            NodeGraphCanvasCommandOutcome::NotHandled => {
-                self.second.handle_command(cx, ctx, command)
-            }
-            other => other,
-        }
-    }
-
-    fn before_commit<H: UiHost>(
-        &mut self,
-        host: &mut H,
-        window: Option<AppWindowId>,
-        ctx: &NodeGraphCanvasMiddlewareCx<'_>,
-        tx: &mut GraphTransaction,
-    ) -> NodeGraphCanvasCommitOutcome {
-        match self.first.before_commit(host, window, ctx, tx) {
-            NodeGraphCanvasCommitOutcome::Continue => {
-                self.second.before_commit(host, window, ctx, tx)
-            }
-            other => other,
-        }
-    }
-}
-
-/// Rejects transactions that introduce non-finite geometry (`NaN`, `Inf`) into the graph document.
-#[derive(Debug, Default, Clone, Copy)]
-pub struct RejectNonFiniteTx;
-
-impl NodeGraphCanvasMiddleware for RejectNonFiniteTx {
-    fn before_commit<H: UiHost>(
-        &mut self,
-        _host: &mut H,
-        _window: Option<AppWindowId>,
-        _ctx: &NodeGraphCanvasMiddlewareCx<'_>,
-        tx: &mut GraphTransaction,
-    ) -> NodeGraphCanvasCommitOutcome {
-        let Some((key, message)) = crate::ops::find_non_finite_in_tx(tx) else {
-            return NodeGraphCanvasCommitOutcome::Continue;
-        };
-
-        NodeGraphCanvasCommitOutcome::Reject {
-            diagnostics: vec![Diagnostic {
-                key,
-                severity: DiagnosticSeverity::Error,
-                target: DiagnosticTarget::Graph,
-                message,
-                fixes: Vec::new(),
-            }],
-        }
-    }
-}
-
-/// Rejects transactions that introduce invalid node sizes (`<= 0`) into the graph document.
-#[derive(Debug, Default, Clone, Copy)]
-pub struct RejectInvalidSizeTx;
-
-impl NodeGraphCanvasMiddleware for RejectInvalidSizeTx {
-    fn before_commit<H: UiHost>(
-        &mut self,
-        _host: &mut H,
-        _window: Option<AppWindowId>,
-        _ctx: &NodeGraphCanvasMiddlewareCx<'_>,
-        tx: &mut GraphTransaction,
-    ) -> NodeGraphCanvasCommitOutcome {
-        let Some((key, message)) = crate::ops::find_invalid_size_in_tx(tx) else {
-            return NodeGraphCanvasCommitOutcome::Continue;
-        };
-
-        NodeGraphCanvasCommitOutcome::Reject {
-            diagnostics: vec![Diagnostic {
-                key,
-                severity: DiagnosticSeverity::Error,
-                target: DiagnosticTarget::Graph,
-                message,
-                fixes: Vec::new(),
-            }],
-        }
-    }
-}

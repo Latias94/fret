@@ -1,9 +1,11 @@
+mod activate;
+mod checks;
+
 use fret_core::Point;
 use fret_ui::UiHost;
 
-use super::threshold::exceeds_drag_threshold;
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
-use crate::ui::canvas::state::{NodeResize, ViewSnapshot};
+use crate::ui::canvas::state::ViewSnapshot;
 
 pub(super) fn handle_pending_node_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
@@ -19,24 +21,11 @@ pub(super) fn handle_pending_node_resize_move<H: UiHost, M: NodeGraphCanvasMiddl
         return false;
     };
 
-    let threshold_screen = snapshot.interaction.node_drag_threshold;
-    if !exceeds_drag_threshold(pending.start_pos, position, threshold_screen, zoom) {
+    if !checks::pending_node_resize_threshold_exceeded(&pending, snapshot, position, zoom) {
         return true;
     }
 
-    canvas.interaction.pending_node_resize = None;
-    canvas.interaction.node_resize = Some(NodeResize {
-        node: pending.node,
-        handle: pending.handle,
-        start_pos: pending.start_pos,
-        start_node_pos: pending.start_node_pos,
-        start_size: pending.start_size,
-        start_size_opt: pending.start_size_opt,
-        current_node_pos: pending.start_node_pos,
-        current_size_opt: pending.start_size_opt,
-        current_groups: Vec::new(),
-        preview_rev: 0,
-    });
+    activate::activate_pending_node_resize(&mut canvas.interaction, pending);
 
     false
 }

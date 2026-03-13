@@ -1,8 +1,13 @@
 use fret_core::{Modifiers, Point, Rect};
 use fret_ui::UiHost;
 
+mod connection_hits;
+mod edge_selection;
+mod element_hits;
+mod group_background;
 mod handlers;
 mod hit;
+mod node_selection;
 
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use crate::ui::canvas::state::ViewSnapshot;
@@ -54,27 +59,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddle
         )
         && !matches!(hit, Hit::Background)
     {
-        canvas.interaction.edge_drag = None;
-        canvas.interaction.pending_edge_insert_drag = None;
-        canvas.interaction.edge_insert_drag = None;
-        canvas.interaction.pending_group_drag = None;
-        canvas.interaction.group_drag = None;
-        canvas.interaction.pending_group_resize = None;
-        canvas.interaction.group_resize = None;
-        canvas.interaction.pending_node_drag = None;
-        canvas.interaction.node_drag = None;
-        canvas.interaction.pending_node_resize = None;
-        canvas.interaction.node_resize = None;
-        canvas.interaction.pending_wire_drag = None;
-        canvas.interaction.wire_drag = None;
-        canvas.interaction.click_connect = false;
-        canvas.interaction.pending_marquee = None;
-        canvas.interaction.marquee = None;
-        canvas.interaction.focused_edge = None;
-        canvas.interaction.hover_port = None;
-        canvas.interaction.hover_port_valid = false;
-        canvas.interaction.hover_port_convertible = false;
-        canvas.interaction.hover_port_diagnostic = None;
+        super::press_session::prepare_for_selection_marquee(&mut canvas.interaction);
 
         super::marquee::begin_background_marquee(canvas, cx, snapshot, position, modifiers, false);
         return true;

@@ -8,8 +8,8 @@ use fret_ui::retained_bridge::Widget as _;
 use crate::core::Graph;
 use crate::rules::EdgeEndpoint;
 use crate::runtime::callbacks::{
-    ConnectEnd, ConnectStart, NodeDragEnd, NodeDragStart, NodeGraphCallbacks, ViewportMoveEnd,
-    ViewportMoveStart,
+    ConnectEnd, ConnectStart, NodeDragEnd, NodeDragStart, NodeGraphCommitCallbacks,
+    NodeGraphGestureCallbacks, NodeGraphViewCallbacks, ViewportMoveEnd, ViewportMoveStart,
 };
 
 use super::prelude::{
@@ -28,7 +28,11 @@ struct Recorder {
     log: Rc<RefCell<Vec<String>>>,
 }
 
-impl NodeGraphCallbacks for Recorder {
+impl NodeGraphCommitCallbacks for Recorder {}
+
+impl NodeGraphViewCallbacks for Recorder {}
+
+impl NodeGraphGestureCallbacks for Recorder {
     fn on_connect_start(&mut self, ev: ConnectStart) {
         self.log.borrow_mut().push(format!("start:{:?}", ev.kind));
     }

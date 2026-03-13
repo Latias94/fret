@@ -1,8 +1,13 @@
-use crate::ui::canvas::widget::paint_render_data::RenderData;
 use crate::ui::canvas::widget::*;
 
+mod anchor_target;
 mod build_state;
+mod dispatch;
+mod edges;
+mod fallback;
+mod geometry;
 mod keys;
+mod labels;
 mod single_rect;
 mod tile_path;
 
@@ -28,61 +33,17 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     ) -> (Option<EdgeId>, Option<(EdgeRouteKind, Point, Point, Color)>) {
         let replay_delta = Point::new(Px(0.0), Px(0.0));
 
-        // --- Edges (static + overlays) ---
-        let edges_cache_allowed = self.interaction.pending_wire_drag.is_none()
-            && self.interaction.wire_drag.is_none()
-            && self.interaction.suspended_wire_drag.is_none()
-            && self.interaction.pending_edge_insert_drag.is_none()
-            && self.interaction.edge_insert_drag.is_none()
-            && self.interaction.edge_drag.is_none()
-            && self.interaction.pending_insert_node_drag.is_none()
-            && self.interaction.insert_node_drag_preview.is_none();
+        let (edge_anchor_target_id, edge_anchor_target) =
+            anchor_target::resolve_cached_edge_anchor_target(self, cx, snapshot, geom);
 
-        let edge_anchor_target_id = self
-            .interaction
-            .focused_edge
-            .or_else(|| (snapshot.selected_edges.len() == 1).then(|| snapshot.selected_edges[0]))
-            .filter(|edge_id| {
-                self.graph
-                    .read_ref(cx.app, |g| {
-                        let edge = g.edges.get(edge_id)?;
-                        let (allow_source, allow_target) =
-                            Self::edge_reconnectable_flags(edge, &snapshot.interaction);
-                        Some(allow_source || allow_target)
-                    })
-                    .ok()
-                    .flatten()
-                    .unwrap_or(false)
-            });
-        let edge_anchor_target: Option<(EdgeRouteKind, Point, Point, Color)> =
-            edge_anchor_target_id.and_then(|edge_id| {
-                self.graph
-                    .read_ref(cx.app, |g| {
-                        let edge = g.edges.get(&edge_id)?;
-                        let from = geom.port_center(edge.from)?;
-                        let to = geom.port_center(edge.to)?;
-                        let hint = EdgePathContext::new(
-                            &self.style,
-                            &*self.presenter,
-                            self.edge_types.as_ref(),
-                        )
-                        .edge_render_hint_normalized(g, edge_id);
-                        let mut color = self.presenter.edge_color(g, edge_id, &self.style);
-                        if let Some(override_color) = hint.color {
-                            color = override_color;
-                        }
-                        Some((hint.route, from, to, color))
-                    })
-                    .ok()
-                    .flatten()
-            });
-
-        if edges_cache_allowed {
-            if edges_cache_tile_size_canvas.is_finite()
-                && (edges_cache_tile_size_canvas < viewport_w
-                    || edges_cache_tile_size_canvas < viewport_h)
-            {
-                self.paint_root_edges_cached_path_tiled(
+        if crate::ui::canvas::widget::interaction_gate::allow_edges_cache(&self.interaction) {
+            if dispatch::should_use_tiled_edges_cache(
+                edges_cache_tile_size_canvas,
+                viewport_w,
+                viewport_h,
+            ) {
+                dispatch::paint_root_edges_cached_path_tiled(
+                    self,
                     cx,
                     snapshot,
                     geom,
@@ -98,7 +59,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     replay_delta,
                 );
             } else {
-                self.paint_root_edges_cached_path_single_rect(
+                dispatch::paint_root_edges_cached_path_single_rect(
+                    self,
                     cx,
                     snapshot,
                     geom,
@@ -116,22 +78,17 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 );
             }
         } else {
-            self.edges_build_states.clear();
-            self.edge_labels_build_states.clear();
-            self.edge_labels_build_state = None;
-            let render_edges: RenderData = self.collect_render_data(
-                &*cx.app,
+            fallback::paint_root_edges_without_static_cache(
+                self,
+                cx,
                 snapshot,
-                Arc::clone(geom),
-                Arc::clone(index),
+                geom,
+                index,
+                hovered_edge,
                 render_cull_rect,
                 zoom,
-                hovered_edge,
-                false,
-                false,
-                true,
+                view_interacting,
             );
-            self.paint_edges(cx, snapshot, &render_edges, geom, zoom, view_interacting);
         }
 
         (edge_anchor_target_id, edge_anchor_target)

@@ -1,5 +1,28 @@
 use super::prelude::*;
 
+pub(in super::super) fn activate_edge_insert_picker_action<
+    H: UiHost,
+    M: NodeGraphCanvasMiddleware,
+>(
+    canvas: &mut NodeGraphCanvasWith<M>,
+    cx: &mut EventCx<'_, H>,
+    edge: EdgeId,
+    invoked_at: Point,
+    action: NodeGraphContextMenuAction,
+    menu_candidates: &[InsertNodeCandidate],
+) -> bool {
+    match action {
+        NodeGraphContextMenuAction::InsertNodeCandidate(candidate_ix) => {
+            let Some(candidate) = menu_candidates.get(candidate_ix).cloned() else {
+                return true;
+            };
+            insert_node_on_edge(canvas, cx, edge, invoked_at, candidate);
+            true
+        }
+        _ => false,
+    }
+}
+
 pub(in super::super) fn insert_node_on_edge<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut EventCx<'_, H>,
@@ -15,59 +38,26 @@ pub(in super::super) fn insert_node_on_edge<H: UiHost, M: NodeGraphCanvasMiddlew
 
     canvas.record_recent_kind(&candidate.kind);
 
-    let outcome = {
-        let at = if candidate.kind.0 == REROUTE_KIND {
-            canvas.reroute_pos_for_invoked_at(invoked_at)
-        } else {
-            CanvasPoint {
-                x: invoked_at.x.0,
-                y: invoked_at.y.0,
+    let outcome = canvas
+        .plan_canvas_split_edge_insert_candidate(cx.app, edge, &candidate, invoked_at)
+        .map(|result| match result {
+            Ok(ops) => Outcome::Apply(ops),
+            Err(diags) => {
+                let (sev, msg) = NodeGraphCanvasWith::<M>::split_edge_candidate_rejection_toast(
+                    &candidate, &diags,
+                );
+                Outcome::Reject(sev, msg)
             }
-        };
-
-        let presenter = &mut *canvas.presenter;
-        canvas
-            .graph
-            .read_ref(cx.app, |graph| {
-                let plan = presenter.plan_split_edge_candidate(graph, edge, &candidate, at);
-                match plan.decision {
-                    ConnectDecision::Accept => Outcome::Apply(plan.ops),
-                    ConnectDecision::Reject => {
-                        NodeGraphCanvasWith::<M>::toast_from_diagnostics(&plan.diagnostics)
-                            .map(|(sev, msg)| Outcome::Reject(sev, msg))
-                            .unwrap_or_else(|| {
-                                Outcome::Reject(
-                                    DiagnosticSeverity::Error,
-                                    Arc::<str>::from(format!(
-                                        "node insertion was rejected: {}",
-                                        candidate.kind.0
-                                    )),
-                                )
-                            })
-                    }
-                }
-            })
-            .ok()
-            .unwrap_or(Outcome::Ignore)
-    };
+        })
+        .unwrap_or(Outcome::Ignore);
 
     match outcome {
         Outcome::Apply(ops) => {
-            let select_node = candidate.kind.0 == REROUTE_KIND;
-            let node_id = select_node
+            let node_id = is_reroute_insert_candidate(&candidate)
                 .then(|| NodeGraphCanvasWith::<M>::first_added_node_id(&ops))
                 .flatten();
             canvas.apply_ops(cx.app, cx.window, ops);
-            if let Some(node_id) = node_id {
-                canvas.update_view_state(cx.app, |s| {
-                    s.selected_edges.clear();
-                    s.selected_groups.clear();
-                    s.selected_nodes.clear();
-                    s.selected_nodes.push(node_id);
-                    s.draw_order.retain(|id| *id != node_id);
-                    s.draw_order.push(node_id);
-                });
-            }
+            canvas.select_inserted_node(cx.app, node_id);
         }
         Outcome::Reject(sev, msg) => canvas.show_toast(cx.app, cx.window, sev, msg),
         Outcome::Ignore => {}

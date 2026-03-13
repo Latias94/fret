@@ -42,6 +42,7 @@ pub mod tab_strip_overflow_menu;
 pub mod tab_strip_scroll;
 pub mod tab_strip_surface;
 pub mod table;
+pub mod text_assist;
 pub mod tooltip_delay_group;
 pub mod tooltip_intent;
 pub mod transition;

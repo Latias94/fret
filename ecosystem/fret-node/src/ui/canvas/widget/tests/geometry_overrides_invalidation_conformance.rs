@@ -61,7 +61,7 @@ fn geometry_overrides_revision_rebuilds_derived_geometry_and_spatial_index_witho
 
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;
-        s.interaction.only_render_visible_elements = false;
+        s.runtime_tuning.only_render_visible_elements = false;
         s.interaction.frame_view_duration_ms = 0;
     });
 

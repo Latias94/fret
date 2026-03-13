@@ -22,6 +22,39 @@ fn append_diag_script_handoff_trace(out_dir: &std::path::Path, line: &str) {
     }
 }
 
+fn script_step_needs_element_runtime(step: &UiActionStepV2) -> bool {
+    // Most promoted scripts resolve targets via `test_id` / role selectors and then inject events.
+    // Borrowing `ElementRuntime` across the whole dispatch path keeps that global leased while
+    // event handlers run, which produces noisy nested-lease warnings. Only borrow it for steps
+    // that explicitly need element-runtime-backed data.
+    matches!(
+        step,
+        UiActionStepV2::ClickSelectableTextSpanStable { .. }
+            | UiActionStepV2::WaitOverlayPlacementTrace { .. }
+    ) || serialized_step_contains_global_element_selector(step)
+}
+
+fn serialized_step_contains_global_element_selector(step: &UiActionStepV2) -> bool {
+    serde_json::to_value(step)
+        .ok()
+        .is_some_and(|value| json_value_contains_string(&value, "global_element_id"))
+}
+
+fn json_value_contains_string(value: &serde_json::Value, needle: &str) -> bool {
+    match value {
+        serde_json::Value::String(current) => current == needle,
+        serde_json::Value::Array(items) => items
+            .iter()
+            .any(|item| json_value_contains_string(item, needle)),
+        serde_json::Value::Object(entries) => entries
+            .values()
+            .any(|entry| json_value_contains_string(entry, needle)),
+        serde_json::Value::Null | serde_json::Value::Bool(_) | serde_json::Value::Number(_) => {
+            false
+        }
+    }
+}
+
 pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
     if active.wait_until.is_some() {
         return true;
@@ -40,6 +73,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
                 | V2StepState::EnsureVisible(_)
                 | V2StepState::ScrollIntoView(_)
                 | V2StepState::TypeTextInto(_)
+                | V2StepState::SetTextValue(_)
                 | V2StepState::PasteTextInto(_)
                 | V2StepState::MenuSelect(_)
                 | V2StepState::MenuSelectPath(_)
@@ -81,6 +115,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::EnsureVisible { .. }
         | UiActionStepV2::ScrollIntoView { .. }
         | UiActionStepV2::TypeTextInto { .. }
+        | UiActionStepV2::SetTextValue { .. }
         | UiActionStepV2::PasteTextInto { .. }
         | UiActionStepV2::MenuSelect { .. }
         | UiActionStepV2::MenuSelectPath { .. }
@@ -144,6 +179,7 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::WheelBurst { .. } => "wheel_burst",
         UiActionStepV2::TypeText { .. } => "type_text",
         UiActionStepV2::TypeTextInto { .. } => "type_text_into",
+        UiActionStepV2::SetTextValue { .. } => "set_text_value",
         UiActionStepV2::PasteTextInto { .. } => "paste_text_into",
         UiActionStepV2::WaitFrames { .. } => "wait_frames",
         UiActionStepV2::WaitMs { .. } => "wait_ms",
@@ -1058,6 +1094,25 @@ pub(super) fn dispatch_drive_script_step(
                 app,
                 window,
                 window_bounds,
+                step_index,
+                step,
+                element_runtime,
+                semantics_snapshot,
+                ui.as_deref_mut(),
+                active,
+                output,
+                force_dump_label,
+                stop_script,
+                failure_reason,
+            );
+            debug_assert!(handled);
+        }
+        step @ UiActionStepV2::SetTextValue { .. } => {
+            let handled = script_steps_input::handle_set_text_value_step(
+                service,
+                app,
+                services,
+                window,
                 step_index,
                 step,
                 element_runtime,
@@ -2020,7 +2075,11 @@ impl UiDiagnosticsService {
         let (step_index_u32, step_kind) =
             self.note_step_start_and_scope_evidence(app, window, step_index, &step, &mut active);
 
-        let element_runtime = app.global::<ElementRuntime>();
+        let element_runtime = if script_step_needs_element_runtime(&step) {
+            app.global::<ElementRuntime>()
+        } else {
+            None
+        };
         let text_font_stack_key_stable_frames =
             self.update_text_font_stack_key_stability(app, window);
         let font_catalog_populated = app
@@ -2407,32 +2466,58 @@ impl UiDiagnosticsService {
                     &mut stop_script,
                     &mut failure_reason,
                 ),
-                _ => app.with_global_mut_untracked(ElementRuntime::new, |element_runtime, app| {
-                    dispatch_drive_script_step(
-                        self,
-                        app,
-                        services,
-                        window,
-                        window_bounds,
-                        anchor_window,
-                        step_index,
-                        step,
-                        scale_factor,
-                        Some(&*element_runtime),
-                        semantics_snapshot,
-                        &mut ui,
-                        text_font_stack_key_stable_frames,
-                        font_catalog_populated,
-                        system_font_rescan_idle,
-                        &mut active,
-                        &mut output,
-                        &mut force_dump_label,
-                        &mut force_dump_max_snapshots,
-                        &mut handoff_to,
-                        &mut stop_script,
-                        &mut failure_reason,
-                    )
-                }),
+                _ if script_step_needs_element_runtime(&step) => {
+                    app.with_global_mut_untracked(ElementRuntime::new, |element_runtime, app| {
+                        dispatch_drive_script_step(
+                            self,
+                            app,
+                            services,
+                            window,
+                            window_bounds,
+                            anchor_window,
+                            step_index,
+                            step,
+                            scale_factor,
+                            Some(&*element_runtime),
+                            semantics_snapshot,
+                            &mut ui,
+                            text_font_stack_key_stable_frames,
+                            font_catalog_populated,
+                            system_font_rescan_idle,
+                            &mut active,
+                            &mut output,
+                            &mut force_dump_label,
+                            &mut force_dump_max_snapshots,
+                            &mut handoff_to,
+                            &mut stop_script,
+                            &mut failure_reason,
+                        )
+                    })
+                }
+                _ => dispatch_drive_script_step(
+                    self,
+                    app,
+                    services,
+                    window,
+                    window_bounds,
+                    anchor_window,
+                    step_index,
+                    step,
+                    scale_factor,
+                    None,
+                    semantics_snapshot,
+                    &mut ui,
+                    text_font_stack_key_stable_frames,
+                    font_catalog_populated,
+                    system_font_rescan_idle,
+                    &mut active,
+                    &mut output,
+                    &mut force_dump_label,
+                    &mut force_dump_max_snapshots,
+                    &mut handoff_to,
+                    &mut stop_script,
+                    &mut failure_reason,
+                ),
             };
 
             match outcome {
@@ -2516,4 +2601,69 @@ impl UiDiagnosticsService {
 
 fn rect_from_v1(r: RectV1) -> Rect {
     Rect::new(Point::new(Px(r.x), Px(r.y)), Size::new(Px(r.w), Px(r.h)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_id_selector(id: &str) -> UiSelectorV1 {
+        UiSelectorV1::TestId {
+            id: id.to_string(),
+            root_z_index: None,
+        }
+    }
+
+    #[test]
+    fn runtime_gate_skips_test_id_only_steps() {
+        let step = UiActionStepV2::WaitUntil {
+            window: None,
+            predicate: UiPredicateV1::LabelContains {
+                target: test_id_selector("imui-editor-proof.editor.search"),
+                text: "validate".to_string(),
+            },
+            timeout_frames: 240,
+            timeout_ms: None,
+        };
+
+        assert!(!script_step_needs_element_runtime(&step));
+    }
+
+    #[test]
+    fn runtime_gate_keeps_global_element_selectors() {
+        let step = UiActionStepV2::ClickStable {
+            window: None,
+            pointer_kind: None,
+            target: UiSelectorV1::GlobalElementId {
+                element: 42,
+                root_z_index: None,
+            },
+            button: UiMouseButtonV1::Left,
+            click_count: 1,
+            modifiers: None,
+            stable_frames: 2,
+            max_move_px: 1.0,
+            timeout_frames: 180,
+        };
+
+        assert!(script_step_needs_element_runtime(&step));
+    }
+
+    #[test]
+    fn runtime_gate_keeps_selectable_span_steps() {
+        let step = UiActionStepV2::ClickSelectableTextSpanStable {
+            window: None,
+            pointer_kind: None,
+            target: test_id_selector("docs.viewer.body"),
+            tag: "link".to_string(),
+            button: UiMouseButtonV1::Left,
+            click_count: 1,
+            modifiers: None,
+            stable_frames: 2,
+            max_move_px: 1.0,
+            timeout_frames: 180,
+        };
+
+        assert!(script_step_needs_element_runtime(&step));
+    }
 }

@@ -152,7 +152,7 @@ fn capture_arrow_axis_lengths_for_zoom(zoom: f32) -> Vec<f32> {
     let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = zoom;
-        s.interaction.only_render_visible_elements = false;
+        s.runtime_tuning.only_render_visible_elements = false;
         s.interaction.frame_view_duration_ms = 0;
     });
 

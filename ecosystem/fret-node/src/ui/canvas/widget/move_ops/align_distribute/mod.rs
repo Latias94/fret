@@ -2,6 +2,7 @@ use super::*;
 
 mod label;
 mod plan;
+mod support;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn align_or_distribute_selection<H: UiHost>(

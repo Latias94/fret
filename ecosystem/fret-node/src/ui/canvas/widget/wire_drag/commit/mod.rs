@@ -99,10 +99,7 @@ pub(in super::super) fn handle_wire_left_up_with_forced_target<
                 .flatten()
         })
     });
-    canvas.interaction.hover_port = None;
-    canvas.interaction.hover_port_valid = false;
-    canvas.interaction.hover_port_convertible = false;
-    canvas.interaction.hover_port_diagnostic = None;
+    super::super::focus_session::clear_hover_port_hints(&mut canvas.interaction);
 
     let pos = w.pos;
     let CommitEmit {
@@ -130,8 +127,7 @@ pub(in super::super) fn handle_wire_left_up_with_forced_target<
     );
 
     cx.release_pointer_capture();
-    cx.request_redraw();
-    cx.invalidate_paint();
+    super::commit_cx::invalidate_commit_paint(cx);
 
     true
 }

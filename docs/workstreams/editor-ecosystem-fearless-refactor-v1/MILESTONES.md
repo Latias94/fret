@@ -1,192 +1,168 @@
-# Editor Ecosystem Fearless Refactor v1 - Milestones
+# Editor ecosystem fearless refactor v1 - milestones
 
 Tracking doc: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/DESIGN.md`
+
+Component-system baseline:
+`docs/workstreams/editor-ecosystem-fearless-refactor-v1/EDITOR_COMPONENT_SYSTEM.md`
+
+Interaction contract:
+`docs/workstreams/editor-ecosystem-fearless-refactor-v1/EDITOR_INTERACTION_CONTRACT.md`
+
 TODO board: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/TODO.md`
 
-## M0 - Lock the orchestration layer and the boundary ADR
+This file is forward-looking only.
+Earlier bring-up steps remain in git history and supporting notes; the milestones below describe the
+recommended next execution order.
+
+## Phase A - Boundary freeze and component-system baseline
+
+Status: In progress
 
 Goal:
 
-- Publish a single directory workstream that coordinates editor controls, workspace shell,
-  `imui` convergence, and theme/token ownership.
-- Lock the token/skinning boundary before scaling editor/workspace surface area further.
+- make the ownership story boring again,
+- reduce document overlap,
+- and publish one explicit editor component-system baseline.
+
+Deliverables:
+
+- a directory-level README that explains which documents are primary vs supporting,
+- a reset design document that captures the current ownership baseline,
+- a forward-looking milestone/TODO structure,
+- a dedicated editor component-system note covering component design, default style direction,
+  state model, and preset strategy,
+- a dedicated interaction contract note covering identity, response semantics, edit sessions, and
+  diagnostics conventions.
 
 Exit gates:
 
-- `DESIGN.md`, `TODO.md`, and `MILESTONES.md` exist under one workstream directory.
-- ADR 0316 is present and linked from the ADR index.
-- `docs/workstreams/README.md` lists the new workstream.
-- A parity matrix exists for imgui/egui outcome tracking.
+- `README.md`, `DESIGN.md`, `MILESTONES.md`, and `TODO.md` point to one coherent plan.
+- `EDITOR_COMPONENT_SYSTEM.md` exists and is referenced as the design/style baseline.
+- `EDITOR_INTERACTION_CONTRACT.md` exists and is referenced as the interaction/identity baseline.
+- `ui-editor-v1.md` remains the detailed widget-surface note instead of being duplicated here.
+- Supporting notes (`OWNERSHIP_AUDIT.md`, `TOKEN_INVENTORY.md`, `IMGUI_LIKE_PRESET.md`,
+  `PARITY_MATRIX.md`) are treated as references rather than competing trackers.
 
-Status: Implemented in this worktree (2026-03-09)
+## Phase B - Foundation closure before component growth
 
-Progress:
-
-- Initial preset draft exists:
-  - `docs/workstreams/editor-ecosystem-fearless-refactor-v1/IMGUI_LIKE_PRESET.md`
-
-## M1 - Ownership map and extraction rubric
+Status: In progress
 
 Goal:
 
-- Make crate ownership explicit across:
-  - `fret-imui`
-  - `fret-ui-editor`
-  - `fret-workspace`
-  - `fret-docking`
-  - `apps/fret-editor`
+- fix the current editor baseline before scaling the promoted component surface,
+- make screenshots and proof surfaces genuinely reviewable,
+- and converge layout/state/tokens across the existing starter set.
+
+Deliverables:
+
+- clearer default editor visual hierarchy and token ownership,
+- editor-owned baseline replay that survives host theme resets and environment-driven theme sync,
+- broader `EditorWidgetVisuals` coverage across reusable editor controls, including shared
+  typed-edit and invalid semantics for field-like surfaces,
+- shared property-grid / inspector layout metrics for label, value, reset, status, group, and panel
+  lanes,
+- one editor-owned trailing affordance baseline so reset/clear/remove/icon actions stop drifting
+  between narrow hit targets and row-height targets,
+- stronger typed-edit, focus, active, and invalid state clarity,
+- screenshot proof coverage for the neutral default baseline,
+- focused authoring-affordance screenshots that pin clear-button alignment and percent readout
+  composition on the full proof surface,
+- a review-only proof composition that hides unrelated parity/docking surfaces during baseline
+  screenshot capture,
+- a decision and follow-up plan for `imgui_like_dense` screenshot parity,
+- proof-surface cleanup so overview / typing / error states are visible without manual scene setup,
+- numeric typing diagnostics that cover both double-click focus handoff and the real first-edit
+  input path (`KeyDown` to arm replacement, then `TextInput` / IME commit to insert text),
+- text-like policy defaults that distinguish general text fields from search boxes without
+  reintroducing widget-local key hooks everywhere,
+- a buffered text-field baseline across single-line and multiline surfaces so editor text entry
+  stops mutating external models mid-edit and instead proves draft/commit/cancel semantics
+  directly on the proof surface,
+- a first editor-grade extension seam on top of that baseline: password-mode rendering, explicit
+  commit/cancel outcome hooks, assistive semantics hooks for future completion/history surfaces,
+- one minimal promoted completion/history proof on top of that seam, keeping focus on the owning
+  input while exposing a controlled listbox relationship plus `active_descendant` state,
+- focused diag coverage for buffered blur commit, multiline explicit commit, and Escape cancel on
+  the promoted proof surface,
+- and a boring close-out path for screenshot automation after typed-mode interactions and reruns.
 
 Exit gates:
 
-- A compact ownership audit exists for current editor-facing surfaces.
-- `apps/fret-editor` modules are classified as:
-  app-specific, ecosystem candidate, or incubating.
-- No new editor/workspace policy work is added to `crates/fret-ui`.
+- the default editor baseline is visually legible enough to review without "squinting through gray",
+- proof/demo startup and host theme sync no longer silently erase the intended editor preset,
+- overview / typing / invalid screenshots are all meaningful and reproducible,
+- authoring-parity screenshots make clear-button alignment and percent slider composition reviewable
+  without manual proof setup,
+- the screenshot proof can switch into a review-only composition without manual window/layout setup,
+- starter-set controls share one layout/state grammar instead of per-control heuristics,
+- repeated screenshot runs reset proof-local filter/search state instead of depending on a fresh
+  launch,
+- buffered text-session proof coverage demonstrates blur commit, multiline explicit commit, and
+  cancel/revert without relying on manual inspection,
+- a promoted text-assist/history proof plus diag gate demonstrate input-owned assist semantics
+  (`expanded`, controlled listbox relation, `active_descendant`) and Enter-accept behavior without
+  moving primary focus into the popup,
+- repeated-control identity coverage exists on a promoted loop-built surface rather than only in
+  local reasoning or code comments,
+- and this workstream can point to clear proof/gate evidence for baseline correctness.
 
-Status: In progress (2026-03-09)
-
-Progress:
-
-- Initial ownership audit landed:
-  - `docs/workstreams/editor-ecosystem-fearless-refactor-v1/OWNERSHIP_AUDIT.md`
-- The first extraction shortlist is now explicit:
-  - property/inspector protocol is the strongest extraction candidate,
-  - viewport tool code should converge with `fret-viewport-tooling` / `fret-gizmo` before any new crate move,
-  - project/asset services remain app-owned.
-
-## M2 - Authoring convergence for editor widgets
-
-Goal:
-
-- Make `fret-ui-editor` the single implementation source for reusable editor widgets, regardless of
-  authoring syntax.
-
-Exit gates:
-
-- `fret-ui-editor::imui` is a real thin adapter layer over declarative widgets.
-- The starter set does not maintain parallel declarative and `imui` implementations.
-- Response, `id_source`, and `test_id` conventions are documented and exercised in proof demos.
-
-Status: In progress (2026-03-09)
-
-Progress:
-
-- A starter `fret-ui-editor::imui` adapter surface now exists for:
-  `TextField`, `Checkbox`, `DragValue`, `Slider`, and `EnumSelect`.
-- `imui_editor_proof_demo` now includes a shared-model side-by-side parity section plus shared-state
-  readouts for scripted verification.
-- The current gates are:
-  - `ecosystem/fret-ui-editor/tests/imui_adapter_smoke.rs`
-  - `tools/diag-scripts/ui-editor/imui/imui-editor-proof-authoring-parity-shared-models.json`
-- The promoted native diagnostics run now passes end-to-end under
-  `FRET_IMUI_EDITOR_PRESET=imgui_like_dense` against `target/debug/imui_editor_proof_demo.exe`.
-  The current enum-select proof path is anchored by per-item `test_id`s, and the `imui` item click
-  uses `click_stable` with `stable_frames: 1` because the popup item can become non-hit-testable
-  after an extra stabilization frame in this proof surface.
-
-## M3 - Reusable editor starter set plus workspace shell baseline
-
-Goal:
-
-- Close the minimum credible editor ecosystem surface:
-  - controls/composites in `fret-ui-editor`,
-  - shell chrome in `fret-workspace`,
-  - docking interactions in `fret-docking`.
-
-Exit gates:
-
-- `fret-ui-editor` has a documented v1 starter set with clear ownership.
-- `fret-workspace` has a documented shell starter set with no docking-policy duplication.
-- At least one proof surface demonstrates the combined editor + workspace stack.
+## Phase C - Editor starter kit closure
 
 Status: Planned
 
-## M4 - Theme/token namespaces and skin adapters
-
 Goal:
 
-- Make editor/workspace theming stable enough that multiple design systems can skin the same crates
-  without re-opening crate boundaries.
+- close the minimum credible editor starter set in `fret-ui-editor`,
+- make declarative and `imui` authoring paths share one implementation source,
+- and lock the highest-risk interaction semantics with proof surfaces and gates.
+
+Deliverables:
+
+- `DragValue` closure for real editor workflows,
+- richer text-input policy for editor surfaces beyond the shared buffered baseline
+  (lifting the promoted proof into reusable `fret-ui-kit` text-assist glue, deciding the formal
+  popup/list abstraction, specialized blur ownership where needed, and deeper editor integrations
+  above the new password/outcome/assistive extension seam),
+- a promoted starter set definition for controls and composites,
+- explicit conventions for `id_source`, response semantics, and `test_id`,
+- and a "no new promoted components without gates" landing rule.
 
 Exit gates:
 
-- `editor.*` and `workspace.*` ownership is documented and consistent with ADR 0316.
-- A shadcn-aligned seeding/alias path is identified.
-- Material/custom-app adapter rules are documented as one-way skinning.
-- Missing-token behavior for the new namespaces follows ADR 0270.
+- starter-set controls do not keep parallel declarative and `imui` implementations,
+- `imui_editor_proof_demo` or an equivalent promoted proof surface covers the core editor set,
+- focused gates exist for edit-session commit/cancel, state-identity correctness, and screenshot
+  baseline review,
+- new editor controls follow the component-system baseline instead of ad-hoc style rules.
 
-Status: In progress
+## Phase D - Shell, adapters, and extraction closure
 
-Progress:
-
-- Token inventory and the first namespace plan now live in:
-  - `docs/workstreams/editor-ecosystem-fearless-refactor-v1/TOKEN_INVENTORY.md`
-- Current findings are now explicit:
-  - `fret-ui-editor` already owns explicit `editor.*` keys and an opt-in preset patch path,
-  - `fret-workspace` has partial `workspace.*` readers and now has adapter-side shell seeding for
-    the first shadcn proof path,
-  - `fret-docking` already owns `component.docking.*` drag/drop chrome and that seeding path is
-    already proven in `fret-ui-shadcn`.
-- The current naming drift is now recorded:
-  canonical `workspace.tabstrip.*`, with current code still reading legacy
-  `workspace.tab_strip.*`.
-- The current adapter recommendation is now explicit:
-  keep stable seeding in adapter crates such as `fret-ui-shadcn`, keep owner-local proof presets
-  optional, and avoid creating a dedicated editor/workspace adapter crate before namespace cleanup.
-- `fret-workspace` now has a small internal token resolver surface in
-  `ecosystem/fret-workspace/src/theme_tokens.rs`.
-- Shell frame/top bar/status bar now read
-  `workspace.frame.*`, `workspace.top_bar.*`, and `workspace.status_bar.*` with generic fallback
-  preserved, and shell tabstrip chrome now resolves canonical `workspace.tabstrip.*` keys before
-  legacy `workspace.tab_strip.*` compatibility spellings.
-- `fret-ui-shadcn` now seeds shell-level `workspace.frame.*`, `workspace.top_bar.*`,
-  `workspace.status_bar.*`, and `workspace.tabstrip.*` families in its new-york presets.
-- `ui_gallery` is now the first end-to-end workspace shell proof surface for this path via
-  `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-chrome-shadcn-screenshot.json`.
-- The current shell seeding closure is intentionally small:
-  it does not seed `workspace.tab.*` yet.
-- Focused unit coverage now locks the ADR 0270 fallback story for these workspace namespaces in
-  `ecosystem/fret-workspace/src/theme_tokens.rs`.
-
-## M5 - Proofs, gates, and cleanup
+Status: Planned
 
 Goal:
 
-- Finish the refactor with durable evidence and less duplication than before.
+- close the shell-level baseline in `fret-workspace`,
+- align shell and docking visually without ownership collapse,
+- and decide the next extraction move for app-local editor protocols.
+
+Deliverables:
+
+- a documented workspace-shell starter set,
+- explicit adapter rules for shell/docking/editor preset alignment,
+- a decision on future inspector/property protocol extraction,
+- a cleanup/migration note for promoting app-local surfaces into ecosystem crates.
 
 Exit gates:
 
-- Proof demos exist for the highest-risk flows:
-  editor widgets, workspace shell composition, token fallback/skinning.
-- Focused test/script gates cover the most failure-prone behaviors.
-- Duplicated app-local/editor-local implementations are deleted or explicitly quarantined.
-- The docs point to one boring recommended path for new editor ecosystem work.
+- `fret-workspace` and `fret-docking` no longer have ambiguous tabstrip/chrome ownership,
+- shell proof surfaces remain promoted and gated,
+- adapter-side seeding remains the default recommendation for skins,
+- either a future protocol crate is scheduled or extraction is explicitly deferred with reasons.
 
-Status: In progress
+## Recommended execution order
 
-Progress:
-
-- `imui_editor_proof_demo` remains the promoted proof for authoring convergence.
-- `ui_gallery` is now the promoted workspace-shell proof surface for shadcn shell seeding:
-  it exercises `WorkspaceFrame`, `WorkspaceTopBar`, `WorkspaceStatusBar`, and
-  `WorkspaceTabStrip` together under an explicit preset switch.
-- The current proof/gate set now includes:
-  - `ecosystem/fret-ui-editor/tests/imui_adapter_smoke.rs`
-  - `tools/diag-scripts/ui-editor/imui/imui-editor-proof-authoring-parity-shared-models.json`
-  - `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-chrome-shadcn-screenshot.json`
-  - `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-focus-command-scope-smoke.json`
-  - `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-tab-commands-smoke.json`
-- `ui_gallery` now also carries the minimum single-pane workspace-shell command/focus wiring:
-  a mirrored `WorkspaceWindowLayout`, `WorkspaceCommandScope`, and
-  `WorkspacePaneContentFocusTarget` for the main content surface.
-- The workspace-shell focus gate is now explicit:
-  - `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-focus-command-scope-smoke.json`
-- The single-pane workspace layout mirror now also has a dedicated tab-command gate:
-  - `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-tab-commands-smoke.json`
-    This gate now locks the promoted default MRU semantics for
-    `workspace.tab.next/prev` plus close-mirror fallback in the `ui_gallery` workspace shell.
-- The `ui_gallery` workspace-shell diagnostics scripts now declare a shared
-  `FRET_UI_GALLERY_DIAG_PROFILE=workspace_shell` default so the proof surface starts in the
-  expected dark/tabstrip state without repeating theme/settings prep in every script.
-- `apps/fret-ui-gallery/src/driver/render_flow.rs` now includes a focused regression test that
-  locks the begin-frame mirror order after command-driven `WorkspaceWindowLayout` updates.
+1. Finish Phase A document closure and keep it stable for a while.
+2. Use Phase B to fix the current editor baseline and proof/gate quality.
+3. Use Phase C to resume starter-set closure only after the baseline is coherent.
+4. Use Phase D only after the starter set is coherent enough to justify protocol extraction and
+   adapter cleanup.

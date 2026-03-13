@@ -6,8 +6,11 @@
 //! `compat-retained-canvas` so downstream authors can adopt declarative UI without enabling
 //! `fret-ui/unstable-retained-bridge`.
 
+pub mod advanced;
+pub mod binding;
 pub mod canvas;
 pub mod commands;
+pub mod controller;
 pub mod declarative;
 pub mod edge_types;
 pub mod edit_queue;
@@ -22,7 +25,7 @@ pub mod registry;
 pub mod skin;
 pub mod style;
 pub mod view_queue;
-pub mod viewport_helper;
+mod viewport_helper;
 
 #[cfg(feature = "compat-retained-canvas")]
 pub mod a11y;
@@ -38,9 +41,10 @@ pub mod overlays;
 pub mod panel;
 #[cfg(feature = "compat-retained-canvas")]
 pub mod portal;
+#[cfg(feature = "compat-retained-canvas")]
+mod screen_space_placement;
 
-pub use declarative::{NodeGraphSurfacePaintOnlyProps, node_graph_surface_paint_only};
-
+pub use binding::NodeGraphSurfaceBinding;
 #[cfg(feature = "compat-retained-canvas")]
 pub use canvas::NodeGraphCanvas;
 #[cfg(feature = "compat-retained-canvas")]
@@ -53,8 +57,12 @@ pub use canvas::{
     NoopNodeGraphCanvasMiddleware,
 };
 pub use commands::register_node_graph_commands;
+pub use controller::{
+    NodeGraphController, NodeGraphControllerError, NodeGraphNodeConnectionsQuery,
+    NodeGraphPortConnectionsQuery,
+};
+pub use declarative::{NodeGraphSurfaceProps, node_graph_surface};
 pub use edge_types::{EdgeCustomPath, EdgePathInput, EdgeTypeKey, NodeGraphEdgeTypes};
-pub use edit_queue::NodeGraphEditQueue;
 pub use geometry_overrides::{
     EdgeGeometryOverrideV1, NodeGeometryOverrideV1, NodeGraphGeometryOverrides,
     NodeGraphGeometryOverridesMap, NodeGraphGeometryOverridesRef,
@@ -83,10 +91,6 @@ pub use skin::{
     PortShapeHint, WireGlowHint, WireHighlightHint, WireOutlineHint,
 };
 pub use style::{NodeGraphColorMode, NodeGraphStyle};
-pub use view_queue::{
-    NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphViewQueue, NodeGraphViewRequest,
-};
-pub use viewport_helper::NodeGraphViewportHelper;
 
 #[cfg(feature = "compat-retained-canvas")]
 pub use a11y::NodeGraphA11yActiveDescendant;

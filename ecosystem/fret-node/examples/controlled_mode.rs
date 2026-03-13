@@ -18,7 +18,9 @@ use fret_node::core::{
 use fret_node::io::NodeGraphViewState;
 use fret_node::ops::{GraphOp, GraphTransaction};
 use fret_node::runtime::apply::{apply_edge_changes, apply_node_changes};
-use fret_node::runtime::callbacks::{NodeGraphCallbacks, install_callbacks};
+use fret_node::runtime::callbacks::{
+    NodeGraphCommitCallbacks, NodeGraphGestureCallbacks, NodeGraphViewCallbacks, install_callbacks,
+};
 use fret_node::runtime::store::NodeGraphStore;
 
 #[derive(Clone)]
@@ -26,7 +28,7 @@ struct ControlledApply {
     graph: Rc<RefCell<Graph>>,
 }
 
-impl NodeGraphCallbacks for ControlledApply {
+impl NodeGraphCommitCallbacks for ControlledApply {
     fn on_nodes_change(&mut self, changes: &[fret_node::runtime::changes::NodeChange]) {
         apply_node_changes(&mut self.graph.borrow_mut(), changes);
     }
@@ -35,6 +37,10 @@ impl NodeGraphCallbacks for ControlledApply {
         apply_edge_changes(&mut self.graph.borrow_mut(), changes);
     }
 }
+
+impl NodeGraphViewCallbacks for ControlledApply {}
+
+impl NodeGraphGestureCallbacks for ControlledApply {}
 
 fn make_graph() -> (Graph, NodeId) {
     let graph_id = GraphId::from_u128(0x1350_0000_0000_0000_0000_0000_0000_00C0);

@@ -1,0 +1,156 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "imui-editor-proof-editor-components-screenshots-default",
+    "tags": ["screenshots", "ui_editor", "imui", "editor_components", "default_preset"],
+    "env_defaults": {
+      "FRET_IMUI_EDITOR_PROOF_SINGLE_WINDOW": "1",
+      "FRET_IMUI_EDITOR_PRESET": "default",
+      "FRET_IMUI_EDITOR_PROOF_LAYOUT": "editor_review"
+    },
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Boots imui_editor_proof_demo in single-window mode under the default editor preset.",
+      "Captures a visual baseline for the core editor surface, typing-mode drag value, and numeric validation error state."
+    ]
+  },
+  "window": "lowest_id",
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "set_window_inner_size", "width_px": 1600.0, "height_px": 1280.0 },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.inspector" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.search" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.search" }
+    },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "wait_frames", "n": 1 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.drag-value-demo" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.advanced.exposure" }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "capture_bundle",
+      "label": "imui-editor-proof-editor-components-default-overview"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "imui-editor-proof-editor-components-default-overview"
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.drag-value-demo" },
+      "click_count": 2
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.drag-value-demo.typing.input"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "set_text_value",
+      "target": {
+        "kind": "test_id",
+        "id": "imui-editor-proof.editor.drag-value-demo.typing.input"
+      },
+      "text": "9.999"
+    },
+    { "type": "wait_frames", "n": 1 },
+    {
+      "type": "capture_bundle",
+      "label": "imui-editor-proof-editor-components-default-typing"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "imui-editor-proof-editor-components-default-typing"
+    },
+
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.search" }
+    },
+    { "type": "type_text", "text": "validate" },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "focus",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.advanced.exposure.input" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.advanced.exposure.input" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.advanced.exposure.input" },
+      "text": "1.500"
+    },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.advanced.exposure.error-text"
+        },
+        "text": "Expected 0.0..=1.0"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_bundle",
+      "label": "imui-editor-proof-editor-components-default-validation-error"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "imui-editor-proof-editor-components-default-validation-error"
+    },
+    { "type": "wait_frames", "n": 2 }
+  ]
+}

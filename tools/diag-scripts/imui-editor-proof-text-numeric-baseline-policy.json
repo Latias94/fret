@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "kind": "script_redirect",
+  "to": "tools/diag-scripts/ui-editor/imui/imui-editor-proof-text-numeric-baseline-policy.json"
+}

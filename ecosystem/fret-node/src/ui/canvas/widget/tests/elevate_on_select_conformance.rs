@@ -76,7 +76,7 @@ fn elevate_nodes_on_select_draws_selected_node_body_last() {
         s.zoom = 1.0;
         s.draw_order = vec![a, b];
         s.selected_nodes = vec![a];
-        s.interaction.only_render_visible_elements = false;
+        s.runtime_tuning.only_render_visible_elements = false;
         s.interaction.elevate_nodes_on_select = true;
         s.interaction.frame_view_duration_ms = 0;
     });
@@ -331,7 +331,7 @@ fn elevate_edges_on_select_controls_selection_z_order() {
             s.zoom = 1.0;
             s.draw_order = vec![a, b, c];
             s.selected_edges = vec![edge_low];
-            s.interaction.only_render_visible_elements = false;
+            s.runtime_tuning.only_render_visible_elements = false;
             s.interaction.elevate_edges_on_select = elevate;
             s.interaction.edges_reconnectable = false;
             s.interaction.frame_view_duration_ms = 0;
@@ -579,7 +579,7 @@ fn elevate_edges_on_select_controls_selection_z_order_for_custom_paths() {
             s.zoom = 1.0;
             s.draw_order = vec![a, b, c];
             s.selected_edges = vec![edge_low];
-            s.interaction.only_render_visible_elements = false;
+            s.runtime_tuning.only_render_visible_elements = false;
             s.interaction.elevate_edges_on_select = elevate;
             s.interaction.edges_reconnectable = false;
             s.interaction.frame_view_duration_ms = 0;

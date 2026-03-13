@@ -3,6 +3,7 @@ mod internal_drop;
 mod internal_move;
 mod pending;
 mod prelude;
+mod session;
 
 use prelude::*;
 
@@ -14,6 +15,12 @@ pub(super) struct InsertNodeDragPayload {
 
 pub(super) const DRAG_KIND_INSERT_NODE: DragKindId = DragKindId(0x4E4F44455F494E53);
 const DND_DROP_CANVAS: DndItemId = DndItemId(0x4E4F44455F43414E);
+
+pub(super) fn clear_insert_node_drag_state(
+    interaction: &mut crate::ui::canvas::state::InteractionState,
+) -> bool {
+    session::clear_insert_node_drag_state(interaction)
+}
 
 pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
@@ -49,10 +56,7 @@ pub(super) fn handle_internal_drag_event<H: UiHost, M: NodeGraphCanvasMiddleware
         .and_then(|d| d.payload::<InsertNodeDragPayload>())
         .cloned();
     let Some(payload) = payload else {
-        if canvas.interaction.insert_node_drag_preview.take().is_some() {
-            cx.request_redraw();
-            cx.invalidate_self(Invalidation::Paint);
-        }
+        session::clear_insert_node_drag_preview(&mut canvas.interaction, cx);
         return false;
     };
 
@@ -61,12 +65,8 @@ pub(super) fn handle_internal_drag_event<H: UiHost, M: NodeGraphCanvasMiddleware
             internal_move::handle_enter_over(canvas, cx, snapshot, event, &payload, zoom)
         }
         InternalDragKind::Leave | InternalDragKind::Cancel => {
-            if canvas.interaction.insert_node_drag_preview.take().is_some() {
-                cx.request_redraw();
-                cx.invalidate_self(Invalidation::Paint);
-            }
-            cx.stop_propagation();
-            true
+            session::clear_insert_node_drag_preview(&mut canvas.interaction, cx);
+            session::finish_insert_node_drag_event(cx)
         }
         InternalDragKind::Drop => {
             internal_drop::handle_drop(canvas, cx, snapshot, event, payload, zoom)

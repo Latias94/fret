@@ -8,9 +8,10 @@ use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 
 use crate::core::{Graph, GraphId, Symbol, SymbolId};
 use crate::ops::{GraphOp, GraphTransaction};
+use crate::ui::edit_queue::NodeGraphEditQueue;
 use crate::ui::{
-    NodeGraphEditQueue, NodeGraphEditor, NodeGraphOverlayHost, NodeGraphOverlayState,
-    NodeGraphStyle, SymbolRenameOverlay,
+    NodeGraphEditor, NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphStyle,
+    SymbolRenameOverlay,
 };
 
 use super::{NullServices, TestUiHostImpl, insert_graph_view};
@@ -95,12 +96,12 @@ fn symbol_rename_overlay_enter_commits_transaction_and_closes() {
     let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
     let overlay_host = NodeGraphOverlayHost::new(
         graph.clone(),
-        edits.clone(),
         overlays.clone(),
         rename_text.clone(),
         underlay,
         style,
-    );
+    )
+    .with_edit_queue(edits.clone());
     let overlay_host_node = ui.create_node_retained(overlay_host);
     let overlay_child =
         ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
@@ -201,12 +202,12 @@ fn symbol_rename_overlay_escape_closes_without_queueing_transaction() {
     let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
     let overlay_host = NodeGraphOverlayHost::new(
         graph.clone(),
-        edits.clone(),
         overlays.clone(),
         rename_text.clone(),
         underlay,
         style,
-    );
+    )
+    .with_edit_queue(edits.clone());
     let overlay_host_node = ui.create_node_retained(overlay_host);
     let overlay_child =
         ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
@@ -294,12 +295,12 @@ fn symbol_rename_overlay_enter_with_unchanged_text_closes_without_queueing_trans
     let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
     let overlay_host = NodeGraphOverlayHost::new(
         graph.clone(),
-        edits.clone(),
         overlays.clone(),
         rename_text.clone(),
         underlay,
         style,
-    );
+    )
+    .with_edit_queue(edits.clone());
     let overlay_host_node = ui.create_node_retained(overlay_host);
     let overlay_child =
         ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));

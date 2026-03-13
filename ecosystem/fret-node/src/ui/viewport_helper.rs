@@ -1,8 +1,9 @@
-//! Viewport helper API (UI-only).
+//! Advanced viewport helper API (UI-only).
 //!
-//! XyFlow exposes a "viewport helper" surface via hooks (`useReactFlow`) that lets apps drive the
-//! viewport without directly referencing a specific widget instance. In Fret this is expressed as
-//! a small wrapper around the `NodeGraphViewQueue` + persisted `NodeGraphViewState` models.
+//! This helper is intentionally scoped to retained-only or transport-first integrations that
+//! explicitly own raw `NodeGraphViewState` + `NodeGraphViewQueue` models.
+//! App-facing composition should prefer `NodeGraphController` from `crate::ui`, which owns the
+//! controller-first viewport API directly.
 
 use fret_core::Rect;
 use fret_runtime::Model;
@@ -20,6 +21,7 @@ pub struct NodeGraphViewportHelper {
 }
 
 impl NodeGraphViewportHelper {
+    /// Advanced transport-first constructor for retained-only integrations.
     pub fn new(
         view_state: Model<NodeGraphViewState>,
         view_queue: Model<NodeGraphViewQueue>,
@@ -32,14 +34,14 @@ impl NodeGraphViewportHelper {
 
     pub fn viewport<H: UiHost>(&self, host: &H) -> (CanvasPoint, f32) {
         self.view_state
-            .read_ref(host, |s| (s.pan, s.zoom))
+            .read_ref(host, |state| (state.pan, state.zoom))
             .ok()
             .unwrap_or((CanvasPoint::default(), 1.0))
     }
 
     pub fn set_viewport<H: UiHost>(&self, host: &mut H, pan: CanvasPoint, zoom: f32) {
-        let _ = self.view_queue.update(host, |q, _cx| {
-            q.push_set_viewport(pan, zoom);
+        let _ = self.view_queue.update(host, |queue, _cx| {
+            queue.push_set_viewport(pan, zoom);
         });
     }
 
@@ -50,14 +52,14 @@ impl NodeGraphViewportHelper {
         zoom: f32,
         options: NodeGraphSetViewportOptions,
     ) {
-        let _ = self.view_queue.update(host, |q, _cx| {
-            q.push_set_viewport_with_options(pan, zoom, options);
+        let _ = self.view_queue.update(host, |queue, _cx| {
+            queue.push_set_viewport_with_options(pan, zoom, options);
         });
     }
 
     pub fn fit_view_nodes<H: UiHost>(&self, host: &mut H, nodes: Vec<NodeId>) {
-        let _ = self.view_queue.update(host, |q, _cx| {
-            q.push_frame_nodes(nodes);
+        let _ = self.view_queue.update(host, |queue, _cx| {
+            queue.push_frame_nodes(nodes);
         });
     }
 
@@ -67,8 +69,8 @@ impl NodeGraphViewportHelper {
         nodes: Vec<NodeId>,
         options: NodeGraphFitViewOptions,
     ) {
-        let _ = self.view_queue.update(host, |q, _cx| {
-            q.push_frame_nodes_with_options(nodes, options);
+        let _ = self.view_queue.update(host, |queue, _cx| {
+            queue.push_frame_nodes_with_options(nodes, options);
         });
     }
 
@@ -97,7 +99,7 @@ impl NodeGraphViewportHelper {
     }
 }
 
-fn pan_for_center(bounds: Rect, center: CanvasPoint, zoom: f32) -> CanvasPoint {
+pub(super) fn pan_for_center(bounds: Rect, center: CanvasPoint, zoom: f32) -> CanvasPoint {
     let z = if zoom.is_finite() && zoom > 0.0 {
         zoom
     } else {

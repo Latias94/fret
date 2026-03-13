@@ -13,6 +13,10 @@ impl EditorTokenKeys {
     pub const DENSITY_HIT_THICKNESS: &'static str = "editor.density.hit_thickness";
     pub const DENSITY_ICON_SIZE: &'static str = "editor.density.icon_size";
 
+    pub const CONTROL_INVALID_FG: &'static str = "editor.control.invalid_fg";
+    pub const CONTROL_INVALID_BORDER: &'static str = "editor.control.invalid_border";
+    pub const CONTROL_INVALID_BG: &'static str = "editor.control.invalid_bg";
+
     pub const NUMERIC_SCRUB_SPEED: &'static str = "editor.numeric.scrub_speed";
     pub const NUMERIC_SCRUB_SLOW_MULTIPLIER: &'static str = "editor.numeric.scrub_slow_multiplier";
     pub const NUMERIC_SCRUB_FAST_MULTIPLIER: &'static str = "editor.numeric.scrub_fast_multiplier";
@@ -22,8 +26,22 @@ impl EditorTokenKeys {
     pub const NUMERIC_ERROR_BG: &'static str = "editor.numeric.error_bg";
 
     pub const PROPERTY_COLUMN_GAP: &'static str = "editor.property.column_gap";
+    pub const PROPERTY_TRAILING_GAP: &'static str = "editor.property.trailing_gap";
+    pub const PROPERTY_ROW_GAP: &'static str = "editor.property.row_gap";
+    pub const PROPERTY_LABEL_WIDTH: &'static str = "editor.property.label_width";
+    pub const PROPERTY_VALUE_MAX_WIDTH: &'static str = "editor.property.value_max_width";
+    pub const PROPERTY_STATUS_SLOT_WIDTH: &'static str = "editor.property.status_slot_width";
+    pub const PROPERTY_RESET_SLOT_WIDTH: &'static str = "editor.property.reset_slot_width";
     pub const PROPERTY_GROUP_HEADER_HEIGHT: &'static str = "editor.property.group_header_height";
+    pub const PROPERTY_GROUP_CONTENT_GAP: &'static str = "editor.property.group_content_gap";
     pub const PROPERTY_AUTO_STACK_BELOW: &'static str = "editor.property.auto_stack_below";
+    pub const PROPERTY_PANEL_GAP: &'static str = "editor.property.panel_gap";
+    pub const PROPERTY_PANEL_HEADER_GAP: &'static str = "editor.property.panel_header_gap";
+    pub const PROPERTY_PANEL_BG: &'static str = "editor.property.panel_bg";
+    pub const PROPERTY_PANEL_BORDER: &'static str = "editor.property.panel_border";
+    pub const PROPERTY_HEADER_BG: &'static str = "editor.property.header_bg";
+    pub const PROPERTY_HEADER_BORDER: &'static str = "editor.property.header_border";
+    pub const PROPERTY_HEADER_FG: &'static str = "editor.property.header_fg";
 
     pub const CHECKBOX_SIZE: &'static str = "editor.checkbox.size";
     pub const CHECKBOX_RADIUS: &'static str = "editor.checkbox.radius";

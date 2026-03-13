@@ -4,7 +4,7 @@ mod picker;
 mod prelude;
 
 pub(super) use context_menu::open_edge_insert_context_menu;
-pub(super) use insert::insert_node_on_edge;
+pub(super) use insert::activate_edge_insert_picker_action;
 pub(super) use picker::open_edge_insert_node_picker;
 
 // Keep this module as a thin facade. The individual steps are split into submodules to reduce drift

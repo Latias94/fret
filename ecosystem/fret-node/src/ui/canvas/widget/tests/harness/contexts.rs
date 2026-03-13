@@ -20,6 +20,8 @@ pub(crate) fn event_cx<'a>(
         event_window_position: None,
         event_window_wheel_delta: None,
         pointer_hit_is_text_input: false,
+        pointer_hit_is_pressable: false,
+        pointer_hit_pressable_target: None,
         prevented_default_actions,
         children: &[],
         focus: None,

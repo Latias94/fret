@@ -11,6 +11,8 @@ use fret_ui::{UiHost, retained_bridge::*};
 
 use crate::io::NodeGraphViewState;
 use crate::runtime::store::NodeGraphStore;
+use crate::ui::controller::NodeGraphController;
+use crate::ui::screen_space_placement::{AxisAlign, rect_in_bounds};
 use crate::ui::view_queue::{
     NodeGraphSetViewportOptions, NodeGraphViewQueue, NodeGraphViewRequest,
 };
@@ -38,6 +40,9 @@ pub enum NodeGraphMiniMapNavigationBinding {
     /// This is useful for B-layer controlled integrations that want the canvas to consume a
     /// message surface rather than allowing widgets to mutate the view model directly.
     ViewQueue(Model<NodeGraphViewQueue>),
+    /// Routes viewport updates through `NodeGraphController`, treating any attached queue as an
+    /// internal transport detail.
+    Controller(NodeGraphController),
 }
 
 #[derive(Clone)]
@@ -109,8 +114,15 @@ impl NodeGraphMiniMapOverlay {
         self
     }
 
-    pub fn with_view_queue(mut self, queue: Model<NodeGraphViewQueue>) -> Self {
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn with_view_queue(mut self, queue: Model<NodeGraphViewQueue>) -> Self {
         self.bindings.navigation = NodeGraphMiniMapNavigationBinding::ViewQueue(queue);
+        self
+    }
+
+    pub fn with_controller(mut self, controller: NodeGraphController) -> Self {
+        self.store = Some(controller.store());
+        self.bindings.navigation = NodeGraphMiniMapNavigationBinding::Controller(controller);
         self
     }
 
@@ -122,9 +134,14 @@ impl NodeGraphMiniMapOverlay {
         let h = self.style.paint.minimap_height.max(30.0);
         let margin = self.style.paint.minimap_margin.max(0.0);
 
-        let x = bounds.origin.x.0 + (bounds.size.width.0 - margin - w).max(0.0);
-        let y = bounds.origin.y.0 + (bounds.size.height.0 - margin - h).max(0.0);
-        Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(w), Px(h)))
+        rect_in_bounds(
+            bounds,
+            Size::new(Px(w), Px(h)),
+            AxisAlign::End,
+            AxisAlign::End,
+            margin,
+            Point::new(Px(0.0), Px(0.0)),
+        )
     }
 
     fn canvas_bounds_from_internals(snapshot: &NodeGraphInternalsSnapshot) -> Rect {
@@ -282,6 +299,17 @@ impl NodeGraphMiniMapOverlay {
                         options: NodeGraphSetViewportOptions::default(),
                     });
                 });
+            }
+            NodeGraphMiniMapNavigationBinding::Controller(controller) => {
+                if controller.set_viewport_with_options(
+                    host,
+                    pan,
+                    z,
+                    NodeGraphSetViewportOptions::default(),
+                ) && controller.transport_view_queue().is_none()
+                {
+                    let _ = controller.sync_view_state_model_from_store(host, &self.view_state);
+                }
             }
             NodeGraphMiniMapNavigationBinding::Default => {
                 let _ = self.view_state.update(host, |s, _cx| {
