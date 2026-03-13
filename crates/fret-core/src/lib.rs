@@ -83,7 +83,8 @@ pub use materials::{
 };
 pub use panels::{PanelKey, PanelKind};
 pub use render_text::{
-    RendererGlyphAtlasPerfSnapshot, RendererTextFallbackPolicySnapshot, RendererTextFontTraceEntry,
+    RendererBundledFontProfileSnapshot, RendererGlyphAtlasPerfSnapshot,
+    RendererTextFallbackPolicySnapshot, RendererTextFontTraceEntry,
     RendererTextFontTraceFamilyClass, RendererTextFontTraceFamilyUsage,
     RendererTextFontTraceSnapshot, RendererTextPerfSnapshot,
 };

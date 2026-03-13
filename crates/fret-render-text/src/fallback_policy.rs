@@ -81,7 +81,7 @@ impl TextFallbackPolicyV1 {
             CommonFallbackMode::PreferSystemFallback => Vec::new(),
             CommonFallbackMode::PreferCommonFallback => effective_common_fallback_candidates(
                 &self.font_family_config.common_fallback,
-                default_common_fallback_families(),
+                default_common_fallback_families(shaper),
             ),
         };
 
@@ -117,7 +117,7 @@ impl TextFallbackPolicyV1 {
         normalize_and_hash_family_candidates(&mut hasher, &self.font_family_config.ui_mono);
         normalize_and_hash_family_candidates(&mut hasher, &self.font_family_config.common_fallback);
 
-        for &family in default_common_fallback_families() {
+        for &family in default_common_fallback_families(shaper) {
             family.trim().to_ascii_lowercase().hash(&mut hasher);
         }
 
@@ -129,6 +129,48 @@ impl TextFallbackPolicyV1 {
 
         let key = hasher.finish();
         self.fallback_policy_key = if key == 0 { 1 } else { key };
+    }
+
+    pub fn diagnostics_snapshot(
+        &self,
+        frame_id: fret_core::FrameId,
+        font_stack_key: u64,
+        font_db_revision: u64,
+        shaper: &ParleyShaper,
+    ) -> fret_core::RendererTextFallbackPolicySnapshot {
+        fret_core::RendererTextFallbackPolicySnapshot {
+            frame_id,
+            font_stack_key,
+            font_db_revision,
+            fallback_policy_key: self.fallback_policy_key,
+            system_fonts_enabled: shaper.system_fonts_enabled(),
+            locale_bcp47: self.locale_bcp47.clone(),
+            common_fallback_injection: self.font_family_config.common_fallback_injection,
+            prefer_common_fallback: self.prefer_common_fallback(),
+            configured_ui_sans_families: self.font_family_config.ui_sans.clone(),
+            configured_ui_serif_families: self.font_family_config.ui_serif.clone(),
+            configured_ui_mono_families: self.font_family_config.ui_mono.clone(),
+            configured_common_fallback_families: self.font_family_config.common_fallback.clone(),
+            default_ui_sans_candidates: default_sans_candidates(shaper)
+                .iter()
+                .map(|family| (*family).to_string())
+                .collect(),
+            default_ui_serif_candidates: default_serif_candidates(shaper)
+                .iter()
+                .map(|family| (*family).to_string())
+                .collect(),
+            default_ui_mono_candidates: default_monospace_candidates(shaper)
+                .iter()
+                .map(|family| (*family).to_string())
+                .collect(),
+            default_common_fallback_families: default_common_fallback_families(shaper)
+                .iter()
+                .map(|family| (*family).to_string())
+                .collect(),
+            common_fallback_stack_suffix: shaper.common_fallback_stack_suffix().to_string(),
+            common_fallback_candidates: self.common_fallback_candidates.clone(),
+            bundled_profile_contract: bundled_profile_contract_snapshot(),
+        }
     }
 }
 
@@ -152,7 +194,7 @@ fn merged_static_family_lists(lists: &[&[&'static str]]) -> Box<[&'static str]> 
 }
 
 #[cfg(target_arch = "wasm32")]
-fn wasm_default_common_fallback_families() -> &'static [&'static str] {
+fn bundled_only_default_common_fallback_families() -> &'static [&'static str] {
     static FAMILIES: OnceLock<Box<[&'static str]>> = OnceLock::new();
     FAMILIES.get_or_init(|| {
         let profile = fret_fonts::default_profile();
@@ -160,67 +202,106 @@ fn wasm_default_common_fallback_families() -> &'static [&'static str] {
     })
 }
 
-pub fn default_common_fallback_families() -> &'static [&'static str] {
-    // For Web/WASM, there are no system fonts. If the app bundles fonts (e.g. via `fret-fonts`
-    // feature flags), include those families in the fallback chain so mixed-script text works
-    // without explicit per-span font selection.
+#[cfg(not(target_arch = "wasm32"))]
+fn bundled_only_default_common_fallback_families() -> &'static [&'static str] {
+    static FAMILIES: OnceLock<Box<[&'static str]>> = OnceLock::new();
+    FAMILIES.get_or_init(|| {
+        let profile = fret_fonts::default_profile();
+        merged_static_family_lists(&[profile.ui_sans_families, profile.common_fallback_families])
+    })
+}
+
+#[cfg(target_os = "windows")]
+fn platform_default_common_fallback_families() -> &'static [&'static str] {
+    &[
+        // UI
+        "Segoe UI",
+        "Tahoma",
+        // CJK
+        "Microsoft YaHei UI",
+        "Microsoft YaHei",
+        "Yu Gothic UI",
+        "Meiryo UI",
+        "Meiryo",
+        "Nirmala UI",
+        // Emoji
+        "Segoe UI Emoji",
+        "Segoe UI Symbol",
+    ]
+}
+
+#[cfg(target_os = "macos")]
+fn platform_default_common_fallback_families() -> &'static [&'static str] {
+    &[
+        // UI
+        "SF Pro Text",
+        ".SF NS Text",
+        "Helvetica Neue",
+        // CJK
+        "PingFang SC",
+        "PingFang TC",
+        "Hiragino Sans",
+        // Emoji
+        "Apple Color Emoji",
+    ]
+}
+
+#[cfg(all(unix, not(any(target_os = "macos", target_os = "android"))))]
+fn platform_default_common_fallback_families() -> &'static [&'static str] {
+    &[
+        // UI
+        "Noto Sans",
+        "DejaVu Sans",
+        "Liberation Sans",
+        // CJK
+        "Noto Sans CJK JP",
+        "Noto Sans CJK TC",
+    ]
+}
+
+#[cfg(not(any(
+    target_arch = "wasm32",
+    target_os = "windows",
+    target_os = "macos",
+    all(unix, not(any(target_os = "macos", target_os = "android")))
+)))]
+fn platform_default_common_fallback_families() -> &'static [&'static str] {
+    &[]
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn native_default_common_fallback_families() -> &'static [&'static str] {
+    static FAMILIES: OnceLock<Box<[&'static str]>> = OnceLock::new();
+    FAMILIES.get_or_init(|| {
+        merged_static_family_lists(&[
+            platform_default_common_fallback_families(),
+            fret_fonts::default_profile().common_fallback_families,
+        ])
+    })
+}
+
+pub fn default_common_fallback_families(shaper: &ParleyShaper) -> &'static [&'static str] {
+    // Bundled-only mode should be explicit and deterministic on both wasm and native.
+    if !shaper.system_fonts_enabled() {
+        return bundled_only_default_common_fallback_families();
+    }
+
     #[cfg(target_arch = "wasm32")]
     {
-        wasm_default_common_fallback_families()
+        let _ = shaper;
+        bundled_only_default_common_fallback_families()
     }
     #[cfg(target_os = "windows")]
     {
-        &[
-            // UI
-            "Segoe UI",
-            "Tahoma",
-            // CJK
-            "Microsoft YaHei UI",
-            "Microsoft YaHei",
-            "Yu Gothic UI",
-            "Meiryo UI",
-            "Meiryo",
-            "Nirmala UI",
-            // Bundled/portable fallbacks (if available)
-            "Noto Sans CJK SC",
-            // Emoji
-            "Segoe UI Emoji",
-            "Segoe UI Symbol",
-            "Noto Color Emoji",
-        ]
+        native_default_common_fallback_families()
     }
     #[cfg(target_os = "macos")]
     {
-        &[
-            // UI
-            "SF Pro Text",
-            ".SF NS Text",
-            "Helvetica Neue",
-            // CJK
-            "PingFang SC",
-            "PingFang TC",
-            "Hiragino Sans",
-            // Emoji
-            "Apple Color Emoji",
-            // Bundled/portable fallbacks (if available)
-            "Noto Sans CJK SC",
-            "Noto Color Emoji",
-        ]
+        native_default_common_fallback_families()
     }
     #[cfg(all(unix, not(any(target_os = "macos", target_os = "android"))))]
     {
-        &[
-            // UI
-            "Noto Sans",
-            "DejaVu Sans",
-            "Liberation Sans",
-            // CJK
-            "Noto Sans CJK SC",
-            "Noto Sans CJK JP",
-            "Noto Sans CJK TC",
-            // Emoji
-            "Noto Color Emoji",
-        ]
+        native_default_common_fallback_families()
     }
     #[cfg(not(any(
         target_arch = "wasm32",
@@ -229,6 +310,7 @@ pub fn default_common_fallback_families() -> &'static [&'static str] {
         all(unix, not(any(target_os = "macos", target_os = "android")))
     )))]
     {
+        let _ = shaper;
         &[]
     }
 }
@@ -308,7 +390,10 @@ fn normalize_and_hash_family_candidates(
     out.hash(hasher);
 }
 
-pub fn default_sans_candidates() -> &'static [&'static str] {
+pub fn default_sans_candidates(shaper: &ParleyShaper) -> &'static [&'static str] {
+    if !shaper.system_fonts_enabled() {
+        return fret_fonts::default_profile().ui_sans_families;
+    }
     #[cfg(target_os = "windows")]
     {
         &["Segoe UI", "Tahoma", "Arial"]
@@ -327,11 +412,15 @@ pub fn default_sans_candidates() -> &'static [&'static str] {
         all(unix, not(any(target_os = "macos", target_os = "android")))
     )))]
     {
+        let _ = shaper;
         &[]
     }
 }
 
-pub fn default_monospace_candidates() -> &'static [&'static str] {
+pub fn default_monospace_candidates(shaper: &ParleyShaper) -> &'static [&'static str] {
+    if !shaper.system_fonts_enabled() {
+        return fret_fonts::default_profile().ui_mono_families;
+    }
     #[cfg(target_os = "windows")]
     {
         &["Cascadia Mono", "Consolas", "Courier New"]
@@ -350,11 +439,15 @@ pub fn default_monospace_candidates() -> &'static [&'static str] {
         all(unix, not(any(target_os = "macos", target_os = "android")))
     )))]
     {
+        let _ = shaper;
         &[]
     }
 }
 
-pub fn default_serif_candidates() -> &'static [&'static str] {
+pub fn default_serif_candidates(shaper: &ParleyShaper) -> &'static [&'static str] {
+    if !shaper.system_fonts_enabled() {
+        return fret_fonts::default_profile().ui_serif_families;
+    }
     #[cfg(target_os = "windows")]
     {
         &["Times New Roman", "Georgia"]
@@ -373,7 +466,69 @@ pub fn default_serif_candidates() -> &'static [&'static str] {
         all(unix, not(any(target_os = "macos", target_os = "android")))
     )))]
     {
+        let _ = shaper;
         &[]
+    }
+}
+
+fn bundled_profile_contract_snapshot() -> fret_core::RendererBundledFontProfileSnapshot {
+    let profile = fret_fonts::default_profile();
+
+    fn role_name(role: fret_fonts::BundledFontRole) -> &'static str {
+        match role {
+            fret_fonts::BundledFontRole::UiSans => "ui_sans",
+            fret_fonts::BundledFontRole::UiSerif => "ui_serif",
+            fret_fonts::BundledFontRole::UiMonospace => "ui_monospace",
+            fret_fonts::BundledFontRole::EmojiFallback => "emoji_fallback",
+            fret_fonts::BundledFontRole::CjkFallback => "cjk_fallback",
+        }
+    }
+
+    fn generic_name(family: fret_fonts::BundledGenericFamily) -> &'static str {
+        match family {
+            fret_fonts::BundledGenericFamily::Sans => "sans",
+            fret_fonts::BundledGenericFamily::Serif => "serif",
+            fret_fonts::BundledGenericFamily::Monospace => "monospace",
+        }
+    }
+
+    fret_core::RendererBundledFontProfileSnapshot {
+        name: profile.name.to_string(),
+        provided_roles: profile
+            .provided_roles
+            .iter()
+            .map(|role| role_name(*role).to_string())
+            .collect(),
+        expected_family_names: profile
+            .expected_family_names
+            .iter()
+            .map(|family| (*family).to_string())
+            .collect(),
+        guaranteed_generic_families: profile
+            .guaranteed_generic_families
+            .iter()
+            .map(|family| generic_name(*family).to_string())
+            .collect(),
+        ui_sans_families: profile
+            .ui_sans_families
+            .iter()
+            .map(|family| (*family).to_string())
+            .collect(),
+        ui_serif_families: profile
+            .ui_serif_families
+            .iter()
+            .map(|family| (*family).to_string())
+            .collect(),
+        ui_mono_families: profile
+            .ui_mono_families
+            .iter()
+            .map(|family| (*family).to_string())
+            .collect(),
+        common_fallback_families: profile
+            .common_fallback_families
+            .iter()
+            .map(|family| (*family).to_string())
+            .collect(),
     }
 }
 

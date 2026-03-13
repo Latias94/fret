@@ -353,9 +353,50 @@ pub struct UiRendererTextFallbackPolicySnapshotV1 {
     pub locale_bcp47: Option<String>,
 
     #[serde(default)]
+    pub configured_ui_sans_families: Vec<String>,
+    #[serde(default)]
+    pub configured_ui_serif_families: Vec<String>,
+    #[serde(default)]
+    pub configured_ui_mono_families: Vec<String>,
+    #[serde(default)]
+    pub configured_common_fallback_families: Vec<String>,
+
+    #[serde(default)]
+    pub default_ui_sans_candidates: Vec<String>,
+    #[serde(default)]
+    pub default_ui_serif_candidates: Vec<String>,
+    #[serde(default)]
+    pub default_ui_mono_candidates: Vec<String>,
+    #[serde(default)]
+    pub default_common_fallback_families: Vec<String>,
+
+    #[serde(default)]
     pub common_fallback_stack_suffix: String,
     #[serde(default)]
     pub common_fallback_candidates: Vec<String>,
+
+    #[serde(default)]
+    pub bundled_profile_contract: UiRendererBundledFontProfileSnapshotV1,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiRendererBundledFontProfileSnapshotV1 {
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub provided_roles: Vec<String>,
+    #[serde(default)]
+    pub expected_family_names: Vec<String>,
+    #[serde(default)]
+    pub guaranteed_generic_families: Vec<String>,
+    #[serde(default)]
+    pub ui_sans_families: Vec<String>,
+    #[serde(default)]
+    pub ui_serif_families: Vec<String>,
+    #[serde(default)]
+    pub ui_mono_families: Vec<String>,
+    #[serde(default)]
+    pub common_fallback_families: Vec<String>,
 }
 
 impl UiRendererTextFallbackPolicySnapshotV1 {
@@ -392,6 +433,40 @@ impl UiRendererTextFallbackPolicySnapshotV1 {
             truncate_string_bytes(s, max_debug_string_bytes);
         }
 
+        let truncate_strings = |values: &mut Vec<String>| {
+            for value in values {
+                truncate_string_bytes(value, max_debug_string_bytes);
+            }
+        };
+
+        let mut configured_ui_sans_families = snapshot.configured_ui_sans_families;
+        truncate_strings(&mut configured_ui_sans_families);
+        let mut configured_ui_serif_families = snapshot.configured_ui_serif_families;
+        truncate_strings(&mut configured_ui_serif_families);
+        let mut configured_ui_mono_families = snapshot.configured_ui_mono_families;
+        truncate_strings(&mut configured_ui_mono_families);
+        let mut configured_common_fallback_families = snapshot.configured_common_fallback_families;
+        truncate_strings(&mut configured_common_fallback_families);
+
+        let mut default_ui_sans_candidates = snapshot.default_ui_sans_candidates;
+        truncate_strings(&mut default_ui_sans_candidates);
+        let mut default_ui_serif_candidates = snapshot.default_ui_serif_candidates;
+        truncate_strings(&mut default_ui_serif_candidates);
+        let mut default_ui_mono_candidates = snapshot.default_ui_mono_candidates;
+        truncate_strings(&mut default_ui_mono_candidates);
+        let mut default_common_fallback_families = snapshot.default_common_fallback_families;
+        truncate_strings(&mut default_common_fallback_families);
+
+        let mut bundled_profile_contract = snapshot.bundled_profile_contract;
+        truncate_string_bytes(&mut bundled_profile_contract.name, max_debug_string_bytes);
+        truncate_strings(&mut bundled_profile_contract.provided_roles);
+        truncate_strings(&mut bundled_profile_contract.expected_family_names);
+        truncate_strings(&mut bundled_profile_contract.guaranteed_generic_families);
+        truncate_strings(&mut bundled_profile_contract.ui_sans_families);
+        truncate_strings(&mut bundled_profile_contract.ui_serif_families);
+        truncate_strings(&mut bundled_profile_contract.ui_mono_families);
+        truncate_strings(&mut bundled_profile_contract.common_fallback_families);
+
         Self {
             frame_id: snapshot.frame_id.0,
             font_stack_key: snapshot.font_stack_key,
@@ -401,8 +476,26 @@ impl UiRendererTextFallbackPolicySnapshotV1 {
             prefer_common_fallback: snapshot.prefer_common_fallback,
             common_fallback_injection: injection_from_core(snapshot.common_fallback_injection),
             locale_bcp47,
+            configured_ui_sans_families,
+            configured_ui_serif_families,
+            configured_ui_mono_families,
+            configured_common_fallback_families,
+            default_ui_sans_candidates,
+            default_ui_serif_candidates,
+            default_ui_mono_candidates,
+            default_common_fallback_families,
             common_fallback_stack_suffix,
             common_fallback_candidates,
+            bundled_profile_contract: UiRendererBundledFontProfileSnapshotV1 {
+                name: bundled_profile_contract.name,
+                provided_roles: bundled_profile_contract.provided_roles,
+                expected_family_names: bundled_profile_contract.expected_family_names,
+                guaranteed_generic_families: bundled_profile_contract.guaranteed_generic_families,
+                ui_sans_families: bundled_profile_contract.ui_sans_families,
+                ui_serif_families: bundled_profile_contract.ui_serif_families,
+                ui_mono_families: bundled_profile_contract.ui_mono_families,
+                common_fallback_families: bundled_profile_contract.common_fallback_families,
+            },
         }
     }
 }

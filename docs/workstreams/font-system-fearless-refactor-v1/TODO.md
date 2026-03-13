@@ -100,14 +100,14 @@ Regression gates:
 
 ## M4 — Tighten fallback-policy composition and diagnostics
 
-- [ ] Keep one renderer-owned fallback-policy model as the only place where fallback composition is
+- [x] Keep one renderer-owned fallback-policy model as the only place where fallback composition is
   derived.
-- [ ] Ensure bundled profiles participate in that model explicitly rather than through duplicated
+- [x] Ensure bundled profiles participate in that model explicitly rather than through duplicated
   hard-coded family lists.
-- [ ] Add a human-auditable bundled-profile / font-environment snapshot where useful.
+- [x] Add a human-auditable bundled-profile / font-environment snapshot where useful.
 - [ ] Confirm diagnostics bundles remain interpretable after the refactor:
   - [ ] font trace
-  - [ ] fallback policy snapshot
+  - [x] fallback policy snapshot
   - [ ] registered-font-blob counters
 
 Regression gates:

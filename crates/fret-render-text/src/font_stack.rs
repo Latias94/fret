@@ -107,17 +107,17 @@ pub fn apply_font_families_inner(
     let sans = pick_primary_family_id(
         shaper,
         &config.ui_sans,
-        fallback_policy::default_sans_candidates(),
+        fallback_policy::default_sans_candidates(shaper),
     );
     let serif = pick_primary_family_id(
         shaper,
         &config.ui_serif,
-        fallback_policy::default_serif_candidates(),
+        fallback_policy::default_serif_candidates(shaper),
     );
     let mono = pick_primary_family_id(
         shaper,
         &config.ui_mono,
-        fallback_policy::default_monospace_candidates(),
+        fallback_policy::default_monospace_candidates(shaper),
     );
 
     let (fallback_ids, suffix) = if policy.prefer_common_fallback() {

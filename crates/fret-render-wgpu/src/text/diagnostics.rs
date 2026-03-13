@@ -145,29 +145,12 @@ impl TextSystem {
         &self,
         frame_id: fret_core::FrameId,
     ) -> fret_core::RendererTextFallbackPolicySnapshot {
-        fret_core::RendererTextFallbackPolicySnapshot {
+        self.font_runtime.fallback_policy.diagnostics_snapshot(
             frame_id,
-            font_stack_key: self.font_runtime.font_stack_key,
-            font_db_revision: self.font_runtime.font_db_revision,
-            fallback_policy_key: self.font_runtime.fallback_policy.fallback_policy_key,
-            system_fonts_enabled: self.parley_shaper.system_fonts_enabled(),
-            locale_bcp47: self.font_runtime.fallback_policy.locale_bcp47.clone(),
-            common_fallback_injection: self
-                .font_runtime
-                .fallback_policy
-                .font_family_config
-                .common_fallback_injection,
-            prefer_common_fallback: self.font_runtime.fallback_policy.prefer_common_fallback(),
-            common_fallback_stack_suffix: self
-                .parley_shaper
-                .common_fallback_stack_suffix()
-                .to_string(),
-            common_fallback_candidates: self
-                .font_runtime
-                .fallback_policy
-                .common_fallback_candidates
-                .clone(),
-        }
+            self.font_runtime.font_stack_key,
+            self.font_runtime.font_db_revision,
+            &self.parley_shaper,
+        )
     }
 
     pub(crate) fn take_atlas_perf_snapshot(&mut self) -> super::TextAtlasPerfSnapshot {

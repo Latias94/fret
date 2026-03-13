@@ -156,8 +156,33 @@ pub struct RendererTextFallbackPolicySnapshot {
     pub common_fallback_injection: crate::TextCommonFallbackInjection,
     pub prefer_common_fallback: bool,
 
+    pub configured_ui_sans_families: Vec<String>,
+    pub configured_ui_serif_families: Vec<String>,
+    pub configured_ui_mono_families: Vec<String>,
+    pub configured_common_fallback_families: Vec<String>,
+
+    pub default_ui_sans_candidates: Vec<String>,
+    pub default_ui_serif_candidates: Vec<String>,
+    pub default_ui_mono_candidates: Vec<String>,
+    pub default_common_fallback_families: Vec<String>,
+
     /// The effective suffix appended to named-family stacks when common fallback is preferred.
     pub common_fallback_stack_suffix: String,
     /// The effective candidate list used to build `common_fallback_stack_suffix` (trimmed + deduped, preserving order).
     pub common_fallback_candidates: Vec<String>,
+
+    pub bundled_profile_contract: RendererBundledFontProfileSnapshot,
+}
+
+/// Diagnostics-only view of the bundled font profile contract the renderer knows about.
+#[derive(Debug, Default, Clone)]
+pub struct RendererBundledFontProfileSnapshot {
+    pub name: String,
+    pub provided_roles: Vec<String>,
+    pub expected_family_names: Vec<String>,
+    pub guaranteed_generic_families: Vec<String>,
+    pub ui_sans_families: Vec<String>,
+    pub ui_serif_families: Vec<String>,
+    pub ui_mono_families: Vec<String>,
+    pub common_fallback_families: Vec<String>,
 }

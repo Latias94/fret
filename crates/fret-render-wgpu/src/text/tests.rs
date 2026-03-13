@@ -2682,6 +2682,173 @@ fn fallback_policy_key_changes_when_common_fallback_injection_changes() {
 }
 
 #[test]
+fn bundled_only_defaults_use_profile_ui_family_when_config_is_empty() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut text = super::TextSystem::new(&ctx.device);
+
+    reset_bundled_only_font_runtime(&mut text);
+
+    let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+        .iter()
+        .map(|b| b.to_vec())
+        .collect();
+    let added = text.add_fonts(fonts);
+    assert!(added > 0, "expected bundled bootstrap fonts to load");
+
+    let profile = fret_fonts::default_profile();
+    let ui_family = profile
+        .ui_sans_families
+        .first()
+        .copied()
+        .expect("expected bundled profile to declare a UI sans family");
+
+    let constraints = TextConstraints {
+        max_width: None,
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+        align: fret_core::TextAlign::Start,
+        scale_factor: 1.0,
+    };
+
+    let expected_faces = {
+        let style = TextStyle {
+            font: fret_core::FontId::family(ui_family),
+            size: Px(24.0),
+            ..Default::default()
+        };
+        let (blob_id, _metrics) = text.prepare("m", &style, constraints);
+        let blob = text.blob(blob_id).expect("text blob");
+        blob.shape
+            .glyphs
+            .iter()
+            .map(|g| g.key.font)
+            .collect::<std::collections::HashSet<super::FontFaceKey>>()
+    };
+
+    let style = TextStyle {
+        font: fret_core::FontId::ui(),
+        size: Px(24.0),
+        ..Default::default()
+    };
+    let (blob_id, _metrics) = text.prepare("m", &style, constraints);
+    let blob = text.blob(blob_id).expect("text blob");
+    let used_faces = blob
+        .shape
+        .glyphs
+        .iter()
+        .map(|g| g.key.font)
+        .collect::<std::collections::HashSet<super::FontFaceKey>>();
+
+    assert!(
+        used_faces.iter().any(|face| expected_faces.contains(face)),
+        "expected bundled-only UI generic resolution to use the bundled profile UI sans family {ui_family}"
+    );
+}
+
+#[test]
+fn fallback_policy_snapshot_reports_profile_contract_and_defaults() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut text = super::TextSystem::new(&ctx.device);
+
+    reset_bundled_only_font_runtime(&mut text);
+
+    let fonts: Vec<Vec<u8>> = fret_fonts::default_fonts()
+        .iter()
+        .map(|b| b.to_vec())
+        .collect();
+    let added = text.add_fonts(fonts);
+    assert!(added > 0, "expected bundled fonts to load");
+
+    let config = fret_core::TextFontFamilyConfig {
+        common_fallback_injection: fret_core::TextCommonFallbackInjection::CommonFallback,
+        ui_sans: vec!["Inter".to_string()],
+        ui_mono: vec!["JetBrains Mono".to_string()],
+        common_fallback: vec!["Noto Sans Arabic".to_string()],
+        ..Default::default()
+    };
+    let _ = text.set_font_families(&config);
+
+    let snap = text.fallback_policy_snapshot(fret_core::FrameId(7));
+    let profile = fret_fonts::default_profile();
+
+    let expected_default_common_fallback = {
+        let mut seen = std::collections::HashSet::<String>::new();
+        let mut out = Vec::new();
+        for family in profile
+            .ui_sans_families
+            .iter()
+            .chain(profile.common_fallback_families.iter())
+        {
+            let key = family.to_ascii_lowercase();
+            if seen.insert(key) {
+                out.push((*family).to_string());
+            }
+        }
+        out
+    };
+
+    assert!(!snap.system_fonts_enabled);
+    assert!(snap.prefer_common_fallback);
+    assert_eq!(snap.configured_ui_sans_families, config.ui_sans);
+    assert_eq!(snap.configured_ui_serif_families, config.ui_serif);
+    assert_eq!(snap.configured_ui_mono_families, config.ui_mono);
+    assert_eq!(
+        snap.configured_common_fallback_families,
+        config.common_fallback
+    );
+    assert_eq!(
+        snap.default_ui_sans_candidates,
+        profile
+            .ui_sans_families
+            .iter()
+            .map(|family| (*family).to_string())
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(
+        snap.default_ui_serif_candidates,
+        profile
+            .ui_serif_families
+            .iter()
+            .map(|family| (*family).to_string())
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(
+        snap.default_ui_mono_candidates,
+        profile
+            .ui_mono_families
+            .iter()
+            .map(|family| (*family).to_string())
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(
+        snap.default_common_fallback_families,
+        expected_default_common_fallback
+    );
+    assert_eq!(snap.bundled_profile_contract.name, profile.name);
+    assert_eq!(
+        snap.bundled_profile_contract.expected_family_names,
+        profile
+            .expected_family_names
+            .iter()
+            .map(|family| (*family).to_string())
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(
+        snap.bundled_profile_contract.common_fallback_families,
+        profile
+            .common_fallback_families
+            .iter()
+            .map(|family| (*family).to_string())
+            .collect::<Vec<_>>()
+    );
+    assert!(
+        snap.common_fallback_candidates
+            .starts_with(&config.common_fallback),
+        "expected configured common fallback families to remain at the head of the effective fallback candidates"
+    );
+}
+
+#[test]
 fn mixed_script_fallback_uses_bundled_faces_when_system_fonts_are_absent() {
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut text = super::TextSystem::new(&ctx.device);
