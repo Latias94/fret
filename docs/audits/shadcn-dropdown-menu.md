@@ -121,7 +121,11 @@ Notes on API mapping:
   parts bridge already covers the docs-style `Trigger` / `Content` path, and typed entries remain
   the more important contract boundary.
 - Groups/labels/shortcuts/destructive variant are modeled via:
-  `DropdownMenuEntry::{Group,Label}` and `DropdownMenuItem::{trailing,variant}`.
+  `DropdownMenuEntry::{Group,Label}`, `DropdownMenuItem::{shortcut,trailing,variant}`, and
+  matching shortcut helpers on checkbox/radio items.
+- Pass: copyable first-party examples now prefer `.shortcut("...")` over manually composing
+  `DropdownMenuShortcut`, while still keeping `DropdownMenuShortcut` available as the explicit
+  trailing escape hatch.
 
 ## Validation
 
@@ -130,6 +134,8 @@ Notes on API mapping:
 - Contract test: `dropdown_menu_new_controllable_applies_default_open`
 - Contract test: `dropdown_menu_open_change_events_emit_change_and_complete_after_settle`
 - Contract test: `dropdown_menu_open_change_events_complete_without_animation`
+- Contract test: `estimated_menu_panel_width_grows_for_explicit_shortcut`
+- Contract test: `estimated_menu_panel_width_grows_for_submenu_chevron`
 - Interaction test: `dropdown_menu_disabled_blocks_arrow_key_open_from_trigger`
 - Interaction test: `dropdown_menu_disabled_hides_content_even_when_open_model_true`
   (ensures `pos_in_set`/`set_size` exclude separators).

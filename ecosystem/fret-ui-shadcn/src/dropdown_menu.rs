@@ -468,6 +468,7 @@ pub struct DropdownMenuItem {
     pub inset: bool,
     pub leading: Option<AnyElement>,
     pub leading_icon: Option<IconId>,
+    pub shortcut: Option<Arc<str>>,
     pub content: Option<AnyElement>,
     pub padding: Option<Edges>,
     pub estimated_height: Option<Px>,
@@ -493,6 +494,7 @@ impl std::fmt::Debug for DropdownMenuItem {
             .field("inset", &self.inset)
             .field("leading", &self.leading)
             .field("leading_icon", &self.leading_icon)
+            .field("shortcut", &self.shortcut)
             .field("content", &self.content)
             .field("padding", &self.padding)
             .field("estimated_height", &self.estimated_height)
@@ -521,6 +523,7 @@ impl DropdownMenuItem {
             inset: false,
             leading: None,
             leading_icon: None,
+            shortcut: None,
             content: None,
             padding: None.into(),
             estimated_height: None,
@@ -561,6 +564,13 @@ impl DropdownMenuItem {
     pub fn leading_icon(mut self, icon: IconId) -> Self {
         self.leading = None;
         self.leading_icon = Some(icon);
+        self
+    }
+
+    /// Copyable shadcn-style shortcut helper for the trailing slot.
+    pub fn shortcut(mut self, text: impl Into<Arc<str>>) -> Self {
+        self.trailing = None;
+        self.shortcut = Some(text.into());
         self
     }
 
@@ -653,6 +663,7 @@ impl DropdownMenuItem {
     }
 
     pub fn trailing(mut self, element: AnyElement) -> Self {
+        self.shortcut = None;
         self.trailing = Some(element);
         self
     }
@@ -665,6 +676,7 @@ pub struct DropdownMenuCheckboxItem {
     pub checked: DropdownMenuCheckboxChecked,
     pub leading: Option<AnyElement>,
     pub leading_icon: Option<IconId>,
+    pub shortcut: Option<Arc<str>>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -682,6 +694,7 @@ impl std::fmt::Debug for DropdownMenuCheckboxItem {
             .field("checked", &self.checked)
             .field("leading", &self.leading.is_some())
             .field("leading_icon", &self.leading_icon)
+            .field("shortcut", &self.shortcut)
             .field("disabled", &self.disabled)
             .field("close_on_select", &self.close_on_select)
             .field("command", &self.command)
@@ -702,6 +715,7 @@ impl DropdownMenuCheckboxItem {
             checked: DropdownMenuCheckboxChecked::Model(checked),
             leading: None,
             leading_icon: None,
+            shortcut: None,
             disabled: false,
             close_on_select: false,
             command: None,
@@ -722,6 +736,7 @@ impl DropdownMenuCheckboxItem {
             checked: DropdownMenuCheckboxChecked::Value(checked),
             leading: None,
             leading_icon: None,
+            shortcut: None,
             disabled: false,
             close_on_select: false,
             command: None,
@@ -747,6 +762,13 @@ impl DropdownMenuCheckboxItem {
     pub fn leading_icon(mut self, icon: IconId) -> Self {
         self.leading = None;
         self.leading_icon = Some(icon);
+        self
+    }
+
+    /// Copyable shadcn-style shortcut helper for the trailing slot.
+    pub fn shortcut(mut self, text: impl Into<Arc<str>>) -> Self {
+        self.trailing = None;
+        self.shortcut = Some(text.into());
         self
     }
 
@@ -797,6 +819,7 @@ impl DropdownMenuCheckboxItem {
     }
 
     pub fn trailing(mut self, element: AnyElement) -> Self {
+        self.shortcut = None;
         self.trailing = Some(element);
         self
     }
@@ -865,6 +888,7 @@ pub struct DropdownMenuRadioItemSpec {
     pub value: Arc<str>,
     pub leading: Option<AnyElement>,
     pub leading_icon: Option<IconId>,
+    pub shortcut: Option<Arc<str>>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -882,6 +906,7 @@ impl DropdownMenuRadioItemSpec {
             value,
             leading: None,
             leading_icon: None,
+            shortcut: None,
             disabled: false,
             close_on_select: true,
             command: None,
@@ -901,6 +926,13 @@ impl DropdownMenuRadioItemSpec {
     pub fn leading_icon(mut self, icon: IconId) -> Self {
         self.leading = None;
         self.leading_icon = Some(icon);
+        self
+    }
+
+    /// Copyable shadcn-style shortcut helper for the trailing slot.
+    pub fn shortcut(mut self, text: impl Into<Arc<str>>) -> Self {
+        self.trailing = None;
+        self.shortcut = Some(text.into());
         self
     }
 
@@ -939,6 +971,7 @@ impl DropdownMenuRadioItemSpec {
     }
 
     pub fn trailing(mut self, element: AnyElement) -> Self {
+        self.shortcut = None;
         self.trailing = Some(element);
         self
     }
@@ -954,6 +987,7 @@ impl DropdownMenuRadioItemSpec {
             group_value,
             leading: self.leading,
             leading_icon: self.leading_icon,
+            shortcut: self.shortcut,
             disabled: self.disabled,
             close_on_select: self.close_on_select,
             command: self.command,
@@ -972,6 +1006,7 @@ pub struct DropdownMenuRadioItem {
     pub group_value: DropdownMenuRadioValue,
     pub leading: Option<AnyElement>,
     pub leading_icon: Option<IconId>,
+    pub shortcut: Option<Arc<str>>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -989,6 +1024,7 @@ impl std::fmt::Debug for DropdownMenuRadioItem {
             .field("group_value", &self.group_value)
             .field("leading", &self.leading.is_some())
             .field("leading_icon", &self.leading_icon)
+            .field("shortcut", &self.shortcut)
             .field("disabled", &self.disabled)
             .field("close_on_select", &self.close_on_select)
             .field("command", &self.command)
@@ -1014,6 +1050,7 @@ impl DropdownMenuRadioItem {
             group_value: DropdownMenuRadioValue::Model(group_value),
             leading: None,
             leading_icon: None,
+            shortcut: None,
             disabled: false,
             close_on_select: true,
             command: None,
@@ -1041,6 +1078,7 @@ impl DropdownMenuRadioItem {
             group_value: DropdownMenuRadioValue::Value(group_value.map(Into::into)),
             leading: None,
             leading_icon: None,
+            shortcut: None,
             disabled: false,
             close_on_select: true,
             command: None,
@@ -1102,12 +1140,20 @@ impl DropdownMenuRadioItem {
         self
     }
 
+    /// Copyable shadcn-style shortcut helper for the trailing slot.
+    pub fn shortcut(mut self, text: impl Into<Arc<str>>) -> Self {
+        self.trailing = None;
+        self.shortcut = Some(text.into());
+        self
+    }
+
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(id.into());
         self
     }
 
     pub fn trailing(mut self, element: AnyElement) -> Self {
+        self.shortcut = None;
         self.trailing = Some(element);
         self
     }
@@ -1177,18 +1223,7 @@ impl DropdownMenuShortcut {
         let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme.color_token("muted-foreground");
         let dir = crate::use_direction(cx, None);
-
-        let base_size = theme.metric_token("font.size");
-        let base_line_height = theme.metric_token("font.line_height");
-        let font_size = theme
-            .metric_by_key("component.dropdown_menu.shortcut.font_size")
-            .unwrap_or_else(|| Px((base_size.0 - 1.0).max(10.0)));
-        let font_line_height = theme
-            .metric_by_key("component.dropdown_menu.shortcut.line_height")
-            .unwrap_or_else(|| Px((base_line_height.0 - 2.0).max(font_size.0)));
-        let mut style = typography::fixed_line_box_style(FontId::ui(), font_size, font_line_height);
-        style.weight = FontWeight::NORMAL;
-        style.letter_spacing_em = Some(0.10);
+        let style = dropdown_menu_shortcut_text_style(&theme);
 
         shortcut_text_element(
             cx,
@@ -1199,6 +1234,88 @@ impl DropdownMenuShortcut {
             rtl::layout_refinement_margin_inline_start_auto(dir),
         )
     }
+}
+
+fn dropdown_menu_shortcut_text_style(theme: &ThemeSnapshot) -> TextStyle {
+    let base_size = theme.metric_token("font.size");
+    let base_line_height = theme.metric_token("font.line_height");
+    let font_size = theme
+        .metric_by_key("component.dropdown_menu.shortcut.font_size")
+        .unwrap_or_else(|| Px((base_size.0 - 1.0).max(10.0)));
+    let font_line_height = theme
+        .metric_by_key("component.dropdown_menu.shortcut.line_height")
+        .unwrap_or_else(|| Px((base_line_height.0 - 2.0).max(font_size.0)));
+    let mut style = typography::fixed_line_box_style(FontId::ui(), font_size, font_line_height);
+    style.weight = FontWeight::NORMAL;
+    style.letter_spacing_em = Some(0.10);
+    style
+}
+
+fn estimated_menu_text_width_with_letter_spacing(
+    text: &str,
+    font_size: Px,
+    letter_spacing_em: f32,
+) -> Px {
+    let base = estimated_menu_text_width(text, font_size);
+    let extra = if text.chars().count() > 1 {
+        font_size.0 * letter_spacing_em.max(0.0) * (text.chars().count().saturating_sub(1) as f32)
+    } else {
+        0.0
+    };
+    Px(base.0 + extra)
+}
+
+fn resolved_dropdown_menu_shortcut_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    shortcut: Option<&Arc<str>>,
+    command: Option<&CommandId>,
+) -> Option<Arc<str>> {
+    shortcut.cloned().or_else(|| {
+        command.and_then(|cmd| command_shortcut_label(cx, cmd, fret_runtime::Platform::current()))
+    })
+}
+
+fn estimated_dropdown_menu_trailing_width<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &ThemeSnapshot,
+    shortcut: Option<&Arc<str>>,
+    command: Option<&CommandId>,
+    trailing_present: bool,
+    submenu_present: bool,
+) -> Px {
+    let mut width = 0.0_f32;
+
+    if let Some(text) = resolved_dropdown_menu_shortcut_text(cx, shortcut, command) {
+        let style = dropdown_menu_shortcut_text_style(theme);
+        width += estimated_menu_text_width_with_letter_spacing(
+            text.as_ref(),
+            style.size,
+            style.letter_spacing_em.unwrap_or(0.0),
+        )
+        .0;
+        // Row flex uses `gap-2`.
+        width += 8.0;
+    } else if trailing_present {
+        // Escape hatch: arbitrary trailing elements cannot be measured here, so reserve a
+        // conservative slot to avoid the menu collapsing into obviously broken row layouts.
+        width += 40.0;
+    }
+
+    if submenu_present {
+        // Submenu trigger renders a trailing chevron in a 16px slot plus the same `gap-2`.
+        width += 24.0;
+    }
+
+    Px(width)
+}
+
+fn resolved_dropdown_menu_shortcut_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    shortcut: Option<&Arc<str>>,
+    command: Option<&CommandId>,
+) -> Option<AnyElement> {
+    resolved_dropdown_menu_shortcut_text(cx, shortcut, command)
+        .map(|text| DropdownMenuShortcut::new(text).into_element(cx))
 }
 
 fn focusable_item_count(entries: &[DropdownMenuEntry]) -> usize {
@@ -1400,8 +1517,10 @@ fn estimated_menu_text_width(text: &str, font_size: Px) -> Px {
     Px(font_size.0 * ems.max(0.0))
 }
 
-fn estimated_menu_panel_width_for_entries(
+fn estimated_menu_panel_width_for_entries<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
     entries: &[DropdownMenuEntry],
+    theme: &ThemeSnapshot,
     font_size: Px,
     pad_x: Px,
     pad_x_inset: Px,
@@ -1418,9 +1537,11 @@ fn estimated_menu_panel_width_for_entries(
         Px(0.0)
     };
 
-    fn add_entries(
+    fn add_entries<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
         out_max: &mut f32,
         entries: &[DropdownMenuEntry],
+        theme: &ThemeSnapshot,
         font_size: Px,
         pad_x: Px,
         pad_x_inset: Px,
@@ -1434,29 +1555,66 @@ fn estimated_menu_panel_width_for_entries(
                 }
                 DropdownMenuEntry::Item(item) => {
                     let left_pad = if item.inset { pad_x_inset } else { pad_x };
+                    let trailing_w = estimated_dropdown_menu_trailing_width(
+                        cx,
+                        theme,
+                        item.shortcut.as_ref(),
+                        if item.submenu.is_some() {
+                            None
+                        } else {
+                            item.command.as_ref()
+                        },
+                        item.trailing.is_some(),
+                        item.submenu.is_some(),
+                    );
                     Some(
                         estimated_menu_text_width(&item.label, font_size).0
                             + left_pad.0
                             + pad_x.0
-                            + leading_slot_w.0,
+                            + leading_slot_w.0
+                            + trailing_w.0,
                     )
                 }
-                DropdownMenuEntry::CheckboxItem(item) => Some(
-                    estimated_menu_text_width(&item.label, font_size).0
-                        + pad_x.0
-                        + pad_x.0
-                        + Px(24.0).0,
-                ),
-                DropdownMenuEntry::RadioItem(item) => Some(
-                    estimated_menu_text_width(&item.label, font_size).0
-                        + pad_x.0
-                        + pad_x.0
-                        + Px(24.0).0,
-                ),
+                DropdownMenuEntry::CheckboxItem(item) => {
+                    let trailing_w = estimated_dropdown_menu_trailing_width(
+                        cx,
+                        theme,
+                        item.shortcut.as_ref(),
+                        item.command.as_ref(),
+                        item.trailing.is_some(),
+                        false,
+                    );
+                    Some(
+                        estimated_menu_text_width(&item.label, font_size).0
+                            + pad_x.0
+                            + pad_x.0
+                            + Px(24.0).0
+                            + trailing_w.0,
+                    )
+                }
+                DropdownMenuEntry::RadioItem(item) => {
+                    let trailing_w = estimated_dropdown_menu_trailing_width(
+                        cx,
+                        theme,
+                        item.shortcut.as_ref(),
+                        item.command.as_ref(),
+                        item.trailing.is_some(),
+                        false,
+                    );
+                    Some(
+                        estimated_menu_text_width(&item.label, font_size).0
+                            + pad_x.0
+                            + pad_x.0
+                            + Px(24.0).0
+                            + trailing_w.0,
+                    )
+                }
                 DropdownMenuEntry::Group(group) => {
                     add_entries(
+                        cx,
                         out_max,
                         &group.entries,
+                        theme,
                         font_size,
                         pad_x,
                         pad_x_inset,
@@ -1466,10 +1624,19 @@ fn estimated_menu_panel_width_for_entries(
                 }
                 DropdownMenuEntry::RadioGroup(group) => {
                     for item in &group.items {
+                        let trailing_w = estimated_dropdown_menu_trailing_width(
+                            cx,
+                            theme,
+                            item.shortcut.as_ref(),
+                            item.command.as_ref(),
+                            item.trailing.is_some(),
+                            false,
+                        );
                         let w = estimated_menu_text_width(&item.label, font_size).0
                             + pad_x.0
                             + pad_x.0
-                            + Px(24.0).0;
+                            + Px(24.0).0
+                            + trailing_w.0;
                         *out_max = out_max.max(w);
                     }
                     None
@@ -1484,8 +1651,10 @@ fn estimated_menu_panel_width_for_entries(
 
     let mut max_row_w = 0.0;
     add_entries(
+        cx,
         &mut max_row_w,
         entries,
+        theme,
         font_size,
         pad_x,
         pad_x_inset,
@@ -2332,7 +2501,9 @@ impl DropdownMenu {
                     let pad_x = MetricRef::space(Space::N2).resolve(theme);
                     let pad_x_inset = MetricRef::space(Space::N8).resolve(theme);
                     let estimated_w = estimated_menu_panel_width_for_entries(
+                        cx,
                         &entries,
+                        theme,
                         font_size,
                         pad_x,
                         pad_x_inset,
@@ -2758,6 +2929,7 @@ impl DropdownMenu {
                                                         let command = item.command;
                                                         let leading = item.leading;
                                                         let leading_icon = item.leading_icon;
+                                                        let shortcut = item.shortcut;
                                                         let trailing = item.trailing;
                                                         let test_id = item.test_id;
                                                         let open = open_for_menu.clone();
@@ -2859,17 +3031,12 @@ impl DropdownMenu {
 
                                                                     let mut trailing = trailing;
                                                                     if trailing.is_none() {
-                                                                        trailing = command.as_ref().and_then(|cmd| {
-                                                                            command_shortcut_label(
+                                                                        trailing =
+                                                                            resolved_dropdown_menu_shortcut_element(
                                                                                 cx,
-                                                                                cmd,
-                                                                                fret_runtime::Platform::current(),
-                                                                            )
-                                                                            .map(|text| {
-                                                                                DropdownMenuShortcut::new(text)
-                                                                                    .into_element(cx)
-                                                                            })
-                                                                        });
+                                                                                shortcut.as_ref(),
+                                                                                command.as_ref(),
+                                                                            );
                                                                     }
 
                                                                     let children = checkable_menu_row_children(
@@ -2916,6 +3083,7 @@ impl DropdownMenu {
                                                         let command = item.command;
                                                         let leading = item.leading;
                                                         let leading_icon = item.leading_icon;
+                                                        let shortcut = item.shortcut;
                                                         let trailing = item.trailing;
                                                         let test_id = item.test_id;
                                                         let open = open_for_menu.clone();
@@ -3027,17 +3195,12 @@ impl DropdownMenu {
 
                                                                     let mut trailing = trailing;
                                                                     if trailing.is_none() {
-                                                                        trailing = command.as_ref().and_then(|cmd| {
-                                                                            command_shortcut_label(
+                                                                        trailing =
+                                                                            resolved_dropdown_menu_shortcut_element(
                                                                                 cx,
-                                                                                cmd,
-                                                                                fret_runtime::Platform::current(),
-                                                                            )
-                                                                            .map(|text| {
-                                                                                DropdownMenuShortcut::new(text)
-                                                                                    .into_element(cx)
-                                                                            })
-                                                                        });
+                                                                                shortcut.as_ref(),
+                                                                                command.as_ref(),
+                                                                            );
                                                                     }
 
                                                                     let children = checkable_menu_row_children(
@@ -3090,6 +3253,7 @@ impl DropdownMenu {
                                                         let on_activate = item.on_activate.clone();
                                                         let leading = item.leading;
                                                         let leading_icon = item.leading_icon;
+                                                        let shortcut = item.shortcut;
                                                         let trailing = item.trailing;
                                                         let content = item.content;
                                                         let padding_override = item.padding;
@@ -3275,18 +3439,17 @@ impl DropdownMenu {
                                                                 }
 
                                                                  let mut trailing = trailing;
-                                                                if !has_submenu && trailing.is_none() {
-                                                                    trailing = command.as_ref().and_then(|cmd| {
-                                                                        command_shortcut_label(
+                                                                if trailing.is_none() {
+                                                                    trailing =
+                                                                        resolved_dropdown_menu_shortcut_element(
                                                                             cx,
-                                                                            cmd,
-                                                                            fret_runtime::Platform::current(),
-                                                                        )
-                                                                        .map(|text| {
-                                                                            DropdownMenuShortcut::new(text)
-                                                                                .into_element(cx)
-                                                                        })
-                                                                    });
+                                                                            shortcut.as_ref(),
+                                                                            if has_submenu {
+                                                                                None
+                                                                            } else {
+                                                                                command.as_ref()
+                                                                            },
+                                                                        );
                                                                 }
 
                                                                 let row_padding_logical = padding_override.unwrap_or(Edges {
@@ -3963,6 +4126,7 @@ impl DropdownMenu {
                                                                 let command = item.command;
                                                                 let leading = item.leading;
                                                                 let leading_icon = item.leading_icon;
+                                                                let shortcut = item.shortcut;
                                                                 let trailing = item.trailing;
                                                                 let test_id = item.test_id;
                                                                 let open = open_for_submenu.clone();
@@ -4051,17 +4215,12 @@ impl DropdownMenu {
 
                                                                             let mut trailing = trailing;
                                                                             if trailing.is_none() {
-                                                                                trailing = command.as_ref().and_then(|cmd| {
-                                                                                    command_shortcut_label(
+                                                                                trailing =
+                                                                                    resolved_dropdown_menu_shortcut_element(
                                                                                         cx,
-                                                                                        cmd,
-                                                                                        fret_runtime::Platform::current(),
-                                                                                    )
-                                                                                    .map(|text| {
-                                                                                        DropdownMenuShortcut::new(text)
-                                                                                            .into_element(cx)
-                                                                                    })
-                                                                                });
+                                                                                        shortcut.as_ref(),
+                                                                                        command.as_ref(),
+                                                                                    );
                                                                             }
 
                                                                             let children = checkable_menu_row_children(
@@ -4108,6 +4267,7 @@ impl DropdownMenu {
                                                                 let command = item.command;
                                                                 let leading = item.leading;
                                                                 let leading_icon = item.leading_icon;
+                                                                let shortcut = item.shortcut;
                                                                 let trailing = item.trailing;
                                                                 let test_id = item.test_id;
                                                                 let open = open_for_submenu.clone();
@@ -4205,17 +4365,12 @@ impl DropdownMenu {
 
                                                                             let mut trailing = trailing;
                                                                             if trailing.is_none() {
-                                                                                trailing = command.as_ref().and_then(|cmd| {
-                                                                                    command_shortcut_label(
+                                                                                trailing =
+                                                                                    resolved_dropdown_menu_shortcut_element(
                                                                                         cx,
-                                                                                        cmd,
-                                                                                        fret_runtime::Platform::current(),
-                                                                                    )
-                                                                                    .map(|text| {
-                                                                                        DropdownMenuShortcut::new(text)
-                                                                                            .into_element(cx)
-                                                                                    })
-                                                                                });
+                                                                                        shortcut.as_ref(),
+                                                                                        command.as_ref(),
+                                                                                    );
                                                                             }
 
                                                                             let children = checkable_menu_row_children(
@@ -4272,6 +4427,7 @@ impl DropdownMenu {
                                                              );
                                                          let leading = item.leading;
                                                          let leading_icon = item.leading_icon;
+                                                         let shortcut = item.shortcut;
                                                          let trailing = item.trailing;
                                                          let variant = item.variant;
                                                          let pad_left =
@@ -4342,17 +4498,12 @@ impl DropdownMenu {
 
                                                                             let mut trailing = trailing;
                                                                             if trailing.is_none() {
-                                                                                trailing = command.as_ref().and_then(|cmd| {
-                                                                                    command_shortcut_label(
+                                                                                trailing =
+                                                                                    resolved_dropdown_menu_shortcut_element(
                                                                                         cx,
-                                                                                        cmd,
-                                                                                        fret_runtime::Platform::current(),
-                                                                                    )
-                                                                                    .map(|text| {
-                                                                                        DropdownMenuShortcut::new(text)
-                                                                                            .into_element(cx)
-                                                                                    })
-                                                                                });
+                                                                                        shortcut.as_ref(),
+                                                                                        command.as_ref(),
+                                                                                    );
                                                                             }
 
                                                                             let children = vec![cx.container(
@@ -4995,6 +5146,106 @@ mod tests {
         let max_height = Px(120.0);
         let height = estimated_menu_panel_height_for_entries(&entries, row_height, max_height);
         assert_eq!(height, Px(50.0));
+    }
+
+    #[test]
+    fn estimated_menu_panel_width_grows_for_explicit_shortcut() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(200.0)),
+        );
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let theme = Theme::global(&*cx.app).snapshot();
+            let base_entries = vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Profile"))];
+            let shortcut_entries = vec![DropdownMenuEntry::Item(
+                DropdownMenuItem::new("Profile").shortcut("Shift+Cmd+P"),
+            )];
+
+            let base_width = estimated_menu_panel_width_for_entries(
+                cx,
+                &base_entries,
+                &theme,
+                Px(14.0),
+                Px(8.0),
+                Px(32.0),
+                false,
+            );
+            let shortcut_width = estimated_menu_panel_width_for_entries(
+                cx,
+                &shortcut_entries,
+                &theme,
+                Px(14.0),
+                Px(8.0),
+                Px(32.0),
+                false,
+            );
+
+            assert!(
+                shortcut_width.0 > base_width.0,
+                "explicit shortcut should reserve trailing width: base={base_width:?} shortcut={shortcut_width:?}"
+            );
+        });
+    }
+
+    #[test]
+    fn estimated_menu_panel_width_grows_for_submenu_chevron() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(200.0)),
+        );
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let theme = Theme::global(&*cx.app).snapshot();
+            let base_entries = vec![DropdownMenuEntry::Item(DropdownMenuItem::new(
+                "Invite users",
+            ))];
+            let submenu_entries = vec![DropdownMenuEntry::Item(
+                DropdownMenuItem::new("Invite users").submenu(vec![DropdownMenuEntry::Item(
+                    DropdownMenuItem::new("Email"),
+                )]),
+            )];
+
+            let base_width = estimated_menu_panel_width_for_entries(
+                cx,
+                &base_entries,
+                &theme,
+                Px(14.0),
+                Px(8.0),
+                Px(32.0),
+                false,
+            );
+            let submenu_width = estimated_menu_panel_width_for_entries(
+                cx,
+                &submenu_entries,
+                &theme,
+                Px(14.0),
+                Px(8.0),
+                Px(32.0),
+                false,
+            );
+
+            assert!(
+                submenu_width.0 > base_width.0,
+                "submenu trigger should reserve chevron width: base={base_width:?} submenu={submenu_width:?}"
+            );
+        });
     }
 
     #[derive(Default)]

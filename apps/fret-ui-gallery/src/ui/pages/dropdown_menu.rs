@@ -24,6 +24,7 @@ pub(super) fn preview_dropdown_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = doc_layout::notes_block([
         "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/base/dropdown-menu.mdx`.",
         "`DropdownMenu::build_parts(...)` and `into_element_parts(...)` are the source-aligned authoring helpers for `Trigger` / `Content`; they keep typed `DropdownMenuEntry` values explicit instead of introducing a generic slot/asChild surface.",
+        "`DropdownMenuItem::shortcut(...)`, `DropdownMenuCheckboxItem::shortcut(...)`, and radio-item shortcut helpers are now the preferred copyable API for keyboard hints; `DropdownMenuShortcut` remains the explicit trailing escape hatch.",
         "`DropdownMenuCheckboxItem::from_checked(...)` / `.on_checked_change(...)` and `DropdownMenuRadioGroup::from_value(...)` / `.on_value_change(...)` now cover the upstream snapshot + callback path without forcing per-item `Model<_>` state.",
         "A separate generic `compose()` / nested children API is still not the next recommended step here; the parts bridge already covers `Trigger` / `Content`, and typed entries remain the more important contract.",
     ]);
@@ -70,7 +71,7 @@ pub(super) fn preview_dropdown_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .test_id_prefix("ui-gallery-dropdown-menu-submenu")
                 .code_rust_from_file_region(snippets::submenu::SOURCE, "example"),
             DocSection::new("Shortcuts", shortcuts)
-                .description("Use `DropdownMenuShortcut` to show keyboard hints.")
+                .description("Prefer `.shortcut(\"...\")` for copyable keyboard hints; keep `DropdownMenuShortcut` for custom trailing content.")
                 .test_id_prefix("ui-gallery-dropdown-menu-shortcuts")
                 .code_rust_from_file_region(snippets::shortcuts::SOURCE, "example"),
             DocSection::new("Icons", icons)

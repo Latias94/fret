@@ -17,7 +17,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             shadcn::DropdownMenuContent::new()
                 .align(shadcn::DropdownMenuAlign::Start)
                 .side_offset(Px(4.0)),
-            |cx| {
+            |_cx| {
                 [shadcn::DropdownMenuGroup::new([
                     shadcn::DropdownMenuItem::new("Team").into(),
                     shadcn::DropdownMenuSub::new(
@@ -41,7 +41,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     )
                     .into(),
                     shadcn::DropdownMenuItem::new("New Team")
-                        .trailing(shadcn::DropdownMenuShortcut::new("⌘+T").into_element(cx))
+                        .shortcut("⌘+T")
                         .into(),
                 ])
                 .into()]
