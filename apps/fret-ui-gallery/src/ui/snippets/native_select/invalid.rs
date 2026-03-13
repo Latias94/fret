@@ -1,17 +1,17 @@
 pub const SOURCE: &str = include_str!("invalid.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    value: Model<Option<Arc<str>>>,
-    open: Model<bool>,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let value =
+        cx.local_model_keyed("ui-gallery-native-select-invalid-value", || None::<Arc<str>>);
+    let open = cx.local_model_keyed("ui-gallery-native-select-invalid-open", || false);
     let select_layout = LayoutRefinement::default().max_w(Px(320.0)).min_w_0();
 
-    let select = shadcn::NativeSelect::new(value, open)
+    let select = shadcn::native_select(value, open)
         .a11y_label("Native select: role (invalid)")
         .placeholder("Select role")
         .aria_invalid(true)

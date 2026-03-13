@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn controlled<H: UiHost>(
@@ -26,7 +27,7 @@ fn controlled<H: UiHost>(
     .items_center()
     .justify_between()
     .into_element(cx);
-    let slider = shadcn::Slider::new(controlled_values)
+    let slider = shadcn::slider(controlled_values)
         .range(0.0, 1.0)
         .step(0.1)
         .test_id("ui-gallery-slider-controlled")
@@ -38,10 +39,9 @@ fn controlled<H: UiHost>(
         .layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
 }
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    controlled_values: Model<Vec<f32>>,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let controlled_values =
+        cx.local_model_keyed("ui-gallery-slider-demo-controlled-values", || vec![0.3, 0.7]);
     let max_w_sm = LayoutRefinement::default().w_full().max_w(Px(384.0));
 
     let single = shadcn::Slider::new_controllable(cx, None, || vec![50.0])

@@ -168,6 +168,24 @@ Execution note on 2026-03-13:
   `DocSection::build(cx, ...)`; the old `pub fn render(...) -> AnyElement` teaching pattern is now
   forbidden for that family by
   `ui_authoring_surface_default_app::{radio_group_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface,radio_group_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the next top-level snippet-family
+  move on the slider lane:
+  `apps/fret-ui-gallery/src/ui/snippets/slider/{demo,extras,label,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep their local model
+  state inside the snippet instead of routing it through `pages/slider.rs`, while
+  `apps/fret-ui-gallery/src/ui/pages/slider.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `pub fn render(...) -> AnyElement` teaching pattern is now
+  forbidden for that family by
+  `ui_authoring_surface_default_app::{slider_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface,slider_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the next top-level snippet-family
+  move on the native-select lane:
+  `apps/fret-ui-gallery/src/ui/snippets/native_select/{demo,disabled,invalid,label,rtl,usage,with_groups}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep value/open model
+  state inside each snippet instead of routing it through `pages/native_select.rs`, while
+  `apps/fret-ui-gallery/src/ui/pages/native_select.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `pub fn render(...) -> AnyElement` teaching pattern is now
+  forbidden for that family by
+  `ui_authoring_surface_default_app::{native_select_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface,native_select_page_uses_typed_doc_sections_for_app_facing_snippets}`.
 - the cookbook advanced-example source gate now also records
   `apps/fret-cookbook/examples/customv1_basics.rs`,
   where `panel_shell(...)` and `preview_content(...)` now use `IntoUiElement<KernelApp>`-based

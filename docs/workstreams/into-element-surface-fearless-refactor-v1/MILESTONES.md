@@ -239,8 +239,22 @@ Exit criteria:
   `apps/fret-ui-gallery/src/ui/pages/radio_group.rs` now routes those previews through
   `DocSection::build(cx, ...)` instead of `DocSection::new(...)`, so the default docs example path
   no longer re-teaches eager `AnyElement` landing for that family either.
-- after `accordion` / `tabs` / `toggle` / `radio_group`, the remaining highest-value app-facing
-  UI Gallery queue is `slider`, `native_select`, then `resizable`.
+- the same UI Gallery app-facing cleanup now also covers the slider family:
+  `apps/fret-ui-gallery/src/ui/snippets/slider/{demo,extras,label,usage}.rs`
+  now expose `impl UiChild + use<>` on their top-level `render(...)` surface, keep their local
+  model state inside the snippet, and `apps/fret-ui-gallery/src/ui/pages/slider.rs` now routes
+  those previews through `DocSection::build(cx, ...)` instead of `DocSection::new(...)`, so the
+  default docs example path no longer re-teaches eager `AnyElement` landing for that family
+  either.
+- the same UI Gallery app-facing cleanup now also covers the native-select family:
+  `apps/fret-ui-gallery/src/ui/snippets/native_select/{demo,disabled,invalid,label,rtl,usage,with_groups}.rs`
+  now expose `impl UiChild + use<>` on their top-level `render(...)` surface, keep value/open
+  model state inside the snippet instead of the page shell, and
+  `apps/fret-ui-gallery/src/ui/pages/native_select.rs` now routes those previews through
+  `DocSection::build(cx, ...)` instead of `DocSection::new(...)`, so the default docs example path
+  no longer re-teaches eager `AnyElement` landing for that family either.
+- after `accordion` / `tabs` / `toggle` / `radio_group` / `slider` / `native_select`, the
+  remaining highest-value app-facing UI Gallery queue is `resizable`.
 - the advanced IMUI compare lane now also stops leaking raw helper signatures on non-raw helpers:
   `apps/fret-examples/src/imui_editor_proof_demo.rs::{render_editor_name_assist_surface,render_authoring_parity_surface,render_authoring_parity_shared_state,render_authoring_parity_declarative_group,render_authoring_parity_imui_group,render_authoring_parity_imui_host}`
   now expose `IntoUiElement<...>`-based signatures while still keeping the internal

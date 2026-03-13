@@ -127,6 +127,8 @@ Validation snapshot on 2026-03-13:
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app tabs_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app toggle_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app radio_group_ -- --nocapture`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app slider_ -- --nocapture`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app native_select_ -- --nocapture`
 
 Implementation note on 2026-03-13:
 
@@ -180,9 +182,21 @@ Implementation note on 2026-03-13:
   now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and
   `apps/fret-ui-gallery/src/ui/pages/radio_group.rs` now routes those previews through
   `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
-- after `accordion` / `tabs` / `toggle` / `radio_group`, the next default-app UI Gallery
-  app-facing queue should stay focused on `slider`, `native_select`, and `resizable` before
-  widening the lane again.
+- the same UI Gallery top-level snippet cleanup now also covers the slider family:
+  `apps/fret-ui-gallery/src/ui/snippets/slider/{demo,extras,label,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep their local model
+  state inside the snippet instead of routing it through the page shell, and
+  `apps/fret-ui-gallery/src/ui/pages/slider.rs` now routes those previews through
+  `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the same UI Gallery top-level snippet cleanup now also covers the native-select family:
+  `apps/fret-ui-gallery/src/ui/snippets/native_select/{demo,disabled,invalid,label,rtl,usage,with_groups}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep local value/open
+  model state inside each snippet instead of routing it through `pages/native_select.rs`, and
+  `apps/fret-ui-gallery/src/ui/pages/native_select.rs` now routes those previews through
+  `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- after `accordion` / `tabs` / `toggle` / `radio_group` / `slider` / `native_select`, the next
+  default-app UI Gallery app-facing queue should stay focused on `resizable` before widening the
+  lane again.
 - `apps/fret-cookbook/examples/customv1_basics.rs` now keeps both advanced reusable helpers
   `panel_shell(...)` and `preview_content(...)` on `IntoUiElement<KernelApp>`-based signatures
   instead of returning raw `AnyElement` for non-raw composition.

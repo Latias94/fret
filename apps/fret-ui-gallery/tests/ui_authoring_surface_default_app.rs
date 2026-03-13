@@ -207,14 +207,58 @@ fn combobox_snippets_prefer_ui_cx_on_the_default_app_surface() {
 }
 
 #[test]
-fn slider_and_toast_snippets_prefer_ui_cx_on_the_default_app_surface() {
+fn toast_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
-        &[
-            "src/ui/snippets/slider/usage.rs",
-            "src/ui/snippets/toast/deprecated.rs",
-        ],
+        &["src/ui/snippets/toast/deprecated.rs"],
         &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
         "app-facing snippet surface",
+    );
+}
+
+#[test]
+fn slider_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/slider/demo.rs",
+            "src/ui/snippets/slider/extras.rs",
+            "src/ui/snippets/slider/label.rs",
+            "src/ui/snippets/slider/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/slider",
+        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn native_select_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/native_select/demo.rs",
+            "src/ui/snippets/native_select/disabled.rs",
+            "src/ui/snippets/native_select/invalid.rs",
+            "src/ui/snippets/native_select/label.rs",
+            "src/ui/snippets/native_select/rtl.rs",
+            "src/ui/snippets/native_select/usage.rs",
+            "src/ui/snippets/native_select/with_groups.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/native_select",
+        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
     );
 }
 
@@ -2942,6 +2986,50 @@ fn radio_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn slider_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/slider.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Label Association\", label)",
+            "DocSection::build(cx, \"Extras\", extras)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Label Association\", label)",
+            "DocSection::new(\"Extras\", extras)",
+        ],
+    );
+}
+
+#[test]
+fn native_select_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/native_select.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Groups\", groups)",
+            "DocSection::build(cx, \"Disabled\", disabled)",
+            "DocSection::build(cx, \"Invalid\", invalid)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Label Association\", label)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Groups\", groups)",
+            "DocSection::new(\"Disabled\", disabled)",
+            "DocSection::new(\"Invalid\", invalid)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Label Association\", label)",
+        ],
+    );
+}
+
+#[test]
 fn accordion_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
@@ -3724,10 +3812,15 @@ fn material3_autocomplete_snippet_prefers_uncontrolled_query_and_dialog_roots() 
             "let value = outlined_autocomplete.query_model();",
             "let dialog = material3::Dialog::uncontrolled(cx);",
             "let dialog_open = dialog.open_model();",
+            "let exposed_dropdown = material3::ExposedDropdown::new_controllable( cx, None, Some(Arc::<str>::from(\"beta\")), None, String::new(), );",
+            "let exposed_selected_value = exposed_dropdown.selected_value_model();",
+            "let exposed_query = exposed_dropdown.query_model();",
         ],
         &[
             "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, value: Model<String>, disabled: Model<bool>, error: Model<bool>, dialog_open: Model<bool>, ) -> AnyElement {",
             "material3::Dialog::new(dialog_open.clone())",
+            "let exposed_selected_value = cx.local_model_keyed(\"exposed_selected_value\", || Some(Arc::<str>::from(\"beta\")));",
+            "let exposed_query = cx.local_model_keyed(\"exposed_query\", String::new);",
         ],
     );
 }

@@ -1,12 +1,11 @@
 pub const SOURCE: &str = include_str!("extras.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    last_commit: Model<Vec<f32>>,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let last_commit = cx.local_model_keyed("ui-gallery-slider-extras-last-commit", Vec::<f32>::new);
     let max_width_xs = LayoutRefinement::default().w_full().max_w(Px(320.0));
 
     let on_value_commit = {
