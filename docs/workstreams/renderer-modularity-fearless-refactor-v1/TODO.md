@@ -68,18 +68,23 @@ ID format:
 
 - [x] RMFR-facade-010 Replace wildcard re-export in `crates/fret-render` with an explicit export
   list.
-- [ ] RMFR-facade-011 Decide the stable v1 facade surface for:
+- [x] RMFR-facade-011 Decide the stable v1 facade surface for:
   - `Renderer`
   - `RenderSceneParams`
   - `SurfaceState`
   - `WgpuContext`
   - capability snapshots
   - perf/report stores
+  - Stable buckets are now recorded in
+    `docs/workstreams/renderer-modularity-fearless-refactor-v1/SURFACE_INVENTORY.md`.
+  - External snapshot gate lives in `crates/fret-render/tests/facade_surface_snapshot.rs`.
 - [~] RMFR-facade-012 Decide which current `fret-render-wgpu` exports should stop being re-exported
   by the default facade.
 - [ ] RMFR-facade-013 Move or alias portable value contracts from backend-owned exports to
   `fret-render-core` where that improves ownership clarity.
-- [ ] RMFR-facade-014 Document the intended stable meaning of `crates/fret-render`.
+- [x] RMFR-facade-014 Document the intended stable meaning of `crates/fret-render`.
+  - `crates/fret-render/src/lib.rs`
+  - `docs/crate-usage-guide.md`
 
 ---
 
@@ -522,8 +527,9 @@ ID format:
 ## F. Gates and Evidence
 
 - [x] RMFR-gates-070 Establish backend baseline gates before refactor work.
-- [~] RMFR-gates-071 Add a surface snapshot note or test proving the intended `fret-render` export
+- [x] RMFR-gates-071 Add a surface snapshot note or test proving the intended `fret-render` export
   set after facade curation.
+  - Gate: `crates/fret-render/tests/facade_surface_snapshot.rs`
 - [x] RMFR-gates-072 Add targeted smoke coverage for host-provided GPU topology if absent.
   - Targeted gate: `cargo nextest run -p fret-render-wgpu renderer_accepts_host_provided_gpu_topology`
 - [ ] RMFR-gates-073 Keep render-plan semantics guardrails green for any planning/execution change.

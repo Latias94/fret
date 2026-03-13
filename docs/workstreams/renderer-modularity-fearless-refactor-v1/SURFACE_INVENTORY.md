@@ -1,8 +1,8 @@
 # Renderer Modularity (Fearless Refactor v1) — Surface Inventory
 
-Status: Draft
+Status: In progress
 
-Last updated: 2026-03-12
+Last updated: 2026-03-13
 
 Related:
 
@@ -163,6 +163,18 @@ shrink slice because they are closer to diagnostics or structured public output:
 
 These may still move out of the default facade later, but they need a more explicit decision on
 how much diagnostics depth `crates/fret-render` is supposed to expose by default.
+
+## Stable v1 Facade Closure (2026-03-13)
+
+The stable default-facade contract for v1 is now intentionally described as:
+
+1. Buckets A through E are the public default-facade story.
+2. Deferred-review diagnostics types remain available, but they are not the primary teaching
+   surface.
+3. `crates/fret-render/tests/facade_surface_snapshot.rs` is the external compile-time gate for the
+   chosen buckets.
+4. `crates/fret-render/src/lib.rs` and `docs/crate-usage-guide.md` are the public prose anchors
+   for this facade story.
 
 ## Current v1 Recommendation
 

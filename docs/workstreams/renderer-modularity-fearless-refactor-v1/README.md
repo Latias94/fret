@@ -84,6 +84,9 @@ As of 2026-03-13:
   - `crates/fret-render/src/lib.rs`
   - `crates/fret-render-wgpu/src/lib.rs`
   - `docs/crate-usage-guide.md`
+- The stable v1 default-facade buckets are now explicit in:
+  - `docs/workstreams/renderer-modularity-fearless-refactor-v1/SURFACE_INVENTORY.md`
+  - `crates/fret-render/tests/facade_surface_snapshot.rs`
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

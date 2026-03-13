@@ -15,6 +15,25 @@
 //!   then call [`Renderer::new`], [`SurfaceState::new`], and [`Renderer::render_scene`] directly
 //!   without routing through [`WgpuContext`].
 //!
+//! Stable v1 facade buckets:
+//!
+//! - Core runtime/bootstrap entrypoints:
+//!   [`Renderer`], [`RenderSceneParams`], [`SurfaceState`], [`WgpuContext`], [`ClearColor`],
+//!   [`RenderError`]
+//! - Capability and adapter snapshots:
+//!   [`RendererCapabilities`], [`AdapterCapabilities`], [`StreamingImageCapabilities`],
+//!   [`WgpuAdapterSelectionSnapshot`], [`WgpuInitDiagnosticsSnapshot`],
+//!   [`WgpuInitAttemptSnapshot`]
+//! - Render-target / ingest contracts:
+//!   [`RenderTargetDescriptor`] and the `RenderTarget*` metadata/value enums re-exported here
+//! - Diagnostics/report stores used by first-party runners and tooling:
+//!   [`RendererPerfFrameStore`], [`WgpuHubReportFrameStore`], [`WgpuAllocatorReportFrameStore`],
+//!   plus the related sample/summary snapshot types
+//! - External image/SVG upload helpers and viewport overlay support:
+//!   [`ImageDescriptor`], [`UploadedRgba8Image`], [`create_rgba8_image_storage`],
+//!   [`upload_rgba8_image`], [`write_rgba8_texture_region`], [`SvgAlphaMask`],
+//!   [`SvgRgbaImage`], [`upload_alpha_mask`], [`upload_rgba_image`], [`viewport_overlay`]
+//!
 //! Depend on `fret-render-wgpu` directly only when you need backend-specific diagnostics or helper
 //! surfaces that are intentionally not part of this default facade.
 

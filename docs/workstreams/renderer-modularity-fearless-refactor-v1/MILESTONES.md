@@ -12,7 +12,7 @@ Current snapshot (2026-03-13):
 
 - The renderer stack is not a rewrite candidate; it is a staged modularization candidate.
 - The latest backend gates are green:
-  - `cargo nextest run -p fret-render -p fret-render-wgpu`: 222/222 passed
+  - `cargo nextest run -p fret-render -p fret-render-wgpu`: 223/223 passed
   - `python3 tools/check_layering.py`: passed
 - v1 start decisions are now locked:
   - no new renderer crates in v1,
@@ -592,7 +592,7 @@ Current snapshot (2026-03-13):
 - Host-provided GPU topology smoke verification is green after adding an explicit engine-hosted
   render path:
   - `cargo nextest run -p fret-render-wgpu renderer_accepts_host_provided_gpu_topology`: passed
-  - `cargo nextest run -p fret-render -p fret-render-wgpu`: 222/222 passed
+  - `cargo nextest run -p fret-render -p fret-render-wgpu`: 223/223 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
   - `python3 tools/check_layering.py`: passed
   - `crates/fret-render-wgpu/tests/host_provided_gpu_topology_smoke.rs` now requests
@@ -605,8 +605,15 @@ Current snapshot (2026-03-13):
     facade
   - `crates/fret-render-wgpu/src/lib.rs` documents the backend convenience-vs-direct seam
   - `docs/crate-usage-guide.md` points advanced/manual integrators to the correct topology APIs
+- Stable default-facade buckets are now explicit and externally gated:
+  - `cargo nextest run -p fret-render facade_surface_snapshot_matches_v1_contract_buckets`: passed
+  - `cargo nextest run -p fret-render -p fret-render-wgpu`: 223/223 passed
+  - `docs/workstreams/renderer-modularity-fearless-refactor-v1/SURFACE_INVENTORY.md` records
+    buckets A-E as the v1 facade contract and keeps deferred diagnostics review explicit
+  - `crates/fret-render/tests/facade_surface_snapshot.rs` compiles the chosen public buckets from
+    an external-consumer perspective
 - The strongest current risks are:
-  - wildcard facade exports,
+  - deferred diagnostics/perf carryovers on the default facade,
   - oversized backend public surface,
   - a large multi-domain `Renderer` state owner,
   - and some convenience/diagnostics ergonomics still skewing toward `WgpuContext`.

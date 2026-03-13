@@ -247,6 +247,16 @@ Notes:
 
 **Use it when:** you are extending or embedding the renderer (runner/app side), or doing rendering diagnostics.
 
+**Stable v1 default-facade buckets:**
+
+- Core runtime/bootstrap entrypoints: `Renderer`, `RenderSceneParams`, `SurfaceState`, `WgpuContext`
+- Capability and adapter snapshots: `RendererCapabilities`, `WgpuAdapterSelectionSnapshot`
+- Render-target / ingest contracts: `RenderTargetDescriptor`, `RenderTargetMetadata`, and the
+  `RenderTarget*` value enums
+- Diagnostics/report stores for first-party runners/tooling: `RendererPerfFrameStore`,
+  `WgpuHubReportFrameStore`, `WgpuAllocatorReportFrameStore`
+- External image/SVG upload helpers and `viewport_overlay`
+
 **Topology entrypoints:**
 
 - Editor-hosted convenience path:
