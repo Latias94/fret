@@ -858,11 +858,6 @@ impl WorkspaceTabStrip {
                                                                         }
                                                                     }
                                                                     activate_on_drag_start = true;
-                                                                    activation_probe.clear(
-                                                                        host.models_mut(),
-                                                                        acx.window,
-                                                                        mv.pointer_id,
-                                                                    );
                                                                 }
 
                                                                 let hit_position =
@@ -955,19 +950,25 @@ impl WorkspaceTabStrip {
                                                                         });
                                                                     }
 
-                                                                    host.begin_cross_window_drag_with_kind(
-                                                                        mv.pointer_id,
-                                                                        DRAG_KIND_WORKSPACE_TAB,
+                                                                    ui_dnd::complete_cross_window_drag_activation_for_action_host(
+                                                                        host,
+                                                                        &activation_probe,
                                                                         acx.window,
-                                                                        mv.position_window
-                                                                            .unwrap_or(mv.position),
+                                                                        mv.pointer_id,
+                                                                        |host| {
+                                                                            host.begin_cross_window_drag_with_kind(
+                                                                                mv.pointer_id,
+                                                                                DRAG_KIND_WORKSPACE_TAB,
+                                                                                acx.window,
+                                                                                hit_position,
+                                                                            );
+                                                                            if let Some(drag) =
+                                                                                host.drag_mut(mv.pointer_id)
+                                                                            {
+                                                                                drag.position = hit_position;
+                                                                            }
+                                                                        },
                                                                     );
-                                                                    if let Some(drag) = host.drag_mut(mv.pointer_id) {
-                                                                        drag.position = mv
-                                                                            .position_window
-                                                                            .unwrap_or(mv.position);
-                                                                        drag.dragging = true;
-                                                                    }
                                                                 }
 
                                                                 // Keep the drag session position fresh on every move so other

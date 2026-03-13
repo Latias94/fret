@@ -8,6 +8,7 @@
 //! Coordinate contract: when used with `fret-ui` events/layout, the canonical space is
 //! **window-local logical pixels** (ADR 0017 / ADR 0149 / ADR 0157).
 
+mod activation_handoff;
 mod activation_probe;
 mod controller;
 mod forwarders;
@@ -15,6 +16,10 @@ mod registry;
 mod service;
 mod types;
 
+pub use activation_handoff::{
+    complete_cross_window_drag_activation, complete_cross_window_drag_activation_for_action_host,
+    try_begin_cross_window_drag_on_activation,
+};
 pub use activation_probe::{DndActivationProbe, DndActivationProbeConfig};
 pub use controller::{
     clear_pointer, clear_pointer_default_scope, clear_pointer_in_scope, handle_pointer_cancel,

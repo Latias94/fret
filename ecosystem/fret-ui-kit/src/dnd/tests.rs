@@ -223,6 +223,83 @@ fn activation_probe_starts_on_threshold_and_clears_tracking() {
 }
 
 #[test]
+fn activation_handoff_starts_runtime_drag_and_clears_probe_tracking() {
+    let mut app = App::new();
+    let svc = mk_service(&mut app);
+    let window = fret_core::AppWindowId::default();
+    let pointer = PointerId(0);
+    let kind = DragKindId(78);
+    let probe = DndActivationProbe::new(
+        svc.clone(),
+        DndActivationProbeConfig::for_kind(kind)
+            .scope(DndScopeId(6))
+            .activation_constraint(ActivationConstraint::Distance { px: 6.0 }),
+    );
+
+    let start = Point::new(Px(0.0), Px(0.0));
+    let pending = try_begin_cross_window_drag_on_activation(
+        &mut app,
+        &probe,
+        window,
+        pointer,
+        TickId(0),
+        start,
+        Point::new(Px(5.0), Px(0.0)),
+        TickId(1),
+        |app| {
+            fret_runtime::DragHost::begin_cross_window_drag_with_kind(
+                app,
+                pointer,
+                kind,
+                window,
+                start,
+                (),
+            );
+        },
+    );
+    assert!(matches!(pending, SensorOutput::Pending));
+    assert!(pointer_is_tracking_any_sensor(
+        app.models(),
+        &svc,
+        window,
+        pointer
+    ));
+    assert!(app.drag(pointer).is_none());
+
+    let activated = try_begin_cross_window_drag_on_activation(
+        &mut app,
+        &probe,
+        window,
+        pointer,
+        TickId(0),
+        start,
+        Point::new(Px(6.0), Px(0.0)),
+        TickId(2),
+        |app| {
+            fret_runtime::DragHost::begin_cross_window_drag_with_kind(
+                app,
+                pointer,
+                kind,
+                window,
+                start,
+                (),
+            );
+        },
+    );
+    assert!(matches!(activated, SensorOutput::DragStart { .. }));
+    assert!(!pointer_is_tracking_any_sensor(
+        app.models(),
+        &svc,
+        window,
+        pointer
+    ));
+
+    let drag = app.drag(pointer).expect("drag session should be created");
+    assert_eq!(drag.kind, kind);
+    assert!(drag.dragging);
+}
+
+#[test]
 fn pointer_is_tracking_any_sensor_reflects_sensor_lifecycle() {
     let mut app = App::new();
     let svc = mk_service(&mut app);

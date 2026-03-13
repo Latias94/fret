@@ -48,33 +48,31 @@ pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvas
         ui_dnd::DndActivationProbeConfig::for_kind(drag_kind)
             .activation_constraint(ActivationConstraint::Distance { px: 6.0 }),
     );
-    let sensor = activation_probe.move_or_init(
-        cx.app.models_mut(),
+    let payload = super::InsertNodeDragPayload {
+        candidate: pending.candidate.clone(),
+    };
+    let sensor = ui_dnd::try_begin_cross_window_drag_on_activation(
+        cx.app,
+        &activation_probe,
         window,
         pointer_id,
         pending.start_tick,
         start_window,
         current_window,
         tick_id,
+        move |app| {
+            fret_runtime::DragHost::begin_cross_window_drag_with_kind(
+                app,
+                pointer_id,
+                drag_kind,
+                window,
+                start_window,
+                payload,
+            );
+        },
     );
     if !matches!(sensor, SensorOutput::DragStart { .. }) {
         return false;
-    }
-
-    cx.app.begin_cross_window_drag_with_kind(
-        pointer_id,
-        drag_kind,
-        window,
-        start_window,
-        super::InsertNodeDragPayload {
-            candidate: pending.candidate.clone(),
-        },
-    );
-    activation_probe.clear(cx.app.models_mut(), window, pointer_id);
-    if let Some(drag) = cx.app.drag_mut(pointer_id)
-        && drag.payload::<super::InsertNodeDragPayload>().is_some()
-    {
-        drag.dragging = true;
     }
 
     super::session::finish_pending_insert_node_drag(&mut canvas.interaction, cx);
