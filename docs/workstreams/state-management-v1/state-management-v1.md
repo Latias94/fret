@@ -82,6 +82,8 @@ Guidelines:
 - When a helper really wants **root-scoped shared runtime state**, spell that intent with
   `root_state(...)` directly; keep `with_state(...)` as a compatibility/migration alias rather than
   the default implementation surface for new framework/ecosystem code.
+- Likewise, use `state_for(...)` directly for explicit-identity slots in first-party code;
+  `with_state_for(...)` remains a compatibility alias rather than the preferred teaching surface.
 - Staged dialog/sheet draft models (pickers, selects, similar temporary edit state) should usually
   be authored as `local_model(...)` handles, while only small open-edge/runtime bookkeeping stays
   in `root_state(...)` or `slot_state(...)`.

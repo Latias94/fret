@@ -3361,7 +3361,7 @@ impl ContextMenu {
                         touch_on_cancel(host, acx, cancel)
                     }));
                     let region_id = cx.root_id();
-                    let installed = cx.with_state_for(
+                    let installed = cx.state_for(
                         region_id,
                         ContextMenuTriggerTimerInstalledState::default,
                         |st| st.installed,
@@ -3391,7 +3391,7 @@ impl ContextMenu {
                                 true
                             }),
                         );
-                        cx.with_state_for(
+                        cx.state_for(
                             region_id,
                             ContextMenuTriggerTimerInstalledState::default,
                             |st| {
@@ -5437,7 +5437,7 @@ mod tests {
                                 false
                             }));
                             let region_id = cx.root_id();
-                            let installed = cx.with_state_for(
+                            let installed = cx.state_for(
                                 region_id,
                                 ContextMenuTriggerTimerInstalledState::default,
                                 |st| st.installed,
@@ -5455,7 +5455,7 @@ mod tests {
                                         false
                                     }),
                                 );
-                                cx.with_state_for(
+                                cx.state_for(
                                     region_id,
                                     ContextMenuTriggerTimerInstalledState::default,
                                     |st| {

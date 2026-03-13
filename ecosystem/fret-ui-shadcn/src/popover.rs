@@ -652,7 +652,7 @@ impl Popover {
             let trigger_id = self.trigger_override.unwrap_or(trigger.id);
 
             let trigger_is_shadcn_trigger =
-                cx.with_state_for(trigger_id, PopoverTriggerContract::default, |st| {
+                cx.state_for(trigger_id, PopoverTriggerContract::default, |st| {
                     st.auto_toggle
                 });
 
@@ -686,7 +686,7 @@ impl Popover {
                 );
                 cx.hover_region(HoverRegionProps::default(), move |cx, trigger_hovered| {
                     let (overlay_hovered, anchor_bounds, floating_bounds) =
-                        cx.with_state_for(popover_id, PopoverHoverSharedState::default, |st| {
+                        cx.state_for(popover_id, PopoverHoverSharedState::default, |st| {
                             (st.overlay_hovered, st.anchor_bounds, st.floating_bounds)
                         });
                     let pointer_in_corridor = cx
@@ -709,7 +709,7 @@ impl Popover {
 
                     let open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
                     let frame_tick = cx.app.frame_id().0;
-                    let update = cx.with_state_for(
+                    let update = cx.state_for(
                         popover_id,
                         PopoverHoverIntentDriverState::default,
                         |st| {
@@ -795,7 +795,7 @@ impl Popover {
                 Rc::new(Cell::new(None));
 
             if open_on_hover && !overlay_presence.present {
-                cx.with_state_for(popover_id, PopoverHoverSharedState::default, |st| {
+                cx.state_for(popover_id, PopoverHoverSharedState::default, |st| {
                     st.overlay_hovered = false;
                     st.anchor_bounds = None;
                     st.floating_bounds = None;
@@ -851,7 +851,7 @@ impl Popover {
                         let anchor_fallback = overlay::anchor_bounds_for_element(cx, anchor_id);
                         if anchor_fallback.is_none() {
                             if open_on_hover {
-                                cx.with_state_for(
+                                cx.state_for(
                                     popover_id,
                                     PopoverHoverSharedState::default,
                                     |st| {
@@ -1021,7 +1021,7 @@ impl Popover {
                             placement_trace,
                         );
                         if open_on_hover {
-                            cx.with_state_for(popover_id, PopoverHoverSharedState::default, |st| {
+                            cx.state_for(popover_id, PopoverHoverSharedState::default, |st| {
                                 st.anchor_bounds = Some(anchor);
                                 st.floating_bounds = Some(layout.rect);
                             });
@@ -1130,7 +1130,7 @@ impl Popover {
 
                         let overlay_content = if open_on_hover {
                             cx.hover_region(HoverRegionProps::default(), move |cx, hovered| {
-                                cx.with_state_for(
+                                cx.state_for(
                                     popover_id,
                                     PopoverHoverSharedState::default,
                                     |st| {
@@ -1150,7 +1150,7 @@ impl Popover {
                         };
 
                         if open_on_hover {
-                            cx.with_state_for(popover_id, PopoverHoverSharedState::default, |st| {
+                            cx.state_for(popover_id, PopoverHoverSharedState::default, |st| {
                                 st.overlay_hovered = false;
                             });
                         }
@@ -1319,7 +1319,7 @@ impl PopoverTrigger {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let child = self.child;
         let auto_toggle = self.auto_toggle;
-        cx.with_state_for(child.id, PopoverTriggerContract::default, |st| {
+        cx.state_for(child.id, PopoverTriggerContract::default, |st| {
             st.auto_toggle = auto_toggle;
         });
         child

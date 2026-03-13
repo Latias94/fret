@@ -206,7 +206,7 @@ impl Marquee {
                         let frame = cx.frame_id.0;
                         let dt = motion::effective_frame_delta_for_cx(cx);
                         let phase =
-                            cx.with_state_for(marquee_id, MarqueePhaseState::default, |st| {
+                            cx.state_for(marquee_id, MarqueePhaseState::default, |st| {
                                 if st.last_frame == 0 {
                                     st.last_frame = frame;
                                     if animating {

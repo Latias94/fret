@@ -514,7 +514,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     ///
     /// If a helper needs to touch the same slot more than once during one render pass, either do
     /// all work inside a single closure or allocate the slot once via [`Self::slot_id`] and then
-    /// use [`Self::with_state_for`] for repeated accesses.
+    /// use [`Self::state_for`] for repeated accesses.
     ///
     /// When the helper may be invoked from a reorderable collection, prefer wrapping the caller in
     /// [`Self::keyed`] (or use [`Self::keyed_slot_state`]) so the surrounding identity stays stable

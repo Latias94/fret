@@ -2109,7 +2109,7 @@ impl DropdownMenu {
                 last_anchor: Option<Rect>,
             }
 
-            let previous_trigger_id_for_anchor = cx.with_state_for(
+            let previous_trigger_id_for_anchor = cx.state_for(
                 overlay_id,
                 TriggerAnchorStableState::default,
                 |st| {
@@ -2242,7 +2242,7 @@ impl DropdownMenu {
                          handle: ScrollHandle,
                      }
 
-                     let root_menu_scroll_handle = cx.with_state_for(
+                     let root_menu_scroll_handle = cx.state_for(
                          overlay_id,
                          RootMenuScrollState::default,
                          |st| st.handle.clone(),
@@ -2251,7 +2251,7 @@ impl DropdownMenu {
                       let anchor_now = overlay::anchor_bounds_for_element(cx, trigger_id);
                       let anchor_prev = previous_trigger_id_for_anchor
                           .and_then(|id| overlay::anchor_bounds_for_element(cx, id));
-                      let cached_anchor = cx.with_state_for(
+                      let cached_anchor = cx.state_for(
                           overlay_id,
                          TriggerAnchorStableState::default,
                          |st| st.last_anchor.clone(),
@@ -2259,7 +2259,7 @@ impl DropdownMenu {
                      let anchor = anchor_now.or(anchor_prev).or(cached_anchor);
 
                      if let Some(anchor) = anchor {
-                         cx.with_state_for(
+                         cx.state_for(
                              overlay_id,
                              TriggerAnchorStableState::default,
                              |st| st.last_anchor = Some(anchor),
