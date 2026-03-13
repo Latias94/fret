@@ -1,13 +1,12 @@
 use super::atlas::subpixel_bin_as_float;
-use super::{TextBlob, TextLine, TextShape, TextSystem};
+use super::{TextLine, TextSystem};
 use fret_core::{
     AttributedText, TextBlobId, TextConstraints, TextInputRef, TextMetrics, TextStyle,
 };
-use fret_render_text::cache_keys::{TextBlobKey, TextShapeKey};
 use fret_render_text::font_instance_key::FontFaceKey;
-use fret_render_text::spans::ResolvedSpan;
 use std::{collections::HashMap, sync::Arc};
 
+mod cache_flow;
 mod face_metadata;
 mod glyph_bounds;
 mod glyph_face;
@@ -86,114 +85,6 @@ impl TextSystem {
             self.font_stack_key,
         );
         self.prepare_with_key(key, base_style, Some(rich.spans.as_ref()), constraints)
-    }
-
-    pub(super) fn try_reuse_cached_blob(
-        &mut self,
-        key: &TextBlobKey,
-        text: &str,
-        style: &TextStyle,
-        constraints: TextConstraints,
-    ) -> Option<(TextBlobId, TextMetrics)> {
-        let id = self.blob_cache.get(key).copied()?;
-
-        let mut hit: Option<(TextMetrics, u32, Arc<TextShape>, bool)> = None;
-        if let Some(blob) = self.blobs.get_mut(id) {
-            self.perf_frame_blob_cache_hits = self.perf_frame_blob_cache_hits.saturating_add(1);
-            let was_released = blob.ref_count == 0;
-            blob.ref_count = blob.ref_count.saturating_add(1);
-            hit = Some((
-                blob.shape.metrics,
-                blob.shape.missing_glyphs,
-                blob.shape.clone(),
-                was_released,
-            ));
-        }
-
-        if let Some((metrics, missing_glyphs, shape, was_released)) = hit {
-            if was_released {
-                self.remove_released_blob(id);
-            }
-            if missing_glyphs > 0 {
-                self.perf_frame_missing_glyphs = self
-                    .perf_frame_missing_glyphs
-                    .saturating_add(u64::from(missing_glyphs));
-                self.perf_frame_texts_with_missing_glyphs =
-                    self.perf_frame_texts_with_missing_glyphs.saturating_add(1);
-            }
-            self.maybe_record_font_trace_entry(text, style, constraints, &shape);
-            return Some((id, metrics));
-        }
-
-        // Stale cache entry (shouldn't happen, but keep it robust).
-        self.blob_cache.remove(key);
-        self.blob_key_by_id.remove(&id);
-        None
-    }
-
-    pub(super) fn finalize_prepared_blob(
-        &mut self,
-        key: TextBlobKey,
-        text: &str,
-        style: &TextStyle,
-        constraints: TextConstraints,
-        shape: Arc<TextShape>,
-        resolved_spans: Option<&[ResolvedSpan]>,
-        paint_palette: Option<Arc<[Option<fret_core::Color>]>>,
-        scale: f32,
-        snap_vertical: bool,
-    ) -> (TextBlobId, TextMetrics) {
-        let decoration_metrics = self.decoration_metrics_for_shape(style, scale, &shape);
-        let decorations: Vec<super::TextDecoration> = resolved_spans
-            .map(|spans| {
-                fret_render_text::decorations::decorations_for_lines(
-                    shape.lines.as_ref(),
-                    spans,
-                    decoration_metrics,
-                    scale,
-                    snap_vertical,
-                )
-            })
-            .unwrap_or_default();
-
-        let metrics = shape.metrics;
-        if shape.missing_glyphs > 0 {
-            self.perf_frame_missing_glyphs = self
-                .perf_frame_missing_glyphs
-                .saturating_add(u64::from(shape.missing_glyphs));
-            self.perf_frame_texts_with_missing_glyphs =
-                self.perf_frame_texts_with_missing_glyphs.saturating_add(1);
-        }
-        self.maybe_record_font_trace_entry(text, style, constraints, &shape);
-        let id = self.blobs.insert(TextBlob {
-            shape,
-            paint_palette,
-            decorations: Arc::from(decorations),
-            ref_count: 1,
-        });
-        self.perf_frame_blobs_created = self.perf_frame_blobs_created.saturating_add(1);
-        self.blob_cache.insert(key.clone(), id);
-        self.blob_key_by_id.insert(id, key);
-        (id, metrics)
-    }
-
-    pub(super) fn try_reuse_cached_shape(
-        &mut self,
-        shape_key: &TextShapeKey,
-    ) -> Option<Arc<TextShape>> {
-        let shape = self.shape_cache.get(shape_key)?.clone();
-        self.perf_frame_shape_cache_hits = self.perf_frame_shape_cache_hits.saturating_add(1);
-        Some(shape)
-    }
-
-    pub(super) fn cache_prepared_shape(
-        &mut self,
-        shape_key: TextShapeKey,
-        shape: Arc<TextShape>,
-    ) -> Arc<TextShape> {
-        self.perf_frame_shapes_created = self.perf_frame_shapes_created.saturating_add(1);
-        self.shape_cache.insert(shape_key, shape.clone());
-        shape
     }
 
     pub(super) fn wrap_for_prepare(
