@@ -19,7 +19,8 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use crate::controls::{
-    AxisDragValue, AxisDragValueOptions, NumericFormatFn, NumericParseFn, NumericValidateFn,
+    AxisDragValue, AxisDragValueOptions, AxisDragValueOutcome, NumericFormatFn, NumericParseFn,
+    NumericValidateFn, OnAxisDragValueOutcome,
 };
 use crate::primitives::EditorTokenKeys;
 use crate::primitives::input_group::derived_test_id;
@@ -34,6 +35,23 @@ fn derived_id_source(base: Option<&Arc<str>>, suffix: &str) -> Option<Arc<str>> 
 }
 
 pub type OnAxisReset = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx) + 'static>;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VecEditAxis {
+    X,
+    Y,
+    Z,
+    W,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct VecEditAxisOutcome {
+    pub axis: VecEditAxis,
+    pub outcome: AxisDragValueOutcome,
+}
+
+pub type OnVecEditAxisOutcome =
+    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, VecEditAxisOutcome) + 'static>;
 
 #[derive(Debug, Clone)]
 pub struct AxisResetOptions {
@@ -76,6 +94,7 @@ impl AxisReset {
 
 fn axis_group<H: UiHost, T>(
     cx: &mut ElementContext<'_, H>,
+    axis: VecEditAxis,
     axis_gap: Px,
     reset: Option<AxisReset>,
     grow: bool,
@@ -89,6 +108,7 @@ fn axis_group<H: UiHost, T>(
     format: NumericFormatFn<T>,
     parse: NumericParseFn<T>,
     validate: Option<NumericValidateFn<T>>,
+    on_axis_outcome: Option<OnVecEditAxisOutcome>,
 ) -> AnyElement
 where
     T: crate::primitives::drag_value_core::DragValueScalar + Default,
@@ -109,6 +129,16 @@ where
             test_id: reset.options.test_id.clone(),
             on_activate,
         })
+    });
+    let axis_outcome: Option<OnAxisDragValueOutcome> = on_axis_outcome.map(|on_axis_outcome| {
+        let handler: OnAxisDragValueOutcome = Arc::new(
+            move |host: &mut dyn UiActionHost,
+                  action_cx: ActionCx,
+                  outcome: AxisDragValueOutcome| {
+                on_axis_outcome(host, action_cx, VecEditAxisOutcome { axis, outcome });
+            },
+        );
+        handler
     });
 
     cx.flex(
@@ -141,6 +171,7 @@ where
             vec![
                 AxisDragValue::new(label, color, model, format, parse)
                     .validate(validate)
+                    .on_outcome(axis_outcome)
                     .options(AxisDragValueOptions {
                         prefix: prefix.clone(),
                         suffix: suffix.clone(),
@@ -221,6 +252,7 @@ pub struct Vec2Edit<T> {
     pub format: NumericFormatFn<T>,
     pub parse: NumericParseFn<T>,
     pub validate: Option<NumericValidateFn<T>>,
+    pub on_axis_outcome: Option<OnVecEditAxisOutcome>,
     pub options: VecEditOptions,
 }
 
@@ -242,6 +274,7 @@ where
             format,
             parse,
             validate: None,
+            on_axis_outcome: None,
             options: VecEditOptions::default(),
         }
     }
@@ -263,6 +296,11 @@ where
 
     pub fn options(mut self, options: VecEditOptions) -> Self {
         self.options = options;
+        self
+    }
+
+    pub fn on_axis_outcome(mut self, on_axis_outcome: Option<OnVecEditAxisOutcome>) -> Self {
+        self.on_axis_outcome = on_axis_outcome;
         self
     }
 
@@ -354,6 +392,7 @@ where
                 vec![
                     axis_group(
                         cx,
+                        VecEditAxis::X,
                         self.options.axis_gap,
                         self.reset_x.clone(),
                         grow,
@@ -367,9 +406,11 @@ where
                         self.format.clone(),
                         self.parse.clone(),
                         self.validate.clone(),
+                        self.on_axis_outcome.clone(),
                     ),
                     axis_group(
                         cx,
+                        VecEditAxis::Y,
                         self.options.axis_gap,
                         self.reset_y.clone(),
                         grow,
@@ -383,6 +424,7 @@ where
                         self.format.clone(),
                         self.parse.clone(),
                         self.validate.clone(),
+                        self.on_axis_outcome.clone(),
                     ),
                 ]
             },
@@ -406,6 +448,7 @@ pub struct Vec3Edit<T> {
     pub format: NumericFormatFn<T>,
     pub parse: NumericParseFn<T>,
     pub validate: Option<NumericValidateFn<T>>,
+    pub on_axis_outcome: Option<OnVecEditAxisOutcome>,
     pub options: VecEditOptions,
 }
 
@@ -430,6 +473,7 @@ where
             format,
             parse,
             validate: None,
+            on_axis_outcome: None,
             options: VecEditOptions::default(),
         }
     }
@@ -456,6 +500,11 @@ where
 
     pub fn options(mut self, options: VecEditOptions) -> Self {
         self.options = options;
+        self
+    }
+
+    pub fn on_axis_outcome(mut self, on_axis_outcome: Option<OnVecEditAxisOutcome>) -> Self {
+        self.on_axis_outcome = on_axis_outcome;
         self
     }
 
@@ -561,6 +610,7 @@ where
                 vec![
                     axis_group(
                         cx,
+                        VecEditAxis::X,
                         self.options.axis_gap,
                         self.reset_x.clone(),
                         grow,
@@ -574,9 +624,11 @@ where
                         self.format.clone(),
                         self.parse.clone(),
                         self.validate.clone(),
+                        self.on_axis_outcome.clone(),
                     ),
                     axis_group(
                         cx,
+                        VecEditAxis::Y,
                         self.options.axis_gap,
                         self.reset_y.clone(),
                         grow,
@@ -590,9 +642,11 @@ where
                         self.format.clone(),
                         self.parse.clone(),
                         self.validate.clone(),
+                        self.on_axis_outcome.clone(),
                     ),
                     axis_group(
                         cx,
+                        VecEditAxis::Z,
                         self.options.axis_gap,
                         self.reset_z.clone(),
                         grow,
@@ -606,6 +660,7 @@ where
                         self.format.clone(),
                         self.parse.clone(),
                         self.validate.clone(),
+                        self.on_axis_outcome.clone(),
                     ),
                 ]
             },
@@ -631,6 +686,7 @@ pub struct Vec4Edit<T> {
     pub format: NumericFormatFn<T>,
     pub parse: NumericParseFn<T>,
     pub validate: Option<NumericValidateFn<T>>,
+    pub on_axis_outcome: Option<OnVecEditAxisOutcome>,
     pub options: VecEditOptions,
 }
 
@@ -658,6 +714,7 @@ where
             format,
             parse,
             validate: None,
+            on_axis_outcome: None,
             options: VecEditOptions::default(),
         }
     }
@@ -689,6 +746,11 @@ where
 
     pub fn options(mut self, options: VecEditOptions) -> Self {
         self.options = options;
+        self
+    }
+
+    pub fn on_axis_outcome(mut self, on_axis_outcome: Option<OnVecEditAxisOutcome>) -> Self {
+        self.on_axis_outcome = on_axis_outcome;
         self
     }
 
@@ -803,6 +865,7 @@ where
                 vec![
                     axis_group(
                         cx,
+                        VecEditAxis::X,
                         self.options.axis_gap,
                         self.reset_x.clone(),
                         grow,
@@ -816,9 +879,11 @@ where
                         self.format.clone(),
                         self.parse.clone(),
                         self.validate.clone(),
+                        self.on_axis_outcome.clone(),
                     ),
                     axis_group(
                         cx,
+                        VecEditAxis::Y,
                         self.options.axis_gap,
                         self.reset_y.clone(),
                         grow,
@@ -832,9 +897,11 @@ where
                         self.format.clone(),
                         self.parse.clone(),
                         self.validate.clone(),
+                        self.on_axis_outcome.clone(),
                     ),
                     axis_group(
                         cx,
+                        VecEditAxis::Z,
                         self.options.axis_gap,
                         self.reset_z.clone(),
                         grow,
@@ -848,9 +915,11 @@ where
                         self.format.clone(),
                         self.parse.clone(),
                         self.validate.clone(),
+                        self.on_axis_outcome.clone(),
                     ),
                     axis_group(
                         cx,
+                        VecEditAxis::W,
                         self.options.axis_gap,
                         self.reset_w.clone(),
                         grow,
@@ -864,6 +933,7 @@ where
                         self.format.clone(),
                         self.parse.clone(),
                         self.validate.clone(),
+                        self.on_axis_outcome.clone(),
                     ),
                 ]
             },

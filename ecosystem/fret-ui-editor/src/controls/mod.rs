@@ -15,7 +15,11 @@ pub mod text_field;
 pub mod transform_edit;
 pub mod vec_edit;
 
-pub use crate::primitives::{EditorTextCancelBehavior, EditorTextSelectionBehavior};
+pub use crate::primitives::{
+    EditorTextCancelBehavior, EditorTextSelectionBehavior, NumericPresentation, NumericTextAffixes,
+    NumericValueConstraints, affixed_number_format, affixed_number_parse, degrees_format,
+    degrees_parse, fixed_decimals_format, plain_number_parse,
+};
 pub use axis_drag_value::{
     AxisDragValue, AxisDragValueOptions, AxisDragValueOutcome, AxisDragValueResetAction,
     OnAxisDragValueOutcome,
@@ -39,5 +43,11 @@ pub use text_field::{
     OnTextFieldOutcome, TextField, TextFieldAssistiveSemantics, TextFieldBlurBehavior,
     TextFieldMode, TextFieldOptions, TextFieldOutcome,
 };
-pub use transform_edit::{TransformEdit, TransformEditLayoutVariant, TransformEditOptions};
-pub use vec_edit::{Vec2Edit, Vec3Edit, Vec4Edit, VecEditLayoutVariant, VecEditOptions};
+pub use transform_edit::{
+    OnTransformEditAxisOutcome, TransformEdit, TransformEditAxisOutcome,
+    TransformEditLayoutVariant, TransformEditOptions, TransformEditSection,
+};
+pub use vec_edit::{
+    OnVecEditAxisOutcome, Vec2Edit, Vec3Edit, Vec4Edit, VecEditAxis, VecEditAxisOutcome,
+    VecEditLayoutVariant, VecEditOptions,
+};

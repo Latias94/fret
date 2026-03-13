@@ -41,7 +41,10 @@ use crate::primitives::numeric_text_entry::{
 };
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
-use crate::primitives::{DragValueCore, DragValueCoreOptions, EditSessionOutcome};
+use crate::primitives::{
+    DragValueCore, DragValueCoreOptions, EditSessionOutcome, NumericValueConstraints,
+    constrain_numeric_value,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum AxisDragValueMode {
@@ -81,6 +84,8 @@ pub struct AxisDragValueOptions {
     pub layout: LayoutStyle,
     pub prefix: Option<Arc<str>>,
     pub suffix: Option<Arc<str>>,
+    /// Shared numeric edit constraints applied to scrub and typed commit paths.
+    pub constraints: NumericValueConstraints,
     /// Explicit identity source for internal state (scrub/typing focus restore, draft string).
     ///
     /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
@@ -111,6 +116,7 @@ impl Default for AxisDragValueOptions {
             },
             prefix: None,
             suffix: None,
+            constraints: NumericValueConstraints::default(),
             id_source: None,
             test_id: None,
             reset: None,
@@ -270,6 +276,7 @@ where
         };
         scrub_opts.enabled = self.options.enabled && mode == AxisDragValueMode::Scrub;
         scrub_opts.scrub_on_double_click = false;
+        scrub_opts.constraints = self.options.constraints;
 
         let model_for_change = self.model.clone();
         let on_change_live: Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, T) + 'static> =
@@ -489,6 +496,7 @@ where
         let parse = self.parse.clone();
         let format = self.format.clone();
         let validate = self.validate.clone();
+        let constraints = self.options.constraints;
         let model_for_commit = self.model.clone();
         let state_for_input = state.clone();
         let on_outcome_for_keys = on_outcome.clone();
@@ -598,6 +606,7 @@ where
                                 .read(&draft_for_keys, |s| s.clone())
                                 .unwrap_or_default();
                             if let Some(v) = (parse)(&text) {
+                                let v = constrain_numeric_value(constraints, v);
                                 if let Some(validate) = validate.as_ref() {
                                     if let Some(msg) = validate(v) {
                                         let _ = host

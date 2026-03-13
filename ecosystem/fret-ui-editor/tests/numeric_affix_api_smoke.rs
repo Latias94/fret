@@ -5,8 +5,8 @@ use fret_runtime::Model;
 
 use fret_ui_editor::controls::{
     AxisDragValue, AxisDragValueOptions, DragValue, DragValueOptions, NumericFormatFn,
-    NumericInput, NumericInputOptions, NumericParseFn, Slider, SliderOptions, TransformEdit,
-    TransformEditOptions, Vec3Edit, VecEditOptions,
+    NumericInput, NumericInputOptions, NumericParseFn, NumericPresentation, Slider, SliderOptions,
+    TransformEdit, TransformEditOptions, Vec3Edit, VecEditOptions,
 };
 
 #[allow(dead_code)]
@@ -99,6 +99,45 @@ fn composite_controls_accept_affixes(value_model: &Model<f64>) {
     });
 }
 
+#[allow(dead_code)]
+fn numeric_controls_accept_presentation_bundle(value_model: &Model<f64>) {
+    let (value_format, value_parse, value_affixes) = NumericPresentation::<f64>::fixed_decimals(2)
+        .with_chrome_prefix("$")
+        .with_chrome_suffix("px")
+        .parts();
+    let (blend_format, blend_parse, blend_affixes) =
+        NumericPresentation::<f64>::percent_0_1(0).parts();
+
+    let _numeric = NumericInput::new(
+        value_model.clone(),
+        value_format.clone(),
+        value_parse.clone(),
+    )
+    .options(NumericInputOptions {
+        prefix: value_affixes.prefix.clone(),
+        suffix: value_affixes.suffix.clone(),
+        id_source: Some(Arc::from("tests.numeric_presentation.input")),
+        ..Default::default()
+    });
+
+    let _drag =
+        DragValue::new(value_model.clone(), value_format, value_parse).options(DragValueOptions {
+            prefix: value_affixes.prefix.clone(),
+            suffix: value_affixes.suffix.clone(),
+            id_source: Some(Arc::from("tests.numeric_presentation.drag")),
+            ..Default::default()
+        });
+
+    let _slider = Slider::new(value_model.clone(), 0.0, 1.0)
+        .format(blend_format)
+        .parse(blend_parse)
+        .options(SliderOptions {
+            id_source: Some(Arc::from("tests.numeric_presentation.slider")),
+            suffix: blend_affixes.suffix.clone(),
+            ..Default::default()
+        });
+}
+
 #[test]
 fn numeric_affix_option_defaults_are_empty() {
     let numeric = NumericInputOptions::default();
@@ -128,4 +167,11 @@ fn numeric_affix_option_defaults_are_empty() {
     assert!(transform.rotation_suffix.is_none());
     assert!(transform.scale_prefix.is_none());
     assert!(transform.scale_suffix.is_none());
+}
+
+#[test]
+fn numeric_presentation_percent_keeps_slider_chrome_suffix_empty() {
+    let presentation = NumericPresentation::<f64>::percent_0_1(0);
+    assert_eq!(presentation.format()(0.25).as_ref(), "25%");
+    assert!(presentation.chrome_suffix().is_none());
 }
