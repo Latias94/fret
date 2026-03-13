@@ -115,6 +115,8 @@ Regression gates:
 - [x] Extend the current mixed-script conformance coverage with profile-aware expectations.
 - [x] Add at least one scripted diagnostics repro for bundled-only fallback behavior after the
   reset.
+- [x] Add a native system-font mixed-script locale-switch conformance gate that proves
+  `fallback_policy_key`, traced `locale_bcp47`, and zero-missing-glyph evidence move together.
 
 ## Exit criteria for calling the workstream "closed enough"
 

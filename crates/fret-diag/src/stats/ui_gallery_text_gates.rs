@@ -31,6 +31,16 @@ struct MixedScriptBundledFallbackEvidence {
     registered_font_blobs_total_bytes: u64,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct LocaleChangeConformanceEvidence {
+    fallback_policy_key: u64,
+    locale_bcp47: Option<String>,
+    system_fonts_enabled: bool,
+    missing_glyphs: u64,
+    font_trace_entry_count: usize,
+    font_trace_locales: Vec<String>,
+}
+
 fn find_latest_labeled_bundle_dir(out_dir: &Path, label: &str) -> Option<PathBuf> {
     let suffix = format!("-{label}");
     let mut best: Option<(u64, PathBuf)> = None;
@@ -181,6 +191,46 @@ fn bundle_last_text_mixed_script_evidence(
         registered_font_blobs_total_bytes: render_text
             .get("registered_font_blobs_total_bytes")?
             .as_u64()?,
+    })
+}
+
+fn bundle_last_text_locale_change_evidence(
+    bundle: &serde_json::Value,
+) -> Option<LocaleChangeConformanceEvidence> {
+    let best = bundle_last_snapshot_by_frame_id(bundle)?;
+
+    let resource_caches = best.get("resource_caches")?.as_object()?;
+    let render_text = resource_caches.get("render_text")?.as_object()?;
+    let policy = resource_caches
+        .get("render_text_fallback_policy")?
+        .as_object()?;
+
+    let mut font_trace_locales = Vec::new();
+    let font_trace_entry_count = resource_caches
+        .get("render_text_font_trace")
+        .and_then(|v| v.get("entries"))
+        .and_then(|v| v.as_array())
+        .map(|entries| {
+            for entry in entries {
+                let Some(locale) = entry.get("locale_bcp47").and_then(|v| v.as_str()) else {
+                    continue;
+                };
+                push_unique_case_insensitive(&mut font_trace_locales, locale);
+            }
+            entries.len()
+        })
+        .unwrap_or_default();
+
+    Some(LocaleChangeConformanceEvidence {
+        fallback_policy_key: policy.get("fallback_policy_key")?.as_u64()?,
+        locale_bcp47: policy
+            .get("locale_bcp47")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
+        system_fonts_enabled: policy.get("system_fonts_enabled")?.as_bool()?,
+        missing_glyphs: render_text.get("frame_missing_glyphs")?.as_u64()?,
+        font_trace_entry_count,
+        font_trace_locales,
     })
 }
 
@@ -815,6 +865,81 @@ mod tests {
             "{err}"
         );
     }
+
+    fn locale_change_bundle(locale: &str, key: u64) -> serde_json::Value {
+        serde_json::json!({
+            "windows": [{
+                "snapshots": [{
+                    "frame_id": 3,
+                    "resource_caches": {
+                        "render_text": {
+                            "frame_missing_glyphs": 0
+                        },
+                        "render_text_fallback_policy": {
+                            "fallback_policy_key": key,
+                            "locale_bcp47": locale,
+                            "system_fonts_enabled": true
+                        },
+                        "render_text_font_trace": {
+                            "entries": [{
+                                "locale_bcp47": locale,
+                                "families": [{
+                                    "family": "Inter",
+                                    "class": "requested",
+                                    "glyphs": 4,
+                                    "missing_glyphs": 0
+                                }]
+                            }]
+                        }
+                    }
+                }]
+            }]
+        })
+    }
+
+    #[test]
+    fn locale_change_gate_accepts_mixed_script_trace_evidence() {
+        let out_dir = unique_tmp_dir("pass_locale_change");
+        write_labeled_bundle(
+            &out_dir,
+            "ui-gallery-text-fallback-policy-locale-before",
+            &locale_change_bundle("en-US", 10),
+        );
+        write_labeled_bundle(
+            &out_dir,
+            "ui-gallery-text-fallback-policy-locale-after",
+            &locale_change_bundle("zh-CN", 11),
+        );
+
+        check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_locale_change(&out_dir)
+            .expect("gate should accept locale change evidence with trace coverage");
+    }
+
+    #[test]
+    fn locale_change_gate_rejects_trace_locale_drift() {
+        let out_dir = unique_tmp_dir("fail_locale_trace_drift");
+        write_labeled_bundle(
+            &out_dir,
+            "ui-gallery-text-fallback-policy-locale-before",
+            &locale_change_bundle("en-US", 10),
+        );
+        let mut after = locale_change_bundle("zh-CN", 11);
+        after["windows"][0]["snapshots"][0]["resource_caches"]["render_text_font_trace"]["entries"]
+            [0]["locale_bcp47"] = serde_json::json!("en-US");
+        write_labeled_bundle(
+            &out_dir,
+            "ui-gallery-text-fallback-policy-locale-after",
+            &after,
+        );
+
+        let err =
+            check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_locale_change(&out_dir)
+                .expect_err("gate should reject stale font trace locales");
+        assert!(
+            err.contains("expected AFTER font trace locales to settle to [\"zh-CN\"]"),
+            "{err}"
+        );
+    }
 }
 
 pub(crate) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_locale_change(
@@ -822,23 +947,6 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_loc
 ) -> Result<(), String> {
     const BEFORE_LABEL: &str = "ui-gallery-text-fallback-policy-locale-before";
     const AFTER_LABEL: &str = "ui-gallery-text-fallback-policy-locale-after";
-
-    fn bundle_last_text_policy_key_and_locale(
-        bundle: &serde_json::Value,
-    ) -> Option<(u64, Option<String>)> {
-        let best = bundle_last_snapshot_by_frame_id(bundle)?;
-
-        let policy = best
-            .get("resource_caches")?
-            .get("render_text_fallback_policy")?
-            .as_object()?;
-        let key = policy.get("fallback_policy_key")?.as_u64()?;
-        let locale_bcp47 = policy
-            .get("locale_bcp47")
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
-        Some((key, locale_bcp47))
-    }
 
     let before_dir = find_latest_labeled_bundle_dir(out_dir, BEFORE_LABEL).ok_or_else(|| {
         format!(
@@ -863,15 +971,15 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_loc
     let after_bundle: serde_json::Value =
         serde_json::from_slice(&after_bytes).map_err(|e| e.to_string())?;
 
-    let before = bundle_last_text_policy_key_and_locale(&before_bundle).ok_or_else(|| {
+    let before = bundle_last_text_locale_change_evidence(&before_bundle).ok_or_else(|| {
         format!(
-            "ui-gallery text fallback policy locale gate expected renderer text fallback policy snapshot in bundle\n  bundle: {}",
+            "ui-gallery text fallback policy locale gate expected renderer text fallback policy + trace + perf snapshots in bundle\n  bundle: {}",
             before_path.display()
         )
     })?;
-    let after = bundle_last_text_policy_key_and_locale(&after_bundle).ok_or_else(|| {
+    let after = bundle_last_text_locale_change_evidence(&after_bundle).ok_or_else(|| {
         format!(
-            "ui-gallery text fallback policy locale gate expected renderer text fallback policy snapshot in bundle\n  bundle: {}",
+            "ui-gallery text fallback policy locale gate expected renderer text fallback policy + trace + perf snapshots in bundle\n  bundle: {}",
             after_path.display()
         )
     })?;
@@ -884,30 +992,82 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_loc
         "after_dir": after_dir.display().to_string(),
         "before_bundle": before_path.display().to_string(),
         "after_bundle": after_path.display().to_string(),
-        "before": { "fallback_policy_key": before.0, "locale_bcp47": before.1 },
-        "after": { "fallback_policy_key": after.0, "locale_bcp47": after.1 },
+        "before": {
+            "fallback_policy_key": before.fallback_policy_key,
+            "locale_bcp47": before.locale_bcp47,
+            "system_fonts_enabled": before.system_fonts_enabled,
+            "frame_missing_glyphs": before.missing_glyphs,
+            "font_trace_entry_count": before.font_trace_entry_count,
+            "font_trace_locales": before.font_trace_locales,
+        },
+        "after": {
+            "fallback_policy_key": after.fallback_policy_key,
+            "locale_bcp47": after.locale_bcp47,
+            "system_fonts_enabled": after.system_fonts_enabled,
+            "frame_missing_glyphs": after.missing_glyphs,
+            "font_trace_entry_count": after.font_trace_entry_count,
+            "font_trace_locales": after.font_trace_locales,
+        },
     });
     let _ = write_json_value(&evidence_path, &payload);
 
-    if before.1.as_deref() != Some("en-US") {
+    if !before.system_fonts_enabled || !after.system_fonts_enabled {
+        return Err(format!(
+            "ui-gallery text fallback policy locale gate failed: expected system_fonts_enabled=true in both captures for the native system-font baseline\n  before: {}\n  after: {}\n  evidence: {}",
+            before.system_fonts_enabled,
+            after.system_fonts_enabled,
+            evidence_path.display()
+        ));
+    }
+    if before.locale_bcp47.as_deref() != Some("en-US") {
         return Err(format!(
             "ui-gallery text fallback policy locale gate failed: expected locale_bcp47 to be en-US in the BEFORE capture\n  observed: {:?}\n  evidence: {}",
-            before.1,
+            before.locale_bcp47,
             evidence_path.display()
         ));
     }
-    if after.1.as_deref() != Some("zh-CN") {
+    if after.locale_bcp47.as_deref() != Some("zh-CN") {
         return Err(format!(
             "ui-gallery text fallback policy locale gate failed: expected locale_bcp47 to be zh-CN in the AFTER capture\n  observed: {:?}\n  evidence: {}",
-            after.1,
+            after.locale_bcp47,
             evidence_path.display()
         ));
     }
-    if before.0 == after.0 {
+    if before.font_trace_entry_count == 0 || after.font_trace_entry_count == 0 {
+        return Err(format!(
+            "ui-gallery text fallback policy locale gate failed: expected bundle-scoped font trace entries in both captures after enabling FRET_TEXT_FONT_TRACE_ALL\n  before: {}\n  after: {}\n  evidence: {}",
+            before.font_trace_entry_count,
+            after.font_trace_entry_count,
+            evidence_path.display()
+        ));
+    }
+    if before.font_trace_locales != vec!["en-US".to_string()] {
+        return Err(format!(
+            "ui-gallery text fallback policy locale gate failed: expected BEFORE font trace locales to settle to [\"en-US\"]\n  observed: {:?}\n  evidence: {}",
+            before.font_trace_locales,
+            evidence_path.display()
+        ));
+    }
+    if after.font_trace_locales != vec!["zh-CN".to_string()] {
+        return Err(format!(
+            "ui-gallery text fallback policy locale gate failed: expected AFTER font trace locales to settle to [\"zh-CN\"]\n  observed: {:?}\n  evidence: {}",
+            after.font_trace_locales,
+            evidence_path.display()
+        ));
+    }
+    if before.missing_glyphs != 0 || after.missing_glyphs != 0 {
+        return Err(format!(
+            "ui-gallery text fallback policy locale gate failed: expected frame_missing_glyphs=0 in both captures on the mixed-script page\n  before: {}\n  after: {}\n  evidence: {}",
+            before.missing_glyphs,
+            after.missing_glyphs,
+            evidence_path.display()
+        ));
+    }
+    if before.fallback_policy_key == after.fallback_policy_key {
         return Err(format!(
             "ui-gallery text fallback policy locale gate failed: expected fallback_policy_key to change when locale changes\n  before: {}\n  after: {}\n  evidence: {}",
-            before.0,
-            after.0,
+            before.fallback_policy_key,
+            after.fallback_policy_key,
             evidence_path.display()
         ));
     }

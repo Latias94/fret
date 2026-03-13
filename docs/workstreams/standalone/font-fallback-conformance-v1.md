@@ -64,22 +64,28 @@ FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-tex
 
 ### Gate 1.5: Locale change bumps fallback policy key
 
-- Script: `tools/diag-scripts/ui-gallery-text-fallback-policy-key-bumps-on-locale-change.json`
+- Script: `tools/diag-scripts/ui-gallery/text/ui-gallery-text-fallback-policy-key-bumps-on-locale-change.json`
 - Check flag: `--check-ui-gallery-text-fallback-policy-key-bumps-on-locale-change`
 
 Expected:
 
-- The script captures two bundles (before/after locale change via Settings).
+- The script starts on `text_mixed_script_fallback`, captures a BEFORE bundle, triggers
+  `app.locale.switch_next` via the default `primary+alt+l` shortcut, then captures an AFTER
+  bundle.
 - The gate asserts:
+  - `system_fonts_enabled` is `true` in both captures.
   - `locale_bcp47` is `en-US` in the BEFORE capture and `zh-CN` in the AFTER capture.
+  - `render_text_font_trace.entries[*].locale_bcp47` is `["en-US"]` in the BEFORE capture and
+    `["zh-CN"]` in the AFTER capture.
+  - `frame_missing_glyphs` is `0` in both captures.
   - `fallback_policy_key` differs between the two labeled captures.
 
 Run (native):
 
 ```bash
-FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-text-fallback-policy-key-bumps-on-locale-change.json \
+FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/text/ui-gallery-text-fallback-policy-key-bumps-on-locale-change.json \
   --check-ui-gallery-text-fallback-policy-key-bumps-on-locale-change \
-  --launch -- cargo run -p fret-ui-gallery --release
+  --launch -- cargo run -p fret-ui-gallery --release --features gallery-web-ime-harness
 ```
 
 ### Gate 2: System font rescan bumps font stack key (native)
@@ -130,5 +136,4 @@ FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/sha
 
 ## Next (recommended)
 
-1) Add a locale-switch gate that asserts `fallback_policy_key` bumps when the renderer locale changes (bundle-only).
-2) Add a bundled-only conformance gate that asserts missing-glyph traces are captured when tofu occurs (debug-only case).
+1) Add a bundled-only conformance gate that asserts missing-glyph traces are captured when tofu occurs (debug-only case).

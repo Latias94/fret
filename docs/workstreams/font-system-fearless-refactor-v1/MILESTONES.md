@@ -89,6 +89,7 @@ Deliverables:
 
 - updated fallback-policy diagnostics,
 - profile-aware mixed-script conformance coverage,
+- native mixed-script locale-switch conformance for system-font builds,
 - clear linkage back to the relevant ADRs and implementation-alignment notes.
 
 Exit criteria:
@@ -98,3 +99,5 @@ Exit criteria:
   - the renderer fallback-policy snapshot,
   - the font trace,
   - the published `TextFontStackKey`.
+- Native locale switching on the mixed-script fallback page can be proven by diagnostics evidence
+  alone without relying on ad-hoc settings UI.

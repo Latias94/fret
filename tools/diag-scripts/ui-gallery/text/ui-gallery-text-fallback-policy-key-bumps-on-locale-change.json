@@ -5,57 +5,36 @@
     "tags": ["ui-gallery", "text", "fonts", "locale", "gate"],
     "target_hints": ["fret-ui-gallery"],
     "env_defaults": {
-      "FRET_UI_GALLERY_BOOTSTRAP_FONTS": "1"
+      "FRET_UI_GALLERY_BOOTSTRAP_FONTS": "1",
+      "FRET_TEXT_FONT_TRACE_ALL": "1",
+      "FRET_UI_GALLERY_START_PAGE": "text_mixed_script_fallback"
     }
   },
   "steps": [
     { "type": "reset_diagnostics" },
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 2 },
-
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-settings-open" }
-    },
-    { "type": "wait_frames", "n": 4 },
-    {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-settings-text-locale-override" }
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-text-mixed-script-fallback-root" }
+      }
     },
     { "type": "wait_frames", "n": 6 },
-    {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-settings-text-locale-override-en-us" }
-    },
-    { "type": "wait_frames", "n": 4 },
-    {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-settings-apply" }
-    },
-    { "type": "wait_frames", "n": 12 },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
     {
       "type": "capture_bundle",
       "label": "ui-gallery-text-fallback-policy-locale-before"
     },
-
+    { "type": "press_shortcut", "shortcut": "primary+alt+l" },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-settings-open" }
-    },
-    { "type": "wait_frames", "n": 4 },
-    {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-settings-text-locale-override" }
-    },
-    { "type": "wait_frames", "n": 6 },
-    {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-settings-text-locale-override-zh-cn" }
-    },
-    { "type": "wait_frames", "n": 4 },
-    {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-settings-apply" }
+      "type": "wait_shortcut_routing_trace",
+      "query": {
+        "outcome": "command_dispatched",
+        "key": "KeyL",
+        "command": "app.locale.switch_next"
+      },
+      "timeout_frames": 120
     },
     { "type": "wait_frames", "n": 12 },
     {
