@@ -96,6 +96,17 @@ Current snapshot (2026-03-13):
   - `cargo check -p fret-render-wgpu --tests`
   - `cargo nextest run -p fret-render-wgpu emoji_sequences_use_color_quads_when_color_font_is_available`
   - `cargo nextest run -p fret-render-wgpu cjk_glyphs_populate_mask_or_subpixel_atlas_when_cjk_lite_font_is_available`
+- The first renderer effect-planning split has landed:
+  - built-in effect helper flow now lives under
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects/builtin.rs`
+  - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns built-in effect
+    budget gates, clip-mask target choice, or single-scratch/two-scratch pass-builder helpers
+    directly
+- Renderer effect-planning split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu gaussian_blur_radius_affects_pass_count`
+  - `cargo nextest run -p fret-render-wgpu dither_compiles_to_pass`
+  - `cargo nextest run -p fret-render-wgpu noise_compiles_to_pass`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

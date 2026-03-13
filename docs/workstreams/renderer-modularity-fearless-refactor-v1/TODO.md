@@ -451,8 +451,14 @@ ID format:
 
 ### D2. Renderer state owner
 
-- [ ] RMFR-renderer-040 Identify the subdomain state that can move out of `Renderer` without
+- [~] RMFR-renderer-040 Identify the subdomain state that can move out of `Renderer` without
   changing behavior.
+  - Landed so far:
+    - built-in effect helper flow moved into
+      `crates/fret-render-wgpu/src/renderer/render_plan_effects/builtin.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns built-in effect
+      budget gates, clip-mask target choice, or single-scratch/two-scratch pass-builder helpers
+      directly
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG
@@ -616,10 +622,11 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: atlas `TextSystem` flow now lives under
-    `crates/fret-render-wgpu/src/text/atlas_flow.rs`, and
-    `crates/fret-render-wgpu/src/text/atlas.rs` no longer owns atlas bind-group access, upload
-    flushing, scene pinning, or glyph ensure glue directly.
+  - Latest landed slice: built-in effect helper flow now lives under
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects/builtin.rs`, and
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns built-in effect
+    budget gates, clip-mask target choice, or single-scratch/two-scratch pass-builder helpers
+    directly.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

@@ -134,6 +134,11 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/text/atlas_flow.rs`, and `crates/fret-render-wgpu/src/text/atlas.rs`
   no longer owns atlas bind-group access, upload flushing, scene pinning, or glyph ensure glue
   directly.
+- Built-in renderer effect helper flow now lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/builtin.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns built-in effect
+  budget gates, clip-mask target choice, or single-scratch/two-scratch pass-builder helpers
+  directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:
@@ -434,6 +439,12 @@ As of 2026-03-13:
     `crates/fret-render-wgpu/src/text/atlas_flow.rs`
   - `crates/fret-render-wgpu/src/text/atlas.rs` no longer owns atlas bind-group access, upload
     flushing, scene pinning, or glyph ensure glue directly
+- The first renderer effect-planning split has landed:
+  - built-in effect helper flow now lives under
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects/builtin.rs`
+  - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns built-in effect
+    budget gates, clip-mask target choice, or single-scratch/two-scratch pass-builder helpers
+    directly
 - The sixty-fourth internal text split has landed:
   - prepared-glyph normalized-coords presence checks now live behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`
