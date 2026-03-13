@@ -571,10 +571,8 @@ impl Renderer {
             .path_intermediate
             .as_ref()
             .map_or(0, PathIntermediate::estimated_bytes);
-        let custom_effect_v3_pyramid_scratch_bytes_estimate = self
-            .custom_effect_v3_pyramid_scratch
-            .as_ref()
-            .map_or(0, v3_pyramid::CustomEffectV3PyramidScratch::estimated_bytes);
+        let custom_effect_v3_pyramid_scratch_bytes_estimate =
+            self.custom_effect_v3_pyramid.scratch_bytes_estimate();
 
         self.last_frame_perf = Some(RenderPerfSnapshot {
             frames: frame_perf.frames,

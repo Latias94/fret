@@ -206,6 +206,14 @@ For `render_plan_effects`, that means the long-term boring shape is:
 - once chain dispatch is extracted, the top-level module should mostly retain shared budgeting /
   utility helpers plus curated wrapper entrypoints.
 
+For `Renderer` state-shell tightening, the same principle applies:
+
+- feature-local execution scratch, reuse caches, and write-epoch tracking should collapse into
+  dedicated owner structs instead of remaining as loose `Renderer` fields plus ad hoc helper
+  methods in `renderer/mod.rs`.
+- the first such extractions should target high-cohesion islands with narrow call surfaces, so
+  owner splits remain reversible and do not force broad service rewrites.
+
 ### 5. Tighten public exports after evidence exists
 
 We should not shrink exports blindly. The order matters:

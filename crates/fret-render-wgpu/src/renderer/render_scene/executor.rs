@@ -95,79 +95,116 @@ impl<'a> RenderSceneExecutor<'a> {
         match planned_pass {
             RenderPlanPass::PathClipMask(mask_pass) => {
                 record_path_clip_mask_pass(self, ctx, resources, mask_pass);
-                self.renderer.bump_plan_target_write_epoch(mask_pass.dst);
+                self.renderer
+                    .custom_effect_v3_pyramid
+                    .bump_plan_target_write_epoch(mask_pass.dst);
             }
             RenderPlanPass::SceneDrawRange(scene_pass) => {
                 record_scene_draw_range_pass(self, ctx, resources, scene_pass);
                 self.renderer
+                    .custom_effect_v3_pyramid
                     .bump_plan_target_write_epoch(scene_pass.target);
             }
             RenderPlanPass::PathMsaaBatch(path_pass) => {
                 record_path_msaa_batch_pass(self, ctx, resources, path_pass);
-                self.renderer.bump_plan_target_write_epoch(path_pass.target);
+                self.renderer
+                    .custom_effect_v3_pyramid
+                    .bump_plan_target_write_epoch(path_pass.target);
             }
             RenderPlanPass::ScaleNearest(pass) => {
                 record_scale_nearest_pass(self, ctx, pass);
-                self.renderer.bump_plan_target_write_epoch(pass.dst);
+                self.renderer
+                    .custom_effect_v3_pyramid
+                    .bump_plan_target_write_epoch(pass.dst);
             }
             RenderPlanPass::Blur(pass) => {
                 record_blur_pass(self, ctx, pass);
-                self.renderer.bump_plan_target_write_epoch(pass.dst);
+                self.renderer
+                    .custom_effect_v3_pyramid
+                    .bump_plan_target_write_epoch(pass.dst);
             }
             RenderPlanPass::FullscreenBlit(pass) => {
                 record_fullscreen_blit_pass(self, pass);
-                self.renderer.bump_plan_target_write_epoch(pass.dst);
+                self.renderer
+                    .custom_effect_v3_pyramid
+                    .bump_plan_target_write_epoch(pass.dst);
             }
             RenderPlanPass::BackdropWarp(pass) => {
                 record_backdrop_warp_pass(self, ctx, pass);
-                self.renderer.bump_plan_target_write_epoch(pass.dst);
+                self.renderer
+                    .custom_effect_v3_pyramid
+                    .bump_plan_target_write_epoch(pass.dst);
             }
             RenderPlanPass::ColorAdjust(pass) => {
                 record_color_adjust_pass(self, ctx, pass);
-                self.renderer.bump_plan_target_write_epoch(pass.dst);
+                self.renderer
+                    .custom_effect_v3_pyramid
+                    .bump_plan_target_write_epoch(pass.dst);
             }
             RenderPlanPass::ColorMatrix(pass) => {
                 record_color_matrix_pass(self, ctx, pass);
-                self.renderer.bump_plan_target_write_epoch(pass.dst);
+                self.renderer
+                    .custom_effect_v3_pyramid
+                    .bump_plan_target_write_epoch(pass.dst);
             }
             RenderPlanPass::AlphaThreshold(pass) => {
                 record_alpha_threshold_pass(self, ctx, pass);
-                self.renderer.bump_plan_target_write_epoch(pass.dst);
+                self.renderer
+                    .custom_effect_v3_pyramid
+                    .bump_plan_target_write_epoch(pass.dst);
             }
             RenderPlanPass::Dither(pass) => {
                 record_dither_pass(self, ctx, pass);
-                self.renderer.bump_plan_target_write_epoch(pass.dst);
+                self.renderer
+                    .custom_effect_v3_pyramid
+                    .bump_plan_target_write_epoch(pass.dst);
             }
             RenderPlanPass::Noise(pass) => {
                 record_noise_pass(self, ctx, pass);
-                self.renderer.bump_plan_target_write_epoch(pass.dst);
+                self.renderer
+                    .custom_effect_v3_pyramid
+                    .bump_plan_target_write_epoch(pass.dst);
             }
             RenderPlanPass::DropShadow(pass) => {
                 record_drop_shadow_pass(self, ctx, pass);
-                self.renderer.bump_plan_target_write_epoch(pass.dst);
+                self.renderer
+                    .custom_effect_v3_pyramid
+                    .bump_plan_target_write_epoch(pass.dst);
             }
             RenderPlanPass::CustomEffect(pass) => {
                 record_custom_effect_pass(self, ctx, pass);
-                self.renderer.bump_plan_target_write_epoch(pass.common.dst);
+                self.renderer
+                    .custom_effect_v3_pyramid
+                    .bump_plan_target_write_epoch(pass.common.dst);
             }
             RenderPlanPass::CustomEffectV2(pass) => {
                 record_custom_effect_v2_pass(self, ctx, pass);
-                self.renderer.bump_plan_target_write_epoch(pass.common.dst);
+                self.renderer
+                    .custom_effect_v3_pyramid
+                    .bump_plan_target_write_epoch(pass.common.dst);
             }
             RenderPlanPass::CustomEffectV3(pass) => {
                 record_custom_effect_v3_pass(self, ctx, pass);
-                self.renderer.bump_plan_target_write_epoch(pass.common.dst);
+                self.renderer
+                    .custom_effect_v3_pyramid
+                    .bump_plan_target_write_epoch(pass.common.dst);
             }
             RenderPlanPass::CompositePremul(pass) => {
                 record_composite_premul_pass(self, ctx, pass);
-                self.renderer.bump_plan_target_write_epoch(pass.dst);
+                self.renderer
+                    .custom_effect_v3_pyramid
+                    .bump_plan_target_write_epoch(pass.dst);
             }
             RenderPlanPass::ClipMask(pass) => {
                 record_clip_mask_pass(self, ctx, pass);
-                self.renderer.bump_plan_target_write_epoch(pass.dst);
+                self.renderer
+                    .custom_effect_v3_pyramid
+                    .bump_plan_target_write_epoch(pass.dst);
             }
             RenderPlanPass::ReleaseTarget(target) => {
-                self.renderer.bump_plan_target_write_epoch(*target);
+                self.renderer
+                    .custom_effect_v3_pyramid
+                    .bump_plan_target_write_epoch(*target);
                 self.frame_targets
                     .release_target(&mut self.renderer.intermediate_pool, *target);
             }

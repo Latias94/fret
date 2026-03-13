@@ -204,6 +204,10 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`, and
   `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` now keeps
   `apply_chain_in_place(...)` only as a thin forwarding surface.
+- Renderer custom-effect v3 pyramid owner state now also lives under
+  `crates/fret-render-wgpu/src/renderer/v3_pyramid.rs`, and
+  `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns the pyramid scratch/cache/write-epoch
+  fields or helper methods directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

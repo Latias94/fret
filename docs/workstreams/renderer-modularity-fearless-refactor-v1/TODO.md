@@ -525,17 +525,24 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`
     - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` now keeps
       `apply_chain_in_place(...)` only as a thin forwarding surface
+    - custom-effect v3 pyramid state owner moved into
+      `crates/fret-render-wgpu/src/renderer/v3_pyramid.rs`
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns the pyramid scratch/cache/write-epoch
+      fields or helper methods directly
   - Current next hotspot:
-    - audit whether the remaining wrapper/shim exports in `render_plan_effects.rs` are the right
-      steady-state surface or should collapse into more explicit forwarding/module-local imports
-    - only split the remaining shared budgeting/value helpers if a real ownership seam appears,
-      rather than splitting them mechanically
+    - continue shrinking `Renderer` by pulling the next high-cohesion owner shell out of
+      `renderer/mod.rs`, with SVG raster/atlas+perf state the best current candidate
+    - avoid chasing remaining `render_plan_effects.rs` wrappers unless a real visibility or
+      ownership seam appears
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG
   - materials/custom effects
   - intermediate budgeting/pools
   - diagnostics state
+  - Landed so far:
+    - custom-effect v3 pyramid scratch/cache/write-epoch state now lives under
+      `crates/fret-render-wgpu/src/renderer/v3_pyramid.rs`
 - [ ] RMFR-renderer-042 Reduce cross-domain mutable coupling inside `Renderer`.
 - [ ] RMFR-renderer-043 Keep service trait implementations readable after extraction.
 
@@ -693,10 +700,10 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: the top-level chain driver now lives under
-    `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`, and
-    `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` now keeps
-    `apply_chain_in_place(...)` only as a thin forwarding surface.
+  - Latest landed slice: custom-effect v3 pyramid owner state now lives under
+    `crates/fret-render-wgpu/src/renderer/v3_pyramid.rs`, and
+    `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns the pyramid scratch/cache/write-epoch
+    fields or helper methods directly.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

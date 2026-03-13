@@ -1164,7 +1164,7 @@ pub(in super::super) fn record_custom_effect_v3_pass(
     };
 
     let pyramid_override_view = if pass.pyramid_wanted && pass.pyramid_levels >= 2 {
-        let reuse = exec.renderer.can_reuse_custom_effect_v3_pyramid(
+        let reuse = exec.renderer.custom_effect_v3_pyramid.can_reuse(
             pass.src_raw,
             common.src_size,
             exec.format,
@@ -1185,7 +1185,7 @@ pub(in super::super) fn record_custom_effect_v3_pass(
         }
 
         let (mip_views, mip_sizes, full_view) = {
-            let scratch = exec.renderer.ensure_custom_effect_v3_pyramid_scratch(
+            let scratch = exec.renderer.custom_effect_v3_pyramid.ensure_scratch(
                 exec.device,
                 common.src_size,
                 exec.format,
@@ -1280,7 +1280,7 @@ pub(in super::super) fn record_custom_effect_v3_pass(
                 );
             }
 
-            exec.renderer.set_custom_effect_v3_pyramid_cache(
+            exec.renderer.custom_effect_v3_pyramid.set_cache(
                 pass.src_raw,
                 common.src_size,
                 exec.format,
