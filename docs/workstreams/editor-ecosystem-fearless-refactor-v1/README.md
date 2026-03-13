@@ -2,7 +2,7 @@
 
 Status: **in progress**
 
-Last updated: **2026-03-12**
+Last updated: **2026-03-13**
 
 Goal: turn Fret's editor-facing crates into one coherent product line without collapsing crate
 boundaries, creating a second widget library, or coupling reusable editor surfaces to one design
@@ -92,20 +92,35 @@ Current checkpoint:
   and Escape cancel all have promoted evidence anchors,
 - repeated gradient-stop rows now also have a focused identity gate, so add/remove churn proves
   edited values stay attached to stable stop ids instead of drifting with row order,
-- the first dedicated headless landing zone for editor completion/history work now exists in
-  `fret-ui-headless::text_assist`, with `fret-ui-kit::headless` re-exporting the query/filter /
-  active-row math while leaving editor visuals and popup composition in `fret-ui-editor`,
+- the text-assist boundary is now split the way this workstream wanted it to be:
+  `fret-ui-headless::text_assist` owns query/filter/highlight/navigation math, while
+  `fret-ui-kit::headless::text_assist` now owns the first reusable input-owned glue layer above
+  that math (`expanded` policy, active-descendant / controls semantics, and outer
+  Arrow/Home/Page/Enter/Escape arbitration) without pulling popup visuals or editor recipes down
+  into the headless crate,
 - `imui_editor_proof_demo` now also promotes that seam into a minimal `Name assist`
   completion/history proof: the input keeps focus, the open popup is exposed as a controlled
   listbox relationship, the active row is surfaced through `active_descendant`, outer editor glue
-  owns Arrow/Home/Page navigation without growing `TextField`'s public API, and Enter accepts the
-  active suggestion,
+  owns Arrow/Home/Page navigation without growing `TextField`'s public API, Enter accepts the
+  active suggestion, and the proof surface now consumes the shared `fret-ui-kit` helper instead of
+  keeping a private demo-local copy,
+- the first editor-owned recipe above that glue now also exists as
+  `fret-ui-editor::controls::TextAssistField`, and it now owns a shared field + listbox panel that
+  can render either inline or as an anchored overlay without pushing popup policy down into
+  `fret-ui` or back into the proof demo,
+- editor `TextField` now also exposes editor-layer `field_id_out` / `input_id_out` seams so
+  higher-level recipes can anchor assistive overlays to the real text entry node while still
+  treating the whole joined field chrome as one dismissable branch,
+- `imui_editor_proof_demo` now defaults that `Name assist` proof to the anchored-overlay surface,
+  so the promoted editor proof no longer relies on an inline-only fallback for completion/history
+  review,
 - and the remaining foundation cleanup is now mostly about promoting specialized text policy above
-  that baseline: lifting the proof into reusable `fret-ui-kit` focus/overlay/active-descendant
-  glue, choosing the formal popup/list-surface abstraction for editor completion/history, richer
-  password/history integrations, targeted `BlurBehavior::Cancel` / `PreserveDraft` adoption on
-  real editor surfaces, and follow-up tuning for wide-inspector slack after the new lane grammar
-  landed.
+  that baseline: proving the new `fret-ui-kit` glue plus `TextAssistField` surface split on a
+  second consumer, deciding which popup/scroll/selection behavior should be promoted into shared
+  kit policy vs stay editor-local, adding focused screenshot/diag coverage for popup geometry and
+  active-row state, richer password/history integrations, targeted
+  `BlurBehavior::Cancel` / `PreserveDraft` adoption on real editor surfaces, and follow-up tuning
+  for wide-inspector slack after the new lane grammar landed.
 
 Until those are in better shape, new promoted reusable components should be treated as lower
 priority than baseline correction.

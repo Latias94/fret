@@ -121,15 +121,25 @@ Interaction contract:
       semantics, and no-op focus/blur cycles no longer emit misleading commit/cancel outcomes. The
       same control also exposes password-mode rendering, a commit/cancel outcome hook, and
       assistive semantics placeholders for future completion/history surfaces while keeping that
-      policy in the ecosystem layer. Authoring-parity percent sliders now also treat
+      policy in the ecosystem layer. The first reusable assist glue above that baseline now also
+      lives in `fret-ui-kit::headless::text_assist`: it preserves the existing
+      `fret-ui-headless::text_assist` math API while adding input-owned expanded/collapsed policy,
+      active-descendant / controls semantics wiring, and outer
+      Arrow/Home/Page/Enter/Escape handling without teaching `TextField` a popup policy. The proof
+      demo has already switched to those shared helpers instead of keeping demo-local glue, and
+      the first editor-owned recipe above that seam now exists as
+      `fret-ui-editor::controls::TextAssistField`, which now owns a shared listbox panel plus
+      `Inline` / `AnchoredOverlay` surfaces and uses editor-layer `TextField` id seams to anchor
+      popup mode to the real input while keeping the whole joined field in one dismissable branch.
+      Authoring-parity percent sliders now also treat
       `percent_0_1_format(0)` as the sole `%` source, and the shared icon-button segment now
       centers trailing clear affordance icons so proof-surface text/numeric controls stop drifting
       on obvious visual seams.
-      Remaining work: lift the new completion/history proof into reusable `fret-ui-kit`
-      focus/overlay/active-descendant glue, decide on the formal popup/list-surface abstraction
-      for editor completion/history, decide where editor surfaces should opt into
-      `BlurBehavior::Cancel` / `PreserveDraft`, and keep tightening multiline/editor proof coverage
-      before new promoted components land.
+      Remaining work: prove the popup-capable seam on a second consumer, add focused
+      screenshot/diag coverage for popup geometry and active-row state, decide where shared
+      overlay/scroll/selection policy should live, decide where editor surfaces should opt into
+      `BlurBehavior::Cancel` / `PreserveDraft`, and keep tightening multiline/editor proof
+      coverage before new promoted components land.
 - [ ] `EER-BASE-118` Do not promote new reusable editor components until `EER-BASE-110` through
       `EER-BASE-117` are in materially better shape.
 
@@ -152,10 +162,14 @@ Interaction contract:
       minimal `Name assist` completion/history surface: the input keeps focus, a controlled
       listbox is exposed through assistive semantics, Arrow/Home/Page navigation is handled by
       outer editor policy glue, and Enter accepts the active suggestion on the promoted proof
-      surface. The remaining work is now about lifting that proof into reusable
-      `fret-ui-kit` focus/overlay/active-descendant glue, deciding the formal popup/list
-      abstraction, deciding where specialized blur policies belong, and adding richer editor
-      integrations above the shared baseline rather than re-litigating commit/cancel semantics.
+      surface. The proof-local glue is no longer private: the first reusable landing zone now
+      also exists in `fret-ui-kit::headless::text_assist`, and `imui_editor_proof_demo` consumes
+      that shared layer directly. The first editor-owned recipe above it now also exists as
+      `fret-ui-editor::controls::TextAssistField`, and that recipe already supports both inline
+      and anchored-overlay list surfaces. The remaining work is now about validating the seam with
+      a second consumer, deciding where overlay-specific policy belongs, deciding where
+      specialized blur policies belong, and adding richer editor integrations above the shared
+      baseline rather than re-litigating commit/cancel semantics.
 - [ ] `EER-EDITOR-123` Freeze the v1 reusable starter set:
       `TextField`, `Checkbox`, `DragValue`, `Slider`, `EnumSelect`, `ColorEdit`, `VecNEdit`,
       `TransformEdit`, `PropertyGrid`, and `InspectorPanel`.
@@ -208,8 +222,12 @@ Interaction contract:
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-history.json` locks the
       expanded/collapsed state readouts, input-owned listbox semantics, keyboard navigation, and
       Enter-accept path on the same proof surface that already hosts buffered text-session
-      evidence. Remaining work: add a second consumer before extracting more formal kit-level
-      popup/focus glue.
+      evidence. The proof now also verifies the shared `fret-ui-kit::headless::text_assist` glue
+      instead of a private demo helper, and the mounted UI path now flows through
+      `fret-ui-editor::controls::TextAssistField` instead of demo-local listbox rendering. The
+      promoted proof now also defaults that recipe to its anchored-overlay surface.
+      Remaining work: add a second consumer and a focused popup screenshot/diag gate before
+      extracting more formal kit-level popup/list glue.
 - [~] `EER-GATE-133` Keep screenshot coverage tied to actual baseline-review states, not just
       arbitrary captures.
       The neutral default baseline now has a screenshot proof via

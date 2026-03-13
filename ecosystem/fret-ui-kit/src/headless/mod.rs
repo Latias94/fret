@@ -2,6 +2,7 @@ pub mod dismissible_layer;
 pub mod focus_scope;
 pub mod tab_strip_arbitration;
 pub mod tab_strip_controller;
+pub mod text_assist;
 
 pub use fret_ui_headless::calendar;
 pub use fret_ui_headless::carousel;
@@ -25,7 +26,6 @@ pub use fret_ui_headless::select_item_aligned;
 pub use fret_ui_headless::slider;
 pub use fret_ui_headless::snap_points;
 pub use fret_ui_headless::table;
-pub use fret_ui_headless::text_assist;
 pub use fret_ui_headless::tooltip_delay_group;
 pub use fret_ui_headless::tooltip_intent;
 pub use fret_ui_headless::transition;

@@ -5,7 +5,9 @@
 //! - optional multiline mode (`TextArea`) with a minimum height
 //! - optional clear affordance
 
+use std::cell::Cell;
 use std::panic::Location;
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -80,6 +82,16 @@ pub struct TextFieldOptions {
     pub a11y_label: Option<Arc<str>>,
     pub test_id: Option<Arc<str>>,
     pub clear_test_id: Option<Arc<str>>,
+    /// Optional sink for the outer joined-field root id.
+    ///
+    /// Recipes such as anchored completion/history popups use this to keep the whole field chrome
+    /// in the same dismissable branch even when the assistive surface is anchored to the input.
+    pub field_id_out: Option<Rc<Cell<Option<GlobalElementId>>>>,
+    /// Optional sink for the inner text-entry element id.
+    ///
+    /// Recipes use this to anchor input-owned assistive surfaces and restore focus to the actual
+    /// text entry node rather than the surrounding field container.
+    pub input_id_out: Option<Rc<Cell<Option<GlobalElementId>>>>,
     /// Visual text mode for the single-line input surface.
     ///
     /// Password mode currently maps to `TextInputProps::obscure_text`; multiline text areas remain
@@ -137,6 +149,8 @@ impl Default for TextFieldOptions {
             a11y_label: None,
             test_id: None,
             clear_test_id: None,
+            field_id_out: None,
+            input_id_out: None,
             mode: TextFieldMode::PlainText,
             buffered: true,
             blur_behavior: TextFieldBlurBehavior::Commit,
@@ -219,6 +233,8 @@ impl TextField {
         let a11y_label = options.a11y_label.clone();
         let test_id = options.test_id.clone();
         let clear_test_id = options.clear_test_id.clone();
+        let field_id_out = options.field_id_out.clone();
+        let input_id_out = options.input_id_out.clone();
         let mode = options.mode;
         let buffered = options.buffered;
         let blur_behavior = options.blur_behavior;
@@ -256,7 +272,7 @@ impl TextField {
         let on_outcome_for_input = on_outcome.clone();
         let submit_command_for_input = submit_command.clone();
 
-        editor_joined_input_frame(
+        let field = editor_joined_input_frame(
             cx,
             layout,
             density,
@@ -311,6 +327,9 @@ impl TextField {
                     });
 
                     let area = cx.text_area(props);
+                    if let Some(out) = input_id_out.as_ref() {
+                        out.set(Some(area.id));
+                    }
                     let area_id = area.id;
                     let is_focused = cx.is_focused_element(area_id);
                     if let (Some(draft), Some(buffered_state)) =
@@ -449,6 +468,9 @@ impl TextField {
                     });
 
                     let input = cx.text_input(props);
+                    if let Some(out) = input_id_out.as_ref() {
+                        out.set(Some(input.id));
+                    }
                     let input_id = input.id;
                     let is_focused = cx.is_focused_element(input_id);
 
@@ -574,7 +596,13 @@ impl TextField {
                     on_activate,
                 )]
             },
-        )
+        );
+
+        if let Some(out) = field_id_out.as_ref() {
+            out.set(Some(field.id));
+        }
+
+        field
     }
 }
 
