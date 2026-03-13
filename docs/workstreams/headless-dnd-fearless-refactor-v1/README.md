@@ -24,6 +24,7 @@ This directory contains:
 - `DROPPABLE_METADATA_DECISION.md`: v1 decision note for `type` / `accept` / collision-hook
   metadata
 - `MONITOR_SURFACE_DECISION.md`: v1 decision note for shared monitor/event-surface extraction
+- `KEYBOARD_SENSOR_DESIGN_NOTE.md`: follow-on ownership and behavior note for keyboard-driven DnD
 
 Primary contract references:
 

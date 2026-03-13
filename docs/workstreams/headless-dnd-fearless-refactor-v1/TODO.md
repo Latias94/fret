@@ -114,10 +114,17 @@ This file tracks the execution checklist for `DESIGN.md`.
 
 ## M5 — Follow-on parity targets (do not block the main refactor)
 
-- [ ] Keyboard sensor design note:
+- [x] Keyboard sensor design note:
   - ownership
   - focus semantics
   - interaction with auto-scroll
+  - Evidence anchors:
+    - `docs/workstreams/headless-dnd-fearless-refactor-v1/KEYBOARD_SENSOR_DESIGN_NOTE.md`
+    - `docs/adr/0157-headless-dnd-v1-contract-surface.md`
+    - `crates/fret-ui/src/elements/cx.rs`
+    - `crates/fret-ui/src/focus_visible.rs`
+    - `crates/fret-ui/src/tree/commands.rs`
+    - `repo-ref/dnd-kit/packages/dom/src/core/sensors/keyboard/KeyboardSensor.ts`
 - [ ] Continuous auto-scroll driver semantics in the integration layer.
 - [ ] Multi-rect droppables only if at least two consumers require them.
 - [ ] Sortable group semantics beyond the current minimal insertion helpers.
