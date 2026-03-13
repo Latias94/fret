@@ -288,6 +288,18 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu unpadded_custom_v3_chain_reserves_distinct_raw_target_when_available`
   - `cargo nextest run -p fret-render-wgpu padded_blur_then_custom_uses_work_buffer`
   - `cargo nextest run -p fret-render-wgpu custom_chain_budget_records_optional_mask_bytes`
+- The fifteenth renderer effect-planning split has landed:
+  - the top-level chain driver now lives under
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`
+  - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` now keeps
+    `apply_chain_in_place(...)` only as a thin forwarding surface
+- Renderer top-level-chain-driver split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu chain_applies_clip_only_on_final_step`
+  - `cargo nextest run -p fret-render-wgpu unpadded_chain_applies_clip_only_on_final_step`
+  - `cargo nextest run -p fret-render-wgpu unpadded_custom_v3_chain_reserves_distinct_raw_target_when_available`
+  - `cargo nextest run -p fret-render-wgpu padded_blur_then_custom_uses_work_buffer`
+  - `cargo nextest run -p fret-render-wgpu custom_chain_budget_records_optional_mask_bytes`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

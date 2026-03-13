@@ -521,11 +521,15 @@ ID format:
     - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns
       `available_scratch_targets(...)`, `is_custom_effect_step(...)`,
       `step_wants_custom_v3_raw(...)`, or `backdrop_source_group_parts(...)` directly
+    - top-level chain driver moved into
+      `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` now keeps
+      `apply_chain_in_place(...)` only as a thin forwarding surface
   - Current next hotspot:
-    - move `apply_chain_in_place(...)` itself behind the chain module so
-      `render_plan_effects.rs` becomes a thin wrapper plus shared budgeting/value helpers
-    - review whether any remaining wrapper/shim exports in `render_plan_effects.rs` should become
-      explicit forwarding surfaces or chain-local internals
+    - audit whether the remaining wrapper/shim exports in `render_plan_effects.rs` are the right
+      steady-state surface or should collapse into more explicit forwarding/module-local imports
+    - only split the remaining shared budgeting/value helpers if a real ownership seam appears,
+      rather than splitting them mechanically
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG
@@ -689,11 +693,10 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: shared chain utility helpers now live under
+  - Latest landed slice: the top-level chain driver now lives under
     `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`, and
-    `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns
-    `available_scratch_targets(...)`, `is_custom_effect_step(...)`,
-    `step_wants_custom_v3_raw(...)`, or `backdrop_source_group_parts(...)` directly.
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` now keeps
+    `apply_chain_in_place(...)` only as a thin forwarding surface.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

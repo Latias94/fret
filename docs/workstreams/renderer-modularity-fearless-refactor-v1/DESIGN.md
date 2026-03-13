@@ -200,6 +200,9 @@ For `render_plan_effects`, that means the long-term boring shape is:
 - shared chain-local utility helpers such as scratch-target discovery, custom-step detection, and
   backdrop-source-group decomposition should live with chain orchestration instead of remaining as
   top-level cross-module helpers.
+- the top-level chain entrypoint itself should also live with chain orchestration, leaving the
+  parent module with only a thin forwarding surface when that entrypoint remains part of the
+  curated module contract.
 - once chain dispatch is extracted, the top-level module should mostly retain shared budgeting /
   utility helpers plus curated wrapper entrypoints.
 

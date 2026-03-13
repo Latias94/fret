@@ -90,10 +90,7 @@ mod chain;
 mod custom;
 mod scissor;
 
-use self::chain::{
-    apply_unpadded_chain_in_place, backdrop_source_group_parts, prepare_chain_start,
-    try_apply_padded_chain_in_place,
-};
+use self::chain::apply_chain_in_place as apply_chain_in_place_impl;
 
 #[cfg(test)]
 use self::blur::inflate_scissor_to_viewport;
@@ -213,78 +210,20 @@ pub(super) fn apply_chain_in_place(
     ctx: EffectCompileCtx,
     backdrop_source_group: Option<BackdropSourceGroupCtx>,
 ) -> Option<CustomEffectChainBudgetEvidence> {
-    if srcdst == PlanTarget::Output || scissor.w == 0 || scissor.h == 0 {
-        return None;
-    }
-
-    let steps: Vec<fret_core::EffectStep> = chain.iter().collect();
-    if steps.is_empty() {
-        return None;
-    }
-
-    let (group_raw, _, _) = backdrop_source_group_parts(backdrop_source_group);
-
-    let mut chain_start = prepare_chain_start(
+    apply_chain_in_place_impl(
         passes,
         in_use_targets,
         srcdst,
-        &steps,
+        mode,
+        chain,
+        quality,
         scissor,
         mask_uniform_index,
         unavailable_mask_targets,
-        quality,
-        ctx,
-    );
-
-    // Padded effect chains:
-    //
-    // Some effects sample their input outside the destination pixel (blur radius, refraction
-    // displacement, chromatic offsets). When such an effect appears later in a chain, earlier
-    // steps must produce output for an expanded region, otherwise the chain will see edge artifacts
-    // (e.g. "dark corners" in blur -> refraction lenses).
-    //
-    // If the chain declares any non-zero sampling padding and we have enough scratch targets +
-    // budget, we evaluate the chain into a work target using a per-step expanded scissor plan,
-    // then composite the final result back into `srcdst` while applying clip/mask coverage exactly
-    // once.
-    if try_apply_padded_chain_in_place(
-        passes,
-        &steps,
-        chain_start.scratch_targets.as_slice(),
-        srcdst,
-        mode,
-        quality,
-        scissor,
-        chain_start.budget_bytes,
-        chain_start.coverage,
         effect_degradations,
         effect_blur_quality,
         ctx,
         backdrop_source_group,
-        &mut chain_start.custom_chain_budget,
-    ) {
-        return chain_start.custom_chain_budget;
-    }
-
-    // Clip/shape masks are coverage (alpha) multipliers. If we apply them at every effect step in a
-    // chain, coverage compounds (e.g. clip^2) and produces visible edge darkening (especially
-    // around rounded corners) for common chains like blur -> custom refraction.
-    //
-    // To avoid this, we apply clip/mask only on the final step of the chain and keep intermediate
-    // steps unmasked.
-    apply_unpadded_chain_in_place(
-        passes,
-        &steps,
-        srcdst,
-        mode,
-        quality,
-        scissor,
-        group_raw,
-        effect_degradations,
-        effect_blur_quality,
-        ctx,
-        backdrop_source_group,
-        &mut chain_start,
     )
 }
 
