@@ -379,6 +379,11 @@ Current snapshot (2026-03-13):
     `crates/fret-render-wgpu/src/text/mod.rs`
   - `prepare_with_key(...)` is now a thin delegation layer and
     `crates/fret-render-wgpu/src/text/prepare/driver.rs` fully owns the live prepare flow
+- The eighty-eighth renderer shader split has landed:
+  - the scale-nearest WGSL sources now live under
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/*.wgsl`
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts the scale-nearest shader
+    family inline
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed

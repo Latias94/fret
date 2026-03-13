@@ -396,6 +396,11 @@ ID format:
 
 - [ ] RMFR-shaders-050 Audit whether `renderer/shaders.rs` needs ownership-oriented splitting or
   only comment/index cleanup.
+  - Landed so far:
+    - scale-nearest WGSL sources moved into
+      `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/{downsample_nearest,upscale_nearest,upscale_nearest_masked_part_a,upscale_nearest_masked_part_b,upscale_nearest_mask}.wgsl`
+    - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts the scale-nearest shader
+      family inline
 - [ ] RMFR-shaders-051 Avoid splitting shader source files purely for line count if no boundary
   benefit exists.
 - [ ] RMFR-shaders-052 Keep WGSL validation tests aligned with any source reorganization.
@@ -430,7 +435,7 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: `text/mod.rs` now delegates directly into `text/prepare/driver.rs`, and the temporary shim body is gone.
+  - Latest landed slice: scale-nearest WGSL now lives under `renderer/pipelines/wgsl/*.wgsl`, and `renderer/shaders.rs` no longer hosts that shader family inline.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:
