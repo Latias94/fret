@@ -11,7 +11,20 @@ Upstream sources:
 - Zed: https://github.com/zed-industries/zed
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-Status: In progress
+Status: historical background roadmap; active execution moved to
+`docs/workstreams/font-system-fearless-refactor-v1/` on 2026-03-13.
+
+Use this document for:
+
+- background rationale,
+- older roadmap context,
+- references that informed ADR 0257 / 0258 / 0259.
+
+Do not use this file as the live execution tracker. Use instead:
+
+- execution tracker: `docs/workstreams/font-system-fearless-refactor-v1/TODO.md`
+- execution design: `docs/workstreams/font-system-fearless-refactor-v1/DESIGN.md`
+- execution milestones: `docs/workstreams/font-system-fearless-refactor-v1/MILESTONES.md`
 
 This workstream focuses on the *font system* (not the entire text pipeline):
 

@@ -11,6 +11,9 @@ Upstream sources:
 - Zed: https://github.com/zed-industries/zed
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
+Status: background audit input for
+`docs/workstreams/font-system-fearless-refactor-v1/`; not a live execution tracker.
+
 Scope: **font enumeration**, **caching**, **fallback chain semantics**, and **variable font instance identity**.
 
 This audit is intended to inform and de-risk the active font-system workstream:

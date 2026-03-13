@@ -1,6 +1,13 @@
 # Workstream: Font Fallback Conformance v1 (Gates + Diagnostics)
 
-Status: In progress
+Status: background conformance planning note; active execution now lives in
+`docs/workstreams/font-system-fearless-refactor-v1/` (especially M4).
+
+Use this file for historical gate rationale. For the current execution lane, see:
+
+- `docs/workstreams/font-system-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/font-system-fearless-refactor-v1/TODO.md`
+- `docs/workstreams/font-system-fearless-refactor-v1/MILESTONES.md`
 
 This workstream defines **portable, CI-friendly conformance gates** for Fret’s text fallback behavior.
 
@@ -93,27 +100,32 @@ FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-tex
   --launch -- cargo run -p fret-ui-gallery --release
 ```
 
-### Gate 3: Bundled-only mixed-script baseline is tofu-free
+### Gate 3: Bundled-only mixed-script baseline is tofu-free and profile-auditable
 
-- Script: `tools/diag-scripts/ui-gallery-text-mixed-script-bundled-fallback-conformance.json`
+- Script: `tools/diag-scripts/ui-gallery/shadcn-conformance/ui-gallery-text-mixed-script-bundled-fallback-conformance.json`
 - Check flag: `--check-ui-gallery-text-mixed-script-bundled-fallback-conformance`
 
 Expected:
 
-- The script navigates to the text measure overlay page, which includes a mixed-script sample (`m你😀`).
+- The script starts directly on the dedicated mixed-script fallback page
+  (`text_mixed_script_fallback`) and captures a bundle after the page settles.
 - The gate asserts:
   - `system_fonts_enabled=false`
   - `prefer_common_fallback=true`
+  - bundled-profile defaults and common fallback candidates stay aligned with the bundled profile
+    contract
+  - bundle-scoped font trace evidence remains interpretable under bundled-only mode
+  - registered-font-blob counters stay populated
   - `frame_missing_glyphs=0`
 
 Run (native, deterministic):
 
 ```bash
-FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-text-mixed-script-bundled-fallback-conformance.json \
+FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/shadcn-conformance/ui-gallery-text-mixed-script-bundled-fallback-conformance.json \
   --env FRET_TEXT_SYSTEM_FONTS=0 \
   --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 \
   --check-ui-gallery-text-mixed-script-bundled-fallback-conformance \
-  --launch -- cargo run -p fret-ui-gallery --release
+  --launch -- cargo run -p fret-ui-gallery --release --features gallery-web-ime-harness
 ```
 
 ## Next (recommended)

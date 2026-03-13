@@ -19,7 +19,7 @@ Background inputs:
   - [x] `TODO.md`
   - [x] `MILESTONES.md`
 - [x] Cross-link the workstream from `docs/README.md`.
-- [ ] Decide which existing standalone font docs remain background/audit-only after this workstream
+- [x] Decide which existing standalone font docs remain background/audit-only after this workstream
   becomes the execution lane.
 - [ ] Identify the ADR rows and alignment notes that must be updated when code lands:
   - [x] ADR 0147
@@ -122,7 +122,7 @@ Regression gates:
 - [x] Bundled font roles and profile guarantees live in one manifest-backed surface.
 - [x] No-op rescan apply does not churn renderer caches or published keys.
 - [x] Bundled-only determinism is explicit rather than inferred from scattered family-name lists.
-- [ ] The remaining font docs can clearly distinguish:
-  - [ ] architecture/contracts
-  - [ ] execution tracker
-  - [ ] audits/background rationale
+- [x] The remaining font docs can clearly distinguish:
+  - [x] architecture/contracts
+  - [x] execution tracker
+  - [x] audits/background rationale
