@@ -13,6 +13,83 @@ pub(in crate::renderer) type SvgMaskAtlasInsert = (
     etagere::AllocId,
 );
 
+pub(super) enum SvgRegistryUnregisterOutcome {
+    Missing,
+    StillReferenced,
+    Removed,
+}
+
+pub(super) struct SvgRegistryState {
+    pub(super) renderer: SvgRenderer,
+    svgs: SlotMap<fret_core::SvgId, SvgEntry>,
+    hash_index: HashMap<u64, Vec<fret_core::SvgId>>,
+}
+
+impl SvgRegistryState {
+    pub(super) fn new() -> Self {
+        Self {
+            renderer: SvgRenderer::new(),
+            svgs: SlotMap::with_key(),
+            hash_index: HashMap::new(),
+        }
+    }
+
+    pub(super) fn bytes(&self, svg: fret_core::SvgId) -> Option<&[u8]> {
+        self.svgs.get(svg).map(|entry| entry.bytes.as_ref())
+    }
+
+    pub(super) fn register_svg(&mut self, bytes: &[u8]) -> fret_core::SvgId {
+        let hash = hash_bytes(bytes);
+        if let Some(ids) = self.hash_index.get(&hash) {
+            for &id in ids {
+                let Some(existing) = self.svgs.get(id) else {
+                    continue;
+                };
+                if existing.bytes.as_ref() == bytes {
+                    if let Some(entry) = self.svgs.get_mut(id) {
+                        entry.refs = entry.refs.saturating_add(1);
+                    }
+                    return id;
+                }
+            }
+        }
+
+        let id = self.svgs.insert(SvgEntry {
+            bytes: Arc::<[u8]>::from(bytes),
+            refs: 1,
+        });
+        self.hash_index.entry(hash).or_default().push(id);
+        id
+    }
+
+    pub(super) fn unregister_svg(&mut self, svg: fret_core::SvgId) -> SvgRegistryUnregisterOutcome {
+        let Some(refs) = self.svgs.get(svg).map(|entry| entry.refs) else {
+            return SvgRegistryUnregisterOutcome::Missing;
+        };
+
+        if refs > 1 {
+            if let Some(entry) = self.svgs.get_mut(svg) {
+                entry.refs = entry.refs.saturating_sub(1);
+            }
+            return SvgRegistryUnregisterOutcome::StillReferenced;
+        }
+
+        let Some(bytes) = self.svgs.remove(svg).map(|entry| entry.bytes) else {
+            return SvgRegistryUnregisterOutcome::Missing;
+        };
+
+        let hash = hash_bytes(&bytes);
+        if let Some(list) = self.hash_index.get_mut(&hash) {
+            list.retain(|id| *id != svg);
+            if list.is_empty() {
+                self.hash_index.remove(&hash);
+            }
+        }
+
+        SvgRegistryUnregisterOutcome::Removed
+    }
+}
+
 #[derive(Default, Clone, Copy)]
 pub(super) struct SvgFramePerfCounters {
     pub(super) raster_cache_hits: u64,
@@ -177,3 +254,34 @@ mod atlas;
 mod cache;
 mod prepare;
 mod raster;
+
+#[cfg(test)]
+mod tests {
+    use super::{SvgRegistryState, SvgRegistryUnregisterOutcome};
+
+    #[test]
+    fn registry_deduplicates_svg_bytes_and_tracks_refcounts() {
+        let mut state = SvgRegistryState::new();
+        let bytes = br#"<svg xmlns="http://www.w3.org/2000/svg"></svg>"#;
+
+        let first = state.register_svg(bytes);
+        let second = state.register_svg(bytes);
+
+        assert_eq!(first, second);
+        assert_eq!(state.bytes(first), Some(bytes.as_slice()));
+        assert!(matches!(
+            state.unregister_svg(first),
+            SvgRegistryUnregisterOutcome::StillReferenced
+        ));
+        assert_eq!(state.bytes(first), Some(bytes.as_slice()));
+        assert!(matches!(
+            state.unregister_svg(first),
+            SvgRegistryUnregisterOutcome::Removed
+        ));
+        assert_eq!(state.bytes(first), None);
+        assert!(matches!(
+            state.unregister_svg(first),
+            SvgRegistryUnregisterOutcome::Missing
+        ));
+    }
+}

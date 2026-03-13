@@ -382,51 +382,14 @@ impl fret_core::PathService for Renderer {
 
 impl fret_core::SvgService for Renderer {
     fn register_svg(&mut self, bytes: &[u8]) -> fret_core::SvgId {
-        let h = hash_bytes(bytes);
-        if let Some(ids) = self.svg_hash_index.get(&h) {
-            for &id in ids {
-                let Some(existing) = self.svgs.get(id) else {
-                    continue;
-                };
-                if existing.bytes.as_ref() == bytes {
-                    if let Some(entry) = self.svgs.get_mut(id) {
-                        entry.refs = entry.refs.saturating_add(1);
-                    }
-                    return id;
-                }
-            }
-        }
-
-        let id = self.svgs.insert(super::types::SvgEntry {
-            bytes: Arc::<[u8]>::from(bytes),
-            refs: 1,
-        });
-        self.svg_hash_index.entry(h).or_default().push(id);
-        id
+        self.svg_registry_state.register_svg(bytes)
     }
 
     fn unregister_svg(&mut self, svg: fret_core::SvgId) -> bool {
-        let Some(refs) = self.svgs.get(svg).map(|e| e.refs) else {
-            return false;
-        };
-
-        if refs > 1 {
-            if let Some(entry) = self.svgs.get_mut(svg) {
-                entry.refs = entry.refs.saturating_sub(1);
-            }
-            return true;
-        }
-
-        let Some(bytes) = self.svgs.remove(svg).map(|e| e.bytes) else {
-            return false;
-        };
-
-        let h = hash_bytes(&bytes);
-        if let Some(list) = self.svg_hash_index.get_mut(&h) {
-            list.retain(|id| *id != svg);
-            if list.is_empty() {
-                self.svg_hash_index.remove(&h);
-            }
+        match self.svg_registry_state.unregister_svg(svg) {
+            svg::SvgRegistryUnregisterOutcome::Missing => return false,
+            svg::SvgRegistryUnregisterOutcome::StillReferenced => return true,
+            svg::SvgRegistryUnregisterOutcome::Removed => {}
         }
 
         // Drop any cached rasterizations for this SVG.

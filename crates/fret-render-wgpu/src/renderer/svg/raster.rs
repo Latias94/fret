@@ -57,14 +57,15 @@ impl Renderer {
                 self.svg_raster_state.perf.cache_misses.saturating_add(1);
         }
 
-        let bytes = self.svgs.get(svg).map(|e| e.bytes.as_ref())?;
+        let bytes = self.svg_registry_state.bytes(svg)?;
         let target_box_px = (key.target_w, key.target_h);
 
         let (image, uv, size_px, approx_bytes, storage) = match kind {
             SvgRasterKind::AlphaMask => {
                 let t_raster = self.svg_raster_state.perf_enabled.then(Instant::now);
                 let mask = self
-                    .svg_renderer
+                    .svg_registry_state
+                    .renderer
                     .render_alpha_mask_fit_mode(bytes, target_box_px, SMOOTH_SVG_SCALE_FACTOR, fit)
                     .ok()?;
                 if let Some(t_raster) = t_raster {
@@ -135,7 +136,8 @@ impl Renderer {
             SvgRasterKind::Rgba => {
                 let t_raster = self.svg_raster_state.perf_enabled.then(Instant::now);
                 let rgba = self
-                    .svg_renderer
+                    .svg_registry_state
+                    .renderer
                     .render_rgba_fit_mode(bytes, target_box_px, SMOOTH_SVG_SCALE_FACTOR, fit)
                     .ok()?;
                 if let Some(t_raster) = t_raster {

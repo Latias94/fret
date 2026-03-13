@@ -125,9 +125,7 @@ pub struct Renderer {
     path_cache_capacity: usize,
     path_cache_epoch: u64,
 
-    svg_renderer: SvgRenderer,
-    svgs: SlotMap<fret_core::SvgId, SvgEntry>,
-    svg_hash_index: HashMap<u64, Vec<fret_core::SvgId>>,
+    svg_registry_state: svg::SvgRegistryState,
     svg_raster_state: svg::SvgRasterState,
 
     clip_path_mask_cache: ClipPathMaskCache,

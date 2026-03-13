@@ -347,6 +347,18 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu unpadded_custom_v3_chain_reserves_distinct_raw_target_when_available`
   - `cargo nextest run -p fret-render-wgpu padded_blur_then_custom_uses_work_buffer`
   - `cargo nextest run -p fret-render-wgpu custom_chain_budget_records_optional_mask_bytes`
+- The fourth renderer owner-state split has landed:
+  - SVG registry / service state now lives under
+    `crates/fret-render-wgpu/src/renderer/svg/mod.rs`
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns `svg_renderer`, `svgs`, or
+    `svg_hash_index` directly
+  - `services.rs` and `svg/raster.rs` now query that owner state instead of reaching into loose
+    renderer fields
+- Renderer svg-registry-state split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu registry_deduplicates_svg_bytes_and_tracks_refcounts`
+  - `cargo nextest run -p fret-render-wgpu svg_draw_rect_centers_contained_raster`
+  - `cargo nextest run -p fret-render-wgpu svg_draw_rect_width_can_overflow_height`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

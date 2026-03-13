@@ -219,6 +219,9 @@ For `Renderer` state-shell tightening, the same principle applies:
 - intermediate reuse pools are a model example of that pattern: budget knobs, reuse/eviction
   policy, and perf counters should move behind one owner shell so config, planning, and execution
   sites can share a single seam without changing degradation semantics.
+- registry-style shells are another good early target when they combine ID ownership, refcounting,
+  hash-based deduplication, and one service-local backend helper; separating SVG registry ownership
+  from SVG raster budget/atlas state keeps service paths from punching through one broad owner.
 
 ### 5. Tighten public exports after evidence exists
 

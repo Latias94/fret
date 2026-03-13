@@ -537,11 +537,14 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/intermediate_pool.rs`
     - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns intermediate budget/perf/pool
       fields directly
+    - SVG registry/service state owner moved into
+      `crates/fret-render-wgpu/src/renderer/svg/mod.rs`
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns `svg_renderer`, `svgs`, or
+      `svg_hash_index` directly
   - Current next hotspot:
-    - decide whether the remaining SVG registry/service shell (`svg_renderer`, `svgs`,
-      `svg_hash_index`) should move into its own owner or stay coupled to `services.rs` for now
-    - evaluate diagnostics state and remaining material/custom-effect runtime shells as the next
-      non-SVG owner-state cuts after `IntermediateState`
+    - evaluate diagnostics state as the next pure owner-state cut, especially
+      `perf_enabled/perf/last_frame_perf/render_scene_frame_index`
+    - evaluate remaining material/custom-effect runtime shells after diagnostics state
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG
@@ -555,6 +558,8 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/svg/mod.rs`
     - intermediate budget / perf / pool state now lives under
       `crates/fret-render-wgpu/src/renderer/intermediate_pool.rs`
+    - SVG registry / service state now lives under
+      `crates/fret-render-wgpu/src/renderer/svg/mod.rs`
 - [ ] RMFR-renderer-042 Reduce cross-domain mutable coupling inside `Renderer`.
 - [ ] RMFR-renderer-043 Keep service trait implementations readable after extraction.
 
@@ -712,10 +717,10 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: intermediate budget/perf/pool owner state now lives under
-    `crates/fret-render-wgpu/src/renderer/intermediate_pool.rs`, and
-    `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns intermediate budget/perf/pool
-    fields directly.
+  - Latest landed slice: SVG registry/service owner state now lives under
+    `crates/fret-render-wgpu/src/renderer/svg/mod.rs`, and
+    `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns `svg_renderer`, `svgs`, or
+    `svg_hash_index` directly.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:
