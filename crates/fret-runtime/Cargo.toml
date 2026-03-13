@@ -12,6 +12,7 @@ description = "Runtime abstractions and scheduling surfaces for host integration
 
 [dependencies]
 fret-core = { version = "0.1.0", path = "../fret-core" }
+fret-fonts = { version = "0.1.0", path = "../fret-fonts", default-features = false }
 slotmap.workspace = true
 serde.workspace = true
 serde_json.workspace = true

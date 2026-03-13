@@ -1,4 +1,5 @@
 use fret_core::TextFontFamilyConfig;
+use std::collections::HashSet;
 
 use crate::{FontCatalog, FontCatalogCache, FontCatalogEntry, FontCatalogMetadata, GlobalsHost};
 
@@ -27,6 +28,103 @@ pub struct FontCatalogUpdate {
     pub cache: FontCatalogCache,
     pub config: TextFontFamilyConfig,
     pub config_changed: bool,
+}
+
+fn merge_unique_family_candidates(lists: &[&[&str]]) -> Vec<String> {
+    let mut seen_lower: HashSet<String> = HashSet::new();
+    let mut out = Vec::new();
+    for list in lists {
+        for &family in *list {
+            let trimmed = family.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+            let key = trimmed.to_ascii_lowercase();
+            if seen_lower.insert(key) {
+                out.push(trimmed.to_string());
+            }
+        }
+    }
+    out
+}
+
+fn bundled_profile() -> &'static fret_fonts::BundledFontProfile {
+    fret_fonts::default_profile()
+}
+
+fn curated_ui_sans_candidates() -> Vec<String> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        merge_unique_family_candidates(&[bundled_profile().ui_sans_families])
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        merge_unique_family_candidates(&[
+            bundled_profile().ui_sans_families,
+            &[
+                "Segoe UI",
+                "Helvetica",
+                "Arial",
+                "Ubuntu",
+                "Adwaita Sans",
+                "Cantarell",
+                "Noto Sans",
+                "DejaVu Sans",
+            ],
+        ])
+    }
+}
+
+fn curated_ui_serif_candidates() -> Vec<String> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        merge_unique_family_candidates(&[bundled_profile().ui_serif_families])
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        merge_unique_family_candidates(&[
+            bundled_profile().ui_serif_families,
+            &["Noto Serif", "Times New Roman", "Georgia", "DejaVu Serif"],
+        ])
+    }
+}
+
+fn curated_ui_mono_candidates() -> Vec<String> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        merge_unique_family_candidates(&[bundled_profile().ui_mono_families])
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        merge_unique_family_candidates(&[
+            bundled_profile().ui_mono_families,
+            &["Consolas", "Menlo", "DejaVu Sans Mono", "Noto Sans Mono"],
+        ])
+    }
+}
+
+fn curated_common_fallback_candidates() -> Vec<String> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        merge_unique_family_candidates(&[bundled_profile().common_fallback_families])
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        merge_unique_family_candidates(&[
+            bundled_profile().common_fallback_families,
+            &[
+                "Noto Sans CJK JP",
+                "Noto Sans CJK TC",
+                "Microsoft YaHei UI",
+                "Microsoft YaHei",
+                "PingFang SC",
+                "Hiragino Sans",
+                "Apple Color Emoji",
+                "Segoe UI Emoji",
+                "Segoe UI Symbol",
+            ],
+        ])
+    }
 }
 
 fn apply_family_defaults_policy(
@@ -62,52 +160,16 @@ fn apply_family_defaults_policy(
         }
         FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates => {
             if config.ui_sans.is_empty() {
-                config.ui_sans = vec![
-                    "Inter".to_string(),
-                    "Segoe UI".to_string(),
-                    "Helvetica".to_string(),
-                    "Arial".to_string(),
-                    "Ubuntu".to_string(),
-                    "Adwaita Sans".to_string(),
-                    "Cantarell".to_string(),
-                    "Noto Sans".to_string(),
-                    "DejaVu Sans".to_string(),
-                ];
+                config.ui_sans = curated_ui_sans_candidates();
             }
             if config.ui_serif.is_empty() {
-                config.ui_serif = vec![
-                    "Noto Serif".to_string(),
-                    "Times New Roman".to_string(),
-                    "Georgia".to_string(),
-                    "DejaVu Serif".to_string(),
-                ];
+                config.ui_serif = curated_ui_serif_candidates();
             }
             if config.ui_mono.is_empty() {
-                config.ui_mono = vec![
-                    "JetBrains Mono".to_string(),
-                    "Fira Mono".to_string(),
-                    "Consolas".to_string(),
-                    "Menlo".to_string(),
-                    "DejaVu Sans Mono".to_string(),
-                    "Noto Sans Mono".to_string(),
-                ];
+                config.ui_mono = curated_ui_mono_candidates();
             }
             if config.common_fallback.is_empty() {
-                config.common_fallback = vec![
-                    // CJK
-                    "Noto Sans CJK SC".to_string(),
-                    "Noto Sans CJK JP".to_string(),
-                    "Noto Sans CJK TC".to_string(),
-                    "Microsoft YaHei UI".to_string(),
-                    "Microsoft YaHei".to_string(),
-                    "PingFang SC".to_string(),
-                    "Hiragino Sans".to_string(),
-                    // Emoji
-                    "Apple Color Emoji".to_string(),
-                    "Segoe UI Emoji".to_string(),
-                    "Segoe UI Symbol".to_string(),
-                    "Noto Color Emoji".to_string(),
-                ];
+                config.common_fallback = curated_common_fallback_candidates();
             }
         }
     }
@@ -263,7 +325,7 @@ mod tests {
     }
 
     #[test]
-    fn curated_defaults_append_known_emoji_families() {
+    fn curated_defaults_include_profile_and_platform_fallbacks() {
         let mut app = TestApp::default();
         let update = apply_font_catalog_update(
             &mut app,
@@ -271,6 +333,9 @@ mod tests {
             FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
         );
 
+        for family in fret_fonts::default_profile().common_fallback_families {
+            assert!(update.config.common_fallback.iter().any(|v| v == family));
+        }
         assert!(
             update
                 .config
@@ -284,13 +349,6 @@ mod tests {
                 .common_fallback
                 .iter()
                 .any(|v| v == "Segoe UI Emoji")
-        );
-        assert!(
-            update
-                .config
-                .common_fallback
-                .iter()
-                .any(|v| v == "Noto Color Emoji")
         );
     }
 

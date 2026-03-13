@@ -64,8 +64,8 @@ Regression gates:
   - [x] provided roles
   - [x] expected family names
   - [x] determinism guarantees
-- [ ] Move duplicated bundled-family knowledge out of:
-  - [ ] `fret-runtime` curated bootstrap defaults
+- [x] Move duplicated bundled-family knowledge out of:
+  - [x] `fret-runtime` curated bootstrap defaults
   - [x] renderer fallback-policy hard-coded wasm assumptions
   - [x] runner bootstrap special cases
 - [x] Decide whether the smallest web bootstrap profile guarantees `Serif` or explicitly does not.
