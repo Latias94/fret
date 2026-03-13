@@ -283,6 +283,9 @@ For `Renderer` state-shell tightening, the same principle applies:
   should split further by family. For larger effect families such as `CustomEffectV3`, the helper
   seam can also absorb pipeline/layout choice once the recorder still only differs by
   unmasked/uniform-mask/texture-mask mode, leaving source preparation and pass execution local.
+  Feature-local build subflows such as `CustomEffectV3` pyramid blit/downsample passes can then
+  move behind executor helpers as the next stage, so recorder modules stop owning pass-loop glue
+  once the surrounding orchestration has become thin enough.
 - render-text dump state is the matching diagnostics/export seam for text debugging:
   dump collection scratch and serialization scratch should move behind one owner so render-scene
   execution keeps only a thin bridge to `TextSystem`.

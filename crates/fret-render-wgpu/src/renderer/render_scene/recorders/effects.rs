@@ -1132,90 +1132,14 @@ pub(in super::super) fn record_custom_effect_v3_pass(
         let full_view = scratch.full_view;
 
         if !reuse {
-            exec.renderer.ensure_blit_pipeline(exec.device, exec.format);
-            exec.renderer
-                .ensure_mip_downsample_box_pipeline(exec.device, exec.format);
-
-            fn downsample_scissor_2x(
-                scissor: ScissorRect,
-                dst_size: (u32, u32),
-            ) -> Option<ScissorRect> {
-                if scissor.w == 0 || scissor.h == 0 {
-                    return None;
-                }
-                let x0 = scissor.x / 2;
-                let y0 = scissor.y / 2;
-                let x1 = scissor.x.saturating_add(scissor.w).saturating_add(1) / 2;
-                let y1 = scissor.y.saturating_add(scissor.h).saturating_add(1) / 2;
-                let x1 = x1.min(dst_size.0);
-                let y1 = y1.min(dst_size.1);
-                if x1 <= x0 || y1 <= y0 {
-                    return None;
-                }
-                Some(ScissorRect {
-                    x: x0,
-                    y: y0,
-                    w: x1 - x0,
-                    h: y1 - y0,
-                })
-            }
-
-            let mut pyramid_scissor = pass.pyramid_build_scissor.map(|s| s.0);
-
-            // Level 0: blit from src_raw into the pyramid scratch.
-            let blit_layout = exec.renderer.blit_bind_group_layout_ref();
-            let blit_bind_group = create_texture_bind_group(
-                exec.device,
-                "fret custom-effect v3 pyramid blit bind group",
-                blit_layout,
-                &src_raw_view,
-            );
-            run_fullscreen_triangle_pass(
-                &mut *exec.encoder,
-                "fret custom-effect v3 pyramid blit",
-                exec.renderer.blit_pipeline_ref(),
-                &mip_views[0],
-                mip_sizes[0],
-                wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-                &blit_bind_group,
-                &[],
-                pyramid_scissor.map(LocalScissorRect),
-                exec.perf_enabled.then_some(&mut *exec.frame_perf),
-            );
-
-            // Downsample chain: mip(i-1) -> mip(i) via a 2x2 box filter.
-            let downsample_layout = exec.renderer.mip_downsample_box_bind_group_layout_ref();
-
-            for level in 1..(mip_views.len() as u32) {
-                let src_level = (level - 1) as usize;
-                let bind_group = exec.device.create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: Some("fret mip downsample box bind group"),
-                    layout: downsample_layout,
-                    entries: &[wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: wgpu::BindingResource::TextureView(&mip_views[src_level]),
-                    }],
-                });
-                pyramid_scissor = pyramid_scissor
-                    .and_then(|s| downsample_scissor_2x(s, mip_sizes[level as usize]));
-                run_fullscreen_triangle_pass(
-                    &mut *exec.encoder,
-                    "fret mip downsample box pass",
-                    exec.renderer.mip_downsample_box_pipeline_ref(),
-                    &mip_views[level as usize],
-                    mip_sizes[level as usize],
-                    wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-                    &bind_group,
-                    &[],
-                    pyramid_scissor.map(LocalScissorRect),
-                    exec.perf_enabled.then_some(&mut *exec.frame_perf),
-                );
-            }
-
-            exec.set_custom_effect_v3_pyramid_cache(
+            exec.build_custom_effect_v3_pyramid(
                 pass.src_raw,
                 common.src_size,
                 pass.pyramid_levels,
+                pass.pyramid_build_scissor,
+                &src_raw_view,
+                &mip_views,
+                &mip_sizes,
             );
         }
 

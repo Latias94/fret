@@ -633,12 +633,17 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_bindings.rs`
     - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
       main `CustomEffectV3` bind-group descriptor branches or pipeline choice table directly
+    - `CustomEffectV3` pyramid build blit/downsample scissor projection and pass-loop glue now
+      live under `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+      pyramid-build loop directly; it now only decides whether to build and which pyramid view to
+      use afterward
   - Current next hotspot:
     - decide whether scene-encoding invalidation/debug evidence should stay coupled to
       `scene_encoding_cache.rs` or move closer to diagnostics state
-    - decide whether the `CustomEffectV3` pyramid build path should move its blit/downsample
-      bind-group and pass-loop glue behind a dedicated helper now that the main pass path has been
-      thinned
+    - decide whether the remaining `CustomEffectV3` source-preparation shell in `effects.rs`
+      should split again so pyramid/reuse selection and user-image fallback selection stop sharing
+      one recorder body
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG
