@@ -28,7 +28,7 @@ use fret_interaction::drag::DragThreshold as InteractionDragThreshold;
 use fret_interaction::runtime_drag::{
     DragMoveOutcome, update_immediate_move, update_thresholded_move,
 };
-use fret_runtime::{ActionId, DragPhase, FrameId};
+use fret_runtime::{ActionId, FrameId};
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::action::{
     DismissReason, DismissRequestCx, OnDismissRequest, PressablePointerDownResult,
@@ -1298,6 +1298,62 @@ fn drag_threshold_for<H: UiHost>(cx: &ElementContext<'_, H>) -> InteractionDragT
         .metric_by_key(crate::theme_tokens::metric::COMPONENT_IMUI_DRAG_THRESHOLD_PX)
         .unwrap_or(Px(DEFAULT_DRAG_THRESHOLD_PX));
     InteractionDragThreshold::new(px)
+}
+
+fn handle_pressable_drag_move_with_threshold(
+    host: &mut dyn fret_ui::action::UiPointerActionHost,
+    acx: fret_ui::action::ActionCx,
+    mv: fret_ui::action::PointerMoveCx,
+    active_item_model: &fret_runtime::Model<ImUiActiveItemState>,
+    long_press_signal_model: &fret_runtime::Model<LongPressSignalState>,
+    drag_kind: fret_runtime::DragKindId,
+    drag_threshold: InteractionDragThreshold,
+) -> bool {
+    let (outcome, was_dragging) = {
+        let Some(drag) = host.drag_mut(mv.pointer_id) else {
+            return false;
+        };
+        if drag.kind != drag_kind || drag.source_window != acx.window {
+            return false;
+        }
+
+        let was_dragging = drag.dragging;
+        let outcome = update_thresholded_move(
+            drag,
+            acx.window,
+            mv.position,
+            mv.buttons.left,
+            drag_threshold,
+        );
+        (outcome, was_dragging)
+    };
+
+    match outcome {
+        DragMoveOutcome::Canceled => {
+            if was_dragging {
+                host.record_transient_event(acx, KEY_DRAG_STOPPED);
+            }
+            let _ = host.update_model(active_item_model, |st| {
+                if st.active == Some(acx.target) {
+                    st.active = None;
+                }
+            });
+            host.cancel_drag(mv.pointer_id);
+            cancel_long_press_timer_for(host, long_press_signal_model);
+            host.notify(acx);
+            false
+        }
+        DragMoveOutcome::StartedDragging => {
+            cancel_long_press_timer_for(host, long_press_signal_model);
+            host.record_transient_event(acx, KEY_DRAG_STARTED);
+            host.notify(acx);
+            false
+        }
+        DragMoveOutcome::Continue => {
+            host.notify(acx);
+            false
+        }
+    }
 }
 
 fn item_spacing_x_metric_ref() -> crate::MetricRef {
@@ -3806,53 +3862,15 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
                 let drag_threshold = drag_threshold_for(cx);
                 cx.pressable_on_pointer_move(Arc::new(move |host, acx, mv| {
-                    let mut cancel_long_press = false;
-
-                    let Some(drag) = host.drag_mut(mv.pointer_id) else {
-                        return false;
-                    };
-                    if drag.kind != drag_kind_for_element(acx.target)
-                        || drag.source_window != acx.window
-                    {
-                        return false;
-                    }
-
-                    drag.current_window = acx.window;
-                    drag.position = mv.position;
-
-                    if !mv.buttons.left {
-                        cancel_long_press = true;
-                        if drag.dragging {
-                            drag.phase = DragPhase::Canceled;
-                            host.record_transient_event(acx, KEY_DRAG_STOPPED);
-                        }
-                        let _ = host.update_model(&active_item_model_for_move, |st| {
-                            if st.active == Some(acx.target) {
-                                st.active = None;
-                            }
-                        });
-                        host.cancel_drag(mv.pointer_id);
-                        if cancel_long_press {
-                            cancel_long_press_timer_for(host, &long_press_signal_model_for_move);
-                        }
-                        host.notify(acx);
-                        return false;
-                    }
-
-                    if !drag.dragging
-                        && drag_threshold.distance_sq_exceeded(drag.start_position, drag.position)
-                    {
-                        cancel_long_press = true;
-                        drag.dragging = true;
-                        drag.phase = DragPhase::Dragging;
-                        host.record_transient_event(acx, KEY_DRAG_STARTED);
-                    }
-
-                    if cancel_long_press {
-                        cancel_long_press_timer_for(host, &long_press_signal_model_for_move);
-                    }
-                    host.notify(acx);
-                    false
+                    handle_pressable_drag_move_with_threshold(
+                        host,
+                        acx,
+                        mv,
+                        &active_item_model_for_move,
+                        &long_press_signal_model_for_move,
+                        drag_kind_for_element(acx.target),
+                        drag_threshold,
+                    )
                 }));
 
                 cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
@@ -4072,53 +4090,15 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
                 let drag_threshold = drag_threshold_for(cx);
                 cx.pressable_on_pointer_move(Arc::new(move |host, acx, mv| {
-                    let mut cancel_long_press = false;
-
-                    let Some(drag) = host.drag_mut(mv.pointer_id) else {
-                        return false;
-                    };
-                    if drag.kind != drag_kind_for_element(acx.target)
-                        || drag.source_window != acx.window
-                    {
-                        return false;
-                    }
-
-                    drag.current_window = acx.window;
-                    drag.position = mv.position;
-
-                    if !mv.buttons.left {
-                        cancel_long_press = true;
-                        if drag.dragging {
-                            drag.phase = DragPhase::Canceled;
-                            host.record_transient_event(acx, KEY_DRAG_STOPPED);
-                        }
-                        let _ = host.update_model(&active_item_model_for_move, |st| {
-                            if st.active == Some(acx.target) {
-                                st.active = None;
-                            }
-                        });
-                        host.cancel_drag(mv.pointer_id);
-                        if cancel_long_press {
-                            cancel_long_press_timer_for(host, &long_press_signal_model_for_move);
-                        }
-                        host.notify(acx);
-                        return false;
-                    }
-
-                    if !drag.dragging
-                        && drag_threshold.distance_sq_exceeded(drag.start_position, drag.position)
-                    {
-                        cancel_long_press = true;
-                        drag.dragging = true;
-                        drag.phase = DragPhase::Dragging;
-                        host.record_transient_event(acx, KEY_DRAG_STARTED);
-                    }
-
-                    if cancel_long_press {
-                        cancel_long_press_timer_for(host, &long_press_signal_model_for_move);
-                    }
-                    host.notify(acx);
-                    false
+                    handle_pressable_drag_move_with_threshold(
+                        host,
+                        acx,
+                        mv,
+                        &active_item_model_for_move,
+                        &long_press_signal_model_for_move,
+                        drag_kind_for_element(acx.target),
+                        drag_threshold,
+                    )
                 }));
 
                 cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
