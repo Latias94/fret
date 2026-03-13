@@ -419,6 +419,10 @@ ID format:
     - `MASK_SHADER` WGSL source moved into
       `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/mask.wgsl`
     - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts `MASK_SHADER` inline
+    - `PATH_CLIP_MASK_SHADER` WGSL source moved into
+      `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/path_clip_mask.wgsl`
+    - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts
+      `PATH_CLIP_MASK_SHADER` inline
 - [ ] RMFR-shaders-051 Avoid splitting shader source files purely for line count if no boundary
   benefit exists.
 - [~] RMFR-shaders-052 Keep WGSL validation tests aligned with any source reorganization.
@@ -428,6 +432,9 @@ ID format:
     - the existing WGSL parse/WebGPU validation coverage in
       `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover `MASK_SHADER` without
       test-surface changes
+    - the existing WGSL parse/WebGPU validation coverage in
+      `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover
+      `PATH_CLIP_MASK_SHADER` without test-surface changes
 
 ---
 
