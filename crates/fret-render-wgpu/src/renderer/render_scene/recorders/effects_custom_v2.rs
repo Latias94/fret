@@ -1,10 +1,10 @@
 use super::super::super::*;
 use super::super::executor::{RecordPassCtx, RenderSceneExecutor};
 use super::blit::record_fullscreen_blit_pass;
-use super::effects::pack_effect_params_v1;
 use super::effects_bindings::{
     CustomEffectV2BindGroupResources, create_custom_effect_v2_bind_group,
 };
+use super::effects_shared::pack_effect_params_v1;
 
 fn resolve_custom_effect_filterable_user_image_view<'a>(
     renderer: &'a Renderer,

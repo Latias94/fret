@@ -676,11 +676,16 @@ ID format:
     - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
       `ClipMask` recorder path; `recorders/mod.rs` now re-exports it directly from the
       family-local module while shared clip-mask pipeline and pass helpers stay in shared seams
+    - the remaining shared fullscreen helper flow now also lives under
+      `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_shared.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now keeps only the
+      remaining recorder family entrypoints while shared parameter packing and fullscreen
+      param/texture helper flow moved behind that dedicated helper module
   - Current next hotspot:
-    - decide whether the remaining shared fullscreen utility paths in `effects.rs` should now split
-      into a dedicated shared-helper module, or whether the current `effects.rs` surface is the
-      right long-term home for `CustomEffectV1`, `AlphaThreshold`, `ColorAdjust`, `ColorMatrix`,
-      `Dither`, and `Noise`
+    - decide whether the remaining recorder families in `effects.rs` should now split further by
+      family, or whether the current post-helper-extraction surface is already the right long-term
+      home for `CustomEffectV1`, `AlphaThreshold`, `ColorAdjust`, `ColorMatrix`, `Dither`,
+      `Noise`, and `DropShadow`
     - decide whether render-plan / scene-encoding diagnostics should converge further behind one
       reporting seam, or whether adjacent owner-specific companion modules are the better v1 shape
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:

@@ -7,6 +7,7 @@ mod effects_clip_mask;
 mod effects_composite;
 mod effects_custom_v2;
 mod effects_custom_v3;
+mod effects_shared;
 mod path_clip_mask;
 mod path_msaa;
 mod scale_nearest;

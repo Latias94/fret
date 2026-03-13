@@ -4,11 +4,11 @@ use super::super::executor_recorders::{
     CustomEffectV3PreparedSourceViews, CustomEffectV3PreparedUserImages,
 };
 use super::blit::record_fullscreen_blit_pass;
-use super::effects::pack_effect_params_v1;
 use super::effects_bindings::{
     CustomEffectV3BindGroupMode, CustomEffectV3BindGroupResources,
     create_custom_effect_v3_pipeline_and_bind_group,
 };
+use super::effects_shared::pack_effect_params_v1;
 
 fn record_custom_effect_v3_fallback_blit(
     exec: &mut RenderSceneExecutor<'_>,

@@ -363,6 +363,12 @@ As of 2026-03-13:
   - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
     `ClipMask` path; `recorders/mod.rs` now re-exports it from the family-local module while the
     shared clip-mask pipeline and pass helpers stay in their existing shared seams.
+- The remaining shared fullscreen helper seam has also been split:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_shared.rs` now owns the
+    shared fullscreen parameter/texture helper flow plus `pack_effect_params_v1(...)`.
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now keeps only the
+    remaining recorder family entrypoints for `CustomEffectV1`, `AlphaThreshold`, `ColorAdjust`,
+    `ColorMatrix`, `Dither`, `Noise`, and `DropShadow`.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

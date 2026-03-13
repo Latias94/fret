@@ -43,6 +43,11 @@ Current snapshot (2026-03-13):
     routing, and final triangle-pass dispatch
   - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
     `ClipMask` recorder path at all
+- The latest shared fullscreen-helper split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_shared.rs` now owns the
+    shared fullscreen parameter/texture helper flow plus `pack_effect_params_v1(...)`
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now keeps only the
+    remaining recorder family entrypoints
 - v1 start decisions are now locked:
   - no new renderer crates in v1,
   - `fret-render` stays the stable default facade,
@@ -794,6 +799,14 @@ Current snapshot (2026-03-13):
     `ClipMask` recorder path at all, and `recorders/mod.rs` now re-exports that entrypoint
     directly from the family-local module
   - the slice does not change effect semantics; it only finishes the family-local ownership move
+- The thirty-fifth renderer shared-fullscreen-helper split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_shared.rs` now owns the
+    shared fullscreen parameter/texture helper flow plus `pack_effect_params_v1(...)`
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now keeps only the
+    remaining recorder family entrypoints while `CustomEffectV2`/`CustomEffectV3` also import the
+    shared parameter packing helper from the dedicated module
+  - the slice does not change effect semantics; it only removes the last shared-helper bucket from
+    the parent recorder-family module
 - Renderer custom-v3-dispatch split verification remains green:
   - `cargo check -p fret-render-wgpu --tests`
   - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
@@ -826,6 +839,16 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_compiles_and_runs_in_masked_path`
   - `cargo nextest run -p fret-render-wgpu gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite`
   - `cargo nextest run -p fret-render-wgpu gpu_backdrop_pixelate_respects_rounded_clip_stack_on_writeback`
+- Renderer shared-fullscreen-helper split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu dither_compiles_to_pass`
+  - `cargo nextest run -p fret-render-wgpu noise_compiles_to_pass`
+  - `cargo nextest run -p fret-render-wgpu color_matrix_compiles_to_pass`
+  - `cargo nextest run -p fret-render-wgpu color_adjust_missing_scratch_increments_effect_degradations`
+  - `cargo nextest run -p fret-render-wgpu gpu_alpha_threshold_hard_and_soft`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v1_can_read_render_space_in_fragment`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_can_sample_user_image_and_respects_sampling_hint`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_src_raw_is_chain_root_and_differs_from_src_after_prior_step`
 - Scene-encoding cache diagnostics split verification remains green:
   - `cargo check -p fret-render-wgpu --tests`
   - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`

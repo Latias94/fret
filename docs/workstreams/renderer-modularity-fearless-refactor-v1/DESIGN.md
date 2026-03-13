@@ -307,6 +307,10 @@ For `Renderer` state-shell tightening, the same principle applies:
   `recorders/effects.rs`. Small fullscreen utility families such as `ClipMask` follow the same
   rule when they only consume shared pipeline/pass helpers plus executor allocation/uniform access:
   once the entrypoint is self-contained, it should move out of `recorders/effects.rs` as well.
+  After those recorder-specific entrypoints are moved, any residual fullscreen param/texture
+  helper flow should also collapse into a dedicated shared-helper module so the parent
+  `recorders/effects.rs` file can be evaluated purely as a recorder-family owner instead of as a
+  mixed family-plus-helper bucket.
 - render-text dump state is the matching diagnostics/export seam for text debugging:
   dump collection scratch and serialization scratch should move behind one owner so render-scene
   execution keeps only a thin bridge to `TextSystem`.
