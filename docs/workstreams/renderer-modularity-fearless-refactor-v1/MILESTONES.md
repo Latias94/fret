@@ -128,6 +128,16 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu padded_blur_then_custom_uses_work_buffer`
   - `cargo nextest run -p fret-render-wgpu custom_v3_pyramid_budget_pressure_degrades_to_one_and_records_counters`
   - `cargo nextest run -p fret-render-wgpu custom_v3_sources_plan_honors_group_pyramid_choice_and_group_roi`
+- The fourth renderer effect-planning split has landed:
+  - backdrop step-apply flow now lives under
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects/builtin.rs`
+  - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns
+    `BackdropWarpV1`/`BackdropWarpV2` step-apply branch handling directly
+- Renderer backdrop-step split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu backdrop_warp_v2_image_field_compiles_to_backdrop_warp_pass`
+  - `cargo nextest run -p fret-render-wgpu chain_applies_clip_only_on_final_step`
+  - `cargo nextest run -p fret-render-wgpu custom_v3_pyramid_budget_pressure_degrades_to_one_and_records_counters`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

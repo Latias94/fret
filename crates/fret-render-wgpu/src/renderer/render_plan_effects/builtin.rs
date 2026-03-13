@@ -536,6 +536,157 @@ pub(super) fn append_backdrop_warp_in_place_single_scratch(
     }));
 }
 
+fn prepare_backdrop_warp_single_scratch(
+    scratch_targets: &[PlanTarget],
+    mode: fret_core::EffectMode,
+    budget_bytes: u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    viewport_size: (u32, u32),
+    format: wgpu::TextureFormat,
+) -> Option<PlanTarget> {
+    if mode != fret_core::EffectMode::Backdrop {
+        return None;
+    }
+
+    effect_degradations.backdrop_warp.requested = effect_degradations
+        .backdrop_warp
+        .requested
+        .saturating_add(1);
+    if !backdrop_warp_enabled(viewport_size, format, budget_bytes) {
+        if budget_bytes == 0 {
+            effect_degradations.backdrop_warp.degraded_budget_zero = effect_degradations
+                .backdrop_warp
+                .degraded_budget_zero
+                .saturating_add(1);
+        } else {
+            effect_degradations
+                .backdrop_warp
+                .degraded_budget_insufficient = effect_degradations
+                .backdrop_warp
+                .degraded_budget_insufficient
+                .saturating_add(1);
+        }
+        return None;
+    }
+    let Some(&scratch) = scratch_targets.first() else {
+        effect_degradations.backdrop_warp.degraded_target_exhausted = effect_degradations
+            .backdrop_warp
+            .degraded_target_exhausted
+            .saturating_add(1);
+        return None;
+    };
+    effect_degradations.backdrop_warp.applied =
+        effect_degradations.backdrop_warp.applied.saturating_add(1);
+    Some(scratch)
+}
+
+pub(super) fn apply_backdrop_warp_v1_step(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    mode: fret_core::EffectMode,
+    scissor: ScissorRect,
+    warp: fret_core::scene::BackdropWarpV1,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+) {
+    let Some(scratch) = prepare_backdrop_warp_single_scratch(
+        scratch_targets,
+        mode,
+        *budget_bytes,
+        effect_degradations,
+        ctx.viewport_size,
+        ctx.format,
+    ) else {
+        return;
+    };
+
+    append_backdrop_warp_in_place_single_scratch(
+        passes,
+        srcdst,
+        scratch,
+        ctx.viewport_size,
+        scissor,
+        scale_backdrop_warp_v1(warp.sanitize(), ctx.scale_factor),
+        ctx.clear,
+        None,
+        None,
+    );
+}
+
+pub(super) fn apply_backdrop_warp_v2_step(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    mode: fret_core::EffectMode,
+    scissor: ScissorRect,
+    warp: fret_core::scene::BackdropWarpV2,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+) {
+    let Some(scratch) = prepare_backdrop_warp_single_scratch(
+        scratch_targets,
+        mode,
+        *budget_bytes,
+        effect_degradations,
+        ctx.viewport_size,
+        ctx.format,
+    ) else {
+        return;
+    };
+
+    // Scissored in-place pattern: preserve outside-region content by pre-blitting into scratch.
+    passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+        src: srcdst,
+        dst: scratch,
+        src_size: ctx.viewport_size,
+        dst_size: ctx.viewport_size,
+        dst_scissor: None,
+        encode_output_srgb: false,
+        load: wgpu::LoadOp::Clear(ctx.clear),
+    }));
+
+    let base = warp.base.sanitize();
+    let (warp_image, warp_uv, warp_sampling, warp_encoding) = match warp.field {
+        fret_core::scene::BackdropWarpFieldV2::Procedural => (
+            None,
+            fret_core::scene::UvRect::FULL,
+            fret_core::scene::ImageSamplingHint::Default,
+            fret_core::scene::WarpMapEncodingV1::RgSigned,
+        ),
+        fret_core::scene::BackdropWarpFieldV2::ImageDisplacementMap {
+            image,
+            uv,
+            sampling,
+            encoding,
+        } => (Some(image), uv, sampling, encoding),
+    };
+
+    passes.push(RenderPlanPass::BackdropWarp(BackdropWarpPass {
+        src: scratch,
+        dst: srcdst,
+        src_size: ctx.viewport_size,
+        dst_size: ctx.viewport_size,
+        origin_px: (scissor.x, scissor.y),
+        bounds_size_px: (scissor.w, scissor.h),
+        dst_scissor: Some(LocalScissorRect(scissor)),
+        mask_uniform_index: None,
+        mask: None,
+        strength_px: base.strength_px.0 * ctx.scale_factor,
+        scale_px: base.scale_px.0 * ctx.scale_factor,
+        phase: base.phase,
+        chromatic_aberration_px: base.chromatic_aberration_px.0 * ctx.scale_factor,
+        kind: base.kind,
+        warp_image,
+        warp_uv,
+        warp_sampling,
+        warp_encoding,
+        load: wgpu::LoadOp::Load,
+    }));
+}
+
 #[allow(dead_code)]
 pub(super) fn append_color_matrix_in_place_single_scratch(
     passes: &mut Vec<RenderPlanPass>,

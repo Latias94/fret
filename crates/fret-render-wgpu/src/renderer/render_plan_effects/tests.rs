@@ -532,6 +532,82 @@ fn noise_compiles_to_pass() {
 }
 
 #[test]
+fn backdrop_warp_v2_image_field_compiles_to_backdrop_warp_pass() {
+    let ctx = EffectCompileCtx {
+        viewport_size: (64, 64),
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 2.0,
+    };
+    let scissor = ScissorRect {
+        x: 4,
+        y: 6,
+        w: 20,
+        h: 18,
+    };
+    let image = fret_core::ImageId::default();
+    let uv = fret_core::scene::UvRect {
+        u0: 0.1,
+        v0: 0.2,
+        u1: 0.8,
+        v1: 0.9,
+    };
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::Backdrop,
+        fret_core::EffectChain::from_steps(&[fret_core::EffectStep::BackdropWarpV2(
+            fret_core::scene::BackdropWarpV2 {
+                base: fret_core::scene::BackdropWarpV1 {
+                    strength_px: fret_core::Px(3.0),
+                    scale_px: fret_core::Px(12.0),
+                    phase: 0.5,
+                    chromatic_aberration_px: fret_core::Px(1.0),
+                    kind: fret_core::scene::BackdropWarpKindV1::Wave,
+                },
+                field: fret_core::scene::BackdropWarpFieldV2::ImageDisplacementMap {
+                    image,
+                    uv,
+                    sampling: fret_core::scene::ImageSamplingHint::Nearest,
+                    encoding: fret_core::scene::WarpMapEncodingV1::NormalRgb,
+                },
+            },
+        )]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        None,
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    );
+
+    let pass = passes.iter().find_map(|p| match p {
+        RenderPlanPass::BackdropWarp(pass) => Some(pass),
+        _ => None,
+    });
+    assert!(
+        pass.is_some_and(|pass| {
+            pass.warp_image == Some(image)
+                && pass.warp_uv == uv
+                && pass.warp_sampling == fret_core::scene::ImageSamplingHint::Nearest
+                && pass.warp_encoding == fret_core::scene::WarpMapEncodingV1::NormalRgb
+                && pass.origin_px == (scissor.x, scissor.y)
+                && pass.bounds_size_px == (scissor.w, scissor.h)
+                && pass.dst_scissor == Some(LocalScissorRect(scissor))
+        }),
+        "BackdropWarpV2 should preserve image-field settings when compiling the pass"
+    );
+}
+
+#[test]
 fn gaussian_blur_budget_zero_increments_effect_degradations() {
     let ctx = EffectCompileCtx {
         viewport_size: (64, 64),

@@ -97,8 +97,9 @@ use self::builtin::{
     append_color_adjust_in_place_single_scratch, append_color_matrix_in_place_single_scratch,
     append_dither_in_place_single_scratch, append_noise_in_place_single_scratch,
     append_pixelate_in_place_single_scratch, append_scissored_blur_in_place_single_scratch,
-    append_scissored_blur_in_place_two_scratch, choose_clip_mask_target_capped,
-    effect_blur_desired_downsample, scale_backdrop_warp_v1,
+    append_scissored_blur_in_place_two_scratch, apply_backdrop_warp_v1_step,
+    apply_backdrop_warp_v2_step, choose_clip_mask_target_capped, effect_blur_desired_downsample,
+    scale_backdrop_warp_v1,
 };
 use self::custom::{
     append_custom_effect_in_place_single_scratch, append_custom_effect_v2_in_place_single_scratch,
@@ -1863,132 +1864,30 @@ fn apply_step_in_place_with_scratch_targets(
             );
         }
         fret_core::EffectStep::BackdropWarpV1(w) => {
-            if mode != fret_core::EffectMode::Backdrop {
-                return;
-            }
-            effect_degradations.backdrop_warp.requested = effect_degradations
-                .backdrop_warp
-                .requested
-                .saturating_add(1);
-            if !backdrop_warp_enabled(ctx.viewport_size, ctx.format, *budget_bytes) {
-                if *budget_bytes == 0 {
-                    effect_degradations.backdrop_warp.degraded_budget_zero = effect_degradations
-                        .backdrop_warp
-                        .degraded_budget_zero
-                        .saturating_add(1);
-                } else {
-                    effect_degradations
-                        .backdrop_warp
-                        .degraded_budget_insufficient = effect_degradations
-                        .backdrop_warp
-                        .degraded_budget_insufficient
-                        .saturating_add(1);
-                }
-                return;
-            }
-            let Some(&scratch) = scratch_targets.first() else {
-                effect_degradations.backdrop_warp.degraded_target_exhausted = effect_degradations
-                    .backdrop_warp
-                    .degraded_target_exhausted
-                    .saturating_add(1);
-                return;
-            };
-            effect_degradations.backdrop_warp.applied =
-                effect_degradations.backdrop_warp.applied.saturating_add(1);
-            append_backdrop_warp_in_place_single_scratch(
+            apply_backdrop_warp_v1_step(
                 passes,
+                scratch_targets,
                 srcdst,
-                scratch,
-                ctx.viewport_size,
+                mode,
                 scissor,
-                scale_backdrop_warp_v1(w.sanitize(), ctx.scale_factor),
-                ctx.clear,
-                None,
-                None,
+                w,
+                ctx,
+                budget_bytes,
+                effect_degradations,
             );
         }
         fret_core::EffectStep::BackdropWarpV2(w) => {
-            if mode != fret_core::EffectMode::Backdrop {
-                return;
-            }
-            effect_degradations.backdrop_warp.requested = effect_degradations
-                .backdrop_warp
-                .requested
-                .saturating_add(1);
-            if !backdrop_warp_enabled(ctx.viewport_size, ctx.format, *budget_bytes) {
-                if *budget_bytes == 0 {
-                    effect_degradations.backdrop_warp.degraded_budget_zero = effect_degradations
-                        .backdrop_warp
-                        .degraded_budget_zero
-                        .saturating_add(1);
-                } else {
-                    effect_degradations
-                        .backdrop_warp
-                        .degraded_budget_insufficient = effect_degradations
-                        .backdrop_warp
-                        .degraded_budget_insufficient
-                        .saturating_add(1);
-                }
-                return;
-            }
-            let Some(&scratch) = scratch_targets.first() else {
-                effect_degradations.backdrop_warp.degraded_target_exhausted = effect_degradations
-                    .backdrop_warp
-                    .degraded_target_exhausted
-                    .saturating_add(1);
-                return;
-            };
-            effect_degradations.backdrop_warp.applied =
-                effect_degradations.backdrop_warp.applied.saturating_add(1);
-
-            // Scissored in-place pattern: preserve outside-region content by pre-blitting into scratch.
-            passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
-                src: srcdst,
-                dst: scratch,
-                src_size: ctx.viewport_size,
-                dst_size: ctx.viewport_size,
-                dst_scissor: None,
-                encode_output_srgb: false,
-                load: wgpu::LoadOp::Clear(ctx.clear),
-            }));
-
-            let base = w.base.sanitize();
-            let (warp_image, warp_uv, warp_sampling, warp_encoding) = match w.field {
-                fret_core::scene::BackdropWarpFieldV2::Procedural => (
-                    None,
-                    fret_core::scene::UvRect::FULL,
-                    fret_core::scene::ImageSamplingHint::Default,
-                    fret_core::scene::WarpMapEncodingV1::RgSigned,
-                ),
-                fret_core::scene::BackdropWarpFieldV2::ImageDisplacementMap {
-                    image,
-                    uv,
-                    sampling,
-                    encoding,
-                } => (Some(image), uv, sampling, encoding),
-            };
-
-            passes.push(RenderPlanPass::BackdropWarp(BackdropWarpPass {
-                src: scratch,
-                dst: srcdst,
-                src_size: ctx.viewport_size,
-                dst_size: ctx.viewport_size,
-                origin_px: (scissor.x, scissor.y),
-                bounds_size_px: (scissor.w, scissor.h),
-                dst_scissor: Some(LocalScissorRect(scissor)),
-                mask_uniform_index: None,
-                mask: None,
-                strength_px: base.strength_px.0 * ctx.scale_factor,
-                scale_px: base.scale_px.0 * ctx.scale_factor,
-                phase: base.phase,
-                chromatic_aberration_px: base.chromatic_aberration_px.0 * ctx.scale_factor,
-                kind: base.kind,
-                warp_image,
-                warp_uv,
-                warp_sampling,
-                warp_encoding,
-                load: wgpu::LoadOp::Load,
-            }));
+            apply_backdrop_warp_v2_step(
+                passes,
+                scratch_targets,
+                srcdst,
+                mode,
+                scissor,
+                w,
+                ctx,
+                budget_bytes,
+                effect_degradations,
+            );
         }
         fret_core::EffectStep::NoiseV1(n) => {
             effect_degradations.noise.requested =
