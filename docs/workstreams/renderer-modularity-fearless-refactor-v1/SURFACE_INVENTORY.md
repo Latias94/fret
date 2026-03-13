@@ -149,31 +149,45 @@ Rationale:
 The following exports also have low or niche first-party usage, but are deferred from the first
 shrink slice because they are closer to diagnostics or structured public output:
 
-- `AdapterCapabilities`
-- `StreamingImageCapabilities`
-- `BlurQualityCounters`
-- `EffectDegradationCounters`
 - `EffectDegradationSnapshot`
 - `IntermediatePerfSnapshot`
 - `RenderPerfSnapshot`
 - `SvgPerfSnapshot`
+
+These may still move out of the default facade later, but they need a more explicit decision on
+how much diagnostics depth `crates/fret-render` is supposed to expose by default.
+
+## Nested detail structs retired from the default facade
+
+The following leaf/detail structs had no first-party consumers outside `crates/fret-render*` during
+the 2026-03-13 rescan and have now been removed from `crates/fret-render`:
+
+- `AdapterCapabilities`
+- `StreamingImageCapabilities`
+- `BlurQualityCounters`
+- `EffectDegradationCounters`
 - `WgpuAllocatorReportSummary`
 - `WgpuAllocatorReportTopAllocation`
 - `WgpuInitAttemptSnapshot`
 
-These may still move out of the default facade later, but they need a more explicit decision on
-how much diagnostics depth `crates/fret-render` is supposed to expose by default.
+Rationale:
+
+- they are detail rows nested inside still-public parent snapshots/stores,
+- they are not part of the primary default-facade teaching surface,
+- and first-party callers did not need source changes after the shrink.
 
 ## Stable v1 Facade Closure (2026-03-13)
 
 The stable default-facade contract for v1 is now intentionally described as:
 
 1. Buckets A through E are the public default-facade story.
-2. Deferred-review diagnostics types remain available, but they are not the primary teaching
+2. Nested diagnostics detail structs may stay backend-only even when their parent snapshots/stores
+   remain on the default facade.
+3. Deferred-review diagnostics types remain available, but they are not the primary teaching
    surface.
-3. `crates/fret-render/tests/facade_surface_snapshot.rs` is the external compile-time gate for the
+4. `crates/fret-render/tests/facade_surface_snapshot.rs` is the external compile-time gate for the
    chosen buckets.
-4. `crates/fret-render/src/lib.rs` and `docs/crate-usage-guide.md` are the public prose anchors
+5. `crates/fret-render/src/lib.rs` and `docs/crate-usage-guide.md` are the public prose anchors
    for this facade story.
 
 ## Current v1 Recommendation

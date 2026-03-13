@@ -78,8 +78,13 @@ ID format:
   - Stable buckets are now recorded in
     `docs/workstreams/renderer-modularity-fearless-refactor-v1/SURFACE_INVENTORY.md`.
   - External snapshot gate lives in `crates/fret-render/tests/facade_surface_snapshot.rs`.
-- [~] RMFR-facade-012 Decide which current `fret-render-wgpu` exports should stop being re-exported
+- [x] RMFR-facade-012 Decide which current `fret-render-wgpu` exports should stop being re-exported
   by the default facade.
+  - Removed nested leaf/detail structs with zero first-party consumers from `crates/fret-render`:
+    `AdapterCapabilities`, `StreamingImageCapabilities`, `BlurQualityCounters`,
+    `EffectDegradationCounters`, `WgpuAllocatorReportSummary`,
+    `WgpuAllocatorReportTopAllocation`, `WgpuInitAttemptSnapshot`.
+  - Parent snapshots/stores remain on the default facade for now.
 - [ ] RMFR-facade-013 Move or alias portable value contracts from backend-owned exports to
   `fret-render-core` where that improves ownership clarity.
 - [x] RMFR-facade-014 Document the intended stable meaning of `crates/fret-render`.
@@ -520,7 +525,8 @@ ID format:
   facade or under a more explicit backend namespace.
 - [ ] RMFR-exports-062 Confirm whether `WgpuContext` remains a stable convenience surface or should
   be demoted in guidance.
-- [ ] RMFR-exports-063 Update first-party callers after any facade shrink.
+- [x] RMFR-exports-063 Update first-party callers after any facade shrink.
+  - No first-party caller updates were required for the nested-detail shrink landed on 2026-03-13.
 
 ---
 

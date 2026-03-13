@@ -87,6 +87,8 @@ As of 2026-03-13:
 - The stable v1 default-facade buckets are now explicit in:
   - `docs/workstreams/renderer-modularity-fearless-refactor-v1/SURFACE_INVENTORY.md`
   - `crates/fret-render/tests/facade_surface_snapshot.rs`
+- The default facade no longer re-exports nested diagnostics/detail leaf structs that had zero
+  first-party consumers; those now stay backend-specific.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

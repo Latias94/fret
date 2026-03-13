@@ -1,19 +1,16 @@
 use fret_render::{
-    AdapterCapabilities, BlurQualityCounters, BlurQualitySnapshot, ClearColor,
-    EffectDegradationCounters, EffectDegradationSnapshot, ImageColorSpace, ImageDescriptor,
+    BlurQualitySnapshot, ClearColor, EffectDegradationSnapshot, ImageColorSpace, ImageDescriptor,
     IntermediatePerfSnapshot, RenderError, RenderPerfSnapshot, RenderSceneParams,
     RenderTargetAlphaMode, RenderTargetColorEncoding, RenderTargetColorPrimaries,
     RenderTargetColorRange, RenderTargetColorSpace, RenderTargetDescriptor,
     RenderTargetIngestStrategy, RenderTargetMatrixCoefficients, RenderTargetMetadata,
     RenderTargetOrientation, RenderTargetRotation, RenderTargetTransferFunction, Renderer,
-    RendererCapabilities, RendererPerfFrameSample, RendererPerfFrameStore,
-    StreamingImageCapabilities, SurfaceState, SvgAlphaMask, SvgPerfSnapshot, SvgRgbaImage,
-    UploadedRgba8Image, WgpuAdapterSelectionSnapshot, WgpuAllocatorReportFrameSample,
-    WgpuAllocatorReportFrameStore, WgpuAllocatorReportSummary, WgpuAllocatorReportTopAllocation,
-    WgpuContext, WgpuHubReportCounts, WgpuHubReportFrameSample, WgpuHubReportFrameStore,
-    WgpuInitAttemptSnapshot, WgpuInitDiagnosticsSnapshot, create_rgba8_image_storage,
-    upload_alpha_mask, upload_rgba_image, upload_rgba8_image, viewport_overlay,
-    write_rgba8_texture_region,
+    RendererCapabilities, RendererPerfFrameSample, RendererPerfFrameStore, SurfaceState,
+    SvgAlphaMask, SvgPerfSnapshot, SvgRgbaImage, UploadedRgba8Image, WgpuAdapterSelectionSnapshot,
+    WgpuAllocatorReportFrameSample, WgpuAllocatorReportFrameStore, WgpuContext,
+    WgpuHubReportCounts, WgpuHubReportFrameSample, WgpuHubReportFrameStore,
+    WgpuInitDiagnosticsSnapshot, create_rgba8_image_storage, upload_alpha_mask, upload_rgba_image,
+    upload_rgba8_image, viewport_overlay, write_rgba8_texture_region,
 };
 
 #[test]
@@ -33,12 +30,9 @@ fn facade_surface_snapshot_matches_v1_contract_buckets() {
     let _ = WgpuContext::new_with_backends;
 
     // Bucket B: capability and adapter snapshots.
-    let _ = std::mem::size_of::<AdapterCapabilities>();
-    let _ = std::mem::size_of::<StreamingImageCapabilities>();
     let _ = std::mem::size_of::<RendererCapabilities>();
     let _ = std::mem::size_of::<WgpuAdapterSelectionSnapshot>();
     let _ = std::mem::size_of::<WgpuInitDiagnosticsSnapshot>();
-    let _ = std::mem::size_of::<WgpuInitAttemptSnapshot>();
     let _ = RendererCapabilities::from_wgpu_context;
     let _ = RendererCapabilities::from_adapter_device;
     let _ = WgpuAdapterSelectionSnapshot::from_context;
@@ -59,9 +53,7 @@ fn facade_surface_snapshot_matches_v1_contract_buckets() {
     let _ = std::mem::size_of::<RenderTargetIngestStrategy>();
 
     // Bucket B continued: diagnostics/report stores and snapshots.
-    let _ = std::mem::size_of::<BlurQualityCounters>();
     let _ = std::mem::size_of::<BlurQualitySnapshot>();
-    let _ = std::mem::size_of::<EffectDegradationCounters>();
     let _ = std::mem::size_of::<EffectDegradationSnapshot>();
     let _ = std::mem::size_of::<RenderPerfSnapshot>();
     let _ = std::mem::size_of::<IntermediatePerfSnapshot>();
@@ -73,8 +65,6 @@ fn facade_surface_snapshot_matches_v1_contract_buckets() {
     let _ = std::mem::size_of::<WgpuHubReportFrameStore>();
     let _ = std::mem::size_of::<WgpuAllocatorReportFrameSample>();
     let _ = std::mem::size_of::<WgpuAllocatorReportFrameStore>();
-    let _ = std::mem::size_of::<WgpuAllocatorReportSummary>();
-    let _ = std::mem::size_of::<WgpuAllocatorReportTopAllocation>();
 
     // Buckets D/E: image upload helpers, SVG helpers, and viewport overlays.
     let _ = std::mem::size_of::<ImageDescriptor>();

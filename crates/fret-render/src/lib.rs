@@ -21,9 +21,7 @@
 //!   [`Renderer`], [`RenderSceneParams`], [`SurfaceState`], [`WgpuContext`], [`ClearColor`],
 //!   [`RenderError`]
 //! - Capability and adapter snapshots:
-//!   [`RendererCapabilities`], [`AdapterCapabilities`], [`StreamingImageCapabilities`],
-//!   [`WgpuAdapterSelectionSnapshot`], [`WgpuInitDiagnosticsSnapshot`],
-//!   [`WgpuInitAttemptSnapshot`]
+//!   [`RendererCapabilities`], [`WgpuAdapterSelectionSnapshot`], [`WgpuInitDiagnosticsSnapshot`]
 //! - Render-target / ingest contracts:
 //!   [`RenderTargetDescriptor`] and the `RenderTarget*` metadata/value enums re-exported here
 //! - Diagnostics/report stores used by first-party runners and tooling:
@@ -35,23 +33,23 @@
 //!   [`SvgRgbaImage`], [`upload_alpha_mask`], [`upload_rgba_image`], [`viewport_overlay`]
 //!
 //! Depend on `fret-render-wgpu` directly only when you need backend-specific diagnostics or helper
-//! surfaces that are intentionally not part of this default facade.
+//! surfaces that are intentionally not part of this default facade, including nested diagnostics
+//! detail structs such as adapter sub-snapshots, blur/effect counter leaf types, allocator
+//! summary/detail rows, and per-attempt init records.
 
 #[cfg(feature = "backend-wgpu")]
 pub use fret_render_wgpu::{
-    AdapterCapabilities, BlurQualityCounters, BlurQualitySnapshot, ClearColor,
-    EffectDegradationCounters, EffectDegradationSnapshot, ImageColorSpace, ImageDescriptor,
+    BlurQualitySnapshot, ClearColor, EffectDegradationSnapshot, ImageColorSpace, ImageDescriptor,
     IntermediatePerfSnapshot, RenderError, RenderPerfSnapshot, RenderSceneParams,
     RenderTargetAlphaMode, RenderTargetColorEncoding, RenderTargetColorPrimaries,
     RenderTargetColorRange, RenderTargetColorSpace, RenderTargetDescriptor,
     RenderTargetIngestStrategy, RenderTargetMatrixCoefficients, RenderTargetMetadata,
     RenderTargetOrientation, RenderTargetRotation, RenderTargetTransferFunction, Renderer,
-    RendererCapabilities, RendererPerfFrameSample, RendererPerfFrameStore,
-    StreamingImageCapabilities, SurfaceState, SvgAlphaMask, SvgPerfSnapshot, SvgRgbaImage,
-    SystemFontRescanResult, SystemFontRescanSeed, TextFontFamilyConfig, UploadedRgba8Image,
-    WgpuAdapterSelectionSnapshot, WgpuAllocatorReportFrameSample, WgpuAllocatorReportFrameStore,
-    WgpuAllocatorReportSummary, WgpuAllocatorReportTopAllocation, WgpuContext, WgpuHubReportCounts,
-    WgpuHubReportFrameSample, WgpuHubReportFrameStore, WgpuInitAttemptSnapshot,
+    RendererCapabilities, RendererPerfFrameSample, RendererPerfFrameStore, SurfaceState,
+    SvgAlphaMask, SvgPerfSnapshot, SvgRgbaImage, SystemFontRescanResult, SystemFontRescanSeed,
+    TextFontFamilyConfig, UploadedRgba8Image, WgpuAdapterSelectionSnapshot,
+    WgpuAllocatorReportFrameSample, WgpuAllocatorReportFrameStore, WgpuContext,
+    WgpuHubReportCounts, WgpuHubReportFrameSample, WgpuHubReportFrameStore,
     WgpuInitDiagnosticsSnapshot, create_rgba8_image_storage, upload_alpha_mask, upload_rgba_image,
     upload_rgba8_image, viewport_overlay, write_rgba8_texture_region,
 };

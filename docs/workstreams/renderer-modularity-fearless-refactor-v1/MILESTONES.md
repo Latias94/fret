@@ -612,8 +612,15 @@ Current snapshot (2026-03-13):
     buckets A-E as the v1 facade contract and keeps deferred diagnostics review explicit
   - `crates/fret-render/tests/facade_surface_snapshot.rs` compiles the chosen public buckets from
     an external-consumer perspective
+- Nested diagnostics/detail leaf shrink is green on the default facade:
+  - `crates/fret-render/src/lib.rs` no longer re-exports `AdapterCapabilities`,
+    `StreamingImageCapabilities`, `BlurQualityCounters`, `EffectDegradationCounters`,
+    `WgpuAllocatorReportSummary`, `WgpuAllocatorReportTopAllocation`, or
+    `WgpuInitAttemptSnapshot`
+  - workspace consumer scan showed no first-party uses of those names outside `crates/fret-render*`
+  - `crates/fret-render/tests/facade_surface_snapshot.rs` still compiles the curated public buckets
 - The strongest current risks are:
-  - deferred diagnostics/perf carryovers on the default facade,
+  - broader diagnostics/perf parent snapshots and stores still living on the default facade,
   - oversized backend public surface,
   - a large multi-domain `Renderer` state owner,
   - and some convenience/diagnostics ergonomics still skewing toward `WgpuContext`.
