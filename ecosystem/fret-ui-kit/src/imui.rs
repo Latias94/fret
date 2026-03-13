@@ -1424,6 +1424,42 @@ fn populate_pressable_drag_response<H: UiHost>(
     }
 }
 
+fn mark_active_item_on_left_pointer_down(
+    host: &mut dyn fret_ui::action::UiPointerActionHost,
+    acx: fret_ui::action::ActionCx,
+    button: MouseButton,
+    active_item_model: &fret_runtime::Model<ImUiActiveItemState>,
+    request_focus: bool,
+) {
+    if button != MouseButton::Left {
+        return;
+    }
+    if request_focus {
+        host.request_focus(acx.target);
+    }
+    let _ = host.update_model(active_item_model, |st| {
+        st.active = Some(acx.target);
+    });
+    host.notify(acx);
+}
+
+fn clear_active_item_on_left_pointer_up(
+    host: &mut dyn fret_ui::action::UiPointerActionHost,
+    acx: fret_ui::action::ActionCx,
+    button: MouseButton,
+    active_item_model: &fret_runtime::Model<ImUiActiveItemState>,
+) {
+    if button != MouseButton::Left {
+        return;
+    }
+    let _ = host.update_model(active_item_model, |st| {
+        if st.active == Some(acx.target) {
+            st.active = None;
+        }
+    });
+    host.notify(acx);
+}
+
 fn item_spacing_x_metric_ref() -> crate::MetricRef {
     crate::MetricRef::Token {
         key: crate::theme_tokens::metric::COMPONENT_IMUI_ITEM_SPACING_X_PX,
@@ -3655,25 +3691,23 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     let active_item_model_for_up = active_item_model.clone();
 
                     cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
-                        if down.button == MouseButton::Left {
-                            host.request_focus(acx.target);
-                            let _ = host.update_model(&active_item_model_for_down, |st| {
-                                st.active = Some(acx.target);
-                            });
-                            host.notify(acx);
-                        }
+                        mark_active_item_on_left_pointer_down(
+                            host,
+                            acx,
+                            down.button,
+                            &active_item_model_for_down,
+                            true,
+                        );
                         PressablePointerDownResult::Continue
                     }));
 
                     cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
-                        if up.button == MouseButton::Left {
-                            let _ = host.update_model(&active_item_model_for_up, |st| {
-                                if st.active == Some(acx.target) {
-                                    st.active = None;
-                                }
-                            });
-                            host.notify(acx);
-                        }
+                        clear_active_item_on_left_pointer_up(
+                            host,
+                            acx,
+                            up.button,
+                            &active_item_model_for_up,
+                        );
                         PressablePointerUpResult::Continue
                     }));
 
@@ -4275,24 +4309,23 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 let active_item_model_for_up = active_item_model.clone();
 
                 cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
-                    if down.button == MouseButton::Left {
-                        let _ = host.update_model(&active_item_model_for_down, |st| {
-                            st.active = Some(acx.target);
-                        });
-                        host.notify(acx);
-                    }
+                    mark_active_item_on_left_pointer_down(
+                        host,
+                        acx,
+                        down.button,
+                        &active_item_model_for_down,
+                        false,
+                    );
                     PressablePointerDownResult::Continue
                 }));
 
                 cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
-                    if up.button == MouseButton::Left {
-                        let _ = host.update_model(&active_item_model_for_up, |st| {
-                            if st.active == Some(acx.target) {
-                                st.active = None;
-                            }
-                        });
-                        host.notify(acx);
-                    }
+                    clear_active_item_on_left_pointer_up(
+                        host,
+                        acx,
+                        up.button,
+                        &active_item_model_for_up,
+                    );
                     PressablePointerUpResult::Continue
                 }));
 
