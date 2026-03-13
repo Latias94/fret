@@ -40,6 +40,7 @@ mod render_plan_dump;
 mod render_plan_effects;
 mod render_plan_reporting;
 mod render_scene;
+mod render_scene_config;
 mod render_text_dump;
 mod resources;
 mod scene_encoding_cache;
@@ -65,6 +66,7 @@ use material_effects::*;
 use path::*;
 use render_plan::*;
 use render_plan_reporting::*;
+use render_scene_config::*;
 use scene_encoding_cache::SceneEncodingState;
 use types::*;
 pub use types::{BlurQualityCounters, BlurQualitySnapshot};
@@ -95,7 +97,7 @@ pub struct Renderer {
     uniforms: UniformResources,
     frame_scratch_state: FrameScratchState,
     render_plan_reporting_state: RenderPlanReportingState,
-    render_plan_strict_output_clear: bool,
+    render_scene_config_state: RenderSceneConfigState,
     globals: GpuGlobals,
     textures: GpuTextures,
     effect_params: GpuEffectParams,
@@ -128,11 +130,6 @@ pub struct Renderer {
 
     diagnostics_state: DiagnosticsState,
 
-    path_msaa_samples: u32,
-    debug_offscreen_blit_enabled: bool,
-    debug_pixelate_scale: u32,
-    debug_blur_radius: u32,
-    debug_blur_scissor: Option<ScissorRect>,
     intermediate_state: IntermediateState,
 
     gpu_resources: GpuResources,

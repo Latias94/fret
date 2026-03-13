@@ -7,14 +7,16 @@ impl Renderer {
         viewport_size: (u32, u32),
         format: wgpu::TextureFormat,
     ) -> DebugPostprocess {
-        if self.debug_pixelate_scale > 0 {
+        let debug_pixelate_scale = self.render_scene_config_state.debug_pixelate_scale();
+        if debug_pixelate_scale > 0 {
             return DebugPostprocess::Pixelate {
-                scale: self.debug_pixelate_scale,
+                scale: debug_pixelate_scale,
             };
         }
 
-        if self.debug_blur_radius > 0 {
-            let radius = self.debug_blur_radius.max(1);
+        let debug_blur_radius = self.render_scene_config_state.debug_blur_radius();
+        if debug_blur_radius > 0 {
+            let radius = debug_blur_radius.max(1);
             let budget = self.intermediate_state.budget_bytes;
             let full = estimate_texture_bytes(viewport_size, format, 1);
             let half = estimate_texture_bytes(downsampled_size(viewport_size, 2), format, 1);
@@ -38,11 +40,14 @@ impl Renderer {
             return DebugPostprocess::Blur {
                 radius,
                 downsample_scale,
-                scissor: self.debug_blur_scissor,
+                scissor: self.render_scene_config_state.debug_blur_scissor(),
             };
         }
 
-        if self.debug_offscreen_blit_enabled {
+        if self
+            .render_scene_config_state
+            .debug_offscreen_blit_enabled()
+        {
             return DebugPostprocess::OffscreenBlit {
                 src: PlanTarget::Intermediate0,
             };

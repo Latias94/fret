@@ -532,16 +532,13 @@ impl Renderer {
             custom_effect_v3_meta_buffer,
         };
 
-        let render_plan_strict_output_clear =
-            std::env::var("FRET_RENDER_PLAN_STRICT_OUTPUT_CLEAR").is_ok_and(|v| v != "0");
-
         Self {
             adapter: adapter.clone(),
             uniform_bind_group,
             uniforms,
             frame_scratch_state: FrameScratchState::default(),
             render_plan_reporting_state: RenderPlanReportingState::default(),
-            render_plan_strict_output_clear,
+            render_scene_config_state: RenderSceneConfigState::new(),
             globals,
             textures,
             effect_params,
@@ -560,11 +557,6 @@ impl Renderer {
             svg_raster_state: svg::SvgRasterState::default(),
             clip_path_mask_cache: ClipPathMaskCache::new((256 * 1024 * 1024) / 8),
             diagnostics_state: DiagnosticsState::default(),
-            path_msaa_samples: 4,
-            debug_offscreen_blit_enabled: false,
-            debug_pixelate_scale: 0,
-            debug_blur_radius: 0,
-            debug_blur_scissor: None,
             intermediate_state: IntermediateState::default(),
             gpu_resources: super::gpu_resources::GpuResources::default(),
             scene_encoding_state: super::scene_encoding_cache::SceneEncodingState::default(),

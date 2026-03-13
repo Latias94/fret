@@ -250,6 +250,9 @@ For `Renderer` state-shell tightening, the same principle applies:
 - render-text dump state is the matching diagnostics/export seam for text debugging:
   dump collection scratch and serialization scratch should move behind one owner so render-scene
   execution keeps only a thin bridge to `TextSystem`.
+- render-scene config state is the matching execution-policy seam:
+  strict output-clear validation, requested path MSAA samples, and debug postprocess knobs should
+  move behind one owner so config/render-scene helpers stop depending on loose renderer scalars.
 
 ### 5. Tighten public exports after evidence exists
 

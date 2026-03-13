@@ -458,6 +458,19 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu render_text_dump_state_clear_scratch_keeps_capacity`
   - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
   - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
+- The thirteenth renderer owner-state split has landed:
+  - render-scene config state now lives under
+    `crates/fret-render-wgpu/src/renderer/render_scene_config.rs`
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns render-plan strict-clear
+    config, path MSAA requested samples, or debug postprocess knobs directly
+  - `config.rs`, `render_scene/frame_pipelines.rs`, `render_scene/debug_postprocess.rs`, and
+    `render_scene/execute.rs` now query that owner instead of reaching into loose renderer fields
+- Renderer render-scene-config split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu normalizes_path_msaa_samples_to_supported_shapes`
+  - `cargo nextest run -p fret-render-wgpu clamps_debug_knobs_and_rejects_zero_sized_scissors`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals
