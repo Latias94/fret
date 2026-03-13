@@ -50,14 +50,16 @@ impl TextSystem {
         font_data_id: u64,
         face_index: u32,
     ) {
-        self.font_data_by_face
+        self.face_cache
+            .font_data_by_face
             .entry((font_data_id, face_index))
             .or_insert_with(|| glyph.font.clone());
     }
 
     fn cache_prepared_glyph_instance_coords(&mut self, glyph: &ParleyGlyph, face_key: FontFaceKey) {
         if prepared_glyph_has_normalized_coords(glyph) {
-            self.font_instance_coords_by_face
+            self.face_cache
+                .font_instance_coords_by_face
                 .entry(face_key)
                 .or_insert_with(|| glyph.normalized_coords.clone());
         }

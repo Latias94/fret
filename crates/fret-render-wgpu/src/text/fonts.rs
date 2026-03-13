@@ -123,9 +123,7 @@ impl TextSystem {
         self.text_pin_mask.iter_mut().for_each(|v| v.clear());
         self.text_pin_color.iter_mut().for_each(|v| v.clear());
         self.text_pin_subpixel.iter_mut().for_each(|v| v.clear());
-        self.font_data_by_face.clear();
-        self.font_instance_coords_by_face.clear();
-        self.font_face_family_name_cache.clear();
+        self.face_cache.clear();
     }
 
     pub fn set_font_families(&mut self, config: &TextFontFamilyConfig) -> bool {

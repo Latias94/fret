@@ -12,7 +12,8 @@ use fret_render_text::cache_keys::spans_paint_fingerprint;
 pub use fret_render_text::decorations::{TextDecoration, TextDecorationKind};
 pub(crate) use fret_render_text::effective_text_scale_factor;
 use fret_render_text::fallback_policy::TextFallbackPolicyV1;
-use fret_render_text::font_instance_key::FontFaceKey;
+#[cfg(test)]
+pub(crate) use fret_render_text::font_instance_key::FontFaceKey;
 use fret_render_text::font_stack::GenericFamilyInjectionState;
 use fret_render_text::font_trace::FontTraceState;
 use fret_render_text::measure::TextMeasureCaches;
@@ -24,6 +25,7 @@ mod atlas;
 mod blobs;
 mod bootstrap;
 mod diagnostics;
+mod face_cache;
 mod fonts;
 mod frame_perf;
 mod measure;
@@ -33,6 +35,7 @@ mod queries;
 mod types;
 
 use self::atlas::{GlyphAtlas, GlyphKey};
+use self::face_cache::TextFaceCacheState;
 use self::frame_perf::TextFramePerfState;
 pub use self::quality::TextQualitySettings;
 use self::quality::TextQualityState;
@@ -76,9 +79,7 @@ pub struct TextSystem {
     text_pin_mask: Vec<Vec<GlyphKey>>,
     text_pin_color: Vec<Vec<GlyphKey>>,
     text_pin_subpixel: Vec<Vec<GlyphKey>>,
-    font_data_by_face: HashMap<(u64, u32), parley::FontData>,
-    font_instance_coords_by_face: HashMap<FontFaceKey, Arc<[i16]>>,
-    font_face_family_name_cache: HashMap<(u64, u32), String>,
+    face_cache: TextFaceCacheState,
 
     frame_perf: TextFramePerfState,
 

@@ -1,5 +1,6 @@
 use super::TextSystem;
 use super::atlas::{GlyphAtlas, TEXT_ATLAS_MAX_PAGES};
+use super::face_cache::TextFaceCacheState;
 use super::frame_perf::TextFramePerfState;
 use super::quality::{TextQualitySettings, TextQualityState};
 use fret_render_text::fallback_policy::TextFallbackPolicyV1;
@@ -89,9 +90,7 @@ pub(super) fn build_text_system(device: &wgpu::Device) -> TextSystem {
         text_pin_mask: vec![Vec::new(); 3],
         text_pin_color: vec![Vec::new(); 3],
         text_pin_subpixel: vec![Vec::new(); 3],
-        font_data_by_face: HashMap::new(),
-        font_instance_coords_by_face: HashMap::new(),
-        font_face_family_name_cache: HashMap::new(),
+        face_cache: TextFaceCacheState::default(),
 
         frame_perf: TextFramePerfState::default(),
 

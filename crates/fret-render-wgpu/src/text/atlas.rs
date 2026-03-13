@@ -834,6 +834,7 @@ impl TextSystem {
 
     fn ensure_parley_glyph(&mut self, key: GlyphKey, epoch: u64) {
         let Some(font_data) = self
+            .face_cache
             .font_data_by_face
             .get(&(key.font.font_data_id, key.font.face_index))
         else {
@@ -855,7 +856,7 @@ impl TextSystem {
             .builder(font_ref)
             .size(font_size)
             .hint(false);
-        if let Some(coords) = self.font_instance_coords_by_face.get(&key.font) {
+        if let Some(coords) = self.face_cache.font_instance_coords_by_face.get(&key.font) {
             scaler_builder = scaler_builder.normalized_coords(coords.iter());
         }
         let mut scaler = scaler_builder.build();

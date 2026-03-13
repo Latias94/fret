@@ -316,6 +316,9 @@ ID format:
     - per-frame text perf state now lives in
       `crates/fret-render-wgpu/src/text/frame_perf.rs`
     - `text/mod.rs` no longer owns the per-frame text perf counter fields directly
+    - text face-cache state now lives in
+      `crates/fret-render-wgpu/src/text/face_cache.rs`
+    - `text/mod.rs` no longer owns font-data / instance-coords / family-name cache fields directly
     - prepared-glyph font-data cache writes now live behind a dedicated helper in
       `crates/fret-render-wgpu/src/text/prepare.rs`
     - `cache_prepared_glyph_face_data(...)` no longer owns font-data entry writes directly
