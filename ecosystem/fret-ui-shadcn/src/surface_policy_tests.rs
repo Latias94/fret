@@ -443,6 +443,37 @@ fn breadcrumb_primitives_prefer_typed_child_conversion_before_the_landing_seam()
     }
 }
 
+
+#[test]
+fn breadcrumb_link_and_page_keep_raw_children_as_an_explicit_escape_hatch() {
+    let normalized = normalize_ws(BREADCRUMB_RS);
+    let required_markers = [
+        "pub struct BreadcrumbLinkBuild<H, Children> {",
+        "pub fn children<H: UiHost, I, TChild, Children>( self, children: Children, ) -> BreadcrumbLinkBuild<H, Children> where Children: FnOnce(&mut ElementContext<'_, H>) -> I, I: IntoIterator<Item = TChild>, TChild: IntoUiElement<H>,",
+        "pub fn children_raw(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {",
+        "pub struct BreadcrumbPageBuild<H, Children> {",
+        "pub fn children<H: UiHost, I, TChild, Children>( self, children: Children, ) -> BreadcrumbPageBuild<H, Children> where Children: FnOnce(&mut ElementContext<'_, H>) -> I, I: IntoIterator<Item = TChild>, TChild: IntoUiElement<H>,",
+    ];
+    let forbidden_markers = [
+        "pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "breadcrumb.rs should keep `children(...)` typed and reserve `children_raw(...)` for the explicit landed-child seam"
+        );
+    }
+    for marker in forbidden_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            !normalized.contains(&marker),
+            "breadcrumb.rs reintroduced raw `children(...)` as the default primitive surface"
+        );
+    }
+}
+
 #[test]
 fn card_helpers_prefer_typed_wrapper_outputs_when_no_raw_slot_storage_is_required() {
     let normalized = normalize_ws(CARD_RS);
