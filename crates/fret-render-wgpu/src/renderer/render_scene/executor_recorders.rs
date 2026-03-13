@@ -1,6 +1,8 @@
 use super::super::*;
 use super::executor::RenderSceneExecutor;
-use super::helpers::{ensure_color_dst_view_owned, require_color_src_view, require_mask_view};
+use super::helpers::{
+    ensure_color_dst_view_owned, ensure_mask_dst_view, require_color_src_view, require_mask_view,
+};
 
 pub(super) struct CustomEffectV3PyramidScratchSnapshot {
     pub(super) full_view: wgpu::TextureView,
@@ -79,6 +81,23 @@ impl<'a> RenderSceneExecutor<'a> {
             dst,
             dst_size,
             self.format,
+            self.usage,
+            pass_name,
+        )
+    }
+
+    pub(super) fn ensure_mask_dst_view(
+        &mut self,
+        dst: PlanTarget,
+        dst_size: (u32, u32),
+        pass_name: &'static str,
+    ) -> Option<wgpu::TextureView> {
+        ensure_mask_dst_view(
+            &mut *self.frame_targets,
+            &mut self.renderer.intermediate_state.pool,
+            self.device,
+            dst,
+            dst_size,
             self.usage,
             pass_name,
         )

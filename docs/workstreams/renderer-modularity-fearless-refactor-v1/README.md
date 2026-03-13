@@ -291,6 +291,14 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs`, no longer reach
   through `Renderer` for pyramid reuse/scratch/cache, source/mask view lookup, clip-path cache
   copy/store, or intermediate target allocation inline.
+- The remaining bespoke effect recorder access in
+  `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now also reuses that
+  executor facade:
+  - `CustomEffectV2`, `CompositePremul`, `ClipMask`, and the `CustomEffectV3` source-pyramid
+    fallback now route color/mask source lookup and color/mask destination allocation through
+    `RenderSceneExecutor` helpers.
+  - `recorders/effects.rs` no longer keeps any direct frame-target helper calls for current effect
+    recorder paths.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

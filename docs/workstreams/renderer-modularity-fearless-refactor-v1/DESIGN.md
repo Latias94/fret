@@ -274,7 +274,10 @@ For `Renderer` state-shell tightening, the same principle applies:
   view-selection access first, then revisit heavier service-local state only if it still blocks
   modularity after the target-allocation seam is closed. Once recorder shells stop owning target
   allocation, the same seam should be reused by shared fullscreen helper flows and by renderer
-  methods that were only depending on recorder args for target allocation.
+  methods that were only depending on recorder args for target allocation. Bespoke effect recorders
+  should follow the same closure path: composite/writeback flows and mask-only clip-target flows
+  should consume the same executor accessors instead of keeping ad hoc frame-target helper calls in
+  `recorders/effects.rs`.
 - render-text dump state is the matching diagnostics/export seam for text debugging:
   dump collection scratch and serialization scratch should move behind one owner so render-scene
   execution keeps only a thin bridge to `TextSystem`.

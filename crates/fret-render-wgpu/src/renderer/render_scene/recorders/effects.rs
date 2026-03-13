@@ -1,9 +1,6 @@
 use super::super::super::*;
 use super::super::executor::{RecordPassCtx, RenderSceneExecutor};
-use super::super::helpers::{
-    ensure_color_dst_view_owned, ensure_mask_dst_view, require_color_src_view, require_mask_view,
-    run_composite_premul_quad_pass,
-};
+use super::super::helpers::run_composite_premul_quad_pass;
 use super::blit::record_fullscreen_blit_pass;
 
 struct FullscreenEffectLabels {
@@ -868,25 +865,13 @@ pub(in super::super) fn record_custom_effect_v2_pass(
         exec.frame_perf.uniform_bytes = exec.frame_perf.uniform_bytes.saturating_add(16);
     }
 
-    let Some(src_view) = require_color_src_view(
-        &mut *exec.frame_targets,
-        common.src,
-        common.src_size,
-        "CustomEffectV2",
-    ) else {
+    let Some(src_view) = exec.require_color_src_view(common.src, common.src_size, "CustomEffectV2")
+    else {
         return;
     };
 
-    let dst_view_owned = ensure_color_dst_view_owned(
-        &mut *exec.frame_targets,
-        &mut exec.renderer.intermediate_state.pool,
-        exec.device,
-        common.dst,
-        common.dst_size,
-        exec.format,
-        exec.usage,
-        "CustomEffectV2",
-    );
+    let dst_view_owned =
+        exec.ensure_color_dst_view_owned(common.dst, common.dst_size, "CustomEffectV2");
     let dst_view = dst_view_owned.as_ref().unwrap_or(exec.target_view);
 
     let mut input_incompatible = false;
@@ -927,12 +912,8 @@ pub(in super::super) fn record_custom_effect_v2_pass(
             .mask_uniform_index
             .expect("mask pass needs uniform index");
         let uniform_offset = (u64::from(mask_uniform_index) * uniform_stride) as u32;
-        let Some(mask_view) = require_mask_view(
-            &mut *exec.frame_targets,
-            mask.target,
-            mask.size,
-            "CustomEffectV2",
-        ) else {
+        let Some(mask_view) = exec.require_mask_view(mask.target, mask.size, "CustomEffectV2")
+        else {
             return;
         };
 
@@ -1276,12 +1257,9 @@ pub(in super::super) fn record_custom_effect_v3_pass(
     let src_pyramid_view = if let Some(view) = pyramid_override_view {
         view
     } else {
-        let Some(view) = require_color_src_view(
-            &mut *exec.frame_targets,
-            pass.src_pyramid,
-            common.src_size,
-            "CustomEffectV3",
-        ) else {
+        let Some(view) =
+            exec.require_color_src_view(pass.src_pyramid, common.src_size, "CustomEffectV3")
+        else {
             return;
         };
         view
@@ -1514,13 +1492,33 @@ pub(in super::super) fn record_composite_premul_pass(
     ctx: &RecordPassCtx<'_>,
     pass: &CompositePremulPass,
 ) {
+    let Some(src_view) = exec.require_color_src_view(pass.src, pass.src_size, "CompositePremul")
+    else {
+        return;
+    };
+    let dst_view_owned =
+        exec.ensure_color_dst_view_owned(pass.dst, pass.dst_size, "CompositePremul");
+    let mask_view = if let Some(mask) = pass.mask {
+        debug_assert!(matches!(
+            mask.target,
+            PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
+        ));
+        debug_assert_eq!(
+            pass.dst_size, exec.viewport_size,
+            "mask-based composite expects full-size destination"
+        );
+        let Some(mask_view) = exec.require_mask_view(mask.target, mask.size, "CompositePremul")
+        else {
+            return;
+        };
+        Some(mask_view)
+    } else {
+        None
+    };
+
     let device = exec.device;
-    let format = exec.format;
     let target_view = exec.target_view;
-    let viewport_size = exec.viewport_size;
-    let usage = exec.usage;
     let encoder = &mut *exec.encoder;
-    let frame_targets = &mut *exec.frame_targets;
     let encoding = exec.encoding;
     let perf_enabled = exec.perf_enabled;
     let frame_perf = &mut *exec.frame_perf;
@@ -1528,40 +1526,9 @@ pub(in super::super) fn record_composite_premul_pass(
     let quad_vertex_size = exec.quad_vertex_size;
 
     let renderer = &mut *exec.renderer;
-
-    let Some(src_view) =
-        require_color_src_view(frame_targets, pass.src, pass.src_size, "CompositePremul")
-    else {
-        return;
-    };
-
-    let dst_view_owned = ensure_color_dst_view_owned(
-        frame_targets,
-        &mut renderer.intermediate_state.pool,
-        device,
-        pass.dst,
-        pass.dst_size,
-        format,
-        usage,
-        "CompositePremul",
-    );
     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
-    let (composite_pipeline, bind_group) = if let Some(mask) = pass.mask {
-        debug_assert!(matches!(
-            mask.target,
-            PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
-        ));
-        debug_assert_eq!(
-            pass.dst_size, viewport_size,
-            "mask-based composite expects full-size destination"
-        );
-
-        let Some(mask_view) =
-            require_mask_view(frame_targets, mask.target, mask.size, "CompositePremul")
-        else {
-            return;
-        };
+    let (composite_pipeline, bind_group) = if let Some(mask_view) = mask_view.as_ref() {
         let layout = renderer.composite_mask_bind_group_layout_ref();
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("fret composite premul mask bind group"),
@@ -1653,39 +1620,28 @@ pub(in super::super) fn record_clip_mask_pass(
     ctx: &RecordPassCtx<'_>,
     pass: &ClipMaskPass,
 ) {
-    let device = exec.device;
     let queue = exec.queue;
-    let usage = exec.usage;
-    let encoder = &mut *exec.encoder;
-    let frame_targets = &mut *exec.frame_targets;
-    let encoding = exec.encoding;
     let perf_enabled = exec.perf_enabled;
-    let frame_perf = &mut *exec.frame_perf;
-
-    let renderer = &mut *exec.renderer;
 
     queue.write_buffer(
-        &renderer.effect_params.clip_mask_param_buffer,
+        &exec.renderer.effect_params.clip_mask_param_buffer,
         0,
         bytemuck::cast_slice(&[pass.dst_size.0 as f32, pass.dst_size.1 as f32, 0.0, 0.0]),
     );
     if perf_enabled {
-        frame_perf.uniform_bytes = frame_perf
+        exec.frame_perf.uniform_bytes = exec
+            .frame_perf
             .uniform_bytes
             .saturating_add(std::mem::size_of::<[f32; 4]>() as u64);
     }
-    let Some(dst_view) = ensure_mask_dst_view(
-        frame_targets,
-        &mut renderer.intermediate_state.pool,
-        device,
-        pass.dst,
-        pass.dst_size,
-        usage,
-        "ClipMask",
-    ) else {
+    let Some(dst_view) = exec.ensure_mask_dst_view(pass.dst, pass.dst_size, "ClipMask") else {
         return;
     };
 
+    let encoder = &mut *exec.encoder;
+    let encoding = exec.encoding;
+    let frame_perf = &mut *exec.frame_perf;
+    let renderer = &mut *exec.renderer;
     let pipeline = renderer.clip_mask_pipeline_ref();
     let uniform_offset = (u64::from(pass.uniform_index) * renderer.uniform_stride()) as u32;
 

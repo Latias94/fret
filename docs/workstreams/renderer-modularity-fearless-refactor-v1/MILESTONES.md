@@ -617,6 +617,27 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu gpu_backdrop_color_adjust_is_scissored_and_preserves_ordering`
   - `cargo nextest run -p fret-render-wgpu gpu_backdrop_color_adjust_brightness_is_a_multiplier_with_identity_1`
   - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v1_can_read_render_space_in_fragment`
+- The twenty-third renderer recorder-facade split has landed:
+  - the existing render-scene recorder execution facade in
+    `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs` now also fronts the
+    remaining bespoke effect paths in
+    `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs`
+  - `CustomEffectV2`, `CompositePremul`, `ClipMask`, and the `CustomEffectV3` source-pyramid
+    fallback no longer reach directly into frame-target helpers or `intermediate_state.pool` for
+    color/mask source lookup or color/mask destination allocation
+  - current effect recorder target/view access in `recorders/effects.rs` is now uniformly routed
+    through `RenderSceneExecutor` helper methods while bind-group assembly and draw logic stay
+    local to each effect path
+- Renderer bespoke-effect-recorder-facade split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_can_sample_user_image_and_respects_sampling_hint`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_with_no_input_image_uses_fallback_texture_and_is_deterministic`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_rejects_non_filterable_input_format_by_falling_back`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_compiles_and_runs_in_masked_path`
+  - `cargo nextest run -p fret-render-wgpu gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite`
+  - `cargo nextest run -p fret-render-wgpu gpu_filter_content_blur_respects_rounded_clip_stack_on_composite`
+  - `cargo nextest run -p fret-render-wgpu gpu_backdrop_pixelate_respects_rounded_clip_stack_on_writeback`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

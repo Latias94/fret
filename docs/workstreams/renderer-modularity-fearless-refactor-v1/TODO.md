@@ -618,12 +618,17 @@ ID format:
     - shared fullscreen param/texture helper flow in
       `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now routes common
       source/mask view lookup and destination allocation through `RenderSceneExecutor` helpers
+    - the remaining bespoke effect paths in
+      `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now also route
+      `CustomEffectV2`, `CompositePremul`, `ClipMask`, and the `CustomEffectV3` source-pyramid
+      fallback through the same executor helper surface for color/mask view lookup and
+      color/mask target allocation
   - Current next hotspot:
     - decide whether scene-encoding invalidation/debug evidence should stay coupled to
       `scene_encoding_cache.rs` or move closer to diagnostics state
-    - continue collapsing the remaining bespoke effect-path helper access inside
-      `recorders/effects.rs`, especially `CustomEffectV2`, `CompositePremul`, and mask-target-only
-      paths that still call frame-target helpers directly
+    - decide whether `recorders/effects.rs` should split bind-group / pipeline assembly further by
+      effect family now that current view/target access is uniformly routed through the executor
+      facade
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG
