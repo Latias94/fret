@@ -89,25 +89,20 @@ impl View for ToastBasicsView {
         .gap(Space::N2)
         .items_center();
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(
-                cx,
-                shadcn::CardHeader::build(|cx, out| {
-                    out.push_ui(cx, shadcn::CardTitle::new("Toast basics (Sonner)"));
-                    out.push_ui(
-                        cx,
-                        shadcn::CardDescription::new(
+        let card = shadcn::card(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_header(|cx| {
+                    ui::children![
+                        cx;
+                        shadcn::card_title("Toast basics (Sonner)"),
+                        shadcn::card_description(
                             "A minimal Sonner integration: render a Toaster and dispatch toast requests from actions.",
                         ),
-                    );
+                    ]
                 }),
-            );
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(cx, buttons);
-                }),
-            );
+                shadcn::card_content(|cx| ui::children![cx; buttons]),
+            ]
         })
         .ui()
         .w_full()

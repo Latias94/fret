@@ -852,12 +852,8 @@ pub(super) fn preview_radio_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     radio_group::preview_radio_group(cx)
 }
 
-pub(super) fn preview_resizable(
-    cx: &mut UiCx<'_>,
-    h_fractions: Model<Vec<f32>>,
-    v_fractions: Model<Vec<f32>>,
-) -> Vec<AnyElement> {
-    resizable::preview_resizable(cx, h_fractions, v_fractions)
+pub(super) fn preview_resizable(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    resizable::preview_resizable(cx)
 }
 
 pub(super) fn preview_pagination(cx: &mut UiCx<'_>) -> Vec<AnyElement> {

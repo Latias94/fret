@@ -80,7 +80,7 @@ fn assert_selected_generic_helpers_prefer_into_ui_element(
     }
 }
 
-fn assert_material3_overlay_snippet_prefers_uncontrolled_copyable_root(
+fn assert_material3_snippet_prefers_copyable_root(
     relative_path: &str,
     required_markers: &[&str],
     forbidden_markers: &[&str],
@@ -3030,6 +3030,51 @@ fn native_select_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn resizable_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/resizable/demo.rs",
+            "src/ui/snippets/resizable/handle.rs",
+            "src/ui/snippets/resizable/notes.rs",
+            "src/ui/snippets/resizable/rtl.rs",
+            "src/ui/snippets/resizable/usage.rs",
+            "src/ui/snippets/resizable/vertical.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/resizable",
+        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn resizable_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/resizable.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Handle\", handle)",
+            "DocSection::build(cx, \"Vertical\", vertical)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Handle\", handle)",
+            "DocSection::new(\"Vertical\", vertical)",
+            "DocSection::new(\"RTL\", rtl)",
+        ],
+    );
+}
+
+#[test]
 fn accordion_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
@@ -3749,7 +3794,7 @@ fn material3_doc_pages_prefer_ui_cx_on_the_default_app_surface() {
 
 #[test]
 fn material3_overlay_snippets_prefer_uncontrolled_copyable_roots() {
-    assert_material3_overlay_snippet_prefers_uncontrolled_copyable_root(
+    assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/menu.rs",
         &[
             "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, last_action: Model<Arc<str>>, ) -> AnyElement {",
@@ -3762,7 +3807,7 @@ fn material3_overlay_snippets_prefer_uncontrolled_copyable_roots() {
         ],
     );
 
-    assert_material3_overlay_snippet_prefers_uncontrolled_copyable_root(
+    assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/dialog.rs",
         &[
             "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, last_action: Model<Arc<str>>, ) -> AnyElement {",
@@ -3775,7 +3820,7 @@ fn material3_overlay_snippets_prefer_uncontrolled_copyable_roots() {
         ],
     );
 
-    assert_material3_overlay_snippet_prefers_uncontrolled_copyable_root(
+    assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/bottom_sheet.rs",
         &[
             "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
@@ -3788,7 +3833,7 @@ fn material3_overlay_snippets_prefer_uncontrolled_copyable_roots() {
         ],
     );
 
-    assert_material3_overlay_snippet_prefers_uncontrolled_copyable_root(
+    assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/state_matrix.rs",
         &[
             "fn render_search_view<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Vec<AnyElement> {",
@@ -3804,7 +3849,7 @@ fn material3_overlay_snippets_prefer_uncontrolled_copyable_roots() {
 
 #[test]
 fn material3_autocomplete_snippet_prefers_uncontrolled_query_and_dialog_roots() {
-    assert_material3_overlay_snippet_prefers_uncontrolled_copyable_root(
+    assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/autocomplete.rs",
         &[
             "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, disabled: Model<bool>, error: Model<bool>, ) -> AnyElement {",
@@ -3821,6 +3866,30 @@ fn material3_autocomplete_snippet_prefers_uncontrolled_query_and_dialog_roots() 
             "material3::Dialog::new(dialog_open.clone())",
             "let exposed_selected_value = cx.local_model_keyed(\"exposed_selected_value\", || Some(Arc::<str>::from(\"beta\")));",
             "let exposed_query = cx.local_model_keyed(\"exposed_query\", String::new);",
+        ],
+    );
+}
+
+#[test]
+fn material3_select_snippet_prefers_uncontrolled_value_roots() {
+    assert_material3_snippet_prefers_copyable_root(
+        "src/ui/snippets/material3/select.rs",
+        &[
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "let default_select = material3::Select::uncontrolled(cx);",
+            "let selected = default_select.value_model();",
+            "let overridden = material3::Select::new(selected.clone())",
+            "let unclamped = material3::Select::uncontrolled(cx)",
+            "let typeahead_select = material3::Select::uncontrolled(cx)",
+            "let rich_select = material3::Select::uncontrolled(cx)",
+            "let transformed_select = material3::Select::uncontrolled(cx)",
+        ],
+        &[
+            "let selected = cx.local_model_keyed(\"selected\", || None::<Arc<str>>);",
+            "let selected_unclamped = cx.local_model_keyed(\"selected_unclamped\", || None::<Arc<str>>);",
+            "let selected_typeahead = cx.local_model_keyed(\"selected_typeahead\", || None::<Arc<str>>);",
+            "let selected_rich = cx.local_model_keyed(\"selected_rich\", || None::<Arc<str>>);",
+            "let selected_transformed = cx.local_model_keyed(\"selected_transformed\", || None::<Arc<str>>);",
         ],
     );
 }

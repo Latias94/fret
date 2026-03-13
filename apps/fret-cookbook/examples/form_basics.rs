@@ -177,25 +177,18 @@ impl View for FormBasicsView {
             ui::v_flex(|cx| ui::children![cx; name_input, email_input, error_row, valid, buttons])
                 .gap(Space::N3);
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(
-                cx,
-                shadcn::CardHeader::build(|cx, out| {
-                    out.push_ui(cx, shadcn::CardTitle::new("Form basics"));
-                    out.push_ui(
-                        cx,
-                        shadcn::CardDescription::new(
+        let card = shadcn::card(|cx| {
+            ui::children![cx;
+                shadcn::card_header(|cx| {
+                    ui::children![cx;
+                        shadcn::card_title("Form basics"),
+                        shadcn::card_description(
                             "A minimal form with validation (no extra form registry dependency).",
                         ),
-                    );
+                    ]
                 }),
-            );
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(cx, body);
-                }),
-            );
+                shadcn::card_content(|cx| ui::children![cx; body]),
+            ]
         })
         .ui()
         .w_full()

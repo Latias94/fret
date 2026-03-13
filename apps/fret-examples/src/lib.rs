@@ -315,8 +315,9 @@ mod authoring_surface_policy_tests {
         assert!(!src.contains("KernelApp"));
         assert!(!src.contains("AppWindowId"));
         assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
-        assert!(src.contains("let card = card.into_element(cx);"));
-        assert!(src.contains("todo_page(cx, theme, card).into()"));
+        assert!(src.contains("todo_page(theme, card).into_element(cx).into()"));
+        assert!(!src.contains("let card = card.into_element(cx);"));
+        assert!(!src.contains("todo_page(cx, theme, card).into()"));
     }
 
     fn assert_avoids_legacy_conversion_names(src: &str) {
@@ -513,6 +514,27 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn simple_todo_demo_prefers_typed_row_helper_surface() {
+        assert!(SIMPLE_TODO_DEMO.contains("ui::for_each_keyed_with_cx("));
+        assert!(SIMPLE_TODO_DEMO.contains("fn todo_row("));
+        assert!(SIMPLE_TODO_DEMO.contains(") -> impl fret_ui_kit::IntoUiElement<App> + use<> {"));
+        assert!(!SIMPLE_TODO_DEMO.contains(") -> fret_ui::element::AnyElement {"));
+    }
+
+    #[test]
+    fn imui_editor_proof_non_raw_helpers_prefer_typed_return_signatures() {
+        assert!(IMUI_EDITOR_PROOF_DEMO.contains("fn render_editor_name_assist_surface("));
+        assert!(IMUI_EDITOR_PROOF_DEMO.contains("fn render_authoring_parity_surface("));
+        assert!(IMUI_EDITOR_PROOF_DEMO.contains("fn render_authoring_parity_shared_state("));
+        assert!(IMUI_EDITOR_PROOF_DEMO.contains("fn render_authoring_parity_declarative_group("));
+        assert!(IMUI_EDITOR_PROOF_DEMO.contains("fn render_authoring_parity_imui_group("));
+        assert!(IMUI_EDITOR_PROOF_DEMO.contains("fn render_authoring_parity_imui_host<H, F>("));
+        assert!(IMUI_EDITOR_PROOF_DEMO.contains(") -> impl IntoUiElement<KernelApp> + use<> {"));
+        assert!(IMUI_EDITOR_PROOF_DEMO.contains(") -> impl IntoUiElement<H> + use<H, F>"));
+        assert!(!IMUI_EDITOR_PROOF_DEMO.contains(") -> fret_ui::element::AnyElement {"));
+    }
+
+    #[test]
     fn view_runtime_examples_prefer_app_ui_and_ui_aliases() {
         for src in [
             ASSETS_DEMO,
@@ -633,7 +655,12 @@ mod authoring_surface_policy_tests {
 
                 let allowed = trimmed.contains("shadcn::raw::typography::")
                     || trimmed.contains("shadcn::raw::extras::")
-                    || trimmed.contains("fret::shadcn::raw::prelude::");
+                    || trimmed.contains("fret::shadcn::raw::prelude::")
+                    || trimmed.contains("shadcn::raw::advanced::sync_theme_from_environment(")
+                    || trimmed
+                        .contains("fret::shadcn::raw::advanced::sync_theme_from_environment(")
+                    || trimmed.contains("shadcn::raw::advanced::install_with_ui_services(")
+                    || trimmed.contains("fret::shadcn::raw::advanced::install_with_ui_services(");
                 assert!(
                     allowed,
                     "{}:{} used an undocumented shadcn raw escape hatch: {}",
@@ -1045,12 +1072,17 @@ mod authoring_surface_policy_tests {
         assert_default_app_generic_helpers_prefer_into_ui_element(
             CUSTOM_EFFECT_V2_IDENTITY_WEB_DEMO,
             &[
+                "fn stage_tile(",
+                ") -> impl IntoUiElement<App> + use<>",
                 "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
                 "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
+                "items.push(Self::stage_tile(",
+                ".into_element(cx),",
                 "let inspector = Self::inspector(cx, &controls).into_element(cx);",
                 "Self::lens(cx, &controls_for_lens).into_element(cx)",
             ],
             &[
+                "fn stage_tile(cx: &mut ElementContext<'_, App>, color: fret_core::Color, left: Px, top: Px, w: Px, h: Px, corner_radius_px: Px,) -> AnyElement",
                 "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
                 "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
             ],
@@ -1059,12 +1091,17 @@ mod authoring_surface_policy_tests {
         assert_default_app_generic_helpers_prefer_into_ui_element(
             CUSTOM_EFFECT_V2_WEB_DEMO,
             &[
+                "fn stage_tile(",
+                ") -> impl IntoUiElement<App> + use<>",
                 "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
                 "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
+                "items.push(Self::stage_tile(",
+                ".into_element(cx),",
                 "let inspector = Self::inspector(cx, &controls).into_element(cx);",
                 "Self::lens(cx, &controls_for_lens).into_element(cx)",
             ],
             &[
+                "fn stage_tile(cx: &mut ElementContext<'_, App>, color: fret_core::Color, left: Px, top: Px, w: Px, h: Px, corner_radius_px: Px,) -> AnyElement",
                 "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
                 "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
             ],
@@ -1073,12 +1110,17 @@ mod authoring_surface_policy_tests {
         assert_default_app_generic_helpers_prefer_into_ui_element(
             CUSTOM_EFFECT_V2_LUT_WEB_DEMO,
             &[
+                "fn stage_tile(",
+                ") -> impl IntoUiElement<App> + use<>",
                 "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
                 "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
+                "items.push(Self::stage_tile(",
+                ".into_element(cx),",
                 "let inspector = Self::inspector(cx, &controls).into_element(cx);",
                 "Self::lens(cx, &controls_for_lens).into_element(cx)",
             ],
             &[
+                "fn stage_tile(cx: &mut ElementContext<'_, App>, color: fret_core::Color, left: Px, top: Px, w: Px, h: Px, corner_radius_px: Px,) -> AnyElement",
                 "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
                 "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
             ],
@@ -1088,16 +1130,35 @@ mod authoring_surface_policy_tests {
             CUSTOM_EFFECT_V2_GLASS_CHROME_WEB_DEMO,
             &[
                 "fn label_row(cx: &mut ElementContext<'_, App>, label: &str, value: String,) -> impl IntoUiElement<App> + use<>",
+                "fn stage_tile(",
+                ") -> impl IntoUiElement<App> + use<>",
                 "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
                 "fn controls_panel(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
                 "Self::label_row(cx, \"Uv span\", format!(\"{uv_span:.2}\")).into_element(cx)",
+                "items.push(Self::stage_tile(",
+                ".into_element(cx),",
                 "let inspector = Self::controls_panel(cx, &controls).into_element(cx);",
                 "items.push(Self::lens(cx, &controls_for_stage).into_element(cx));",
             ],
             &[
                 "fn label_row(cx: &mut ElementContext<'_, App>, label: &str, value: String) -> AnyElement",
+                "fn stage_tile(cx: &mut ElementContext<'_, App>, color: fret_core::Color, left: Px, top: Px, w: Px, h: Px, corner_radius_px: Px,) -> AnyElement",
                 "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
                 "fn controls_panel(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
+            ],
+        );
+
+        assert_advanced_helpers_prefer_uicx(
+            ASYNC_PLAYGROUND_DEMO,
+            &[
+                "fn catalog_item(",
+                "id: QueryId,",
+                ") -> impl IntoUiElement<KernelApp> + use<>",
+                "out.push(catalog_item(cx, st, theme.clone(), selected, id).into_element(cx));",
+            ],
+            &[
+                "fn catalog_item(cx: &mut UiCx<'_>, st: &mut AsyncPlaygroundState, theme: ThemeSnapshot, selected: QueryId, id: QueryId,) -> AnyElement",
+                "out.push(catalog_item(cx, st, theme.clone(), selected, id));",
             ],
         );
     }

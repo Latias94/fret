@@ -129,6 +129,7 @@ Validation snapshot on 2026-03-13:
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app radio_group_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app slider_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app native_select_ -- --nocapture`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app resizable_ -- --nocapture`
 
 Implementation note on 2026-03-13:
 
@@ -194,9 +195,16 @@ Implementation note on 2026-03-13:
   model state inside each snippet instead of routing it through `pages/native_select.rs`, and
   `apps/fret-ui-gallery/src/ui/pages/native_select.rs` now routes those previews through
   `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
-- after `accordion` / `tabs` / `toggle` / `radio_group` / `slider` / `native_select`, the next
-  default-app UI Gallery app-facing queue should stay focused on `resizable` before widening the
-  lane again.
+- the same UI Gallery top-level snippet cleanup now also covers the resizable family:
+  `apps/fret-ui-gallery/src/ui/snippets/resizable/{demo,handle,notes,rtl,usage,vertical}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep local fractions
+  model state inside each snippet instead of routing it through page/content/runtime-driver relay
+  state, and `apps/fret-ui-gallery/src/ui/pages/resizable.rs` now routes those previews through
+  `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- after `accordion` / `tabs` / `toggle` / `radio_group` / `slider` / `native_select` /
+  `resizable`, the next default-app UI Gallery app-facing queue should move to the remaining
+  top-level families that still re-teach eager `AnyElement` returns, starting with the smallest
+  page-local lanes rather than reopening reusable-helper work.
 - `apps/fret-cookbook/examples/customv1_basics.rs` now keeps both advanced reusable helpers
   `panel_shell(...)` and `preview_content(...)` on `IntoUiElement<KernelApp>`-based signatures
   instead of returning raw `AnyElement` for non-raw composition.

@@ -341,14 +341,14 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GizmoBasicsWindowState)
 
     let snap_label = if model.snap { "Snap: on" } else { "Snap: off" };
 
-    let header = shadcn::CardHeader::build(|cx, out| {
-        out.push_ui(cx, shadcn::CardTitle::new("Gizmo basics"));
-        out.push_ui(
-            cx,
-            shadcn::CardDescription::new(
+    let header = shadcn::card_header(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_title("Gizmo basics"),
+            shadcn::card_description(
                 "A minimal editor-style gizmo loop: pointer input -> fret-gizmo update -> app-owned transform -> paint.",
             ),
-        );
+        ]
     });
 
     let pos_badges = ui::h_flex(|_cx| {
@@ -655,21 +655,21 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GizmoBasicsWindowState)
         .h_full()
         .min_h(Px(480.0));
 
-    let card = shadcn::Card::build(|cx, out| {
-        out.push_ui(cx, header);
-        out.push_ui(
-            cx,
-            shadcn::CardContent::build(|cx, out| {
-                out.push_ui(
-                    cx,
+    let card = shadcn::card(|cx| {
+        ui::children![
+            cx;
+            header,
+            shadcn::card_content(|cx| {
+                ui::children![
+                    cx;
                     ui::v_flex(|cx| ui::children![cx; toolbar, hint, viewport])
                         .gap(Space::N3)
                         .w_full()
                         .h_full()
                         .min_w_0(),
-                );
+                ]
             }),
-        );
+        ]
     })
     .ui()
     .w_full()
@@ -729,9 +729,9 @@ fn main() -> anyhow::Result<()> {
         .with_command_default_keybindings()
         .setup(install_commands)
         .setup(shadcn::app::install)
+        .setup(fret_icons_lucide::app::install)
         .setup(fret_cookbook::install_cookbook_defaults)
-        .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
-        .with_lucide_icons();
+        .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096);
 
     #[cfg(feature = "cookbook-diag")]
     let builder = builder.with_default_diagnostics();

@@ -1230,6 +1230,61 @@ where
     UiBuilder::new(KeyedBox::new(Location::caller(), key, child))
 }
 
+/// Collects a keyed dynamic child list without forcing callers onto `*_build(|cx, out| ...)`.
+///
+/// This is the preferred authoring helper when a layout closure naturally wants to return
+/// a conditional `Vec<AnyElement>`: empty-state content can still use `ui::children![cx; ...]`,
+/// while the non-empty branch keeps stable keyed identity without open-coding
+/// `for item in ... { out.push_ui(cx, ui::keyed(...)) }`.
+///
+/// Use [`for_each_keyed_with_cx`] when the per-row builder itself needs the keyed child scope.
+#[track_caller]
+pub fn for_each_keyed<H: UiHost, I, KF, BF, K, T>(
+    cx: &mut ElementContext<'_, H>,
+    items: I,
+    key_of: KF,
+    mut build: BF,
+) -> Vec<AnyElement>
+where
+    I: IntoIterator,
+    KF: FnMut(&I::Item) -> K,
+    BF: FnMut(I::Item) -> T,
+    K: Hash,
+    T: IntoUiElement<H>,
+{
+    for_each_keyed_with_cx(cx, items, key_of, |_cx, item| build(item))
+}
+
+/// Collects a keyed dynamic child list while exposing the keyed child scope to each row builder.
+///
+/// Prefer this when each row needs its own keyed `cx` for row-local state, `cx.text(...)`,
+/// nested local models, or other child-scope work that should happen inside the keyed boundary.
+#[track_caller]
+pub fn for_each_keyed_with_cx<H: UiHost, I, KF, BF, K, T>(
+    cx: &mut ElementContext<'_, H>,
+    items: I,
+    mut key_of: KF,
+    mut build: BF,
+) -> Vec<AnyElement>
+where
+    I: IntoIterator,
+    KF: FnMut(&I::Item) -> K,
+    BF: FnMut(&mut ElementContext<'_, H>, I::Item) -> T,
+    K: Hash,
+    T: IntoUiElement<H>,
+{
+    let callsite = Location::caller();
+    let mut out = Vec::new();
+
+    for item in items {
+        let key = key_of(&item);
+        let build = &mut build;
+        out.push(cx.keyed_at(callsite, key, |cx| build(cx, item).into_element(cx)));
+    }
+
+    out
+}
+
 #[derive(Debug, Clone)]
 pub struct EffectLayerBox<H, F> {
     pub(crate) props: EffectLayerProps,
@@ -1825,6 +1880,39 @@ mod tests {
     fn keyed_accepts_ui_builder_children<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         v_flex_build(|cx, out| {
             out.push_ui(cx, keyed("row-1", |_cx| text("row").test_id("row")));
+        })
+        .test_id("rows")
+        .into_element(cx)
+    }
+
+    // Compile-only: ensure keyed list helpers can stay on the ordinary `v_flex(|cx| ..)` lane
+    // without falling back to sink-based `v_flex_build(...)` authoring.
+    #[allow(dead_code)]
+    fn for_each_keyed_accepts_ui_builder_children<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+    ) -> AnyElement {
+        let rows = [("row-1", "Alpha"), ("row-2", "Beta")];
+
+        v_flex(|cx| for_each_keyed(cx, rows, |(id, _label)| *id, |(_id, label)| text(label)))
+            .test_id("rows")
+            .into_element(cx)
+    }
+
+    // Compile-only: ensure keyed list helpers can also hand row builders the inner keyed scope
+    // when the row content needs to be assembled inside that boundary.
+    #[allow(dead_code)]
+    fn for_each_keyed_with_cx_accepts_row_local_scope<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+    ) -> AnyElement {
+        let rows = [("row-1", "Alpha"), ("row-2", "Beta")];
+
+        v_flex(|cx| {
+            for_each_keyed_with_cx(
+                cx,
+                rows,
+                |(id, _label)| *id,
+                |_cx, (_id, label)| container(move |cx| [cx.text(label)]).test_id(label),
+            )
         })
         .test_id("rows")
         .into_element(cx)

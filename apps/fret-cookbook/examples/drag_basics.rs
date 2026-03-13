@@ -123,14 +123,13 @@ impl View for DragBasicsView {
                 true
             });
 
-        let header = shadcn::CardHeader::build(|cx, out| {
-            out.push_ui(cx, shadcn::CardTitle::new("Drag basics"));
-            out.push_ui(
-                cx,
-                shadcn::CardDescription::new(
+        let header = shadcn::card_header(|cx| {
+            ui::children![cx;
+                shadcn::card_title("Drag basics"),
+                shadcn::card_description(
                     "A tiny pointer-capture drag example using a pointer region.",
                 ),
-            );
+            ]
         });
 
         let pos = shadcn::Badge::new(pos_label)
@@ -186,18 +185,16 @@ impl View for DragBasicsView {
             vec![bounds]
         });
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(cx, header);
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(
-                        cx,
+        let card = shadcn::card(|cx| {
+            ui::children![cx;
+                header,
+                shadcn::card_content(|cx| {
+                    ui::children![cx;
                         ui::v_flex(|cx| ui::children![cx; pos, drag_count_badge, draggable])
-                            .gap(Space::N3),
-                    );
+                            .gap(Space::N3)
+                    ]
                 }),
-            );
+            ]
         })
         .ui()
         .w_full()

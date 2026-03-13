@@ -46,9 +46,6 @@ pub(crate) struct UiGalleryModels {
     #[cfg(feature = "gallery-material3")]
     pub(crate) time_picker_selected: Model<time::Time>,
 
-    pub(crate) resizable_h_fractions: Model<Vec<f32>>,
-    pub(crate) resizable_v_fractions: Model<Vec<f32>>,
-
     pub(crate) data_table_state: Model<fret_ui_headless::table::TableState>,
     #[cfg(feature = "gallery-dev")]
     pub(crate) data_grid_selected_row: Model<Option<u64>>,
@@ -90,21 +87,15 @@ pub(crate) struct UiGalleryModels {
     #[cfg(feature = "gallery-material3")]
     pub(crate) material3_modal_navigation_drawer_open: Model<bool>,
     #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_dialog_open: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
     pub(crate) material3_text_field_value: Model<String>,
     #[cfg(feature = "gallery-material3")]
     pub(crate) material3_text_field_disabled: Model<bool>,
     #[cfg(feature = "gallery-material3")]
     pub(crate) material3_text_field_error: Model<bool>,
     #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_autocomplete_value: Model<String>,
-    #[cfg(feature = "gallery-material3")]
     pub(crate) material3_autocomplete_disabled: Model<bool>,
     #[cfg(feature = "gallery-material3")]
     pub(crate) material3_autocomplete_error: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_autocomplete_dialog_open: Model<bool>,
     #[cfg(feature = "gallery-material3")]
     pub(crate) material3_menu_open: Model<bool>,
 

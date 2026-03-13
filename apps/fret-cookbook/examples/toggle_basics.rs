@@ -43,25 +43,18 @@ impl View for ToggleBasicsView {
         .gap(Space::N3)
         .items_start();
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(
-                cx,
-                shadcn::CardHeader::build(|cx, out| {
-                    out.push_ui(cx, shadcn::CardTitle::new("Toggle basics"));
-                    out.push_ui(
-                        cx,
-                        shadcn::CardDescription::new(
+        let card = shadcn::card(|cx| {
+            ui::children![cx;
+                shadcn::card_header(|cx| {
+                    ui::children![cx;
+                        shadcn::card_title("Toggle basics"),
+                        shadcn::card_description(
                             "Demonstrates `Toggle::from_pressed(...)` plus typed actions on view-local state.",
                         ),
-                    );
+                    ]
                 }),
-            );
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(cx, body);
-                }),
-            );
+                shadcn::card_content(|cx| ui::children![cx; body]),
+            ]
         })
         .ui()
         .w_full()

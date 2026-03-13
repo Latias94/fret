@@ -241,8 +241,6 @@ struct UiGalleryWindowState {
     time_picker_open: Model<bool>,
     #[cfg(feature = "gallery-material3")]
     time_picker_selected: Model<time::Time>,
-    resizable_h_fractions: Model<Vec<f32>>,
-    resizable_v_fractions: Model<Vec<f32>>,
     data_table_state: Model<fret_ui_headless::table::TableState>,
     #[cfg(feature = "gallery-dev")]
     data_grid_selected_row: Model<Option<u64>>,
@@ -299,21 +297,15 @@ struct UiGalleryWindowState {
     #[cfg(feature = "gallery-material3")]
     material3_modal_navigation_drawer_open: Model<bool>,
     #[cfg(feature = "gallery-material3")]
-    material3_dialog_open: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
     material3_text_field_value: Model<String>,
     #[cfg(feature = "gallery-material3")]
     material3_text_field_disabled: Model<bool>,
     #[cfg(feature = "gallery-material3")]
     material3_text_field_error: Model<bool>,
     #[cfg(feature = "gallery-material3")]
-    material3_autocomplete_value: Model<String>,
-    #[cfg(feature = "gallery-material3")]
     material3_autocomplete_disabled: Model<bool>,
     #[cfg(feature = "gallery-material3")]
     material3_autocomplete_error: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    material3_autocomplete_dialog_open: Model<bool>,
     #[cfg(feature = "gallery-material3")]
     material3_menu_open: Model<bool>,
     text_input: Model<String>,
@@ -376,8 +368,6 @@ impl UiGalleryWindowState {
             time_picker_open: self.time_picker_open.clone(),
             #[cfg(feature = "gallery-material3")]
             time_picker_selected: self.time_picker_selected.clone(),
-            resizable_h_fractions: self.resizable_h_fractions.clone(),
-            resizable_v_fractions: self.resizable_v_fractions.clone(),
             data_table_state: self.data_table_state.clone(),
             #[cfg(feature = "gallery-dev")]
             data_grid_selected_row: self.data_grid_selected_row.clone(),
@@ -417,21 +407,15 @@ impl UiGalleryWindowState {
                 .material3_modal_navigation_drawer_open
                 .clone(),
             #[cfg(feature = "gallery-material3")]
-            material3_dialog_open: self.material3_dialog_open.clone(),
-            #[cfg(feature = "gallery-material3")]
             material3_text_field_value: self.material3_text_field_value.clone(),
             #[cfg(feature = "gallery-material3")]
             material3_text_field_disabled: self.material3_text_field_disabled.clone(),
             #[cfg(feature = "gallery-material3")]
             material3_text_field_error: self.material3_text_field_error.clone(),
             #[cfg(feature = "gallery-material3")]
-            material3_autocomplete_value: self.material3_autocomplete_value.clone(),
-            #[cfg(feature = "gallery-material3")]
             material3_autocomplete_disabled: self.material3_autocomplete_disabled.clone(),
             #[cfg(feature = "gallery-material3")]
             material3_autocomplete_error: self.material3_autocomplete_error.clone(),
-            #[cfg(feature = "gallery-material3")]
-            material3_autocomplete_dialog_open: self.material3_autocomplete_dialog_open.clone(),
             #[cfg(feature = "gallery-material3")]
             material3_menu_open: self.material3_menu_open.clone(),
             text_input: self.text_input.clone(),

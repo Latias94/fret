@@ -104,23 +104,27 @@ impl View for SimpleTodoV2TargetView {
             .items_center()
             .w_full();
 
-        let rows = ui::v_flex_build(|cx, out| {
+        let rows = ui::v_flex(|cx| {
             if todos.is_empty() {
-                out.push_ui(
-                    cx,
+                return ui::children![
+                    cx;
                     ui::text("No tasks yet. Add one above.")
                         .text_sm()
                         .text_color(ColorRef::Color(
                             theme_for_rows.color_token("muted-foreground"),
-                        )),
-                );
-                return;
+                        ))
+                ];
             }
 
-            for row in &todos {
-                let theme = theme_for_rows.clone();
-                out.push_ui(cx, ui::keyed(row.id, |_cx| todo_row(theme, row)));
-            }
+            ui::for_each_keyed(
+                cx,
+                &todos,
+                |row| row.id,
+                |row| {
+                    let theme = theme_for_rows.clone();
+                    todo_row(theme, row)
+                },
+            )
         })
         .gap(Space::N2)
         .test_id(TEST_ID_ROWS);
@@ -132,31 +136,25 @@ impl View for SimpleTodoV2TargetView {
         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
         .test_id(TEST_ID_NOTE);
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(
-                cx,
-                shadcn::CardHeader::build(|cx, out| {
-                    out.push_ui(cx, shadcn::CardTitle::new("Simple todo v2 target"));
-                    out.push_ui(
-                        cx,
-                        shadcn::CardDescription::new(
+        let card = shadcn::card(|cx| {
+            ui::children![cx;
+                shadcn::card_header(|cx| {
+                    ui::children![cx;
+                        shadcn::card_title("Simple todo v2 target"),
+                        shadcn::card_description(
                             "Comparison target: local draft + LocalState<Vec<_>> + checkbox snapshot/actions (no selector/query).",
                         ),
-                    );
-                    out.push_ui(cx, header_actions);
+                        header_actions,
+                    ]
                 }),
-            );
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(
-                        cx,
+                shadcn::card_content(|cx| {
+                    ui::children![cx;
                         ui::v_flex(|cx| ui::children![cx; input_row, rows, note])
                             .gap(Space::N4)
-                            .w_full(),
-                    );
+                            .w_full()
+                    ]
                 }),
-            );
+            ]
         })
         .ui()
         .w_full()

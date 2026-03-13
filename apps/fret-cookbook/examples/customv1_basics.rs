@@ -72,18 +72,13 @@ where
     let theme = Theme::global(&*cx.app).snapshot();
     let body = body.into_element(cx);
 
-    shadcn::Card::build(move |cx, out| {
-        out.push_ui(
-            cx,
-            shadcn::CardHeader::build(move |cx, out| {
-                out.push_ui(cx, shadcn::CardTitle::new(title));
-            }),
-        );
-        out.push_ui(
-            cx,
-            shadcn::CardContent::build(move |cx, out| {
-                out.push_ui(
-                    cx,
+    shadcn::card(move |cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| ui::children![cx; shadcn::card_title(title)]),
+            shadcn::card_content(move |cx| {
+                ui::children![
+                    cx;
                     ui::container(|_cx| vec![body])
                         .bg(ColorRef::Color(theme.color_token("muted")))
                         .rounded(Radius::Md)
@@ -91,9 +86,9 @@ where
                         .border_color(ColorRef::Color(theme.color_token("border")))
                         .w_full()
                         .h_px(Px(320.0)),
-                );
+                ]
             }),
-        );
+        ]
     })
     .ui()
     .w_full()
@@ -316,25 +311,20 @@ impl View for CustomV1BasicsView {
             .gap(Space::N4)
             .w_full();
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(
-                cx,
-                shadcn::CardHeader::build(|cx, out| {
-                    out.push_ui(cx, shadcn::CardTitle::new("CustomV1 basics"));
-                    out.push_ui(
-                        cx,
-                        shadcn::CardDescription::new(
+        let card = shadcn::card(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_header(|cx| {
+                    ui::children![
+                        cx;
+                        shadcn::card_title("CustomV1 basics"),
+                        shadcn::card_description(
                             "Registers a bounded WGSL snippet at on_gpu_ready and applies EffectStep::CustomV1 (single pass).",
                         ),
-                    );
+                    ]
                 }),
-            );
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(cx, body);
-                }),
-            );
+                shadcn::card_content(|cx| ui::children![cx; body]),
+            ]
         })
         .ui()
         .w_full()

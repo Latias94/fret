@@ -195,9 +195,12 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> ViewElements 
         "Reports effective/clamped window style via diagnostics."
     };
 
-    let header = shadcn::CardHeader::build(|cx, out| {
-        out.push_ui(cx, shadcn::CardTitle::new(title));
-        out.push_ui(cx, shadcn::CardDescription::new(description));
+    let header = shadcn::card_header(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_title(title),
+            shadcn::card_description(description),
+        ]
     });
 
     let content = ui::v_flex(|cx| {
@@ -287,14 +290,12 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> ViewElements 
     })
     .gap(Space::N3);
 
-    let surface = shadcn::Card::build(|cx, out| {
-        out.push_ui(cx, header);
-        out.push_ui(
-            cx,
-            shadcn::CardContent::build(|cx, out| {
-                out.push_ui(cx, content);
-            }),
-        );
+    let surface = shadcn::card(|cx| {
+        ui::children![
+            cx;
+            header,
+            shadcn::card_content(|cx| ui::children![cx; content]),
+        ]
     })
     .ui()
     .w_full()

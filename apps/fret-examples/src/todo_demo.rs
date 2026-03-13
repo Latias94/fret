@@ -110,60 +110,58 @@ impl View for TodoDemoView {
             .items_center()
             .w_full();
 
-        let rows = ui::v_flex_build(|cx, out| {
+        let rows = ui::v_flex(|cx| {
             if todos.is_empty() {
-                out.push_ui(
-                    cx,
+                return ui::children![
+                    cx;
                     ui::text("No tasks yet. Add one above.")
                         .text_sm()
                         .text_color(ColorRef::Color(
                             theme_for_rows.color_token("muted-foreground"),
-                        )),
-                );
-                return;
+                        ))
+                ];
             }
 
-            for row in &todos {
-                let theme = theme_for_rows.clone();
-                out.push_ui(cx, ui::keyed(row.id, |_cx| todo_row(theme, row)));
-            }
+            ui::for_each_keyed(
+                cx,
+                &todos,
+                |row| row.id,
+                |row| {
+                    let theme = theme_for_rows.clone();
+                    todo_row(theme, row)
+                },
+            )
         })
         .gap(Space::N2)
         .w_full()
         .test_id(TEST_ID_ROWS);
 
         let note = ui::text(
-            "App-grade comparison target: this demo now keeps the keyed list in LocalState<Vec<_>> and uses payload actions for row toggle/remove. The next migration target should be the scaffold simple-todo template, not more tracked-write helpers.",
+            "App-grade comparison target: this demo now keeps the keyed list in LocalState<Vec<_>>, renders rows through ui::for_each_keyed(...), and uses payload actions for row toggle/remove.",
         )
         .text_xs()
         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
         .test_id(TEST_ID_NOTE);
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(
-                cx,
-                shadcn::CardHeader::build(|cx, out| {
-                    out.push_ui(cx, shadcn::CardTitle::new("Todo demo (action-first)"));
-                    out.push_ui(
-                        cx,
-                        shadcn::CardDescription::new(
+        let card = shadcn::card(|cx| {
+            ui::children![cx;
+                shadcn::card_header(|cx| {
+                    ui::children![cx;
+                        shadcn::card_title("Todo demo (action-first)"),
+                        shadcn::card_description(
                             "App-grade local list + typed actions + payload row actions.",
                         ),
-                    );
-                    out.push_ui(cx, header_actions);
+                        header_actions,
+                    ]
                 }),
-            );
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(
-                        cx,
+                shadcn::card_content(|cx| {
+                    ui::children![cx;
                         ui::v_flex(|cx| ui::children![cx; input_row, rows, note])
                             .gap(Space::N4)
-                            .w_full(),
-                    );
+                            .w_full()
+                    ]
                 }),
-            );
+            ]
         })
         .ui()
         .w_full()
@@ -229,20 +227,15 @@ impl View for TodoDemoView {
                 rows.len() != before
             });
 
-        let card = card.into_element(cx);
-        todo_page(cx, theme, card).into()
+        todo_page(theme, card).into_element(cx).into()
     }
 }
 
-fn todo_page(
-    cx: &mut UiCx<'_>,
-    theme: ThemeSnapshot,
-    content: impl UiChild,
-) -> fret_ui::element::AnyElement {
-    ui::container(|cx| {
+fn todo_page(theme: ThemeSnapshot, content: impl UiChild) -> impl UiChild {
+    ui::container(move |cx| {
         ui::children![
             cx;
-            ui::v_flex(|cx| ui::children![cx; content])
+            ui::v_flex(move |cx| ui::children![cx; content])
                 .w_full()
                 .h_full()
                 .justify_center()
@@ -254,7 +247,6 @@ fn todo_page(
     .w_full()
     .h_full()
     .test_id(TEST_ID_ROOT)
-    .into_element(cx)
 }
 
 fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {

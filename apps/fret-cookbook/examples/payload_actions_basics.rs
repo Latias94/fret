@@ -49,31 +49,30 @@ impl View for PayloadActionsView {
         });
         let rows_snapshot = cx.state().watch(&rows_state).layout().value_or_default();
 
-        let rows_el = ui::v_flex_build(|cx, out| {
-            for row in &rows_snapshot {
-                let row_id = row.id;
-                let row_label = row.label.clone();
+        let rows_el = ui::v_flex(|cx| {
+            ui::for_each_keyed(
+                cx,
+                &rows_snapshot,
+                |row| row.id,
+                |row| {
+                    let row_id = row.id;
+                    let row_label = row.label.clone();
+                    let label = ui::text(row_label).text_sm();
 
-                out.push_ui(
-                    cx,
-                    ui::keyed(row_id, |_cx| {
-                        let label = ui::text(row_label).text_sm();
+                    let remove = shadcn::Button::new("Remove")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .action(act::Remove)
+                        .action_payload(row_id)
+                        .test_id(remove_test_id(row_id));
 
-                        let remove = shadcn::Button::new("Remove")
-                            .variant(shadcn::ButtonVariant::Secondary)
-                            .action(act::Remove)
-                            .action_payload(row_id)
-                            .test_id(remove_test_id(row_id));
-
-                        ui::h_flex(|cx| ui::children![cx; label, remove])
-                            .gap(Space::N2)
-                            .items_center()
-                            .justify_between()
-                            .w_full()
-                            .test_id(row_test_id(row_id))
-                    }),
-                );
-            }
+                    ui::h_flex(|cx| ui::children![cx; label, remove])
+                        .gap(Space::N2)
+                        .items_center()
+                        .justify_between()
+                        .w_full()
+                        .test_id(row_test_id(row_id))
+                },
+            )
         })
         .gap(Space::N2)
         .w_full()
@@ -87,13 +86,10 @@ impl View for PayloadActionsView {
                 rows.len() != before
             });
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(cx, rows_el);
-                }),
-            );
+        let card = shadcn::card(|cx| {
+            ui::children![cx;
+                shadcn::card_content(|cx| ui::children![cx; rows_el]),
+            ]
         })
         .ui()
         .w_full()

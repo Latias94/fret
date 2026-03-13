@@ -196,6 +196,19 @@ mod authoring_surface_policy_tests {
         }
     }
 
+    fn assert_promoted_card_wrapper_family_only(name: &str, src: &str) {
+        for forbidden in [
+            "shadcn::Card::build(",
+            "shadcn::CardHeader::build(",
+            "shadcn::CardContent::build(",
+        ] {
+            assert!(
+                !src.contains(forbidden),
+                "{name} reintroduced legacy card teaching surface: {forbidden}"
+            );
+        }
+    }
+
     #[test]
     fn onboarding_examples_use_the_new_app_surface() {
         assert_uses_app_surface(HELLO_EXAMPLE);
@@ -505,12 +518,16 @@ mod authoring_surface_policy_tests {
         assert_advanced_helpers_prefer_uicx(
             ASSETS_RELOAD_EPOCH_EXAMPLE,
             &[
-                "fn render_image_panel(cx: &mut UiCx<'_>,",
-                "fn render_svg_panel(cx: &mut UiCx<'_>,",
+                "fn render_image_panel(_cx: &mut UiCx<'_>,",
+                ") -> impl IntoUiElement<KernelApp> + use<>",
+                "fn render_svg_panel(_cx: &mut UiCx<'_>,",
+                ") -> impl IntoUiElement<KernelApp> + use<>",
             ],
             &[
                 "fn render_image_panel(cx: &mut ElementContext<'_, KernelApp>,",
                 "fn render_svg_panel(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn render_image_panel(cx: &mut UiCx<'_>, theme: &ThemeSnapshot, st: fret_ui_assets::ImageSourceState,) -> AnyElement",
+                "fn render_svg_panel(cx: &mut UiCx<'_>, theme: &ThemeSnapshot, st: fret_ui_assets::SvgFileState,) -> AnyElement",
             ],
         );
 
@@ -555,6 +572,52 @@ mod authoring_surface_policy_tests {
                 "fn chart_canvas(cx: &mut UiCx<'_>, st: &ChartInteractionsWindowState) -> impl IntoUiElement<KernelApp>",
             ],
         );
+    }
+
+    #[test]
+    fn cookbook_examples_keep_card_wrapper_family_as_the_only_card_teaching_surface() {
+        for (name, src) in [
+            ("commands_keymap_basics", COMMANDS_KEYMAP_EXAMPLE),
+            ("data_table_basics", DATA_TABLE_EXAMPLE),
+            ("date_picker_basics", DATE_PICKER_EXAMPLE),
+            ("drag_basics", DRAG_EXAMPLE),
+            ("docking_basics", DOCKING_EXAMPLE),
+            ("drop_shadow_basics", DROP_SHADOW_EXAMPLE),
+            ("embedded_viewport_basics", EMBEDDED_VIEWPORT_EXAMPLE),
+            ("effects_layer_basics", EFFECTS_LAYER_EXAMPLE),
+            (
+                "external_texture_import_basics",
+                EXTERNAL_TEXTURE_IMPORT_EXAMPLE,
+            ),
+            ("form_basics", FORM_EXAMPLE),
+            ("gizmo_basics", GIZMO_EXAMPLE),
+            ("icons_and_assets_basics", ICONS_AND_ASSETS_EXAMPLE),
+            ("markdown_and_code_basics", MARKDOWN_AND_CODE_EXAMPLE),
+            ("overlay_basics", OVERLAY_EXAMPLE),
+            ("payload_actions_basics", PAYLOAD_ACTIONS_EXAMPLE),
+            ("query_basics", QUERY_EXAMPLE),
+            ("router_basics", ROUTER_EXAMPLE),
+            ("simple_todo", SIMPLE_TODO_EXAMPLE),
+            ("simple_todo_v2_target", SIMPLE_TODO_V2_TARGET_EXAMPLE),
+            ("async_inbox_basics", ASYNC_INBOX_EXAMPLE),
+            ("assets_reload_epoch_basics", ASSETS_RELOAD_EPOCH_EXAMPLE),
+            ("canvas_pan_zoom_basics", CANVAS_PAN_ZOOM_EXAMPLE),
+            ("chart_interactions_basics", CHART_INTERACTIONS_EXAMPLE),
+            ("theme_switching_basics", THEME_SWITCHING_EXAMPLE),
+            ("customv1_basics", CUSTOM_V1_EXAMPLE),
+            ("hello_counter", HELLO_COUNTER_EXAMPLE),
+            ("text_input_basics", TEXT_INPUT_EXAMPLE),
+            ("toast_basics", TOAST_EXAMPLE),
+            ("toggle_basics", TOGGLE_EXAMPLE),
+            ("undo_basics", UNDO_EXAMPLE),
+            (
+                "utility_window_materials_windows",
+                UTILITY_WINDOW_MATERIALS_EXAMPLE,
+            ),
+            ("virtual_list_basics", VIRTUAL_LIST_EXAMPLE),
+        ] {
+            assert_promoted_card_wrapper_family_only(name, src);
+        }
     }
 
     #[test]

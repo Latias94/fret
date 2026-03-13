@@ -188,17 +188,13 @@ fn view(
         _ => (DEFAULT_TARGET_PX_SIZE, "960×540"),
     };
 
-    let header = shadcn::CardHeader::build(|cx, out| {
-        out.push_ui(
-            cx,
-            shadcn::CardTitle::new("Tier A interop: external texture import (basics)"),
-        );
-        out.push_ui(
-            cx,
-            shadcn::CardDescription::new(
+    let header = shadcn::card_header(|cx| {
+        ui::children![cx;
+            shadcn::card_title("Tier A interop: external texture import (basics)"),
+            shadcn::card_description(
                 "Presenting a per-frame imported wgpu::TextureView as a stable RenderTargetId via EngineFrameUpdate deltas (ADR 0234).",
             ),
-        );
+        ]
     });
 
     let controls = ui::h_flex(|cx| {
@@ -322,14 +318,11 @@ fn view(
     let content =
         ui::v_flex(|cx| ui::children![cx; controls, info, hint, surface_panel]).gap(Space::N3);
 
-    let card = shadcn::Card::build(|cx, out| {
-        out.push_ui(cx, header);
-        out.push_ui(
-            cx,
-            shadcn::CardContent::build(|cx, out| {
-                out.push_ui(cx, content);
-            }),
-        );
+    let card = shadcn::card(|cx| {
+        ui::children![cx;
+            header,
+            shadcn::card_content(|cx| ui::children![cx; content]),
+        ]
     })
     .ui()
     .w_full()
@@ -469,9 +462,9 @@ fn main() -> anyhow::Result<()> {
         .with_command_default_keybindings()
         .setup(install_commands)
         .setup(shadcn::app::install)
+        .setup(fret_icons_lucide::app::install)
         .setup(fret_cookbook::install_cookbook_defaults)
-        .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
-        .with_lucide_icons();
+        .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096);
 
     #[cfg(feature = "cookbook-diag")]
     let builder = builder.with_default_diagnostics();

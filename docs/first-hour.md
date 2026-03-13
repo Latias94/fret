@@ -77,7 +77,7 @@ Memorize the default app surface before you start editing:
 
 When rendering a list that can insert/remove/reorder, use keys:
 
-- Prefer `cx.keyed(id, |cx| ...)` for list rows.
+- Prefer `ui::for_each_keyed(cx, items, |item| id, |item| row)` for list rows.
 
 Rule of thumb:
 
@@ -91,9 +91,19 @@ Why this matters:
 Minimal pattern:
 
 ```rust
-for item in items {
-    cx.keyed(item.id, |cx| render_row(cx, item));
-}
+let rows = ui::v_flex(|cx| {
+    ui::for_each_keyed(cx, items.iter(), |item| item.id, |item| render_row(item))
+});
+```
+
+If a row really needs the inner keyed child scope, use:
+
+```rust
+let rows = ui::v_flex(|cx| {
+    ui::for_each_keyed_with_cx(cx, items.iter(), |item| item.id, |cx, item| {
+        render_row_with_cx(cx, item)
+    })
+});
 ```
 
 ### B) The authoring dialect: one small default surface
@@ -134,24 +144,29 @@ let header = ui::h_flex(|_cx| [ui::text("Hello")])
 
 ### C) Iterator helpers for child collection
 
+For dynamic keyed lists, the default path is still the dedicated keyed helper:
+
+```rust
+let rows = ui::v_flex(|cx| {
+    ui::for_each_keyed(cx, items.iter(), |item| item.id, |item| render_row(item))
+});
+```
+
 If you already have an iterator that yields `AnyElement`, collect it with `.elements()`:
 
 ```rust
 use fret_ui::element::AnyElementIterExt;
 
-let rows = items
-    .iter()
-    .map(|it| cx.keyed(it.id, |cx| render_row(cx, it)))
-    .elements();
+let rows = prebuilt_rows.into_iter().elements();
 ```
 
-If you run into iterator borrow pitfalls (because a closure needs `&mut cx`), prefer the `*_build`
-constructors that collect into a sink:
+If you truly need manual sink-style collection, keep `*_build(...)` as an explicit advanced escape
+hatch rather than the default keyed-list story:
 
 ```rust
-let list = ui::v_flex_build(cx, |cx, out| {
+let list = ui::v_flex_build(|cx, out| {
     for it in items.iter() {
-        out.push(cx.keyed(it.id, |cx| render_row(cx, it)));
+        out.push_ui(cx, expensive_manual_child(it));
     }
 });
 ```

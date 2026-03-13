@@ -253,8 +253,16 @@ Exit criteria:
   `apps/fret-ui-gallery/src/ui/pages/native_select.rs` now routes those previews through
   `DocSection::build(cx, ...)` instead of `DocSection::new(...)`, so the default docs example path
   no longer re-teaches eager `AnyElement` landing for that family either.
-- after `accordion` / `tabs` / `toggle` / `radio_group` / `slider` / `native_select`, the
-  remaining highest-value app-facing UI Gallery queue is `resizable`.
+- the same UI Gallery app-facing cleanup now also covers the resizable family:
+  `apps/fret-ui-gallery/src/ui/snippets/resizable/{demo,handle,notes,rtl,usage,vertical}.rs`
+  now expose `impl UiChild + use<>` on their top-level `render(...)` surface, keep fractions model
+  state inside the snippet instead of threading it through page/content/runtime-driver relay
+  fields, and `apps/fret-ui-gallery/src/ui/pages/resizable.rs` now routes those previews through
+  `DocSection::build(cx, ...)` instead of `DocSection::new(...)`, so the default docs example path
+  no longer re-teaches eager `AnyElement` landing for that family either.
+- after `accordion` / `tabs` / `toggle` / `radio_group` / `slider` / `native_select` /
+  `resizable`, the highest-value remaining app-facing UI Gallery queue is now the next
+  top-level-family sweep rather than more relay-state cleanup on this page.
 - the advanced IMUI compare lane now also stops leaking raw helper signatures on non-raw helpers:
   `apps/fret-examples/src/imui_editor_proof_demo.rs::{render_editor_name_assist_surface,render_authoring_parity_surface,render_authoring_parity_shared_state,render_authoring_parity_declarative_group,render_authoring_parity_imui_group,render_authoring_parity_imui_host}`
   now expose `IntoUiElement<...>`-based signatures while still keeping the internal

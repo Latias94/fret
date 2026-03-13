@@ -54,7 +54,7 @@ pub fn centered_page_muted<H: UiHost>(
 }
 
 /// Host-bound builder variant of `centered_page` for cookbook surfaces that still need
-/// `ElementContext` at the final landing step (for example `shadcn::Card::build(...).ui()`).
+/// `ElementContext` at the final landing step (for example `shadcn::card(...).ui()`).
 #[track_caller]
 pub fn centered_page_ui<H: UiHost, T>(
     cx: &mut ComponentCx<'_, H>,

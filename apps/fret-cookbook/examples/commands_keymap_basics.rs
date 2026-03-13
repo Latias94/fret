@@ -175,23 +175,16 @@ impl View for CommandsKeymapBasicsView {
         })
         .gap(Space::N2);
 
-        let panel = shadcn::Card::build(|cx, out| {
-            out.push_ui(
-                cx,
-                shadcn::CardHeader::build(|cx, out| {
-                    out.push_ui(cx, shadcn::CardTitle::new("Panel"));
-                    out.push_ui(
-                        cx,
-                        shadcn::CardDescription::new("State changes should be command-driven."),
-                    );
+        let panel = shadcn::card(|cx| {
+            ui::children![cx;
+                shadcn::card_header(|cx| {
+                    ui::children![cx;
+                        shadcn::card_title("Panel"),
+                        shadcn::card_description("State changes should be command-driven."),
+                    ]
                 }),
-            );
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(cx, panel_body);
-                }),
-            );
+                shadcn::card_content(|cx| ui::children![cx; panel_body]),
+            ]
         })
         .ui()
         .w_full()
@@ -201,25 +194,18 @@ impl View for CommandsKeymapBasicsView {
             .gap(Space::N6)
             .w_full();
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(
-                cx,
-                shadcn::CardHeader::build(|cx, out| {
-                    out.push_ui(cx, shadcn::CardTitle::new("Commands + keymap basics"));
-                    out.push_ui(
-                        cx,
-                        shadcn::CardDescription::new(
+        let card = shadcn::card(|cx| {
+            ui::children![cx;
+                shadcn::card_header(|cx| {
+                    ui::children![cx;
+                        shadcn::card_title("Commands + keymap basics"),
+                        shadcn::card_description(
                             "Registers a command with a default keybinding, then gates availability from UI state.",
                         ),
-                    );
+                    ]
                 }),
-            );
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(cx, body);
-                }),
-            );
+                shadcn::card_content(|cx| ui::children![cx; body]),
+            ]
         })
         .ui()
         .w_full()

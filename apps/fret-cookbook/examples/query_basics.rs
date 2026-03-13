@@ -164,36 +164,27 @@ impl View for QueryBasicsView {
         })
         .gap(Space::N2);
 
-        let card = shadcn::Card::build(|cx, out| {
-            out.push_ui(
-                cx,
-                shadcn::CardHeader::build(|cx, out| {
-                    out.push_ui(cx, shadcn::CardTitle::new("Query basics"));
-                    out.push_ui(
-                        cx,
-                        shadcn::CardDescription::new(
+        let card = shadcn::card(|cx| {
+            ui::children![cx;
+                shadcn::card_header(|cx| {
+                    ui::children![cx;
+                        shadcn::card_title("Query basics"),
+                        shadcn::card_description(
                             "A tiny async resource example using fret-query (invalidate + error mode).",
                         ),
-                    );
-                    out.push_ui(
-                        cx,
                         ui::h_flex(|cx| ui::children![cx; status_badge, mode_badge])
                             .gap(Space::N2)
                             .items_center(),
-                    );
+                    ]
                 }),
-            );
-            out.push_ui(
-                cx,
-                shadcn::CardContent::build(|cx, out| {
-                    out.push_ui(
-                        cx,
+                shadcn::card_content(|cx| {
+                    ui::children![cx;
                         ui::v_flex(|cx| ui::children![cx; buttons, lines])
                             .gap(Space::N4)
-                            .w_full(),
-                    );
+                            .w_full()
+                    ]
                 }),
-            );
+            ]
         })
         .ui()
         .w_full()
