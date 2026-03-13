@@ -102,7 +102,8 @@ use self::builtin::{
 };
 use self::custom::{
     append_custom_effect_in_place_single_scratch, append_custom_effect_v2_in_place_single_scratch,
-    append_custom_effect_v3_in_place_single_scratch, plan_custom_v3_sources_and_charge_budget,
+    append_custom_effect_v3_in_place_single_scratch, apply_custom_v1_step, apply_custom_v2_step,
+    apply_custom_v3_step, plan_custom_v3_sources_and_charge_budget,
 };
 
 pub(super) fn choose_effect_blur_downsample_scale(
@@ -2248,46 +2249,16 @@ fn apply_step_in_place_with_scratch_targets(
             params,
             max_sample_offset_px: _,
         } => {
-            effect_degradations.custom_effect.requested = effect_degradations
-                .custom_effect
-                .requested
-                .saturating_add(1);
-            if !color_adjust_enabled(ctx.viewport_size, ctx.format, *budget_bytes) {
-                if *budget_bytes == 0 {
-                    effect_degradations.custom_effect.degraded_budget_zero = effect_degradations
-                        .custom_effect
-                        .degraded_budget_zero
-                        .saturating_add(1);
-                } else {
-                    effect_degradations
-                        .custom_effect
-                        .degraded_budget_insufficient = effect_degradations
-                        .custom_effect
-                        .degraded_budget_insufficient
-                        .saturating_add(1);
-                }
-                return;
-            }
-            let Some(&scratch) = scratch_targets.first() else {
-                effect_degradations.custom_effect.degraded_target_exhausted = effect_degradations
-                    .custom_effect
-                    .degraded_target_exhausted
-                    .saturating_add(1);
-                return;
-            };
-            effect_degradations.custom_effect.applied =
-                effect_degradations.custom_effect.applied.saturating_add(1);
-            append_custom_effect_in_place_single_scratch(
+            apply_custom_v1_step(
                 passes,
+                scratch_targets,
                 srcdst,
-                scratch,
-                ctx.viewport_size,
-                Some(scissor),
+                scissor,
                 id,
                 params,
-                ctx.clear,
-                None,
-                None,
+                ctx,
+                budget_bytes,
+                effect_degradations,
             );
         }
         fret_core::EffectStep::CustomV2 {
@@ -2296,58 +2267,17 @@ fn apply_step_in_place_with_scratch_targets(
             max_sample_offset_px: _,
             input_image,
         } => {
-            effect_degradations.custom_effect.requested = effect_degradations
-                .custom_effect
-                .requested
-                .saturating_add(1);
-            if !color_adjust_enabled(ctx.viewport_size, ctx.format, *budget_bytes) {
-                if *budget_bytes == 0 {
-                    effect_degradations.custom_effect.degraded_budget_zero = effect_degradations
-                        .custom_effect
-                        .degraded_budget_zero
-                        .saturating_add(1);
-                } else {
-                    effect_degradations
-                        .custom_effect
-                        .degraded_budget_insufficient = effect_degradations
-                        .custom_effect
-                        .degraded_budget_insufficient
-                        .saturating_add(1);
-                }
-                return;
-            }
-            let Some(&scratch) = scratch_targets.first() else {
-                effect_degradations.custom_effect.degraded_target_exhausted = effect_degradations
-                    .custom_effect
-                    .degraded_target_exhausted
-                    .saturating_add(1);
-                return;
-            };
-            effect_degradations.custom_effect.applied =
-                effect_degradations.custom_effect.applied.saturating_add(1);
-
-            let (input_image, input_uv, input_sampling) = match input_image {
-                None => (
-                    None,
-                    fret_core::scene::UvRect::FULL,
-                    fret_core::scene::ImageSamplingHint::Default,
-                ),
-                Some(input) => (Some(input.image), input.uv, input.sampling),
-            };
-            append_custom_effect_v2_in_place_single_scratch(
+            apply_custom_v2_step(
                 passes,
+                scratch_targets,
                 srcdst,
-                scratch,
-                ctx.viewport_size,
-                Some(scissor),
+                scissor,
                 id,
                 params,
                 input_image,
-                input_uv,
-                input_sampling,
-                ctx.clear,
-                None,
-                None,
+                ctx,
+                budget_bytes,
+                effect_degradations,
             );
         }
         fret_core::EffectStep::CustomV3 {
@@ -2358,109 +2288,22 @@ fn apply_step_in_place_with_scratch_targets(
             user1,
             sources,
         } => {
-            effect_degradations.custom_effect.requested = effect_degradations
-                .custom_effect
-                .requested
-                .saturating_add(1);
-            if !color_adjust_enabled(ctx.viewport_size, ctx.format, *budget_bytes) {
-                if *budget_bytes == 0 {
-                    effect_degradations.custom_effect.degraded_budget_zero = effect_degradations
-                        .custom_effect
-                        .degraded_budget_zero
-                        .saturating_add(1);
-                } else {
-                    effect_degradations
-                        .custom_effect
-                        .degraded_budget_insufficient = effect_degradations
-                        .custom_effect
-                        .degraded_budget_insufficient
-                        .saturating_add(1);
-                }
-                return;
-            }
-            let Some(&scratch) = scratch_targets.first() else {
-                effect_degradations.custom_effect.degraded_target_exhausted = effect_degradations
-                    .custom_effect
-                    .degraded_target_exhausted
-                    .saturating_add(1);
-                return;
-            };
-            effect_degradations.custom_effect.applied =
-                effect_degradations.custom_effect.applied.saturating_add(1);
-
-            let (user0_image, user0_uv, user0_sampling) = match user0 {
-                None => (
-                    None,
-                    fret_core::scene::UvRect::FULL,
-                    fret_core::scene::ImageSamplingHint::Default,
-                ),
-                Some(input) => (Some(input.image), input.uv, input.sampling),
-            };
-            let (user1_image, user1_uv, user1_sampling) = match user1 {
-                None => (
-                    None,
-                    fret_core::scene::UvRect::FULL,
-                    fret_core::scene::ImageSamplingHint::Default,
-                ),
-                Some(input) => (Some(input.image), input.uv, input.sampling),
-            };
-
-            let group_raw = backdrop_source_group.map(|g| g.raw_target);
-            let group_pyramid = backdrop_source_group.and_then(|g| g.pyramid);
-            let group_pyramid_roi = backdrop_source_group
-                .and_then(|g| g.pyramid.map(|_| (g.scissor, g.pyramid_pad_px)));
-
-            let v3_chain_raw = group_raw.or(custom_v3_chain_raw);
-            let v3_sources_plan = plan_custom_v3_sources_and_charge_budget(
-                sources,
-                scratch,
-                v3_chain_raw,
-                group_pyramid,
-                group_pyramid_roi,
-                scissor,
-                ctx,
-                budget_bytes,
-                base_required_bytes_for_srcdst_and_single_scratch(estimate_texture_bytes(
-                    ctx.viewport_size,
-                    ctx.format,
-                    1,
-                )),
-                &mut effect_degradations.custom_effect_v3_sources,
-            );
-            if let Some(e) = custom_chain_budget.as_mut()
-                && group_pyramid.is_none()
-                && sources.pyramid.is_some()
-                && v3_sources_plan.pyramid_levels >= 2
-            {
-                e.optional_pyramid_bytes =
-                    e.optional_pyramid_bytes
-                        .saturating_add(estimate_custom_v3_pyramid_bytes(
-                            ctx.viewport_size,
-                            ctx.format,
-                            v3_sources_plan.pyramid_levels,
-                        ));
-            }
-            append_custom_effect_v3_in_place_single_scratch(
+            apply_custom_v3_step(
                 passes,
+                scratch_targets,
                 srcdst,
-                scratch,
-                ctx.viewport_size,
-                Some(scissor),
+                scissor,
                 id,
                 params,
-                user0_image,
-                user0_uv,
-                user0_sampling,
-                user1_image,
-                user1_uv,
-                user1_sampling,
+                user0,
+                user1,
                 sources,
-                v3_sources_plan.src_raw,
-                v3_sources_plan.pyramid_levels,
-                v3_sources_plan.pyramid_build_scissor,
-                ctx.clear,
-                None,
-                None,
+                ctx,
+                budget_bytes,
+                effect_degradations,
+                custom_v3_chain_raw,
+                backdrop_source_group,
+                custom_chain_budget,
             );
         }
         fret_core::EffectStep::DropShadowV1(_) => {}

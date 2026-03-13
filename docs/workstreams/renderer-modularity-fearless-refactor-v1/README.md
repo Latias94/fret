@@ -143,6 +143,10 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/render_plan_effects/blur.rs`, and
   `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns blur compile,
   scissor inflation, or padded chain-scissor derivation helpers directly.
+- Renderer custom-step apply flow now lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/custom.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns custom effect
+  V1/V2/V3 step-apply branch handling directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:
@@ -454,6 +458,11 @@ As of 2026-03-13:
     `crates/fret-render-wgpu/src/renderer/render_plan_effects/blur.rs`
   - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns blur compile,
     scissor inflation, or padded chain-scissor derivation helpers directly
+- The third renderer effect-planning split has landed:
+  - custom-step apply flow now lives under
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects/custom.rs`
+  - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns custom effect
+    V1/V2/V3 step-apply branch handling directly
 - The sixty-fourth internal text split has landed:
   - prepared-glyph normalized-coords presence checks now live behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`

@@ -325,6 +325,232 @@ pub(super) fn append_custom_effect_in_place_single_scratch(
     }));
 }
 
+fn prepare_custom_effect_single_scratch(
+    scratch_targets: &[PlanTarget],
+    budget_bytes: u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    viewport_size: (u32, u32),
+    format: wgpu::TextureFormat,
+) -> Option<PlanTarget> {
+    effect_degradations.custom_effect.requested = effect_degradations
+        .custom_effect
+        .requested
+        .saturating_add(1);
+    if !color_adjust_enabled(viewport_size, format, budget_bytes) {
+        if budget_bytes == 0 {
+            effect_degradations.custom_effect.degraded_budget_zero = effect_degradations
+                .custom_effect
+                .degraded_budget_zero
+                .saturating_add(1);
+        } else {
+            effect_degradations
+                .custom_effect
+                .degraded_budget_insufficient = effect_degradations
+                .custom_effect
+                .degraded_budget_insufficient
+                .saturating_add(1);
+        }
+        return None;
+    }
+    let Some(&scratch) = scratch_targets.first() else {
+        effect_degradations.custom_effect.degraded_target_exhausted = effect_degradations
+            .custom_effect
+            .degraded_target_exhausted
+            .saturating_add(1);
+        return None;
+    };
+    effect_degradations.custom_effect.applied =
+        effect_degradations.custom_effect.applied.saturating_add(1);
+    Some(scratch)
+}
+
+pub(super) fn apply_custom_v1_step(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    effect: fret_core::EffectId,
+    params: fret_core::EffectParamsV1,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+) {
+    let Some(scratch) = prepare_custom_effect_single_scratch(
+        scratch_targets,
+        *budget_bytes,
+        effect_degradations,
+        ctx.viewport_size,
+        ctx.format,
+    ) else {
+        return;
+    };
+
+    append_custom_effect_in_place_single_scratch(
+        passes,
+        srcdst,
+        scratch,
+        ctx.viewport_size,
+        Some(scissor),
+        effect,
+        params,
+        ctx.clear,
+        None,
+        None,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(super) fn apply_custom_v2_step(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    effect: fret_core::EffectId,
+    params: fret_core::EffectParamsV1,
+    input_image: Option<fret_core::scene::CustomEffectImageInputV1>,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+) {
+    let Some(scratch) = prepare_custom_effect_single_scratch(
+        scratch_targets,
+        *budget_bytes,
+        effect_degradations,
+        ctx.viewport_size,
+        ctx.format,
+    ) else {
+        return;
+    };
+
+    let (input_image, input_uv, input_sampling) = match input_image {
+        None => (
+            None,
+            fret_core::scene::UvRect::FULL,
+            fret_core::scene::ImageSamplingHint::Default,
+        ),
+        Some(input) => (Some(input.image), input.uv, input.sampling),
+    };
+    append_custom_effect_v2_in_place_single_scratch(
+        passes,
+        srcdst,
+        scratch,
+        ctx.viewport_size,
+        Some(scissor),
+        effect,
+        params,
+        input_image,
+        input_uv,
+        input_sampling,
+        ctx.clear,
+        None,
+        None,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(super) fn apply_custom_v3_step(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    effect: fret_core::EffectId,
+    params: fret_core::EffectParamsV1,
+    user0: Option<fret_core::scene::CustomEffectImageInputV1>,
+    user1: Option<fret_core::scene::CustomEffectImageInputV1>,
+    sources: fret_core::scene::CustomEffectSourcesV3,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    custom_v3_chain_raw: Option<PlanTarget>,
+    backdrop_source_group: Option<BackdropSourceGroupCtx>,
+    custom_chain_budget: &mut Option<CustomEffectChainBudgetEvidence>,
+) {
+    let Some(scratch) = prepare_custom_effect_single_scratch(
+        scratch_targets,
+        *budget_bytes,
+        effect_degradations,
+        ctx.viewport_size,
+        ctx.format,
+    ) else {
+        return;
+    };
+
+    let (user0_image, user0_uv, user0_sampling) = match user0 {
+        None => (
+            None,
+            fret_core::scene::UvRect::FULL,
+            fret_core::scene::ImageSamplingHint::Default,
+        ),
+        Some(input) => (Some(input.image), input.uv, input.sampling),
+    };
+    let (user1_image, user1_uv, user1_sampling) = match user1 {
+        None => (
+            None,
+            fret_core::scene::UvRect::FULL,
+            fret_core::scene::ImageSamplingHint::Default,
+        ),
+        Some(input) => (Some(input.image), input.uv, input.sampling),
+    };
+
+    let group_raw = backdrop_source_group.map(|g| g.raw_target);
+    let group_pyramid = backdrop_source_group.and_then(|g| g.pyramid);
+    let group_pyramid_roi =
+        backdrop_source_group.and_then(|g| g.pyramid.map(|_| (g.scissor, g.pyramid_pad_px)));
+
+    let v3_chain_raw = group_raw.or(custom_v3_chain_raw);
+    let v3_sources_plan = plan_custom_v3_sources_and_charge_budget(
+        sources,
+        scratch,
+        v3_chain_raw,
+        group_pyramid,
+        group_pyramid_roi,
+        scissor,
+        ctx,
+        budget_bytes,
+        base_required_bytes_for_srcdst_and_single_scratch(estimate_texture_bytes(
+            ctx.viewport_size,
+            ctx.format,
+            1,
+        )),
+        &mut effect_degradations.custom_effect_v3_sources,
+    );
+    if let Some(e) = custom_chain_budget.as_mut()
+        && group_pyramid.is_none()
+        && sources.pyramid.is_some()
+        && v3_sources_plan.pyramid_levels >= 2
+    {
+        e.optional_pyramid_bytes =
+            e.optional_pyramid_bytes
+                .saturating_add(estimate_custom_v3_pyramid_bytes(
+                    ctx.viewport_size,
+                    ctx.format,
+                    v3_sources_plan.pyramid_levels,
+                ));
+    }
+    append_custom_effect_v3_in_place_single_scratch(
+        passes,
+        srcdst,
+        scratch,
+        ctx.viewport_size,
+        Some(scissor),
+        effect,
+        params,
+        user0_image,
+        user0_uv,
+        user0_sampling,
+        user1_image,
+        user1_uv,
+        user1_sampling,
+        sources,
+        v3_sources_plan.src_raw,
+        v3_sources_plan.pyramid_levels,
+        v3_sources_plan.pyramid_build_scissor,
+        ctx.clear,
+        None,
+        None,
+    );
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(super) fn append_custom_effect_v2_in_place_single_scratch(
     passes: &mut Vec<RenderPlanPass>,
