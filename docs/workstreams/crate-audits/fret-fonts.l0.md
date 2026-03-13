@@ -49,13 +49,14 @@ Evidence anchors:
 - Layering policy compliance:
   - excellent; this crate is fully portable and asset-focused.
 - Compile-time / maintenance hotspots:
-  - the entire public surface and feature matrix currently live in a single `src/lib.rs`
-    (~884 LOC from the audit snapshot), which concentrates feature drift risk in one file.
+  - the crate now has explicit `assets / profiles / tests` seams, but the feature matrix is still
+    handwritten Rust constants rather than a generated manifest.
 
 Evidence anchors:
 
 - `crates/fret-fonts/Cargo.toml`
 - `crates/fret-fonts/src/lib.rs`
+- `crates/fret-fonts/src/{assets,profiles,tests}.rs`
 - `python tools/audit_crate.py --crate fret-fonts`
 
 ## 4) Module ownership map (internal seams)
@@ -64,13 +65,14 @@ Evidence anchors:
   - Files: `crates/fret-fonts/src/lib.rs` (`BundledFontRole`, `BundledGenericFamily`,
     `BundledFontProfile`)
 - Feature-matrix asset wiring
-  - Files: `crates/fret-fonts/src/lib.rs` (`*_BYTES`, `*_FACE`, `*_PROFILE_NAME`,
+  - Files: `crates/fret-fonts/src/assets.rs` (`*_BYTES`, `*_FACE`, `BOOTSTRAP_FACES`,
+    `DEFAULT_FACES`), `crates/fret-fonts/src/profiles.rs` (`*_PROFILE_NAME`,
     `BOOTSTRAP_PROFILE`, `DEFAULT_PROFILE`)
 - Byte collection helpers
-  - Files: `crates/fret-fonts/src/lib.rs` (`collect_font_bytes`, `default_fonts`,
+  - Files: `crates/fret-fonts/src/profiles.rs` (`collect_font_bytes`, `default_fonts`,
     `bootstrap_fonts`, `emoji_fonts`, `cjk_lite_fonts`)
 - Manifest / asset conformance tests
-  - Files: `crates/fret-fonts/src/lib.rs` (`bundled_profiles_are_manifest_consistent`,
+  - Files: `crates/fret-fonts/src/tests.rs` (`bundled_profiles_are_manifest_consistent`,
     `bundled_face_family_names_match_name_tables`, `default_fonts_total_size_is_reasonable`)
 
 ## 5) Refactor hazards (what can regress easily)
@@ -87,11 +89,11 @@ Evidence anchors:
   - Existing gates: `default_fonts_total_size_is_reasonable`.
   - Missing gate to add: split out explicit budget checks for `bootstrap_fonts()` vs
     `default_fonts()` so bootstrap-only regressions cannot hide behind the larger default profile.
-- Single-file maintenance pressure
-  - Failure mode: future bundle additions touch unrelated profile, test, and asset constants in the
-    same file, making review harder and ordering regressions easier.
-  - Existing gates: manifest consistency tests catch some ordering issues.
-  - Missing gate to add: none executable yet; the main fix is structural separation.
+- Handwritten feature-matrix pressure
+  - Failure mode: future bundle additions still require touching multiple handwritten constant sets
+    across `assets.rs` and `profiles.rs`, making omissions possible even after the module split.
+  - Existing gates: manifest consistency tests catch some ordering and role drift.
+  - Missing gate to add: a generated manifest or a stronger feature-matrix test harness.
 - Policy leakage into the asset crate
   - Failure mode: platform fallback defaults or startup policy get added here because the profile
     data is nearby.
@@ -102,22 +104,26 @@ Evidence anchors:
 
 - The strongest part of the crate is its low dependency footprint and direct test coverage over the
   bundled manifest contract.
-- The highest refactor risk is not algorithmic complexity but manual feature-matrix maintenance:
-  dozens of `#[cfg(...)]` constants encode profile names, face sets, and provided-role lists.
+- The first ownership split is now landed: `lib.rs` is a facade and the crate has explicit
+  `assets / profiles / tests` seams.
+- The highest remaining refactor risk is not algorithmic complexity but manual feature-matrix
+  maintenance: dozens of `#[cfg(...)]` constants still encode profile names, face sets, and
+  provided-role lists.
 - No `unsafe` usage, no UI-thread work, and no serialization hazards were found in the crate.
 
 Evidence anchors:
 
 - `crates/fret-fonts/src/lib.rs`
-- `crates/fret-fonts/src/lib.rs` (`bundled_profile_matrix_covers_ui_and_monospace_contracts`,
+- `crates/fret-fonts/src/tests.rs` (`bundled_profile_matrix_covers_ui_and_monospace_contracts`,
   `bundled_profile_matrix_covers_emoji_fallback_contract`,
   `bundled_profile_matrix_covers_cjk_fallback_contract`)
 
 ## 7) Recommended refactor steps (small, gated)
 
-1. Split `src/lib.rs` into `profile.rs`, `assets.rs`, and `tests.rs` (or generated manifest +
-   helpers) — outcome: asset matrix changes become reviewable — gate: `cargo nextest run -p
-   fret-fonts`.
+1. Split `src/lib.rs` into `profiles.rs`, `assets.rs`, and `tests.rs` — outcome: asset matrix
+   changes become reviewable — status: landed — gate: `cargo nextest run -p fret-fonts`,
+   `cargo check -p fret-fonts --no-default-features`,
+   `cargo check -p fret-fonts --features bootstrap-full,emoji,cjk-lite`.
 2. Add representative feature-matrix gates for the crate — outcome: bundled profile drift is caught
    before integration — gate: `cargo check -p fret-fonts --no-default-features`, `cargo nextest
    run -p fret-fonts`, `cargo nextest run -p fret-fonts --features bootstrap-full,emoji,cjk-lite`.
