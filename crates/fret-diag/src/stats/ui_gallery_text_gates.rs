@@ -39,7 +39,19 @@ struct LocaleChangeConformanceEvidence {
     missing_glyphs: u64,
     font_trace_entry_count: usize,
     font_trace_locales: Vec<String>,
+    common_fallback_candidates: Vec<String>,
+    sample_trace_frame_id: Option<u64>,
+    sample_trace_locales: Vec<String>,
+    latin_families: Vec<String>,
+    cjk_families: Vec<String>,
+    emoji_families: Vec<String>,
+    mixed_families: Vec<String>,
 }
+
+const LOCALE_CHANGE_TRACE_SAMPLE_LATIN: &str = "m";
+const LOCALE_CHANGE_TRACE_SAMPLE_CJK: &str = "你";
+const LOCALE_CHANGE_TRACE_SAMPLE_EMOJI: &str = "\u{1F600}";
+const LOCALE_CHANGE_TRACE_SAMPLE_MIXED: &str = "m你\u{1F600}";
 
 fn find_latest_labeled_bundle_dir(out_dir: &Path, label: &str) -> Option<PathBuf> {
     let suffix = format!("-{label}");
@@ -204,6 +216,12 @@ fn bundle_last_text_locale_change_evidence(
     let policy = resource_caches
         .get("render_text_fallback_policy")?
         .as_object()?;
+    let snapshots = bundle
+        .get("windows")?
+        .as_array()?
+        .first()?
+        .get("snapshots")?
+        .as_array()?;
 
     let mut font_trace_locales = Vec::new();
     let font_trace_entry_count = resource_caches
@@ -221,6 +239,69 @@ fn bundle_last_text_locale_change_evidence(
         })
         .unwrap_or_default();
 
+    let latest_sample_trace = snapshots
+        .iter()
+        .filter_map(|snapshot| {
+            let frame_id = snapshot.get("frame_id")?.as_u64()?;
+            let entries = snapshot
+                .get("resource_caches")?
+                .get("render_text_font_trace")?
+                .get("entries")?
+                .as_array()?;
+
+            let latin = entries.iter().find(|entry| {
+                entry.get("text_preview").and_then(|v| v.as_str())
+                    == Some(LOCALE_CHANGE_TRACE_SAMPLE_LATIN)
+            })?;
+            let cjk = entries.iter().find(|entry| {
+                entry.get("text_preview").and_then(|v| v.as_str())
+                    == Some(LOCALE_CHANGE_TRACE_SAMPLE_CJK)
+            })?;
+            let emoji = entries.iter().find(|entry| {
+                entry.get("text_preview").and_then(|v| v.as_str())
+                    == Some(LOCALE_CHANGE_TRACE_SAMPLE_EMOJI)
+            })?;
+            let mixed = entries.iter().find(|entry| {
+                entry.get("text_preview").and_then(|v| v.as_str())
+                    == Some(LOCALE_CHANGE_TRACE_SAMPLE_MIXED)
+            })?;
+
+            let mut sample_locales = Vec::new();
+            for entry in [latin, cjk, emoji, mixed] {
+                if let Some(locale) = entry.get("locale_bcp47").and_then(|v| v.as_str()) {
+                    push_unique_case_insensitive(&mut sample_locales, locale);
+                }
+            }
+
+            let entry_families = |entry: &serde_json::Value| {
+                entry
+                    .get("families")
+                    .and_then(|v| v.as_array())
+                    .map(|families| {
+                        families
+                            .iter()
+                            .filter_map(|family| {
+                                family
+                                    .get("family")
+                                    .and_then(|v| v.as_str())
+                                    .map(|s| s.to_string())
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                    .unwrap_or_default()
+            };
+
+            Some((
+                frame_id,
+                sample_locales,
+                entry_families(latin),
+                entry_families(cjk),
+                entry_families(emoji),
+                entry_families(mixed),
+            ))
+        })
+        .max_by_key(|(frame_id, _, _, _, _, _)| *frame_id);
+
     Some(LocaleChangeConformanceEvidence {
         fallback_policy_key: policy.get("fallback_policy_key")?.as_u64()?,
         locale_bcp47: policy
@@ -231,6 +312,30 @@ fn bundle_last_text_locale_change_evidence(
         missing_glyphs: render_text.get("frame_missing_glyphs")?.as_u64()?,
         font_trace_entry_count,
         font_trace_locales,
+        common_fallback_candidates: json_string_vec(policy.get("common_fallback_candidates")),
+        sample_trace_frame_id: latest_sample_trace
+            .as_ref()
+            .map(|(frame_id, _, _, _, _, _)| *frame_id),
+        sample_trace_locales: latest_sample_trace
+            .as_ref()
+            .map(|(_, locales, _, _, _, _)| locales.clone())
+            .unwrap_or_default(),
+        latin_families: latest_sample_trace
+            .as_ref()
+            .map(|(_, _, families, _, _, _)| families.clone())
+            .unwrap_or_default(),
+        cjk_families: latest_sample_trace
+            .as_ref()
+            .map(|(_, _, _, families, _, _)| families.clone())
+            .unwrap_or_default(),
+        emoji_families: latest_sample_trace
+            .as_ref()
+            .map(|(_, _, _, _, families, _)| families.clone())
+            .unwrap_or_default(),
+        mixed_families: latest_sample_trace
+            .as_ref()
+            .map(|(_, _, _, _, _, families)| families.clone())
+            .unwrap_or_default(),
     })
 }
 
@@ -878,18 +983,69 @@ mod tests {
                         "render_text_fallback_policy": {
                             "fallback_policy_key": key,
                             "locale_bcp47": locale,
-                            "system_fonts_enabled": true
+                            "system_fonts_enabled": true,
+                            "common_fallback_candidates": [
+                                "Noto Sans CJK SC",
+                                "Segoe UI Emoji"
+                            ]
                         },
                         "render_text_font_trace": {
-                            "entries": [{
-                                "locale_bcp47": locale,
-                                "families": [{
-                                    "family": "Inter",
-                                    "class": "requested",
-                                    "glyphs": 4,
-                                    "missing_glyphs": 0
-                                }]
-                            }]
+                            "entries": [
+                                {
+                                    "text_preview": "m",
+                                    "locale_bcp47": locale,
+                                    "families": [{
+                                        "family": "Inter",
+                                        "class": "requested",
+                                        "glyphs": 1,
+                                        "missing_glyphs": 0
+                                    }]
+                                },
+                                {
+                                    "text_preview": "你",
+                                    "locale_bcp47": locale,
+                                    "families": [{
+                                        "family": "Noto Sans CJK SC",
+                                        "class": "common_fallback",
+                                        "glyphs": 1,
+                                        "missing_glyphs": 0
+                                    }]
+                                },
+                                {
+                                    "text_preview": "😀",
+                                    "locale_bcp47": locale,
+                                    "families": [{
+                                        "family": "Segoe UI Emoji",
+                                        "class": "common_fallback",
+                                        "glyphs": 1,
+                                        "missing_glyphs": 0
+                                    }]
+                                },
+                                {
+                                    "text_preview": "m你😀",
+                                    "locale_bcp47": locale,
+                                    "families": [
+                                        {
+                                            "family": "Inter",
+                                            "class": "requested",
+                                            "glyphs": 1,
+                                            "missing_glyphs": 0
+                                        },
+                                        {
+                                            "family": "Noto Sans CJK SC",
+                                            "class": "common_fallback",
+                                            "glyphs": 1,
+                                            "missing_glyphs": 0
+                                        },
+                                        {
+                                            "family": "Segoe UI Emoji",
+                                            "class": "common_fallback",
+                                            "glyphs": 1,
+                                            "missing_glyphs": 0
+                                        }
+                                    ]
+                                }
+                            ]
                         }
                     }
                 }]
@@ -936,7 +1092,56 @@ mod tests {
             check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_locale_change(&out_dir)
                 .expect_err("gate should reject stale font trace locales");
         assert!(
-            err.contains("expected AFTER font trace locales to settle to [\"zh-CN\"]"),
+            err.contains(
+                "expected AFTER mixed-script sample trace locales to settle to [\"zh-CN\"]"
+            ),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn locale_change_gate_rejects_mixed_family_order_drift() {
+        let out_dir = unique_tmp_dir("fail_locale_family_order");
+        write_labeled_bundle(
+            &out_dir,
+            "ui-gallery-text-fallback-policy-locale-before",
+            &locale_change_bundle("en-US", 10),
+        );
+        let mut after = locale_change_bundle("zh-CN", 11);
+        after["windows"][0]["snapshots"][0]["resource_caches"]["render_text_font_trace"]["entries"]
+            [3]["families"] = serde_json::json!([
+            {
+                "family": "Noto Sans CJK SC",
+                "class": "common_fallback",
+                "glyphs": 1,
+                "missing_glyphs": 0
+            },
+            {
+                "family": "Inter",
+                "class": "requested",
+                "glyphs": 1,
+                "missing_glyphs": 0
+            },
+            {
+                "family": "Segoe UI Emoji",
+                "class": "common_fallback",
+                "glyphs": 1,
+                "missing_glyphs": 0
+            }
+        ]);
+        write_labeled_bundle(
+            &out_dir,
+            "ui-gallery-text-fallback-policy-locale-after",
+            &after,
+        );
+
+        let err =
+            check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_locale_change(&out_dir)
+                .expect_err("gate should reject mixed-script family ordering drift");
+        assert!(
+            err.contains(
+                "expected the mixed-script trace to preserve latin -> cjk -> emoji family order"
+            ),
             "{err}"
         );
     }
@@ -999,6 +1204,12 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_loc
             "frame_missing_glyphs": before.missing_glyphs,
             "font_trace_entry_count": before.font_trace_entry_count,
             "font_trace_locales": before.font_trace_locales,
+            "sample_trace_frame_id": before.sample_trace_frame_id,
+            "sample_trace_locales": before.sample_trace_locales,
+            "latin_families": before.latin_families,
+            "cjk_families": before.cjk_families,
+            "emoji_families": before.emoji_families,
+            "mixed_families": before.mixed_families,
         },
         "after": {
             "fallback_policy_key": after.fallback_policy_key,
@@ -1007,6 +1218,12 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_loc
             "frame_missing_glyphs": after.missing_glyphs,
             "font_trace_entry_count": after.font_trace_entry_count,
             "font_trace_locales": after.font_trace_locales,
+            "sample_trace_frame_id": after.sample_trace_frame_id,
+            "sample_trace_locales": after.sample_trace_locales,
+            "latin_families": after.latin_families,
+            "cjk_families": after.cjk_families,
+            "emoji_families": after.emoji_families,
+            "mixed_families": after.mixed_families,
         },
     });
     let _ = write_json_value(&evidence_path, &payload);
@@ -1041,20 +1258,93 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_loc
             evidence_path.display()
         ));
     }
-    if before.font_trace_locales != vec!["en-US".to_string()] {
+    if before.sample_trace_frame_id.is_none() || after.sample_trace_frame_id.is_none() {
         return Err(format!(
-            "ui-gallery text fallback policy locale gate failed: expected BEFORE font trace locales to settle to [\"en-US\"]\n  observed: {:?}\n  evidence: {}",
-            before.font_trace_locales,
+            "ui-gallery text fallback policy locale gate failed: expected the mixed-script sample traces (`m`, `你`, `😀`, `m你😀`) to appear in both captures\n  before_frame: {:?}\n  after_frame: {:?}\n  evidence: {}",
+            before.sample_trace_frame_id,
+            after.sample_trace_frame_id,
             evidence_path.display()
         ));
     }
-    if after.font_trace_locales != vec!["zh-CN".to_string()] {
+    if before.sample_trace_locales != vec!["en-US".to_string()] {
         return Err(format!(
-            "ui-gallery text fallback policy locale gate failed: expected AFTER font trace locales to settle to [\"zh-CN\"]\n  observed: {:?}\n  evidence: {}",
-            after.font_trace_locales,
+            "ui-gallery text fallback policy locale gate failed: expected BEFORE mixed-script sample trace locales to settle to [\"en-US\"]\n  observed: {:?}\n  evidence: {}",
+            before.sample_trace_locales,
             evidence_path.display()
         ));
     }
+    if after.sample_trace_locales != vec!["zh-CN".to_string()] {
+        return Err(format!(
+            "ui-gallery text fallback policy locale gate failed: expected AFTER mixed-script sample trace locales to settle to [\"zh-CN\"]\n  observed: {:?}\n  evidence: {}",
+            after.sample_trace_locales,
+            evidence_path.display()
+        ));
+    }
+    let validate_sample_families = |label: &str,
+                                    evidence: &LocaleChangeConformanceEvidence|
+     -> Result<(), String> {
+        let latin = evidence.latin_families.first().ok_or_else(|| {
+                format!(
+                    "ui-gallery text fallback policy locale gate failed: expected a latin sample family in the {label} capture\n  evidence: {}",
+                    evidence_path.display()
+                )
+            })?;
+        let cjk = evidence.cjk_families.first().ok_or_else(|| {
+                format!(
+                    "ui-gallery text fallback policy locale gate failed: expected a cjk sample family in the {label} capture\n  evidence: {}",
+                    evidence_path.display()
+                )
+            })?;
+        let emoji = evidence.emoji_families.first().ok_or_else(|| {
+                format!(
+                    "ui-gallery text fallback policy locale gate failed: expected an emoji sample family in the {label} capture\n  evidence: {}",
+                    evidence_path.display()
+                )
+            })?;
+
+        if !contains_case_insensitive(&evidence.common_fallback_candidates, cjk)
+            || !contains_case_insensitive(&evidence.common_fallback_candidates, emoji)
+        {
+            return Err(format!(
+                "ui-gallery text fallback policy locale gate failed: expected cjk/emoji sample families in the {label} capture to stay within common_fallback_candidates\n  cjk: {:?}\n  emoji: {:?}\n  candidates: {:?}\n  evidence: {}",
+                evidence.cjk_families,
+                evidence.emoji_families,
+                evidence.common_fallback_candidates,
+                evidence_path.display()
+            ));
+        }
+
+        let latin_ix = evidence
+            .mixed_families
+            .iter()
+            .position(|family| family.eq_ignore_ascii_case(latin));
+        let cjk_ix = evidence
+            .mixed_families
+            .iter()
+            .position(|family| family.eq_ignore_ascii_case(cjk));
+        let emoji_ix = evidence
+            .mixed_families
+            .iter()
+            .position(|family| family.eq_ignore_ascii_case(emoji));
+
+        match (latin_ix, cjk_ix, emoji_ix) {
+            (Some(latin_ix), Some(cjk_ix), Some(emoji_ix))
+                if latin_ix < cjk_ix && cjk_ix < emoji_ix =>
+            {
+                Ok(())
+            }
+            _ => Err(format!(
+                "ui-gallery text fallback policy locale gate failed: expected the mixed-script trace to preserve latin -> cjk -> emoji family order in the {label} capture\n  latin: {:?}\n  cjk: {:?}\n  emoji: {:?}\n  mixed: {:?}\n  evidence: {}",
+                evidence.latin_families,
+                evidence.cjk_families,
+                evidence.emoji_families,
+                evidence.mixed_families,
+                evidence_path.display()
+            )),
+        }
+    };
+    validate_sample_families("BEFORE", &before)?;
+    validate_sample_families("AFTER", &after)?;
     if before.missing_glyphs != 0 || after.missing_glyphs != 0 {
         return Err(format!(
             "ui-gallery text fallback policy locale gate failed: expected frame_missing_glyphs=0 in both captures on the mixed-script page\n  before: {}\n  after: {}\n  evidence: {}",

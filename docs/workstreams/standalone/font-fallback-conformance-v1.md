@@ -75,8 +75,11 @@ Expected:
 - The gate asserts:
   - `system_fonts_enabled` is `true` in both captures.
   - `locale_bcp47` is `en-US` in the BEFORE capture and `zh-CN` in the AFTER capture.
-  - `render_text_font_trace.entries[*].locale_bcp47` is `["en-US"]` in the BEFORE capture and
-    `["zh-CN"]` in the AFTER capture.
+  - The mixed-script sample traces (`m`, `你`, `😀`, `m你😀`) appear in both captures.
+  - Those sample trace locales settle to `["en-US"]` in the BEFORE capture and `["zh-CN"]` in
+    the AFTER capture.
+  - The mixed-script trace preserves `latin -> cjk -> emoji` family order, and the CJK / emoji
+    sample families stay within `common_fallback_candidates`.
   - `frame_missing_glyphs` is `0` in both captures.
   - `fallback_policy_key` differs between the two labeled captures.
 

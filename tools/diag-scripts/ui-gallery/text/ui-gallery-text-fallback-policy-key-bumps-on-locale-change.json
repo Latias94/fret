@@ -19,9 +19,7 @@
         "target": { "kind": "test_id", "id": "ui-gallery-text-mixed-script-fallback-root" }
       }
     },
-    { "type": "wait_frames", "n": 6 },
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 2 },
+    { "type": "wait_frames", "n": 1 },
     {
       "type": "capture_bundle",
       "label": "ui-gallery-text-fallback-policy-locale-before"
