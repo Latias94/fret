@@ -31,6 +31,7 @@ mod diagnostics;
 mod frame_targets;
 mod fullscreen;
 mod intermediate_pool;
+mod material_effects;
 mod pipelines;
 mod render_plan;
 mod render_plan_compiler;
@@ -57,6 +58,7 @@ use gpu_pipelines::GpuPipelines;
 use gpu_resources::GpuResources;
 use gpu_textures::GpuTextures;
 use intermediate_pool::*;
+use material_effects::*;
 use path::*;
 use render_plan::*;
 use scene_encoding_cache::SceneEncodingCache;
@@ -144,15 +146,7 @@ pub struct Renderer {
 
     scene_encoding_cache: SceneEncodingCache,
 
-    materials: SlotMap<fret_core::MaterialId, MaterialEntry>,
-    materials_by_desc: HashMap<fret_core::MaterialDescriptor, fret_core::MaterialId>,
-    materials_generation: u64,
-    material_paint_budget_per_frame: u64,
-    material_distinct_budget_per_frame: usize,
-
-    custom_effects: SlotMap<fret_core::EffectId, CustomEffectEntry>,
-    custom_effect_hash_index: HashMap<u64, Vec<fret_core::EffectId>>,
-    custom_effects_generation: u64,
+    material_effect_state: MaterialEffectState,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -162,29 +156,6 @@ struct RenderPlanSegmentReport {
     flags_mask: u8,
     scene_draw_range_passes: u32,
     path_msaa_batch_passes: u32,
-}
-
-#[derive(Clone, Copy, Debug)]
-struct MaterialEntry {
-    desc: fret_core::MaterialDescriptor,
-    refs: u32,
-}
-
-#[derive(Clone, Debug)]
-struct CustomEffectEntry {
-    abi: CustomEffectAbi,
-    raw_source: Arc<str>,
-    wgsl_unmasked: Arc<str>,
-    wgsl_masked: Arc<str>,
-    wgsl_mask: Arc<str>,
-    refs: u32,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum CustomEffectAbi {
-    V1,
-    V2,
-    V3,
 }
 
 pub struct RenderSceneParams<'a> {

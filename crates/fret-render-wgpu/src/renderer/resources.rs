@@ -587,15 +587,7 @@ impl Renderer {
             intermediate_state: IntermediateState::default(),
             gpu_resources: super::gpu_resources::GpuResources::default(),
             scene_encoding_cache: super::scene_encoding_cache::SceneEncodingCache::default(),
-
-            materials: SlotMap::with_key(),
-            materials_by_desc: HashMap::new(),
-            materials_generation: 0,
-            material_paint_budget_per_frame: 50_000,
-            material_distinct_budget_per_frame: 256,
-            custom_effects: SlotMap::with_key(),
-            custom_effect_hash_index: HashMap::new(),
-            custom_effects_generation: 0,
+            material_effect_state: MaterialEffectState::default(),
         }
     }
 

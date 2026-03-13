@@ -119,9 +119,12 @@ fn find_existing_custom_effect(
     hash: u64,
     user_source: &str,
 ) -> Option<fret_core::EffectId> {
-    let ids = renderer.custom_effect_hash_index.get(&hash)?;
+    let ids = renderer
+        .material_effect_state
+        .custom_effect_hash_index
+        .get(&hash)?;
     ids.iter().copied().find(|&id| {
-        let Some(existing) = renderer.custom_effects.get(id) else {
+        let Some(existing) = renderer.material_effect_state.custom_effects.get(id) else {
             return false;
         };
         existing.abi == abi && existing.raw_source.as_ref() == user_source
@@ -146,7 +149,7 @@ fn register_custom_effect_wgsl(
 
     let h = mix_u64(hash_bytes(user_source.as_bytes()), abi_hash_salt);
     if let Some(id) = find_existing_custom_effect(renderer, abi, h, &user_source) {
-        if let Some(entry) = renderer.custom_effects.get_mut(id) {
+        if let Some(entry) = renderer.material_effect_state.custom_effects.get_mut(id) {
             entry.refs = entry.refs.saturating_add(1);
         }
         return Ok(id);
@@ -155,20 +158,27 @@ fn register_custom_effect_wgsl(
     let (wgsl_unmasked, wgsl_masked, wgsl_mask) = build_and_validate(&user_source)?;
 
     let raw_source: Arc<str> = Arc::from(user_source);
-    let id = renderer.custom_effects.insert(super::CustomEffectEntry {
-        abi,
-        raw_source: raw_source.clone(),
-        wgsl_unmasked: Arc::from(wgsl_unmasked),
-        wgsl_masked: Arc::from(wgsl_masked),
-        wgsl_mask: Arc::from(wgsl_mask),
-        refs: 1,
-    });
+    let id = renderer
+        .material_effect_state
+        .custom_effects
+        .insert(CustomEffectEntry {
+            abi,
+            raw_source: raw_source.clone(),
+            wgsl_unmasked: Arc::from(wgsl_unmasked),
+            wgsl_masked: Arc::from(wgsl_masked),
+            wgsl_mask: Arc::from(wgsl_mask),
+            refs: 1,
+        });
     renderer
+        .material_effect_state
         .custom_effect_hash_index
         .entry(h)
         .or_default()
         .push(id);
-    renderer.custom_effects_generation = renderer.custom_effects_generation.wrapping_add(1);
+    renderer.material_effect_state.custom_effects_generation = renderer
+        .material_effect_state
+        .custom_effects_generation
+        .wrapping_add(1);
     Ok(id)
 }
 
@@ -440,43 +450,52 @@ impl fret_core::MaterialService for Renderer {
             }
         }
 
-        match self.materials_by_desc.entry(desc) {
+        match self.material_effect_state.materials_by_desc.entry(desc) {
             Entry::Occupied(e) => {
                 let id = *e.get();
-                if let Some(entry) = self.materials.get_mut(id) {
+                if let Some(entry) = self.material_effect_state.materials.get_mut(id) {
                     entry.refs = entry.refs.saturating_add(1);
                 }
                 Ok(id)
             }
             Entry::Vacant(e) => {
                 let id = self
+                    .material_effect_state
                     .materials
-                    .insert(super::MaterialEntry { desc, refs: 1 });
+                    .insert(MaterialEntry { desc, refs: 1 });
                 e.insert(id);
-                self.materials_generation = self.materials_generation.wrapping_add(1);
+                self.material_effect_state.materials_generation = self
+                    .material_effect_state
+                    .materials_generation
+                    .wrapping_add(1);
                 Ok(id)
             }
         }
     }
 
     fn unregister_material(&mut self, id: fret_core::MaterialId) -> bool {
-        let Some(refs) = self.materials.get(id).map(|e| e.refs) else {
+        let Some(refs) = self.material_effect_state.materials.get(id).map(|e| e.refs) else {
             return false;
         };
 
         if refs > 1 {
-            if let Some(entry) = self.materials.get_mut(id) {
+            if let Some(entry) = self.material_effect_state.materials.get_mut(id) {
                 entry.refs = entry.refs.saturating_sub(1);
             }
             return true;
         }
 
-        let Some(entry) = self.materials.remove(id) else {
+        let Some(entry) = self.material_effect_state.materials.remove(id) else {
             return false;
         };
 
-        self.materials_by_desc.remove(&entry.desc);
-        self.materials_generation = self.materials_generation.wrapping_add(1);
+        self.material_effect_state
+            .materials_by_desc
+            .remove(&entry.desc);
+        self.material_effect_state.materials_generation = self
+            .material_effect_state
+            .materials_generation
+            .wrapping_add(1);
         true
     }
 }
@@ -547,18 +566,23 @@ impl fret_core::CustomEffectService for Renderer {
     }
 
     fn unregister_custom_effect(&mut self, id: fret_core::EffectId) -> bool {
-        let Some(refs) = self.custom_effects.get(id).map(|e| e.refs) else {
+        let Some(refs) = self
+            .material_effect_state
+            .custom_effects
+            .get(id)
+            .map(|e| e.refs)
+        else {
             return false;
         };
 
         if refs > 1 {
-            if let Some(entry) = self.custom_effects.get_mut(id) {
+            if let Some(entry) = self.material_effect_state.custom_effects.get_mut(id) {
                 entry.refs = entry.refs.saturating_sub(1);
             }
             return true;
         }
 
-        let Some(entry) = self.custom_effects.remove(id) else {
+        let Some(entry) = self.material_effect_state.custom_effects.remove(id) else {
             return false;
         };
 
@@ -570,10 +594,16 @@ impl fret_core::CustomEffectService for Renderer {
                 CustomEffectAbi::V3 => 3,
             },
         );
-        if let Some(list) = self.custom_effect_hash_index.get_mut(&h) {
+        if let Some(list) = self
+            .material_effect_state
+            .custom_effect_hash_index
+            .get_mut(&h)
+        {
             list.retain(|x| *x != id);
             if list.is_empty() {
-                self.custom_effect_hash_index.remove(&h);
+                self.material_effect_state
+                    .custom_effect_hash_index
+                    .remove(&h);
             }
         }
 
@@ -582,7 +612,10 @@ impl fret_core::CustomEffectService for Renderer {
         self.pipelines.custom_effect_v2_pipelines.remove(&id);
         self.pipelines.custom_effect_v3_pipelines.remove(&id);
 
-        self.custom_effects_generation = self.custom_effects_generation.wrapping_add(1);
+        self.material_effect_state.custom_effects_generation = self
+            .material_effect_state
+            .custom_effects_generation
+            .wrapping_add(1);
         true
     }
 }

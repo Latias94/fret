@@ -225,6 +225,10 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns render perf enablement, pending
   render-target ingest counters, last-frame perf snapshots, render-plan segment history, or render
   scene frame index directly.
+- Renderer material/custom-effect runtime owner state now also lives under
+  `crates/fret-render-wgpu/src/renderer/material_effects.rs`, and
+  `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns material registries, material
+  budgets, custom-effect registries, or their generation counters directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

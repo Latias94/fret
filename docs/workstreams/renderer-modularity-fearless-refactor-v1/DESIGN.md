@@ -225,6 +225,10 @@ For `Renderer` state-shell tightening, the same principle applies:
 - diagnostics/perf state is the next high-cohesion pattern after caches and registries: runtime
   enablement flags, pending per-frame counters, accumulated snapshots, and render-plan history
   belong behind one owner shell so config/resources/render-scene code stop sharing loose fields.
+- material/custom-effect runtime registries are the matching service-local shell on the content
+  side: registration maps, refcounts, generation counters, and author-facing degradation budgets
+  should live together so services, scene encoding, and effect pipelines stop depending on loose
+  `Renderer` fields.
 
 ### 5. Tighten public exports after evidence exists
 

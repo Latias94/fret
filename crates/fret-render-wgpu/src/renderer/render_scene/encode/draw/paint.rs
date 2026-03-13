@@ -267,7 +267,7 @@ pub(super) fn paint_to_gpu(
                 return out;
             }
 
-            let Some(entry) = renderer.materials.get(id) else {
+            let Some(entry) = renderer.material_effect_state.materials.get(id) else {
                 *state.material_unknown_ids = state.material_unknown_ids.saturating_add(1);
                 out.kind = 0;
                 out.params0 = [0.0; 4];

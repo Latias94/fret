@@ -700,7 +700,13 @@ pub(in super::super) fn record_custom_effect_pass(
     let common = pass.common;
     let effect = common.effect;
 
-    if exec.renderer.custom_effects.get(effect).is_none() {
+    if exec
+        .renderer
+        .material_effect_state
+        .custom_effects
+        .get(effect)
+        .is_none()
+    {
         let blit = FullscreenBlitPass {
             src: common.src,
             dst: common.dst,
@@ -777,7 +783,12 @@ pub(in super::super) fn record_custom_effect_v2_pass(
     let common = pass.common;
     let effect = common.effect;
 
-    let Some(entry) = exec.renderer.custom_effects.get(effect) else {
+    let Some(entry) = exec
+        .renderer
+        .material_effect_state
+        .custom_effects
+        .get(effect)
+    else {
         let blit = FullscreenBlitPass {
             src: common.src,
             dst: common.dst,
@@ -1059,7 +1070,12 @@ pub(in super::super) fn record_custom_effect_v3_pass(
     let common = pass.common;
     let effect = common.effect;
 
-    let Some(entry) = exec.renderer.custom_effects.get(effect) else {
+    let Some(entry) = exec
+        .renderer
+        .material_effect_state
+        .custom_effects
+        .get(effect)
+    else {
         let blit = FullscreenBlitPass {
             src: common.src,
             dst: common.dst,
