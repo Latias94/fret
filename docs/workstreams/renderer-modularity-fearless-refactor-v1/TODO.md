@@ -427,6 +427,10 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/{quad_part_a,quad_part_b}.wgsl`
     - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts the quad shader envelope
       inline
+    - `CLIP_MASK_SHADER_PART_A/B` WGSL sources moved into
+      `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/{clip_mask_part_a,clip_mask_part_b}.wgsl`
+    - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts the clip-mask shader
+      envelope inline
 - [ ] RMFR-shaders-051 Avoid splitting shader source files purely for line count if no boundary
   benefit exists.
 - [~] RMFR-shaders-052 Keep WGSL validation tests aligned with any source reorganization.
@@ -442,6 +446,9 @@ ID format:
     - the existing WGSL parse/WebGPU validation coverage in
       `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover the assembled
       `quad_shader_source()` output without test-surface changes
+    - the existing WGSL parse/WebGPU validation coverage in
+      `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover the assembled
+      `clip_mask_shader_source()` output without test-surface changes
 
 ---
 

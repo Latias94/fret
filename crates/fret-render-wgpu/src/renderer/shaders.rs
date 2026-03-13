@@ -56,97 +56,9 @@ pub(super) fn upscale_nearest_masked_shader_source() -> String {
 pub(super) const UPSCALE_NEAREST_MASK_SHADER: &str =
     include_str!("pipelines/wgsl/upscale_nearest_mask.wgsl");
 
-const CLIP_MASK_SHADER_PART_A: &str = r#"
-struct ClipRRect {
-  rect: vec4<f32>,
-  corner_radii: vec4<f32>,
-  inv0: vec4<f32>,
-  inv1: vec4<f32>,
-};
+const CLIP_MASK_SHADER_PART_A: &str = include_str!("pipelines/wgsl/clip_mask_part_a.wgsl");
 
-struct Viewport {
-  viewport_size: vec2<f32>,
-  clip_head: u32,
-  clip_count: u32,
-  mask_head: u32,
-  mask_count: u32,
-  mask_scope_head: u32,
-  mask_scope_count: u32,
-  output_is_srgb: u32,
-  _pad0: u32,
-  mask_viewport_origin: vec2<f32>,
-  mask_viewport_size: vec2<f32>,
-};
-
-@group(0) @binding(0) var<uniform> viewport: Viewport;
-
-struct RenderSpace {
-  origin_px: vec2<f32>,
-  size_px: vec2<f32>,
-};
-
-@group(0) @binding(5) var<uniform> render_space: RenderSpace;
-struct ClipStack {
-  clips: array<ClipRRect>,
-};
-
-@group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
-
-struct Params {
-  dst_size: vec2<f32>,
-  _pad0: vec2<f32>,
-};
-
-@group(1) @binding(0) var<uniform> params: Params;
-
-struct VsOut {
-  @builtin(position) pos: vec4<f32>,
-};
-
-@vertex
-fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
-  var pos = array<vec2<f32>, 3>(
-    vec2<f32>(-1.0, -3.0),
-    vec2<f32>( 3.0,  1.0),
-    vec2<f32>(-1.0,  1.0),
-  );
-  var out: VsOut;
-  out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
-  return out;
-}
-"#;
-
-const CLIP_MASK_SHADER_PART_B: &str = r#"
-fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
-  var alpha = 1.0;
-  var idx = viewport.clip_head;
-  for (var i = 0u; i < 64u; i = i + 1u) {
-    if (i >= viewport.clip_count) {
-      break;
-    }
-    if (idx == 0xffffffffu) {
-      break;
-    }
-    let clip = clip_stack.clips[idx];
-    idx = bitcast<u32>(clip.inv0.w);
-    let clip_local = vec2<f32>(
-      dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
-      dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
-    );
-    let sdf = quad_sdf(clip_local, clip.rect.xy, clip.rect.zw, clip.corner_radii);
-    alpha = alpha * sdf_coverage_smooth(sdf);
-  }
-  return alpha;
-}
-
-@fragment
-fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) f32 {
-  let x = floor(pos.x) + 0.5;
-  let y = floor(pos.y) + 0.5;
-  let scale = viewport.mask_viewport_size / params.dst_size;
-  return clip_alpha(viewport.mask_viewport_origin + vec2<f32>(x, y) * scale);
-}
-"#;
+const CLIP_MASK_SHADER_PART_B: &str = include_str!("pipelines/wgsl/clip_mask_part_b.wgsl");
 
 pub(super) fn clip_mask_shader_source() -> String {
     format!("{CLIP_MASK_SHADER_PART_A}{CLIP_SDF_CORE_WGSL}{CLIP_MASK_SHADER_PART_B}")
