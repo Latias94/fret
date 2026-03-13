@@ -82,6 +82,6 @@ Companion docs:
 
 ## Closeout
 
-- [ ] Review whether any remaining scheduling duplication is acceptable for v1.
-- [ ] Record any intentionally deferred cleanup in the README and milestones docs.
+- [x] Review whether any remaining scheduling duplication is acceptable for v1.
+- [x] Record any intentionally deferred cleanup in the README and milestones docs.
 - [ ] Prepare a follow-up worktree only after the documentation commit lands on `main`.

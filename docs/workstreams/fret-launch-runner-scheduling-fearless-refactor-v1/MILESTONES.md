@@ -106,3 +106,16 @@ Possible follow-ups:
 Exit criteria:
 
 - Deferred work is recorded explicitly instead of silently left behind.
+
+## Remaining closeout blockers (from the current checkpoint)
+
+- shared redraw / RAF coalescing rules are still backend-local,
+- bounded fixed-point drain is still duplicated in backend-local code shape,
+- diagnostics writes still need a turn/frame semantic audit,
+- module thinning is intentionally deferred until semantics and evidence are fully locked.
+
+## Recommended continuation order
+
+1. Land a dedicated slice for redraw / RAF coalescing semantics.
+2. Land a dedicated slice for diagnostics meaning and regression evidence.
+3. Only then decide whether structural thinning belongs here or in a separate workstream.

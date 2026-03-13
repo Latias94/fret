@@ -346,6 +346,85 @@ This workstream is considered complete when all of the following are true:
 - Existing crate boundaries remain intact.
 - Regression gates exist for both semantic drift and the web recovery path.
 
+## Current checkpoint (2026-03-13, post-batch-2)
+
+This workstream has now cleared the highest-risk scheduling drift:
+
+- desktop and web share the same `TickId` / `FrameId` contract,
+- web frame-state restoration is failure-safe across surface acquire abort paths,
+- timer ownership and wake-path convergence are documented instead of inferred.
+
+This means the repo now has a stable checkpoint that is worth preserving before any wider cleanup.
+
+### Acceptable remaining duplication for v1
+
+The following duplication is still acceptable at this stage:
+
+- backend-local redraw request sink wiring,
+- backend-local RAF request sink wiring,
+- backend-local bounded drain scaffolding,
+- backend-local diagnostics writes that still need semantic auditing.
+
+The intent is to remove only the duplication that still risks contract drift.
+Further deduplication should be justified by either:
+
+- a hard contract that is still not locked,
+- a regression gate that is currently impossible to write cleanly,
+- or a concrete review/maintenance burden that outweighs the churn cost.
+
+### Remaining closeout blockers
+
+The main blockers before calling v1 "closed" are now:
+
+1. shared redraw / RAF coalescing semantics,
+2. a decision on whether bounded fixed-point drain needs shared code or only shared policy plus
+   tests,
+3. diagnostics-store auditing for turn/frame-drive/present meaning,
+4. an explicit decision on which cleanup belongs in this workstream versus a later one.
+
+## Recommended next implementation slices
+
+The safest continuation from this checkpoint is to keep future work narrow and reversible.
+
+### Slice A — redraw / RAF coalescing
+
+Recommended scope:
+
+- extract shared internal rules for one-shot redraw and RAF coalescing,
+- add focused tests for those rules,
+- keep backend-specific wake sinks untouched.
+
+Avoid in this slice:
+
+- diagnostics cleanup,
+- large module thinning,
+- timer abstraction redesign.
+
+### Slice B — diagnostics semantic audit
+
+Recommended scope:
+
+- audit stores keyed by `TickId` / `FrameId`,
+- verify frame-drive reasons and present diagnostics still mean the same thing on desktop/web,
+- add focused assertions where drift would be expensive to debug later.
+
+Avoid in this slice:
+
+- changing wake mechanisms,
+- changing effect ownership,
+- moving code across crate boundaries.
+
+### Slice C — optional structural cleanup
+
+Recommended scope:
+
+- thin large backend modules only after slices A and B are green,
+- decide whether desktop should also adopt the slot-restoration pattern,
+- decide whether any deeper timer abstraction deserves a separate workstream.
+
+This slice should remain optional.
+If the earlier slices fully lock semantics and evidence, structural thinning can be deferred.
+
 ## Suggested gates
 
 Minimum intended gates once code work starts:
