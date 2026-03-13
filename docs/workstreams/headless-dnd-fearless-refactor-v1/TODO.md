@@ -11,15 +11,15 @@ This file tracks the execution checklist for `DESIGN.md`.
 
 ## M1 — Safety fixes and truthful integration outputs
 
-- [ ] Fix `clamp_rect_translation(...)` so oversized dragged rects do not panic.
+- [x] Fix `clamp_rect_translation(...)` so oversized dragged rects do not panic.
   - Gate: add a `fret-dnd` regression test for `bounds < rect`.
-- [ ] Make `fret-ui-kit::dnd::DndUpdate.collisions` truthful.
+- [x] Make `fret-ui-kit::dnd::DndUpdate.collisions` truthful.
   - Route collision results from the headless frame computation into the public update surface.
   - Gate: add a focused UI-kit test that asserts deterministic collision ordering.
-- [ ] Remove duplicate `over` / auto-scroll computation paths in the controller when the headless
+- [x] Remove duplicate `over` / auto-scroll computation paths in the controller when the headless
   frame output already provides them.
   - Gate: add a test that compares UI-kit update output with direct `compute_dnd_frame(...)`.
-- [ ] Keep layering green.
+- [x] Keep layering green.
   - Gate: `python tools/check_layering.py`
 
 ## M2 — Headless engine / operation extraction
@@ -100,8 +100,8 @@ This file tracks the execution checklist for `DESIGN.md`.
 
 ## Minimum completion bar
 
-- [ ] Known panic fixed and guarded.
-- [ ] `DndUpdate` collision output made truthful.
+- [x] Known panic fixed and guarded.
+- [x] `DndUpdate` collision output made truthful.
 - [ ] Headless engine/operation introduced.
 - [ ] UI-kit controller reduced to a thinner adapter.
 - [ ] At least one real first-party integration migrated to the preferred seam.

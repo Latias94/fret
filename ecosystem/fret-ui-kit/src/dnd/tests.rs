@@ -2,6 +2,7 @@ use super::*;
 
 use fret_app::App;
 use fret_core::{Point, PointerId, Px, Rect, Size};
+use fret_dnd::{Droppable, RegistrySnapshot, compute_dnd_frame};
 use fret_runtime::{DragKindId, FrameId, TickId};
 
 fn rect(x: f32, y: f32, w: f32, h: f32) -> Rect {
@@ -231,4 +232,156 @@ fn sensors_are_scoped_to_avoid_constraint_cross_talk() {
     );
 
     assert!(matches!(out_p0.sensor, SensorOutput::Pending));
+}
+
+#[test]
+fn controller_reports_collisions_in_deterministic_order() {
+    let mut app = App::new();
+    let svc = mk_service(&mut app);
+    let window = fret_core::AppWindowId::default();
+    let frame = FrameId(1);
+    let scope = DndScopeId(7);
+
+    register_droppable_rect_in_scope(
+        app.models_mut(),
+        &svc,
+        window,
+        frame,
+        scope,
+        DndItemId(2),
+        rect(0.0, 0.0, 10.0, 10.0),
+        10,
+        false,
+    );
+    register_droppable_rect_in_scope(
+        app.models_mut(),
+        &svc,
+        window,
+        frame,
+        scope,
+        DndItemId(1),
+        rect(0.0, 0.0, 10.0, 10.0),
+        0,
+        false,
+    );
+
+    let out = handle_pointer_down_in_scope(
+        app.models_mut(),
+        &svc,
+        window,
+        frame,
+        DragKindId(3),
+        scope,
+        PointerId(0),
+        Point::new(Px(5.0), Px(5.0)),
+        TickId(0),
+        ActivationConstraint::None,
+        CollisionStrategy::PointerWithin,
+        None,
+    );
+
+    assert_eq!(out.over, Some(DndItemId(2)));
+    assert_eq!(out.collisions.len(), 2);
+    assert_eq!(out.collisions[0].id, DndItemId(2));
+    assert_eq!(out.collisions[1].id, DndItemId(1));
+}
+
+#[test]
+fn controller_update_matches_headless_frame_output() {
+    let mut app = App::new();
+    let svc = mk_service(&mut app);
+    let window = fret_core::AppWindowId::default();
+    let frame = FrameId(1);
+    let scope = DndScopeId(9);
+    let kind = DragKindId(4);
+    let pointer = PointerId(0);
+    let pointer_position = Point::new(Px(95.0), Px(5.0));
+    let autoscroll = Some((
+        rect(0.0, 0.0, 100.0, 20.0),
+        AutoScrollConfig {
+            margin_px: 10.0,
+            min_speed_px_per_tick: 0.0,
+            max_speed_px_per_tick: 10.0,
+        },
+    ));
+
+    register_droppable_rect_in_scope(
+        app.models_mut(),
+        &svc,
+        window,
+        frame,
+        scope,
+        DndItemId(1),
+        rect(0.0, 0.0, 10.0, 10.0),
+        0,
+        false,
+    );
+    register_droppable_rect_in_scope(
+        app.models_mut(),
+        &svc,
+        window,
+        frame,
+        scope,
+        DndItemId(2),
+        rect(90.0, 0.0, 10.0, 10.0),
+        0,
+        false,
+    );
+
+    let _ = handle_pointer_down_in_scope(
+        app.models_mut(),
+        &svc,
+        window,
+        frame,
+        kind,
+        scope,
+        pointer,
+        Point::new(Px(0.0), Px(0.0)),
+        TickId(0),
+        ActivationConstraint::None,
+        CollisionStrategy::ClosestCenter,
+        autoscroll,
+    );
+
+    let out = handle_pointer_move_in_scope(
+        app.models_mut(),
+        &svc,
+        window,
+        frame,
+        kind,
+        scope,
+        pointer,
+        pointer_position,
+        TickId(1),
+        ActivationConstraint::None,
+        CollisionStrategy::ClosestCenter,
+        autoscroll,
+    );
+
+    let expected = compute_dnd_frame(
+        &RegistrySnapshot {
+            draggables: vec![],
+            droppables: vec![
+                Droppable {
+                    id: DndItemId(1),
+                    rect: rect(0.0, 0.0, 10.0, 10.0),
+                    disabled: false,
+                    z_index: 0,
+                },
+                Droppable {
+                    id: DndItemId(2),
+                    rect: rect(90.0, 0.0, 10.0, 10.0),
+                    disabled: false,
+                    z_index: 0,
+                },
+            ],
+        },
+        pointer_position,
+        CollisionStrategy::ClosestCenter,
+        autoscroll,
+    );
+
+    assert_eq!(out.over, expected.over);
+    assert_eq!(out.collisions, expected.collisions);
+    assert_eq!(out.autoscroll, expected.autoscroll);
 }

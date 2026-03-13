@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 
 use fret_core::{AppWindowId, Point, PointerId, Rect};
-use fret_dnd::{PointerSensor, SensorEvent, compute_autoscroll, compute_dnd_over};
+use fret_dnd::{PointerSensor, SensorEvent, compute_dnd_frame};
 use fret_runtime::{DragKindId, FrameId, ModelStore, TickId};
 
 use super::service::{DndServiceModel, read_dnd, update_dnd};
@@ -50,6 +50,22 @@ impl DndControllerService {
             .or_insert_with(|| PointerSensor::new(constraint));
         sensor.set_constraint(constraint);
         sensor
+    }
+}
+
+fn update_from_frame_output(
+    snapshot: &fret_dnd::RegistrySnapshot,
+    pointer: Point,
+    collision_strategy: CollisionStrategy,
+    autoscroll: Option<(Rect, AutoScrollConfig)>,
+    sensor: fret_dnd::SensorOutput,
+) -> DndUpdate {
+    let frame = compute_dnd_frame(snapshot, pointer, collision_strategy, autoscroll);
+    DndUpdate {
+        sensor,
+        collisions: frame.collisions,
+        over: frame.over,
+        autoscroll: frame.autoscroll,
     }
 }
 
@@ -135,16 +151,7 @@ fn update_from_sensor_event_in_scope(
         let sensor = sensor.handle(sensor_event);
 
         let snapshot = dnd.registry.snapshot_for_frame(window, frame_id, scope);
-        let over = compute_dnd_over(snapshot, position, collision_strategy);
-        let autoscroll =
-            autoscroll.and_then(|(container, cfg)| compute_autoscroll(cfg, container, position));
-
-        DndUpdate {
-            sensor,
-            collisions: Vec::new(),
-            over,
-            autoscroll,
-        }
+        update_from_frame_output(snapshot, position, collision_strategy, autoscroll, sensor)
     })
     .unwrap_or_else(DndUpdate::pending)
 }
@@ -315,16 +322,7 @@ pub fn handle_pointer_move_or_init_in_scope(
         });
 
         let snapshot = dnd.registry.snapshot_for_frame(window, frame_id, scope);
-        let over = compute_dnd_over(snapshot, position, collision_strategy);
-        let autoscroll =
-            autoscroll.and_then(|(container, cfg)| compute_autoscroll(cfg, container, position));
-
-        DndUpdate {
-            sensor,
-            collisions: Vec::new(),
-            over,
-            autoscroll,
-        }
+        update_from_frame_output(snapshot, position, collision_strategy, autoscroll, sensor)
     })
     .unwrap_or_else(DndUpdate::pending)
 }
