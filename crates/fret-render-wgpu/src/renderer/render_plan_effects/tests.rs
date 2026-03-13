@@ -140,6 +140,80 @@ fn padded_blur_then_custom_uses_work_buffer() {
 }
 
 #[test]
+fn custom_v2_masked_step_preserves_image_input_and_clip_coverage() {
+    let ctx = EffectCompileCtx {
+        viewport_size: (64, 64),
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 1.0,
+    };
+    let scissor = ScissorRect {
+        x: 8,
+        y: 10,
+        w: 24,
+        h: 18,
+    };
+    let input_image = fret_core::scene::CustomEffectImageInputV1 {
+        image: fret_core::ImageId::default(),
+        uv: fret_core::scene::UvRect {
+            u0: 0.2,
+            v0: 0.1,
+            u1: 0.9,
+            v1: 0.8,
+        },
+        sampling: fret_core::scene::ImageSamplingHint::Nearest,
+    };
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::FilterContent,
+        fret_core::EffectChain::from_steps(&[fret_core::EffectStep::CustomV2 {
+            id: fret_core::EffectId::default(),
+            params: fret_core::scene::EffectParamsV1 {
+                vec4s: [[0.0; 4]; 4],
+            },
+            max_sample_offset_px: fret_core::Px(0.0),
+            input_image: Some(input_image),
+        }]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        Some(15),
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    );
+
+    assert!(
+        passes
+            .iter()
+            .any(|pass| matches!(pass, RenderPlanPass::ClipMask(_))),
+        "masked custom-v2 should allocate a clip mask pass when budget allows"
+    );
+    let pass = passes.iter().find_map(|pass| match pass {
+        RenderPlanPass::CustomEffectV2(pass) => Some(pass),
+        _ => None,
+    });
+    assert!(
+        pass.is_some_and(|pass| {
+            pass.common.dst_scissor == Some(LocalScissorRect(scissor))
+                && (pass.common.mask_uniform_index.is_some() || pass.common.mask.is_some())
+                && pass.input_image == Some(input_image.image)
+                && pass.input_uv == input_image.uv
+                && pass.input_sampling == input_image.sampling
+        }),
+        "CustomEffectV2 should preserve image input and clip coverage in the masked chain path"
+    );
+}
+
+#[test]
 fn custom_v3_pyramid_budget_pressure_degrades_to_one_and_records_counters() {
     let viewport_size = (64, 64);
     let format = wgpu::TextureFormat::Rgba8Unorm;

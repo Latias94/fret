@@ -169,6 +169,10 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/render_plan_effects/blur.rs`, and
   `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns masked
   `apply_chain_in_place(...)` branch handling for `DropShadowV1` directly.
+- Renderer masked custom chain step-apply flow now also lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/custom.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns masked
+  `apply_chain_in_place(...)` branch handling for `CustomV1`/`CustomV2`/`CustomV3` directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

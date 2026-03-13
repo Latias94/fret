@@ -364,7 +364,7 @@ fn prepare_custom_effect_single_scratch(
     Some(scratch)
 }
 
-pub(super) fn apply_custom_v1_step(
+fn apply_custom_v1_step_inner(
     passes: &mut Vec<RenderPlanPass>,
     scratch_targets: &[PlanTarget],
     srcdst: PlanTarget,
@@ -374,6 +374,8 @@ pub(super) fn apply_custom_v1_step(
     ctx: EffectCompileCtx,
     budget_bytes: &mut u64,
     effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
 ) {
     let Some(scratch) = prepare_custom_effect_single_scratch(
         scratch_targets,
@@ -394,13 +396,67 @@ pub(super) fn apply_custom_v1_step(
         effect,
         params,
         ctx.clear,
+        mask_uniform_index,
+        mask,
+    );
+}
+
+pub(super) fn apply_custom_v1_step(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    effect: fret_core::EffectId,
+    params: fret_core::EffectParamsV1,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+) {
+    apply_custom_v1_step_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        scissor,
+        effect,
+        params,
+        ctx,
+        budget_bytes,
+        effect_degradations,
         None,
         None,
     );
 }
 
+pub(super) fn apply_custom_v1_step_masked(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    effect: fret_core::EffectId,
+    params: fret_core::EffectParamsV1,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+) {
+    apply_custom_v1_step_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        scissor,
+        effect,
+        params,
+        ctx,
+        budget_bytes,
+        effect_degradations,
+        mask_uniform_index,
+        mask,
+    );
+}
+
 #[allow(clippy::too_many_arguments)]
-pub(super) fn apply_custom_v2_step(
+fn apply_custom_v2_step_inner(
     passes: &mut Vec<RenderPlanPass>,
     scratch_targets: &[PlanTarget],
     srcdst: PlanTarget,
@@ -411,6 +467,8 @@ pub(super) fn apply_custom_v2_step(
     ctx: EffectCompileCtx,
     budget_bytes: &mut u64,
     effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
 ) {
     let Some(scratch) = prepare_custom_effect_single_scratch(
         scratch_targets,
@@ -442,13 +500,73 @@ pub(super) fn apply_custom_v2_step(
         input_uv,
         input_sampling,
         ctx.clear,
+        mask_uniform_index,
+        mask,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(super) fn apply_custom_v2_step(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    effect: fret_core::EffectId,
+    params: fret_core::EffectParamsV1,
+    input_image: Option<fret_core::scene::CustomEffectImageInputV1>,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+) {
+    apply_custom_v2_step_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        scissor,
+        effect,
+        params,
+        input_image,
+        ctx,
+        budget_bytes,
+        effect_degradations,
         None,
         None,
     );
 }
 
 #[allow(clippy::too_many_arguments)]
-pub(super) fn apply_custom_v3_step(
+pub(super) fn apply_custom_v2_step_masked(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    effect: fret_core::EffectId,
+    params: fret_core::EffectParamsV1,
+    input_image: Option<fret_core::scene::CustomEffectImageInputV1>,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+) {
+    apply_custom_v2_step_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        scissor,
+        effect,
+        params,
+        input_image,
+        ctx,
+        budget_bytes,
+        effect_degradations,
+        mask_uniform_index,
+        mask,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn apply_custom_v3_step_inner(
     passes: &mut Vec<RenderPlanPass>,
     scratch_targets: &[PlanTarget],
     srcdst: PlanTarget,
@@ -464,6 +582,8 @@ pub(super) fn apply_custom_v3_step(
     custom_v3_chain_raw: Option<PlanTarget>,
     backdrop_source_group: Option<BackdropSourceGroupCtx>,
     custom_chain_budget: &mut Option<CustomEffectChainBudgetEvidence>,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
 ) {
     let Some(scratch) = prepare_custom_effect_single_scratch(
         scratch_targets,
@@ -546,8 +666,88 @@ pub(super) fn apply_custom_v3_step(
         v3_sources_plan.pyramid_levels,
         v3_sources_plan.pyramid_build_scissor,
         ctx.clear,
+        mask_uniform_index,
+        mask,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(super) fn apply_custom_v3_step(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    effect: fret_core::EffectId,
+    params: fret_core::EffectParamsV1,
+    user0: Option<fret_core::scene::CustomEffectImageInputV1>,
+    user1: Option<fret_core::scene::CustomEffectImageInputV1>,
+    sources: fret_core::scene::CustomEffectSourcesV3,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    custom_v3_chain_raw: Option<PlanTarget>,
+    backdrop_source_group: Option<BackdropSourceGroupCtx>,
+    custom_chain_budget: &mut Option<CustomEffectChainBudgetEvidence>,
+) {
+    apply_custom_v3_step_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        scissor,
+        effect,
+        params,
+        user0,
+        user1,
+        sources,
+        ctx,
+        budget_bytes,
+        effect_degradations,
+        custom_v3_chain_raw,
+        backdrop_source_group,
+        custom_chain_budget,
         None,
         None,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(super) fn apply_custom_v3_step_masked(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    effect: fret_core::EffectId,
+    params: fret_core::EffectParamsV1,
+    user0: Option<fret_core::scene::CustomEffectImageInputV1>,
+    user1: Option<fret_core::scene::CustomEffectImageInputV1>,
+    sources: fret_core::scene::CustomEffectSourcesV3,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    custom_v3_chain_raw: Option<PlanTarget>,
+    backdrop_source_group: Option<BackdropSourceGroupCtx>,
+    custom_chain_budget: &mut Option<CustomEffectChainBudgetEvidence>,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+) {
+    apply_custom_v3_step_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        scissor,
+        effect,
+        params,
+        user0,
+        user1,
+        sources,
+        ctx,
+        budget_bytes,
+        effect_degradations,
+        custom_v3_chain_raw,
+        backdrop_source_group,
+        custom_chain_budget,
+        mask_uniform_index,
+        mask,
     );
 }
 
