@@ -628,12 +628,17 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_bindings.rs`
     - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
       `BindGroupDescriptor` assembly branches for those two recorder paths directly
+    - `CustomEffectV3` main-pass bind-group assembly and unmasked / uniform-mask / texture-mask
+      pipeline selection now also live under
+      `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_bindings.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+      main `CustomEffectV3` bind-group descriptor branches or pipeline choice table directly
   - Current next hotspot:
     - decide whether scene-encoding invalidation/debug evidence should stay coupled to
       `scene_encoding_cache.rs` or move closer to diagnostics state
-    - continue the same bind-group / pipeline thinning for `CustomEffectV3`, whose recorder path
-      still owns the largest remaining descriptor and pipeline-selection branches in
-      `recorders/effects.rs`
+    - decide whether the `CustomEffectV3` pyramid build path should move its blit/downsample
+      bind-group and pass-loop glue behind a dedicated helper now that the main pass path has been
+      thinned
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG

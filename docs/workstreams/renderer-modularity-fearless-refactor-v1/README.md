@@ -305,6 +305,12 @@ As of 2026-03-13:
   - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now keeps those
     paths focused on mode selection, uniform binding choice, and pass execution instead of
     inlining every `BindGroupDescriptor` branch.
+- The same helper layer now also covers the `CustomEffectV3` main pass path:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_bindings.rs` now owns
+    `CustomEffectV3` bind-group assembly plus unmasked / uniform-mask / texture-mask pipeline
+    selection.
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now keeps
+    `CustomEffectV3` focused on pyramid/source preparation, uniform routing, and pass execution.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

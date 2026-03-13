@@ -655,6 +655,22 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite`
   - `cargo nextest run -p fret-render-wgpu gpu_filter_content_blur_respects_rounded_clip_stack_on_composite`
   - `cargo nextest run -p fret-render-wgpu gpu_backdrop_pixelate_respects_rounded_clip_stack_on_writeback`
+- The twenty-fifth renderer custom-v3-binding split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_bindings.rs` now also
+    owns `CustomEffectV3` bind-group assembly and the unmasked / uniform-mask / texture-mask
+    pipeline selection for the main pass path
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now reuses that
+    helper surface and keeps `CustomEffectV3` focused on source preparation, pyramid reuse/build,
+    uniform routing, and pass execution
+  - the pyramid build blit/downsample chain remains local to the recorder in this slice, so the
+    change narrows main-pass assembly ownership without touching the effect algorithm
+- Renderer custom-v3-binding split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_src_raw_is_chain_root_and_differs_from_src_after_prior_step`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_backdrop_source_group_raw_snapshots_before_prior_backdrop_steps`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_pyramid_level1_differs_from_raw_near_an_unaligned_edge`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_rejects_non_filterable_user_image_formats_by_falling_back_and_counts_it`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

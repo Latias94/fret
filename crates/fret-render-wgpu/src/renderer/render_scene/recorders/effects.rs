@@ -3,8 +3,9 @@ use super::super::executor::{RecordPassCtx, RenderSceneExecutor};
 use super::super::helpers::run_composite_premul_quad_pass;
 use super::blit::record_fullscreen_blit_pass;
 use super::effects_bindings::{
-    CustomEffectV2BindGroupResources, create_composite_premul_pipeline_and_bind_group,
-    create_custom_effect_v2_bind_group,
+    CustomEffectV2BindGroupResources, CustomEffectV3BindGroupMode,
+    CustomEffectV3BindGroupResources, create_composite_premul_pipeline_and_bind_group,
+    create_custom_effect_v2_bind_group, create_custom_effect_v3_pipeline_and_bind_group,
 };
 
 struct FullscreenEffectLabels {
@@ -1281,11 +1282,19 @@ pub(in super::super) fn record_custom_effect_v3_pass(
         _ => &exec.renderer.globals.viewport_sampler,
     };
 
-    let layout_unmasked = exec.renderer.custom_effect_v3_bind_group_layout_ref();
-    let layout_mask = exec.renderer.custom_effect_v3_mask_bind_group_layout_ref();
-
     let param_buffer = &exec.renderer.effect_params.custom_effect_param_buffer;
     let meta_buffer = &exec.renderer.effect_params.custom_effect_v3_meta_buffer;
+    let binding_resources = CustomEffectV3BindGroupResources {
+        src_view: &src_view,
+        src_raw_view: &src_raw_view,
+        src_pyramid_view: &src_pyramid_view,
+        param_buffer,
+        meta_buffer,
+        user0_view,
+        user0_sampler,
+        user1_view,
+        user1_sampler,
+    };
 
     let uniform_stride = exec.renderer.uniform_stride();
 
@@ -1299,54 +1308,13 @@ pub(in super::super) fn record_custom_effect_v3_pass(
             return;
         };
 
-        let bind_group = exec.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("fret custom-effect v3 mask bind group"),
-            layout: layout_mask,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&src_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: param_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::TextureView(&src_raw_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: wgpu::BindingResource::TextureView(&src_pyramid_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: meta_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: wgpu::BindingResource::TextureView(user0_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 6,
-                    resource: wgpu::BindingResource::Sampler(user0_sampler),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 7,
-                    resource: wgpu::BindingResource::TextureView(user1_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 8,
-                    resource: wgpu::BindingResource::Sampler(user1_sampler),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 9,
-                    resource: wgpu::BindingResource::TextureView(&mask_view),
-                },
-            ],
-        });
-
-        let pipeline = exec.renderer.custom_effect_v3_mask_pipeline_ref(effect);
+        let (pipeline, bind_group) = create_custom_effect_v3_pipeline_and_bind_group(
+            exec.device,
+            &*exec.renderer,
+            effect,
+            binding_resources,
+            CustomEffectV3BindGroupMode::TextureMask(&mask_view),
+        );
         run_fullscreen_triangle_pass_uniform_texture(
             &mut *exec.encoder,
             "fret custom-effect v3 mask pass",
@@ -1370,52 +1338,15 @@ pub(in super::super) fn record_custom_effect_v3_pass(
         return;
     }
 
-    let bind_group = exec.device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("fret custom-effect v3 bind group"),
-        layout: layout_unmasked,
-        entries: &[
-            wgpu::BindGroupEntry {
-                binding: 0,
-                resource: wgpu::BindingResource::TextureView(&src_view),
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
-                resource: param_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 2,
-                resource: wgpu::BindingResource::TextureView(&src_raw_view),
-            },
-            wgpu::BindGroupEntry {
-                binding: 3,
-                resource: wgpu::BindingResource::TextureView(&src_pyramid_view),
-            },
-            wgpu::BindGroupEntry {
-                binding: 4,
-                resource: meta_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 5,
-                resource: wgpu::BindingResource::TextureView(user0_view),
-            },
-            wgpu::BindGroupEntry {
-                binding: 6,
-                resource: wgpu::BindingResource::Sampler(user0_sampler),
-            },
-            wgpu::BindGroupEntry {
-                binding: 7,
-                resource: wgpu::BindingResource::TextureView(user1_view),
-            },
-            wgpu::BindGroupEntry {
-                binding: 8,
-                resource: wgpu::BindingResource::Sampler(user1_sampler),
-            },
-        ],
-    });
-
     if let Some(mask_uniform_index) = common.mask_uniform_index {
         let uniform_offset = (u64::from(mask_uniform_index) * uniform_stride) as u32;
-        let pipeline = exec.renderer.custom_effect_v3_masked_pipeline_ref(effect);
+        let (pipeline, bind_group) = create_custom_effect_v3_pipeline_and_bind_group(
+            exec.device,
+            &*exec.renderer,
+            effect,
+            binding_resources,
+            CustomEffectV3BindGroupMode::UniformMask,
+        );
         run_fullscreen_triangle_pass_uniform_texture(
             &mut *exec.encoder,
             "fret custom-effect v3 masked pass",
@@ -1439,7 +1370,13 @@ pub(in super::super) fn record_custom_effect_v3_pass(
         return;
     }
 
-    let pipeline = exec.renderer.custom_effect_v3_pipeline_ref(effect);
+    let (pipeline, bind_group) = create_custom_effect_v3_pipeline_and_bind_group(
+        exec.device,
+        &*exec.renderer,
+        effect,
+        binding_resources,
+        CustomEffectV3BindGroupMode::Unmasked,
+    );
     run_fullscreen_triangle_pass_uniform_texture(
         &mut *exec.encoder,
         "fret custom-effect v3 pass",

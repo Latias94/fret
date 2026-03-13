@@ -280,7 +280,9 @@ For `Renderer` state-shell tightening, the same principle applies:
   `recorders/effects.rs`. Once recorder access is uniformly routed through the executor facade,
   effect-family bind-group builders become the next thinning seam: move descriptor-heavy binding
   assembly into narrow helper modules first, and only then decide whether pipeline/mode selection
-  should split further by family.
+  should split further by family. For larger effect families such as `CustomEffectV3`, the helper
+  seam can also absorb pipeline/layout choice once the recorder still only differs by
+  unmasked/uniform-mask/texture-mask mode, leaving source preparation and pass execution local.
 - render-text dump state is the matching diagnostics/export seam for text debugging:
   dump collection scratch and serialization scratch should move behind one owner so render-scene
   execution keeps only a thin bridge to `TextSystem`.
