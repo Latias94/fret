@@ -92,7 +92,7 @@ pub(super) fn inflate_scissor_to_viewport(
     }
 }
 
-pub(super) fn compile_gaussian_blur_in_place(
+fn compile_gaussian_blur_in_place_inner(
     passes: &mut Vec<RenderPlanPass>,
     scratch_targets: &[PlanTarget],
     srcdst: PlanTarget,
@@ -104,6 +104,8 @@ pub(super) fn compile_gaussian_blur_in_place(
     budget_bytes: &mut u64,
     effect_degradations: &mut super::super::EffectDegradationSnapshot,
     effect_blur_quality: &mut super::super::BlurQualitySnapshot,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
 ) {
     if radius_px <= 0.0 || scissor.w == 0 || scissor.h == 0 {
         return;
@@ -144,8 +146,8 @@ pub(super) fn compile_gaussian_blur_in_place(
             iterations,
             scissor,
             ctx.clear,
-            None,
-            None,
+            mask_uniform_index,
+            mask,
         );
         return;
     }
@@ -219,7 +221,69 @@ pub(super) fn compile_gaussian_blur_in_place(
         iterations,
         scissor,
         ctx.clear,
+        mask_uniform_index,
+        mask,
+    );
+}
+
+pub(super) fn compile_gaussian_blur_in_place(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    quality: fret_core::EffectQuality,
+    scissor: ScissorRect,
+    downsample: u32,
+    radius_px: f32,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    effect_blur_quality: &mut super::super::BlurQualitySnapshot,
+) {
+    compile_gaussian_blur_in_place_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        quality,
+        scissor,
+        downsample,
+        radius_px,
+        ctx,
+        budget_bytes,
+        effect_degradations,
+        effect_blur_quality,
         None,
         None,
+    );
+}
+
+pub(super) fn compile_gaussian_blur_in_place_masked(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    quality: fret_core::EffectQuality,
+    scissor: ScissorRect,
+    downsample: u32,
+    radius_px: f32,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    effect_blur_quality: &mut super::super::BlurQualitySnapshot,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+) {
+    compile_gaussian_blur_in_place_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        quality,
+        scissor,
+        downsample,
+        radius_px,
+        ctx,
+        budget_bytes,
+        effect_degradations,
+        effect_blur_quality,
+        mask_uniform_index,
+        mask,
     );
 }

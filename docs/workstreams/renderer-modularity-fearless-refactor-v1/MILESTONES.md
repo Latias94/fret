@@ -169,6 +169,18 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu noise_compiles_to_pass`
   - `cargo nextest run -p fret-render-wgpu dither_compiles_to_pass`
   - `cargo nextest run -p fret-render-wgpu color_adjust_missing_scratch_increments_effect_degradations`
+- The seventh renderer effect-planning split has landed:
+  - masked GaussianBlur chain compile flow now lives under
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects/blur.rs`
+  - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns masked
+    `apply_chain_in_place(...)` branch handling for `GaussianBlur` directly
+- Renderer masked-GaussianBlur split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu gaussian_blur_radius_affects_pass_count`
+  - `cargo nextest run -p fret-render-wgpu gaussian_blur_budget_zero_increments_effect_degradations`
+  - `cargo nextest run -p fret-render-wgpu gaussian_blur_quality_records_applied_downsample_scale`
+  - `cargo nextest run -p fret-render-wgpu gaussian_blur_target_pressure_falls_back_to_single_scratch_blur`
+  - `cargo nextest run -p fret-render-wgpu gaussian_blur_masked_single_scratch_blur_applies_clip_coverage`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

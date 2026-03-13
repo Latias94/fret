@@ -90,7 +90,8 @@ mod custom;
 mod scissor;
 
 use self::blur::{
-    compile_gaussian_blur_in_place, inflate_scissor_to_viewport, padded_chain_step_scissors,
+    compile_gaussian_blur_in_place, compile_gaussian_blur_in_place_masked,
+    inflate_scissor_to_viewport, padded_chain_step_scissors,
 };
 use self::builtin::{
     append_scissored_blur_in_place_single_scratch, append_scissored_blur_in_place_two_scratch,
@@ -728,205 +729,18 @@ pub(super) fn apply_chain_in_place(
                 } else {
                     0.0
                 };
-                if radius_px <= 0.0 {
-                    continue;
-                }
-                effect_degradations.gaussian_blur.requested = effect_degradations
-                    .gaussian_blur
-                    .requested
-                    .saturating_add(1);
-
-                let requested_downsample = if downsample >= 4 { 4 } else { 2 };
-                let desired_downsample =
-                    effect_blur_desired_downsample(requested_downsample, quality);
-                if scratch_targets.len() >= 2 {
-                    let Some(downsample_scale) = choose_effect_blur_downsample_scale(
-                        ctx.viewport_size,
-                        ctx.format,
-                        budget_bytes,
-                        requested_downsample,
-                        quality,
-                    ) else {
-                        // Downsampled two-scratch blur does not fit. Fall back to a single-scratch
-                        // blur if possible, otherwise degrade to no-op.
-                        let Some(&scratch) = scratch_targets.first() else {
-                            effect_degradations.gaussian_blur.degraded_target_exhausted =
-                                effect_degradations
-                                    .gaussian_blur
-                                    .degraded_target_exhausted
-                                    .saturating_add(1);
-                            effect_blur_quality.gaussian_blur.record_applied(
-                                1,
-                                0,
-                                desired_downsample,
-                            );
-                            effect_blur_quality
-                                .gaussian_blur
-                                .quality_degraded_blur_removed = effect_blur_quality
-                                .gaussian_blur
-                                .quality_degraded_blur_removed
-                                .saturating_add(1);
-                            continue;
-                        };
-                        if budget_bytes == 0 {
-                            effect_degradations.gaussian_blur.degraded_budget_zero =
-                                effect_degradations
-                                    .gaussian_blur
-                                    .degraded_budget_zero
-                                    .saturating_add(1);
-                            effect_blur_quality.gaussian_blur.record_applied(
-                                1,
-                                0,
-                                desired_downsample,
-                            );
-                            effect_blur_quality
-                                .gaussian_blur
-                                .quality_degraded_blur_removed = effect_blur_quality
-                                .gaussian_blur
-                                .quality_degraded_blur_removed
-                                .saturating_add(1);
-                            continue;
-                        }
-                        let full = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
-                        let required = base_required_bytes_for_srcdst_and_single_scratch(full);
-                        if required > budget_bytes {
-                            effect_degradations
-                                .gaussian_blur
-                                .degraded_budget_insufficient = effect_degradations
-                                .gaussian_blur
-                                .degraded_budget_insufficient
-                                .saturating_add(1);
-                            effect_blur_quality.gaussian_blur.record_applied(
-                                1,
-                                0,
-                                desired_downsample,
-                            );
-                            effect_blur_quality
-                                .gaussian_blur
-                                .quality_degraded_blur_removed = effect_blur_quality
-                                .gaussian_blur
-                                .quality_degraded_blur_removed
-                                .saturating_add(1);
-                            continue;
-                        }
-
-                        let iterations =
-                            blur_primitive::blur_iterations_for_radius(radius_px, 1, quality);
-                        effect_degradations.gaussian_blur.applied =
-                            effect_degradations.gaussian_blur.applied.saturating_add(1);
-                        effect_blur_quality.gaussian_blur.record_applied(
-                            1,
-                            iterations,
-                            desired_downsample,
-                        );
-                        append_scissored_blur_in_place_single_scratch(
-                            passes,
-                            srcdst,
-                            scratch,
-                            ctx.viewport_size,
-                            iterations,
-                            scissor,
-                            ctx.clear,
-                            mask_uniform_index,
-                            mask,
-                        );
-                        continue;
-                    };
-                    let iterations = blur_primitive::blur_iterations_for_radius(
-                        radius_px,
-                        downsample_scale,
-                        quality,
-                    );
-                    effect_degradations.gaussian_blur.applied =
-                        effect_degradations.gaussian_blur.applied.saturating_add(1);
-                    effect_blur_quality.gaussian_blur.record_applied(
-                        downsample_scale,
-                        iterations,
-                        desired_downsample,
-                    );
-                    append_scissored_blur_in_place_two_scratch(
-                        passes,
-                        srcdst,
-                        scratch_targets[0],
-                        scratch_targets[1],
-                        ctx.viewport_size,
-                        downsample_scale,
-                        iterations,
-                        scissor,
-                        ctx.clear,
-                        mask_uniform_index,
-                        mask,
-                    );
-                    continue;
-                }
-
-                let Some(&scratch) = scratch_targets.first() else {
-                    effect_degradations.gaussian_blur.degraded_target_exhausted =
-                        effect_degradations
-                            .gaussian_blur
-                            .degraded_target_exhausted
-                            .saturating_add(1);
-                    effect_blur_quality
-                        .gaussian_blur
-                        .record_applied(1, 0, desired_downsample);
-                    effect_blur_quality
-                        .gaussian_blur
-                        .quality_degraded_blur_removed = effect_blur_quality
-                        .gaussian_blur
-                        .quality_degraded_blur_removed
-                        .saturating_add(1);
-                    continue;
-                };
-                if budget_bytes == 0 {
-                    effect_degradations.gaussian_blur.degraded_budget_zero = effect_degradations
-                        .gaussian_blur
-                        .degraded_budget_zero
-                        .saturating_add(1);
-                    effect_blur_quality
-                        .gaussian_blur
-                        .record_applied(1, 0, desired_downsample);
-                    effect_blur_quality
-                        .gaussian_blur
-                        .quality_degraded_blur_removed = effect_blur_quality
-                        .gaussian_blur
-                        .quality_degraded_blur_removed
-                        .saturating_add(1);
-                    continue;
-                }
-                let full = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
-                let required = base_required_bytes_for_srcdst_and_single_scratch(full);
-                if required > budget_bytes {
-                    effect_degradations
-                        .gaussian_blur
-                        .degraded_budget_insufficient = effect_degradations
-                        .gaussian_blur
-                        .degraded_budget_insufficient
-                        .saturating_add(1);
-                    effect_blur_quality
-                        .gaussian_blur
-                        .record_applied(1, 0, desired_downsample);
-                    effect_blur_quality
-                        .gaussian_blur
-                        .quality_degraded_blur_removed = effect_blur_quality
-                        .gaussian_blur
-                        .quality_degraded_blur_removed
-                        .saturating_add(1);
-                    continue;
-                }
-                let iterations = blur_primitive::blur_iterations_for_radius(radius_px, 1, quality);
-                effect_degradations.gaussian_blur.applied =
-                    effect_degradations.gaussian_blur.applied.saturating_add(1);
-                effect_blur_quality
-                    .gaussian_blur
-                    .record_applied(1, iterations, desired_downsample);
-                append_scissored_blur_in_place_single_scratch(
+                compile_gaussian_blur_in_place_masked(
                     passes,
+                    scratch_targets,
                     srcdst,
-                    scratch,
-                    ctx.viewport_size,
-                    iterations,
+                    quality,
                     scissor,
-                    ctx.clear,
+                    downsample,
+                    radius_px,
+                    ctx,
+                    &mut budget_bytes,
+                    effect_degradations,
+                    effect_blur_quality,
                     mask_uniform_index,
                     mask,
                 );

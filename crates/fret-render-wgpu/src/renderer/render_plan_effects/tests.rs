@@ -1097,3 +1097,57 @@ fn gaussian_blur_target_pressure_falls_back_to_single_scratch_blur() {
         "single-scratch blur fallback must not emit downsample scale passes"
     );
 }
+
+#[test]
+fn gaussian_blur_masked_single_scratch_blur_applies_clip_coverage() {
+    let viewport_size = (256, 256);
+    let format = wgpu::TextureFormat::Rgba8Unorm;
+    let ctx = EffectCompileCtx {
+        viewport_size,
+        format,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 1.0,
+    };
+    let scissor = ScissorRect::full(viewport_size.0, viewport_size.1);
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    apply_chain_in_place(
+        &mut passes,
+        &[PlanTarget::Intermediate1, PlanTarget::Intermediate2],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::FilterContent,
+        fret_core::EffectChain::from_steps(&[fret_core::EffectStep::GaussianBlur {
+            radius_px: fret_core::Px(16.0),
+            downsample: 2,
+        }]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        Some(11),
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    );
+
+    assert!(
+        passes
+            .iter()
+            .any(|pass| matches!(pass, RenderPlanPass::ClipMask(_))),
+        "masked gaussian blur should allocate a clip mask pass when budget allows"
+    );
+    let final_blur = passes.iter().rev().find_map(|pass| match pass {
+        RenderPlanPass::Blur(pass) => Some(pass),
+        _ => None,
+    });
+    assert!(
+        final_blur.is_some_and(|pass| {
+            pass.dst_scissor == Some(LocalScissorRect(scissor))
+                && (pass.mask_uniform_index.is_some() || pass.mask.is_some())
+        }),
+        "single-scratch gaussian blur should preserve clip coverage on the final blur pass"
+    );
+}
