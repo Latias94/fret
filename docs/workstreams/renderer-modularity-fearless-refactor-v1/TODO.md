@@ -442,6 +442,11 @@ ID format:
     - `TEXT_SHADER` WGSL source moved into
       `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/text.wgsl`
     - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts `TEXT_SHADER` inline
+    - `PATH_SHADER` WGSL source moved into
+      `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/path.wgsl`
+    - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts `PATH_SHADER` inline
+    - `crates/fret-render-wgpu/src/renderer/shaders.rs` now acts as a shader index/assembly file
+      instead of a large inline-WGSL store
 - [ ] RMFR-shaders-051 Avoid splitting shader source files purely for line count if no boundary
   benefit exists.
 - [~] RMFR-shaders-052 Keep WGSL validation tests aligned with any source reorganization.
@@ -469,6 +474,12 @@ ID format:
     - the existing WGSL parse/WebGPU validation coverage in
       `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover `TEXT_SHADER` without
       test-surface changes
+    - the existing WGSL parse/WebGPU validation coverage in
+      `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover `PATH_SHADER` without
+      test-surface changes
+    - the existing local naga validation test in
+      `crates/fret-render-wgpu/src/renderer/shaders.rs` continued to validate `PATH_SHADER`
+      unchanged
 
 ---
 
@@ -500,9 +511,10 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: `TEXT_SHADER` WGSL now lives under `renderer/pipelines/wgsl/text.wgsl`,
-    `renderer/shaders.rs` no longer hosts that shader inline, and the existing `renderer/tests.rs`
-    WGSL validation coverage continued to cover it unchanged.
+  - Latest landed slice: `PATH_SHADER` WGSL now lives under `renderer/pipelines/wgsl/path.wgsl`,
+    `renderer/shaders.rs` no longer hosts that shader inline, the existing `renderer/tests.rs`
+    WGSL validation coverage continued to cover it unchanged, and the local naga validation in
+    `renderer/shaders.rs` remained intact.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

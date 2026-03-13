@@ -464,6 +464,16 @@ Current snapshot (2026-03-13):
   - the existing WGSL parse/WebGPU validation coverage in
     `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover `TEXT_SHADER` without
     test-surface changes
+- The one-hundredth renderer shader split has landed:
+  - the `PATH_SHADER` WGSL source now lives under
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/path.wgsl`
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts `PATH_SHADER` inline
+  - the existing WGSL parse/WebGPU validation coverage in
+    `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover `PATH_SHADER` without
+    test-surface changes
+  - the existing local naga validation test in
+    `crates/fret-render-wgpu/src/renderer/shaders.rs` continued to validate `PATH_SHADER`
+    unchanged
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
@@ -543,6 +553,13 @@ Current snapshot (2026-03-13):
   - `python3 tools/check_layering.py`: passed
   - `python3 tools/report_largest_files.py --top 30 --min-lines 800`: `renderer/shaders.rs`
     dropped from 1592 lines to 981 lines while staying out of the top-30 oversized file report
+- Renderer shader split verification is green after the `PATH_SHADER` externalization:
+  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+  - `python3 tools/report_largest_files.py --top 30 --min-lines 800`: `renderer/shaders.rs`
+    dropped from 981 lines to 331 lines while staying out of the top-30 oversized file report
+  - `rg -n '= r#"' crates/fret-render-wgpu/src/renderer/shaders.rs`: no inline raw WGSL blocks remain
 - The strongest current risks are:
   - wildcard facade exports,
   - oversized backend public surface,
