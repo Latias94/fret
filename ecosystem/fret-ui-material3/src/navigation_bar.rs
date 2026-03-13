@@ -245,7 +245,7 @@ impl NavigationBar {
                         let container_id = cx.root_id();
                         let item_count = items.len();
 
-                        cx.with_state_for(
+                        cx.state_for(
                             container_id,
                             NavigationBarLayoutRuntime::default,
                             |rt| {
@@ -539,7 +539,7 @@ fn navigation_bar_item<H: UiHost>(
 
                 let icon_slot = cx.named("icon_slot", |cx| {
                     let icon_slot_id = cx.root_id();
-                    cx.with_state_for(container_id, NavigationBarLayoutRuntime::default, |rt| {
+                    cx.state_for(container_id, NavigationBarLayoutRuntime::default, |rt| {
                         rt.icon_slots.set(idx, icon_slot_id);
                     });
 
@@ -670,7 +670,7 @@ fn navigation_bar_active_indicator<H: UiHost>(
 
         let icon_slot_bounds = selected_idx
             .and_then(|idx| {
-                cx.with_state_for(container_id, NavigationBarLayoutRuntime::default, |rt| {
+                cx.state_for(container_id, NavigationBarLayoutRuntime::default, |rt| {
                     rt.icon_slots.get(idx)
                 })
             })

@@ -877,7 +877,7 @@ impl Radio {
                         }
 
                         let (dot_scale, dot_active) =
-                            cx.with_state_for(pressable_id, RadioDotRuntime::default, |rt| {
+                            cx.state_for(pressable_id, RadioDotRuntime::default, |rt| {
                                 let desired_dot = if checked { 1.0 } else { 0.0 };
                                 if (desired_dot - rt.dot_target).abs() > 1e-6 {
                                     rt.dot_target = desired_dot;

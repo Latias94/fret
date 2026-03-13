@@ -94,7 +94,7 @@ where
             resize_top_right_test_id,
             resize_bottom_left_test_id,
             resize_corner_test_id,
-        ) = cx.with_state_for(
+        ) = cx.state_for(
             window_id,
             || super::FloatWindowState {
                 size: initial_size.unwrap_or_else(|| Size::new(Px(0.0), Px(0.0))),
@@ -223,7 +223,7 @@ where
         );
 
         if position_after_resize != area.position {
-            cx.with_state_for(
+            cx.state_for(
                 window_id,
                 || super::FloatingAreaState {
                     position: initial_position,

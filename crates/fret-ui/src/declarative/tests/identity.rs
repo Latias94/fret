@@ -2,6 +2,38 @@ use super::*;
 use crate::GlobalElementId;
 use fret_runtime::ModelId;
 
+#[track_caller]
+fn bump_root_scoped_counter<H: crate::UiHost>(cx: &mut crate::ElementContext<'_, H>) -> u32 {
+    cx.root_state(u32::default, |value| {
+        *value = value.saturating_add(1);
+        *value
+    })
+}
+
+#[track_caller]
+fn bump_callsite_scoped_counter<H: crate::UiHost>(cx: &mut crate::ElementContext<'_, H>) -> u32 {
+    cx.slot_state(u32::default, |value| {
+        *value = value.saturating_add(1);
+        *value
+    })
+}
+
+fn two_root_scoped_counters<H: crate::UiHost>(
+    cx: &mut crate::ElementContext<'_, H>,
+) -> (u32, u32) {
+    let a = bump_root_scoped_counter(cx);
+    let b = bump_root_scoped_counter(cx);
+    (a, b)
+}
+
+fn two_callsite_scoped_counters<H: crate::UiHost>(
+    cx: &mut crate::ElementContext<'_, H>,
+) -> (u32, u32) {
+    let a = bump_callsite_scoped_counter(cx);
+    let b = bump_callsite_scoped_counter(cx);
+    (a, b)
+}
+
 #[test]
 fn named_scopes_produce_stable_element_ids_across_frames() {
     let mut app = TestHost::new();
@@ -81,7 +113,7 @@ fn keyed_list_reorder_preserves_element_identity_for_state() {
                 let mut frame_results = Vec::new();
                 for item in items {
                     let el = cx.keyed(item, |cx| cx.text("row"));
-                    let remembered = cx.with_state_for(el.id, || item, |st: &mut u64| *st);
+                    let remembered = cx.state_for(el.id, || item, |st: &mut u64| *st);
                     frame_results.push((item, remembered));
                     elements.push(el);
                 }
@@ -141,7 +173,7 @@ fn unkeyed_list_reorder_does_not_preserve_element_identity_for_state() {
                 let mut frame_results = Vec::new();
                 cx.for_each_unkeyed(&items, |cx, _idx, item| {
                     let el = cx.text("row");
-                    let remembered = cx.with_state_for(el.id, || *item, |st: &mut u64| *st);
+                    let remembered = cx.state_for(el.id, || *item, |st: &mut u64| *st);
                     frame_results.push((*item, remembered));
                     elements.push(el);
                 });
@@ -170,6 +202,46 @@ fn unkeyed_list_reorder_does_not_preserve_element_identity_for_state() {
             .any(|(item, remembered)| item != remembered),
         "expected unkeyed reorder to reuse element identity by index, not item key"
     );
+}
+
+#[test]
+fn root_state_is_root_scoped_shared_slot_per_type() {
+    let mut app = TestHost::new();
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+
+    let first = crate::elements::with_element_cx(&mut app, window, bounds, "root-state", |cx| {
+        two_root_scoped_counters(cx)
+    });
+    let second = crate::elements::with_element_cx(&mut app, window, bounds, "root-state", |cx| {
+        two_root_scoped_counters(cx)
+    });
+
+    assert_eq!(first, (1, 2));
+    assert_eq!(second, (3, 4));
+}
+
+#[test]
+fn slot_state_is_independent_per_callsite() {
+    let mut app = TestHost::new();
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+
+    let first = crate::elements::with_element_cx(&mut app, window, bounds, "slot-state", |cx| {
+        two_callsite_scoped_counters(cx)
+    });
+    let second = crate::elements::with_element_cx(&mut app, window, bounds, "slot-state", |cx| {
+        two_callsite_scoped_counters(cx)
+    });
+
+    assert_eq!(first, (1, 1));
+    assert_eq!(second, (2, 2));
 }
 
 #[test]

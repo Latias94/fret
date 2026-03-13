@@ -490,6 +490,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     /// Compatibility alias for [`Self::root_state`].
+    ///
+    /// Prefer [`Self::root_state`] in new first-party code. Keep this alias for migration and
+    /// downstream compatibility only.
     pub fn with_state<S: Any, R>(
         &mut self,
         init: impl FnOnce() -> S,
@@ -599,6 +602,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     /// Compatibility alias for [`Self::state_for`].
+    ///
+    /// Prefer [`Self::state_for`] in new first-party code. Keep this alias for migration and
+    /// downstream compatibility only.
     pub fn with_state_for<S: Any, R>(
         &mut self,
         element: GlobalElementId,
@@ -1381,7 +1387,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let name = props.name.clone();
-            cx.with_state_for(id, LayoutQueryRegionMarker::default, |marker| {
+            cx.state_for(id, LayoutQueryRegionMarker::default, |marker| {
                 marker.name = name.clone();
             });
             let built = f(cx, id);
@@ -1974,7 +1980,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn pressable_on_activate_for(&mut self, element: GlobalElementId, handler: OnActivate) {
-        self.with_state_for(element, PressableActionHooks::default, |hooks| {
+        self.state_for(element, PressableActionHooks::default, |hooks| {
             hooks.on_activate = Some(handler);
         });
     }
@@ -1995,7 +2001,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn pressable_add_on_activate_for(&mut self, element: GlobalElementId, handler: OnActivate) {
-        self.with_state_for(element, PressableActionHooks::default, |hooks| {
+        self.state_for(element, PressableActionHooks::default, |hooks| {
             hooks.on_activate = match hooks.on_activate.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2031,7 +2037,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         element: GlobalElementId,
         handler: OnSelectableTextActivateSpan,
     ) {
-        self.with_state_for(element, SelectableTextActionHooks::default, |hooks| {
+        self.state_for(element, SelectableTextActionHooks::default, |hooks| {
             hooks.on_activate_span = Some(handler);
         });
     }
@@ -2043,7 +2049,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn selectable_text_clear_on_activate_span_for(&mut self, element: GlobalElementId) {
-        self.with_state_for(element, SelectableTextActionHooks::default, |hooks| {
+        self.state_for(element, SelectableTextActionHooks::default, |hooks| {
             hooks.on_activate_span = None;
         });
     }
@@ -2075,7 +2081,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         element: GlobalElementId,
         handler: OnPressablePointerDown,
     ) {
-        self.with_state_for(element, PressableActionHooks::default, |hooks| {
+        self.state_for(element, PressableActionHooks::default, |hooks| {
             hooks.on_pointer_down = Some(handler);
         });
     }
@@ -2085,7 +2091,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         element: GlobalElementId,
         handler: OnPressablePointerMove,
     ) {
-        self.with_state_for(element, PressableActionHooks::default, |hooks| {
+        self.state_for(element, PressableActionHooks::default, |hooks| {
             hooks.on_pointer_move = Some(handler);
         });
     }
@@ -2095,7 +2101,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         element: GlobalElementId,
         handler: OnPressablePointerUp,
     ) {
-        self.with_state_for(element, PressableActionHooks::default, |hooks| {
+        self.state_for(element, PressableActionHooks::default, |hooks| {
             hooks.on_pointer_up = Some(handler);
         });
     }
@@ -2167,7 +2173,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         element: GlobalElementId,
         handler: OnPressablePointerDown,
     ) {
-        self.with_state_for(element, PressableActionHooks::default, |hooks| {
+        self.state_for(element, PressableActionHooks::default, |hooks| {
             hooks.on_pointer_down = match hooks.on_pointer_down.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2195,7 +2201,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         element: GlobalElementId,
         handler: OnPressablePointerMove,
     ) {
-        self.with_state_for(element, PressableActionHooks::default, |hooks| {
+        self.state_for(element, PressableActionHooks::default, |hooks| {
             hooks.on_pointer_move = match hooks.on_pointer_move.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2215,7 +2221,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         element: GlobalElementId,
         handler: OnPressablePointerUp,
     ) {
-        self.with_state_for(element, PressableActionHooks::default, |hooks| {
+        self.state_for(element, PressableActionHooks::default, |hooks| {
             hooks.on_pointer_up = match hooks.on_pointer_up.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2713,19 +2719,19 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn key_on_key_down_for(&mut self, element: GlobalElementId, handler: OnKeyDown) {
-        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+        self.state_for(element, KeyActionHooks::default, |hooks| {
             hooks.on_key_down = Some(handler);
         });
     }
 
     pub fn key_on_key_down_focused_for(&mut self, element: GlobalElementId, handler: OnKeyDown) {
-        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+        self.state_for(element, KeyActionHooks::default, |hooks| {
             hooks.on_key_down_focused = Some(handler);
         });
     }
 
     pub fn key_add_on_key_down_for(&mut self, element: GlobalElementId, handler: OnKeyDown) {
-        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+        self.state_for(element, KeyActionHooks::default, |hooks| {
             hooks.on_key_down = match hooks.on_key_down.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2739,7 +2745,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn key_prepend_on_key_down_for(&mut self, element: GlobalElementId, handler: OnKeyDown) {
-        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+        self.state_for(element, KeyActionHooks::default, |hooks| {
             hooks.on_key_down = match hooks.on_key_down.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2753,19 +2759,19 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn key_clear_on_key_down_for(&mut self, element: GlobalElementId) {
-        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+        self.state_for(element, KeyActionHooks::default, |hooks| {
             hooks.on_key_down = None;
         });
     }
 
     pub fn key_clear_on_key_down_focused_for(&mut self, element: GlobalElementId) {
-        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+        self.state_for(element, KeyActionHooks::default, |hooks| {
             hooks.on_key_down_focused = None;
         });
     }
 
     pub fn key_on_key_down_capture_for(&mut self, element: GlobalElementId, handler: OnKeyDown) {
-        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+        self.state_for(element, KeyActionHooks::default, |hooks| {
             hooks.on_key_down_capture = Some(handler);
         });
     }
@@ -2775,7 +2781,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         element: GlobalElementId,
         handler: OnKeyDown,
     ) {
-        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+        self.state_for(element, KeyActionHooks::default, |hooks| {
             hooks.on_key_down_capture = match hooks.on_key_down_capture.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2793,7 +2799,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         element: GlobalElementId,
         handler: OnKeyDown,
     ) {
-        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+        self.state_for(element, KeyActionHooks::default, |hooks| {
             hooks.on_key_down_capture = match hooks.on_key_down_capture.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2807,19 +2813,19 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn key_clear_on_key_down_capture_for(&mut self, element: GlobalElementId) {
-        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+        self.state_for(element, KeyActionHooks::default, |hooks| {
             hooks.on_key_down_capture = None;
         });
     }
 
     pub fn command_on_command_for(&mut self, element: GlobalElementId, handler: OnCommand) {
-        self.with_state_for(element, CommandActionHooks::default, |hooks| {
+        self.state_for(element, CommandActionHooks::default, |hooks| {
             hooks.on_command = Some(handler);
         });
     }
 
     pub fn command_add_on_command_for(&mut self, element: GlobalElementId, handler: OnCommand) {
-        self.with_state_for(element, CommandActionHooks::default, |hooks| {
+        self.state_for(element, CommandActionHooks::default, |hooks| {
             hooks.on_command = match hooks.on_command.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2833,7 +2839,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn command_prepend_on_command_for(&mut self, element: GlobalElementId, handler: OnCommand) {
-        self.with_state_for(element, CommandActionHooks::default, |hooks| {
+        self.state_for(element, CommandActionHooks::default, |hooks| {
             hooks.on_command = match hooks.on_command.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2847,7 +2853,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn command_clear_on_command_for(&mut self, element: GlobalElementId) {
-        self.with_state_for(element, CommandActionHooks::default, |hooks| {
+        self.state_for(element, CommandActionHooks::default, |hooks| {
             hooks.on_command = None;
         });
     }
@@ -2857,7 +2863,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         element: GlobalElementId,
         handler: OnCommandAvailability,
     ) {
-        self.with_state_for(element, CommandAvailabilityActionHooks::default, |hooks| {
+        self.state_for(element, CommandAvailabilityActionHooks::default, |hooks| {
             hooks.on_command_availability = Some(handler);
         });
     }
@@ -2867,7 +2873,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         element: GlobalElementId,
         handler: OnCommandAvailability,
     ) {
-        self.with_state_for(element, CommandAvailabilityActionHooks::default, |hooks| {
+        self.state_for(element, CommandAvailabilityActionHooks::default, |hooks| {
             hooks.on_command_availability = match hooks.on_command_availability.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2889,7 +2895,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         element: GlobalElementId,
         handler: OnCommandAvailability,
     ) {
-        self.with_state_for(element, CommandAvailabilityActionHooks::default, |hooks| {
+        self.state_for(element, CommandAvailabilityActionHooks::default, |hooks| {
             hooks.on_command_availability = match hooks.on_command_availability.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2907,19 +2913,19 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn command_clear_on_command_availability_for(&mut self, element: GlobalElementId) {
-        self.with_state_for(element, CommandAvailabilityActionHooks::default, |hooks| {
+        self.state_for(element, CommandAvailabilityActionHooks::default, |hooks| {
             hooks.on_command_availability = None;
         });
     }
 
     pub fn timer_on_timer_for(&mut self, element: GlobalElementId, handler: OnTimer) {
-        self.with_state_for(element, TimerActionHooks::default, |hooks| {
+        self.state_for(element, TimerActionHooks::default, |hooks| {
             hooks.on_timer = Some(handler);
         });
     }
 
     pub fn timer_add_on_timer_for(&mut self, element: GlobalElementId, handler: OnTimer) {
-        self.with_state_for(element, TimerActionHooks::default, |hooks| {
+        self.state_for(element, TimerActionHooks::default, |hooks| {
             hooks.on_timer = match hooks.on_timer.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2933,7 +2939,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn timer_clear_on_timer_for(&mut self, element: GlobalElementId) {
-        self.with_state_for(element, TimerActionHooks::default, |hooks| {
+        self.state_for(element, TimerActionHooks::default, |hooks| {
             hooks.on_timer = None;
         });
     }
@@ -3328,7 +3334,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         let on_paint: OnCanvasPaint = Arc::new(paint);
         self.scope(|cx| {
             let id = cx.root_id();
-            cx.with_state_for(id, CanvasPaintHooks::default, |hooks| {
+            cx.state_for(id, CanvasPaintHooks::default, |hooks| {
                 hooks.on_paint = Some(on_paint.clone());
             });
             cx.new_any_element(id, ElementKind::Canvas(props), Vec::new())

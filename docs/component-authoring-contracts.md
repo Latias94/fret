@@ -33,9 +33,9 @@ at least one regression test before expanding usage.
     - authored local models: `ElementContext::{local_model, local_model_keyed}`
     - explicit-identity models: `ElementContext::model_for(...)`
     - helper/runtime slots: `ElementContext::{slot_state, slot_id, keyed_slot_id}`
-    - explicit identity slots: `ElementContext::{state_for, with_state_for}`
+    - explicit identity slots: `ElementContext::state_for(...)`
     - root-scoped runtime state: `ElementContext::root_state(...)`
-    - lower-level compatibility alias: `ElementContext::with_state(...)`
+    - lower-level compatibility aliases: `ElementContext::{with_state, with_state_for}`
   - Model reads + observation: `ElementContext::{observe_model, read_model_ref, get_model_*}`
   - Focus reads: `ElementContext::{focused_element, is_focused_element}`
   - Cross-frame geometry queries: `ElementContext::{last_bounds_for_element, last_visual_bounds_for_element}`

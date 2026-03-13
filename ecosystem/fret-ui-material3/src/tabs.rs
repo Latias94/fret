@@ -277,7 +277,7 @@ impl Tabs {
                         let tab_count = items.len();
                         let container_id = cx.root_id();
 
-                        cx.with_state_for(container_id, TabListLayoutRuntime::default, |rt| {
+                        cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
                             rt.tabs.ensure_len(tab_count);
                         });
                         let indicator = primary_tab_list_indicator(
@@ -429,7 +429,7 @@ fn material_primary_tab<H: UiHost>(
             .map(|v| v.as_ref() == value.as_ref())
             .unwrap_or(false);
 
-        cx.with_state_for(container_id, TabListLayoutRuntime::default, |rt| {
+        cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
             rt.tabs.ensure_len(set_size);
             rt.tabs.set(idx, pressable_id);
         });
@@ -720,7 +720,7 @@ fn primary_tab_list_indicator<H: UiHost>(
         let container_bounds = cx.last_bounds_for_element(id).unwrap_or(cx.bounds);
         let tab_bounds = selected_idx
             .and_then(|idx| {
-                cx.with_state_for(container_id, TabListLayoutRuntime::default, |rt| {
+                cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
                     rt.tabs.get(idx)
                 })
             })

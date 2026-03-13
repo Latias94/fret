@@ -247,7 +247,7 @@ fn navigation_rail_impl<H: UiHost>(
                     let container_id = cx.root_id();
                     let item_count = items.len();
 
-                    cx.with_state_for(container_id, NavigationRailLayoutRuntime::default, |rt| {
+                    cx.state_for(container_id, NavigationRailLayoutRuntime::default, |rt| {
                         rt.icon_slots.ensure_len(item_count)
                     });
 
@@ -548,7 +548,7 @@ fn navigation_rail_item<H: UiHost>(
 
                 let icon_slot = cx.named("icon_slot", |cx| {
                     let icon_slot_id = cx.root_id();
-                    cx.with_state_for(container_id, NavigationRailLayoutRuntime::default, |rt| {
+                    cx.state_for(container_id, NavigationRailLayoutRuntime::default, |rt| {
                         rt.icon_slots.set(idx, icon_slot_id);
                     });
 
@@ -666,7 +666,7 @@ fn navigation_rail_active_indicator<H: UiHost>(
 
         let icon_slot_bounds = selected_idx
             .and_then(|idx| {
-                cx.with_state_for(container_id, NavigationRailLayoutRuntime::default, |rt| {
+                cx.state_for(container_id, NavigationRailLayoutRuntime::default, |rt| {
                     rt.icon_slots.get(idx)
                 })
             })

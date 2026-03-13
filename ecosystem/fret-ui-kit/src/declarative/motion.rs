@@ -361,7 +361,7 @@ pub fn drive_tween_f32_for_element<H: UiHost, K: Hash>(
     let frame_id = cx.frame_id.0;
     let dt = effective_frame_delta_for_cx(cx);
 
-    let out = cx.with_state_for(element, TweenF32StateMap::default, |map| {
+    let out = cx.state_for(element, TweenF32StateMap::default, |map| {
         let st = map
             .entries
             .entry(entry_key)
@@ -529,7 +529,7 @@ pub fn drive_tween_color_for_element<H: UiHost, K: Hash>(
         let frame_id = cx.frame_id.0;
         let dt = effective_frame_delta_for_cx(cx);
 
-        let out = cx.with_state_for(element, TweenColorStateMap::default, |map| {
+        let out = cx.state_for(element, TweenColorStateMap::default, |map| {
             let st = map
                 .entries
                 .entry(entry_key)

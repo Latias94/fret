@@ -193,7 +193,7 @@ fn ensure_last_focus_before_menubar_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     group: GlobalElementId,
 ) -> fret_runtime::Model<Option<GlobalElementId>> {
-    let existing = cx.with_state_for(group, InWindowMenubarBridgeState::default, |st| {
+    let existing = cx.state_for(group, InWindowMenubarBridgeState::default, |st| {
         st.last_focus_before_menubar.clone()
     });
     if let Some(existing) = existing {
@@ -201,7 +201,7 @@ fn ensure_last_focus_before_menubar_model<H: UiHost>(
     }
 
     let model = cx.app.models_mut().insert(None);
-    cx.with_state_for(group, InWindowMenubarBridgeState::default, |st| {
+    cx.state_for(group, InWindowMenubarBridgeState::default, |st| {
         st.last_focus_before_menubar = Some(model.clone());
     });
     model
@@ -212,7 +212,7 @@ fn ensure_menubar_focus_is_trigger_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     group: GlobalElementId,
 ) -> fret_runtime::Model<bool> {
-    let existing = cx.with_state_for(group, InWindowMenubarBridgeState::default, |st| {
+    let existing = cx.state_for(group, InWindowMenubarBridgeState::default, |st| {
         st.focus_is_trigger.clone()
     });
     if let Some(existing) = existing {
@@ -220,7 +220,7 @@ fn ensure_menubar_focus_is_trigger_model<H: UiHost>(
     }
 
     let model = cx.app.models_mut().insert(false);
-    cx.with_state_for(group, InWindowMenubarBridgeState::default, |st| {
+    cx.state_for(group, InWindowMenubarBridgeState::default, |st| {
         st.focus_is_trigger = Some(model.clone());
     });
     model

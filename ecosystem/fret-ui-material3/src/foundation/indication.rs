@@ -145,7 +145,7 @@ pub fn advance_indication_for_pressable<H: UiHost>(
         .flatten()
         .filter(|down| now_tick.0.saturating_sub(down.tick_id.0) <= 2);
 
-    cx.with_state_for(pressable_id, IndicationRuntime::default, |rt| {
+    cx.state_for(pressable_id, IndicationRuntime::default, |rt| {
         if (state_layer_target - rt.state_target).abs() > 1e-6 {
             rt.state_target = state_layer_target;
             rt.state_layer.set_target(
@@ -328,7 +328,7 @@ pub fn advance_indication_for_pressable_with_ripple_bounds<H: UiHost>(
         .flatten()
         .filter(|down| now_tick.0.saturating_sub(down.tick_id.0) <= 2);
 
-    cx.with_state_for(pressable_id, IndicationRuntime::default, |rt| {
+    cx.state_for(pressable_id, IndicationRuntime::default, |rt| {
         if (state_layer_target - rt.state_target).abs() > 1e-6 {
             rt.state_target = state_layer_target;
             rt.state_layer.set_target(

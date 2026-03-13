@@ -1112,7 +1112,7 @@ fn time_input_field<H: UiHost>(
             update_time_input_edit_ids(cx, &time_input_edit, kind, pressable_id);
 
             let (_gained_focus, lost_focus) =
-                cx.with_state_for(pressable_id, TimeInputFieldRuntime::default, |rt| {
+                cx.state_for(pressable_id, TimeInputFieldRuntime::default, |rt| {
                     let gained = !rt.was_focused && focused;
                     let lost = rt.was_focused && !focused;
                     rt.was_focused = focused;

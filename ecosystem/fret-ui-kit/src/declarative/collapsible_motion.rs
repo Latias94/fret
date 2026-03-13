@@ -77,7 +77,7 @@ pub fn last_measured_height_for<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     state_id: GlobalElementId,
 ) -> Px {
-    cx.with_state_for(state_id, MeasuredSizeState::default, |st| st.last.height)
+    cx.state_for(state_id, MeasuredSizeState::default, |st| st.last.height)
 }
 
 /// Read the last cached open size for a collapsible content subtree.
@@ -85,7 +85,7 @@ pub fn last_measured_size_for<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     state_id: GlobalElementId,
 ) -> Size {
-    cx.with_state_for(state_id, MeasuredSizeState::default, |st| st.last)
+    cx.state_for(state_id, MeasuredSizeState::default, |st| st.last)
 }
 
 /// Update the cached open height from the previously-laid-out bounds of `wrapper_element_id`.
@@ -115,7 +115,7 @@ pub fn update_measured_height_if_open_for<H: UiHost>(
         return last_height;
     }
 
-    cx.with_state_for(state_id, MeasuredSizeState::default, |st| {
+    cx.state_for(state_id, MeasuredSizeState::default, |st| {
         st.last = bounds.size;
     });
     h
@@ -151,7 +151,7 @@ pub fn update_measured_size_from_element_if_open_for<H: UiHost>(
         return last;
     }
 
-    cx.with_state_for(state_id, MeasuredSizeState::default, |st| {
+    cx.state_for(state_id, MeasuredSizeState::default, |st| {
         st.last = bounds.size;
     });
 

@@ -543,27 +543,27 @@ fn ensure_hover_switch_models<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     trigger_id: GlobalElementId,
 ) -> (Model<bool>, Model<Option<TimerToken>>) {
-    let hovered = cx.with_state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
+    let hovered = cx.state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
         st.hovered.clone()
     });
     let hovered = if let Some(hovered) = hovered {
         hovered
     } else {
         let hovered = cx.app.models_mut().insert(false);
-        cx.with_state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
+        cx.state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
             st.hovered = Some(hovered.clone());
         });
         hovered
     };
 
-    let timer = cx.with_state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
+    let timer = cx.state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
         st.timer.clone()
     });
     let timer = if let Some(timer) = timer {
         timer
     } else {
         let timer = cx.app.models_mut().insert(None);
-        cx.with_state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
+        cx.state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
             st.timer = Some(timer.clone());
         });
         timer
@@ -576,27 +576,27 @@ fn ensure_patient_click_models<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     trigger_id: GlobalElementId,
 ) -> (Model<bool>, Model<Option<TimerToken>>) {
-    let sticky = cx.with_state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
+    let sticky = cx.state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
         st.patient_click_sticky.clone()
     });
     let sticky = if let Some(sticky) = sticky {
         sticky
     } else {
         let sticky = cx.app.models_mut().insert(false);
-        cx.with_state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
+        cx.state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
             st.patient_click_sticky = Some(sticky.clone());
         });
         sticky
     };
 
-    let timer = cx.with_state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
+    let timer = cx.state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
         st.patient_click_timer.clone()
     });
     let timer = if let Some(timer) = timer {
         timer
     } else {
         let timer = cx.app.models_mut().insert(None);
-        cx.with_state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
+        cx.state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
             st.patient_click_timer = Some(timer.clone());
         });
         timer
@@ -625,7 +625,7 @@ pub fn ensure_group_active_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     group: GlobalElementId,
 ) -> Model<Option<MenubarActiveTrigger>> {
-    let existing = cx.with_state_for(group, MenubarTriggerRowGroupState::default, |st| {
+    let existing = cx.state_for(group, MenubarTriggerRowGroupState::default, |st| {
         st.active.clone()
     });
     if let Some(existing) = existing {
@@ -633,7 +633,7 @@ pub fn ensure_group_active_model<H: UiHost>(
     }
 
     let active = cx.app.models_mut().insert(None);
-    cx.with_state_for(group, MenubarTriggerRowGroupState::default, |st| {
+    cx.state_for(group, MenubarTriggerRowGroupState::default, |st| {
         st.active = Some(active.clone());
     });
     active
@@ -647,7 +647,7 @@ pub fn ensure_group_registry_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     group: GlobalElementId,
 ) -> Model<Vec<MenubarTriggerRowEntry>> {
-    let existing = cx.with_state_for(group, MenubarTriggerRowGroupState::default, |st| {
+    let existing = cx.state_for(group, MenubarTriggerRowGroupState::default, |st| {
         st.registry.clone()
     });
     if let Some(existing) = existing {
@@ -655,7 +655,7 @@ pub fn ensure_group_registry_model<H: UiHost>(
     }
 
     let registry = cx.app.models_mut().insert(Vec::new());
-    cx.with_state_for(group, MenubarTriggerRowGroupState::default, |st| {
+    cx.state_for(group, MenubarTriggerRowGroupState::default, |st| {
         st.registry = Some(registry.clone());
     });
     registry
@@ -824,7 +824,7 @@ pub fn sync_trigger_row_state<H: UiHost>(
 
     let (hovered_model, hover_timer) = ensure_hover_switch_models(cx, trigger_id);
 
-    let installed = cx.with_state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
+    let installed = cx.state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
         st.installed
     });
     if !installed {
@@ -848,7 +848,7 @@ pub fn sync_trigger_row_state<H: UiHost>(
             ),
         );
 
-        cx.with_state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
+        cx.state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
             st.installed = true;
         });
     }

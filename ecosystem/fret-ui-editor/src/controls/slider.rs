@@ -343,13 +343,13 @@ where
         // accidental state sharing across sibling sliders when the surrounding composition
         // changes.
         let state_id = cx.named("slider.state", |cx| cx.root_id());
-        let state: Arc<Mutex<SliderState>> = cx.with_state_for(
+        let state: Arc<Mutex<SliderState>> = cx.state_for(
             state_id,
             || Arc::new(Mutex::new(SliderState::default())),
             |s| s.clone(),
         );
         let focus_handoff_state_id = cx.named("slider.focus_handoff.state", |cx| cx.root_id());
-        let focus_handoff: Arc<Mutex<NumericTextEntryFocusHandoffState>> = cx.with_state_for(
+        let focus_handoff: Arc<Mutex<NumericTextEntryFocusHandoffState>> = cx.state_for(
             focus_handoff_state_id,
             || Arc::new(Mutex::new(NumericTextEntryFocusHandoffState::default())),
             |s| s.clone(),
