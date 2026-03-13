@@ -95,7 +95,7 @@ Regression gates:
 Regression gates:
 
 - [x] Add a unit/integration test for "no-op rescan does not change published font state".
-- [ ] Add a diagnostics/perf check showing that no-op rescan apply does not trigger cache-reset
+- [x] Add a diagnostics/perf check showing that no-op rescan apply does not trigger cache-reset
   churn.
 
 ## M4 — Tighten fallback-policy composition and diagnostics

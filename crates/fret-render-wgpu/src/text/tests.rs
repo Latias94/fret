@@ -268,6 +268,38 @@ fn text_rescan_system_fonts_noop_preserves_generic_injection() {
     );
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn text_diagnostics_report_no_cache_reset_churn_for_noop_rescan() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut text = super::TextSystem::new(&ctx.device);
+
+    text.begin_frame_diagnostics();
+    let _ = text.take_atlas_perf_snapshot();
+
+    let seed = text
+        .system_font_rescan_seed()
+        .expect("expected system font rescan to be available");
+    let result = seed.run();
+
+    assert!(
+        !text.apply_system_font_rescan_result(result),
+        "expected apply to short-circuit when the environment is unchanged"
+    );
+
+    let perf = text.diagnostics_snapshot(fret_core::FrameId(1));
+    let atlas_perf = text.take_atlas_perf_snapshot();
+
+    assert_eq!(
+        perf.frame_cache_resets, 0,
+        "expected diagnostics snapshot to report zero cache resets for a no-op rescan apply"
+    );
+    assert_eq!(
+        atlas_perf.resets, 0,
+        "expected atlas perf snapshot to report zero atlas resets for a no-op rescan apply"
+    );
+}
+
 #[test]
 fn text_measure_key_ignores_width_for_wrap_none() {
     let style = TextStyle::default();
