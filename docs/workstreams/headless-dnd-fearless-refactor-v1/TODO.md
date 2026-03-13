@@ -45,7 +45,7 @@ This file tracks the execution checklist for `DESIGN.md`.
 
 ## M3 — Thin UI-kit adapter and forwarder-first adoption
 
-- [ ] Split `ecosystem/fret-ui-kit/src/dnd/controller.rs` by responsibility.
+- [x] Split `ecosystem/fret-ui-kit/src/dnd/controller/` by responsibility.
 - [x] Recenter the UI-kit controller around the headless engine output instead of hand-assembling
   partial `DndUpdate` values.
 - [x] Make `DndPointerForwarders` the preferred path for new integrations.
@@ -86,7 +86,7 @@ This file tracks the execution checklist for `DESIGN.md`.
 
 - [x] Sortable recipe gate added or strengthened.
 - [x] Kanban gate added or strengthened.
-- [ ] Docking tab hover/insert path verified against the new engine/controller shape.
+- [x] Docking tab hover/insert path verified against the new engine/controller shape.
 - [x] Carousel-vs-DnD arbitration gate remains green after adapter changes.
 
 ## Docs and contract follow-up

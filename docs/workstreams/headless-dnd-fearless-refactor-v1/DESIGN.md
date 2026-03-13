@@ -23,7 +23,8 @@ a mature, reusable DnD architecture.
 
 The current stack already shows the usual drift signals:
 
-- `ecosystem/fret-ui-kit/src/dnd/controller.rs` is a large orchestration file that owns too much
+- `ecosystem/fret-ui-kit/src/dnd/controller/` is still the main runtime adapter surface and had
+  grown into a large orchestration module that owned too much
   event translation logic.
 - `DndUpdate.collisions` exists in the public integration surface but is currently returned as an
   empty vector by the main controller paths.
@@ -69,7 +70,7 @@ The refactor must preserve these invariants:
 - `ecosystem/fret-dnd/src/registry.rs`
 - `ecosystem/fret-dnd/src/scroll.rs`
 - `ecosystem/fret-dnd/src/sortable.rs`
-- `ecosystem/fret-ui-kit/src/dnd/controller.rs`
+- `ecosystem/fret-ui-kit/src/dnd/controller/`
 - `ecosystem/fret-ui-kit/src/dnd/registry.rs`
 - `ecosystem/fret-ui-kit/src/dnd/forwarders.rs`
 - `ecosystem/fret-ui-kit/src/recipes/sortable_dnd.rs`
@@ -106,7 +107,7 @@ of collision state.
 Evidence:
 
 - `ecosystem/fret-ui-kit/src/dnd/types.rs`
-- `ecosystem/fret-ui-kit/src/dnd/controller.rs`
+- `ecosystem/fret-ui-kit/src/dnd/controller/`
 
 ### H3. `fret-dnd` has frame-level outputs that are not actually driving the integration layer
 
@@ -122,7 +123,7 @@ entirely. This is an architectural split-brain.
 Evidence:
 
 - `ecosystem/fret-dnd/src/frame.rs`
-- `ecosystem/fret-ui-kit/src/dnd/controller.rs`
+- `ecosystem/fret-ui-kit/src/dnd/controller/`
 
 ### H4. Too much central behavior still lives in recipes and product code
 
@@ -136,12 +137,12 @@ Evidence:
 
 ### H5. The integration layer is becoming a "god file"
 
-`controller.rs` is already large enough that future feature growth will increase review risk and
+the `controller/` module was already large enough that future feature growth would increase review risk and
 encourage copy-paste usage.
 
 Evidence:
 
-- `ecosystem/fret-ui-kit/src/dnd/controller.rs`
+- `ecosystem/fret-ui-kit/src/dnd/controller/`
 
 ## Non-goals (v1)
 
@@ -226,7 +227,7 @@ headless engine/frame pipeline and forward those outputs as-is.
 
 This reduces drift and makes `DndUpdate` truthful.
 
-### 3) Shrink `fret-ui-kit::dnd/controller.rs` into smaller adapters
+### 3) Shrink `fret-ui-kit::dnd/controller/` into smaller adapters
 
 Recommended split:
 

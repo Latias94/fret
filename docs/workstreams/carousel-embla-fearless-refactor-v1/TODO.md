@@ -161,7 +161,7 @@ keeping their higher-level semantics separate (Carousel vs Drawer vs Slider).
   - references: ADR 0149/0150/0151/0157
   - Evidence:
     - `docs/workstreams/carousel-embla-fearless-refactor-v1/dnd-arbitration.md`
-    - `ecosystem/fret-ui-kit/src/dnd/controller.rs` (`pointer_is_tracking_any_sensor`)
+    - `ecosystem/fret-ui-kit/src/dnd/controller/mod.rs` (`pointer_is_tracking_any_sensor`)
     - `ecosystem/fret-ui-shadcn/src/carousel.rs` (skip swipe when DnD sensor tracks the pointer)
     - `apps/fret-ui-gallery/src/ui/pages/carousel.rs` (demo handle wiring)
     - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-dnd-handle-gate.json`

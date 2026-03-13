@@ -31,7 +31,7 @@ intact.
 
 - `ecosystem/fret-dnd/src/modifier.rs`
 - `ecosystem/fret-dnd/src/frame.rs`
-- `ecosystem/fret-ui-kit/src/dnd/controller.rs`
+- `ecosystem/fret-ui-kit/src/dnd/controller/`
 - `ecosystem/fret-ui-kit/src/dnd/types.rs`
 
 **Gates**
@@ -68,7 +68,7 @@ intact.
 **Outcome**
 
 - The UI-kit DnD controller becomes a thin runtime adapter over the headless engine.
-- `controller.rs` is split by responsibility.
+- the `controller/` module is split by responsibility.
 - the public integration surface stops hand-assembling partial DnD truth
 
 **Evidence anchors**
