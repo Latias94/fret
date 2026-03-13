@@ -131,6 +131,13 @@ fn helper(cx: &mut UiCx<'_>) -> impl fret_ui_kit::IntoUiElement<fret_app::App> +
   controls_panel}`.
 - keep `.into_element(cx)` explicit only where those demos intentionally still assemble raw stage
   child arrays, overlay child collections, or other concrete landing seams.
+- first-party page/snippet teaching rule:
+  once a wrapper/helper family is promoted onto the default authoring path, Gallery pages and
+  snippets should teach that wrapper family by default and should not silently fall back to eager
+  `*::new(...)` constructors or lower-level `*::build(...)` forms.
+- lower-level builder names such as `Card::build(...)` may still appear in first-party docs only
+  when they are explicitly labeled as advanced or late-child-collection escape hatches rather than
+  default-equal alternatives.
 
 ## Component Surface
 

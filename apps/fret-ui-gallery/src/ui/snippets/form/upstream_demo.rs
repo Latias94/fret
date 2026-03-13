@@ -312,33 +312,40 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     let mobile_field = {
         let control_id = "ui-gallery-form-demo-mobile";
-        shadcn::Card::new(vec![shadcn::CardContent::new(vec![ui::h_flex(|cx| {
-                let label = ui::v_flex(|cx| {
-                        vec![
-                            shadcn::FieldLabel::new(
-                                "Use different settings for my mobile devices",
-                            )
-                            .for_control(control_id)
-                            .into_element(cx),
-                            shadcn::raw::typography::muted(
-                                "You can manage your mobile notifications in the mobile settings page.",
-                            ).into_element(cx),
-                        ]
-                    })
-                        .gap(Space::N1)
-                        .layout(LayoutRefinement::default().w_full().min_w_0()).into_element(cx);
+        let body = ui::h_flex(|cx| {
+            let label = ui::v_flex(|cx| {
                 vec![
-                    shadcn::Checkbox::new(mobile.clone())
-                        .control_id(control_id)
-                        .a11y_label("Use different settings for my mobile devices")
+                    shadcn::FieldLabel::new("Use different settings for my mobile devices")
+                        .for_control(control_id)
                         .into_element(cx),
-                    label,
+                    shadcn::raw::typography::muted(
+                        "You can manage your mobile notifications in the mobile settings page.",
+                    )
+                    .into_element(cx),
                 ]
             })
-                .gap(Space::N3)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().min_w_0()).into_element(cx)])
-        .into_element(cx)])
+            .gap(Space::N1)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx);
+            vec![
+                shadcn::Checkbox::new(mobile.clone())
+                    .control_id(control_id)
+                    .a11y_label("Use different settings for my mobile devices")
+                    .into_element(cx),
+                label,
+            ]
+        })
+        .gap(Space::N3)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx);
+
+        shadcn::card(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_content(|cx| ui::children![cx; body]),
+            ]
+        })
         .refine_layout(LayoutRefinement::default().w_full().min_w_0())
         .into_element(cx)
         .test_id("ui-gallery-form-demo-mobile")
@@ -481,70 +488,72 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .test_id("ui-gallery-form-demo-dob");
 
     let email_notifications = {
-        let marketing = shadcn::Card::new(vec![
-            shadcn::CardContent::new(vec![
-                ui::h_flex(|cx| {
-                    let text = ui::v_stack(|cx| {
-                        vec![
-                            shadcn::Label::new("Marketing emails").into_element(cx),
-                            shadcn::raw::typography::muted(
-                                "Receive emails about new products, features, and more.",
-                            )
-                            .into_element(cx),
-                        ]
-                    })
-                    .gap(Space::N1)
-                    .layout(LayoutRefinement::default().min_w_0())
-                    .into_element(cx);
-                    vec![
-                        text,
-                        shadcn::Switch::new(marketing_emails.clone())
-                            .a11y_label("Marketing emails")
-                            .into_element(cx),
-                    ]
-                })
-                .gap(Space::N4)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .justify_between()
-                .into_element(cx),
-            ])
-            .into_element(cx),
-        ])
+        let marketing_body = ui::h_flex(|cx| {
+            let text = ui::v_stack(|cx| {
+                vec![
+                    shadcn::Label::new("Marketing emails").into_element(cx),
+                    shadcn::raw::typography::muted(
+                        "Receive emails about new products, features, and more.",
+                    )
+                    .into_element(cx),
+                ]
+            })
+            .gap(Space::N1)
+            .layout(LayoutRefinement::default().min_w_0())
+            .into_element(cx);
+            vec![
+                text,
+                shadcn::Switch::new(marketing_emails.clone())
+                    .a11y_label("Marketing emails")
+                    .into_element(cx),
+            ]
+        })
+        .gap(Space::N4)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .justify_between()
+        .into_element(cx);
+
+        let marketing = shadcn::card(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_content(|cx| ui::children![cx; marketing_body]),
+            ]
+        })
         .into_element(cx)
         .test_id("ui-gallery-form-demo-email-notify-marketing");
 
-        let security = shadcn::Card::new(vec![
-            shadcn::CardContent::new(vec![
-                ui::h_flex(|cx| {
-                    let text = ui::v_stack(|cx| {
-                        vec![
-                            shadcn::Label::new("Security emails").into_element(cx),
-                            shadcn::raw::typography::muted(
-                                "Receive emails about your account security.",
-                            )
-                            .into_element(cx),
-                        ]
-                    })
-                    .gap(Space::N1)
-                    .layout(LayoutRefinement::default().min_w_0())
-                    .into_element(cx);
-                    vec![
-                        text,
-                        shadcn::Switch::new(security_emails.clone())
-                            .a11y_label("Security emails")
-                            .disabled(true)
-                            .into_element(cx),
-                    ]
-                })
-                .gap(Space::N4)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .justify_between()
-                .into_element(cx),
-            ])
-            .into_element(cx),
-        ])
+        let security_body = ui::h_flex(|cx| {
+            let text = ui::v_stack(|cx| {
+                vec![
+                    shadcn::Label::new("Security emails").into_element(cx),
+                    shadcn::raw::typography::muted("Receive emails about your account security.")
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N1)
+            .layout(LayoutRefinement::default().min_w_0())
+            .into_element(cx);
+            vec![
+                text,
+                shadcn::Switch::new(security_emails.clone())
+                    .a11y_label("Security emails")
+                    .disabled(true)
+                    .into_element(cx),
+            ]
+        })
+        .gap(Space::N4)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .justify_between()
+        .into_element(cx);
+
+        let security = shadcn::card(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_content(|cx| ui::children![cx; security_body]),
+            ]
+        })
         .into_element(cx)
         .test_id("ui-gallery-form-demo-email-notify-security");
 

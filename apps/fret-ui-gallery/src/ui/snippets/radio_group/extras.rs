@@ -64,14 +64,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             ))
             .into_element(cx);
 
-        shadcn::FieldSet::new([
-            shadcn::FieldLegend::new("Subscription Plan")
-                .variant(shadcn::FieldLegendVariant::Label)
-                .into_element(cx),
-            shadcn::FieldDescription::new("Yearly and lifetime plans offer significant savings.")
-                .into_element(cx),
-            group,
-        ])
+        shadcn::field_set(|cx| {
+            ui::children![
+                cx;
+                shadcn::FieldLegend::new("Subscription Plan")
+                    .variant(shadcn::FieldLegendVariant::Label),
+                shadcn::FieldDescription::new("Yearly and lifetime plans offer significant savings."),
+                group,
+            ]
+        })
         .refine_layout(max_w_xs.clone())
         .into_element(cx)
     };
@@ -121,14 +122,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             )
             .into_element(cx);
 
-        shadcn::FieldSet::new([
-            shadcn::FieldLegend::new("Notification Preferences")
-                .variant(shadcn::FieldLegendVariant::Label)
-                .into_element(cx),
-            shadcn::FieldDescription::new("Choose how you want to receive notifications.")
-                .into_element(cx),
-            group,
-        ])
+        shadcn::field_set(|cx| {
+            ui::children![
+                cx;
+                shadcn::FieldLegend::new("Notification Preferences")
+                    .variant(shadcn::FieldLegendVariant::Label),
+                shadcn::FieldDescription::new("Choose how you want to receive notifications."),
+                group,
+            ]
+        })
         .refine_layout(max_w_xs.clone())
         .into_element(cx)
     };

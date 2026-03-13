@@ -26,14 +26,19 @@ fn rich_title_text() -> AttributedText {
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    shadcn::Alert::new([
-        fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
-        shadcn::AlertTitle::new_children([cx.styled_text(rich_title_text())]).into_element(cx),
-        shadcn::AlertDescription::new(
-            "Use `AlertTitle::new_children(...)` when the title needs an attributed or precomposed subtree.",
-        )
-        .into_element(cx),
-    ])
+    shadcn::alert(|cx| {
+        ui::children![
+            cx;
+            fret_ui_shadcn::icon::icon(
+                cx,
+                fret_icons::IconId::new_static("lucide.circle-alert"),
+            ),
+            shadcn::AlertTitle::new_children([cx.styled_text(rich_title_text())]),
+            shadcn::AlertDescription::new(
+                "Use `AlertTitle::new_children(...)` when the title needs an attributed or precomposed subtree.",
+            ),
+        ]
+    })
     .variant(shadcn::AlertVariant::Default)
     .refine_layout(LayoutRefinement::default().max_w(Px(520.0)))
     .into_element(cx)

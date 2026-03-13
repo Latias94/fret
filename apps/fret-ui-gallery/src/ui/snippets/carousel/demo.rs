@@ -559,7 +559,10 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         );
         let content = cx.container(props, move |_cx| layered);
 
-        let card = shadcn::Card::new([content]).into_element(cx);
+        let card = shadcn::card(
+            |cx| ui::children![cx; shadcn::card_content(|cx| ui::children![cx; content])],
+        )
+        .into_element(cx);
         ui::container(move |_cx| vec![card])
             .w_full()
             .p_1()

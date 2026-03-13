@@ -11,24 +11,29 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         .max_w(MetricRef::Px(Px(384.0)))
         .min_w_0();
 
-    shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("CardContent inline children").into_element(cx),
-            shadcn::CardDescription::new(
-                "CardContent should not stretch inline-sized children (e.g. buttons).",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new(vec![
-            shadcn::Button::new("Inline Button")
-                .into_element(cx)
-                .test_id("ui-gallery-card-content-inline-button"),
-        ])
-        .into_element(cx),
-        shadcn::CardFooter::new(vec![ui::text("Footer").text_sm().into_element(cx)])
-            .into_element(cx),
-    ])
+    shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("CardContent inline children"),
+                    shadcn::card_description(
+                        "CardContent should not stretch inline-sized children (e.g. buttons).",
+                    ),
+                ]
+            }),
+            shadcn::card_content(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::Button::new("Inline Button")
+                        .ui()
+                        .test_id("ui-gallery-card-content-inline-button"),
+                ]
+            }),
+            shadcn::card_footer(|cx| ui::children![cx; ui::text("Footer").text_sm()]),
+        ]
+    })
     .refine_layout(max_w_sm)
     .into_element(cx)
     .test_id("ui-gallery-card-content-inline-button-demo")

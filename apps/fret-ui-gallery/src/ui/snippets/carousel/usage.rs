@@ -35,7 +35,7 @@ fn slide_card(cx: &mut UiCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App
         move |_cx| vec![number],
     );
 
-    shadcn::Card::new([content])
+    shadcn::card(|cx| ui::children![cx; shadcn::card_content(|cx| ui::children![cx; content])])
 }
 
 fn slide(cx: &mut UiCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + use<> {

@@ -91,17 +91,17 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         ),
     ];
 
-    let card = shadcn::Card::new(vec![
-        shadcn::CardContent::new(vec![calendar])
-            .size(shadcn::CardSize::Sm)
-            .into_element(cx),
-        shadcn::CardFooter::new(footer_buttons)
-            .size(shadcn::CardSize::Sm)
-            .border_top(true)
-            .wrap(true)
-            .gap(Space::N2)
-            .into_element(cx),
-    ])
+    let card = shadcn::card(move |cx| {
+        ui::children![
+            cx;
+            shadcn::card_content(|cx| ui::children![cx; calendar]).size(shadcn::CardSize::Sm),
+            shadcn::card_footer(move |_cx| footer_buttons)
+                .size(shadcn::CardSize::Sm)
+                .border_top(true)
+                .wrap(true)
+                .gap(Space::N2),
+        ]
+    })
     .size(shadcn::CardSize::Sm)
     .refine_layout(
         LayoutRefinement::default()

@@ -47,17 +47,21 @@ pub fn render(cx: &mut UiCx<'_>, dialog_open: Model<bool>) -> AnyElement {
         )
         .test_id("ui-gallery-motion-presets-dialog");
 
-    shadcn::Card::new([
-        shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Overlay demo").into_element(cx),
-            shadcn::CardDescription::new(
-                "Presence motion is token-driven and should feel consistent across refresh rates.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new([dialog]).into_element(cx),
-    ])
+    shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Overlay demo"),
+                    shadcn::card_description(
+                        "Presence motion is token-driven and should feel consistent across refresh rates.",
+                    ),
+                ]
+            }),
+            shadcn::card_content(|cx| ui::children![cx; dialog]),
+        ]
+    })
     .refine_layout(shell_layout)
     .into_element(cx)
     .test_id("ui-gallery-motion-presets-overlay-demo")

@@ -136,10 +136,17 @@ Implementation note on 2026-03-12:
 - `fret-ui-shadcn` now has a thin public constructor/wrapper trial:
   `badge.rs::badge<H, T>(...)`, `kbd.rs::kbd<H, T>(...)`,
   `separator.rs::separator<H>()`, `input_group.rs::input_group<H>(...)`,
-  `input_otp.rs::input_otp<H>(...)`, and `command.rs::command<H, I, F, T>(...)`
+  `input_otp.rs::input_otp<H>(...)`, `command.rs::command<H, I, F, T>(...)`,
+  `checkbox.rs::{checkbox<H>(...), checkbox_opt<H>(...)}`,
+  `progress.rs::progress<H>(...)`,
+  `switch.rs::{switch<H>(...), switch_opt<H>(...)}`, and
+  `card.rs::{card<H, I, F, T>(...), card_sized<H, I, F, T>(...), card_header<H, I, F, T>(...), card_action<H, I, F, T>(...), card_title<H, T>(...), card_description<H, T>(...), card_description_children<H, I, F, T>(...), card_content<H, I, F, T>(...), card_footer<H, I, F, T>(...)}`
   now expose typed constructor/wrapper outputs, while
-  `kbd.rs::kbd_icon<H>(...)` remains an explicit raw helper because
-  `Kbd::from_children(...)` still owns a concrete `Vec<AnyElement>` child seam.
+  `kbd.rs::kbd_icon<H>(...)` and `combobox.rs::use_combobox_anchor(...)` remain explicit raw
+  helper seams because `Kbd::from_children(...)` and `PopoverAnchor::new(...)` still own concrete
+  landed-child storage.
+  The card lane now also has builder support where the wrapper still needs late child collection:
+  `CardAction::build(...)` and `CardDescription::build(...)`.
 - `fret-ui-shadcn/src/typography.rs` now completes the dedicated typography lane:
   `h1` / `h2` / `h3` / `h4` / `p` / `lead` / `large` / `small` / `muted` /
   `inline_code` / `blockquote` / `list` now expose
@@ -158,6 +165,11 @@ Implementation note on 2026-03-12:
   as well: where a component still intentionally owns `new(children: Vec<AnyElement>)`, Gallery
   snippets should prefer `ui::children![cx; ...]` over ad-hoc `vec![...into_element(cx)]`
   assembly so typed helpers can still read like component values at the call site.
+- that eager child-list guidance now also covers first-party card wrappers:
+  `apps/fret-ui-gallery/src/ui/snippets/card/{usage,demo,rtl}.rs`
+  now teach `shadcn::card(|cx| ui::children![cx; ...])` and
+  `shadcn::card_header(|cx| ui::children![cx; ...])`
+  instead of the old `card(cx, ...)` / `card_header(cx, ...)` eager-landing pattern.
 - that eager child-list guidance now also covers the first-party modal/form exemplars:
   selected `dialog`, `sheet`, and `drawer` snippets now build `Field`, `FieldSet`,
   `DialogContent`, `DialogHeader`, `DialogFooter`, `SheetContent`, `SheetHeader`,
@@ -226,6 +238,143 @@ Implementation note on 2026-03-12:
 - `apps/fret-examples/src/hello_world_compare_demo.rs` now keeps its local `swatch(...)` closure
   off raw landed returns by default; it lands explicitly only where the surrounding child array
   wants raw elements.
+
+Update on 2026-03-13:
+
+- the first-party wrapper return-shape rule is now explicit:
+  when a helper should preserve fluent builder affordances before the explicit landing seam,
+  prefer returning the concrete builder/component type rather than an opaque
+  `impl IntoUiElement<H>`.
+- this rule is now landed across the `card`, `alert`, `table`, and `field` families:
+  `card(...)` / `card_header(...)` / `card_action(...)` / `card_content(...)` / `card_footer(...)`
+  return concrete builder or component types, `alert(...)` now returns `AlertBuild<H, ...>`
+  while `AlertAction::build(...)` stays on the builder-first typed lane, and the new
+  `table(...)` / `table_header(...)` / `table_body(...)` / `table_footer(...)` /
+  `table_row(...)` / `table_head(...)` / `table_cell(...)` / `table_caption(...)` helpers now
+  cover the first-party table authoring lane without forcing `Table::build(...)` /
+  `TableRow::build(...)` boilerplate at the call site, while `field_set(...)` /
+  `field_group(...)` now remove the remaining raw/eager wrapper seam around grouped form authoring.
+- the same typed-wrapper rule now also covers the `empty` family:
+  `empty(...)` / `empty_header(...)` / `empty_media(...)` / `empty_title(...)` /
+  `empty_description(...)` / `empty_content(...)` now keep the default empty-state slot surface on
+  the typed lane, while `EmptyMedia::variant(...)` remains available on the builder/component
+  surface when call sites still need to tweak media chrome before the explicit landing seam.
+- page-level/default-teaching cleanup is now an explicit sub-lane of M3:
+  once a family is promoted onto a typed wrapper path, first-party Gallery page prose/code blocks
+  should stop teaching the old constructor/builder surface as the default authoring path.
+
+Update on 2026-03-13 (page/docs teaching drift cleanup):
+
+- selected AI Gallery doc pages now standardize their small reference tables on
+  `doc_layout::text_table(...)` instead of open-coding `Table::build(...)` /
+  `TableHeader::build(...)` / `TableRow::build(...)` / `TableCell::build(...)` boilerplate.
+- the `field` page usage/code block now teaches `shadcn::field_set(|cx| { ... })` and
+  `shadcn::field_group(|cx| { ... })` as the default grouped authoring path while keeping
+  `Field::new([...])` as the low-level single-field root.
+- lower-traffic first-party snippets are now being swept under the same rule:
+  `src/ui/snippets/pagination/extras.rs` teaches the pagination wrapper family instead of
+  `Pagination::new(...)` / `PaginationContent::new(...)`, while
+  `src/ui/snippets/checkbox/table.rs` and `src/ui/snippets/typography/table.rs` now teach the
+  table wrapper family instead of raw `Table::build(...)`.
+- the first-party alert teaching lane is now also tightened for already-promoted wrappers:
+  `src/ui/snippets/alert/{demo,interactive_links,custom_colors,rich_title}.rs` and
+  `src/ui/snippets/motion_presets/fluid_tabs_demo.rs` now teach
+  `shadcn::alert(|cx| ui::children![cx; ...])` instead of `Alert::new(...)`, and
+  `selected_alert_snippets_prefer_alert_wrapper_family` now locks that source policy.
+- the same wrapper-family cleanup now also covers grouped-field control snippets beyond the
+  dedicated field/form pages:
+  `combobox/label.rs`, `input/{form,field_group}.rs`, `toggle_group/label.rs`,
+  `date_picker/{label,time_picker}.rs`, `native_select/label.rs`, `select/label.rs`,
+  `select/align_item_with_trigger.rs`, `checkbox/with_title.rs`, `slider/label.rs`,
+  `switch/{label,choice_card}.rs`, and `radio_group/{label,fieldset,invalid,extras}.rs` now teach
+  `field_group(...)` / `field_set(...)` instead of `FieldGroup::new(...)` / `FieldSet::new(...)`.
+- the `card` page notes now also present `card(...)` as the default first-party teaching path,
+  with `Card::build(...)` explicitly framed as a lower-level option rather than a default-equal
+  recommendation.
+- selected first-party card snippets now also follow the wrapper-family lane end-to-end:
+  `card/{size,card_content,image,compositions}.rs` now teach `card(...)` plus the slot helper
+  family instead of `Card::new(...)` / `CardHeader::new(...)` / `CardContent::new(...)` /
+  `CardFooter::new(...)`, while `card/{demo,rtl}.rs` now also teach `card_footer(...)` instead of
+  `CardFooter::build(...)`; `compositions.rs::cell(...)` now accepts any `IntoUiElement<App>`
+  card input so the example no longer needs a concrete `shadcn::Card` parameter to stay typed.
+- the same card-family cleanup now also reaches a few non-card composition snippets that were still
+  teaching `Card::*` as the outer container:
+  `tabs/demo.rs`, `input_otp/form.rs`, `collapsible/basic.rs`, and
+  `motion_presets/fluid_tabs_demo.rs` now teach `card(...)` plus the slot helper family instead of
+  `Card::new(...)` / `CardHeader::new(...)` / `CardContent::new(...)` / `CardFooter::new(...)`.
+- another low-risk composition sweep now lands on the same lane:
+  `calendar/presets.rs`, `motion_presets/{overlay_demo,stagger_demo,stack_shift_list_demo}.rs`,
+  and `accordion/card.rs` now also teach `card(...)` plus the slot helper family instead of
+  `Card::new(...)` / `CardHeader::new(...)` / `CardContent::new(...)` / `CardFooter::new(...)`
+  for their outer showcase shell.
+- the card-shell cleanup now also reaches two ordinary non-card demo surfaces:
+  `toast/deprecated.rs` now teaches its deprecation card through `card(...)` plus the slot helper
+  family, and `chart/demo.rs` now teaches `chart_card(...)` / `trending_footer(...)` on typed
+  `IntoUiElement<App>` helpers while using `card(...)` plus the slot helper family for the chart
+  shell instead of eager `Card::*` constructors.
+- `form/upstream_demo.rs` now joins the same card-shell lane for its lightweight inset rows:
+  the `mobile_field` card plus the marketing/security email-notification cards now teach
+  `card(...)` + `card_content(...)` instead of raw `Card::new(...)` / `CardContent::new(...)`
+  while leaving the broader upstream form/state logic untouched.
+- another low-risk sweep now lands on the same card-family teaching rule:
+  `motion_presets/{preset_selector,token_snapshot}.rs`, `skeleton/card.rs`,
+  `accordion/extras.rs`, `collapsible/settings_panel.rs`, and `card/meeting_notes.rs`
+  now teach `card(...)` plus the slot helper family instead of eager `Card::*` constructors,
+  with `meeting_notes.rs` also switching its header action to `card_action(...)`.
+- the last remaining low-risk non-material/non-carousel card shell in this sweep is now gone too:
+  `ai/speech_input_demo.rs` now teaches its transcript surface through
+  `card(...)` + `card_content(...)` instead of `Card::new(...)` / `CardContent::new(...)`.
+- the remaining ordinary `carousel` teaching drift is now closed too:
+  `carousel/{basic,api,demo,duration_embla,events,expandable,focus_watch,loop_carousel,loop_downgrade_cannot_loop,options,orientation_vertical,parts,plugin_autoplay,plugin_autoplay_controlled,plugin_autoplay_delays,plugin_autoplay_stop_on_focus,plugin_autoplay_stop_on_last_snap,plugin_wheel_gestures,rtl,sizes,sizes_thirds,spacing,spacing_responsive,usage}.rs`
+  now teach `card(...)` + `card_content(...)` instead of eager `Card::new(...)` /
+  `CardContent::new(...)`, and the selected card-wrapper source gate now covers those carousel
+  call sites too.
+- the follow-up policy decision is now made explicitly:
+  `sidebar/*` and `material3/*` should also teach the wrapper family for ordinary showcase shells,
+  because those cards are still first-party teaching surfaces rather than low-level recipe
+  implementation examples.
+- with that rule applied, the remaining `sidebar/{usage,demo,rtl,use_sidebar,mobile,controlled}.rs`
+  and `material3/{state_matrix,menu,text_field,autocomplete,touch_targets,snackbar,tooltip,list}.rs`
+  card shells now also teach `card(...)` + `card_header(...)` + `card_content(...)` instead of
+  eager `Card::*` constructors, and the source-policy gate now locks the stronger invariant that
+  `src/ui/snippets/**` no longer reintroduces any `shadcn::Card::*` constructor family at all.
+- a follow-up page/docs sweep now confirms the same policy at the page layer too:
+  `src/ui/pages/**` no longer reintroduces `shadcn::Card::*` constructors either, while
+  `pages/card.rs` intentionally keeps one note that frames `Card::build(...)` as a lower-level
+  late-child-collection escape hatch rather than a default teaching path.
+- focused source-policy gates now also cover this page-level teaching lane, so already-promoted
+  families cannot silently regress back to legacy `FieldSet::new(...)` / `Table::build(...)`
+  teaching on first-party doc pages.
+- the same typed-wrapper rule now also covers the `pagination` family where the old surface still
+  forced eager child landing:
+  `pagination(...)` / `pagination_content(...)` / `pagination_item(...)` /
+  `pagination_link(...)` now keep pagination root/content/item/link authoring on the typed lane,
+  while `PaginationPrevious::new()`, `PaginationNext::new()`, and `PaginationEllipsis::new()`
+  remain ordinary typed leaf constructors because they never required a raw child-list seam.
+- the crate root/facade now also expose `alert(...)` and the table helper family, and the UI
+  Gallery alert/table snippets now teach `shadcn::alert(|cx| ui::children![cx; ...])` and
+  `shadcn::table(|cx| ui::children![cx; ...])` as the default first-party authoring pattern, and
+  the selected field/form snippets now also teach `shadcn::field_set(|cx| ...)` /
+  `shadcn::field_group(|cx| ...)` instead of `FieldSet::build(...)` / `FieldGroup::build(...)`.
+- the first-party Empty docs/snippets now follow that same teaching lane:
+  `apps/fret-ui-gallery/src/ui/snippets/empty/*` and `src/ui/snippets/spinner/empty.rs`
+  now teach `shadcn::empty(|cx| ui::children![cx; ...])` plus the slot helper family rather than
+  `Empty::new([...])` / `EmptyHeader::new([...])` / `EmptyContent::new([...])`,
+  and the gallery source gate now locks that posture with
+  `selected_empty_snippets_prefer_empty_wrapper_family`.
+- the first-party Pagination docs/snippets now follow the same teaching lane:
+  `apps/fret-ui-gallery/src/ui/snippets/pagination/{demo,icons_only,rtl,simple,usage}.rs`
+  now teach `shadcn::pagination(|cx| ui::children![cx; ...])` plus the content/item/link helper
+  family rather than `Pagination::new([ PaginationContent::new([ ... ]) ])`, and the gallery
+  source gate now locks that posture with
+  `selected_pagination_snippets_prefer_pagination_wrapper_family`.
+- remaining follow-up after the current pagination landing:
+  finish auditing page-level docs/code blocks that still teach old type-first examples for
+  already-promoted families beyond the now-updated `field` page and AI page-local table helpers,
+  before widening the thin-wrapper trial much further.
+- next priority after the `card` + `alert` + `table` + `field` sweep:
+  review the remaining lower-frequency wrappers and decide which ones still justify promotion,
+  versus leaving them as explicit type-first APIs.
 - `apps/fret-cookbook/examples/chart_interactions_basics.rs::chart_canvas(...)` is now treated as
   an intentional raw retained seam rather than migration debt: it owns
   `RetainedSubtreeProps::new::<KernelApp>(...)` and `cached_subtree_with(...)` landing.

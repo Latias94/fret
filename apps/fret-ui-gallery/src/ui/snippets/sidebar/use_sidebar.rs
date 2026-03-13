@@ -41,23 +41,24 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .refine_layout(LayoutRefinement::default().h_full())
                 .into_element(cx);
 
-            let summary = shadcn::Card::new(vec![
-                shadcn::CardHeader::new(vec![
-                    shadcn::CardTitle::new("use_sidebar").into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::CardContent::new(vec![
-                    shadcn::SidebarTrigger::new().into_element(cx),
-                    cx.text(format!("state={state_label}")),
-                    cx.text(format!("open={open_now}")),
-                    cx.text(format!("open_mobile={open_mobile_now}")),
-                    cx.text(format!("is_mobile={}", sidebar_ctx.is_mobile)),
-                    cx.text(format!("width={:.0}px", sidebar_ctx.width.0)),
-                    cx.text(format!("width_icon={:.0}px", sidebar_ctx.width_icon.0)),
-                    cx.text(format!("width_mobile={:.0}px", sidebar_ctx.width_mobile.0)),
-                ])
-                .into_element(cx),
-            ])
+            let summary = shadcn::card(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_header(|cx| ui::children![cx; shadcn::card_title("use_sidebar")]),
+                    shadcn::card_content(|cx| {
+                        vec![
+                            shadcn::SidebarTrigger::new().into_element(cx),
+                            cx.text(format!("state={state_label}")),
+                            cx.text(format!("open={open_now}")),
+                            cx.text(format!("open_mobile={open_mobile_now}")),
+                            cx.text(format!("is_mobile={}", sidebar_ctx.is_mobile)),
+                            cx.text(format!("width={:.0}px", sidebar_ctx.width.0)),
+                            cx.text(format!("width_icon={:.0}px", sidebar_ctx.width_icon.0)),
+                            cx.text(format!("width_mobile={:.0}px", sidebar_ctx.width_mobile.0)),
+                        ]
+                    }),
+                ]
+            })
             .refine_layout(LayoutRefinement::default().w_full().h_full().min_w_0())
             .into_element(cx);
 

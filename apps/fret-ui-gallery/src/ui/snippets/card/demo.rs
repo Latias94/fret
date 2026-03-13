@@ -52,27 +52,31 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         .max_w(MetricRef::Px(Px(384.0)))
         .min_w_0();
 
-    shadcn::Card::build(|cx, out| {
-        out.extend([
-            shadcn::card_header(cx, |cx| {
-                vec![
-                    shadcn::card_title(cx, "Login to your account")
+    shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Login to your account")
                         .test_id("ui-gallery-card-demo-title"),
-                    shadcn::card_description(cx, "Enter your email below to login to your account")
+                    shadcn::card_description("Enter your email below to login to your account")
                         .test_id("ui-gallery-card-demo-description"),
-                    shadcn::card_action(cx, |cx| {
-                        vec![
+                    shadcn::card_action(|cx| {
+                        ui::children![
+                            cx;
                             shadcn::Button::new("Sign Up")
                                 .variant(shadcn::ButtonVariant::Link)
                                 .size(shadcn::ButtonSize::Sm)
-                                .into_element(cx)
+                                .ui()
                                 .test_id("ui-gallery-card-demo-sign-up"),
                         ]
                     }),
                 ]
             }),
-            shadcn::card_content(cx, |cx| {
-                vec![
+            shadcn::card_content(|cx| {
+                ui::children![
+                    cx;
                     ui::v_flex(|cx| {
                         vec![
                             email_field(email.clone()).into_element(cx),
@@ -80,27 +84,26 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                         ]
                     })
                     .gap(Space::N6)
-                    .layout(LayoutRefinement::default().w_full())
-                    .into_element(cx),
+                    .layout(LayoutRefinement::default().w_full()),
                 ]
             }),
-            shadcn::CardFooter::build(|cx, out| {
-                out.extend([
+            shadcn::card_footer(|cx| {
+                ui::children![
+                    cx;
                     shadcn::Button::new("Login")
                         .refine_layout(LayoutRefinement::default().w_full())
-                        .into_element(cx)
+                        .ui()
                         .test_id("ui-gallery-card-demo-login"),
                     shadcn::Button::new("Login with Google")
                         .variant(shadcn::ButtonVariant::Outline)
                         .refine_layout(LayoutRefinement::default().w_full())
-                        .into_element(cx)
+                        .ui()
                         .test_id("ui-gallery-card-demo-login-google"),
-                ]);
+                ]
             })
             .direction(shadcn::CardFooterDirection::Column)
-            .gap(Space::N2)
-            .into_element(cx),
-        ]);
+            .gap(Space::N2),
+        ]
     })
     .refine_layout(max_w_sm)
     .into_element(cx)

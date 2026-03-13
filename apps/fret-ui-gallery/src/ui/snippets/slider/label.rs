@@ -15,20 +15,24 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .test_id_prefix("ui-gallery-slider-label")
         .into_element(cx);
 
-    shadcn::FieldGroup::new([shadcn::Field::new([
-        shadcn::FieldContent::new([
-            shadcn::FieldLabel::new("Volume")
-                .for_control(control_id.clone())
-                .test_id("ui-gallery-slider-label-label")
+    shadcn::field_group(|cx| {
+        ui::children![
+            cx;
+            shadcn::Field::new([
+                shadcn::FieldContent::new([
+                    shadcn::FieldLabel::new("Volume")
+                        .for_control(control_id.clone())
+                        .test_id("ui-gallery-slider-label-label")
+                        .into_element(cx),
+                    shadcn::FieldDescription::new("Click the label to focus the slider thumb.")
+                        .for_control(control_id.clone())
+                        .into_element(cx),
+                ])
                 .into_element(cx),
-            shadcn::FieldDescription::new("Click the label to focus the slider thumb.")
-                .for_control(control_id.clone())
-                .into_element(cx),
-        ])
-        .into_element(cx),
-        slider,
-    ])
-    .into_element(cx)])
+                slider,
+            ]),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
     .into_element(cx)
 }

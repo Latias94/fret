@@ -1,10 +1,36 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
+use std::sync::Arc;
+
 use fret::UiCx;
 use fret_core::{FontWeight, Px};
-use fret_ui_kit::{IntoUiElement, ui::UiElementSinkExt};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
+
+fn body_row(
+    invoice_w: Px,
+    invoice: &'static str,
+    status: &'static str,
+    method: &'static str,
+    amount: &'static str,
+    test_id: &'static str,
+) -> impl IntoUiElement<fret_app::App> + use<> {
+    let invoice_slug = invoice.to_ascii_lowercase();
+    let row_test_id = Arc::<str>::from(format!("{test_id}-row-{invoice_slug}"));
+
+    shadcn::table_row(4, move |cx| {
+        ui::children![
+            cx;
+            shadcn::table_cell(ui::text(invoice).font_weight(FontWeight::MEDIUM))
+                .refine_layout(LayoutRefinement::default().w_px(invoice_w)),
+            shadcn::table_cell(ui::text(status)),
+            shadcn::table_cell(ui::text(method)),
+            shadcn::table_cell(ui::text(amount)).text_align_end(),
+        ]
+    })
+    .test_id(row_test_id)
+}
 
 fn make_invoice_table(
     rows: &[(&'static str, &'static str, &'static str, &'static str)],
@@ -15,86 +41,54 @@ fn make_invoice_table(
     let invoice_w = Px(100.0);
     let rows = rows.to_vec();
 
-    let body_row = move |cx: &mut UiCx<'_>,
-                         invoice: &'static str,
-                         status: &'static str,
-                         method: &'static str,
-                         amount: &'static str| {
-        let invoice_slug = invoice.to_ascii_lowercase();
-        let row_test_id = format!("{test_id}-row-{invoice_slug}");
-        shadcn::TableRow::build(4, move |cx, out| {
-            out.push_ui(
-                cx,
-                shadcn::TableCell::build(ui::text(invoice).font_weight(FontWeight::MEDIUM))
-                    .refine_layout(LayoutRefinement::default().w_px(invoice_w)),
-            );
-            out.push_ui(cx, shadcn::TableCell::build(ui::text(status)));
-            out.push_ui(cx, shadcn::TableCell::build(ui::text(method)));
-            out.push_ui(
-                cx,
-                shadcn::TableCell::build(ui::text(amount)).text_align_end(),
-            );
-        })
-        .into_element(cx)
-        .test_id(row_test_id)
-    };
-
-    shadcn::Table::build(move |cx, out| {
-        out.push_ui(
-            cx,
-            shadcn::TableHeader::build(|cx, out| {
-                out.push(
-                    shadcn::TableRow::build(4, |cx, out| {
-                        out.push(
-                            shadcn::TableHead::new("Invoice")
-                                .refine_layout(LayoutRefinement::default().w_px(invoice_w))
-                                .into_element(cx),
-                        );
-                        out.push(shadcn::TableHead::new("Status").into_element(cx));
-                        out.push(shadcn::TableHead::new("Method").into_element(cx));
-                        out.push(
-                            shadcn::TableHead::new("Amount")
-                                .text_align_end()
-                                .into_element(cx),
-                        );
+    shadcn::table(move |cx| {
+        let mut children = ui::children![
+            cx;
+            shadcn::table_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::table_row(4, |cx| {
+                        ui::children![
+                            cx;
+                            shadcn::table_head("Invoice")
+                                .refine_layout(LayoutRefinement::default().w_px(invoice_w)),
+                            shadcn::table_head("Status"),
+                            shadcn::table_head("Method"),
+                            shadcn::table_head("Amount").text_align_end(),
+                        ]
                     })
-                    .border_bottom(true)
-                    .into_element(cx),
-                );
+                    .border_bottom(true),
+                ]
             }),
-        );
-        out.push_ui(
-            cx,
-            shadcn::TableBody::build(|cx, out| {
-                for (invoice, status, method, amount) in rows.iter().copied() {
-                    out.push(body_row(cx, invoice, status, method, amount));
-                }
+            shadcn::table_body(move |_cx| {
+                rows.iter().copied().map(move |(invoice, status, method, amount)| {
+                    body_row(invoice_w, invoice, status, method, amount, test_id)
+                })
+                .collect::<Vec<_>>()
             }),
-        );
+        ];
+
         if include_footer {
-            out.push_ui(
-                cx,
-                shadcn::TableFooter::build(|cx, out| {
-                    out.push(
-                        shadcn::TableRow::build(4, |cx, out| {
-                            out.push(
-                                shadcn::TableCell::build(ui::text("Total"))
-                                    .col_span(3)
-                                    .into_element(cx),
-                            );
-                            out.push(
-                                shadcn::TableCell::build(ui::text("$2,500.00"))
-                                    .text_align_end()
-                                    .into_element(cx),
-                            );
+            children.push(
+                shadcn::table_footer(|cx| {
+                    ui::children![
+                        cx;
+                        shadcn::table_row(4, |cx| {
+                            ui::children![
+                                cx;
+                                shadcn::table_cell(ui::text("Total")).col_span(3),
+                                shadcn::table_cell(ui::text("$2,500.00")).text_align_end(),
+                            ]
                         })
-                        .border_bottom(false)
-                        .into_element(cx),
-                    );
-                }),
+                        .border_bottom(false),
+                    ]
+                })
+                .into_element(cx),
             );
         }
-        out.push(shadcn::TableCaption::new("A list of your recent invoices.").into_element(cx));
+
+        children.push(shadcn::table_caption("A list of your recent invoices.").into_element(cx));
+        children
     })
     .ui()
     .w_full()

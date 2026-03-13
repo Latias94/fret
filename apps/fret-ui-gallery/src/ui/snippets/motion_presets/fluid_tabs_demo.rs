@@ -6,17 +6,18 @@ use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn panel(
-    cx: &mut UiCx<'_>,
     title: &'static str,
     description: &'static str,
 ) -> impl IntoUiElement<fret_app::App> + use<> {
-    shadcn::Alert::new([
-        fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.sparkles")),
-        shadcn::AlertTitle::new(title).into_element(cx),
-        shadcn::AlertDescription::new(description).into_element(cx),
-    ])
+    shadcn::alert(move |cx| {
+        ui::children![
+            cx;
+            fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.sparkles")),
+            shadcn::AlertTitle::new(title),
+            shadcn::AlertDescription::new(description),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
-    .into_element(cx)
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
@@ -30,7 +31,6 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                 "accounts",
                 "Accounts",
                 [panel(
-                    cx,
                     "Accounts",
                     "Crossfade content on selection change (semantic presence tokens).",
                 )
@@ -41,7 +41,6 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                 "deposits",
                 "Deposits",
                 [panel(
-                    cx,
                     "Deposits",
                     "Uses a Duration-based driver so it stays stable across refresh rates.",
                 )
@@ -52,7 +51,6 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                 "funds",
                 "Funds",
                 [panel(
-                    cx,
                     "Funds",
                     "This is intentionally not DOM/Framer Motion: same semantics, different runtime.",
                 )
@@ -62,17 +60,21 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         ])
         .into_element(cx);
 
-    shadcn::Card::new([
-        shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Fluid tabs demo").into_element(cx),
-            shadcn::CardDescription::new(
-                "Shared indicator + content presence (crossfade) using semantic motion tokens.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new([tabs]).into_element(cx),
-    ])
+    shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Fluid tabs demo"),
+                    shadcn::card_description(
+                        "Shared indicator + content presence (crossfade) using semantic motion tokens.",
+                    ),
+                ]
+            }),
+            shadcn::card_content(|cx| ui::children![cx; tabs]),
+        ]
+    })
     .refine_layout(
         LayoutRefinement::default()
             .w_full()

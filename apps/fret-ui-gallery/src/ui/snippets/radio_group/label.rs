@@ -18,20 +18,24 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .item(shadcn::RadioGroupItem::new("enterprise", "Enterprise"))
         .into_element(cx);
 
-    shadcn::FieldGroup::new([shadcn::Field::new([
-        shadcn::FieldContent::new([
-            shadcn::FieldLabel::new("Plan")
-                .for_control(control_id.clone())
-                .test_id("ui-gallery-radio-group-label-label")
+    shadcn::field_group(|cx| {
+        ui::children![
+            cx;
+            shadcn::Field::new([
+                shadcn::FieldContent::new([
+                    shadcn::FieldLabel::new("Plan")
+                        .for_control(control_id.clone())
+                        .test_id("ui-gallery-radio-group-label-label")
+                        .into_element(cx),
+                    shadcn::FieldDescription::new("Click the label to focus the active radio item.")
+                        .for_control(control_id.clone())
+                        .into_element(cx),
+                ])
                 .into_element(cx),
-            shadcn::FieldDescription::new("Click the label to focus the active radio item.")
-                .for_control(control_id.clone())
-                .into_element(cx),
-        ])
-        .into_element(cx),
-        radio_group,
-    ])
-    .into_element(cx)])
+                radio_group,
+            ]),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
     .into_element(cx)
     .test_id("ui-gallery-radio-group-label")

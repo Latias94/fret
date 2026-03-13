@@ -120,35 +120,40 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
     ui::v_flex(|cx| {
         vec![
-            shadcn::Alert::new([
-                fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
-                shadcn::AlertTitle::new("Need help resolving the billing issue?").into_element(cx),
-                shadcn::AlertDescription::new_children([
-                    ui::text(
-                        "Review the recovery resources below. These text-like links open safe URLs in normal runs while diagnostics still keep deterministic activation evidence.",
-                    )
-                    .into_element(cx),
-                    interactive_link(
+            shadcn::alert(|cx| {
+                ui::children![
+                    cx;
+                    fret_ui_shadcn::icon::icon(
                         cx,
-                        last_link.clone(),
-                        "Open billing information",
-                        "billing-information",
-                        "https://example.com/billing-information",
-                        "ui-gallery-alert-link-billing",
-                    )
-                    .into_element(cx),
-                    interactive_link(
-                        cx,
-                        last_link.clone(),
-                        "Open support article",
-                        "support-article",
-                        "https://example.com/support-article",
-                        "ui-gallery-alert-link-support",
-                    )
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-            ])
+                        fret_icons::IconId::new_static("lucide.circle-alert"),
+                    ),
+                    shadcn::AlertTitle::new("Need help resolving the billing issue?"),
+                    shadcn::AlertDescription::new_children([
+                        ui::text(
+                            "Review the recovery resources below. These text-like links open safe URLs in normal runs while diagnostics still keep deterministic activation evidence.",
+                        )
+                        .into_element(cx),
+                        interactive_link(
+                            cx,
+                            last_link.clone(),
+                            "Open billing information",
+                            "billing-information",
+                            "https://example.com/billing-information",
+                            "ui-gallery-alert-link-billing",
+                        )
+                        .into_element(cx),
+                        interactive_link(
+                            cx,
+                            last_link.clone(),
+                            "Open support article",
+                            "support-article",
+                            "https://example.com/support-article",
+                            "ui-gallery-alert-link-support",
+                        )
+                        .into_element(cx),
+                    ]),
+                ]
+            })
             .variant(shadcn::AlertVariant::Default)
             .refine_layout(LayoutRefinement::default().max_w(Px(520.0)))
             .into_element(cx)

@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
+use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -16,24 +17,25 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .test_id("ui-gallery-empty-rtl-input-group")
             .into_element(cx);
 
-        shadcn::Empty::new([
-            fret_ui_shadcn::empty::EmptyHeader::new([
-                fret_ui_shadcn::empty::EmptyMedia::new([icon])
-                    .variant(fret_ui_shadcn::empty::EmptyMediaVariant::Icon)
-                    .into_element(cx),
-                fret_ui_shadcn::empty::EmptyTitle::new("RTL Empty State").into_element(cx),
-                fret_ui_shadcn::empty::EmptyDescription::new(
-                    "This empty state uses RTL direction context for layout and alignment.",
-                )
-                .into_element(cx),
-            ])
-            .into_element(cx),
-            fret_ui_shadcn::empty::EmptyContent::new([
-                input,
-                shadcn::Button::new("Create Project").into_element(cx),
-            ])
-            .into_element(cx),
-        ])
+        shadcn::empty(|cx| {
+            ui::children![
+                cx;
+                shadcn::empty_header(|cx| {
+                    ui::children![
+                        cx;
+                        shadcn::empty_media(|cx| ui::children![cx; icon])
+                            .variant(fret_ui_shadcn::empty::EmptyMediaVariant::Icon),
+                        shadcn::empty_title("RTL Empty State"),
+                        shadcn::empty_description(
+                            "This empty state uses RTL direction context for layout and alignment.",
+                        ),
+                    ]
+                }),
+                shadcn::empty_content(|cx| {
+                    ui::children![cx; input, shadcn::Button::new("Create Project"),]
+                }),
+            ]
+        })
         .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
         .into_element(cx)
     })

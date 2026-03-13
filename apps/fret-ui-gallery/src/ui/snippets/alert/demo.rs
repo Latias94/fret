@@ -116,92 +116,122 @@ fn interactive_link_text<H: UiHost + 'static>(
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ui::v_flex(|cx| {
         vec![
-            shadcn::Alert::new([
-                fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
-                shadcn::AlertTitle::new_children([interactive_link_text(
-                    cx,
-                    "Let's try one with icon, title and a link.",
-                    "link",
-                    "https://example.com/alert-title-link",
-                    "ui-gallery-alert-demo-title-link-inline",
-                )
-                .into_element(cx)])
-                .into_element(cx),
-            ])
+            shadcn::alert(|cx| {
+                ui::children![
+                    cx;
+                    fret_ui_shadcn::icon::icon(
+                        cx,
+                        fret_icons::IconId::new_static("lucide.circle-alert"),
+                    ),
+                    shadcn::AlertTitle::new_children([interactive_link_text(
+                        cx,
+                        "Let's try one with icon, title and a link.",
+                        "link",
+                        "https://example.com/alert-title-link",
+                        "ui-gallery-alert-demo-title-link-inline",
+                    )
+                    .into_element(cx)]),
+                ]
+            })
             .variant(shadcn::AlertVariant::Default)
             .refine_layout(LayoutRefinement::default().max_w(Px(520.0)))
             .into_element(cx)
             .test_id("ui-gallery-alert-demo-title-link"),
-            shadcn::Alert::new([
-                fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
-                shadcn::AlertDescription::new_children([
-                    interactive_link_text(
+            shadcn::alert(|cx| {
+                ui::children![
+                    cx;
+                    fret_ui_shadcn::icon::icon(
                         cx,
-                        "This one has an icon and a description only. No title. But it has a link and a second link.",
-                        "link",
-                        "https://example.com/alert-description-link",
-                        "ui-gallery-alert-demo-description-link-primary",
-                    )
-                    .into_element(cx),
-                    interactive_link_text(
-                        cx,
-                        "It also demonstrates a second link in the same description block.",
-                        "second link",
-                        "https://example.com/alert-description-second-link",
-                        "ui-gallery-alert-demo-description-link-secondary",
-                    )
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-            ])
+                        fret_icons::IconId::new_static("lucide.circle-alert"),
+                    ),
+                    shadcn::AlertDescription::new_children([
+                        interactive_link_text(
+                            cx,
+                            "This one has an icon and a description only. No title. But it has a link and a second link.",
+                            "link",
+                            "https://example.com/alert-description-link",
+                            "ui-gallery-alert-demo-description-link-primary",
+                        )
+                        .into_element(cx),
+                        interactive_link_text(
+                            cx,
+                            "It also demonstrates a second link in the same description block.",
+                            "second link",
+                            "https://example.com/alert-description-second-link",
+                            "ui-gallery-alert-demo-description-link-secondary",
+                        )
+                        .into_element(cx),
+                    ]),
+                ]
+            })
             .variant(shadcn::AlertVariant::Default)
             .refine_layout(LayoutRefinement::default().max_w(Px(520.0)))
             .into_element(cx)
             .test_id("ui-gallery-alert-demo-description-link"),
-            shadcn::Alert::new([
-                fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
-                shadcn::AlertTitle::new("Success! Your changes have been saved")
-                    .into_element(cx),
-                shadcn::AlertDescription::new("This is an alert with icon, title and description.")
-                    .into_element(cx),
-            ])
+            shadcn::alert(|cx| {
+                ui::children![
+                    cx;
+                    fret_ui_shadcn::icon::icon(
+                        cx,
+                        fret_icons::IconId::new_static("lucide.circle-alert"),
+                    ),
+                    shadcn::AlertTitle::new("Success! Your changes have been saved"),
+                    shadcn::AlertDescription::new(
+                        "This is an alert with icon, title and description.",
+                    ),
+                ]
+            })
             .variant(shadcn::AlertVariant::Default)
             .refine_layout(LayoutRefinement::default().max_w(Px(520.0)))
             .into_element(cx)
             .test_id("ui-gallery-alert-demo-success"),
-            shadcn::Alert::new([
-                fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
-                shadcn::AlertTitle::new(
-                    "This is a very long alert title that demonstrates how the component handles extended text content and potentially wraps across multiple lines",
-                )
-                .into_element(cx),
-            ])
+            shadcn::alert(|cx| {
+                ui::children![
+                    cx;
+                    fret_ui_shadcn::icon::icon(
+                        cx,
+                        fret_icons::IconId::new_static("lucide.circle-alert"),
+                    ),
+                    shadcn::AlertTitle::new(
+                        "This is a very long alert title that demonstrates how the component handles extended text content and potentially wraps across multiple lines",
+                    ),
+                ]
+            })
             .variant(shadcn::AlertVariant::Default)
             .refine_layout(LayoutRefinement::default().max_w(Px(520.0)))
             .into_element(cx)
             .test_id("ui-gallery-alert-demo-long-title"),
-            shadcn::Alert::new([
-                fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
-                shadcn::AlertDescription::new(
-                    "This is a very long alert description that demonstrates how the component handles extended text content and potentially wraps across multiple lines.",
-                )
-                .into_element(cx),
-            ])
+            shadcn::alert(|cx| {
+                ui::children![
+                    cx;
+                    fret_ui_shadcn::icon::icon(
+                        cx,
+                        fret_icons::IconId::new_static("lucide.circle-alert"),
+                    ),
+                    shadcn::AlertDescription::new(
+                        "This is a very long alert description that demonstrates how the component handles extended text content and potentially wraps across multiple lines.",
+                    ),
+                ]
+            })
             .variant(shadcn::AlertVariant::Default)
             .refine_layout(LayoutRefinement::default().max_w(Px(520.0)))
             .into_element(cx)
             .test_id("ui-gallery-alert-demo-long-description"),
-            shadcn::Alert::new([
-                fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
-                shadcn::AlertTitle::new(
-                    "This is an extremely long alert title that spans multiple lines to demonstrate how the component handles very lengthy headings while maintaining readability and proper text wrapping behavior",
-                )
-                .into_element(cx),
-                shadcn::AlertDescription::new(
-                    "This is an equally long description that contains detailed information about the alert. It shows how the component can accommodate extensive content while preserving proper spacing, alignment, and readability across different screen sizes and viewport widths.",
-                )
-                .into_element(cx),
-            ])
+            shadcn::alert(|cx| {
+                ui::children![
+                    cx;
+                    fret_ui_shadcn::icon::icon(
+                        cx,
+                        fret_icons::IconId::new_static("lucide.circle-alert"),
+                    ),
+                    shadcn::AlertTitle::new(
+                        "This is an extremely long alert title that spans multiple lines to demonstrate how the component handles very lengthy headings while maintaining readability and proper text wrapping behavior",
+                    ),
+                    shadcn::AlertDescription::new(
+                        "This is an equally long description that contains detailed information about the alert. It shows how the component can accommodate extensive content while preserving proper spacing, alignment, and readability across different screen sizes and viewport widths.",
+                    ),
+                ]
+            })
             .variant(shadcn::AlertVariant::Default)
             .refine_layout(LayoutRefinement::default().max_w(Px(520.0)))
             .into_element(cx)

@@ -80,6 +80,23 @@ fn assert_selected_generic_helpers_prefer_into_ui_element(
     }
 }
 
+fn assert_sources_absent(relative_root: &str, forbidden_markers: &[&str]) {
+    for path in rust_sources(relative_root) {
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in forbidden_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "{} reintroduced forbidden source marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
 #[test]
 fn gallery_sources_do_not_depend_on_the_legacy_fret_prelude() {
     let menubar = read("src/driver/menubar.rs");
@@ -339,9 +356,12 @@ fn selected_card_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/card/compositions.rs",
         &[
+            "fn cell<T>(test_id: &'static str, card: T) -> impl IntoUiElement<fret_app::App> + use<T> where T: IntoUiElement<fret_app::App>",
+        ],
+        &[
+            "fn cell(cx: &mut UiCx<'_>, test_id: &'static str, card: shadcn::Card,) -> AnyElement",
             "fn cell(cx: &mut UiCx<'_>, test_id: &'static str, card: shadcn::Card,) -> impl IntoUiElement<fret_app::App> + use<>",
         ],
-        &["fn cell(cx: &mut UiCx<'_>, test_id: &'static str, card: shadcn::Card,) -> AnyElement"],
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
@@ -1240,6 +1260,12 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_notes_blocks() {
         );
     }
 
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/card.rs",
+        &["Default first-party teaching should prefer `card(...)` plus the slot helper family;"],
+        &["use `Card::build(...)` or `card(...)`;"],
+    );
+
     for relative_path in [
         "src/ui/pages/resizable.rs",
         "src/ui/pages/sonner.rs",
@@ -1251,6 +1277,260 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_notes_blocks() {
             &["DocSection::new(\"Notes\", notes)"],
         );
     }
+}
+
+#[test]
+fn selected_card_snippets_prefer_card_wrapper_family() {
+    for relative_path in [
+        "src/ui/snippets/card/usage.rs",
+        "src/ui/snippets/card/size.rs",
+        "src/ui/snippets/card/card_content.rs",
+        "src/ui/snippets/card/compositions.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "shadcn::card(",
+                "shadcn::card_header(",
+                "shadcn::card_content(",
+                "shadcn::card_footer(",
+            ],
+            &[
+                "shadcn::Card::new(",
+                "shadcn::CardHeader::new(",
+                "shadcn::CardContent::new(",
+                "shadcn::CardFooter::new(",
+                "shadcn::CardFooter::build(",
+            ],
+        );
+    }
+
+    for relative_path in [
+        "src/ui/snippets/card/demo.rs",
+        "src/ui/snippets/card/rtl.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "shadcn::card(",
+                "shadcn::card_header(",
+                "shadcn::card_content(",
+                "shadcn::card_footer(",
+            ],
+            &["shadcn::Card::new(", "shadcn::CardFooter::build("],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/card/image.rs",
+        &[
+            "shadcn::card(",
+            "shadcn::card_header(",
+            "shadcn::card_action(",
+            "shadcn::card_footer(",
+        ],
+        &[
+            "shadcn::Card::new(",
+            "shadcn::CardHeader::new(",
+            "shadcn::CardAction::new(",
+            "shadcn::CardFooter::new(",
+        ],
+    );
+
+    for relative_path in [
+        "src/ui/snippets/tabs/demo.rs",
+        "src/ui/snippets/input_otp/form.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "shadcn::card(",
+                "shadcn::card_header(",
+                "shadcn::card_content(",
+                "shadcn::card_footer(",
+            ],
+            &[
+                "shadcn::Card::new(",
+                "shadcn::CardHeader::new(",
+                "shadcn::CardContent::new(",
+                "shadcn::CardFooter::new(",
+            ],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/collapsible/basic.rs",
+        &["shadcn::card(", "shadcn::card_content("],
+        &["shadcn::Card::new(", "shadcn::CardContent::new("],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/motion_presets/fluid_tabs_demo.rs",
+        &[
+            "shadcn::card(",
+            "shadcn::card_header(",
+            "shadcn::card_content(",
+        ],
+        &[
+            "shadcn::Card::new(",
+            "shadcn::CardHeader::new(",
+            "shadcn::CardContent::new(",
+        ],
+    );
+
+    for relative_path in [
+        "src/ui/snippets/motion_presets/overlay_demo.rs",
+        "src/ui/snippets/motion_presets/stagger_demo.rs",
+        "src/ui/snippets/motion_presets/stack_shift_list_demo.rs",
+        "src/ui/snippets/accordion/card.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "shadcn::card(",
+                "shadcn::card_header(",
+                "shadcn::card_content(",
+            ],
+            &[
+                "shadcn::Card::new(",
+                "shadcn::CardHeader::new(",
+                "shadcn::CardContent::new(",
+            ],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/calendar/presets.rs",
+        &[
+            "shadcn::card(",
+            "shadcn::card_content(",
+            "shadcn::card_footer(",
+        ],
+        &[
+            "shadcn::Card::new(",
+            "shadcn::CardContent::new(",
+            "shadcn::CardFooter::new(",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/form/upstream_demo.rs",
+        &["shadcn::card(", "shadcn::card_content("],
+        &["shadcn::Card::new(", "shadcn::CardContent::new("],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/ai/speech_input_demo.rs",
+        &["shadcn::card(", "shadcn::card_content("],
+        &["shadcn::Card::new(", "shadcn::CardContent::new("],
+    );
+
+    for relative_path in [
+        "src/ui/snippets/carousel/basic.rs",
+        "src/ui/snippets/carousel/api.rs",
+        "src/ui/snippets/carousel/demo.rs",
+        "src/ui/snippets/carousel/duration_embla.rs",
+        "src/ui/snippets/carousel/events.rs",
+        "src/ui/snippets/carousel/expandable.rs",
+        "src/ui/snippets/carousel/focus_watch.rs",
+        "src/ui/snippets/carousel/loop_carousel.rs",
+        "src/ui/snippets/carousel/loop_downgrade_cannot_loop.rs",
+        "src/ui/snippets/carousel/options.rs",
+        "src/ui/snippets/carousel/orientation_vertical.rs",
+        "src/ui/snippets/carousel/parts.rs",
+        "src/ui/snippets/carousel/plugin_autoplay.rs",
+        "src/ui/snippets/carousel/plugin_autoplay_controlled.rs",
+        "src/ui/snippets/carousel/plugin_autoplay_delays.rs",
+        "src/ui/snippets/carousel/plugin_autoplay_stop_on_focus.rs",
+        "src/ui/snippets/carousel/plugin_autoplay_stop_on_last_snap.rs",
+        "src/ui/snippets/carousel/plugin_wheel_gestures.rs",
+        "src/ui/snippets/carousel/rtl.rs",
+        "src/ui/snippets/carousel/sizes.rs",
+        "src/ui/snippets/carousel/sizes_thirds.rs",
+        "src/ui/snippets/carousel/spacing.rs",
+        "src/ui/snippets/carousel/spacing_responsive.rs",
+        "src/ui/snippets/carousel/usage.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["shadcn::card(", "shadcn::card_content("],
+            &[
+                "shadcn::Card::new(",
+                "shadcn::CardHeader::new(",
+                "shadcn::CardAction::new(",
+                "shadcn::CardContent::new(",
+                "shadcn::CardFooter::new(",
+            ],
+        );
+    }
+
+    for relative_path in [
+        "src/ui/snippets/motion_presets/preset_selector.rs",
+        "src/ui/snippets/motion_presets/token_snapshot.rs",
+        "src/ui/snippets/skeleton/card.rs",
+        "src/ui/snippets/accordion/extras.rs",
+        "src/ui/snippets/collapsible/settings_panel.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "shadcn::card(",
+                "shadcn::card_header(",
+                "shadcn::card_content(",
+            ],
+            &[
+                "shadcn::Card::new(",
+                "shadcn::CardHeader::new(",
+                "shadcn::CardContent::new(",
+            ],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/card/meeting_notes.rs",
+        &[
+            "shadcn::card(",
+            "shadcn::card_header(",
+            "shadcn::card_action(",
+            "shadcn::card_content(",
+            "shadcn::card_footer(",
+        ],
+        &[
+            "shadcn::Card::new(",
+            "shadcn::CardHeader::new(",
+            "shadcn::CardAction::new(",
+            "shadcn::CardContent::new(",
+            "shadcn::CardFooter::new(",
+        ],
+    );
+}
+
+#[test]
+fn snippet_tree_does_not_reintroduce_legacy_shadcn_card_constructors() {
+    assert_sources_absent(
+        "src/ui/snippets",
+        &[
+            "shadcn::Card::new(",
+            "shadcn::CardHeader::new(",
+            "shadcn::CardAction::new(",
+            "shadcn::CardContent::new(",
+            "shadcn::CardFooter::new(",
+        ],
+    );
+}
+
+#[test]
+fn page_tree_does_not_reintroduce_legacy_shadcn_card_constructors() {
+    assert_sources_absent(
+        "src/ui/pages",
+        &[
+            "shadcn::Card::new(",
+            "shadcn::CardHeader::new(",
+            "shadcn::CardAction::new(",
+            "shadcn::CardContent::new(",
+            "shadcn::CardFooter::new(",
+        ],
+    );
 }
 
 #[test]
@@ -1703,6 +1983,77 @@ fn selected_pagination_snippet_helpers_prefer_into_ui_element_over_anyelement() 
 }
 
 #[test]
+fn selected_pagination_snippets_prefer_pagination_wrapper_family() {
+    for relative_path in [
+        "src/ui/snippets/pagination/demo.rs",
+        "src/ui/snippets/pagination/extras.rs",
+        "src/ui/snippets/pagination/icons_only.rs",
+        "src/ui/snippets/pagination/rtl.rs",
+        "src/ui/snippets/pagination/simple.rs",
+        "src/ui/snippets/pagination/usage.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "shadcn::pagination(|cx|",
+                "shadcn::pagination_content(|cx|",
+                "shadcn::pagination_item(",
+            ],
+            &[
+                "shadcn::Pagination::new(",
+                "shadcn::PaginationContent::new(",
+                "shadcn::PaginationItem::new(",
+            ],
+        );
+    }
+
+    for relative_path in [
+        "src/ui/snippets/pagination/demo.rs",
+        "src/ui/snippets/pagination/extras.rs",
+        "src/ui/snippets/pagination/rtl.rs",
+        "src/ui/snippets/pagination/simple.rs",
+        "src/ui/snippets/pagination/usage.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["shadcn::pagination_link(|cx|"],
+            &["shadcn::PaginationLink::new("],
+        );
+    }
+}
+
+#[test]
+fn selected_table_snippets_prefer_table_wrapper_family() {
+    for relative_path in [
+        "src/ui/snippets/table/actions.rs",
+        "src/ui/snippets/table/demo.rs",
+        "src/ui/snippets/table/footer.rs",
+        "src/ui/snippets/table/rtl.rs",
+        "src/ui/snippets/checkbox/table.rs",
+        "src/ui/snippets/typography/table.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "shadcn::table(",
+                "shadcn::table_header(",
+                "shadcn::table_body(",
+                "shadcn::table_row(",
+            ],
+            &[
+                "shadcn::Table::build(",
+                "shadcn::TableHeader::build(",
+                "shadcn::TableBody::build(",
+                "shadcn::TableRow::build(",
+                "shadcn::TableHead::new(",
+                "shadcn::TableCell::new(",
+                "shadcn::TableCell::build(",
+            ],
+        );
+    }
+}
+
+#[test]
 fn selected_carousel_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     for relative_path in [
         "src/ui/snippets/carousel/basic.rs",
@@ -1972,13 +2323,164 @@ fn selected_table_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         "src/ui/snippets/table/actions.rs",
         &[
             "fn align_end<B>(child: B) -> impl IntoUiElement<fret_app::App> + use<B> where B: IntoUiElement<fret_app::App>",
-            "fn action_row(cx: &mut UiCx<'_>, product: &'static str, price: &'static str, open_model: Model<bool>, key: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn action_row(product: &'static str, price: &'static str, open_model: Model<bool>, key: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
         ],
         &[
             "fn align_end(cx: &mut UiCx<'_>, child: AnyElement) -> AnyElement",
-            "fn action_row(cx: &mut UiCx<'_>, product: &'static str, price: &'static str, open_model: Model<bool>, key: &'static str,) -> AnyElement",
+            "fn action_row(product: &'static str, price: &'static str, open_model: Model<bool>, key: &'static str,) -> AnyElement",
         ],
     );
+}
+
+#[test]
+fn selected_field_and_form_snippets_prefer_field_wrapper_family() {
+    for relative_path in [
+        "src/ui/snippets/field/input.rs",
+        "src/ui/snippets/field/fieldset.rs",
+        "src/ui/snippets/field/field_group.rs",
+        "src/ui/snippets/form/demo.rs",
+        "src/ui/snippets/form/fieldset.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["shadcn::field_set(|cx| {", "shadcn::field_group(|cx| {"],
+            &[
+                "shadcn::FieldSet::build(",
+                "shadcn::FieldGroup::build(",
+                "shadcn::FieldSet::new(",
+                "shadcn::FieldGroup::new(",
+            ],
+        );
+    }
+}
+
+#[test]
+fn selected_control_snippets_prefer_field_group_wrapper_family() {
+    for relative_path in [
+        "src/ui/snippets/combobox/label.rs",
+        "src/ui/snippets/input/form.rs",
+        "src/ui/snippets/input/field_group.rs",
+        "src/ui/snippets/toggle_group/label.rs",
+        "src/ui/snippets/date_picker/time_picker.rs",
+        "src/ui/snippets/date_picker/label.rs",
+        "src/ui/snippets/native_select/label.rs",
+        "src/ui/snippets/select/label.rs",
+        "src/ui/snippets/select/align_item_with_trigger.rs",
+        "src/ui/snippets/checkbox/with_title.rs",
+        "src/ui/snippets/slider/label.rs",
+        "src/ui/snippets/switch/choice_card.rs",
+        "src/ui/snippets/switch/label.rs",
+        "src/ui/snippets/radio_group/label.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["shadcn::field_group(|cx| {"],
+            &["shadcn::FieldGroup::new(", "shadcn::FieldGroup::build("],
+        );
+    }
+}
+
+#[test]
+fn selected_radio_group_snippets_prefer_field_set_wrapper_family() {
+    for relative_path in [
+        "src/ui/snippets/radio_group/fieldset.rs",
+        "src/ui/snippets/radio_group/extras.rs",
+        "src/ui/snippets/radio_group/invalid.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["shadcn::field_set(|cx| {"],
+            &["shadcn::FieldSet::new(", "shadcn::FieldSet::build("],
+        );
+    }
+}
+
+#[test]
+fn field_page_usage_prefers_field_wrapper_family() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/field.rs",
+        &["shadcn::field_set(|cx| {", "shadcn::field_group(|cx| {"],
+        &["shadcn::FieldSet::new(", "shadcn::FieldGroup::new("],
+    );
+}
+
+#[test]
+fn selected_ai_doc_pages_prefer_doc_layout_text_table_over_raw_table_builders() {
+    for relative_path in [
+        "src/ui/pages/ai_model_selector_demo.rs",
+        "src/ui/pages/ai_context_demo.rs",
+        "src/ui/pages/ai_mic_selector_demo.rs",
+        "src/ui/pages/ai_voice_selector_demo.rs",
+        "src/ui/pages/ai_shimmer_demo.rs",
+        "src/ui/pages/ai_chain_of_thought_demo.rs",
+        "src/ui/pages/ai_checkpoint_demo.rs",
+        "src/ui/pages/ai_commit_demo.rs",
+        "src/ui/pages/ai_test_results_demo.rs",
+        "src/ui/pages/ai_persona_demo.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["doc_layout::text_table("],
+            &[
+                "shadcn::Table::build(",
+                "shadcn::TableHeader::build(",
+                "shadcn::TableBody::build(",
+                "shadcn::TableRow::build(",
+                "shadcn::TableHead::new(",
+                "shadcn::TableCell::build(",
+            ],
+        );
+    }
+}
+
+#[test]
+fn selected_empty_snippets_prefer_empty_wrapper_family() {
+    for relative_path in [
+        "src/ui/snippets/empty/avatar.rs",
+        "src/ui/snippets/empty/avatar_group.rs",
+        "src/ui/snippets/empty/background.rs",
+        "src/ui/snippets/empty/demo.rs",
+        "src/ui/snippets/empty/input_group.rs",
+        "src/ui/snippets/empty/outline.rs",
+        "src/ui/snippets/empty/rtl.rs",
+        "src/ui/snippets/empty/usage.rs",
+        "src/ui/snippets/spinner/empty.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "shadcn::empty(|cx|",
+                "shadcn::empty_header(|cx|",
+                "shadcn::empty_content(|cx|",
+                "shadcn::empty_title(",
+                "shadcn::empty_description(",
+            ],
+            &[
+                "shadcn::Empty::new(",
+                "fret_ui_shadcn::empty::EmptyHeader::new(",
+                "fret_ui_shadcn::empty::EmptyTitle::new(",
+                "fret_ui_shadcn::empty::EmptyDescription::new(",
+                "fret_ui_shadcn::empty::EmptyContent::new(",
+            ],
+        );
+    }
+
+    for relative_path in [
+        "src/ui/snippets/empty/avatar.rs",
+        "src/ui/snippets/empty/avatar_group.rs",
+        "src/ui/snippets/empty/background.rs",
+        "src/ui/snippets/empty/demo.rs",
+        "src/ui/snippets/empty/outline.rs",
+        "src/ui/snippets/empty/rtl.rs",
+        "src/ui/snippets/empty/usage.rs",
+        "src/ui/snippets/spinner/empty.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["shadcn::empty_media(|cx|"],
+            &["fret_ui_shadcn::empty::EmptyMedia::new("],
+        );
+    }
 }
 
 #[test]
@@ -2419,8 +2921,18 @@ fn selected_toast_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         "src/ui/snippets/toast/deprecated.rs",
         &[
             "fn centered<B>(body: B) -> impl IntoUiElement<fret_app::App> + use<B> where B: IntoUiElement<fret_app::App>",
+            "shadcn::card(",
+            "shadcn::card_header(",
+            "shadcn::card_content(",
+            "shadcn::card_footer(",
         ],
-        &["fn centered(cx: &mut UiCx<'_>, body: AnyElement) -> AnyElement"],
+        &[
+            "fn centered(cx: &mut UiCx<'_>, body: AnyElement) -> AnyElement",
+            "shadcn::Card::new(",
+            "shadcn::CardHeader::new(",
+            "shadcn::CardContent::new(",
+            "shadcn::CardFooter::new(",
+        ],
     );
 
     for relative_path in [
@@ -2438,6 +2950,29 @@ fn selected_toast_snippet_helpers_prefer_into_ui_element_over_anyelement() {
             ],
         );
     }
+}
+
+#[test]
+fn selected_chart_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/chart/demo.rs",
+        &[
+            "let trending_footer = |cx: &mut UiCx<'_>, secondary: &'static str| -> impl IntoUiElement<fret_app::App> + use<>",
+            "let chart_card = |cx: &mut UiCx<'_>, title: &'static str, description: &'static str, kind: DemoChartKind, footer_secondary: &'static str, test_id: &'static str| -> impl IntoUiElement<fret_app::App> + use<>",
+            "shadcn::card(",
+            "shadcn::card_header(",
+            "shadcn::card_content(",
+            "shadcn::card_footer(",
+        ],
+        &[
+            "let trending_footer = |cx: &mut UiCx<'_>, secondary: &'static str| {",
+            "let chart_card = |cx: &mut UiCx<'_>, title: &'static str, description: &'static str, kind: DemoChartKind, footer_secondary: &'static str, test_id: &'static str| {",
+            "shadcn::Card::new(",
+            "shadcn::CardHeader::new(",
+            "shadcn::CardContent::new(",
+            "shadcn::CardFooter::new(",
+        ],
+    );
 }
 
 #[test]
@@ -2464,6 +2999,27 @@ fn selected_alert_snippet_helpers_prefer_into_ui_element_over_anyelement() {
 }
 
 #[test]
+fn selected_alert_snippets_prefer_alert_wrapper_family() {
+    for relative_path in [
+        "src/ui/snippets/alert/action.rs",
+        "src/ui/snippets/alert/basic.rs",
+        "src/ui/snippets/alert/custom_colors.rs",
+        "src/ui/snippets/alert/demo.rs",
+        "src/ui/snippets/alert/destructive.rs",
+        "src/ui/snippets/alert/interactive_links.rs",
+        "src/ui/snippets/alert/rich_title.rs",
+        "src/ui/snippets/alert/rtl.rs",
+        "src/ui/snippets/motion_presets/fluid_tabs_demo.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["shadcn::alert("],
+            &["shadcn::Alert::new("],
+        );
+    }
+}
+
+#[test]
 fn selected_slider_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/slider/demo.rs",
@@ -2481,10 +3037,11 @@ fn selected_motion_presets_snippet_helpers_prefer_into_ui_element_over_anyelemen
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/motion_presets/fluid_tabs_demo.rs",
         &[
-            "fn panel(cx: &mut UiCx<'_>, title: &'static str, description: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn panel(title: &'static str, description: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
         ],
         &[
             "fn panel(cx: &mut UiCx<'_>, title: &'static str, description: &'static str) -> AnyElement",
+            "fn panel(cx: &mut UiCx<'_>, title: &'static str, description: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
         ],
     );
 }

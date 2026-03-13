@@ -114,15 +114,18 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         .refine_layout(LayoutRefinement::default().h_full())
         .into_element(cx);
 
-        let content = shadcn::Card::new(vec![
-            shadcn::CardHeader::new(vec![shadcn::CardTitle::new("RTL").into_element(cx)])
-                .into_element(cx),
-            shadcn::CardContent::new(vec![
-                cx.text("This section validates RTL direction + icon alignment."),
-                cx.text(format!("active={}", selected_value.as_ref())),
-            ])
-            .into_element(cx),
-        ])
+        let content = shadcn::card(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_header(|cx| ui::children![cx; shadcn::card_title("RTL")]),
+                shadcn::card_content(|cx| {
+                    vec![
+                        cx.text("This section validates RTL direction + icon alignment."),
+                        cx.text(format!("active={}", selected_value.as_ref())),
+                    ]
+                }),
+            ]
+        })
         .refine_layout(LayoutRefinement::default().w_full().h_full().min_w_0())
         .into_element(cx);
 

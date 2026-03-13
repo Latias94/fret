@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("avatar_group.rs");
 
 // region: example
+use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -29,18 +30,22 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .items_center()
     .into_element(cx);
 
-    shadcn::Empty::new([
-        fret_ui_shadcn::empty::EmptyHeader::new([
-            fret_ui_shadcn::empty::EmptyMedia::new([avatars]).into_element(cx),
-            fret_ui_shadcn::empty::EmptyTitle::new("No Team Members").into_element(cx),
-            fret_ui_shadcn::empty::EmptyDescription::new(
-                "Invite collaborators to start working on this project together.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        fret_ui_shadcn::empty::EmptyContent::new([invite_button]).into_element(cx),
-    ])
+    shadcn::empty(|cx| {
+        ui::children![
+            cx;
+            shadcn::empty_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::empty_media(|cx| ui::children![cx; avatars]),
+                    shadcn::empty_title("No Team Members"),
+                    shadcn::empty_description(
+                        "Invite collaborators to start working on this project together.",
+                    ),
+                ]
+            }),
+            shadcn::empty_content(|cx| ui::children![cx; invite_button]),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
     .into_element(cx)
     .test_id("ui-gallery-empty-avatar-group")

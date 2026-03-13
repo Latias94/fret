@@ -33,27 +33,27 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             },
         );
 
-    shadcn::FieldGroup::new([
-        shadcn::Field::new([
-            shadcn::FieldContent::new([
-                shadcn::FieldLabel::new("Position")
-                    .for_control("ui-gallery-select-align-item-switch")
-                    .into_element(cx),
-                shadcn::FieldDescription::new("Toggle between ItemAligned and Popper positioning.")
+    shadcn::field_group(|cx| {
+        ui::children![
+            cx;
+            shadcn::Field::new([
+                shadcn::FieldContent::new([
+                    shadcn::FieldLabel::new("Position")
+                        .for_control("ui-gallery-select-align-item-switch")
+                        .into_element(cx),
+                    shadcn::FieldDescription::new("Toggle between ItemAligned and Popper positioning.")
+                        .into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::Switch::new(align_item_with_trigger.clone())
+                    .control_id("ui-gallery-select-align-item-switch")
+                    .a11y_label("Select positioning toggle")
                     .into_element(cx),
             ])
-            .into_element(cx),
-            shadcn::Switch::new(align_item_with_trigger.clone())
-                .control_id("ui-gallery-select-align-item-switch")
-                .a11y_label("Select positioning toggle")
-                .into_element(cx),
-        ])
-        .orientation(shadcn::FieldOrientation::Horizontal)
-        .into_element(cx),
-        shadcn::Field::new([select])
-            .refine_layout(LayoutRefinement::default().w_full())
-            .into_element(cx),
-    ])
+            .orientation(shadcn::FieldOrientation::Horizontal),
+            shadcn::Field::new([select]).refine_layout(LayoutRefinement::default().w_full()),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
     .into_element(cx)
     .test_id("ui-gallery-select-align-item")

@@ -14,26 +14,28 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         .min_w_0();
 
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
-        shadcn::Card::build(|cx, out| {
-            out.extend([
-                shadcn::card_header(cx, |cx| {
-                    vec![
-                        shadcn::card_title(cx, "تسجيل الدخول إلى حسابك"),
+        shadcn::card(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_header(|cx| {
+                    ui::children![
+                        cx;
+                        shadcn::card_title("تسجيل الدخول إلى حسابك"),
                         shadcn::card_description(
-                            cx,
                             "أدخل بريدك الإلكتروني أدناه لتسجيل الدخول إلى حسابك",
                         ),
-                        shadcn::card_action(cx, |cx| {
-                            vec![
+                        shadcn::card_action(|cx| {
+                            ui::children![
+                                cx;
                                 shadcn::Button::new("إنشاء حساب")
-                                    .variant(shadcn::ButtonVariant::Link)
-                                    .into_element(cx),
+                                    .variant(shadcn::ButtonVariant::Link),
                             ]
                         }),
                     ]
                 }),
-                shadcn::card_content(cx, |cx| {
-                    vec![
+                shadcn::card_content(|cx| {
+                    ui::children![
+                        cx;
                         ui::v_flex(|cx| {
                             let email = ui::v_stack(|cx| {
                                 vec![
@@ -74,27 +76,26 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                             vec![email, password]
                         })
                         .gap(Space::N6)
-                        .layout(LayoutRefinement::default().w_full())
-                        .into_element(cx),
+                        .layout(LayoutRefinement::default().w_full()),
                     ]
                 }),
-                shadcn::CardFooter::build(|cx, out| {
-                    out.extend([
+                shadcn::card_footer(|cx| {
+                    ui::children![
+                        cx;
                         shadcn::Button::new("تسجيل الدخول")
                             .refine_layout(LayoutRefinement::default().w_full())
-                            .into_element(cx)
+                            .ui()
                             .test_id("ui-gallery-card-rtl-login"),
                         shadcn::Button::new("تسجيل الدخول باستخدام Google")
                             .variant(shadcn::ButtonVariant::Outline)
                             .refine_layout(LayoutRefinement::default().w_full())
-                            .into_element(cx)
+                            .ui()
                             .test_id("ui-gallery-card-rtl-login-with-google"),
-                    ]);
+                    ]
                 })
                 .direction(shadcn::CardFooterDirection::Column)
-                .gap(Space::N2)
-                .into_element(cx),
-            ]);
+                .gap(Space::N2),
+            ]
         })
         .refine_layout(max_w_sm)
         .into_element(cx)

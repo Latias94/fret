@@ -80,17 +80,21 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         ]
     });
 
-    shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Tooltip").into_element(cx),
-            shadcn::CardDescription::new(
-                "Tooltip MVP: delay group + hover intent + safe-hover corridor + token-driven styling (plain + rich).",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new(content).into_element(cx),
-    ])
+    shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Tooltip"),
+                    shadcn::card_description(
+                        "Tooltip MVP: delay group + hover intent + safe-hover corridor + token-driven styling (plain + rich).",
+                    ),
+                ]
+            }),
+            shadcn::card_content(move |_cx| content),
+        ]
+    })
     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx)
 }

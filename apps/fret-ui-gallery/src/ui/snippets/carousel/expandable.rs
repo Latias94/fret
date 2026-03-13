@@ -101,7 +101,10 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                 },
             );
 
-            let card = shadcn::Card::new([body]).into_element(cx);
+            let card = shadcn::card(
+                |cx| ui::children![cx; shadcn::card_content(|cx| ui::children![cx; body])],
+            )
+            .into_element(cx);
             ui::container(move |_cx| vec![card])
                 .w_full()
                 .p_1()

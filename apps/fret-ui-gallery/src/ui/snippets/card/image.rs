@@ -176,25 +176,31 @@ pub fn render(cx: &mut UiCx<'_>, event_cover_image: Model<Option<ImageId>>) -> A
         .into_element(cx)
         .test_id("ui-gallery-card-image-featured");
 
-    shadcn::Card::new(vec![
-        cover,
-        shadcn::CardHeader::new(vec![
-            shadcn::CardAction::new([featured]).into_element(cx),
-            shadcn::CardTitle::new("Design systems meetup").into_element(cx),
-            shadcn::CardDescription::new(
-                "A practical talk on component APIs, accessibility, and shipping faster.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardFooter::new(vec![
-            shadcn::Button::new("View Event")
-                .refine_layout(LayoutRefinement::default().w_full())
-                .into_element(cx)
-                .test_id("ui-gallery-card-image-view-event"),
-        ])
-        .into_element(cx),
-    ])
+    shadcn::card(|cx| {
+        ui::children![
+            cx;
+            cover,
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_action(|cx| ui::children![cx; featured]),
+                    shadcn::card_title("Design systems meetup"),
+                    shadcn::card_description(
+                        "A practical talk on component APIs, accessibility, and shipping faster.",
+                    ),
+                ]
+            }),
+            shadcn::card_footer(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::Button::new("View Event")
+                        .refine_layout(LayoutRefinement::default().w_full())
+                        .ui()
+                        .test_id("ui-gallery-card-image-view-event"),
+                ]
+            }),
+        ]
+    })
     .refine_style(ChromeRefinement::default().pt(Space::N0))
     .refine_layout(max_w_sm.relative())
     .into_element(cx)

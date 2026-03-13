@@ -105,14 +105,19 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         )
         .test_id("ui-gallery-collapsible-settings");
 
-    shadcn::Card::new([
-        shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Radius").into_element(cx),
-            shadcn::CardDescription::new("Set the corner radius of the element.").into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new([settings_collapsible]).into_element(cx),
-    ])
+    shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Radius"),
+                    shadcn::card_description("Set the corner radius of the element."),
+                ]
+            }),
+            shadcn::card_content(|cx| ui::children![cx; settings_collapsible]),
+        ]
+    })
     .size(shadcn::CardSize::Sm)
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
     .into_element(cx)

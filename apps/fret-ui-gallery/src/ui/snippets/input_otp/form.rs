@@ -62,29 +62,34 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .refine_layout(LayoutRefinement::default().w_full())
     .into_element(cx);
 
-    let footer = shadcn::CardFooter::new([
-        shadcn::Button::new("Verify")
-            .refine_layout(LayoutRefinement::default().w_full())
-            .into_element(cx),
-        shadcn::FieldDescription::new("Having trouble signing in? Contact support.")
-            .into_element(cx),
-    ])
-    .direction(shadcn::CardFooterDirection::Column)
-    .gap(Space::N3)
-    .into_element(cx);
-
-    shadcn::Card::new([
-        shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Verify your login").into_element(cx),
-            shadcn::CardDescription::new(
-                "Enter the verification code we sent to your email address: m@example.com.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new([otp_field]).into_element(cx),
-        footer,
-    ])
+    shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Verify your login"),
+                    shadcn::card_description(
+                        "Enter the verification code we sent to your email address: m@example.com.",
+                    ),
+                ]
+            }),
+            shadcn::card_content(|cx| ui::children![cx; otp_field]),
+            shadcn::card_footer(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::Button::new("Verify")
+                        .refine_layout(LayoutRefinement::default().w_full())
+                        .ui(),
+                    shadcn::FieldDescription::new(
+                        "Having trouble signing in? Contact support.",
+                    ),
+                ]
+            })
+            .direction(shadcn::CardFooterDirection::Column)
+            .gap(Space::N3),
+        ]
+    })
     .refine_layout(card_layout)
     .into_element(cx)
     .test_id("ui-gallery-input-otp-form")

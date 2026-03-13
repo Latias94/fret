@@ -728,15 +728,19 @@ pub fn render<H: UiHost>(
             .test_id("ui-gallery-material3-state-matrix-text-field")
             .into_element(cx);
 
-        shadcn::Card::new(vec![
-            shadcn::CardHeader::new(vec![
-                shadcn::CardTitle::new("Text field").into_element(cx),
-                shadcn::CardDescription::new("Outlined text field bound to models.")
-                    .into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new(vec![toggles, field]).into_element(cx),
-        ])
+        shadcn::card(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_header(|cx| {
+                    ui::children![
+                        cx;
+                        shadcn::card_title("Text field"),
+                        shadcn::card_description("Outlined text field bound to models."),
+                    ]
+                }),
+                shadcn::card_content(|_cx| vec![toggles, field]),
+            ]
+        })
         .refine_layout(LayoutRefinement::default().w_full().min_w_0())
         .into_element(cx)
     };

@@ -5,6 +5,7 @@ use fret_core::scene::{ColorSpace, GradientStop, LinearGradient, MAX_STOPS, Pain
 use fret_ui::Invalidation;
 use fret_ui::element::LayoutQueryRegionProps;
 use fret_ui_kit::declarative::ElementContextThemeExt;
+use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -62,20 +63,23 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
             let header_icon =
                 fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.bell"));
-            let empty = shadcn::Empty::new([
-                fret_ui_shadcn::empty::EmptyHeader::new([
-                    fret_ui_shadcn::empty::EmptyMedia::new([header_icon])
-                        .variant(fret_ui_shadcn::empty::EmptyMediaVariant::Icon)
-                        .into_element(cx),
-                    fret_ui_shadcn::empty::EmptyTitle::new("No Notifications").into_element(cx),
-                    fret_ui_shadcn::empty::EmptyDescription::new(
-                        "You're all caught up. New notifications will appear here.",
-                    )
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-                fret_ui_shadcn::empty::EmptyContent::new([refresh_button]).into_element(cx),
-            ])
+            let empty = shadcn::empty(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::empty_header(|cx| {
+                        ui::children![
+                            cx;
+                            shadcn::empty_media(|cx| ui::children![cx; header_icon])
+                                .variant(fret_ui_shadcn::empty::EmptyMediaVariant::Icon),
+                            shadcn::empty_title("No Notifications"),
+                            shadcn::empty_description(
+                                "You're all caught up. New notifications will appear here.",
+                            ),
+                        ]
+                    }),
+                    shadcn::empty_content(|cx| ui::children![cx; refresh_button]),
+                ]
+            })
             .refine_style(ChromeRefinement::default().background_paint(paint))
             .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
             .into_element(cx)
