@@ -4,6 +4,7 @@ use super::window::PendingWheelEvent;
 use super::*;
 use std::sync::{Arc, Mutex, OnceLock};
 
+use crate::runner::common::scheduling;
 use fret_core::time::Instant;
 use fret_platform::external_drop::ExternalDropProvider as _;
 
@@ -2285,7 +2286,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         }
                     }
 
-                    self.frame_id.0 = self.frame_id.0.saturating_add(1);
+                    self.frame_id = scheduling::commit_presented_frame(&mut self.frame_id);
                     self.app.set_frame_id(self.frame_id);
                 }
 
@@ -2483,7 +2484,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             }
             self.drain_effects(event_loop);
         }
-        self.tick_id.0 = self.tick_id.0.saturating_add(1);
+        self.tick_id = scheduling::begin_turn(&mut self.tick_id);
         self.app.set_tick_id(self.tick_id);
         self.saw_left_mouse_release_this_turn = false;
         let now = Instant::now();

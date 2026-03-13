@@ -4,6 +4,27 @@ Status: Draft
 
 Last updated: 2026-03-13
 
+## Current progress (2026-03-13)
+
+- M1: Partial
+  - shared turn/frame scheduling helper landed,
+  - pure counter semantics tests landed,
+  - slot-restoration seam and its regression tests landed,
+  - redraw/RAF coalescing extraction still pending.
+- M2: Partial
+  - desktop `TickId` turn advancement and `FrameId` present commitment now use the shared helper,
+  - native timer participation in the bounded drain has now been audited,
+  - broader diagnostics auditing is still pending.
+- M3: Partial
+  - web `TickId` turn advancement moved out of render entry,
+  - web `FrameId` commitment moved to the post-present path,
+  - web frame-state restoration on surface acquire failure is now in place,
+  - wake-path audit is now documented,
+  - redraw/RAF coalescing extraction is still pending.
+- M4: Partial
+  - ADR 0034 wording was confirmed stable for v1,
+  - implementation-alignment evidence now reflects the shared turn/frame seam and web recovery path.
+
 ## M0 — Workstream agreed
 
 Outcome:

@@ -11,6 +11,8 @@ use winit::event_loop::{ActiveEventLoop, ControlFlow};
 use winit::platform::web::{WindowAttributesWeb, WindowExtWeb};
 use winit::window::{Window, WindowAttributes, WindowId};
 
+use crate::runner::common::scheduling;
+
 use super::{GfxState, WinitAppDriver, WinitRunner};
 
 impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
@@ -389,6 +391,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         if self.maybe_exit(event_loop) {
             return;
         }
+        if self.exiting {
+            return;
+        }
+        self.tick_id = scheduling::begin_turn(&mut self.tick_id);
+        self.app.set_tick_id(self.tick_id);
         event_loop.set_control_flow(ControlFlow::Wait);
     }
 }

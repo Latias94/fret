@@ -15,6 +15,11 @@ use winit::event_loop::ActiveEventLoop;
 use winit::platform::web::WindowExtWeb;
 use winit::window::Window;
 
+use crate::runner::common::{
+    scheduling,
+    slot_restore::{self, SlotPairOwner, with_slot_pair_restored},
+};
+
 use super::super::{
     EngineFrameUpdate, RenderTargetUpdate, WinitEventContext, WinitRenderContext,
     WinitWindowContext,
@@ -41,6 +46,17 @@ pub(super) struct WebEnvironmentMediaQueries {
     prefers_contrast_no_preference: Option<web_sys::MediaQueryList>,
     forced_colors_active: Option<web_sys::MediaQueryList>,
     _listeners: Vec<Closure<dyn FnMut(web_sys::MediaQueryListEvent)>>,
+}
+
+impl<D: WinitAppDriver> SlotPairOwner<GfxState, D::WindowState> for WinitRunner<D> {
+    fn take_slot_pair(&mut self) -> Option<(GfxState, D::WindowState)> {
+        slot_restore::take_slot_pair(&mut self.gfx, &mut self.window_state)
+    }
+
+    fn restore_slot_pair(&mut self, gfx: GfxState, state: D::WindowState) {
+        self.gfx = Some(gfx);
+        self.window_state = Some(state);
+    }
 }
 
 impl WebEnvironmentMediaQueries {
@@ -404,29 +420,20 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
     }
 
-    pub(super) fn render_frame(&mut self, event_loop: &dyn ActiveEventLoop, window: &dyn Window) {
-        if self.maybe_exit(event_loop) {
-            return;
-        }
-        if self.exiting {
-            return;
-        }
-        self.adopt_gfx_if_ready();
-        self.ensure_gpu_ready_hook();
+    fn with_runner_frame_state<R>(
+        &mut self,
+        f: impl FnOnce(&mut Self, &mut GfxState, &mut D::WindowState) -> R,
+    ) -> Option<R> {
+        with_slot_pair_restored(self, f)
+    }
 
-        let Some(mut gfx) = self.gfx.take() else {
-            return;
-        };
-        let Some(mut state) = self.window_state.take() else {
-            self.gfx = Some(gfx);
-            return;
-        };
-
-        self.tick_id.0 = self.tick_id.0.saturating_add(1);
-        self.frame_id.0 = self.frame_id.0.saturating_add(1);
-        self.app.set_tick_id(self.tick_id);
-        self.app.set_frame_id(self.frame_id);
-
+    fn render_frame_with_state(
+        &mut self,
+        event_loop: &dyn ActiveEventLoop,
+        window: &dyn Window,
+        gfx: &mut GfxState,
+        state: &mut D::WindowState,
+    ) {
         self.platform.prepare_frame(window);
         self.update_window_environment_for_frame(window);
 
@@ -447,13 +454,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             );
         }
 
-        self.drain_turns(event_loop, window, &mut gfx, &mut state);
+        self.drain_turns(event_loop, window, gfx, state);
 
         let scale_factor = scale as f32;
         self.driver.gpu_frame_prepare(
             &mut self.app,
             self.app_window,
-            &mut state,
+            state,
             &gfx.ctx,
             &mut gfx.renderer,
             scale_factor,
@@ -472,7 +479,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             app: &mut self.app,
             services: &mut gfx.renderer,
             window: self.app_window,
-            state: &mut state,
+            state,
             bounds,
             scale_factor,
             scene: &mut self.scene,
@@ -481,7 +488,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let engine = self.driver.record_engine_frame(
             &mut self.app,
             self.app_window,
-            &mut state,
+            state,
             &gfx.ctx,
             &mut gfx.renderer,
             scale_factor,
@@ -686,8 +693,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             },
         );
         drop(keepalive);
+        self.frame_id = scheduling::commit_presented_frame(&mut self.frame_id);
+        self.app.set_frame_id(self.frame_id);
 
-        self.drain_turns(event_loop, window, &mut gfx, &mut state);
+        self.drain_turns(event_loop, window, gfx, state);
         if gfx.diag_keepalive_redraw {
             window.request_redraw();
             self.app.with_global_mut_untracked(
@@ -701,9 +710,25 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 },
             );
         }
+    }
 
-        self.window_state = Some(state);
-        self.gfx = Some(gfx);
+    pub(super) fn render_frame(&mut self, event_loop: &dyn ActiveEventLoop, window: &dyn Window) {
+        if self.maybe_exit(event_loop) {
+            return;
+        }
+        if self.exiting {
+            return;
+        }
+        self.adopt_gfx_if_ready();
+        self.ensure_gpu_ready_hook();
+        if self
+            .with_runner_frame_state(|runner, gfx, state| {
+                runner.render_frame_with_state(event_loop, window, gfx, state);
+            })
+            .is_none()
+        {
+            return;
+        }
     }
 }
 

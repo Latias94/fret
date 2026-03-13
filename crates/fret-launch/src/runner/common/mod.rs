@@ -2,6 +2,8 @@ mod config;
 mod context;
 mod engine_frame_update;
 mod fn_driver;
+pub(crate) mod scheduling;
+pub(crate) mod slot_restore;
 mod viewport_overlay_3d;
 mod window_create_spec;
 mod window_geometry;

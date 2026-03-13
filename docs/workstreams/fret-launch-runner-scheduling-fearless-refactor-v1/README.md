@@ -4,6 +4,32 @@ Status: Draft
 
 Last updated: 2026-03-13
 
+Implementation update (2026-03-13, batch 1):
+
+- A launch-internal scheduling helper now exists for shared turn/frame counter semantics.
+- Desktop and web both use that helper for `TickId` turn advancement and `FrameId` present
+  commitment.
+- The web render loop now restores runner-owned frame state after surface acquire failures instead
+  of returning with `self.gfx` / `self.window_state` dropped.
+
+Implementation update (2026-03-13, batch 2):
+
+- The web render loop now enters owned-frame work through a dedicated slot-restoration seam
+  (`crates/fret-launch/src/runner/common/slot_restore.rs` +
+  `crates/fret-launch/src/runner/web/render_loop.rs`), so early aborts restore runner-owned state
+  by construction.
+- v1 ownership is now explicitly confirmed as:
+  - `crates/fret-app` owns redraw/effect coalescing.
+  - `crates/fret-launch` owns runner turn entry, bounded drain, render/present, and frame
+    commitment.
+  - `crates/fret-platform-web` owns DOM timers and browser async bridges.
+  - `crates/fret-runner-winit` remains adapter-only glue for platform/window/event normalization.
+- ADR 0034 wording does not need a contract rewrite for this batch; refreshed implementation
+  evidence is the correct follow-up.
+- Wake-path audit result: web DOM timers, `proxy_wake_up`, pending async completions,
+  clipboard/file-dialog completions, and devtools keepalive redraw all converge without bypassing
+  the next runner turn boundary.
+
 ## Context
 
 Fret's architecture already places the scheduling and presentation responsibility in the correct
@@ -153,6 +179,35 @@ That split is acceptable for v1 as long as both sides feed the same event semant
 - timer wakeups must become `Event::Timer`,
 - timer-driven work must participate in the same bounded drain model,
 - timer wakeups must not imply different `TickId` / `FrameId` semantics by backend.
+
+## Audit conclusions (2026-03-13)
+
+### Ownership confirmation
+
+- `fret-app` keeps redraw/effect intent coalescing.
+- `fret-launch` keeps turn/frame lifecycle and bounded fixed-point drain.
+- `fret-platform-web` keeps browser-owned services (`setTimeout`, file dialogs, clipboard, IME).
+- `fret-runner-winit` stays an adapter, not the owner of scheduling semantics.
+
+### Timer posture confirmation
+
+- Desktop native timers remain runner-owned via `crates/fret-launch/src/runner/desktop/runner/timers.rs`.
+- Web timers remain browser-service-owned via `crates/fret-platform-web/src/wasm/timers.rs`.
+- Both paths feed `Event::Timer` before the next bounded drain cycle:
+  - desktop via `fire_due_timers()` inside launch drain/effect processing,
+  - web via `WebPlatformServices::tick()` inside `proxy_wake_up()`.
+- A deeper shared timer abstraction is intentionally out of scope for v1; this workstream only
+  unifies observable semantics.
+
+### Web wake-path audit summary
+
+- `proxy_wake_up()` drains pending async events and browser-service events before requesting redraw.
+- DOM timers wake through the `fret-platform-web` waker, then become `Event::Timer` on the next
+  runner cycle.
+- Clipboard/share/file-dialog async completions wake the runner through either
+  `pending_async_events` or `WebPlatformServices` event queues.
+- Devtools inbox wakeups request redraw plus `wake_up()`, while configured keepalive redraw only
+  schedules the next redraw and still waits for the next runner turn to advance `TickId`.
 
 ## Proposed target shape
 
@@ -311,8 +366,11 @@ Additional targeted gates recommended for this workstream:
 - Scheduling contract: `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
 - App redraw/effect coalescing: `crates/fret-app/src/app.rs`
 - Launch facade: `crates/fret-launch/src/lib.rs`
+- Shared turn/frame seam: `crates/fret-launch/src/runner/common/scheduling.rs`
+- Shared slot restoration seam: `crates/fret-launch/src/runner/common/slot_restore.rs`
 - Desktop runner entry: `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`
 - Desktop effect draining: `crates/fret-launch/src/runner/desktop/runner/effects.rs`
+- Desktop native timers: `crates/fret-launch/src/runner/desktop/runner/timers.rs`
 - Web runner loop: `crates/fret-launch/src/runner/web/render_loop.rs`
 - Web app handler: `crates/fret-launch/src/runner/web/app_handler.rs`
 - Web platform timers: `crates/fret-platform-web/src/wasm/{mod.rs,timers.rs}`
