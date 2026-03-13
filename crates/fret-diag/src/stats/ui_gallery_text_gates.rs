@@ -54,6 +54,17 @@ struct LocaleChangeConformanceEvidence {
     mixed_classes: Vec<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct SettingsChangeConformanceEvidence {
+    fallback_policy_key: u64,
+    system_fonts_enabled: bool,
+    prefer_common_fallback: bool,
+    common_fallback_injection: Option<String>,
+    configured_common_fallback_families: Vec<String>,
+    common_fallback_candidates: Vec<String>,
+    common_fallback_stack_suffix: String,
+}
+
 const LOCALE_CHANGE_TRACE_SAMPLE_LATIN: &str = "m";
 const LOCALE_CHANGE_TRACE_SAMPLE_CJK: &str = "你";
 const LOCALE_CHANGE_TRACE_SAMPLE_EMOJI: &str = "\u{1F600}";
@@ -381,6 +392,36 @@ fn bundle_last_text_locale_change_evidence(
     })
 }
 
+fn bundle_last_text_settings_change_evidence(
+    bundle: &serde_json::Value,
+) -> Option<SettingsChangeConformanceEvidence> {
+    let best = bundle_last_snapshot_by_frame_id(bundle)?;
+
+    let policy = best
+        .get("resource_caches")?
+        .get("render_text_fallback_policy")?
+        .as_object()?;
+
+    Some(SettingsChangeConformanceEvidence {
+        fallback_policy_key: policy.get("fallback_policy_key")?.as_u64()?,
+        system_fonts_enabled: policy.get("system_fonts_enabled")?.as_bool()?,
+        prefer_common_fallback: policy.get("prefer_common_fallback")?.as_bool()?,
+        common_fallback_injection: policy
+            .get("common_fallback_injection")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
+        configured_common_fallback_families: json_string_vec(
+            policy.get("configured_common_fallback_families"),
+        ),
+        common_fallback_candidates: json_string_vec(policy.get("common_fallback_candidates")),
+        common_fallback_stack_suffix: policy
+            .get("common_fallback_stack_suffix")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .to_string(),
+    })
+}
+
 pub(crate) fn check_out_dir_for_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps(
     out_dir: &Path,
 ) -> Result<(), String> {
@@ -468,16 +509,6 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_set
     const BEFORE_LABEL: &str = "ui-gallery-text-fallback-policy-before";
     const AFTER_LABEL: &str = "ui-gallery-text-fallback-policy-after";
 
-    fn bundle_last_text_policy_key(bundle: &serde_json::Value) -> Option<u64> {
-        let best = bundle_last_snapshot_by_frame_id(bundle)?;
-
-        let policy = best
-            .get("resource_caches")?
-            .get("render_text_fallback_policy")?
-            .as_object()?;
-        policy.get("fallback_policy_key")?.as_u64()
-    }
-
     let before_dir = find_latest_labeled_bundle_dir(out_dir, BEFORE_LABEL).ok_or_else(|| {
         format!(
             "ui-gallery text fallback policy gate expected a capture_bundle label={BEFORE_LABEL} under out_dir, but none was found\n  out_dir: {}",
@@ -501,13 +532,13 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_set
     let after_bundle: serde_json::Value =
         serde_json::from_slice(&after_bytes).map_err(|e| e.to_string())?;
 
-    let before_key = bundle_last_text_policy_key(&before_bundle).ok_or_else(|| {
+    let before = bundle_last_text_settings_change_evidence(&before_bundle).ok_or_else(|| {
         format!(
             "ui-gallery text fallback policy gate expected renderer text fallback policy snapshot in bundle\n  bundle: {}",
             before_path.display()
         )
     })?;
-    let after_key = bundle_last_text_policy_key(&after_bundle).ok_or_else(|| {
+    let after = bundle_last_text_settings_change_evidence(&after_bundle).ok_or_else(|| {
         format!(
             "ui-gallery text fallback policy gate expected renderer text fallback policy snapshot in bundle\n  bundle: {}",
             after_path.display()
@@ -522,16 +553,96 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_set
         "after_dir": after_dir.display().to_string(),
         "before_bundle": before_path.display().to_string(),
         "after_bundle": after_path.display().to_string(),
-        "before": { "fallback_policy_key": before_key },
-        "after": { "fallback_policy_key": after_key },
+        "before": {
+            "fallback_policy_key": before.fallback_policy_key,
+            "system_fonts_enabled": before.system_fonts_enabled,
+            "prefer_common_fallback": before.prefer_common_fallback,
+            "common_fallback_injection": before.common_fallback_injection,
+            "configured_common_fallback_families": before.configured_common_fallback_families,
+            "common_fallback_candidates": before.common_fallback_candidates,
+            "common_fallback_stack_suffix": before.common_fallback_stack_suffix,
+        },
+        "after": {
+            "fallback_policy_key": after.fallback_policy_key,
+            "system_fonts_enabled": after.system_fonts_enabled,
+            "prefer_common_fallback": after.prefer_common_fallback,
+            "common_fallback_injection": after.common_fallback_injection,
+            "configured_common_fallback_families": after.configured_common_fallback_families,
+            "common_fallback_candidates": after.common_fallback_candidates,
+            "common_fallback_stack_suffix": after.common_fallback_stack_suffix,
+        },
     });
     let _ = write_json_value(&evidence_path, &payload);
 
-    if before_key == after_key {
+    if !before.system_fonts_enabled || !after.system_fonts_enabled {
+        return Err(format!(
+            "ui-gallery text fallback policy gate failed: expected system_fonts_enabled=true in both captures for the native settings baseline\n  before: {}\n  after: {}\n  evidence: {}",
+            before.system_fonts_enabled,
+            after.system_fonts_enabled,
+            evidence_path.display()
+        ));
+    }
+    if before.common_fallback_injection.as_deref() != Some("platform_default") {
+        return Err(format!(
+            "ui-gallery text fallback policy gate failed: expected common_fallback_injection=platform_default in the BEFORE capture\n  observed: {:?}\n  evidence: {}",
+            before.common_fallback_injection,
+            evidence_path.display()
+        ));
+    }
+    if after.common_fallback_injection.as_deref() != Some("common_fallback") {
+        return Err(format!(
+            "ui-gallery text fallback policy gate failed: expected common_fallback_injection=common_fallback in the AFTER capture\n  observed: {:?}\n  evidence: {}",
+            after.common_fallback_injection,
+            evidence_path.display()
+        ));
+    }
+    if before.prefer_common_fallback {
+        return Err(format!(
+            "ui-gallery text fallback policy gate failed: expected prefer_common_fallback=false in the BEFORE capture\n  observed: {}\n  evidence: {}",
+            before.prefer_common_fallback,
+            evidence_path.display()
+        ));
+    }
+    if !after.prefer_common_fallback {
+        return Err(format!(
+            "ui-gallery text fallback policy gate failed: expected prefer_common_fallback=true in the AFTER capture\n  observed: {}\n  evidence: {}",
+            after.prefer_common_fallback,
+            evidence_path.display()
+        ));
+    }
+    if !before.common_fallback_candidates.is_empty() {
+        return Err(format!(
+            "ui-gallery text fallback policy gate failed: expected common_fallback_candidates=[] in the BEFORE capture on the platform-default/system-fallback lane\n  observed: {:?}\n  evidence: {}",
+            before.common_fallback_candidates,
+            evidence_path.display()
+        ));
+    }
+    if after.common_fallback_candidates.is_empty() {
+        return Err(format!(
+            "ui-gallery text fallback policy gate failed: expected non-empty common_fallback_candidates in the AFTER capture after selecting common_fallback injection\n  configured_common_fallback_families: {:?}\n  evidence: {}",
+            after.configured_common_fallback_families,
+            evidence_path.display()
+        ));
+    }
+    if !before.common_fallback_stack_suffix.is_empty() {
+        return Err(format!(
+            "ui-gallery text fallback policy gate failed: expected an empty common_fallback_stack_suffix in the BEFORE capture\n  observed: {:?}\n  evidence: {}",
+            before.common_fallback_stack_suffix,
+            evidence_path.display()
+        ));
+    }
+    if after.common_fallback_stack_suffix.is_empty() {
+        return Err(format!(
+            "ui-gallery text fallback policy gate failed: expected a non-empty common_fallback_stack_suffix in the AFTER capture\n  common_fallback_candidates: {:?}\n  evidence: {}",
+            after.common_fallback_candidates,
+            evidence_path.display()
+        ));
+    }
+    if before.fallback_policy_key == after.fallback_policy_key {
         return Err(format!(
             "ui-gallery text fallback policy gate failed: expected fallback_policy_key to change after settings apply\n  before: fallback_policy_key={}\n  after:  fallback_policy_key={}\n  evidence: {}",
-            before_key,
-            after_key,
+            before.fallback_policy_key,
+            after.fallback_policy_key,
             evidence_path.display()
         ));
     }
@@ -1009,6 +1120,120 @@ mod tests {
                 .expect_err("gate should reject trace families outside bundled profile contract");
         assert!(
             err.contains("expected font trace families to stay within bundled_profile_contract.expected_family_names"),
+            "{err}"
+        );
+    }
+
+    fn settings_change_bundle(
+        injection: &str,
+        prefer_common_fallback: bool,
+        candidates: &[&str],
+        key: u64,
+    ) -> serde_json::Value {
+        let common_fallback_candidates = candidates
+            .iter()
+            .map(|family| (*family).to_string())
+            .collect::<Vec<_>>();
+        let stack_suffix = if prefer_common_fallback {
+            common_fallback_candidates.join(", ")
+        } else {
+            String::new()
+        };
+
+        serde_json::json!({
+            "windows": [{
+                "snapshots": [{
+                    "frame_id": 5,
+                    "resource_caches": {
+                        "render_text_fallback_policy": {
+                            "fallback_policy_key": key,
+                            "system_fonts_enabled": true,
+                            "prefer_common_fallback": prefer_common_fallback,
+                            "common_fallback_injection": injection,
+                            "configured_common_fallback_families": [],
+                            "common_fallback_candidates": common_fallback_candidates,
+                            "common_fallback_stack_suffix": stack_suffix
+                        }
+                    }
+                }]
+            }]
+        })
+    }
+
+    #[test]
+    fn settings_change_gate_accepts_platform_default_to_common_fallback_transition() {
+        let out_dir = unique_tmp_dir("pass_settings_change");
+        write_labeled_bundle(
+            &out_dir,
+            "ui-gallery-text-fallback-policy-before",
+            &settings_change_bundle("platform_default", false, &[], 10),
+        );
+        write_labeled_bundle(
+            &out_dir,
+            "ui-gallery-text-fallback-policy-after",
+            &settings_change_bundle(
+                "common_fallback",
+                true,
+                &["Inter", "Noto Sans CJK SC", "Noto Color Emoji"],
+                11,
+            ),
+        );
+
+        check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_settings_change(&out_dir)
+            .expect("gate should accept the settings-driven lane transition");
+    }
+
+    #[test]
+    fn settings_change_gate_rejects_before_capture_outside_platform_default_baseline() {
+        let out_dir = unique_tmp_dir("fail_settings_before_baseline");
+        write_labeled_bundle(
+            &out_dir,
+            "ui-gallery-text-fallback-policy-before",
+            &settings_change_bundle("common_fallback", true, &["Inter", "Noto Sans CJK SC"], 10),
+        );
+        write_labeled_bundle(
+            &out_dir,
+            "ui-gallery-text-fallback-policy-after",
+            &settings_change_bundle(
+                "common_fallback",
+                true,
+                &["Inter", "Noto Sans CJK SC", "Noto Color Emoji"],
+                11,
+            ),
+        );
+
+        let err = check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_settings_change(
+            &out_dir,
+        )
+        .expect_err("gate should reject a stale BEFORE lane");
+        assert!(
+            err.contains(
+                "expected common_fallback_injection=platform_default in the BEFORE capture"
+            ),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn settings_change_gate_rejects_after_capture_without_common_fallback_candidates() {
+        let out_dir = unique_tmp_dir("fail_settings_after_candidates");
+        write_labeled_bundle(
+            &out_dir,
+            "ui-gallery-text-fallback-policy-before",
+            &settings_change_bundle("platform_default", false, &[], 10),
+        );
+        write_labeled_bundle(
+            &out_dir,
+            "ui-gallery-text-fallback-policy-after",
+            &settings_change_bundle("common_fallback", true, &[], 11),
+        );
+
+        let err = check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_settings_change(
+            &out_dir,
+        )
+        .expect_err("gate should reject missing common fallback candidates");
+        assert!(
+            err.contains("expected non-empty common_fallback_candidates in the AFTER capture"),
             "{err}"
         );
     }

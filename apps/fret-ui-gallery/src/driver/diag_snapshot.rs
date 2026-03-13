@@ -113,8 +113,10 @@ fn command_palette_entries_bytes_estimate(app: &App) -> serde_json::Value {
 fn settings_sheet_static_string_bytes_estimate() -> serde_json::Value {
     let strings = [
         "Settings",
-        "Menu bar presentation (OS vs in-window) + chrome toggles.",
+        "Menu bar presentation, text fallback policy, and chrome/debug state.",
         "Menu bar surfaces",
+        "Text",
+        "Common fallback injection",
         "Chrome",
         "Command availability (debug)",
         "Auto (Windows/macOS on; Linux/Web off)",
@@ -123,6 +125,9 @@ fn settings_sheet_static_string_bytes_estimate() -> serde_json::Value {
         "Auto (Linux/Web on; Windows/macOS off)",
         "On",
         "Off",
+        "Platform default (desktop system fallback; wasm/bundled common fallback)",
+        "None (never inject common fallback)",
+        "Common fallback (always inject the curated fallback stack)",
         "Workspace tabs in the top bar",
         "edit.can_undo (enables OS/in-window Undo)",
         "edit.can_redo (enables OS/in-window Redo)",
@@ -178,6 +183,9 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                 let nav_query = app.models().get_cloned(&ids.nav_query)?;
                 let settings_menu_bar_os = app.models().get_cloned(&ids.settings_menu_bar_os)?;
                 let settings_menu_bar_in_window = app.models().get_cloned(&ids.settings_menu_bar_in_window)?;
+                let settings_text_common_fallback_injection = app
+                    .models()
+                    .get_cloned(&ids.settings_text_common_fallback_injection)?;
                 let chrome_show_workspace_tab_strip = app
                     .models()
                     .get_cloned(&ids.chrome_show_workspace_tab_strip)?;
@@ -454,6 +462,19 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                 shell.insert("input_file_value_len_bytes".to_string(), serde_json::json!(input_file_value.len() as u64));
                 shell.insert("settings_menu_bar_os_len_bytes".to_string(), serde_json::json!(opt_arc_str_len(settings_menu_bar_os.as_ref())));
                 shell.insert("settings_menu_bar_in_window_len_bytes".to_string(), serde_json::json!(opt_arc_str_len(settings_menu_bar_in_window.as_ref())));
+                shell.insert(
+                    "settings_text_common_fallback_injection_len_bytes".to_string(),
+                    serde_json::json!(opt_arc_str_len(
+                        settings_text_common_fallback_injection.as_ref()
+                    )),
+                );
+                shell.insert(
+                    "settings_text_common_fallback_injection".to_string(),
+                    settings_text_common_fallback_injection
+                        .as_ref()
+                        .map(|value| serde_json::Value::String(value.to_string()))
+                        .unwrap_or(serde_json::Value::Null),
+                );
                 shell.insert("chrome_show_workspace_tab_strip".to_string(), serde_json::json!(chrome_show_workspace_tab_strip));
                 if let Some(obj) = command_registry_string_bytes_estimate(app).as_object() {
                     for (k, v) in obj {

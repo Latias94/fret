@@ -151,6 +151,7 @@ struct UiGalleryHarnessModelIds {
     nav_query: Model<String>,
     settings_menu_bar_os: Model<Option<Arc<str>>>,
     settings_menu_bar_in_window: Model<Option<Arc<str>>>,
+    settings_text_common_fallback_injection: Model<Option<Arc<str>>>,
     chrome_show_workspace_tab_strip: Model<bool>,
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
@@ -241,6 +242,8 @@ struct UiGalleryWindowState {
     settings_menu_bar_os_open: Model<bool>,
     settings_menu_bar_in_window: Model<Option<Arc<str>>>,
     settings_menu_bar_in_window_open: Model<bool>,
+    settings_text_common_fallback_injection: Model<Option<Arc<str>>>,
+    settings_text_common_fallback_injection_open: Model<bool>,
     settings_edit_can_undo: Model<bool>,
     settings_edit_can_redo: Model<bool>,
     chrome_show_workspace_tab_strip: Model<bool>,
@@ -1458,6 +1461,14 @@ impl WinitAppDriver for UiGalleryDriver {
                         .update(&state.settings_menu_bar_in_window, |v| {
                             *v = Some(Self::menu_bar_mode_key(settings.menu_bar.in_window));
                         });
+                    let injection =
+                        Self::current_text_font_family_config(app).common_fallback_injection;
+                    let _ = app.models_mut().update(
+                        &state.settings_text_common_fallback_injection,
+                        |v| {
+                            *v = Some(Self::text_common_fallback_injection_key(injection));
+                        },
+                    );
                 }
                 let _ = app
                     .models_mut()
@@ -1480,10 +1491,20 @@ impl WinitAppDriver for UiGalleryDriver {
                     .flatten()
                     .as_deref()
                     .map(str::to_string);
+                let common_fallback_injection = app
+                    .models()
+                    .get_cloned(&state.settings_text_common_fallback_injection)
+                    .flatten()
+                    .as_deref()
+                    .map(str::to_string);
 
                 let os = Self::menu_bar_mode_from_key(os.as_deref());
                 let in_window = Self::menu_bar_mode_from_key(in_window.as_deref());
-                Self::apply_menu_bar_settings(app, os, in_window);
+                let common_fallback_injection =
+                    Self::text_common_fallback_injection_from_key(
+                        common_fallback_injection.as_deref(),
+                    );
+                Self::apply_settings_sheet_values(app, os, in_window, common_fallback_injection);
                 Self::sync_menu_bar_after_state_change(app, window);
                 Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
 
@@ -1497,7 +1518,8 @@ impl WinitAppDriver for UiGalleryDriver {
                     &mut host,
                     window,
                     "Settings applied",
-                    shadcn::ToastMessageOptions::new().description("Menu bar settings updated."),
+                    shadcn::ToastMessageOptions::new()
+                        .description("Menu bar and text fallback settings updated."),
                 );
 
                 let _ = host.models_mut().update(&state.last_action, |v| {
@@ -1519,19 +1541,36 @@ impl WinitAppDriver for UiGalleryDriver {
                         .flatten()
                         .as_deref()
                         .map(str::to_string);
+                    let common_fallback_injection = app
+                        .models()
+                        .get_cloned(&state.settings_text_common_fallback_injection)
+                        .flatten()
+                        .as_deref()
+                        .map(str::to_string);
 
                     let os = Self::menu_bar_mode_from_key(os.as_deref());
                     let in_window = Self::menu_bar_mode_from_key(in_window.as_deref());
+                    let common_fallback_injection =
+                        Self::text_common_fallback_injection_from_key(
+                            common_fallback_injection.as_deref(),
+                        );
 
-                    let result =
-                        Self::write_project_settings_menu_bar(os, in_window).and_then(|_| {
-                            let paths = LayeredConfigPaths::for_project_root(".");
-                            let (settings, _report) =
-                                load_layered_settings(&paths).map_err(std::io::Error::other)?;
-                            fret_app::settings::apply_settings_globals(app, &settings);
-                            fret_app::sync_os_menu_bar(app);
-                            Ok(())
-                        });
+                    let result = Self::write_project_settings_snapshot(
+                        os,
+                        in_window,
+                        common_fallback_injection,
+                    )
+                    .and_then(|_| {
+                        let paths = LayeredConfigPaths::for_project_root(".");
+                        let (settings, _report) =
+                            load_layered_settings(&paths).map_err(std::io::Error::other)?;
+                        fret_app::settings::apply_settings_globals(app, &settings);
+                        let mut fonts = Self::current_text_font_family_config(app);
+                        fonts.common_fallback_injection = settings.fonts.common_fallback_injection;
+                        app.set_global::<fret_core::TextFontFamilyConfig>(fonts);
+                        fret_app::sync_os_menu_bar(app);
+                        Ok(())
+                    });
 
                     let sonner = shadcn::Sonner::global(app);
                     let mut host = UiActionHostAdapter { app };

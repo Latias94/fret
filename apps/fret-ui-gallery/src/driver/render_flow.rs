@@ -35,6 +35,8 @@ pub(super) struct PreparedFrame {
     pub(super) settings_menu_bar_os_open: Model<bool>,
     pub(super) settings_menu_bar_in_window: Model<Option<Arc<str>>>,
     pub(super) settings_menu_bar_in_window_open: Model<bool>,
+    pub(super) settings_text_common_fallback_injection: Model<Option<Arc<str>>>,
+    pub(super) settings_text_common_fallback_injection_open: Model<bool>,
     pub(super) settings_edit_can_undo: Model<bool>,
     pub(super) settings_edit_can_redo: Model<bool>,
     pub(super) chrome_show_workspace_tab_strip: Model<bool>,
@@ -126,6 +128,10 @@ pub(super) fn begin_frame(
     let settings_menu_bar_os_open = state.settings_menu_bar_os_open.clone();
     let settings_menu_bar_in_window = state.settings_menu_bar_in_window.clone();
     let settings_menu_bar_in_window_open = state.settings_menu_bar_in_window_open.clone();
+    let settings_text_common_fallback_injection =
+        state.settings_text_common_fallback_injection.clone();
+    let settings_text_common_fallback_injection_open =
+        state.settings_text_common_fallback_injection_open.clone();
     let settings_edit_can_undo = state.settings_edit_can_undo.clone();
     let settings_edit_can_redo = state.settings_edit_can_redo.clone();
     let chrome_show_workspace_tab_strip = state.chrome_show_workspace_tab_strip.clone();
@@ -180,6 +186,8 @@ pub(super) fn begin_frame(
         settings_menu_bar_os_open,
         settings_menu_bar_in_window,
         settings_menu_bar_in_window_open,
+        settings_text_common_fallback_injection,
+        settings_text_common_fallback_injection_open,
         settings_edit_can_undo,
         settings_edit_can_redo,
         chrome_show_workspace_tab_strip,
@@ -375,6 +383,8 @@ fn render_root_contents(
         frame.settings_menu_bar_os_open.clone(),
         frame.settings_menu_bar_in_window.clone(),
         frame.settings_menu_bar_in_window_open.clone(),
+        frame.settings_text_common_fallback_injection.clone(),
+        frame.settings_text_common_fallback_injection_open.clone(),
         frame.settings_edit_can_undo.clone(),
         frame.settings_edit_can_redo.clone(),
         frame.chrome_show_workspace_tab_strip.clone(),

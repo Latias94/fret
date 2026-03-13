@@ -75,6 +75,9 @@ fn register_harness_model_ids(app: &mut App, window: AppWindowId, state: &UiGall
                 nav_query: state.nav_query.clone(),
                 settings_menu_bar_os: state.settings_menu_bar_os.clone(),
                 settings_menu_bar_in_window: state.settings_menu_bar_in_window.clone(),
+                settings_text_common_fallback_injection: state
+                    .settings_text_common_fallback_injection
+                    .clone(),
                 chrome_show_workspace_tab_strip: state.chrome_show_workspace_tab_strip.clone(),
                 cmdk_query: state.cmdk_query.clone(),
                 last_action: state.last_action.clone(),
@@ -220,6 +223,12 @@ impl UiGalleryDriver {
             .models_mut()
             .insert(Some(Self::menu_bar_mode_key(settings.menu_bar.in_window)));
         let settings_menu_bar_in_window_open = app.models_mut().insert(false);
+        let text_common_fallback_injection =
+            Self::current_text_font_family_config(app).common_fallback_injection;
+        let settings_text_common_fallback_injection = app.models_mut().insert(Some(
+            Self::text_common_fallback_injection_key(text_common_fallback_injection),
+        ));
+        let settings_text_common_fallback_injection_open = app.models_mut().insert(false);
         let settings_edit_can_undo = app.models_mut().insert(true);
         let settings_edit_can_redo = app.models_mut().insert(true);
         let chrome_show_workspace_tab_strip = app.models_mut().insert(workspace_shell_diag_profile);
@@ -468,6 +477,8 @@ impl UiGalleryDriver {
             settings_menu_bar_os_open,
             settings_menu_bar_in_window,
             settings_menu_bar_in_window_open,
+            settings_text_common_fallback_injection,
+            settings_text_common_fallback_injection_open,
             settings_edit_can_undo,
             settings_edit_can_redo,
             chrome_show_workspace_tab_strip,

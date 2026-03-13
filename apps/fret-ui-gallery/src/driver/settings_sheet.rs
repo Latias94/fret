@@ -35,6 +35,8 @@ pub(super) fn push_settings_sheet(
     settings_menu_bar_os_open: Model<bool>,
     settings_menu_bar_in_window: Model<Option<Arc<str>>>,
     settings_menu_bar_in_window_open: Model<bool>,
+    settings_text_common_fallback_injection: Model<Option<Arc<str>>>,
+    settings_text_common_fallback_injection_open: Model<bool>,
     settings_edit_can_undo: Model<bool>,
     settings_edit_can_redo: Model<bool>,
     chrome_show_workspace_tab_strip: Model<bool>,
@@ -93,6 +95,35 @@ pub(super) fn push_settings_sheet(
                     .refine_layout(LayoutRefinement::default().w_full())
                     .into_element(cx);
 
+                    let text_common_fallback_injection_select = shadcn::Select::new(
+                        settings_text_common_fallback_injection.clone(),
+                        settings_text_common_fallback_injection_open.clone(),
+                    )
+                    .value(
+                        shadcn::SelectValue::new().placeholder("Common fallback injection"),
+                    )
+                    .trigger_test_id("ui-gallery-settings-text-common-fallback-injection")
+                    .items([
+                        shadcn::SelectItem::new(
+                            "platform-default",
+                            "Platform default (desktop system fallback; wasm/bundled common fallback)",
+                        )
+                        .test_id(
+                            "ui-gallery-settings-text-common-fallback-injection-platform-default",
+                        ),
+                        shadcn::SelectItem::new("none", "None (never inject common fallback)")
+                            .test_id("ui-gallery-settings-text-common-fallback-injection-none"),
+                        shadcn::SelectItem::new(
+                            "common-fallback",
+                            "Common fallback (always inject the curated fallback stack)",
+                        )
+                        .test_id(
+                            "ui-gallery-settings-text-common-fallback-injection-common-fallback",
+                        ),
+                    ])
+                    .refine_layout(LayoutRefinement::default().w_full())
+                    .into_element(cx);
+
                     let chrome_show_workspace_tab_strip_switch = shadcn::Switch::new(
                         chrome_show_workspace_tab_strip.clone(),
                     )
@@ -115,7 +146,7 @@ pub(super) fn push_settings_sheet(
                                     shadcn::SheetHeader::new(vec![
                                         shadcn::SheetTitle::new("Settings").into_element(cx),
                                         shadcn::SheetDescription::new(
-                                            "Menu bar presentation (OS vs in-window) + chrome/debug state.",
+                                            "Menu bar presentation, text fallback policy, and chrome/debug state.",
                                         )
                                         .into_element(cx),
                                     ])
@@ -124,6 +155,8 @@ pub(super) fn push_settings_sheet(
                                     cx.text("Menu bar surfaces"),
                                     os_select,
                                     in_window_select,
+                                    cx.text("Text"),
+                                    text_common_fallback_injection_select,
                                     cx.text("Chrome"),
                                     switch_row(
                                         cx,
