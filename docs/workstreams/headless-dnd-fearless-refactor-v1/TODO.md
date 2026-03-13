@@ -85,7 +85,7 @@ This file tracks the execution checklist for `DESIGN.md`.
 ## Product adoption and gates
 
 - [x] Sortable recipe gate added or strengthened.
-- [ ] Kanban gate added or strengthened.
+- [x] Kanban gate added or strengthened.
 - [ ] Docking tab hover/insert path verified against the new engine/controller shape.
 - [x] Carousel-vs-DnD arbitration gate remains green after adapter changes.
 

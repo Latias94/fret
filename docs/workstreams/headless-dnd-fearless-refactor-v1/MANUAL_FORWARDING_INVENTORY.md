@@ -7,25 +7,17 @@ This note captures the remaining first-party call sites that still hand-wire poi
 
 - Preferred path in first-party recipe/teaching surfaces:
   - `ecosystem/fret-ui-kit/src/recipes/sortable_dnd.rs`
+  - `ecosystem/fret-ui-shadcn/src/extras/kanban.rs`
   - `apps/fret-ui-gallery/src/ui/snippets/carousel/demo.rs`
+- Focused forwarder-backed gates now cover:
+  - `ecosystem/fret-ui-kit/src/recipes/sortable_dnd.rs`
+  - `ecosystem/fret-ui-shadcn/tests/kanban_dnd_forwarders.rs`
 - Remaining manual forwarding is now concentrated in flows that still need bespoke lifecycle
-  coupling beyond a simple pointer-region adapter.
+  coupling beyond an activation-only or cross-window hand-off seam.
 
 ## Remaining manual call sites
 
-### 1) Kanban card drag recipe
-
-- File: `ecosystem/fret-ui-shadcn/src/extras/kanban.rs`
-- Why still manual:
-  - card-local state still derives extra outputs from each DnD update (`translation`, `origin_rect`,
-    `over_side`),
-  - pointer capture intentionally starts on drag activation rather than on pointer-down,
-  - drop semantics mix card-vs-column targets and recipe-owned reorder policy.
-- Recommended next step:
-  - migrate to `DndPointerForwarders` with `capture_pointer_on_down(false)` and keep the extra
-    Kanban state updates in the `on_update` callback / wrapper closures.
-
-### 2) Workspace tab strip pre-drag detection
+### 1) Workspace tab strip pre-drag detection
 
 - Files:
   - `ecosystem/fret-workspace/src/tab_strip/mod.rs`
@@ -40,7 +32,7 @@ This note captures the remaining first-party call sites that still hand-wire poi
     sensor-only/activation-only wrapper, or whether workspace tabs should keep their specialized
     pre-drag path.
 
-### 3) Node insert pre-cross-window drag activation
+### 2) Node insert pre-cross-window drag activation
 
 - File: `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/pending.rs`
 - Why still manual:
