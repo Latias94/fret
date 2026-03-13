@@ -237,12 +237,6 @@ impl UiGalleryDriver {
             .models_mut()
             .insert(fret_ui_headless::calendar::CalendarMonth::from_date(today));
         let date_picker_selected = app.models_mut().insert(None::<Date>);
-        #[cfg(feature = "gallery-material3")]
-        let time_picker_open = app.models_mut().insert(false);
-        #[cfg(feature = "gallery-material3")]
-        let time_picker_selected = app
-            .models_mut()
-            .insert(time::Time::from_hms(9, 41, 0).expect("valid time"));
 
         let mut data_table_state_value = fret_ui_headless::table::TableState::default();
         data_table_state_value.pagination.page_size = 25;
@@ -327,8 +321,6 @@ impl UiGalleryDriver {
         let material3_navigation_rail_value = app.models_mut().insert(Arc::<str>::from("search"));
         #[cfg(feature = "gallery-material3")]
         let material3_navigation_drawer_value = app.models_mut().insert(Arc::<str>::from("search"));
-        #[cfg(feature = "gallery-material3")]
-        let material3_modal_navigation_drawer_open = app.models_mut().insert(false);
         #[cfg(feature = "gallery-material3")]
         let material3_text_field_value = app.models_mut().insert(String::new());
         #[cfg(feature = "gallery-material3")]
@@ -478,10 +470,6 @@ impl UiGalleryDriver {
             date_picker_open,
             date_picker_month,
             date_picker_selected,
-            #[cfg(feature = "gallery-material3")]
-            time_picker_open,
-            #[cfg(feature = "gallery-material3")]
-            time_picker_selected,
             data_table_state,
             #[cfg(feature = "gallery-dev")]
             data_grid_selected_row,
@@ -535,8 +523,6 @@ impl UiGalleryDriver {
             material3_navigation_rail_value,
             #[cfg(feature = "gallery-material3")]
             material3_navigation_drawer_value,
-            #[cfg(feature = "gallery-material3")]
-            material3_modal_navigation_drawer_open,
             #[cfg(feature = "gallery-material3")]
             material3_text_field_value,
             #[cfg(feature = "gallery-material3")]

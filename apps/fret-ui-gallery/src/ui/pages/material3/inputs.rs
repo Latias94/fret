@@ -5,13 +5,8 @@ use crate::ui::snippets;
 
 use super::shared::{MATERIAL3_INTRO, render_material3_demo_page};
 
-pub(in crate::ui) fn preview_material3_date_picker(
-    cx: &mut UiCx<'_>,
-    open: Model<bool>,
-    month: Model<fret_ui_headless::calendar::CalendarMonth>,
-    selected: Model<Option<time::Date>>,
-) -> Vec<AnyElement> {
-    let demo = snippets::material3::date_picker::render(cx, open, month, selected);
+pub(in crate::ui) fn preview_material3_date_picker(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    let demo = snippets::material3::date_picker::render(cx);
 
     render_material3_demo_page(
         cx,
@@ -21,12 +16,8 @@ pub(in crate::ui) fn preview_material3_date_picker(
     )
 }
 
-pub(in crate::ui) fn preview_material3_time_picker(
-    cx: &mut UiCx<'_>,
-    open: Model<bool>,
-    selected: Model<time::Time>,
-) -> Vec<AnyElement> {
-    let demo = snippets::material3::time_picker::render(cx, open, selected);
+pub(in crate::ui) fn preview_material3_time_picker(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    let demo = snippets::material3::time_picker::render(cx);
 
     render_material3_demo_page(
         cx,

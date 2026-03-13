@@ -252,10 +252,6 @@ struct UiGalleryWindowState {
     date_picker_open: Model<bool>,
     date_picker_month: Model<fret_ui_headless::calendar::CalendarMonth>,
     date_picker_selected: Model<Option<Date>>,
-    #[cfg(feature = "gallery-material3")]
-    time_picker_open: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    time_picker_selected: Model<time::Time>,
     data_table_state: Model<fret_ui_headless::table::TableState>,
     #[cfg(feature = "gallery-dev")]
     data_grid_selected_row: Model<Option<u64>>,
@@ -309,8 +305,6 @@ struct UiGalleryWindowState {
     material3_navigation_rail_value: Model<Arc<str>>,
     #[cfg(feature = "gallery-material3")]
     material3_navigation_drawer_value: Model<Arc<str>>,
-    #[cfg(feature = "gallery-material3")]
-    material3_modal_navigation_drawer_open: Model<bool>,
     #[cfg(feature = "gallery-material3")]
     material3_text_field_value: Model<String>,
     #[cfg(feature = "gallery-material3")]
@@ -379,10 +373,6 @@ impl UiGalleryWindowState {
             date_picker_open: self.date_picker_open.clone(),
             date_picker_month: self.date_picker_month.clone(),
             date_picker_selected: self.date_picker_selected.clone(),
-            #[cfg(feature = "gallery-material3")]
-            time_picker_open: self.time_picker_open.clone(),
-            #[cfg(feature = "gallery-material3")]
-            time_picker_selected: self.time_picker_selected.clone(),
             data_table_state: self.data_table_state.clone(),
             #[cfg(feature = "gallery-dev")]
             data_grid_selected_row: self.data_grid_selected_row.clone(),
@@ -417,10 +407,6 @@ impl UiGalleryWindowState {
             material3_navigation_rail_value: self.material3_navigation_rail_value.clone(),
             #[cfg(feature = "gallery-material3")]
             material3_navigation_drawer_value: self.material3_navigation_drawer_value.clone(),
-            #[cfg(feature = "gallery-material3")]
-            material3_modal_navigation_drawer_open: self
-                .material3_modal_navigation_drawer_open
-                .clone(),
             #[cfg(feature = "gallery-material3")]
             material3_text_field_value: self.material3_text_field_value.clone(),
             #[cfg(feature = "gallery-material3")]

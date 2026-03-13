@@ -88,10 +88,8 @@ pub(in crate::ui) fn preview_material3_navigation_drawer(
 
 pub(in crate::ui) fn preview_material3_modal_navigation_drawer(
     cx: &mut UiCx<'_>,
-    open: Model<bool>,
-    value: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
-    let demo = snippets::material3::modal_navigation_drawer::render(cx, open, value);
+    let demo = snippets::material3::modal_navigation_drawer::render(cx);
 
     render_material3_demo_page(
         cx,

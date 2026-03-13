@@ -41,11 +41,6 @@ pub(crate) struct UiGalleryModels {
     pub(crate) date_picker_month: Model<fret_ui_headless::calendar::CalendarMonth>,
     pub(crate) date_picker_selected: Model<Option<Date>>,
 
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) time_picker_open: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) time_picker_selected: Model<time::Time>,
-
     pub(crate) data_table_state: Model<fret_ui_headless::table::TableState>,
     #[cfg(feature = "gallery-dev")]
     pub(crate) data_grid_selected_row: Model<Option<u64>>,
@@ -84,8 +79,6 @@ pub(crate) struct UiGalleryModels {
     pub(crate) material3_navigation_rail_value: Model<Arc<str>>,
     #[cfg(feature = "gallery-material3")]
     pub(crate) material3_navigation_drawer_value: Model<Arc<str>>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_modal_navigation_drawer_open: Model<bool>,
     #[cfg(feature = "gallery-material3")]
     pub(crate) material3_text_field_value: Model<String>,
     #[cfg(feature = "gallery-material3")]

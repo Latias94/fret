@@ -7,11 +7,11 @@ use fret_ui::action::OnActivate;
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    open: Model<bool>,
-    selected: Model<time::Time>,
-) -> AnyElement {
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let dialog = material3::TimePickerDialog::uncontrolled(cx);
+    let open = dialog.open_model();
+    let selected = dialog.selected_model();
+
     let open_dialog: OnActivate = {
         let open = open.clone();
         Arc::new(move |host, action_cx, _reason| {
@@ -29,7 +29,7 @@ pub fn render<H: UiHost>(
         selected_value.minute()
     ));
 
-    material3::TimePickerDialog::new(open, selected.clone())
+    dialog
         .test_id("ui-gallery-material3-time-picker")
         .into_element(cx, move |cx| {
             ui::v_stack(move |cx| {

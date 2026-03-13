@@ -26,6 +26,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::{OverlayController, OverlayPresence};
@@ -291,6 +292,39 @@ impl TimePickerDialog {
             on_dismiss_request: None,
             test_id: None,
         }
+    }
+
+    /// Creates a time picker dialog with controlled/uncontrolled open and selected-time models.
+    ///
+    /// When a model is `None`, it is stored at the root call site and initialized from the
+    /// corresponding default value.
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: Option<Model<bool>>,
+        default_open: bool,
+        selected: Option<Model<Time>>,
+        default_selected: Time,
+    ) -> Self {
+        let open = controllable_state::use_controllable_model(cx, open, || default_open).model();
+        let selected =
+            controllable_state::use_controllable_model(cx, selected, || default_selected).model();
+        Self::new(open, selected)
+    }
+
+    /// Default teaching-surface constructor for a time picker dialog that owns its root models.
+    pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {
+        Self::new_controllable(cx, None, false, None, default_time())
+    }
+
+    /// Returns the resolved open model, including the internally owned model for uncontrolled use.
+    pub fn open_model(&self) -> Model<bool> {
+        self.open.clone()
+    }
+
+    /// Returns the resolved selected-time model, including the internally owned model for
+    /// uncontrolled use.
+    pub fn selected_model(&self) -> Model<Time> {
+        self.selected.clone()
     }
 
     pub fn is_24h(mut self, is_24h: bool) -> Self {
@@ -2672,8 +2706,9 @@ fn absolute_fill_layout() -> LayoutStyle {
 mod tests {
     use super::*;
     use fret_app::App;
-    use fret_core::{Point, Rect, Size};
+    use fret_core::{AppWindowId, Point, Rect, Size};
     use fret_ui::element::{ElementKind, Length, TextProps};
+    use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 
     fn bounds() -> Rect {
         Rect::new(
@@ -2694,7 +2729,7 @@ mod tests {
 
     #[test]
     fn time_picker_titles_can_truncate_beside_mode_toggle() {
-        let window = fret_core::AppWindowId::default();
+        let window = AppWindowId::default();
         let mut app = App::new();
         let selected_time = Time::from_hms(10, 15, 0).expect("time");
         let time_model = app.models_mut().insert(selected_time);
@@ -2736,5 +2771,82 @@ mod tests {
         assert_eq!(title.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(title.layout.flex.grow, 1.0);
         assert_eq!(title.layout.flex.basis, Length::Px(Px(0.0)));
+    }
+
+    #[test]
+    fn time_picker_dialog_new_controllable_uses_controlled_models_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let controlled_open = app.models_mut().insert(true);
+        let controlled_selected = app
+            .models_mut()
+            .insert(Time::from_hms(21, 30, 0).expect("time"));
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-time-picker-controlled",
+            |cx| {
+                let dialog = TimePickerDialog::new_controllable(
+                    cx,
+                    Some(controlled_open.clone()),
+                    false,
+                    Some(controlled_selected.clone()),
+                    default_time(),
+                );
+                assert_eq!(dialog.open_model(), controlled_open);
+                assert_eq!(dialog.selected_model(), controlled_selected);
+            },
+        );
+    }
+
+    #[test]
+    fn time_picker_dialog_new_controllable_applies_defaults() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let default_selected = Time::from_hms(8, 45, 0).expect("time");
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-time-picker-defaults",
+            |cx| {
+                let dialog =
+                    TimePickerDialog::new_controllable(cx, None, true, None, default_selected);
+                let open = cx
+                    .watch_model(&dialog.open_model())
+                    .layout()
+                    .copied()
+                    .unwrap_or(false);
+                let selected = cx
+                    .watch_model(&dialog.selected_model())
+                    .layout()
+                    .copied()
+                    .unwrap_or_else(default_time);
+                assert!(open);
+                assert_eq!(selected, default_selected);
+            },
+        );
+    }
+
+    #[test]
+    fn time_picker_dialog_uncontrolled_multiple_instances_do_not_share_models() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-time-picker-uncontrolled-scope",
+            |cx| {
+                let a = TimePickerDialog::uncontrolled(cx);
+                let b = TimePickerDialog::uncontrolled(cx);
+                assert_ne!(a.open_model(), b.open_model());
+                assert_ne!(a.selected_model(), b.selected_model());
+            },
+        );
     }
 }

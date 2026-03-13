@@ -303,10 +303,6 @@ fn page_preview(
     let date_picker_open = models.date_picker_open.clone();
     let date_picker_month = models.date_picker_month.clone();
     let date_picker_selected = models.date_picker_selected.clone();
-    #[cfg(feature = "gallery-material3")]
-    let time_picker_open = models.time_picker_open.clone();
-    #[cfg(feature = "gallery-material3")]
-    let time_picker_selected = models.time_picker_selected.clone();
     let data_table_state = models.data_table_state.clone();
     #[cfg(feature = "gallery-dev")]
     let data_grid_selected_row = models.data_grid_selected_row.clone();
@@ -341,9 +337,6 @@ fn page_preview(
     let material3_navigation_rail_value = models.material3_navigation_rail_value.clone();
     #[cfg(feature = "gallery-material3")]
     let material3_navigation_drawer_value = models.material3_navigation_drawer_value.clone();
-    #[cfg(feature = "gallery-material3")]
-    let material3_modal_navigation_drawer_open =
-        models.material3_modal_navigation_drawer_open.clone();
     #[cfg(feature = "gallery-material3")]
     let material3_text_field_value = models.material3_text_field_value.clone();
     #[cfg(feature = "gallery-material3")]
@@ -735,22 +728,13 @@ fn page_preview(
         #[cfg(feature = "gallery-material3")]
         PAGE_MATERIAL3_DATE_PICKER => {
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-                pages::material3::preview_material3_date_picker(
-                    cx,
-                    date_picker_open,
-                    date_picker_month,
-                    date_picker_selected,
-                )
+                pages::material3::preview_material3_date_picker(cx)
             })
         }
         #[cfg(feature = "gallery-material3")]
         PAGE_MATERIAL3_TIME_PICKER => {
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-                pages::material3::preview_material3_time_picker(
-                    cx,
-                    time_picker_open,
-                    time_picker_selected,
-                )
+                pages::material3::preview_material3_time_picker(cx)
             })
         }
         #[cfg(feature = "gallery-material3")]
@@ -828,11 +812,7 @@ fn page_preview(
         #[cfg(feature = "gallery-material3")]
         PAGE_MATERIAL3_MODAL_NAVIGATION_DRAWER => {
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-                pages::material3::preview_material3_modal_navigation_drawer(
-                    cx,
-                    material3_modal_navigation_drawer_open,
-                    material3_navigation_drawer_value,
-                )
+                pages::material3::preview_material3_modal_navigation_drawer(cx)
             })
         }
         #[cfg(feature = "gallery-material3")]

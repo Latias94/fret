@@ -463,6 +463,10 @@ mod tests {
             ("dropdown_menu.rs", include_str!("dropdown_menu.rs")),
             ("dialog.rs", include_str!("dialog.rs")),
             ("bottom_sheet.rs", include_str!("bottom_sheet.rs")),
+            (
+                "modal_navigation_drawer.rs",
+                include_str!("modal_navigation_drawer.rs"),
+            ),
         ];
 
         let required_markers = [
@@ -561,6 +565,47 @@ mod tests {
             assert!(
                 normalized.contains(&marker),
                 "select.rs should keep `new(selected_value)` as the explicit controlled seam and expose `new_controllable(...)`, `uncontrolled(cx)`, and `value_model()` for copyable teaching surfaces"
+            );
+        }
+    }
+
+    #[test]
+    fn material3_date_picker_dialog_offers_uncontrolled_copyable_open_month_and_selected_paths() {
+        let normalized = normalize_ws(include_str!("date_picker.rs"));
+        let required_markers = [
+            "pub fn new( open: Model<bool>, month: Model<CalendarMonth>, selected: Model<Option<Date>>, ) -> Self {",
+            "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, month: Option<Model<CalendarMonth>>, default_month: CalendarMonth, selected: Option<Model<Option<Date>>>, default_selected: Option<Date>, ) -> Self {",
+            "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {",
+            "pub fn open_model(&self) -> Model<bool> {",
+            "pub fn month_model(&self) -> Model<CalendarMonth> {",
+            "pub fn selected_model(&self) -> Model<Option<Date>> {",
+        ];
+
+        for marker in required_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                normalized.contains(&marker),
+                "date_picker.rs should keep `new(open, month, selected)` as the explicit controlled seam and expose `new_controllable(...)`, `uncontrolled(cx)`, `open_model()`, `month_model()`, and `selected_model()` for copyable teaching surfaces"
+            );
+        }
+    }
+
+    #[test]
+    fn material3_time_picker_dialog_offers_uncontrolled_copyable_open_and_selected_paths() {
+        let normalized = normalize_ws(include_str!("time_picker.rs"));
+        let required_markers = [
+            "pub fn new(open: Model<bool>, selected: Model<Time>) -> Self {",
+            "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, selected: Option<Model<Time>>, default_selected: Time, ) -> Self {",
+            "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {",
+            "pub fn open_model(&self) -> Model<bool> {",
+            "pub fn selected_model(&self) -> Model<Time> {",
+        ];
+
+        for marker in required_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                normalized.contains(&marker),
+                "time_picker.rs should keep `new(open, selected)` as the explicit controlled seam and expose `new_controllable(...)`, `uncontrolled(cx)`, `open_model()`, and `selected_model()` for copyable teaching surfaces"
             );
         }
     }

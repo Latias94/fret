@@ -16,7 +16,6 @@ pub fn render<H: UiHost>(
     let default_dialog = material3::Dialog::uncontrolled(cx);
     let open = default_dialog.open_model();
     let override_open = cx.local_model_keyed("override_open", || false);
-    let selected = cx.local_model_keyed("selected", || None::<Arc<str>>);
 
     let is_open = cx
         .get_model_copied(&open, Invalidation::Layout)
@@ -149,7 +148,6 @@ pub fn render<H: UiHost>(
                         .gap(Space::N4).into_element(cx)
             },
             {
-                let selected = selected.clone();
                 let select_items = select_items.clone();
                 move |cx| {
                     let spacer = cx.container(
@@ -167,7 +165,7 @@ pub fn render<H: UiHost>(
 
                     vec![ui::v_flex(move |cx| {
                             vec![
-                                material3::Select::new(selected.clone())
+                                material3::Select::uncontrolled(cx)
                                     .a11y_label("Material 3 Select (dialog)")
                                     .placeholder("Pick one")
                                     .items(select_items.clone())
@@ -178,7 +176,7 @@ pub fn render<H: UiHost>(
                                     "Bottom-edge clamping probe: open the Select menu near the window bottom.",
                                 ),
                                 spacer,
-                                material3::Select::new(selected.clone())
+                                material3::Select::uncontrolled(cx)
                                     .a11y_label("Material 3 Select (dialog, bottom)")
                                     .placeholder("Pick one")
                                     .items(select_items.clone())
