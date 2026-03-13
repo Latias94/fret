@@ -99,6 +99,45 @@ use fret_ui_shadcn::{
     DropdownMenuSide,
 };
 
+const WORKSPACE_TAB_DRAG_ACTIVATION_THRESHOLD_PX: f32 = 6.0;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WorkspaceTabDragActivationDecision {
+    Pending,
+    StartFromSensor,
+    StartFromDistanceFallback,
+}
+
+fn workspace_tab_drag_distance_threshold_reached(start: Point, current: Point) -> bool {
+    let dx = current.x.0 - start.x.0;
+    let dy = current.y.0 - start.y.0;
+    let dist2 = (dx * dx) + (dy * dy);
+    dist2
+        >= (WORKSPACE_TAB_DRAG_ACTIVATION_THRESHOLD_PX * WORKSPACE_TAB_DRAG_ACTIVATION_THRESHOLD_PX)
+}
+
+fn workspace_tab_drag_activation_decision(
+    sensor: ui_dnd::SensorOutput,
+    start: Point,
+    current: Point,
+) -> WorkspaceTabDragActivationDecision {
+    if matches!(sensor, ui_dnd::SensorOutput::DragStart { .. }) {
+        WorkspaceTabDragActivationDecision::StartFromSensor
+    } else if workspace_tab_drag_distance_threshold_reached(start, current) {
+        WorkspaceTabDragActivationDecision::StartFromDistanceFallback
+    } else {
+        WorkspaceTabDragActivationDecision::Pending
+    }
+}
+
+fn workspace_tab_release_treats_pointer_as_drag(
+    dragging: bool,
+    start: Point,
+    current: Point,
+) -> bool {
+    dragging || workspace_tab_drag_distance_threshold_reached(start, current)
+}
+
 #[derive(Debug, Clone)]
 pub struct WorkspaceTab {
     pub id: Arc<str>,
@@ -758,6 +797,20 @@ impl WorkspaceTabStrip {
                                                             ),
                                                         );
 
+                                                        let activation_probe =
+                                                            ui_dnd::DndActivationProbe::new(
+                                                                dnd.clone(),
+                                                                ui_dnd::DndActivationProbeConfig::for_kind(
+                                                                    DRAG_KIND_WORKSPACE_TAB,
+                                                                )
+                                                                .scope(dnd_scope)
+                                                                .activation_constraint(
+                                                                    ui_dnd::ActivationConstraint::Distance {
+                                                                        px: WORKSPACE_TAB_DRAG_ACTIVATION_THRESHOLD_PX,
+                                                                    },
+                                                                ),
+                                                            );
+
                                                         let dnd_on_move: OnPressablePointerMove = {
                                                             let drag_model = drag_model.clone();
                                                             let tab_command = tab_drag_command.clone();
@@ -765,7 +818,8 @@ impl WorkspaceTabStrip {
                                                             let tab_drag_model = tab_drag_model_for_drag.clone();
                                                             let source_pane = pane_id_for_drag.clone();
                                                             let dragged_tab_id = tab_id.clone();
-                                                            let dnd = dnd.clone();
+                                                            let activation_probe =
+                                                                activation_probe.clone();
                                                             let scroll_handle = scroll_handle.clone();
                                                             let pinned_by_id = pinned_by_id.clone();
                                                             let canonical_tab_order = canonical_tab_order.clone();
@@ -813,51 +867,30 @@ impl WorkspaceTabStrip {
                                                                     let sensor_position = mv
                                                                         .position_window
                                                                         .unwrap_or(mv.position);
-                                                                    let sensor =
-                                                                        ui_dnd::handle_sensor_move_or_init_in_scope(
-                                                                            host.models_mut(),
-                                                                            &dnd,
-                                                                            acx.window,
-                                                                            DRAG_KIND_WORKSPACE_TAB,
-                                                                            dnd_scope,
-                                                                            mv.pointer_id,
-                                                                            start_tick,
+                                                                    let sensor = activation_probe.move_or_init(
+                                                                        host.models_mut(),
+                                                                        acx.window,
+                                                                        mv.pointer_id,
+                                                                        start_tick,
+                                                                        sensor_start,
+                                                                        sensor_position,
+                                                                        mv.tick_id,
+                                                                    );
+                                                                    if matches!(
+                                                                        workspace_tab_drag_activation_decision(
+                                                                            sensor,
                                                                             sensor_start,
                                                                             sensor_position,
-                                                                            mv.tick_id,
-                                                                            ui_dnd::ActivationConstraint::Distance {
-                                                                                px: 6.0,
-                                                                            },
-                                                                        );
-                                                                    if !matches!(
-                                                                        sensor,
-                                                                        ui_dnd::SensorOutput::DragStart { .. }
+                                                                        ),
+                                                                        WorkspaceTabDragActivationDecision::Pending
                                                                     ) {
-                                                                        // Defensive fallback: some synthetic/scripted pointer
-                                                                        // injections can produce move events that do not advance the
-                                                                        // DnD sensor in the way we expect (tick quirks, transport
-                                                                        // differences). Keep the user-visible behavior stable by
-                                                                        // falling back to a simple distance threshold.
-                                                                        let dx =
-                                                                            sensor_position.x.0
-                                                                                - sensor_start.x.0;
-                                                                        let dy =
-                                                                            sensor_position.y.0
-                                                                                - sensor_start.y.0;
-                                                                        let dist2 = (dx * dx) + (dy * dy);
-                                                                        if dist2 < (6.0 * 6.0) {
-                                                                            return false;
-                                                                        }
+                                                                        // Stay pending until either the DnD sensor activates or the
+                                                                        // defensive distance fallback is reached. Some synthetic or
+                                                                        // scripted pointer injections do not advance the sensor the
+                                                                        // same way as normal runner-delivered events.
+                                                                        return false;
                                                                     }
                                                                     activate_on_drag_start = true;
-                                                                    ui_dnd::clear_pointer_in_scope(
-                                                                        host.models_mut(),
-                                                                        &dnd,
-                                                                        acx.window,
-                                                                        DRAG_KIND_WORKSPACE_TAB,
-                                                                        dnd_scope,
-                                                                        mv.pointer_id,
-                                                                    );
                                                                 }
 
                                                                 let hit_position =
@@ -950,19 +983,25 @@ impl WorkspaceTabStrip {
                                                                         });
                                                                     }
 
-                                                                    host.begin_cross_window_drag_with_kind(
-                                                                        mv.pointer_id,
-                                                                        DRAG_KIND_WORKSPACE_TAB,
+                                                                    ui_dnd::complete_cross_window_drag_activation_for_action_host(
+                                                                        host,
+                                                                        &activation_probe,
                                                                         acx.window,
-                                                                        mv.position_window
-                                                                            .unwrap_or(mv.position),
+                                                                        mv.pointer_id,
+                                                                        |host| {
+                                                                            host.begin_cross_window_drag_with_kind(
+                                                                                mv.pointer_id,
+                                                                                DRAG_KIND_WORKSPACE_TAB,
+                                                                                acx.window,
+                                                                                hit_position,
+                                                                            );
+                                                                            if let Some(drag) =
+                                                                                host.drag_mut(mv.pointer_id)
+                                                                            {
+                                                                                drag.position = hit_position;
+                                                                            }
+                                                                        },
                                                                     );
-                                                                    if let Some(drag) = host.drag_mut(mv.pointer_id) {
-                                                                        drag.position = mv
-                                                                            .position_window
-                                                                            .unwrap_or(mv.position);
-                                                                        drag.dragging = true;
-                                                                    }
                                                                 }
 
                                                                 // Keep the drag session position fresh on every move so other
@@ -1046,7 +1085,8 @@ impl WorkspaceTabStrip {
                                                             let drag_model = drag_model.clone();
                                                             let tab_command = tab_drag_command.clone();
                                                             let tab_drag_model = tab_drag_model_for_drag.clone();
-                                                            let dnd = dnd.clone();
+                                                            let activation_probe =
+                                                                activation_probe.clone();
                                                             let pinned_by_id = pinned_by_id.clone();
                                                             let canonical_tab_order = canonical_tab_order.clone();
                                                             let two_row_pinned = use_separate_pinned_row;
@@ -1059,12 +1099,9 @@ impl WorkspaceTabStrip {
                                                                     .drag(up.pointer_id)
                                                                     .map(|session| session.position);
 
-                                                                ui_dnd::clear_pointer_in_scope(
+                                                                activation_probe.clear(
                                                                     host.models_mut(),
-                                                                    &dnd,
                                                                     acx.window,
-                                                                    DRAG_KIND_WORKSPACE_TAB,
-                                                                    dnd_scope,
                                                                     up.pointer_id,
                                                                 );
 
@@ -1075,10 +1112,11 @@ impl WorkspaceTabStrip {
                                                                     if st.pointer != Some(up.pointer_id) {
                                                                         return;
                                                                     }
-                                                                    let dx = up.position.x.0 - st.start_position.x.0;
-                                                                    let dy = up.position.y.0 - st.start_position.y.0;
-                                                                    let dist2 = (dx * dx) + (dy * dy);
-                                                                    let treat_as_drag = st.dragging || dist2 >= (6.0 * 6.0);
+                                                                    let treat_as_drag = workspace_tab_release_treats_pointer_as_drag(
+                                                                        st.dragging,
+                                                                        st.start_position,
+                                                                        up.position,
+                                                                    );
 
                                                                     if treat_as_drag {
                                                                         outcome = PressablePointerUpResult::SkipActivate;
@@ -2954,5 +2992,59 @@ impl WorkspaceTabStrip {
                     vec![root]
             },
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_core::PointerId;
+
+    #[test]
+    fn workspace_tab_drag_activation_uses_distance_fallback_when_sensor_is_pending() {
+        let start = Point::new(Px(0.0), Px(0.0));
+        let current = Point::new(Px(WORKSPACE_TAB_DRAG_ACTIVATION_THRESHOLD_PX), Px(0.0));
+
+        let decision =
+            workspace_tab_drag_activation_decision(ui_dnd::SensorOutput::Pending, start, current);
+
+        assert_eq!(
+            decision,
+            WorkspaceTabDragActivationDecision::StartFromDistanceFallback
+        );
+    }
+
+    #[test]
+    fn workspace_tab_drag_activation_prefers_sensor_start_when_available() {
+        let start = Point::new(Px(0.0), Px(0.0));
+        let current = Point::new(Px(1.0), Px(0.0));
+
+        let decision = workspace_tab_drag_activation_decision(
+            ui_dnd::SensorOutput::DragStart {
+                pointer_id: PointerId(0),
+                start,
+                position: current,
+            },
+            start,
+            current,
+        );
+
+        assert_eq!(
+            decision,
+            WorkspaceTabDragActivationDecision::StartFromSensor
+        );
+    }
+
+    #[test]
+    fn workspace_tab_release_treats_started_drag_as_drag_even_below_threshold() {
+        let start = Point::new(Px(0.0), Px(0.0));
+        let current = Point::new(Px(1.0), Px(0.0));
+
+        assert!(workspace_tab_release_treats_pointer_as_drag(
+            true, start, current
+        ));
+        assert!(!workspace_tab_release_treats_pointer_as_drag(
+            false, start, current
+        ));
     }
 }

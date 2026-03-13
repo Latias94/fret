@@ -9,7 +9,8 @@ use std::sync::Arc;
 use fret_core::{Modifiers, MouseButton, PointerId, Px};
 use fret_runtime::{DragKindId, Model};
 use fret_ui::action::{
-    OnPointerDown, OnPointerMove, OnPointerUp, PointerDownCx, PointerMoveCx, PointerUpCx,
+    OnPointerCancel, OnPointerDown, OnPointerMove, OnPointerUp, PointerCancelCx, PointerDownCx,
+    PointerMoveCx, PointerUpCx,
 };
 use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, PointerRegionProps};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -18,8 +19,9 @@ use crate::Space;
 use crate::declarative::model_watch::ModelWatchExt as _;
 use crate::dnd;
 use crate::dnd::{
-    ActivationConstraint, Axis, CollisionStrategy, DndItemId, DndScopeId, InsertionSide,
-    SensorOutput, insertion_side_for_pointer,
+    ActivationConstraint, Axis, CollisionStrategy, DndItemId, DndPointerForwarders,
+    DndPointerForwardersConfig, DndScopeId, DndUpdate, InsertionSide, SensorOutput,
+    insertion_side_for_pointer,
 };
 use crate::ui;
 
@@ -74,7 +76,7 @@ fn get_state_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<SortableD
 
 /// Sortable/reorder helper:
 /// - renders a list driven by `items` (a `Vec<DndItemId>`),
-/// - captures pointer and tracks a per-pointer `PointerSensor`,
+/// - routes pointer events through `DndPointerForwarders`,
 /// - on drop, mutates `items` by moving the active id to the `over` position.
 ///
 /// Notes:
@@ -131,15 +133,58 @@ where
         let state_on_down = state.clone();
         let state_on_move = state.clone();
         let state_on_up = state.clone();
+        let state_on_cancel = state.clone();
         let items_on_up = items.clone();
-        let dnd_on_down = dnd.clone();
-        let dnd_on_move = dnd.clone();
         let dnd_on_up = dnd.clone();
+        let on_update_state = state.clone();
+        let on_update = Arc::new(
+            move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                  action_cx: fret_ui::action::ActionCx,
+                  update: &DndUpdate| {
+                let (pointer_id, over) = match update.sensor {
+                    SensorOutput::DragStart { pointer_id, .. }
+                    | SensorOutput::DragMove { pointer_id, .. } => (pointer_id, update.over),
+                    _ => return,
+                };
+
+                let mut changed = false;
+                let _ = host.models_mut().update(&on_update_state, |st| {
+                    let Some(state) = st.pointers.get_mut(&pointer_id) else {
+                        return;
+                    };
+                    state.dragging = true;
+                    if let Some(over) = over {
+                        state.over = over;
+                    }
+                    changed = true;
+                });
+
+                if changed {
+                    host.request_redraw(action_cx.window);
+                }
+            },
+        );
 
         let el = cx.keyed(id.0, |cx| {
             let mut pr = PointerRegionProps::default();
             pr.layout.size.width = Length::Fill;
             pr.layout.size.height = Length::Px(row_height);
+
+            let forwarders = DndPointerForwarders::new(
+                dnd.clone(),
+                frame_id,
+                DndPointerForwardersConfig::for_kind(DRAG_KIND_SORTABLE_REORDER)
+                    .scope(scope)
+                    .activation_constraint(activation)
+                    .collision_strategy(collision_strategy)
+                    .consume_events(false)
+                    .on_update(on_update.clone()),
+            );
+            let down_forwarder = forwarders.on_pointer_down();
+            let move_forwarder = forwarders.on_pointer_move();
+            let up_forwarder = forwarders.on_pointer_up();
+            let cancel_forwarder = forwarders.on_pointer_cancel();
+            let cancel_forwarder_on_move = cancel_forwarder.clone();
 
             let on_down: OnPointerDown = Arc::new(move |host, action_cx, down: PointerDownCx| {
                 if down.button != MouseButton::Left {
@@ -151,47 +196,41 @@ where
                     return false;
                 }
 
-                host.capture_pointer();
+                let window = action_cx.window;
+                let pointer_id = down.pointer_id;
+                let _ = down_forwarder(host, action_cx, down);
 
-                let _ = dnd::handle_pointer_down_in_scope(
-                    host.models_mut(),
-                    &dnd_on_down,
-                    action_cx.window,
-                    frame_id,
-                    DRAG_KIND_SORTABLE_REORDER,
-                    scope,
-                    down.pointer_id,
-                    down.position,
-                    down.tick_id,
-                    activation,
-                    collision_strategy,
-                    None,
-                );
-
-                let _ = host.models_mut().update(&state_on_down, |st| {
-                    st.pointers.insert(
-                        down.pointer_id,
-                        SortablePointerState {
-                            active: id,
-                            over: id,
-                            dragging: false,
-                        },
-                    );
-                });
-                host.request_redraw(action_cx.window);
-                true
+                let inserted = host
+                    .models_mut()
+                    .update(&state_on_down, |st| {
+                        st.pointers.insert(
+                            pointer_id,
+                            SortablePointerState {
+                                active: id,
+                                over: id,
+                                dragging: false,
+                            },
+                        );
+                    })
+                    .is_ok();
+                if inserted {
+                    host.request_redraw(window);
+                }
+                inserted
             });
 
-            let on_move: OnPointerMove = Arc::new(move |host, _action_cx, mv: PointerMoveCx| {
+            let on_move: OnPointerMove = Arc::new(move |host, action_cx, mv: PointerMoveCx| {
+                let window = action_cx.window;
+                let pointer_id = mv.pointer_id;
                 let mut tracked = false;
                 let mut canceled = false;
                 let _ = host.models_mut().update(&state_on_move, |st| {
-                    if !st.pointers.contains_key(&mv.pointer_id) {
+                    if !st.pointers.contains_key(&pointer_id) {
                         return;
                     }
                     tracked = true;
                     if !mv.buttons.left {
-                        st.pointers.remove(&mv.pointer_id);
+                        st.pointers.remove(&pointer_id);
                         canceled = true;
                     }
                 });
@@ -201,57 +240,35 @@ where
                 }
 
                 if canceled {
-                    let _ = dnd::handle_pointer_cancel_in_scope(
-                        host.models_mut(),
-                        &dnd_on_move,
-                        _action_cx.window,
-                        frame_id,
-                        DRAG_KIND_SORTABLE_REORDER,
-                        scope,
-                        mv.pointer_id,
-                        mv.position,
-                        mv.tick_id,
-                        activation,
-                        collision_strategy,
-                        None,
+                    let _ = cancel_forwarder_on_move(
+                        host,
+                        action_cx,
+                        PointerCancelCx {
+                            pointer_id,
+                            position: Some(mv.position),
+                            position_local: Some(mv.position_local),
+                            position_window: mv.position_window,
+                            buttons: mv.buttons,
+                            modifiers: mv.modifiers,
+                            pointer_type: mv.pointer_type,
+                            tick_id: mv.tick_id,
+                            pixels_per_point: mv.pixels_per_point,
+                            reason: fret_core::PointerCancelReason::LeftWindow,
+                        },
                     );
-                    host.release_pointer_capture();
-                    host.request_redraw(_action_cx.window);
+                    host.request_redraw(window);
                     return true;
                 }
 
-                let dnd_update = dnd::handle_pointer_move_in_scope(
-                    host.models_mut(),
-                    &dnd_on_move,
-                    _action_cx.window,
-                    frame_id,
-                    DRAG_KIND_SORTABLE_REORDER,
-                    scope,
-                    mv.pointer_id,
-                    mv.position,
-                    mv.tick_id,
-                    activation,
-                    collision_strategy,
-                    None,
-                );
+                let _ = move_forwarder(host, action_cx, mv);
 
-                if matches!(
-                    dnd_update.sensor,
-                    SensorOutput::DragStart { .. } | SensorOutput::DragMove { .. }
-                ) {
-                    let _ = host.models_mut().update(&state_on_move, |st| {
-                        let Some(state) = st.pointers.get_mut(&mv.pointer_id) else {
-                            return;
-                        };
-                        state.dragging = true;
-                        if let Some(over) = dnd_update.over {
-                            state.over = over;
-                        }
-                    });
-                    host.request_redraw(_action_cx.window);
-                    return true;
-                }
-                false
+                host.models_mut()
+                    .read(&state_on_move, |st| {
+                        st.pointers
+                            .get(&pointer_id)
+                            .is_some_and(|state| state.dragging)
+                    })
+                    .unwrap_or(false)
             });
 
             let on_up: OnPointerUp = Arc::new(move |host, action_cx, up: PointerUpCx| {
@@ -259,12 +276,15 @@ where
                     return false;
                 }
 
+                let window = action_cx.window;
+                let pointer_id = up.pointer_id;
+                let up_position = up.position;
                 let mut moved = false;
                 let mut reorder: Option<(DndItemId, DndItemId)> = None;
                 let mut had_pointer = false;
 
                 let _ = host.models_mut().update(&state_on_up, |st| {
-                    let Some(state) = st.pointers.remove(&up.pointer_id) else {
+                    let Some(state) = st.pointers.remove(&pointer_id) else {
                         return;
                     };
                     had_pointer = true;
@@ -277,33 +297,19 @@ where
                     return false;
                 }
 
-                let _ = dnd::handle_pointer_up_in_scope(
-                    host.models_mut(),
-                    &dnd_on_up,
-                    action_cx.window,
-                    frame_id,
-                    DRAG_KIND_SORTABLE_REORDER,
-                    scope,
-                    up.pointer_id,
-                    up.position,
-                    up.tick_id,
-                    activation,
-                    collision_strategy,
-                    None,
-                );
-                host.release_pointer_capture();
+                let _ = up_forwarder(host, action_cx, up);
 
                 if let Some((active, over)) = reorder {
                     let over_rect = dnd::droppable_rect_in_scope(
                         host.models_mut(),
                         &dnd_on_up,
-                        action_cx.window,
+                        window,
                         frame_id,
                         scope,
                         over,
                     );
                     let side = over_rect
-                        .map(|rect| insertion_side_for_pointer(up.position, rect, Axis::Y))
+                        .map(|rect| insertion_side_for_pointer(up_position, rect, Axis::Y))
                         .unwrap_or(InsertionSide::Before);
 
                     let _ = host.models_mut().update(&items_on_up, |ids| {
@@ -328,9 +334,26 @@ where
                     });
                 }
 
-                host.request_redraw(action_cx.window);
+                host.request_redraw(window);
                 moved
             });
+
+            let on_cancel: OnPointerCancel =
+                Arc::new(move |host, action_cx, cancel: PointerCancelCx| {
+                    let window = action_cx.window;
+                    let mut had_pointer = false;
+                    let _ = host.models_mut().update(&state_on_cancel, |st| {
+                        had_pointer = st.pointers.remove(&cancel.pointer_id).is_some();
+                    });
+
+                    if !had_pointer {
+                        return false;
+                    }
+
+                    let _ = cancel_forwarder(host, action_cx, cancel);
+                    host.request_redraw(window);
+                    true
+                });
 
             let bg = if active == Some(id) {
                 Some(row_active)
@@ -344,6 +367,7 @@ where
                 cx.pointer_region_on_pointer_down(on_down);
                 cx.pointer_region_on_pointer_move(on_move);
                 cx.pointer_region_on_pointer_up(on_up);
+                cx.pointer_region_on_pointer_cancel(on_cancel);
 
                 let mut layout = LayoutStyle::default();
                 layout.size.width = Length::Fill;
@@ -1011,6 +1035,122 @@ mod tests {
             ui.captured_for(PointerId(0)).is_none(),
             "expected capture release when buttons are no longer pressed"
         );
+
+        let after = app.models().get_cloned(&items).unwrap_or_default();
+        assert_eq!(after, vec![DndItemId(1), DndItemId(2), DndItemId(3)]);
+    }
+
+    #[test]
+    fn sortable_reorder_clears_tracking_on_pointer_cancel() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let items = app
+            .models_mut()
+            .insert(vec![DndItemId(1), DndItemId(2), DndItemId(3)]);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+
+        let row_ids: Rc<RefCell<Vec<fret_ui::GlobalElementId>>> = Rc::new(RefCell::new(Vec::new()));
+
+        for _ in 0..2 {
+            bump_tick(&mut app);
+            bump_frame(&mut app);
+            let root = render(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                items.clone(),
+                &row_ids,
+                SortableReorderListProps {
+                    row_height: Px(32.0),
+                    activation: ActivationConstraint::Distance { px: 6.0 },
+                    collision_strategy: CollisionStrategy::ClosestCenter,
+                },
+            );
+            ui.set_root(root);
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let elements = row_ids.borrow().clone();
+        let nodes = elements
+            .iter()
+            .map(|&el| fret_ui::elements::node_for_element(&mut app, window, el).expect("node"))
+            .collect::<Vec<_>>();
+        let rects = nodes
+            .iter()
+            .map(|&n| ui.debug_node_bounds(n).expect("bounds"))
+            .collect::<Vec<_>>();
+
+        let start = Point::new(
+            Px(rects[0].origin.x.0 + rects[0].size.width.0 * 0.5),
+            Px(rects[0].origin.y.0 + rects[0].size.height.0 * 0.5),
+        );
+
+        let dnd = dnd::dnd_service_model_global(&mut app);
+
+        bump_tick(&mut app);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: start,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        assert!(ui.captured_for(PointerId(0)).is_some());
+        assert!(dnd::pointer_is_tracking_any_sensor(
+            app.models(),
+            &dnd,
+            window,
+            PointerId(0)
+        ));
+
+        bump_tick(&mut app);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::PointerCancel(fret_core::PointerCancelEvent {
+                pointer_id: PointerId(0),
+                position: Some(start),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+                reason: fret_core::PointerCancelReason::LeftWindow,
+            }),
+        );
+
+        assert!(
+            ui.captured_for(PointerId(0)).is_none(),
+            "expected pointer capture to be released after pointer cancel"
+        );
+        assert!(!dnd::pointer_is_tracking_any_sensor(
+            app.models(),
+            &dnd,
+            window,
+            PointerId(0)
+        ));
 
         let after = app.models().get_cloned(&items).unwrap_or_default();
         assert_eq!(after, vec![DndItemId(1), DndItemId(2), DndItemId(3)]);

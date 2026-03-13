@@ -20,6 +20,16 @@ This directory contains:
 - `DESIGN.md`: ownership, boundaries, current hazards, target architecture, parity plan
 - `TODO.md`: execution checklist
 - `MILESTONES.md`: staged acceptance criteria and gates
+- `CRATE_AUDIT.md`: boundary snapshot, current parity gaps, and landable follow-on steps
+- `DROPPABLE_METADATA_DECISION.md`: v1 decision note for `type` / `accept` / collision-hook
+  metadata
+- `MONITOR_SURFACE_DECISION.md`: v1 decision note for shared monitor/event-surface extraction
+- `KEYBOARD_SENSOR_DESIGN_NOTE.md`: follow-on ownership and behavior note for keyboard-driven DnD
+- `AUTO_SCROLL_DRIVER_DESIGN_NOTE.md`: follow-on ownership and extraction note for continuous
+  drag auto-scroll drivers
+- `MULTI_RECT_DROPPABLES_DECISION.md`: v1 decision note for one-droppable-many-rects support
+- `SORTABLE_GROUP_SEMANTICS_DECISION.md`: v1 decision note for sortable group/index transfer
+  semantics
 
 Primary contract references:
 
@@ -31,3 +41,16 @@ Primary contract references:
 Primary upstream reference:
 
 - `repo-ref/dnd-kit/`
+
+Current v1 scope decisions:
+
+- droppable metadata widening is deferred until at least two real consumers need the same shared
+  contract
+- monitor/event-surface extraction is deferred until at least two cross-cutting observers need the
+  same shared contract
+- modifier and auto-scroll core stay pure/data-only; actual scrolling side effects remain in
+  product/integration code
+- multi-rect droppables are deferred until at least two registry-driven consumers need the same
+  shared contract
+- sortable group semantics beyond the minimal insertion helper are deferred until at least two real
+  consumers need the same shared contract
