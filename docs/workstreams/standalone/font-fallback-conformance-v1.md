@@ -81,8 +81,10 @@ Expected:
   - The mixed-script sample traces (`m`, `你`, `😀`, `m你😀`) appear in both captures.
   - Those sample trace locales settle to `["en-US"]` in the BEFORE capture and `["zh-CN"]` in
     the AFTER capture.
+  - The sample trace classes stay `requested` for latin and `system_fallback` for CJK / emoji.
   - The mixed-script trace preserves `latin -> cjk -> emoji` family order while the CJK / emoji
-    sample families resolve outside the curated `common_fallback_candidates` lane.
+    sample families resolve outside the curated `common_fallback_candidates` lane, and the mixed
+    trace classes stay `requested -> system_fallback -> system_fallback`.
   - `frame_missing_glyphs` is `0` in both captures.
   - `fallback_policy_key` differs between the two labeled captures.
 
