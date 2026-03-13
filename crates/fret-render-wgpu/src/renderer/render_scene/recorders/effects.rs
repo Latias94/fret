@@ -1112,52 +1112,12 @@ pub(in super::super) fn record_custom_effect_v3_pass(
         exec.frame_perf.uniform_bytes = exec.frame_perf.uniform_bytes.saturating_add(48);
     }
 
-    let Some(src_view) = exec.require_color_src_view(common.src, common.src_size, "CustomEffectV3")
-    else {
+    let Some(source_views) = exec.prepare_custom_effect_v3_source_views(pass) else {
         return;
     };
-    let Some(src_raw_view) =
-        exec.require_color_src_view(pass.src_raw, common.src_size, "CustomEffectV3")
-    else {
-        return;
-    };
-
-    let pyramid_override_view = if pass.pyramid_wanted && pass.pyramid_levels >= 2 {
-        let reuse =
-            exec.custom_effect_v3_pyramid_reuse(pass.src_raw, common.src_size, pass.pyramid_levels);
-        let scratch =
-            exec.custom_effect_v3_pyramid_scratch_snapshot(common.src_size, pass.pyramid_levels);
-        let mip_views = scratch.mip_views;
-        let mip_sizes = scratch.mip_sizes;
-        let full_view = scratch.full_view;
-
-        if !reuse {
-            exec.build_custom_effect_v3_pyramid(
-                pass.src_raw,
-                common.src_size,
-                pass.pyramid_levels,
-                pass.pyramid_build_scissor,
-                &src_raw_view,
-                &mip_views,
-                &mip_sizes,
-            );
-        }
-
-        Some(full_view)
-    } else {
-        None
-    };
-
-    let src_pyramid_view = if let Some(view) = pyramid_override_view {
-        view
-    } else {
-        let Some(view) =
-            exec.require_color_src_view(pass.src_pyramid, common.src_size, "CustomEffectV3")
-        else {
-            return;
-        };
-        view
-    };
+    let src_view = source_views.src_view;
+    let src_raw_view = source_views.src_raw_view;
+    let src_pyramid_view = source_views.src_pyramid_view;
 
     let dst_view_owned =
         exec.ensure_color_dst_view_owned(common.dst, common.dst_size, "CustomEffectV3");

@@ -316,6 +316,13 @@ As of 2026-03-13:
     pyramid blit/downsample bind-group setup, scissor projection, and pass-loop glue.
   - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now keeps only the
     reuse decision, scratch snapshot retrieval, and final pyramid-view selection for that path.
+- The same executor seam now also owns `CustomEffectV3` source-view preparation:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs` now prepares
+    `src`, `src_raw`, and final `src_pyramid` views, including optional pyramid override
+    construction.
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now receives prepared
+    source views and focuses on user-image fallback selection, destination routing, and pass
+    execution.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

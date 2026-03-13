@@ -285,7 +285,9 @@ For `Renderer` state-shell tightening, the same principle applies:
   unmasked/uniform-mask/texture-mask mode, leaving source preparation and pass execution local.
   Feature-local build subflows such as `CustomEffectV3` pyramid blit/downsample passes can then
   move behind executor helpers as the next stage, so recorder modules stop owning pass-loop glue
-  once the surrounding orchestration has become thin enough.
+  once the surrounding orchestration has become thin enough. After that, source-view preparation
+  itself can collapse behind the same executor seam so recorder bodies stop owning the
+  `src`/`src_raw`/`src_pyramid` choice graph and only consume prepared effect-local inputs.
 - render-text dump state is the matching diagnostics/export seam for text debugging:
   dump collection scratch and serialization scratch should move behind one owner so render-scene
   execution keeps only a thin bridge to `TextSystem`.

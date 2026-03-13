@@ -638,12 +638,15 @@ ID format:
     - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
       pyramid-build loop directly; it now only decides whether to build and which pyramid view to
       use afterward
+    - `CustomEffectV3` source-view preparation now also lives under
+      `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+      `src` / `src_raw` / final `src_pyramid` preparation graph directly
   - Current next hotspot:
     - decide whether scene-encoding invalidation/debug evidence should stay coupled to
       `scene_encoding_cache.rs` or move closer to diagnostics state
-    - decide whether the remaining `CustomEffectV3` source-preparation shell in `effects.rs`
-      should split again so pyramid/reuse selection and user-image fallback selection stop sharing
-      one recorder body
+    - decide whether `CustomEffectV3` user-image fallback selection and sampler choice should move
+      behind a dedicated helper now that source-view preparation has already left `effects.rs`
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG

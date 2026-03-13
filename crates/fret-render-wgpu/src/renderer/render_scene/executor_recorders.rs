@@ -31,6 +31,12 @@ pub(super) struct CustomEffectV3PyramidScratchSnapshot {
     pub(super) mip_sizes: Vec<(u32, u32)>,
 }
 
+pub(super) struct CustomEffectV3PreparedSourceViews {
+    pub(super) src_view: wgpu::TextureView,
+    pub(super) src_raw_view: wgpu::TextureView,
+    pub(super) src_pyramid_view: wgpu::TextureView,
+}
+
 impl<'a> RenderSceneExecutor<'a> {
     pub(super) fn require_color_src_view(
         &self,
@@ -269,6 +275,58 @@ impl<'a> RenderSceneExecutor<'a> {
         }
 
         self.set_custom_effect_v3_pyramid_cache(src_raw, src_size, levels);
+    }
+
+    pub(super) fn prepare_custom_effect_v3_source_views(
+        &mut self,
+        pass: &CustomEffectV3Pass,
+    ) -> Option<CustomEffectV3PreparedSourceViews> {
+        let common = pass.common;
+        let src_view =
+            self.require_color_src_view(common.src, common.src_size, "CustomEffectV3")?;
+        let src_raw_view =
+            self.require_color_src_view(pass.src_raw, common.src_size, "CustomEffectV3")?;
+
+        let pyramid_override_view = if pass.pyramid_wanted && pass.pyramid_levels >= 2 {
+            let reuse = self.custom_effect_v3_pyramid_reuse(
+                pass.src_raw,
+                common.src_size,
+                pass.pyramid_levels,
+            );
+            let scratch = self
+                .custom_effect_v3_pyramid_scratch_snapshot(common.src_size, pass.pyramid_levels);
+            let mip_views = scratch.mip_views;
+            let mip_sizes = scratch.mip_sizes;
+            let full_view = scratch.full_view;
+
+            if !reuse {
+                self.build_custom_effect_v3_pyramid(
+                    pass.src_raw,
+                    common.src_size,
+                    pass.pyramid_levels,
+                    pass.pyramid_build_scissor,
+                    &src_raw_view,
+                    &mip_views,
+                    &mip_sizes,
+                );
+            }
+
+            Some(full_view)
+        } else {
+            None
+        };
+
+        let src_pyramid_view = if let Some(view) = pyramid_override_view {
+            view
+        } else {
+            self.require_color_src_view(pass.src_pyramid, common.src_size, "CustomEffectV3")?
+        };
+
+        Some(CustomEffectV3PreparedSourceViews {
+            src_view,
+            src_raw_view,
+            src_pyramid_view,
+        })
     }
 
     pub(super) fn set_custom_effect_v3_pyramid_cache(
