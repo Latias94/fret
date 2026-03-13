@@ -72,13 +72,13 @@ Regression gates:
 
 Regression gates:
 
-- [ ] Add manifest consistency tests in `fret-fonts`.
-- [ ] Add a deterministic bundled-only test matrix covering:
-  - [ ] `Ui`
-  - [ ] `Monospace`
-  - [ ] `Serif` (guaranteed or explicitly unsupported-by-profile)
-  - [ ] CJK fallback
-  - [ ] emoji fallback
+- [x] Add manifest consistency tests in `fret-fonts`.
+- [x] Add a deterministic bundled-only test matrix covering:
+  - [x] `Ui`
+  - [x] `Monospace`
+  - [x] `Serif` (guaranteed or explicitly unsupported-by-profile)
+  - [x] CJK fallback
+  - [x] emoji fallback
 
 ## M3 — Make rescan apply diff-based
 
@@ -119,9 +119,9 @@ Regression gates:
 ## Exit criteria for calling the workstream "closed enough"
 
 - [ ] There is one canonical runner publication path for font state.
-- [ ] Bundled font roles and profile guarantees live in one manifest-backed surface.
+- [x] Bundled font roles and profile guarantees live in one manifest-backed surface.
 - [x] No-op rescan apply does not churn renderer caches or published keys.
-- [ ] Bundled-only determinism is explicit rather than inferred from scattered family-name lists.
+- [x] Bundled-only determinism is explicit rather than inferred from scattered family-name lists.
 - [ ] The remaining font docs can clearly distinguish:
   - [ ] architecture/contracts
   - [ ] execution tracker

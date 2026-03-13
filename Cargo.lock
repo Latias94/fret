@@ -2196,6 +2196,9 @@ dependencies = [
 [[package]]
 name = "fret-fonts"
 version = "0.1.0"
+dependencies = [
+ "read-fonts",
+]
 
 [[package]]
 name = "fret-framework"

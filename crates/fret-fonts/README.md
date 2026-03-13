@@ -15,8 +15,12 @@ The canonical API is:
 - `fret_fonts::default_fonts()` — bootstrap + CJK-lite (by default) + optional emoji (if enabled).
 - `fret_fonts::bootstrap_fonts()` — bootstrap fonts only (never includes emoji).
 - `fret_fonts::emoji_fonts()` — emoji fonts only (requires `emoji` feature).
+- `fret_fonts::cjk_lite_fonts()` — CJK fallback fonts only (requires `cjk-lite` feature).
+- `fret_fonts::default_profile()` / `fret_fonts::bootstrap_profile()` — manifest-backed bundled
+  profile metadata (roles, expected family names, generic guarantees, fallback families).
 
-All are intended to be fed into `Effect::TextAddFonts`.
+The byte-returning functions are intended to be fed into `Effect::TextAddFonts`. The profile
+surfaces are the contract source for bundled roles and guarantees.
 
 ## Size strategy (WASM)
 

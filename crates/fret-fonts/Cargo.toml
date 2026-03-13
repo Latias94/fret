@@ -12,6 +12,9 @@ description = "Bundled font assets and loading helpers for Fret."
 
 [dependencies]
 
+[dev-dependencies]
+read-fonts.workspace = true
+
 [features]
 # The default build includes a minimal UI font bootstrap *subset* set for Web/WASM, plus a
 # small CJK subset to avoid "tofu" for common mixed-script UIs.
