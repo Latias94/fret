@@ -304,7 +304,9 @@ For `Renderer` state-shell tightening, the same principle applies:
   together. The same rule also applies to smaller self-contained writeback families such as
   `CompositePremul`: if the recorder only consumes shared bind-group and draw helpers, its
   entrypoint should also move into a family-local module instead of remaining under
-  `recorders/effects.rs`.
+  `recorders/effects.rs`. Small fullscreen utility families such as `ClipMask` follow the same
+  rule when they only consume shared pipeline/pass helpers plus executor allocation/uniform access:
+  once the entrypoint is self-contained, it should move out of `recorders/effects.rs` as well.
 - render-text dump state is the matching diagnostics/export seam for text debugging:
   dump collection scratch and serialization scratch should move behind one owner so render-scene
   execution keeps only a thin bridge to `TextSystem`.

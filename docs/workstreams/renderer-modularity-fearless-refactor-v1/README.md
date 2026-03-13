@@ -356,6 +356,13 @@ As of 2026-03-13:
   - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
     `CompositePremul` path; `recorders/mod.rs` now re-exports it from the family-local module
     while shared bind-group and quad-pass helpers stay in their existing shared seams.
+- The same closure now also covers `ClipMask` as a small fullscreen utility family:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_clip_mask.rs` now owns
+    the `ClipMask` recorder entrypoint, including param upload, mask-target allocation, uniform
+    routing, and final triangle-pass dispatch.
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+    `ClipMask` path; `recorders/mod.rs` now re-exports it from the family-local module while the
+    shared clip-mask pipeline and pass helpers stay in their existing shared seams.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:
