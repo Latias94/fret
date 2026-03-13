@@ -7,6 +7,7 @@ use fret_render_text::font_instance_key::FontFaceKey;
 use std::{collections::HashMap, sync::Arc};
 
 mod cache_flow;
+mod driver;
 mod face_metadata;
 mod glyph_bounds;
 mod glyph_face;

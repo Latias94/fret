@@ -370,6 +370,9 @@ ID format:
     - prepare cache-flow helpers now live in
       `crates/fret-render-wgpu/src/text/prepare/cache_flow.rs`
     - `crates/fret-render-wgpu/src/text/prepare.rs` no longer hosts the blob/shape cache reuse and blob finalize chain inline
+    - the live prepare-with-key driver now lives in
+      `crates/fret-render-wgpu/src/text/prepare/driver.rs`
+    - `crates/fret-render-wgpu/src/text/mod.rs` currently routes through a soft-rollback shim while the old inline body awaits deletion in the next slice
 - [ ] RMFR-text-031 Keep `fret_render_text` as the low-level text contract crate and avoid moving
   backend-specific state there prematurely.
 - [ ] RMFR-text-032 Add focused tests around any extracted text subdomain whose behavior was
@@ -426,7 +429,7 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: prepare cache-flow submodule in `text/prepare/cache_flow.rs`.
+  - Latest landed slice: live prepare driver in `text/prepare/driver.rs` with a temporary `text/mod.rs` shim.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

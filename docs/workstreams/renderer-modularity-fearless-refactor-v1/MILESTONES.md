@@ -370,6 +370,10 @@ Current snapshot (2026-03-12):
   - prepare cache-flow helpers now live in
     `crates/fret-render-wgpu/src/text/prepare/cache_flow.rs`
   - `crates/fret-render-wgpu/src/text/prepare.rs` no longer hosts the blob/shape cache reuse and blob finalize chain inline
+- The eighty-sixth internal `text/mod.rs` split has landed:
+  - the live prepare-with-key driver now lives in
+    `crates/fret-render-wgpu/src/text/prepare/driver.rs`
+  - `crates/fret-render-wgpu/src/text/mod.rs` currently routes through a soft-rollback shim while the old inline body awaits deletion in the next slice
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed

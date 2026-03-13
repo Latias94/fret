@@ -303,6 +303,7 @@ impl TextSystem {
         out
     }
 
+    #[allow(unreachable_code, unused_mut)]
     fn prepare_with_key(
         &mut self,
         mut key: TextBlobKey,
@@ -310,6 +311,8 @@ impl TextSystem {
         spans: Option<&[TextSpan]>,
         constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics) {
+        return self.prepare_with_key_driver(key, style, spans, constraints);
+
         let text = key.text.clone();
         key.backend = 1;
 
