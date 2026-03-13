@@ -130,6 +130,7 @@ Validation snapshot on 2026-03-13:
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app slider_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app native_select_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app resizable_ -- --nocapture`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app navigation_menu_ -- --nocapture`
 
 Implementation note on 2026-03-13:
 
@@ -201,10 +202,16 @@ Implementation note on 2026-03-13:
   model state inside each snippet instead of routing it through page/content/runtime-driver relay
   state, and `apps/fret-ui-gallery/src/ui/pages/resizable.rs` now routes those previews through
   `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the same UI Gallery top-level snippet cleanup now also covers the navigation-menu family:
+  `apps/fret-ui-gallery/src/ui/snippets/navigation_menu/{demo,docs_demo,link_component,rtl,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep the local menu
+  value state inside each snippet, and `apps/fret-ui-gallery/src/ui/pages/navigation_menu.rs`
+  now routes those previews through `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
 - after `accordion` / `tabs` / `toggle` / `radio_group` / `slider` / `native_select` /
-  `resizable`, the next default-app UI Gallery app-facing queue should move to the remaining
-  top-level families that still re-teach eager `AnyElement` returns, starting with the smallest
-  page-local lanes rather than reopening reusable-helper work.
+  `resizable` / `navigation_menu`, the next default-app UI Gallery app-facing queue should move
+  to `scroll_area`, keeping `demo` / `usage` / `horizontal` / `nested_scroll_routing` / `rtl` on
+  the typed teaching lane while intentionally leaving `drag_baseline` / `expand_at_bottom` on
+  diagnostics-owned raw seams.
 - `apps/fret-cookbook/examples/customv1_basics.rs` now keeps both advanced reusable helpers
   `panel_shell(...)` and `preview_content(...)` on `IntoUiElement<KernelApp>`-based signatures
   instead of returning raw `AnyElement` for non-raw composition.

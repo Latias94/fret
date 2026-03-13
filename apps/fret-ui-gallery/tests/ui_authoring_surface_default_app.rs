@@ -268,10 +268,20 @@ fn navigation_menu_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface()
         &[
             "src/ui/snippets/navigation_menu/demo.rs",
             "src/ui/snippets/navigation_menu/docs_demo.rs",
+            "src/ui/snippets/navigation_menu/link_component.rs",
             "src/ui/snippets/navigation_menu/rtl.rs",
+            "src/ui/snippets/navigation_menu/usage.rs",
         ],
-        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
         "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/navigation_menu",
+        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
     );
 }
 
@@ -300,6 +310,27 @@ fn selected_navigation_menu_snippet_helpers_prefer_into_ui_element_over_anyeleme
         &[
             "fn list_item(cx: &mut UiCx<'_>, muted_foreground: Color, model: Model<Option<Arc<str>>>, title: &'static str, description: &'static str, test_id: &'static str, command: &'static str,) -> AnyElement",
             "fn icon_row(cx: &mut UiCx<'_>, model: Model<Option<Arc<str>>>, icon: &'static str, label: &'static str, test_id: &'static str, command: &'static str,) -> AnyElement",
+        ],
+    );
+}
+
+#[test]
+fn navigation_menu_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/navigation_menu.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", docs_demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Link Component\", link_component)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Container Query Toggle\", demo_with_toggle)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", docs_demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Link Component\", link_component)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Container Query Toggle\", demo_with_toggle)",
         ],
     );
 }
@@ -3813,10 +3844,12 @@ fn material3_overlay_snippets_prefer_uncontrolled_copyable_roots() {
             "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, last_action: Model<Arc<str>>, ) -> AnyElement {",
             "let default_dialog = material3::Dialog::uncontrolled(cx);",
             "let open = default_dialog.open_model();",
+            "material3::Select::uncontrolled(cx)",
         ],
         &[
             "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Model<bool>, last_action: Model<Arc<str>>, ) -> AnyElement {",
             "let open = cx.local_model_keyed(\"open\", || false);",
+            "let selected = cx.local_model_keyed(\"selected\", || None::<Arc<str>>);",
         ],
     );
 

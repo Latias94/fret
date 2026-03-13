@@ -196,6 +196,15 @@ Execution note on 2026-03-13:
   `DocSection::build(cx, ...)`; the old `pub fn render(...) -> AnyElement` teaching pattern is now
   forbidden for that family by
   `ui_authoring_surface_default_app::{resizable_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface,resizable_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the next top-level snippet-family
+  move on the navigation-menu lane:
+  `apps/fret-ui-gallery/src/ui/snippets/navigation_menu/{demo,docs_demo,link_component,rtl,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep local menu value
+  state inside the snippet instead of routing it through a page-local relay, while
+  `apps/fret-ui-gallery/src/ui/pages/navigation_menu.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `pub fn render(...) -> AnyElement` teaching pattern is now
+  forbidden for that family by
+  `ui_authoring_surface_default_app::{navigation_menu_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface,navigation_menu_page_uses_typed_doc_sections_for_app_facing_snippets}`.
 - the cookbook advanced-example source gate now also records
   `apps/fret-cookbook/examples/customv1_basics.rs`,
   where `panel_shell(...)` and `preview_content(...)` now use `IntoUiElement<KernelApp>`-based
