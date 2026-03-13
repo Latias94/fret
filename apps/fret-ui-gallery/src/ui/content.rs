@@ -470,7 +470,7 @@ fn page_preview(
         PAGE_TEXT_FEATURE_TOGGLES => preview_text_feature_toggles(cx, theme),
         #[cfg(feature = "gallery-dev")]
         PAGE_TEXT_OUTLINE_STROKE => preview_text_outline_stroke(cx, theme),
-        #[cfg(feature = "gallery-dev")]
+        #[cfg(any(feature = "gallery-dev", feature = "gallery-web-ime-harness"))]
         PAGE_WEB_IME_HARNESS => preview_web_ime_harness(cx, theme, text_input, text_area),
         #[cfg(feature = "gallery-dev")]
         PAGE_CHART_TORTURE => preview_chart_torture(cx, theme),

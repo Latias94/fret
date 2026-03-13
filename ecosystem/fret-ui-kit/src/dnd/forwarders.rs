@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{MouseButton, Point, Rect};
+use fret_core::{MouseButton, Point, PointerType, Rect};
 use fret_runtime::{DragKindId, FrameId, Model};
 use fret_ui::action::{
     ActionCx, OnPointerCancel, OnPointerDown, OnPointerMove, OnPointerUp, PointerCancelCx,
@@ -13,13 +13,71 @@ use super::{
     handle_pointer_move_in_scope, handle_pointer_up_in_scope,
 };
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DndPointerActivationConstraints {
+    pub mouse: ActivationConstraint,
+    pub touch: ActivationConstraint,
+    pub pen: ActivationConstraint,
+    pub unknown: ActivationConstraint,
+}
+
+impl DndPointerActivationConstraints {
+    pub fn uniform(constraint: ActivationConstraint) -> Self {
+        Self {
+            mouse: constraint,
+            touch: constraint,
+            pen: constraint,
+            unknown: constraint,
+        }
+    }
+
+    pub fn resolve(&self, pointer_type: PointerType) -> ActivationConstraint {
+        match pointer_type {
+            PointerType::Mouse => self.mouse,
+            PointerType::Touch => self.touch,
+            PointerType::Pen => self.pen,
+            PointerType::Unknown => self.unknown,
+        }
+    }
+
+    pub fn mouse(mut self, constraint: ActivationConstraint) -> Self {
+        self.mouse = constraint;
+        self
+    }
+
+    pub fn touch(mut self, constraint: ActivationConstraint) -> Self {
+        self.touch = constraint;
+        self
+    }
+
+    pub fn pen(mut self, constraint: ActivationConstraint) -> Self {
+        self.pen = constraint;
+        self
+    }
+
+    pub fn unknown(mut self, constraint: ActivationConstraint) -> Self {
+        self.unknown = constraint;
+        self
+    }
+}
+
+impl Default for DndPointerActivationConstraints {
+    fn default() -> Self {
+        Self::uniform(ActivationConstraint::Distance { px: 2.0 })
+    }
+}
+
 #[derive(Clone)]
 pub struct DndPointerForwardersConfig {
     pub kind: DragKindId,
     pub scope: DndScopeId,
     pub activation_constraint: ActivationConstraint,
+    pub pointer_activation_constraints: Option<DndPointerActivationConstraints>,
     pub collision_strategy: CollisionStrategy,
     pub autoscroll: Option<(Rect, AutoScrollConfig)>,
+    pub prevent_activation_on_text_input: bool,
+    pub prevent_activation_on_pressable_descendant: bool,
+    pub prevent_activation: Option<Arc<dyn Fn(ActionCx, PointerDownCx) -> bool + 'static>>,
     pub capture_pointer_on_down: bool,
     pub consume_events: bool,
     pub update_model: Option<Model<DndUpdate>>,
@@ -33,8 +91,12 @@ impl DndPointerForwardersConfig {
             kind,
             scope: super::DND_SCOPE_DEFAULT,
             activation_constraint: ActivationConstraint::Distance { px: 2.0 },
+            pointer_activation_constraints: None,
             collision_strategy: CollisionStrategy::ClosestCenter,
             autoscroll: None,
+            prevent_activation_on_text_input: false,
+            prevent_activation_on_pressable_descendant: false,
+            prevent_activation: None,
             capture_pointer_on_down: true,
             consume_events: true,
             update_model: None,
@@ -49,6 +111,35 @@ impl DndPointerForwardersConfig {
 
     pub fn activation_constraint(mut self, constraint: ActivationConstraint) -> Self {
         self.activation_constraint = constraint;
+        self.pointer_activation_constraints = None;
+        self
+    }
+
+    pub fn pointer_activation_constraints(
+        mut self,
+        constraints: DndPointerActivationConstraints,
+    ) -> Self {
+        self.pointer_activation_constraints = Some(constraints);
+        self
+    }
+
+    pub fn mouse_activation_constraint(mut self, constraint: ActivationConstraint) -> Self {
+        self.pointer_activation_constraints_mut().mouse = constraint;
+        self
+    }
+
+    pub fn touch_activation_constraint(mut self, constraint: ActivationConstraint) -> Self {
+        self.pointer_activation_constraints_mut().touch = constraint;
+        self
+    }
+
+    pub fn pen_activation_constraint(mut self, constraint: ActivationConstraint) -> Self {
+        self.pointer_activation_constraints_mut().pen = constraint;
+        self
+    }
+
+    pub fn unknown_activation_constraint(mut self, constraint: ActivationConstraint) -> Self {
+        self.pointer_activation_constraints_mut().unknown = constraint;
         self
     }
 
@@ -59,6 +150,24 @@ impl DndPointerForwardersConfig {
 
     pub fn autoscroll(mut self, autoscroll: Option<(Rect, AutoScrollConfig)>) -> Self {
         self.autoscroll = autoscroll;
+        self
+    }
+
+    pub fn prevent_activation_on_text_input(mut self, prevent: bool) -> Self {
+        self.prevent_activation_on_text_input = prevent;
+        self
+    }
+
+    pub fn prevent_activation_on_pressable_descendant(mut self, prevent: bool) -> Self {
+        self.prevent_activation_on_pressable_descendant = prevent;
+        self
+    }
+
+    pub fn prevent_activation(
+        mut self,
+        f: Arc<dyn Fn(ActionCx, PointerDownCx) -> bool + 'static>,
+    ) -> Self {
+        self.prevent_activation = Some(f);
         self
     }
 
@@ -84,6 +193,37 @@ impl DndPointerForwardersConfig {
         self.on_update = Some(f);
         self
     }
+
+    fn pointer_activation_constraints_mut(&mut self) -> &mut DndPointerActivationConstraints {
+        self.pointer_activation_constraints.get_or_insert_with(|| {
+            DndPointerActivationConstraints::uniform(self.activation_constraint)
+        })
+    }
+
+    fn resolved_activation_constraint(&self, pointer_type: PointerType) -> ActivationConstraint {
+        self.pointer_activation_constraints
+            .as_ref()
+            .map(|constraints| constraints.resolve(pointer_type))
+            .unwrap_or(self.activation_constraint)
+    }
+
+    fn should_prevent_activation(&self, action_cx: ActionCx, down: PointerDownCx) -> bool {
+        if self.prevent_activation_on_text_input && down.hit_is_text_input {
+            return true;
+        }
+
+        if self.prevent_activation_on_pressable_descendant
+            && down
+                .hit_pressable_target
+                .is_some_and(|target| target != action_cx.target)
+        {
+            return true;
+        }
+
+        self.prevent_activation
+            .as_ref()
+            .is_some_and(|prevent| prevent(action_cx, down))
+    }
 }
 
 #[derive(Clone)]
@@ -108,6 +248,10 @@ impl DndPointerForwarders {
                     return false;
                 }
 
+                if cfg.should_prevent_activation(action_cx, down) {
+                    return false;
+                }
+
                 if cfg.capture_pointer_on_down {
                     host.capture_pointer();
                 }
@@ -122,7 +266,7 @@ impl DndPointerForwarders {
                     down.pointer_id,
                     down.position,
                     down.tick_id,
-                    cfg.activation_constraint,
+                    cfg.resolved_activation_constraint(down.pointer_type),
                     cfg.collision_strategy,
                     cfg.autoscroll,
                 );
@@ -157,7 +301,7 @@ impl DndPointerForwarders {
                     mv.pointer_id,
                     mv.position,
                     mv.tick_id,
-                    cfg.activation_constraint,
+                    cfg.resolved_activation_constraint(mv.pointer_type),
                     cfg.collision_strategy,
                     cfg.autoscroll,
                 );
@@ -192,7 +336,7 @@ impl DndPointerForwarders {
                     up.pointer_id,
                     up.position,
                     up.tick_id,
-                    cfg.activation_constraint,
+                    cfg.resolved_activation_constraint(up.pointer_type),
                     cfg.collision_strategy,
                     cfg.autoscroll,
                 );
@@ -234,7 +378,7 @@ impl DndPointerForwarders {
                     cancel.pointer_id,
                     position,
                     cancel.tick_id,
-                    cfg.activation_constraint,
+                    cfg.resolved_activation_constraint(cancel.pointer_type),
                     cfg.collision_strategy,
                     cfg.autoscroll,
                 );

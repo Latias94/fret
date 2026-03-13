@@ -15,7 +15,9 @@ use web_sys::{
     HtmlTextAreaElement, InputEvent, KeyboardEvent, Node,
 };
 
-use crate::ime_dom_state::{DomInputDisposition, WebImeDomState};
+use crate::ime_dom_state::{
+    DomControlIntent, DomInputDisposition, WebImeDomState, control_intent_for_beforeinput_type,
+};
 
 type WebChangeCallback = wasm_bindgen::closure::Closure<dyn FnMut(WebSysEvent)>;
 type WebWaker = Rc<dyn Fn()>;
@@ -196,6 +198,27 @@ fn ime_console_log(msg: impl AsRef<str>) {
     let _ = log.call1(&console, &wasm_bindgen::JsValue::from_str(msg.as_ref()));
 }
 
+#[cfg(debug_assertions)]
+const IME_DEBUG_INJECT_BEFOREINPUT_KEY: &str = "__FRET_IME_DEBUG_INJECT_BEFOREINPUT";
+
+#[cfg(debug_assertions)]
+fn set_ime_debug_beforeinput_injector(
+    injector: Option<&wasm_bindgen::closure::Closure<dyn FnMut(wasm_bindgen::JsValue)>>,
+) {
+    let Some(win) = window() else {
+        return;
+    };
+    let key = wasm_bindgen::JsValue::from_str(IME_DEBUG_INJECT_BEFOREINPUT_KEY);
+    match injector {
+        Some(injector) => {
+            let _ = js_sys::Reflect::set(&win, &key, injector.as_ref().unchecked_ref());
+        }
+        None => {
+            let _ = js_sys::Reflect::delete_property(&win, &key);
+        }
+    }
+}
+
 pub(super) struct WebImeBridge {
     textarea: HtmlTextAreaElement,
     position_mode: WebImePositionMode,
@@ -209,6 +232,9 @@ pub(super) struct WebImeBridge {
     debug: Rc<RefCell<WebImeDebugState>>,
     #[cfg(debug_assertions)]
     cursor_overlay: Option<HtmlElement>,
+    #[cfg(debug_assertions)]
+    debug_inject_beforeinput:
+        Option<wasm_bindgen::closure::Closure<dyn FnMut(wasm_bindgen::JsValue)>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -370,6 +396,15 @@ impl WebImeBridge {
         #[cfg(debug_assertions)]
         debug_update_textarea_metrics(&textarea, &debug);
 
+        #[cfg(debug_assertions)]
+        let debug_inject_beforeinput = Some(Self::make_debug_beforeinput_injector(
+            textarea.clone(),
+            dom_state.clone(),
+            queued_events.clone(),
+            waker.clone(),
+            debug.clone(),
+        ));
+
         let mut bridge = Self {
             textarea,
             position_mode,
@@ -383,9 +418,55 @@ impl WebImeBridge {
             debug,
             #[cfg(debug_assertions)]
             cursor_overlay,
+            #[cfg(debug_assertions)]
+            debug_inject_beforeinput,
         };
         bridge.install_listeners();
         Some(bridge)
+    }
+
+    #[cfg(debug_assertions)]
+    fn make_debug_beforeinput_injector(
+        textarea: HtmlTextAreaElement,
+        dom_state: Rc<RefCell<WebImeDomState>>,
+        queued_events: Rc<RefCell<Vec<Event>>>,
+        waker: Option<WebWaker>,
+        debug: Rc<RefCell<WebImeDebugState>>,
+    ) -> wasm_bindgen::closure::Closure<dyn FnMut(wasm_bindgen::JsValue)> {
+        wasm_bindgen::closure::Closure::wrap(Box::new(move |value: wasm_bindgen::JsValue| {
+            let Some(input_type) = value.as_string() else {
+                return;
+            };
+            let Some(intent) = control_intent_for_beforeinput_type(input_type.as_str()) else {
+                return;
+            };
+
+            textarea.set_value("");
+            {
+                let mut st = debug.borrow_mut();
+                st.snapshot.beforeinput_seen = st.snapshot.beforeinput_seen.saturating_add(1);
+                st.snapshot.last_input_type = Some(input_type.clone());
+                st.snapshot.last_beforeinput_data = None;
+                st.snapshot.composing = dom_state.borrow().composing();
+                st.snapshot.suppress_next_input = dom_state.borrow().suppress_next_input();
+                st.dirty = true;
+            }
+            debug_push_recent_event(
+                &debug,
+                format!("debug_beforeinput type={:?} synthetic=1", input_type),
+            );
+
+            queued_events.borrow_mut().push(Event::KeyDown {
+                key: Self::key_code_for_control_intent(intent),
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            });
+            if let Some(wake) = waker.as_ref() {
+                wake();
+            }
+
+            debug_update_textarea_metrics(&textarea, &debug);
+        }) as Box<dyn FnMut(wasm_bindgen::JsValue)>)
     }
 
     #[cfg(debug_assertions)]
@@ -441,6 +522,25 @@ impl WebImeBridge {
     fn push_event(&self, event: Event) {
         self.queued_events.borrow_mut().push(event);
         self.wake();
+    }
+
+    fn key_code_for_control_intent(intent: DomControlIntent) -> fret_core::KeyCode {
+        match intent {
+            DomControlIntent::DeleteBackward => fret_core::KeyCode::Backspace,
+            DomControlIntent::DeleteForward => fret_core::KeyCode::Delete,
+            DomControlIntent::Enter => fret_core::KeyCode::Enter,
+        }
+    }
+
+    fn control_intent_for_key(key: fret_core::KeyCode) -> Option<DomControlIntent> {
+        match key {
+            fret_core::KeyCode::Backspace => Some(DomControlIntent::DeleteBackward),
+            fret_core::KeyCode::Delete => Some(DomControlIntent::DeleteForward),
+            fret_core::KeyCode::Enter | fret_core::KeyCode::NumpadEnter => {
+                Some(DomControlIntent::Enter)
+            }
+            _ => None,
+        }
     }
 
     fn install_listeners(&mut self) {
@@ -514,6 +614,14 @@ impl WebImeBridge {
                     }
                 }
 
+                if !modifiers.ctrl
+                    && !modifiers.alt
+                    && !modifiers.meta
+                    && let Some(intent) = Self::control_intent_for_key(key)
+                {
+                    dom_state.borrow_mut().on_control_keydown(intent);
+                }
+
                 let event = Event::KeyDown {
                     key,
                     modifiers,
@@ -530,6 +638,7 @@ impl WebImeBridge {
         }
 
         {
+            let dom_state = self.dom_state.clone();
             let queue = self.queued_events.clone();
             let wake = self.waker.clone();
             #[cfg(debug_assertions)]
@@ -562,6 +671,10 @@ impl WebImeBridge {
                     let mut st = debug.borrow_mut();
                     st.snapshot.last_key_code = Some(key);
                     st.dirty = true;
+                }
+
+                if let Some(intent) = Self::control_intent_for_key(key) {
+                    dom_state.borrow_mut().on_control_keyup(intent);
                 }
 
                 let event = Event::KeyUp { key, modifiers };
@@ -869,6 +982,41 @@ impl WebImeBridge {
                         input.data().unwrap_or_default()
                     ),
                 );
+
+                if let Some(intent) = control_intent_for_beforeinput_type(input_type.as_str()) {
+                    let mut dom_state = dom_state.borrow_mut();
+                    dom_state.on_beforeinput_handled();
+                    input.prevent_default();
+                    textarea.set_value("");
+
+                    if dom_state.suppress_matching_control_beforeinput(intent) {
+                        #[cfg(debug_assertions)]
+                        {
+                            let mut st = debug.borrow_mut();
+                            st.snapshot.suppressed_input_seen =
+                                st.snapshot.suppressed_input_seen.saturating_add(1);
+                            st.dirty = true;
+                        }
+                        #[cfg(debug_assertions)]
+                        debug_update_textarea_metrics(&textarea, &debug);
+                        return;
+                    }
+
+                    drop(dom_state);
+                    queue.borrow_mut().push(Event::KeyDown {
+                        key: Self::key_code_for_control_intent(intent),
+                        modifiers: fret_core::Modifiers::default(),
+                        repeat: false,
+                    });
+                    if let Some(wake) = wake.as_ref() {
+                        wake();
+                    }
+
+                    #[cfg(debug_assertions)]
+                    debug_update_textarea_metrics(&textarea, &debug);
+                    return;
+                }
+
                 if !input_type.starts_with("insert") {
                     return;
                 }
@@ -917,6 +1065,12 @@ impl WebImeBridge {
         debug_update_textarea_metrics(&self.textarea, &self.debug);
         #[cfg(debug_assertions)]
         debug_push_recent_event(&self.debug, format!("ime_allow enabled={}", enabled as u8));
+        #[cfg(debug_assertions)]
+        set_ime_debug_beforeinput_injector(
+            enabled
+                .then_some(self.debug_inject_beforeinput.as_ref())
+                .flatten(),
+        );
 
         if enabled {
             let focus_result = self.textarea.focus();

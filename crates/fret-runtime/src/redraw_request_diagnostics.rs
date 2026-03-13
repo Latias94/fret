@@ -114,8 +114,11 @@ impl WindowRedrawRequestDiagnosticsStore {
             snapshot.max_request_count = snapshot
                 .max_request_count
                 .max(window_snapshot.total_request_count);
-            if window_snapshot.last_request_unix_ms.unwrap_or(0)
-                >= snapshot.last_request_unix_ms.unwrap_or(0)
+            let next_unix_ms = window_snapshot.last_request_unix_ms.unwrap_or(0);
+            let current_unix_ms = snapshot.last_request_unix_ms.unwrap_or(0);
+            if next_unix_ms > current_unix_ms
+                || (next_unix_ms == current_unix_ms
+                    && window_snapshot.last_request_frame_id >= snapshot.last_request_frame_id)
             {
                 snapshot.last_request_unix_ms = window_snapshot.last_request_unix_ms;
                 snapshot.last_request_frame_id = window_snapshot.last_request_frame_id;
@@ -230,7 +233,7 @@ mod tests {
         assert_eq!(aggregate.window_count, 2);
         assert_eq!(aggregate.total_request_count, 3);
         assert_eq!(aggregate.max_request_count, 2);
-        assert!(matches!(aggregate.last_request_frame_id, 4 | 8));
+        assert_eq!(aggregate.last_request_frame_id, 8);
         assert!(aggregate.last_request_unix_ms.is_some());
         assert_eq!(aggregate.callsites.len(), 2);
         assert_eq!(aggregate.callsites[0].count, 2);

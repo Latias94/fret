@@ -1,6 +1,9 @@
+#[path = "target_clear.rs"]
 mod clear;
+#[path = "target_focus.rs"]
 mod focus;
 #[cfg(test)]
+#[path = "target_tests.rs"]
 mod tests;
 
 pub(in super::super::super) use focus::{

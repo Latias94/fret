@@ -59,6 +59,33 @@ const DOCK_TAB_OVERFLOW_SVG: &[u8] =
   <circle cx="17.5" cy="12" r="1.6" fill="black"/>
 </svg>"#;
 
+fn begin_cross_window_dock_drag<H: UiHost, T: std::any::Any>(
+    app: &mut H,
+    pointer_id: fret_core::PointerId,
+    kind: DragKindId,
+    source_window: fret_core::AppWindowId,
+    start: Point,
+    position: Point,
+    payload: T,
+    follow_window: Option<fret_core::AppWindowId>,
+    grab_offset: Point,
+) {
+    fret_runtime::DragHost::begin_cross_window_drag_with_kind(
+        app,
+        pointer_id,
+        kind,
+        source_window,
+        start,
+        payload,
+    );
+    if let Some(drag) = fret_runtime::DragHost::drag_mut(app, pointer_id) {
+        drag.follow_window = follow_window;
+        drag.position = position;
+        drag.dragging = true;
+        drag.cursor_grab_offset = Some(grab_offset);
+    }
+}
+
 fn diag_scale_factor_x1000(scale_factor: f32) -> u32 {
     if !scale_factor.is_finite() {
         return 0;
@@ -6675,21 +6702,17 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     .is_some_and(|v| !v.is_empty());
             let follow_this_window =
                 follow_enabled && crate::runtime::is_dock_floating_os_window(cx.app, self.window);
-            cx.app.begin_cross_window_drag_with_kind(
+            begin_cross_window_dock_drag(
+                cx.app,
                 pointer_id,
                 fret_runtime::DRAG_KIND_DOCK_PANEL,
                 self.window,
                 start,
+                position,
                 payload,
+                follow_this_window.then_some(self.window),
+                grab_offset,
             );
-            if let Some(drag) = cx.app.drag_mut(pointer_id) {
-                if follow_this_window {
-                    drag.follow_window = Some(self.window);
-                }
-                drag.position = position;
-                drag.dragging = true;
-                drag.cursor_grab_offset = Some(grab_offset);
-            }
         }
         if let Some((start, payload, position)) = start_dock_tabs_drag {
             let grab_offset = payload.grab_offset;
@@ -6703,21 +6726,17 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     .is_some_and(|v| !v.is_empty());
             let follow_this_window =
                 follow_enabled && crate::runtime::is_dock_floating_os_window(cx.app, self.window);
-            cx.app.begin_cross_window_drag_with_kind(
+            begin_cross_window_dock_drag(
+                cx.app,
                 pointer_id,
                 fret_runtime::DRAG_KIND_DOCK_TABS,
                 self.window,
                 start,
+                position,
                 payload,
+                follow_this_window.then_some(self.window),
+                grab_offset,
             );
-            if let Some(drag) = cx.app.drag_mut(pointer_id) {
-                if follow_this_window {
-                    drag.follow_window = Some(self.window);
-                }
-                drag.position = position;
-                drag.dragging = true;
-                drag.cursor_grab_offset = Some(grab_offset);
-            }
         }
 
         if let Some(request) = request_pointer_capture {

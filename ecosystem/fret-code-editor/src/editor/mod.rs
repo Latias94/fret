@@ -2896,39 +2896,11 @@ impl CodeEditor {
                                 before_bytes,
                                 after_bytes,
                             } => {
-                                let range = st.selection.normalized();
-                                let caret = st.selection.caret().min(st.buffer.len_bytes());
-                                let start = if range.is_empty() {
-                                    caret.saturating_sub(*before_bytes)
-                                } else {
-                                    range.start
-                                }
-                                .min(st.buffer.len_bytes());
-                                let end = if range.is_empty() {
-                                    caret.saturating_add(*after_bytes)
-                                } else {
-                                    range.end
-                                }
-                                .min(st.buffer.len_bytes());
-
-                                let start = st.buffer.prev_char_boundary(start);
-                                let end = st.buffer.next_char_boundary(end);
-                                if start < end {
-                                    let kind = if *before_bytes > 0 {
-                                        UndoGroupKind::Backspace
-                                    } else {
-                                        UndoGroupKind::DeleteForward
-                                    };
-                                    let _ = input::apply_and_record_edit(
-                                        &mut st,
-                                        kind,
-                                        Edit::Delete { range: start..end },
-                                        Selection {
-                                            anchor: start,
-                                            focus: start,
-                                        },
-                                    );
-                                }
+                                let _ = input::apply_ime_delete_surrounding(
+                                    &mut st,
+                                    *before_bytes,
+                                    *after_bytes,
+                                );
                             }
                         }
 

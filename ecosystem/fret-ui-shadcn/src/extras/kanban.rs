@@ -4,7 +4,8 @@ use std::sync::Arc;
 use fret_core::{Modifiers, MouseButton, Point, PointerId, Px, Rect, Transform2D};
 use fret_runtime::{DragKindId, Model};
 use fret_ui::action::{
-    OnPointerDown, OnPointerMove, OnPointerUp, PointerDownCx, PointerMoveCx, PointerUpCx,
+    OnPointerCancel, OnPointerDown, OnPointerMove, OnPointerUp, PointerCancelCx, PointerDownCx,
+    PointerMoveCx, PointerUpCx,
 };
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, PointerRegionProps, ScrollAxis,
@@ -14,8 +15,9 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::transition;
 use fret_ui_kit::dnd::{
-    self, ActivationConstraint, CollisionStrategy, DndItemId, DndScopeId, InsertionSide,
-    SensorOutput, insertion_side_for_pointer,
+    self, ActivationConstraint, CollisionStrategy, DndItemId, DndPointerForwarders,
+    DndPointerForwardersConfig, DndScopeId, DndUpdate, InsertionSide, SensorOutput,
+    insertion_side_for_pointer,
 };
 use fret_ui_kit::primitives::presence;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
@@ -126,6 +128,27 @@ struct KanbanLastDrag {
 struct KanbanDndState {
     pointers: HashMap<PointerId, KanbanPointerState>,
     last_drag: Option<KanbanLastDrag>,
+}
+
+fn drag_details_from_sensor(sensor: SensorOutput) -> Option<(PointerId, Point, Point)> {
+    match sensor {
+        SensorOutput::DragStart {
+            pointer_id,
+            start,
+            position,
+        } => Some((
+            pointer_id,
+            position,
+            Point::new(Px(position.x.0 - start.x.0), Px(position.y.0 - start.y.0)),
+        )),
+        SensorOutput::DragMove {
+            pointer_id,
+            position,
+            translation,
+            ..
+        } => Some((pointer_id, position, translation)),
+        _ => None,
+    }
 }
 
 fn get_state_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<KanbanDndState> {
@@ -550,8 +573,7 @@ impl Kanban {
                     let state_on_down = state.clone();
                     let state_on_move = state.clone();
                     let state_on_up = state.clone();
-                    let dnd_on_down = dnd_for_render.clone();
-                    let dnd_on_move = dnd_for_render.clone();
+                    let state_on_cancel = state.clone();
                     let dnd_on_up = dnd_for_render.clone();
 
                     let col_id = col.id.clone();
@@ -651,12 +673,13 @@ impl Kanban {
                             let state_on_down = state_on_down.clone();
                             let state_on_move = state_on_move.clone();
                             let state_on_up = state_on_up.clone();
-                            let dnd_on_down = dnd_on_down.clone();
-                            let dnd_on_move = dnd_on_move.clone();
+                            let state_on_cancel = state_on_cancel.clone();
                             let dnd_on_up = dnd_on_up.clone();
+                            let dnd_for_forwarders = dnd_for_render.clone();
+                            let dnd_on_update = dnd_for_render.clone();
                             let items_on_up = items.clone();
 
-                            let columns_for_move = columns.clone();
+                            let columns_for_update = columns.clone();
                             let columns_for_up = columns.clone();
 
                             let el = cx.keyed(card_dnd_id.0, |cx| {
@@ -735,6 +758,101 @@ impl Kanban {
                                 pr.layout.size.width = Length::Fill;
                                 pr.layout.size.height = Length::Auto;
 
+                                let state_on_update = state_on_move.clone();
+                                let on_update = Arc::new(
+                                    move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                                          action_cx: fret_ui::action::ActionCx,
+                                          update: &DndUpdate| {
+                                        let Some((pointer_id, position, translation)) =
+                                            drag_details_from_sensor(update.sensor)
+                                        else {
+                                            return;
+                                        };
+
+                                        let origin_rect = dnd::droppable_rect_in_scope(
+                                            host.models_mut(),
+                                            &dnd_on_update,
+                                            action_cx.window,
+                                            frame_id,
+                                            scope,
+                                            card_dnd_id,
+                                        );
+                                        let next_over = update.over;
+                                        let next_over_side = match next_over {
+                                            None => None,
+                                            Some(over_id)
+                                                if is_column_id(
+                                                    over_id,
+                                                    columns_for_update.as_ref(),
+                                                )
+                                                .is_some() =>
+                                            {
+                                                None
+                                            }
+                                            Some(over_id) => dnd::droppable_rect_in_scope(
+                                                host.models_mut(),
+                                                &dnd_on_update,
+                                                action_cx.window,
+                                                frame_id,
+                                                scope,
+                                                over_id,
+                                            )
+                                            .map(|rect| {
+                                                insertion_side_for_pointer(
+                                                    position,
+                                                    rect,
+                                                    dnd::Axis::Y,
+                                                )
+                                            }),
+                                        };
+
+                                        let mut changed = false;
+                                        let mut became_dragging = false;
+                                        let _ = host.models_mut().update(&state_on_update, |st| {
+                                            let Some(state) = st.pointers.get_mut(&pointer_id)
+                                            else {
+                                                return;
+                                            };
+
+                                            if !state.dragging {
+                                                became_dragging = true;
+                                                state.origin_rect = origin_rect;
+                                            }
+
+                                            state.dragging = true;
+                                            state.translation = translation;
+                                            state.over = next_over;
+                                            state.over_side = next_over_side;
+                                            state.pointer = position;
+                                            changed = true;
+                                        });
+
+                                        if became_dragging {
+                                            host.capture_pointer();
+                                        }
+                                        if changed {
+                                            host.request_redraw(action_cx.window);
+                                        }
+                                    },
+                                );
+
+                                let forwarders = DndPointerForwarders::new(
+                                    dnd_for_forwarders,
+                                    frame_id,
+                                    DndPointerForwardersConfig::for_kind(DRAG_KIND_KANBAN)
+                                        .scope(scope)
+                                        .activation_constraint(activation)
+                                        .collision_strategy(collision_strategy)
+                                        .capture_pointer_on_down(false)
+                                        .consume_events(false)
+                                        .on_update(on_update.clone()),
+                                );
+                                let down_forwarder = forwarders.on_pointer_down();
+                                let move_forwarder = forwarders.on_pointer_move();
+                                let up_forwarder = forwarders.on_pointer_up();
+                                let cancel_forwarder = forwarders.on_pointer_cancel();
+                                let cancel_forwarder_on_move = cancel_forwarder.clone();
+
                                 let on_down: OnPointerDown =
                                     Arc::new(move |host, action_cx, down: PointerDownCx| {
                                         if down.button != MouseButton::Left {
@@ -744,20 +862,7 @@ impl Kanban {
                                             return false;
                                         }
 
-                                        let _ = dnd::handle_pointer_down_in_scope(
-                                            host.models_mut(),
-                                            &dnd_on_down,
-                                            action_cx.window,
-                                            frame_id,
-                                            DRAG_KIND_KANBAN,
-                                            scope,
-                                            down.pointer_id,
-                                            down.position,
-                                            down.tick_id,
-                                            activation,
-                                            collision_strategy,
-                                            None,
-                                        );
+                                        let _ = down_forwarder(host, action_cx, down);
 
                                         let _ = host.models_mut().update(&state_on_down, |st| {
                                             st.pointers.insert(
@@ -780,133 +885,61 @@ impl Kanban {
 
                                 let on_move: OnPointerMove =
                                     Arc::new(move |host, action_cx, mv: PointerMoveCx| {
+                                        let pointer_id = mv.pointer_id;
                                         let mut tracked = false;
                                         let mut canceled = false;
-                                        let mut became_dragging = false;
+                                        let mut was_dragging = false;
                                         let _ = host.models_mut().update(&state_on_move, |st| {
-                                            if !st.pointers.contains_key(&mv.pointer_id) {
+                                            let Some(state) = st.pointers.get(&pointer_id) else {
                                                 return;
-                                            }
+                                            };
                                             tracked = true;
-                                            if !mv.buttons.left {
-                                                st.pointers.remove(&mv.pointer_id);
-                                                canceled = true;
-                                            }
+                                            was_dragging = state.dragging;
                                         });
 
                                         if !tracked {
                                             return false;
                                         }
 
-                                        if canceled {
-                                            let _ = dnd::handle_pointer_cancel_in_scope(
-                                                host.models_mut(),
-                                                &dnd_on_move,
-                                                action_cx.window,
-                                                frame_id,
-                                                DRAG_KIND_KANBAN,
-                                                scope,
-                                                mv.pointer_id,
-                                                mv.position,
-                                                mv.tick_id,
-                                                activation,
-                                                collision_strategy,
-                                                None,
-                                            );
-                                            host.release_pointer_capture();
-                                            host.request_redraw(action_cx.window);
-                                            return true;
-                                        }
+                                        if !mv.buttons.left {
+                                            let _ = host.models_mut().update(&state_on_move, |st| {
+                                                canceled = st.pointers.remove(&pointer_id).is_some();
+                                            });
 
-                                        let dnd_update = dnd::handle_pointer_move_in_scope(
-                                            host.models_mut(),
-                                            &dnd_on_move,
-                                            action_cx.window,
-                                            frame_id,
-                                            DRAG_KIND_KANBAN,
-                                            scope,
-                                            mv.pointer_id,
-                                            mv.position,
-                                            mv.tick_id,
-                                            activation,
-                                            collision_strategy,
-                                            None,
-                                        );
-
-                                        if matches!(
-                                            dnd_update.sensor,
-                                            SensorOutput::DragStart { .. }
-                                                | SensorOutput::DragMove { .. }
-                                        ) {
-                                            let translation = match dnd_update.sensor {
-                                                SensorOutput::DragMove { translation, .. } => {
-                                                    translation
+                                            if canceled {
+                                                let _ = cancel_forwarder_on_move(
+                                                    host,
+                                                    action_cx,
+                                                    PointerCancelCx {
+                                                        pointer_id,
+                                                        position: Some(mv.position),
+                                                        position_local: Some(mv.position_local),
+                                                        position_window: mv.position_window,
+                                                        buttons: mv.buttons,
+                                                        modifiers: mv.modifiers,
+                                                        pointer_type: mv.pointer_type,
+                                                        tick_id: mv.tick_id,
+                                                        pixels_per_point: mv.pixels_per_point,
+                                                        reason: fret_core::PointerCancelReason::LeftWindow,
+                                                    },
+                                                );
+                                                if was_dragging {
+                                                    host.release_pointer_capture();
                                                 }
-                                                _ => Point::new(Px(0.0), Px(0.0)),
-                                            };
-
-                                            let origin_rect = dnd::droppable_rect_in_scope(
-                                                host.models_mut(),
-                                                &dnd_on_move,
-                                                action_cx.window,
-                                                frame_id,
-                                                scope,
-                                                card_dnd_id,
-                                            );
-
-                                            let next_over = dnd_update.over;
-                                            let next_over_side = match next_over {
-                                                None => None,
-                                                Some(over_id)
-                                                    if is_column_id(
-                                                        over_id,
-                                                        columns_for_move.as_ref(),
-                                                    )
-                                                    .is_some() =>
-                                                {
-                                                    None
-                                                }
-                                                Some(over_id) => dnd::droppable_rect_in_scope(
-                                                    host.models_mut(),
-                                                    &dnd_on_move,
-                                                    action_cx.window,
-                                                    frame_id,
-                                                    scope,
-                                                    over_id,
-                                                )
-                                                .map(|rect| {
-                                                    insertion_side_for_pointer(
-                                                        mv.position,
-                                                        rect,
-                                                        dnd::Axis::Y,
-                                                    )
-                                                }),
-                                            };
-                                            let _ =
-                                                host.models_mut().update(&state_on_move, |st| {
-                                                    let Some(state) =
-                                                        st.pointers.get_mut(&mv.pointer_id)
-                                                    else {
-                                                        return;
-                                                    };
-                                                    if !state.dragging {
-                                                        became_dragging = true;
-                                                        state.origin_rect = origin_rect;
-                                                    }
-                                                    state.dragging = true;
-                                                    state.translation = translation;
-                                                    state.over = next_over;
-                                                    state.over_side = next_over_side;
-                                                    state.pointer = mv.position;
-                                                });
-
-                                            if became_dragging {
-                                                host.capture_pointer();
+                                                host.request_redraw(action_cx.window);
+                                                return true;
                                             }
-                                            host.request_redraw(action_cx.window);
-                                            return true;
                                         }
-                                        false
+
+                                        let _ = move_forwarder(host, action_cx, mv);
+
+                                        host.models_mut()
+                                            .read(&state_on_move, |st| {
+                                                st.pointers
+                                                    .get(&pointer_id)
+                                                    .is_some_and(|state| state.dragging)
+                                            })
+                                            .unwrap_or(false)
                                     });
 
                                 let on_up: OnPointerUp =
@@ -945,20 +978,7 @@ impl Kanban {
                                             return false;
                                         }
 
-                                        let _ = dnd::handle_pointer_up_in_scope(
-                                            host.models_mut(),
-                                            &dnd_on_up,
-                                            action_cx.window,
-                                            frame_id,
-                                            DRAG_KIND_KANBAN,
-                                            scope,
-                                            up.pointer_id,
-                                            up.position,
-                                            up.tick_id,
-                                            activation,
-                                            collision_strategy,
-                                            None,
-                                        );
+                                        let _ = up_forwarder(host, action_cx, up);
                                         if was_dragging {
                                             host.release_pointer_capture();
                                         }
@@ -991,10 +1011,36 @@ impl Kanban {
                                         was_dragging
                                     });
 
+                                let on_cancel: OnPointerCancel =
+                                    Arc::new(move |host, action_cx, cancel: PointerCancelCx| {
+                                        let mut had_pointer = false;
+                                        let mut was_dragging = false;
+                                        let _ = host.models_mut().update(&state_on_cancel, |st| {
+                                            let Some(state) = st.pointers.remove(&cancel.pointer_id)
+                                            else {
+                                                return;
+                                            };
+                                            had_pointer = true;
+                                            was_dragging = state.dragging;
+                                        });
+
+                                        if !had_pointer {
+                                            return false;
+                                        }
+
+                                        let _ = cancel_forwarder(host, action_cx, cancel);
+                                        if was_dragging {
+                                            host.release_pointer_capture();
+                                            host.request_redraw(action_cx.window);
+                                        }
+                                        true
+                                    });
+
                                 let el = cx.pointer_region(pr, |cx| {
                                     cx.pointer_region_on_pointer_down(on_down);
                                     cx.pointer_region_on_pointer_move(on_move);
                                     cx.pointer_region_on_pointer_up(on_up);
+                                    cx.pointer_region_on_pointer_cancel(on_cancel);
 
                                     let mut layout = LayoutStyle::default();
                                     layout.size.width = Length::Fill;

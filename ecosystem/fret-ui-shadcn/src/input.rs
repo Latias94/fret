@@ -634,7 +634,7 @@ mod tests {
         TextMetrics, TextService,
     };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_runtime::FrameId;
+    use fret_runtime::{Effect, FrameId, TextInteractionSettings};
     use fret_ui::element::{ElementKind, Length};
     use fret_ui::elements;
     use fret_ui::{UiTree, focus_visible};
@@ -686,6 +686,63 @@ mod tests {
     }
 
     impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
+    #[derive(Default)]
+    struct BlinkTextServices;
+
+    impl TextService for BlinkTextServices {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: UiSize::new(Px(12.0), Px(16.0)),
+                    baseline: Px(12.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for BlinkTextServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for BlinkTextServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for BlinkTextServices {
         fn register_material(
             &mut self,
             _desc: fret_core::MaterialDescriptor,
@@ -968,6 +1025,107 @@ mod tests {
         assert!(
             !always_paint_final,
             "expected focus ring to stop requesting painting after settling"
+        );
+    }
+
+    #[test]
+    fn input_caret_blinks_when_text_interaction_settings_enable_it() {
+        use std::cell::Cell;
+        use std::rc::Rc;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+        app.set_global(TextInteractionSettings {
+            caret_blink: true,
+            caret_blink_interval_ms: 16,
+            ..Default::default()
+        });
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(120.0)),
+        );
+        let mut services = BlinkTextServices;
+        let model = app.models_mut().insert(String::new());
+        let caret_color_out: Rc<Cell<Option<fret_core::Color>>> = Rc::new(Cell::new(None));
+        let caret_color_out_render = caret_color_out.clone();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "input-caret-blink",
+            move |cx| {
+                let el = Input::new(model.clone())
+                    .a11y_label("Input")
+                    .into_element(cx);
+                let ElementKind::Container(_) = &el.kind else {
+                    panic!("expected Input root to be a Container");
+                };
+                let child = el.children.first().expect("input inner child");
+                let ElementKind::TextInput(props) = &child.kind else {
+                    panic!("expected Input inner child to be a TextInput");
+                };
+                caret_color_out_render.set(Some(props.chrome.caret_color));
+                vec![el]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let input_node = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable input");
+        ui.set_focus(Some(input_node));
+
+        let caret_color = caret_color_out
+            .get()
+            .expect("caret color from TextInput props");
+
+        let mut scene0 = fret_core::Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene0, 1.0);
+
+        let token = app
+            .flush_effects()
+            .into_iter()
+            .find_map(|effect| match effect {
+                Effect::SetTimer { token, .. } => Some(token),
+                _ => None,
+            })
+            .expect("expected shadcn Input to schedule a caret blink timer when focused");
+
+        assert!(
+            scene0.ops().iter().any(|op| matches!(
+                op,
+                fret_core::SceneOp::Quad { background, .. }
+                    if *background == fret_core::Paint::Solid(caret_color).into()
+            )),
+            "expected shadcn Input to paint the caret before the blink timer fires"
+        );
+
+        ui.dispatch_event(&mut app, &mut services, &fret_core::Event::Timer { token });
+        let _ = app.flush_effects();
+
+        let mut scene1 = fret_core::Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene1, 1.0);
+
+        assert!(
+            !scene1.ops().iter().any(|op| matches!(
+                op,
+                fret_core::SceneOp::Quad { background, .. }
+                    if *background == fret_core::Paint::Solid(caret_color).into()
+            )),
+            "expected shadcn Input to hide the caret after the blink timer fires"
         );
     }
 

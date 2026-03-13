@@ -176,7 +176,7 @@ pub(in crate::ui) fn render_doc_page(
         .into_element(cx)
 }
 
-#[cfg(feature = "gallery-dev")]
+#[cfg(any(feature = "gallery-dev", feature = "gallery-web-ime-harness"))]
 pub(in crate::ui) fn wrap_preview_page(
     cx: &mut UiCx<'_>,
     intro: Option<&'static str>,

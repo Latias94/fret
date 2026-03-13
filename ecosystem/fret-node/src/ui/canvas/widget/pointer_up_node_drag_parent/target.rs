@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
-use fret_core::{Point, Px, Rect, Size};
+use fret_core::Rect;
 
-use crate::core::{CanvasPoint, CanvasRect, CanvasSize, Graph, Group, GroupId};
+use crate::core::{CanvasRect, Graph, GroupId};
 
 pub(super) fn best_parent_group(
     rect: Rect,
@@ -34,4 +34,5 @@ pub(super) fn best_parent_group(
 }
 
 #[cfg(test)]
+#[path = "target_tests.rs"]
 mod tests;

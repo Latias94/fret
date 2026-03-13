@@ -54,7 +54,8 @@ pub use fret_runtime::{
     DragPhase, DragSession, DragSessionId, Effect, InputContext, KeyChord, Keymap, KeymapService,
     Menu, MenuBar, MenuItem, MenuRole, Model, ModelCx, ModelId, ModelStore, ModelUpdateError,
     OsAction, Platform, PlatformFilter, SystemMenuType, TaskbarVisibility, WhenExpr, WindowOpacity,
-    WindowRequest, WindowRole, WindowStyleRequest, WindowZLevel, format_chord, format_sequence,
+    WindowRequest, WindowRole, WindowStyleRequest, WindowZLevel, TextInteractionSettings,
+    format_chord, format_sequence,
 };
 
 pub use keymap::KeymapError;

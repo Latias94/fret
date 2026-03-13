@@ -1,6 +1,40 @@
 use super::super::super::super::*;
 use crate::ui::doc_layout;
 use fret::UiCx;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::JsCast;
+
+fn delete_last_char(text: &mut String) -> bool {
+    let Some((start, _)) = text.char_indices().last() else {
+        return false;
+    };
+    text.truncate(start);
+    true
+}
+
+#[cfg(target_arch = "wasm32")]
+fn inject_debug_beforeinput(input_type: &str) -> bool {
+    let Some(window) = web_sys::window() else {
+        return false;
+    };
+    let Ok(injector) = js_sys::Reflect::get(
+        &window,
+        &wasm_bindgen::JsValue::from_str("__FRET_IME_DEBUG_INJECT_BEFOREINPUT"),
+    ) else {
+        return false;
+    };
+    let Ok(injector) = injector.dyn_into::<js_sys::Function>() else {
+        return false;
+    };
+    injector
+        .call1(&window, &wasm_bindgen::JsValue::from_str(input_type))
+        .is_ok()
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn inject_debug_beforeinput(_input_type: &str) -> bool {
+    false
+}
 
 pub(in crate::ui) fn preview_web_ime_harness(
     cx: &mut UiCx<'_>,
@@ -34,6 +68,9 @@ pub(in crate::ui) fn preview_web_ime_harness(
                 "Try: CJK IME preedit → commit; ensure no double insert on compositionend + input.",
             ),
             cx.text("Click inside the region to focus it (IME should enable)."),
+            cx.text(
+                "Debug buttons below inject web-only beforeinput control intents without a physical keydown.",
+            ),
         ]
     })
     .layout(LayoutRefinement::default().w_full())
@@ -123,6 +160,39 @@ pub(in crate::ui) fn preview_web_ime_harness(
 
     let region = cx
         .text_input_region(region_props, |cx| {
+        let region_id = cx.root_id();
+        let state_for_keydown = state.clone();
+        cx.key_on_key_down_focused_for(
+            region_id,
+            std::sync::Arc::new(move |host, action_cx, key| {
+                if key.modifiers.ctrl || key.modifiers.alt || key.modifiers.meta {
+                    return false;
+                }
+
+                let mut st = state_for_keydown.borrow_mut();
+                let mut handled = true;
+                match key.key {
+                    fret_core::KeyCode::Backspace => {
+                        let _ = delete_last_char(&mut st.committed);
+                    }
+                    fret_core::KeyCode::Delete => {}
+                    fret_core::KeyCode::Enter | fret_core::KeyCode::NumpadEnter => {
+                        st.committed.push('\n');
+                    }
+                    _ => handled = false,
+                }
+
+                if !handled {
+                    return false;
+                }
+
+                st.last = format!("KeyDown({:?})", key.key);
+                host.notify(action_cx);
+                host.request_redraw(action_cx.window);
+                true
+            }),
+        );
+
         let state_for_text_input = state.clone();
         cx.text_input_region_on_text_input(std::sync::Arc::new(
             move |host: &mut dyn fret_ui::action::UiActionHost,
@@ -220,7 +290,74 @@ pub(in crate::ui) fn preview_web_ime_harness(
             ),
             |cx| {
                 let body = ui::v_flex(|cx: &mut UiCx<'_>| {
+                        let inject_chip = |cx: &mut UiCx<'_>,
+                                           label: &'static str,
+                                           input_type: &'static str,
+                                           test_id: &'static str| {
+                            let state = state.clone();
+                            cx.pointer_region(
+                                fret_ui::element::PointerRegionProps::default(),
+                                move |cx| {
+                                    cx.pointer_region_on_pointer_down(std::sync::Arc::new(
+                                        move |host, action_cx, _down| {
+                                            host.request_focus(region_id);
+                                            let ok = inject_debug_beforeinput(input_type);
+                                            let mut st = state.borrow_mut();
+                                            st.last = format!(
+                                                "DebugBeforeInput({input_type}, ok={})",
+                                                ok as u8
+                                            );
+                                            host.notify(action_cx);
+                                            host.request_redraw(action_cx.window);
+                                            true
+                                        },
+                                    ));
+                                    let body = cx.container(
+                                        decl_style::container_props(
+                                            theme,
+                                            ChromeRefinement::default()
+                                                .border_1()
+                                                .rounded(Radius::Sm)
+                                                .bg(ColorRef::Color(
+                                                    theme.color_token("secondary"),
+                                                )),
+                                            LayoutRefinement::default(),
+                                        ),
+                                        move |cx| vec![cx.text(label)],
+                                    );
+                                    vec![body]
+                                },
+                            )
+                            .test_id(test_id)
+                        };
+                        let inject_delete = inject_chip(
+                            cx,
+                            "Inject delete backward",
+                            "deleteContentBackward",
+                            "ui-gallery-web-ime-inject-delete-backward",
+                        );
+                        let inject_line_break = inject_chip(
+                            cx,
+                            "Inject line break",
+                            "insertLineBreak",
+                            "ui-gallery-web-ime-inject-line-break",
+                        );
+                        let inject_paragraph = inject_chip(
+                            cx,
+                            "Inject paragraph",
+                            "insertParagraph",
+                            "ui-gallery-web-ime-inject-paragraph",
+                        );
+                        let controls = ui::h_flex(move |_cx| {
+                            vec![inject_delete, inject_line_break, inject_paragraph]
+                        })
+                        .layout(LayoutRefinement::default().w_full())
+                        .gap(Space::N2)
+                        .items_start()
+                        .into_element(cx);
+
                         let mut lines = vec![
+                            controls,
                             cx.text(format!(
                                 "harness_region_ime_enabled={harness_region_ime_enabled}"
                             )),
