@@ -22,9 +22,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .set_global::<fret_render::RendererCapabilities>(renderer_caps.clone());
         self.renderer_caps = Some(renderer_caps);
 
-        self.app
-            .set_global::<fret_core::TextFontFamilyConfig>(self.config.text_font_families.clone());
-
         // Web/WASM cannot access system fonts. Load our bundled defaults as soon as the renderer
         // becomes available, then seed `TextFontFamilyConfig` deterministically.
         let default_fonts = fret_fonts::default_fonts()
@@ -34,10 +31,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let _ = gfx.renderer.add_fonts(default_fonts);
 
         // Font catalog refresh trigger (ADR 0258): initial renderer availability (adopt gfx).
-        let _update = super::super::font_catalog::apply_renderer_font_catalog_update(
+        let _update = super::super::font_catalog::initialize_web_startup_font_environment(
             &mut self.app,
             &mut gfx.renderer,
-            fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
+            self.config.text_font_families.clone(),
         );
 
         self.gfx = Some(gfx);

@@ -371,15 +371,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         if !changed_globals.is_empty() {
             did_work = true;
             if changed_globals.contains(&TypeId::of::<fret_runtime::fret_i18n::I18nService>()) {
-                let locale = self
-                    .app
-                    .global::<fret_runtime::fret_i18n::I18nService>()
-                    .and_then(|service| service.preferred_locales().first())
-                    .map(|locale| locale.to_string());
-                if gfx.renderer.set_text_locale(locale.as_deref()) {
-                    self.app.set_global::<fret_runtime::TextFontStackKey>(
-                        fret_runtime::TextFontStackKey(gfx.renderer.text_font_stack_key()),
-                    );
+                if crate::runner::font_catalog::sync_renderer_locale_from_globals(
+                    &mut self.app,
+                    &mut gfx.renderer,
+                ) {
                     self.app.request_redraw(self.app_window);
                 }
             }

@@ -2008,23 +2008,12 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
         }
 
         if changed.contains(&TypeId::of::<fret_core::TextFontFamilyConfig>())
-            && let (Some(renderer), Some(config)) = (
-                self.renderer.as_mut(),
-                self.app.global::<fret_core::TextFontFamilyConfig>(),
+            && let Some(renderer) = self.renderer.as_mut()
+            && crate::runner::font_catalog::sync_renderer_font_families_from_globals(
+                &mut self.app,
+                renderer,
             )
-            && renderer.set_text_font_families(config)
         {
-            let new_key = renderer.text_font_stack_key();
-            let old_key = self
-                .app
-                .global::<fret_runtime::TextFontStackKey>()
-                .map(|k| k.0);
-            if old_key != Some(new_key) {
-                self.app.set_global::<fret_runtime::TextFontStackKey>(
-                    fret_runtime::TextFontStackKey(new_key),
-                );
-            }
-
             for (_id, state) in self.windows.iter() {
                 state.window.request_redraw();
             }
@@ -2032,27 +2021,13 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
 
         if changed.contains(&TypeId::of::<fret_runtime::fret_i18n::I18nService>())
             && let Some(renderer) = self.renderer.as_mut()
+            && crate::runner::font_catalog::sync_renderer_locale_from_globals(
+                &mut self.app,
+                renderer,
+            )
         {
-            let locale = self
-                .app
-                .global::<fret_runtime::fret_i18n::I18nService>()
-                .and_then(|service| service.preferred_locales().first())
-                .map(|locale| locale.to_string());
-            if renderer.set_text_locale(locale.as_deref()) {
-                let new_key = renderer.text_font_stack_key();
-                let old_key = self
-                    .app
-                    .global::<fret_runtime::TextFontStackKey>()
-                    .map(|k| k.0);
-                if old_key != Some(new_key) {
-                    self.app.set_global::<fret_runtime::TextFontStackKey>(
-                        fret_runtime::TextFontStackKey(new_key),
-                    );
-                }
-
-                for (_id, state) in self.windows.iter() {
-                    state.window.request_redraw();
-                }
+            for (_id, state) in self.windows.iter() {
+                state.window.request_redraw();
             }
         }
 

@@ -53,6 +53,53 @@ fn preferred_text_locale(app: &impl GlobalsHost) -> Option<String> {
 }
 
 #[doc(hidden)]
+pub fn publish_renderer_text_stack_key_if_changed(
+    app: &mut impl GlobalsHost,
+    renderer: &impl RendererFontEnvironmentHost,
+) -> bool {
+    let new_key = renderer.text_font_stack_key();
+    let old_key = app
+        .global::<fret_runtime::TextFontStackKey>()
+        .map(|key| key.0);
+    if old_key != Some(new_key) {
+        app.set_global::<fret_runtime::TextFontStackKey>(fret_runtime::TextFontStackKey(new_key));
+        true
+    } else {
+        false
+    }
+}
+
+#[doc(hidden)]
+pub fn sync_renderer_font_families_from_globals(
+    app: &mut impl GlobalsHost,
+    renderer: &mut impl RendererFontEnvironmentHost,
+) -> bool {
+    let Some(config) = app.global::<TextFontFamilyConfig>().cloned() else {
+        return false;
+    };
+    if renderer.set_text_font_families(&config) {
+        let _ = publish_renderer_text_stack_key_if_changed(app, renderer);
+        true
+    } else {
+        false
+    }
+}
+
+#[doc(hidden)]
+pub fn sync_renderer_locale_from_globals(
+    app: &mut impl GlobalsHost,
+    renderer: &mut impl RendererFontEnvironmentHost,
+) -> bool {
+    let locale = preferred_text_locale(app);
+    if renderer.set_text_locale(locale.as_deref()) {
+        let _ = publish_renderer_text_stack_key_if_changed(app, renderer);
+        true
+    } else {
+        false
+    }
+}
+
+#[doc(hidden)]
 pub fn publish_renderer_font_environment(
     app: &mut impl GlobalsHost,
     renderer: &mut impl RendererFontEnvironmentHost,
@@ -63,9 +110,7 @@ pub fn publish_renderer_font_environment(
     let _ = renderer.set_text_font_families(&update.config);
     let locale = preferred_text_locale(app);
     let _ = renderer.set_text_locale(locale.as_deref());
-    app.set_global::<fret_runtime::TextFontStackKey>(fret_runtime::TextFontStackKey(
-        renderer.text_font_stack_key(),
-    ));
+    let _ = publish_renderer_text_stack_key_if_changed(app, renderer);
     update
 }
 
@@ -77,6 +122,36 @@ pub fn apply_renderer_font_catalog_update(
 ) -> FontCatalogUpdate {
     let entries = renderer.all_font_catalog_entries_runtime();
     publish_renderer_font_environment(app, renderer, entries, policy)
+}
+
+#[doc(hidden)]
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+pub fn initialize_web_startup_font_environment(
+    app: &mut impl GlobalsHost,
+    renderer: &mut impl RendererFontEnvironmentHost,
+    config: TextFontFamilyConfig,
+) -> FontCatalogUpdate {
+    app.set_global::<TextFontFamilyConfig>(config);
+    apply_renderer_font_catalog_update(
+        app,
+        renderer,
+        FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
+    )
+}
+
+#[doc(hidden)]
+pub fn initialize_desktop_startup_font_environment(
+    app: &mut impl GlobalsHost,
+    renderer: &mut impl RendererFontEnvironmentHost,
+    config: TextFontFamilyConfig,
+    startup_async: bool,
+) -> FontCatalogUpdate {
+    app.set_global::<TextFontFamilyConfig>(config);
+    if startup_async {
+        publish_renderer_font_environment(app, renderer, Vec::new(), FontFamilyDefaultsPolicy::None)
+    } else {
+        apply_renderer_font_catalog_update(app, renderer, FontFamilyDefaultsPolicy::None)
+    }
 }
 
 #[cfg(test)]
@@ -185,6 +260,36 @@ mod tests {
     }
 
     #[test]
+    fn web_startup_font_environment_sets_key_after_locale_application() {
+        let mut app = TestApp::default();
+        let mut renderer = TestRenderer {
+            entries: vec![FontCatalogEntry {
+                family: "Inter".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let locale = LocaleId::parse("zh-CN").expect("locale must parse");
+        app.set_global::<I18nService>(I18nService::new(vec![locale]));
+
+        let _ = initialize_web_startup_font_environment(
+            &mut app,
+            &mut renderer,
+            TextFontFamilyConfig::default(),
+        );
+
+        assert_eq!(renderer.steps, vec!["entries", "families", "locale"]);
+        assert_eq!(renderer.last_locale, Some(Some("zh-CN".to_string())));
+        assert_eq!(
+            app.global::<fret_runtime::TextFontStackKey>()
+                .expect("font stack key")
+                .0,
+            42,
+            "expected web startup to publish the post-locale renderer key"
+        );
+    }
+
+    #[test]
     fn publish_renderer_font_environment_with_empty_entries_preserves_existing_config() {
         let mut app = TestApp::default();
         let mut renderer = TestRenderer::default();
@@ -211,6 +316,83 @@ mod tests {
                 .expect("font stack key")
                 .0,
             42
+        );
+    }
+
+    #[test]
+    fn desktop_async_startup_font_environment_preserves_config_and_key_order() {
+        let mut app = TestApp::default();
+        let mut renderer = TestRenderer::default();
+        let existing = TextFontFamilyConfig {
+            ui_sans: vec!["Inter".to_string()],
+            ui_mono: vec!["Iosevka".to_string()],
+            ..Default::default()
+        };
+        let locale = LocaleId::parse("en-US").expect("locale must parse");
+        app.set_global::<I18nService>(I18nService::new(vec![locale]));
+
+        let update = initialize_desktop_startup_font_environment(
+            &mut app,
+            &mut renderer,
+            existing.clone(),
+            true,
+        );
+
+        assert_eq!(update.config, existing);
+        assert_eq!(renderer.last_config, Some(existing));
+        assert_eq!(renderer.steps, vec!["families", "locale"]);
+        assert_eq!(renderer.last_locale, Some(Some("en-US".to_string())));
+        assert_eq!(
+            app.global::<fret_runtime::TextFontStackKey>()
+                .expect("font stack key")
+                .0,
+            42,
+            "expected desktop async startup to publish the post-locale renderer key"
+        );
+    }
+
+    #[test]
+    fn sync_renderer_font_families_from_globals_updates_key() {
+        let mut app = TestApp::default();
+        let mut renderer = TestRenderer::default();
+        let config = TextFontFamilyConfig {
+            ui_sans: vec!["Inter".to_string()],
+            ..Default::default()
+        };
+        app.set_global::<TextFontFamilyConfig>(config.clone());
+
+        let changed = sync_renderer_font_families_from_globals(&mut app, &mut renderer);
+
+        assert!(changed);
+        assert_eq!(renderer.steps, vec!["families"]);
+        assert_eq!(renderer.last_config, Some(config));
+        assert_eq!(
+            app.global::<fret_runtime::TextFontStackKey>()
+                .expect("font stack key")
+                .0,
+            11,
+            "expected family sync to publish the renderer's current stack key"
+        );
+    }
+
+    #[test]
+    fn sync_renderer_locale_from_globals_updates_key() {
+        let mut app = TestApp::default();
+        let mut renderer = TestRenderer::default();
+        let locale = LocaleId::parse("ja-JP").expect("locale must parse");
+        app.set_global::<I18nService>(I18nService::new(vec![locale]));
+
+        let changed = sync_renderer_locale_from_globals(&mut app, &mut renderer);
+
+        assert!(changed);
+        assert_eq!(renderer.steps, vec!["locale"]);
+        assert_eq!(renderer.last_locale, Some(Some("ja-JP".to_string())));
+        assert_eq!(
+            app.global::<fret_runtime::TextFontStackKey>()
+                .expect("font stack key")
+                .0,
+            42,
+            "expected locale sync to publish the renderer's current stack key"
         );
     }
 }

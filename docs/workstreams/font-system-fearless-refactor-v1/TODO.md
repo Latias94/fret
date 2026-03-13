@@ -22,11 +22,11 @@ Background inputs:
 - [ ] Decide which existing standalone font docs remain background/audit-only after this workstream
   becomes the execution lane.
 - [ ] Identify the ADR rows and alignment notes that must be updated when code lands:
-  - [ ] ADR 0147
+  - [x] ADR 0147
   - [ ] ADR 0257
-  - [ ] ADR 0258
+  - [x] ADR 0258
   - [ ] ADR 0259
-  - [ ] `docs/adr/IMPLEMENTATION_ALIGNMENT.md` entries as needed
+  - [x] `docs/adr/IMPLEMENTATION_ALIGNMENT.md` entries as needed
 
 ## M1 — Reset runner publication to one canonical operation
 
@@ -40,15 +40,15 @@ Background inputs:
   - [x] `FontCatalogCache`
   - [x] `TextFontStackKey`
   - [ ] rescan-status globals where relevant
-- [ ] Delete obsolete helper paths once the canonical flow exists.
+- [x] Delete obsolete helper paths once the canonical flow exists.
 
 Regression gates:
 
 - [x] Add helper-level regression tests for publication ordering and empty-entry startup
   preservation.
-- [ ] Add a targeted web startup test that fails if the published `TextFontStackKey` is stale
+- [x] Add a targeted web startup test that fails if the published `TextFontStackKey` is stale
   relative to the renderer's current locale/configured environment.
-- [ ] Add a desktop-side regression test for the same invariant on startup/update flows.
+- [x] Add a desktop-side regression test for the same invariant on startup/update flows.
 
 ## M2 — Make bundled font profiles manifest-driven
 

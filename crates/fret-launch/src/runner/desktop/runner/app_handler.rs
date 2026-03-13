@@ -655,26 +655,16 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 renderer
                     .set_intermediate_budget_bytes(self.config.renderer_intermediate_budget_bytes);
                 renderer.set_path_msaa_samples(self.config.path_msaa_samples);
-                self.app.set_global::<fret_core::TextFontFamilyConfig>(
-                    self.config.text_font_families.clone(),
-                );
 
                 let startup_async = Self::system_font_rescan_async_enabled()
                     && Self::system_font_catalog_startup_async_enabled();
-                if startup_async {
-                    let _ = super::super::super::font_catalog::publish_renderer_font_environment(
+                let _ =
+                    super::super::super::font_catalog::initialize_desktop_startup_font_environment(
                         &mut self.app,
                         &mut renderer,
-                        Vec::new(),
-                        fret_runtime::FontFamilyDefaultsPolicy::None,
+                        self.config.text_font_families.clone(),
+                        startup_async,
                     );
-                } else {
-                    super::super::super::font_catalog::apply_renderer_font_catalog_update(
-                        &mut self.app,
-                        &mut renderer,
-                        fret_runtime::FontFamilyDefaultsPolicy::None,
-                    );
-                }
 
                 self.context = Some(context);
                 self.renderer = Some(renderer);
@@ -873,29 +863,15 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             renderer.set_svg_raster_budget_bytes(self.config.svg_raster_budget_bytes);
             renderer.set_intermediate_budget_bytes(self.config.renderer_intermediate_budget_bytes);
             renderer.set_path_msaa_samples(self.config.path_msaa_samples);
-            self.app.set_global::<fret_core::TextFontFamilyConfig>(
-                self.config.text_font_families.clone(),
-            );
 
             let startup_async = Self::system_font_rescan_async_enabled()
                 && Self::system_font_catalog_startup_async_enabled();
-            if startup_async {
-                // Avoid enumerating the full system font catalog on the UI thread at startup. Seed an
-                // empty picker snapshot and populate it asynchronously via the rescan pipeline.
-                let _ = super::super::super::font_catalog::publish_renderer_font_environment(
-                    &mut self.app,
-                    &mut renderer,
-                    Vec::new(),
-                    fret_runtime::FontFamilyDefaultsPolicy::None,
-                );
-            } else {
-                // Font catalog refresh trigger (ADR 0258): initial renderer availability (startup).
-                super::super::super::font_catalog::apply_renderer_font_catalog_update(
-                    &mut self.app,
-                    &mut renderer,
-                    fret_runtime::FontFamilyDefaultsPolicy::None,
-                );
-            }
+            let _ = super::super::super::font_catalog::initialize_desktop_startup_font_environment(
+                &mut self.app,
+                &mut renderer,
+                self.config.text_font_families.clone(),
+                startup_async,
+            );
 
             self.context = Some(context);
             self.renderer = Some(renderer);
