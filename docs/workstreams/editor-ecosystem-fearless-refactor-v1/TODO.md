@@ -104,8 +104,15 @@ Interaction contract:
       `EnumSelect` now records combobox-style close reasons, restores focus through the shared
       close-autofocus policy, clears its search query on close instead of on open, and commits item
       selection through the shared combobox helper with editor-specific "do not toggle back to
-      none" semantics. This confirms the intended boundary: shared trigger-owned popup/list policy
-      belongs in `fret-ui-kit`, while input-owned assist remains a separate seam built on
+      none" semantics. It also now reuses the shared scroll-handle + active-element visibility
+      helpers to reveal the selected row when reopening the popup, and the proof/demo surface now
+      exposes a dedicated viewport wrapper so diagnostics can target real popup geometry instead of
+      a zero-height scroll semantics node. A focused gate script now exists at
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-enum-select-selected-row-reveal.json`;
+      final packed evidence still needs a successful `fret-demo` proof binary link on Windows.
+      This confirms the intended boundary: shared trigger-owned popup/list policy belongs in
+      `fret-ui-kit`, while
+      input-owned assist remains a separate seam built on
       `fret-ui-headless::text_assist` + `fret-ui-kit::headless::text_assist`.
 - [~] `EER-BASE-117` Close baseline editor text/numeric policy where visuals and interaction are
       coupled:
@@ -147,11 +154,12 @@ Interaction contract:
       The same seam now also has a second reusable consumer via `InspectorPanel` search history,
       and trigger-owned `EnumSelect` popup/list lifecycle now also reuses the shared
       `fret-ui-kit::primitives::combobox` helpers for close reasons, focus restore, and
-      close-time query clearing rather than keeping a separate editor-local copy.
-      The remaining work is to promote only the next shared layer that has real multi-consumer
-      evidence (for example selected-row reveal / scroll heuristics), decide where editor surfaces
-      should opt into `BlurBehavior::Cancel` / `PreserveDraft`, and keep multiline/editor proof
-      coverage tight before new promoted components land.
+      close-time query clearing rather than keeping a separate editor-local copy, while popup open
+      now also reveals the selected row instead of restarting long lists at the top. The remaining
+      work is to promote only the next shared layer that has real multi-consumer evidence beyond
+      this reveal baseline, decide where editor surfaces should opt into `BlurBehavior::Cancel` /
+      `PreserveDraft`, and keep multiline/editor proof coverage tight before new promoted
+      components land.
 - [ ] `EER-BASE-118` Do not promote new reusable editor components until `EER-BASE-110` through
       `EER-BASE-117` are in materially better shape.
 

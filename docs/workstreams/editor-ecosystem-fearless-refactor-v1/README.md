@@ -131,6 +131,11 @@ Current checkpoint:
   timing with `fret-ui-kit::primitives::combobox`, which confirms the intended boundary:
   trigger-owned select/list policy belongs in shared `ui-kit` primitives, while input-owned assist
   remains a separate editor-facing seam above `text_assist`,
+- editor `EnumSelect` now also reveals the selected row when the popup opens instead of reopening
+  long filtered lists at the top every time, reusing shared scroll-handle plus active-element
+  visibility helpers rather than keeping another editor-local "selected item reveal" path, and it
+  now anchors that visibility/repro surface to an explicit popup viewport wrapper instead of
+  relying on a scroll semantics node that can collapse to zero-height in diagnostics geometry,
 - and the remaining foundation cleanup is now mostly about promoting the next layer above that
   baseline: only the popup/scroll/selection behaviors that gain real multi-consumer evidence should
   move further into shared kit policy, alongside richer password/history integrations, targeted

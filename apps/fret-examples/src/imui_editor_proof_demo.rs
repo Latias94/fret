@@ -1386,15 +1386,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                     }
 
                                                     if show_shading_model {
-                                                        let items: Arc<[EnumSelectItem]> = vec![
-                                                            EnumSelectItem::new("lit", "Lit"),
-                                                            EnumSelectItem::new("unlit", "Unlit"),
-                                                            EnumSelectItem::new(
-                                                                "subsurface",
-                                                                "Subsurface",
-                                                            ),
-                                                        ]
-                                                        .into();
+                                                        let items = editor_material_shading_items();
 
                                                         rows.push(row_cx.row(
                                                             cx,
@@ -1417,6 +1409,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                     search_test_id: Some(Arc::from(
                                                                         "imui-editor-proof.editor.material.shading-model.search",
                                                                     )),
+                                                                    max_list_height: Some(Px(144.0)),
                                                                     ..Default::default()
                                                                 })
                                                                 .into_element(cx)
@@ -2369,6 +2362,24 @@ fn authoring_parity_shading_items() -> Arc<[EnumSelectItem]> {
     .into()
 }
 
+fn editor_material_shading_items() -> Arc<[EnumSelectItem]> {
+    vec![
+        EnumSelectItem::new("lit", "Lit"),
+        EnumSelectItem::new("unlit", "Unlit"),
+        EnumSelectItem::new("subsurface", "Subsurface"),
+        EnumSelectItem::new("clearcoat", "Clearcoat"),
+        EnumSelectItem::new("sheen", "Sheen"),
+        EnumSelectItem::new("anisotropy", "Anisotropy"),
+        EnumSelectItem::new("iridescence", "Iridescence"),
+        EnumSelectItem::new("transmission", "Transmission"),
+        EnumSelectItem::new("specular-gloss", "Specular gloss"),
+        EnumSelectItem::new("matcap", "Matcap"),
+        EnumSelectItem::new("toon", "Toon"),
+        EnumSelectItem::new("cloth", "Cloth"),
+    ]
+    .into()
+}
+
 fn named_demo_state<H: UiHost, S: Clone + 'static>(
     cx: &mut ElementContext<'_, H>,
     name: &'static str,
@@ -2523,7 +2534,7 @@ fn editor_demo_shading_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model
     named_demo_state(cx, "imui_editor_proof_demo.model.shading_model", |cx| {
         cx.app
             .models_mut()
-            .insert(Some::<Arc<str>>(Arc::from("lit")))
+            .insert(Some::<Arc<str>>(Arc::from("cloth")))
     })
 }
 
