@@ -753,6 +753,163 @@ fn text_input_caret_blinks_when_enabled() {
 }
 
 #[test]
+fn text_input_blur_hides_caret_and_clears_preedit_before_refocus() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let caret_color = fret_core::Color {
+        r: 0.91,
+        g: 0.23,
+        b: 0.14,
+        a: 1.0,
+    };
+    let underline_color = fret_core::Color {
+        r: 0.12,
+        g: 0.78,
+        b: 0.31,
+        a: 1.0,
+    };
+
+    let mut input = TextInput::new().with_text("hello");
+    input.set_chrome_style(TextInputStyle {
+        caret_color,
+        preedit_underline_color: underline_color,
+        ..Default::default()
+    });
+
+    let root = ui.create_node(input);
+    ui.set_root(root);
+    ui.set_focus(Some(root));
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(TextInteractionSettings {
+        caret_blink: true,
+        caret_blink_interval_ms: 16,
+        ..Default::default()
+    });
+    let mut text = FakeTextService::default();
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let _ = app.take_effects();
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::Ime(ImeEvent::Preedit {
+            text: "yo".to_string(),
+            cursor: Some((0, 2)),
+        }),
+    );
+
+    let mut focused_scene = fret_core::Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut focused_scene, 1.0);
+
+    let focused_effects = app.take_effects();
+    let blink_token = focused_effects
+        .iter()
+        .find_map(|effect| match effect {
+            Effect::SetTimer { token, .. } => Some(*token),
+            _ => None,
+        })
+        .expect("expected focused preedit to keep a caret blink timer active");
+
+    let focused_snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a text input snapshot while focused");
+    assert!(focused_snapshot.focus_is_text_input);
+    assert!(focused_snapshot.is_composing);
+    assert!(focused_snapshot.marked_utf16.is_some());
+    assert!(
+        focused_scene.ops().iter().any(|op| matches!(
+            op,
+            fret_core::SceneOp::Quad { background, .. }
+                if *background == fret_core::Paint::Solid(caret_color).into()
+        )),
+        "expected caret to remain visible while focused"
+    );
+    assert!(
+        focused_scene.ops().iter().any(|op| matches!(
+            op,
+            fret_core::SceneOp::Quad { background, rect, .. }
+                if *background == fret_core::Paint::Solid(underline_color).into()
+                    && rect.size.height.0 > 0.0
+                    && rect.size.height.0 <= 1.1
+        )),
+        "expected focused preedit to paint an underline"
+    );
+
+    ui.set_focus(None);
+
+    let mut blur_scene = fret_core::Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut blur_scene, 1.0);
+
+    let blur_effects = app.take_effects();
+    assert!(
+        blur_effects.iter().any(|effect| matches!(
+            effect,
+            Effect::CancelTimer { token } if *token == blink_token
+        )),
+        "expected blur to cancel the active caret blink timer"
+    );
+    assert!(
+        !blur_scene.ops().iter().any(|op| matches!(
+            op,
+            fret_core::SceneOp::Quad { background, .. }
+                if *background == fret_core::Paint::Solid(caret_color).into()
+        )),
+        "expected blur to stop painting the caret"
+    );
+
+    let blur_snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected the window text input snapshot service to stay present");
+    assert!(!blur_snapshot.focus_is_text_input);
+    assert!(!blur_snapshot.is_composing);
+    assert_eq!(blur_snapshot.marked_utf16, None);
+
+    ui.set_focus(Some(root));
+
+    let mut refocus_scene = fret_core::Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut refocus_scene, 1.0);
+    let _ = app.take_effects();
+
+    let refocus_snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a text input snapshot after refocus");
+    assert!(refocus_snapshot.focus_is_text_input);
+    assert!(!refocus_snapshot.is_composing);
+    assert_eq!(refocus_snapshot.marked_utf16, None);
+    assert!(
+        refocus_scene.ops().iter().any(|op| matches!(
+            op,
+            fret_core::SceneOp::Quad { background, .. }
+                if *background == fret_core::Paint::Solid(caret_color).into()
+        )),
+        "expected refocus to paint the caret again"
+    );
+    assert!(
+        !refocus_scene.ops().iter().any(|op| matches!(
+            op,
+            fret_core::SceneOp::Quad { background, rect, .. }
+                if *background == fret_core::Paint::Solid(underline_color).into()
+                    && rect.size.height.0 > 0.0
+                    && rect.size.height.0 <= 1.1
+        )),
+        "expected blur to clear preedit so refocus does not repaint an underline"
+    );
+}
+
+#[test]
 fn text_input_draws_preedit_underline_when_composing() {
     let window = AppWindowId::default();
     let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));

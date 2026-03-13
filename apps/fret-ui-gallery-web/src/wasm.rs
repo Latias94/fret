@@ -7,6 +7,15 @@ thread_local! {
         const { std::cell::RefCell::new(None) };
 }
 
+fn run_web_app<D: fret_launch::WinitAppDriver + 'static>(
+    config: fret_launch::WinitRunnerConfig,
+    mut app: fret_app::App,
+    driver: D,
+) -> Result<fret_launch::WebRunnerHandle, fret_launch::RunnerError> {
+    fret_bootstrap::install_default_text_interaction_settings(&mut app);
+    fret_launch::run_app_with_handle(config, app, driver)
+}
+
 #[wasm_bindgen(start)]
 pub fn start() -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
@@ -16,8 +25,7 @@ pub fn start() -> Result<(), JsValue> {
     config.main_window_title = "fret-ui-gallery (web)".to_string();
     let driver = fret_ui_gallery::build_driver();
 
-    let handle = fret_launch::run_app_with_handle(config, app, driver)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let handle = run_web_app(config, app, driver).map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     RUNNER_HANDLE.with(|slot| {
         slot.borrow_mut().replace(handle);

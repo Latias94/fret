@@ -60,7 +60,7 @@ use std::time::Duration;
 use fret_app::SettingsFileV1;
 #[cfg(not(target_arch = "wasm32"))]
 use fret_app::config_files::LayeredConfigPaths;
-use fret_app::{App, KeymapFileError, MenuBarFileError, SettingsError};
+use fret_app::{App, KeymapFileError, MenuBarFileError, SettingsError, TextInteractionSettings};
 use fret_i18n::{I18nLookup, I18nService, LocaleId};
 use fret_i18n_fluent::{FluentCatalog, FluentLookup};
 #[cfg(not(target_arch = "wasm32"))]
@@ -108,6 +108,34 @@ pub fn install_default_i18n_backend(app: &mut App) {
 
     service.set_lookup(Some(default_i18n_lookup()));
     app.set_global(service);
+}
+
+fn diagnostics_env_enabled() -> bool {
+    std::env::var_os("FRET_DIAG").is_some_and(|value| !value.is_empty())
+        || std::env::var_os("FRET_DIAG_DIR").is_some_and(|value| !value.is_empty())
+}
+
+fn install_default_text_interaction_settings_with(app: &mut App, diagnostics_active: bool) {
+    if app.global::<TextInteractionSettings>().is_some() {
+        return;
+    }
+
+    app.set_global(TextInteractionSettings {
+        // Desktop-facing bootstrap paths should feel like a normal product by default, while
+        // diagnostics runs stay deterministic unless an app opts back into blinking explicitly.
+        caret_blink: !diagnostics_active,
+        ..Default::default()
+    });
+}
+
+/// Installs bootstrap-level text interaction defaults when the app has not provided them yet.
+///
+/// This intentionally lives in the ecosystem bootstrap layer rather than `fret_app::App::new()`:
+/// - low-level apps/tests keep deterministic kernel defaults,
+/// - desktop "golden path" apps get editor-like caret blink by default,
+/// - diagnostics runs remain stable by disabling blink when `FRET_DIAG*` is active.
+pub fn install_default_text_interaction_settings(app: &mut App) {
+    install_default_text_interaction_settings_with(app, diagnostics_env_enabled());
 }
 
 fn default_i18n_lookup() -> Rc<dyn I18nLookup + 'static> {
@@ -185,7 +213,8 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
     /// This constructor remains useful for compatibility-oriented code that still implements
     /// `fret_launch::WinitAppDriver` directly, or for callers that already have a concrete driver
     /// value and simply want the bootstrap/defaults layer.
-    pub fn new(app: App, driver: D) -> Self {
+    pub fn new(mut app: App, driver: D) -> Self {
+        install_default_text_interaction_settings(&mut app);
         Self {
             inner: fret_launch::WinitAppBuilder::new(app, driver),
             on_gpu_ready_hooks: Vec::new(),
@@ -1042,4 +1071,57 @@ pub fn ui_app_with_app_and_hooks<S: 'static>(
     ))
     .into_fn_driver();
     BootstrapBuilder::new(app, driver)
+}
+
+#[cfg(test)]
+mod text_interaction_defaults_tests {
+    use super::*;
+
+    #[test]
+    fn install_default_text_interaction_settings_enables_caret_blink_outside_diagnostics() {
+        let mut app = App::new();
+
+        install_default_text_interaction_settings_with(&mut app, false);
+
+        let settings = app
+            .global::<TextInteractionSettings>()
+            .copied()
+            .expect("bootstrap should install text interaction settings");
+        assert!(settings.caret_blink);
+        assert_eq!(settings.caret_blink_interval_ms, 500);
+    }
+
+    #[test]
+    fn install_default_text_interaction_settings_disables_caret_blink_for_diagnostics() {
+        let mut app = App::new();
+
+        install_default_text_interaction_settings_with(&mut app, true);
+
+        let settings = app
+            .global::<TextInteractionSettings>()
+            .copied()
+            .expect("bootstrap should install text interaction settings");
+        assert!(!settings.caret_blink);
+    }
+
+    #[test]
+    fn install_default_text_interaction_settings_preserves_explicit_override() {
+        let mut app = App::new();
+        let explicit = TextInteractionSettings {
+            linux_primary_selection: true,
+            caret_blink: false,
+            caret_blink_interval_ms: 777,
+            horizontal_autoscroll_margin_px: 21,
+            horizontal_autoscroll_max_step_px: 42,
+        };
+        app.set_global(explicit);
+
+        install_default_text_interaction_settings_with(&mut app, false);
+
+        let settings = app
+            .global::<TextInteractionSettings>()
+            .copied()
+            .expect("explicit settings should still be present");
+        assert_eq!(settings, explicit);
+    }
 }

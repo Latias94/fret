@@ -1971,6 +1971,8 @@ name = "fret-demo-web"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
+ "fret-app",
+ "fret-bootstrap",
  "fret-examples",
  "fret-launch",
  "fret-router",
@@ -2869,6 +2871,8 @@ name = "fret-ui-gallery-web"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
+ "fret-app",
+ "fret-bootstrap",
  "fret-launch",
  "fret-ui-gallery",
  "js-sys",

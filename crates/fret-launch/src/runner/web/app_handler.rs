@@ -395,8 +395,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         }
         self.tick_id = scheduling::begin_turn(&mut self.tick_id);
         self.app.set_tick_id(self.tick_id);
-        if let Some(window) = self.window.as_ref()
-            && self.raf_windows.has_pending()
+        if self.raf_windows.has_pending()
+            && let Some(window) = self.window.clone()
         {
             self.flush_raf_redraw_requests(window.as_ref());
         }
