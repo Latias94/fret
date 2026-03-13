@@ -98,6 +98,15 @@ Interaction contract:
       Decision: yes. The dense preset now has matching overview / typing / validation screenshot
       proof coverage via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-imgui-like-dense.json`.
+- [x] `EER-BASE-120` Align trigger-owned editor select popup/list policy with shared
+      `fret-ui-kit::primitives::combobox` helpers instead of keeping a second editor-local state
+      machine.
+      `EnumSelect` now records combobox-style close reasons, restores focus through the shared
+      close-autofocus policy, clears its search query on close instead of on open, and commits item
+      selection through the shared combobox helper with editor-specific "do not toggle back to
+      none" semantics. This confirms the intended boundary: shared trigger-owned popup/list policy
+      belongs in `fret-ui-kit`, while input-owned assist remains a separate seam built on
+      `fret-ui-headless::text_assist` + `fret-ui-kit::headless::text_assist`.
 - [~] `EER-BASE-117` Close baseline editor text/numeric policy where visuals and interaction are
       coupled:
       Enter/Escape semantics, selection defaults, clear affordances, affix behavior, and error
@@ -136,10 +145,13 @@ Interaction contract:
       centers trailing clear affordance icons so proof-surface text/numeric controls stop drifting
       on obvious visual seams.
       The same seam now also has a second reusable consumer via `InspectorPanel` search history,
-      so the remaining work is deciding where shared overlay/scroll/selection policy should live,
-      deciding where editor surfaces should opt into `BlurBehavior::Cancel` /
-      `PreserveDraft`, and keeping multiline/editor proof coverage tight before new promoted
-      components land.
+      and trigger-owned `EnumSelect` popup/list lifecycle now also reuses the shared
+      `fret-ui-kit::primitives::combobox` helpers for close reasons, focus restore, and
+      close-time query clearing rather than keeping a separate editor-local copy.
+      The remaining work is to promote only the next shared layer that has real multi-consumer
+      evidence (for example selected-row reveal / scroll heuristics), decide where editor surfaces
+      should opt into `BlurBehavior::Cancel` / `PreserveDraft`, and keep multiline/editor proof
+      coverage tight before new promoted components land.
 - [ ] `EER-BASE-118` Do not promote new reusable editor components until `EER-BASE-110` through
       `EER-BASE-117` are in materially better shape.
 
@@ -174,9 +186,9 @@ Interaction contract:
       `InspectorPanel` search history, and
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-inspector-search-assist-popup-screenshots.json`
       is the intended focused gate for that panel-header surface. The remaining work is now about
-      deciding where shared overlay/scroll/selection policy belongs, deciding where specialized
-      blur policies belong, and adding richer editor integrations above the shared baseline rather
-      than re-litigating commit/cancel semantics.
+      promoting only the shared overlay/scroll/selection policy that has real reuse evidence,
+      deciding where specialized blur policies belong, and adding richer editor integrations above
+      the shared baseline rather than re-litigating popup ownership or commit/cancel semantics.
 - [ ] `EER-EDITOR-123` Freeze the v1 reusable starter set:
       `TextField`, `Checkbox`, `DragValue`, `Slider`, `EnumSelect`, `ColorEdit`, `VecNEdit`,
       `TransformEdit`, `PropertyGrid`, and `InspectorPanel`.
@@ -238,8 +250,10 @@ Interaction contract:
       placement tracing on that same proof surface. The same seam now also has a second reusable
       consumer in `InspectorPanel` search history, with intended focused evidence via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-inspector-search-assist-popup-screenshots.json`.
-      Remaining work: decide whether shared popup/list policy now belongs in `fret-ui-kit`
-      primitives or should stay editor-local for another cycle.
+      Trigger-owned `EnumSelect` policy now also aligns with
+      `fret-ui-kit::primitives::combobox`, so the remaining work is narrower: decide which
+      additional shared popup/list behaviors deserve promotion into `ui-kit` beyond the now-landed
+      reason/focus/query lifecycle helpers, and back those promotions with focused proof surfaces.
 - [~] `EER-GATE-133` Keep screenshot coverage tied to actual baseline-review states, not just
       arbitrary captures.
       The neutral default baseline now has a screenshot proof via

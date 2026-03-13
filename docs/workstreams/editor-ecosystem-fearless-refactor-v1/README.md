@@ -18,6 +18,10 @@ system.
 - `ecosystem/fret-ui-headless` owns reusable query/filter/highlight math for searchable suggestion
   surfaces; `ecosystem/fret-ui-kit` re-exports that logic and owns focus/overlay/active-descendant
   glue above it.
+- `ecosystem/fret-ui-kit::primitives::combobox` owns shared trigger-owned popup/list policy
+  (close reasons, focus restore, query-clear timing) for select-like surfaces; input-owned assist
+  remains a separate seam built from `fret-ui-headless::text_assist` math plus
+  `fret-ui-kit::headless::text_assist` glue.
 - `ecosystem/fret-workspace` owns editor shell chrome and shell-level command/focus coordination.
 - `ecosystem/fret-docking` owns dock-graph-aware tabs, drop surfaces, split previews, and docking
   interaction policy.
@@ -123,10 +127,13 @@ Current checkpoint:
   `InspectorPanel` search: panel headers can opt into input-owned search history/completion without
   growing a second popup implementation, and the proof demo now exercises that path with anchored
   overlay search history in the promoted inspector surface,
-- and the remaining foundation cleanup is now mostly about promoting specialized text policy above
-  that baseline: deciding which popup/scroll/selection behavior should be promoted into shared
-  kit policy vs stay editor-local now that a second consumer exists, richer password/history
-  integrations, targeted
+- `EnumSelect` now also aligns its trigger-owned close-reason, close-autofocus, and clear-query
+  timing with `fret-ui-kit::primitives::combobox`, which confirms the intended boundary:
+  trigger-owned select/list policy belongs in shared `ui-kit` primitives, while input-owned assist
+  remains a separate editor-facing seam above `text_assist`,
+- and the remaining foundation cleanup is now mostly about promoting the next layer above that
+  baseline: only the popup/scroll/selection behaviors that gain real multi-consumer evidence should
+  move further into shared kit policy, alongside richer password/history integrations, targeted
   `BlurBehavior::Cancel` / `PreserveDraft` adoption on real editor surfaces, and follow-up tuning
   for wide-inspector slack after the new lane grammar landed.
 

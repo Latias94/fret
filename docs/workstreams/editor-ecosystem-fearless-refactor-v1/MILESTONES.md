@@ -86,6 +86,9 @@ Deliverables:
 - a first editor-owned recipe above that seam (`fret-ui-editor::controls::TextAssistField`) with a
   shared panel builder plus `Inline` / `AnchoredOverlay` surfaces so field + listbox composition,
   popup anchoring, and row visuals stop living in proof-local code,
+- one first concrete trigger-owned reuse of shared popup/list policy by aligning editor
+  `EnumSelect` with `fret-ui-kit::primitives::combobox` for close reasons, focus restore, and
+  close-time query reset instead of keeping a second editor-local state machine,
 - one minimal promoted completion/history proof on top of that seam, keeping focus on the owning
   input while exposing a controlled listbox relationship plus `active_descendant` state and
   consuming the shared kit helper rather than proof-local glue,
@@ -114,6 +117,9 @@ Exit gates:
   moving primary focus into the popup, and that proof is backed by shared `fret-ui-kit`
   text-assist glue plus an editor-owned `TextAssistField` recipe rather than demo-local policy
   code, with anchored overlay mode promoted on the proof surface instead of an inline-only fallback,
+- trigger-owned editor select surfaces reuse shared `fret-ui-kit::primitives::combobox` policy for
+  close reasons, focus restore, and query clearing instead of keeping a separate editor-local
+  popup/list lifecycle,
 - the anchored-overlay popup path is also backed by focused screenshot/bundle/layout evidence and
   an overlay-placement trace instead of only the behavioral history script,
 - repeated-control identity coverage exists on a promoted loop-built surface rather than only in
