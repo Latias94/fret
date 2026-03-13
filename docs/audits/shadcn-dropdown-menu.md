@@ -208,6 +208,10 @@ Notes on API mapping:
   submenu triggers (via wheel), the root menu panel origin remains stable under wheel input
   (asserted in `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` during
   `web_vs_fret_dropdown_menu_demo_submenu_*`).
+- Diag gate: `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-item-chrome-fill.json`
+  (asserts the interactive row chrome still fills the authored item bounds on demo/basic examples).
+- Diag screenshot evidence: `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-demo-open-screenshot-zinc-dark.json`
+  (captures the docs-aligned demo open state in the zinc dark preset).
 - Underlay scroll anchor stability gate: when the trigger lives inside a scrolling underlay, the
   menu panel tracks the trigger after wheel-driven scroll updates (validated in
   `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` via
