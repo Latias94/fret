@@ -555,6 +555,7 @@ impl Renderer {
             path_vertices,
             text_system,
             path_state: PathState::new(device),
+            render_text_dump_state: super::render_text_dump::RenderTextDumpState::default(),
             svg_registry_state: svg::SvgRegistryState::new(),
             svg_raster_state: svg::SvgRasterState::default(),
             clip_path_mask_cache: ClipPathMaskCache::new((256 * 1024 * 1024) / 8),

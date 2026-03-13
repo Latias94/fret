@@ -250,6 +250,10 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/frame_scratch.rs`, and
   `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns viewport-uniform scratch,
   render-space scratch, plan-quad vertex scratch, or plan-quad base scratch directly.
+- Renderer render-text dump owner state now also lives under
+  `crates/fret-render-wgpu/src/renderer/render_text_dump.rs`, and
+  `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns render-text dump scratch directly;
+  dump collection/output scratch now sits behind that owner.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

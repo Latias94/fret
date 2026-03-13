@@ -247,6 +247,9 @@ For `Renderer` state-shell tightening, the same principle applies:
 - frame scratch state is the matching per-frame upload/build seam:
   viewport-uniform scratch, render-space scratch, and plan-quad scratch should move behind one
   owner so render-scene upload helpers stop depending on loose renderer vectors.
+- render-text dump state is the matching diagnostics/export seam for text debugging:
+  dump collection scratch and serialization scratch should move behind one owner so render-scene
+  execution keeps only a thin bridge to `TextSystem`.
 
 ### 5. Tighten public exports after evidence exists
 

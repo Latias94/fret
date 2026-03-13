@@ -571,11 +571,15 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/frame_scratch.rs`
     - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns viewport-uniform scratch,
       render-space scratch, plan-quad vertex scratch, or plan-quad base scratch directly
+    - render-text dump owner moved into
+      `crates/fret-render-wgpu/src/renderer/render_text_dump.rs`
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns render-text dump scratch
+      directly; dump collection/output scratch now sits behind that owner
   - Current next hotspot:
     - decide whether scene-encoding invalidation/debug evidence should stay coupled to
       `scene_encoding_cache.rs` or move closer to diagnostics state
-    - evaluate whether render-text dump state and remaining render-scene encode/upload helper
-      surfaces are the next owner-state cuts after frame scratch closure
+    - evaluate whether the remaining render-scene encode/upload helper surfaces should move behind
+      a shared execution owner after render-text dump closure
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG
@@ -605,6 +609,8 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/scene_encoding_cache.rs`
     - frame scratch state now lives under
       `crates/fret-render-wgpu/src/renderer/frame_scratch.rs`
+    - render-text dump state now lives under
+      `crates/fret-render-wgpu/src/renderer/render_text_dump.rs`
 - [ ] RMFR-renderer-042 Reduce cross-domain mutable coupling inside `Renderer`.
 - [ ] RMFR-renderer-043 Keep service trait implementations readable after extraction.
 
@@ -762,10 +768,10 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: frame scratch owner state now lives under
-    `crates/fret-render-wgpu/src/renderer/frame_scratch.rs`, and
-    `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns viewport-uniform scratch,
-    render-space scratch, plan-quad vertex scratch, or plan-quad base scratch directly.
+  - Latest landed slice: render-text dump owner state now lives under
+    `crates/fret-render-wgpu/src/renderer/render_text_dump.rs`, and
+    `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns render-text dump scratch
+    directly; dump collection/output scratch now sits behind that owner.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

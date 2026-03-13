@@ -446,6 +446,18 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu quad_scratch_roundtrips_vertices_and_bases`
   - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
   - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
+- The twelfth renderer owner-state split has landed:
+  - render-text dump state now lives under
+    `crates/fret-render-wgpu/src/renderer/render_text_dump.rs`
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns render-text dump scratch
+    directly; dump collection/output scratch now sits behind that owner
+  - `render_scene/execute.rs` now keeps only a thin bridge into that owner instead of relying on
+    dump-local transient allocations
+- Renderer render-text-dump split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu render_text_dump_state_clear_scratch_keeps_capacity`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

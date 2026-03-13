@@ -119,6 +119,8 @@ pub struct Renderer {
 
     path_state: PathState,
 
+    render_text_dump_state: render_text_dump::RenderTextDumpState,
+
     svg_registry_state: svg::SvgRegistryState,
     svg_raster_state: svg::SvgRasterState,
 
