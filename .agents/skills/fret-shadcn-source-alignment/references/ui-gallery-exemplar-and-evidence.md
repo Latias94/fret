@@ -51,7 +51,14 @@ Guidance:
     tracked in `docs/workstreams/into-element-surface-fearless-refactor-v1/`,
   - advanced/manual-assembly reusable helpers should prefer `IntoUiElement<H>` rather than
     child-pipeline traits such as `UiChildIntoElement<H>`,
+  - page/document wrapper seams should keep typed preview inputs typed for as long as possible;
+    prefer wrapper entry points such as `DocSection::build(cx, title, preview)` when the wrapper
+    itself can own the final landing,
+  - prose/doc-note helpers should also stay typed until the page wrapper seam; prefer
+    `doc_layout::notes_block(...)` over reintroducing `AnyElement`-returning doc helpers,
   - `AnyElement` stays for explicit raw/diagnostics/helper seams only,
+  - do not eagerly call `.into_element(cx)` just to cross a docs/page scaffold boundary unless the
+    wrapper is intentionally a raw seam that truly owns a concrete `AnyElement` contract,
   - do not teach the legacy split conversion trait names in copyable snippet tabs unless the
     example is explicitly documenting a raw/advanced seam.
 

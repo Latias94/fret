@@ -175,6 +175,9 @@ This tracker follows the repo-wide authoring reset and the focused conversion-su
   `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md`,
 - advanced/manual-assembly reusable helpers should prefer `IntoUiElement<H>` directly, including
   heterogeneous child-collection and single-child builder seams,
+- first-party UI Gallery page/document scaffolds are part of the shadcn teaching surface too, so
+  they should prefer typed wrapper entry points such as `DocSection::build(...)` instead of
+  eagerly landing previews into `AnyElement` before the scaffold layer,
 - shadcn opt-in authoring glue in `ecosystem/fret-ui-shadcn/src/ui_ext/` now also lands through
   `IntoUiElement<H>` directly, so adapter macros do not re-teach `UiIntoElement`,
 - shadcn `ui_builder_ext/*` helper closures now also accept values that implement
@@ -183,6 +186,10 @@ This tracker follows the repo-wide authoring reset and the focused conversion-su
   already deleted from code and should not be taught on first-party shadcn surfaces,
 - keep `AnyElement` explicit only for justified raw seams such as diagnostics, overlay/controller
   internals, or low-level helper plumbing.
+
+This matters beyond local helper signatures: when a docs/page scaffold turns a still-typed preview
+into `AnyElement` too early, the exemplar surface starts teaching the wrong authoring pattern even
+if the underlying component recipe is already aligned.
 
 Before (low density; props structs + wrappers):
 
