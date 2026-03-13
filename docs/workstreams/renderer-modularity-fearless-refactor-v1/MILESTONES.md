@@ -152,6 +152,23 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu color_matrix_compiles_to_pass`
   - `cargo nextest run -p fret-render-wgpu pixelate_scissored_step_compiles_to_scale_nearest_pair`
   - `cargo nextest run -p fret-render-wgpu backdrop_warp_v2_image_field_compiles_to_backdrop_warp_pass`
+- The sixth renderer effect-planning split has landed:
+  - masked chain builtin/backdrop step-apply flow now lives under
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects/builtin.rs`
+  - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns masked
+    `apply_chain_in_place(...)` branch handling for `BackdropWarpV1`/`BackdropWarpV2`,
+    `NoiseV1`, `ColorAdjust`, `ColorMatrix`, `AlphaThreshold`, `Pixelate`, or `Dither`
+    directly
+- Renderer masked-chain builtins split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu color_adjust_masked_step_compiles_to_masked_color_adjust_pass`
+  - `cargo nextest run -p fret-render-wgpu backdrop_warp_v2_masked_image_field_compiles_to_masked_backdrop_warp_pass`
+  - `cargo nextest run -p fret-render-wgpu backdrop_warp_v2_image_field_compiles_to_backdrop_warp_pass`
+  - `cargo nextest run -p fret-render-wgpu color_matrix_compiles_to_pass`
+  - `cargo nextest run -p fret-render-wgpu pixelate_scissored_step_compiles_to_scale_nearest_pair`
+  - `cargo nextest run -p fret-render-wgpu noise_compiles_to_pass`
+  - `cargo nextest run -p fret-render-wgpu dither_compiles_to_pass`
+  - `cargo nextest run -p fret-render-wgpu color_adjust_missing_scratch_increments_effect_degradations`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

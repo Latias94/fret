@@ -156,6 +156,11 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns
   `NoiseV1`, `ColorAdjust`, `ColorMatrix`, `AlphaThreshold`, `Pixelate`, or `Dither`
   step-apply branch handling directly.
+- Renderer masked chain builtin/backdrop step-apply flow now also lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/builtin.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns masked
+  `apply_chain_in_place(...)` branch handling for `BackdropWarpV1`/`BackdropWarpV2`, `NoiseV1`,
+  `ColorAdjust`, `ColorMatrix`, `AlphaThreshold`, `Pixelate`, or `Dither` directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

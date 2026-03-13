@@ -581,7 +581,7 @@ fn prepare_backdrop_warp_single_scratch(
     )
 }
 
-pub(super) fn apply_backdrop_warp_v1_step(
+fn apply_backdrop_warp_v1_step_inner(
     passes: &mut Vec<RenderPlanPass>,
     scratch_targets: &[PlanTarget],
     srcdst: PlanTarget,
@@ -591,6 +591,8 @@ pub(super) fn apply_backdrop_warp_v1_step(
     ctx: EffectCompileCtx,
     budget_bytes: &mut u64,
     effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
 ) {
     let Some(scratch) = prepare_backdrop_warp_single_scratch(
         scratch_targets,
@@ -611,12 +613,66 @@ pub(super) fn apply_backdrop_warp_v1_step(
         scissor,
         scale_backdrop_warp_v1(warp.sanitize(), ctx.scale_factor),
         ctx.clear,
+        mask_uniform_index,
+        mask,
+    );
+}
+
+pub(super) fn apply_backdrop_warp_v1_step(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    mode: fret_core::EffectMode,
+    scissor: ScissorRect,
+    warp: fret_core::scene::BackdropWarpV1,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+) {
+    apply_backdrop_warp_v1_step_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        mode,
+        scissor,
+        warp,
+        ctx,
+        budget_bytes,
+        effect_degradations,
         None,
         None,
     );
 }
 
-pub(super) fn apply_backdrop_warp_v2_step(
+pub(super) fn apply_backdrop_warp_v1_step_masked(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    mode: fret_core::EffectMode,
+    scissor: ScissorRect,
+    warp: fret_core::scene::BackdropWarpV1,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+) {
+    apply_backdrop_warp_v1_step_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        mode,
+        scissor,
+        warp,
+        ctx,
+        budget_bytes,
+        effect_degradations,
+        mask_uniform_index,
+        mask,
+    );
+}
+
+fn apply_backdrop_warp_v2_step_inner(
     passes: &mut Vec<RenderPlanPass>,
     scratch_targets: &[PlanTarget],
     srcdst: PlanTarget,
@@ -626,6 +682,8 @@ pub(super) fn apply_backdrop_warp_v2_step(
     ctx: EffectCompileCtx,
     budget_bytes: &mut u64,
     effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
 ) {
     let Some(scratch) = prepare_backdrop_warp_single_scratch(
         scratch_targets,
@@ -673,8 +731,8 @@ pub(super) fn apply_backdrop_warp_v2_step(
         origin_px: (scissor.x, scissor.y),
         bounds_size_px: (scissor.w, scissor.h),
         dst_scissor: Some(LocalScissorRect(scissor)),
-        mask_uniform_index: None,
-        mask: None,
+        mask_uniform_index,
+        mask,
         strength_px: base.strength_px.0 * ctx.scale_factor,
         scale_px: base.scale_px.0 * ctx.scale_factor,
         phase: base.phase,
@@ -688,7 +746,61 @@ pub(super) fn apply_backdrop_warp_v2_step(
     }));
 }
 
-pub(super) fn apply_noise_step(
+pub(super) fn apply_backdrop_warp_v2_step(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    mode: fret_core::EffectMode,
+    scissor: ScissorRect,
+    warp: fret_core::scene::BackdropWarpV2,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+) {
+    apply_backdrop_warp_v2_step_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        mode,
+        scissor,
+        warp,
+        ctx,
+        budget_bytes,
+        effect_degradations,
+        None,
+        None,
+    );
+}
+
+pub(super) fn apply_backdrop_warp_v2_step_masked(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    mode: fret_core::EffectMode,
+    scissor: ScissorRect,
+    warp: fret_core::scene::BackdropWarpV2,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+) {
+    apply_backdrop_warp_v2_step_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        mode,
+        scissor,
+        warp,
+        ctx,
+        budget_bytes,
+        effect_degradations,
+        mask_uniform_index,
+        mask,
+    );
+}
+
+fn apply_noise_step_inner(
     passes: &mut Vec<RenderPlanPass>,
     scratch_targets: &[PlanTarget],
     srcdst: PlanTarget,
@@ -697,6 +809,8 @@ pub(super) fn apply_noise_step(
     ctx: EffectCompileCtx,
     budget_bytes: &mut u64,
     effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
 ) {
     let Some(scratch) = prepare_effect_single_scratch(
         scratch_targets,
@@ -717,12 +831,62 @@ pub(super) fn apply_noise_step(
         (noise.scale_px.0 * ctx.scale_factor).max(1.0),
         noise.phase,
         ctx.clear,
+        mask_uniform_index,
+        mask,
+    );
+}
+
+pub(super) fn apply_noise_step(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    noise: fret_core::scene::NoiseV1,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+) {
+    apply_noise_step_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        scissor,
+        noise,
+        ctx,
+        budget_bytes,
+        effect_degradations,
         None,
         None,
     );
 }
 
-pub(super) fn apply_color_adjust_step(
+pub(super) fn apply_noise_step_masked(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    noise: fret_core::scene::NoiseV1,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+) {
+    apply_noise_step_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        scissor,
+        noise,
+        ctx,
+        budget_bytes,
+        effect_degradations,
+        mask_uniform_index,
+        mask,
+    );
+}
+
+fn apply_color_adjust_step_inner(
     passes: &mut Vec<RenderPlanPass>,
     scratch_targets: &[PlanTarget],
     srcdst: PlanTarget,
@@ -733,6 +897,8 @@ pub(super) fn apply_color_adjust_step(
     ctx: EffectCompileCtx,
     budget_bytes: &mut u64,
     effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
 ) {
     let Some(scratch) = prepare_effect_single_scratch(
         scratch_targets,
@@ -753,12 +919,70 @@ pub(super) fn apply_color_adjust_step(
         brightness,
         contrast,
         ctx.clear,
+        mask_uniform_index,
+        mask,
+    );
+}
+
+pub(super) fn apply_color_adjust_step(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    saturation: f32,
+    brightness: f32,
+    contrast: f32,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+) {
+    apply_color_adjust_step_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        scissor,
+        saturation,
+        brightness,
+        contrast,
+        ctx,
+        budget_bytes,
+        effect_degradations,
         None,
         None,
     );
 }
 
-pub(super) fn apply_color_matrix_step(
+pub(super) fn apply_color_adjust_step_masked(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    saturation: f32,
+    brightness: f32,
+    contrast: f32,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+) {
+    apply_color_adjust_step_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        scissor,
+        saturation,
+        brightness,
+        contrast,
+        ctx,
+        budget_bytes,
+        effect_degradations,
+        mask_uniform_index,
+        mask,
+    );
+}
+
+fn apply_color_matrix_step_inner(
     passes: &mut Vec<RenderPlanPass>,
     scratch_targets: &[PlanTarget],
     srcdst: PlanTarget,
@@ -767,6 +991,8 @@ pub(super) fn apply_color_matrix_step(
     ctx: EffectCompileCtx,
     budget_bytes: &mut u64,
     effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
 ) {
     let Some(scratch) = prepare_effect_single_scratch(
         scratch_targets,
@@ -785,12 +1011,62 @@ pub(super) fn apply_color_matrix_step(
         Some(scissor),
         matrix,
         ctx.clear,
+        mask_uniform_index,
+        mask,
+    );
+}
+
+pub(super) fn apply_color_matrix_step(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    matrix: [f32; 20],
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+) {
+    apply_color_matrix_step_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        scissor,
+        matrix,
+        ctx,
+        budget_bytes,
+        effect_degradations,
         None,
         None,
     );
 }
 
-pub(super) fn apply_alpha_threshold_step(
+pub(super) fn apply_color_matrix_step_masked(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    matrix: [f32; 20],
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+) {
+    apply_color_matrix_step_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        scissor,
+        matrix,
+        ctx,
+        budget_bytes,
+        effect_degradations,
+        mask_uniform_index,
+        mask,
+    );
+}
+
+fn apply_alpha_threshold_step_inner(
     passes: &mut Vec<RenderPlanPass>,
     scratch_targets: &[PlanTarget],
     srcdst: PlanTarget,
@@ -800,6 +1076,8 @@ pub(super) fn apply_alpha_threshold_step(
     ctx: EffectCompileCtx,
     budget_bytes: &mut u64,
     effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
 ) {
     let Some(scratch) = prepare_effect_single_scratch(
         scratch_targets,
@@ -819,12 +1097,66 @@ pub(super) fn apply_alpha_threshold_step(
         cutoff,
         soft,
         ctx.clear,
+        mask_uniform_index,
+        mask,
+    );
+}
+
+pub(super) fn apply_alpha_threshold_step(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    cutoff: f32,
+    soft: f32,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+) {
+    apply_alpha_threshold_step_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        scissor,
+        cutoff,
+        soft,
+        ctx,
+        budget_bytes,
+        effect_degradations,
         None,
         None,
     );
 }
 
-pub(super) fn apply_pixelate_step(
+pub(super) fn apply_alpha_threshold_step_masked(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    cutoff: f32,
+    soft: f32,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+) {
+    apply_alpha_threshold_step_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        scissor,
+        cutoff,
+        soft,
+        ctx,
+        budget_bytes,
+        effect_degradations,
+        mask_uniform_index,
+        mask,
+    );
+}
+
+fn apply_pixelate_step_inner(
     passes: &mut Vec<RenderPlanPass>,
     scratch_targets: &[PlanTarget],
     srcdst: PlanTarget,
@@ -833,6 +1165,8 @@ pub(super) fn apply_pixelate_step(
     ctx: EffectCompileCtx,
     budget_bytes: &mut u64,
     effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
 ) {
     let Some(scratch) = prepare_effect_single_scratch(
         scratch_targets,
@@ -857,12 +1191,62 @@ pub(super) fn apply_pixelate_step(
         Some(scissor),
         scale,
         ctx.clear,
+        mask_uniform_index,
+        mask,
+    );
+}
+
+pub(super) fn apply_pixelate_step(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    scale: u32,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+) {
+    apply_pixelate_step_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        scissor,
+        scale,
+        ctx,
+        budget_bytes,
+        effect_degradations,
         None,
         None,
     );
 }
 
-pub(super) fn apply_dither_step(
+pub(super) fn apply_pixelate_step_masked(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    scale: u32,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+) {
+    apply_pixelate_step_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        scissor,
+        scale,
+        ctx,
+        budget_bytes,
+        effect_degradations,
+        mask_uniform_index,
+        mask,
+    );
+}
+
+fn apply_dither_step_inner(
     passes: &mut Vec<RenderPlanPass>,
     scratch_targets: &[PlanTarget],
     srcdst: PlanTarget,
@@ -871,6 +1255,8 @@ pub(super) fn apply_dither_step(
     ctx: EffectCompileCtx,
     budget_bytes: &mut u64,
     effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
 ) {
     let Some(scratch) = prepare_effect_single_scratch(
         scratch_targets,
@@ -889,8 +1275,58 @@ pub(super) fn apply_dither_step(
         Some(scissor),
         mode,
         ctx.clear,
+        mask_uniform_index,
+        mask,
+    );
+}
+
+pub(super) fn apply_dither_step(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    mode: fret_core::DitherMode,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+) {
+    apply_dither_step_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        scissor,
+        mode,
+        ctx,
+        budget_bytes,
+        effect_degradations,
         None,
         None,
+    );
+}
+
+pub(super) fn apply_dither_step_masked(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    scissor: ScissorRect,
+    mode: fret_core::DitherMode,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+) {
+    apply_dither_step_inner(
+        passes,
+        scratch_targets,
+        srcdst,
+        scissor,
+        mode,
+        ctx,
+        budget_bytes,
+        effect_degradations,
+        mask_uniform_index,
+        mask,
     );
 }
 

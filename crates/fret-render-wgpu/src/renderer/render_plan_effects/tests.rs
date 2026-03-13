@@ -575,6 +575,62 @@ fn color_matrix_compiles_to_pass() {
 }
 
 #[test]
+fn color_adjust_masked_step_compiles_to_masked_color_adjust_pass() {
+    let ctx = EffectCompileCtx {
+        viewport_size: (64, 64),
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 1.0,
+    };
+    let scissor = ScissorRect::full(64, 64);
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::FilterContent,
+        fret_core::EffectChain::from_steps(&[fret_core::EffectStep::ColorAdjust {
+            saturation: 1.2,
+            brightness: 0.1,
+            contrast: 0.9,
+        }]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        Some(7),
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    );
+
+    assert!(
+        passes
+            .iter()
+            .any(|pass| matches!(pass, RenderPlanPass::ClipMask(_))),
+        "masked color-adjust should allocate a clip mask pass when budget allows"
+    );
+    let pass = passes.iter().find_map(|pass| match pass {
+        RenderPlanPass::ColorAdjust(pass) => Some(pass),
+        _ => None,
+    });
+    assert!(
+        pass.is_some_and(|pass| {
+            pass.dst_scissor == Some(LocalScissorRect(scissor))
+                && (pass.mask_uniform_index.is_some() || pass.mask.is_some())
+                && pass.saturation == 1.2
+                && pass.brightness == 0.1
+                && pass.contrast == 0.9
+        }),
+        "ColorAdjust should preserve clip coverage and parameters in the masked chain path"
+    );
+}
+
+#[test]
 fn backdrop_warp_v2_image_field_compiles_to_backdrop_warp_pass() {
     let ctx = EffectCompileCtx {
         viewport_size: (64, 64),
@@ -647,6 +703,87 @@ fn backdrop_warp_v2_image_field_compiles_to_backdrop_warp_pass() {
                 && pass.dst_scissor == Some(LocalScissorRect(scissor))
         }),
         "BackdropWarpV2 should preserve image-field settings when compiling the pass"
+    );
+}
+
+#[test]
+fn backdrop_warp_v2_masked_image_field_compiles_to_masked_backdrop_warp_pass() {
+    let ctx = EffectCompileCtx {
+        viewport_size: (64, 64),
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 2.0,
+    };
+    let scissor = ScissorRect {
+        x: 4,
+        y: 6,
+        w: 20,
+        h: 18,
+    };
+    let image = fret_core::ImageId::default();
+    let uv = fret_core::scene::UvRect {
+        u0: 0.1,
+        v0: 0.2,
+        u1: 0.8,
+        v1: 0.9,
+    };
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::Backdrop,
+        fret_core::EffectChain::from_steps(&[fret_core::EffectStep::BackdropWarpV2(
+            fret_core::scene::BackdropWarpV2 {
+                base: fret_core::scene::BackdropWarpV1 {
+                    strength_px: fret_core::Px(3.0),
+                    scale_px: fret_core::Px(12.0),
+                    phase: 0.5,
+                    chromatic_aberration_px: fret_core::Px(1.0),
+                    kind: fret_core::scene::BackdropWarpKindV1::Wave,
+                },
+                field: fret_core::scene::BackdropWarpFieldV2::ImageDisplacementMap {
+                    image,
+                    uv,
+                    sampling: fret_core::scene::ImageSamplingHint::Nearest,
+                    encoding: fret_core::scene::WarpMapEncodingV1::NormalRgb,
+                },
+            },
+        )]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        Some(9),
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    );
+
+    assert!(
+        passes
+            .iter()
+            .any(|pass| matches!(pass, RenderPlanPass::ClipMask(_))),
+        "masked backdrop-warp should allocate a clip mask pass when budget allows"
+    );
+    let pass = passes.iter().find_map(|pass| match pass {
+        RenderPlanPass::BackdropWarp(pass) => Some(pass),
+        _ => None,
+    });
+    assert!(
+        pass.is_some_and(|pass| {
+            pass.warp_image == Some(image)
+                && pass.warp_uv == uv
+                && pass.warp_sampling == fret_core::scene::ImageSamplingHint::Nearest
+                && pass.warp_encoding == fret_core::scene::WarpMapEncodingV1::NormalRgb
+                && pass.dst_scissor == Some(LocalScissorRect(scissor))
+                && (pass.mask_uniform_index.is_some() || pass.mask.is_some())
+        }),
+        "BackdropWarpV2 should preserve image-field settings and clip coverage in the masked chain path"
     );
 }
 

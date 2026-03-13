@@ -93,14 +93,13 @@ use self::blur::{
     compile_gaussian_blur_in_place, inflate_scissor_to_viewport, padded_chain_step_scissors,
 };
 use self::builtin::{
-    append_alpha_threshold_in_place_single_scratch, append_backdrop_warp_in_place_single_scratch,
-    append_color_adjust_in_place_single_scratch, append_color_matrix_in_place_single_scratch,
-    append_dither_in_place_single_scratch, append_noise_in_place_single_scratch,
-    append_pixelate_in_place_single_scratch, append_scissored_blur_in_place_single_scratch,
-    append_scissored_blur_in_place_two_scratch, apply_alpha_threshold_step,
-    apply_backdrop_warp_v1_step, apply_backdrop_warp_v2_step, apply_color_adjust_step,
-    apply_color_matrix_step, apply_dither_step, apply_noise_step, apply_pixelate_step,
-    choose_clip_mask_target_capped, effect_blur_desired_downsample, scale_backdrop_warp_v1,
+    append_scissored_blur_in_place_single_scratch, append_scissored_blur_in_place_two_scratch,
+    apply_alpha_threshold_step, apply_alpha_threshold_step_masked, apply_backdrop_warp_v1_step,
+    apply_backdrop_warp_v1_step_masked, apply_backdrop_warp_v2_step,
+    apply_backdrop_warp_v2_step_masked, apply_color_adjust_step, apply_color_adjust_step_masked,
+    apply_color_matrix_step, apply_color_matrix_step_masked, apply_dither_step,
+    apply_dither_step_masked, apply_noise_step, apply_noise_step_masked, apply_pixelate_step,
+    apply_pixelate_step_masked, choose_clip_mask_target_capped, effect_blur_desired_downsample,
 };
 use self::custom::{
     append_custom_effect_in_place_single_scratch, append_custom_effect_v2_in_place_single_scratch,
@@ -933,136 +932,34 @@ pub(super) fn apply_chain_in_place(
                 );
             }
             fret_core::EffectStep::BackdropWarpV1(w) => {
-                if mode != fret_core::EffectMode::Backdrop {
-                    continue;
-                }
-                effect_degradations.backdrop_warp.requested = effect_degradations
-                    .backdrop_warp
-                    .requested
-                    .saturating_add(1);
-                if !color_adjust_enabled(ctx.viewport_size, ctx.format, budget_bytes) {
-                    if budget_bytes == 0 {
-                        effect_degradations.backdrop_warp.degraded_budget_zero =
-                            effect_degradations
-                                .backdrop_warp
-                                .degraded_budget_zero
-                                .saturating_add(1);
-                    } else {
-                        effect_degradations
-                            .backdrop_warp
-                            .degraded_budget_insufficient = effect_degradations
-                            .backdrop_warp
-                            .degraded_budget_insufficient
-                            .saturating_add(1);
-                    }
-                    continue;
-                }
-                let Some(&scratch) = scratch_targets.first() else {
-                    effect_degradations.backdrop_warp.degraded_target_exhausted =
-                        effect_degradations
-                            .backdrop_warp
-                            .degraded_target_exhausted
-                            .saturating_add(1);
-                    continue;
-                };
-                effect_degradations.backdrop_warp.applied =
-                    effect_degradations.backdrop_warp.applied.saturating_add(1);
-                append_backdrop_warp_in_place_single_scratch(
+                apply_backdrop_warp_v1_step_masked(
                     passes,
+                    scratch_targets,
                     srcdst,
-                    scratch,
-                    ctx.viewport_size,
+                    mode,
                     scissor,
-                    scale_backdrop_warp_v1(w.sanitize(), ctx.scale_factor),
-                    ctx.clear,
+                    w,
+                    ctx,
+                    &mut budget_bytes,
+                    effect_degradations,
                     mask_uniform_index,
                     mask,
                 );
             }
             fret_core::EffectStep::BackdropWarpV2(w) => {
-                if mode != fret_core::EffectMode::Backdrop {
-                    continue;
-                }
-                effect_degradations.backdrop_warp.requested = effect_degradations
-                    .backdrop_warp
-                    .requested
-                    .saturating_add(1);
-                if !color_adjust_enabled(ctx.viewport_size, ctx.format, budget_bytes) {
-                    if budget_bytes == 0 {
-                        effect_degradations.backdrop_warp.degraded_budget_zero =
-                            effect_degradations
-                                .backdrop_warp
-                                .degraded_budget_zero
-                                .saturating_add(1);
-                    } else {
-                        effect_degradations
-                            .backdrop_warp
-                            .degraded_budget_insufficient = effect_degradations
-                            .backdrop_warp
-                            .degraded_budget_insufficient
-                            .saturating_add(1);
-                    }
-                    continue;
-                }
-                let Some(&scratch) = scratch_targets.first() else {
-                    effect_degradations.backdrop_warp.degraded_target_exhausted =
-                        effect_degradations
-                            .backdrop_warp
-                            .degraded_target_exhausted
-                            .saturating_add(1);
-                    continue;
-                };
-                effect_degradations.backdrop_warp.applied =
-                    effect_degradations.backdrop_warp.applied.saturating_add(1);
-
-                // Scissored in-place pattern: preserve outside-region content by pre-blitting into scratch.
-                passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
-                    src: srcdst,
-                    dst: scratch,
-                    src_size: ctx.viewport_size,
-                    dst_size: ctx.viewport_size,
-                    dst_scissor: None,
-                    encode_output_srgb: false,
-                    load: wgpu::LoadOp::Clear(ctx.clear),
-                }));
-
-                let base = w.base.sanitize();
-                let (warp_image, warp_uv, warp_sampling, warp_encoding) = match w.field {
-                    fret_core::scene::BackdropWarpFieldV2::Procedural => (
-                        None,
-                        fret_core::scene::UvRect::FULL,
-                        fret_core::scene::ImageSamplingHint::Default,
-                        fret_core::scene::WarpMapEncodingV1::RgSigned,
-                    ),
-                    fret_core::scene::BackdropWarpFieldV2::ImageDisplacementMap {
-                        image,
-                        uv,
-                        sampling,
-                        encoding,
-                    } => (Some(image), uv, sampling, encoding),
-                };
-
-                passes.push(RenderPlanPass::BackdropWarp(BackdropWarpPass {
-                    src: scratch,
-                    dst: srcdst,
-                    src_size: ctx.viewport_size,
-                    dst_size: ctx.viewport_size,
-                    origin_px: (scissor.x, scissor.y),
-                    bounds_size_px: (scissor.w, scissor.h),
-                    dst_scissor: Some(LocalScissorRect(scissor)),
+                apply_backdrop_warp_v2_step_masked(
+                    passes,
+                    scratch_targets,
+                    srcdst,
+                    mode,
+                    scissor,
+                    w,
+                    ctx,
+                    &mut budget_bytes,
+                    effect_degradations,
                     mask_uniform_index,
                     mask,
-                    strength_px: base.strength_px.0 * ctx.scale_factor,
-                    scale_px: base.scale_px.0 * ctx.scale_factor,
-                    phase: base.phase,
-                    chromatic_aberration_px: base.chromatic_aberration_px.0 * ctx.scale_factor,
-                    kind: base.kind,
-                    warp_image,
-                    warp_uv,
-                    warp_sampling,
-                    warp_encoding,
-                    load: wgpu::LoadOp::Load,
-                }));
+                );
             }
             fret_core::EffectStep::DropShadowV1(s) => {
                 if mode != fret_core::EffectMode::FilterContent {
@@ -1333,133 +1230,46 @@ pub(super) fn apply_chain_in_place(
                 brightness,
                 contrast,
             } => {
-                effect_degradations.color_adjust.requested =
-                    effect_degradations.color_adjust.requested.saturating_add(1);
-                if !color_adjust_enabled(ctx.viewport_size, ctx.format, budget_bytes) {
-                    if budget_bytes == 0 {
-                        effect_degradations.color_adjust.degraded_budget_zero = effect_degradations
-                            .color_adjust
-                            .degraded_budget_zero
-                            .saturating_add(1);
-                    } else {
-                        effect_degradations
-                            .color_adjust
-                            .degraded_budget_insufficient = effect_degradations
-                            .color_adjust
-                            .degraded_budget_insufficient
-                            .saturating_add(1);
-                    }
-                    continue;
-                }
-                let Some(&scratch) = scratch_targets.first() else {
-                    effect_degradations.color_adjust.degraded_target_exhausted =
-                        effect_degradations
-                            .color_adjust
-                            .degraded_target_exhausted
-                            .saturating_add(1);
-                    continue;
-                };
-                effect_degradations.color_adjust.applied =
-                    effect_degradations.color_adjust.applied.saturating_add(1);
-                append_color_adjust_in_place_single_scratch(
+                apply_color_adjust_step_masked(
                     passes,
+                    scratch_targets,
                     srcdst,
-                    scratch,
-                    ctx.viewport_size,
-                    Some(scissor),
+                    scissor,
                     saturation,
                     brightness,
                     contrast,
-                    ctx.clear,
+                    ctx,
+                    &mut budget_bytes,
+                    effect_degradations,
                     mask_uniform_index,
                     mask,
                 );
             }
             fret_core::EffectStep::ColorMatrix { m } => {
-                effect_degradations.color_matrix.requested =
-                    effect_degradations.color_matrix.requested.saturating_add(1);
-                if !color_adjust_enabled(ctx.viewport_size, ctx.format, budget_bytes) {
-                    if budget_bytes == 0 {
-                        effect_degradations.color_matrix.degraded_budget_zero = effect_degradations
-                            .color_matrix
-                            .degraded_budget_zero
-                            .saturating_add(1);
-                    } else {
-                        effect_degradations
-                            .color_matrix
-                            .degraded_budget_insufficient = effect_degradations
-                            .color_matrix
-                            .degraded_budget_insufficient
-                            .saturating_add(1);
-                    }
-                    continue;
-                }
-                let Some(&scratch) = scratch_targets.first() else {
-                    effect_degradations.color_matrix.degraded_target_exhausted =
-                        effect_degradations
-                            .color_matrix
-                            .degraded_target_exhausted
-                            .saturating_add(1);
-                    continue;
-                };
-                effect_degradations.color_matrix.applied =
-                    effect_degradations.color_matrix.applied.saturating_add(1);
-                append_color_matrix_in_place_single_scratch(
+                apply_color_matrix_step_masked(
                     passes,
+                    scratch_targets,
                     srcdst,
-                    scratch,
-                    ctx.viewport_size,
-                    Some(scissor),
+                    scissor,
                     m,
-                    ctx.clear,
+                    ctx,
+                    &mut budget_bytes,
+                    effect_degradations,
                     mask_uniform_index,
                     mask,
                 );
             }
             fret_core::EffectStep::AlphaThreshold { cutoff, soft } => {
-                effect_degradations.alpha_threshold.requested = effect_degradations
-                    .alpha_threshold
-                    .requested
-                    .saturating_add(1);
-                if !color_adjust_enabled(ctx.viewport_size, ctx.format, budget_bytes) {
-                    if budget_bytes == 0 {
-                        effect_degradations.alpha_threshold.degraded_budget_zero =
-                            effect_degradations
-                                .alpha_threshold
-                                .degraded_budget_zero
-                                .saturating_add(1);
-                    } else {
-                        effect_degradations
-                            .alpha_threshold
-                            .degraded_budget_insufficient = effect_degradations
-                            .alpha_threshold
-                            .degraded_budget_insufficient
-                            .saturating_add(1);
-                    }
-                    continue;
-                }
-                let Some(&scratch) = scratch_targets.first() else {
-                    effect_degradations
-                        .alpha_threshold
-                        .degraded_target_exhausted = effect_degradations
-                        .alpha_threshold
-                        .degraded_target_exhausted
-                        .saturating_add(1);
-                    continue;
-                };
-                effect_degradations.alpha_threshold.applied = effect_degradations
-                    .alpha_threshold
-                    .applied
-                    .saturating_add(1);
-                append_alpha_threshold_in_place_single_scratch(
+                apply_alpha_threshold_step_masked(
                     passes,
+                    scratch_targets,
                     srcdst,
-                    scratch,
-                    ctx.viewport_size,
-                    Some(scissor),
+                    scissor,
                     cutoff,
                     soft,
-                    ctx.clear,
+                    ctx,
+                    &mut budget_bytes,
+                    effect_degradations,
                     mask_uniform_index,
                     mask,
                 );
@@ -1468,85 +1278,29 @@ pub(super) fn apply_chain_in_place(
                 if scale <= 1 {
                     continue;
                 }
-                effect_degradations.pixelate.requested =
-                    effect_degradations.pixelate.requested.saturating_add(1);
-                if !pixelate_enabled(
-                    ctx.viewport_size,
-                    Some(scissor),
-                    ctx.format,
-                    budget_bytes,
-                    scale,
-                ) {
-                    if budget_bytes == 0 {
-                        effect_degradations.pixelate.degraded_budget_zero = effect_degradations
-                            .pixelate
-                            .degraded_budget_zero
-                            .saturating_add(1);
-                    } else {
-                        effect_degradations.pixelate.degraded_budget_insufficient =
-                            effect_degradations
-                                .pixelate
-                                .degraded_budget_insufficient
-                                .saturating_add(1);
-                    }
-                    continue;
-                }
-                let Some(&scratch) = scratch_targets.first() else {
-                    effect_degradations.pixelate.degraded_target_exhausted = effect_degradations
-                        .pixelate
-                        .degraded_target_exhausted
-                        .saturating_add(1);
-                    continue;
-                };
-                effect_degradations.pixelate.applied =
-                    effect_degradations.pixelate.applied.saturating_add(1);
-                append_pixelate_in_place_single_scratch(
+                apply_pixelate_step_masked(
                     passes,
+                    scratch_targets,
                     srcdst,
-                    scratch,
-                    ctx.viewport_size,
-                    Some(scissor),
+                    scissor,
                     scale,
-                    ctx.clear,
+                    ctx,
+                    &mut budget_bytes,
+                    effect_degradations,
                     mask_uniform_index,
                     mask,
                 );
             }
             fret_core::EffectStep::Dither { mode } => {
-                effect_degradations.dither.requested =
-                    effect_degradations.dither.requested.saturating_add(1);
-                if !dither_enabled(ctx.viewport_size, ctx.format, budget_bytes) {
-                    if budget_bytes == 0 {
-                        effect_degradations.dither.degraded_budget_zero = effect_degradations
-                            .dither
-                            .degraded_budget_zero
-                            .saturating_add(1);
-                    } else {
-                        effect_degradations.dither.degraded_budget_insufficient =
-                            effect_degradations
-                                .dither
-                                .degraded_budget_insufficient
-                                .saturating_add(1);
-                    }
-                    continue;
-                }
-                let Some(&scratch) = scratch_targets.first() else {
-                    effect_degradations.dither.degraded_target_exhausted = effect_degradations
-                        .dither
-                        .degraded_target_exhausted
-                        .saturating_add(1);
-                    continue;
-                };
-                effect_degradations.dither.applied =
-                    effect_degradations.dither.applied.saturating_add(1);
-                append_dither_in_place_single_scratch(
+                apply_dither_step_masked(
                     passes,
+                    scratch_targets,
                     srcdst,
-                    scratch,
-                    ctx.viewport_size,
-                    Some(scissor),
+                    scissor,
                     mode,
-                    ctx.clear,
+                    ctx,
+                    &mut budget_bytes,
+                    effect_degradations,
                     mask_uniform_index,
                     mask,
                 );
@@ -1556,42 +1310,15 @@ pub(super) fn apply_chain_in_place(
                 if n.strength <= 0.0 {
                     continue;
                 }
-                effect_degradations.noise.requested =
-                    effect_degradations.noise.requested.saturating_add(1);
-                if !noise_enabled(ctx.viewport_size, ctx.format, budget_bytes) {
-                    if budget_bytes == 0 {
-                        effect_degradations.noise.degraded_budget_zero = effect_degradations
-                            .noise
-                            .degraded_budget_zero
-                            .saturating_add(1);
-                    } else {
-                        effect_degradations.noise.degraded_budget_insufficient =
-                            effect_degradations
-                                .noise
-                                .degraded_budget_insufficient
-                                .saturating_add(1);
-                    }
-                    continue;
-                }
-                let Some(&scratch) = scratch_targets.first() else {
-                    effect_degradations.noise.degraded_target_exhausted = effect_degradations
-                        .noise
-                        .degraded_target_exhausted
-                        .saturating_add(1);
-                    continue;
-                };
-                effect_degradations.noise.applied =
-                    effect_degradations.noise.applied.saturating_add(1);
-                append_noise_in_place_single_scratch(
+                apply_noise_step_masked(
                     passes,
+                    scratch_targets,
                     srcdst,
-                    scratch,
-                    ctx.viewport_size,
-                    Some(scissor),
-                    n.strength,
-                    (n.scale_px.0 * ctx.scale_factor).max(1.0),
-                    n.phase,
-                    ctx.clear,
+                    scissor,
+                    n,
+                    ctx,
+                    &mut budget_bytes,
+                    effect_degradations,
                     mask_uniform_index,
                     mask,
                 );
