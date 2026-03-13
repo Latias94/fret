@@ -84,6 +84,15 @@ Current snapshot (2026-03-13):
     `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` and
     `crates/fret-render-wgpu/src/renderer/services.rs`
   - `RMFR-renderer-041`, `RMFR-renderer-042`, and `RMFR-renderer-043` are now closed for v1
+- The latest shader audit has landed:
+  - `docs/workstreams/renderer-modularity-fearless-refactor-v1/SHADERS_AUDIT.md` now records the
+    v1 stop-point decision for `crates/fret-render-wgpu/src/renderer/shaders.rs`
+  - `RMFR-shaders-050`, `RMFR-shaders-051`, and `RMFR-shaders-052` are now closed for v1
+- Shader audit verification remains green:
+  - `cargo nextest run -p fret-render-wgpu -E 'test(shaders_parse_as_wgsl) | test(shaders_validate_for_webgpu) | test(path_shader_wgsl_validates_under_naga)'`
+  - residual note: the conditional wasm/browser Tint guard in
+    `crates/fret-render-wgpu/src/renderer/tests.rs` remains available but was not rerun in this
+    native docs-closeout slice
 - The latest custom-effect service split has landed:
   - `crates/fret-render-wgpu/src/renderer/services_custom_effects.rs` now owns custom-effect WGSL
     validation, capability gating, registration/unregister flow, and the focused service tests

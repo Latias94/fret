@@ -104,6 +104,8 @@ These decisions are intentionally locked before code refactors begin:
 7. `text/mod.rs` is the first large internal breakup target.
 8. `renderer/shaders.rs` is not a first-wave extraction target unless a real ownership boundary
    requires it.
+   - Once it shrinks to a small index/assembly file backed by reviewable `pipelines/wgsl/*.wgsl`
+     sources, v1 should stop there instead of splitting Rust modules purely by shader family name.
 
 ## Target v1 Architecture
 

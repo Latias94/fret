@@ -10,6 +10,7 @@ Related:
 - TODO: `docs/workstreams/renderer-modularity-fearless-refactor-v1/TODO.md`
 - Milestones: `docs/workstreams/renderer-modularity-fearless-refactor-v1/MILESTONES.md`
 - Finishing audit: `docs/workstreams/renderer-modularity-fearless-refactor-v1/FINISHING_AUDIT.md`
+- Shaders audit: `docs/workstreams/renderer-modularity-fearless-refactor-v1/SHADERS_AUDIT.md`
 
 ## Motivation
 
@@ -82,8 +83,10 @@ As of 2026-03-13:
   - diagnostics stores,
   - and types that may not need to stay public.
 - `crates/fret-render-wgpu/src/renderer/mod.rs` still defines a large `Renderer` state owner.
-- `crates/fret-render-wgpu/src/text/mod.rs` and `crates/fret-render-wgpu/src/renderer/shaders.rs`
-  are the most obvious oversized internal modules.
+- `crates/fret-render-wgpu/src/text/mod.rs` remains the most obvious oversized internal module.
+- `crates/fret-render-wgpu/src/renderer/shaders.rs` is now a 331-line shader index/assembly file
+  backed by `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/*.wgsl`, and the shader audit now
+  closes it as a non-hotspot for v1.
 - `Renderer::new(adapter, device)` and `render_scene(device, queue, ...)` already make
   host-provided GPU objects possible, and
   `crates/fret-render-wgpu/tests/host_provided_gpu_topology_smoke.rs` now locks that engine-hosted
@@ -277,6 +280,12 @@ As of 2026-03-13:
     `crates/fret-render-wgpu/src/renderer/services.rs`
   - `RMFR-renderer-041`, `RMFR-renderer-042`, and `RMFR-renderer-043` are now treated as closed
     for v1
+- Shader audit now closes the remaining shader modularity decisions for v1:
+  - `docs/workstreams/renderer-modularity-fearless-refactor-v1/SHADERS_AUDIT.md` records the
+    "do not split further" decision for
+    `crates/fret-render-wgpu/src/renderer/shaders.rs`
+  - `RMFR-shaders-050`, `RMFR-shaders-051`, and `RMFR-shaders-052` are now treated as closed for
+    v1
 - Renderer path registry/cache owner state now also lives under
   `crates/fret-render-wgpu/src/renderer/path.rs`, and
   `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns prepared path storage, path cache

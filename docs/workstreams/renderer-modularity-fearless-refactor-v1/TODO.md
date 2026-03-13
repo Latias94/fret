@@ -785,7 +785,7 @@ ID format:
 
 ### D3. Shaders and pipelines
 
-- [ ] RMFR-shaders-050 Audit whether `renderer/shaders.rs` needs ownership-oriented splitting or
+- [x] RMFR-shaders-050 Audit whether `renderer/shaders.rs` needs ownership-oriented splitting or
   only comment/index cleanup.
   - Landed so far:
     - scale-nearest WGSL sources moved into
@@ -838,9 +838,19 @@ ID format:
     - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts `PATH_SHADER` inline
     - `crates/fret-render-wgpu/src/renderer/shaders.rs` now acts as a shader index/assembly file
       instead of a large inline-WGSL store
-- [ ] RMFR-shaders-051 Avoid splitting shader source files purely for line count if no boundary
+    - shader audit now records the v1 stop-point in
+      `docs/workstreams/renderer-modularity-fearless-refactor-v1/SHADERS_AUDIT.md`: keep
+      `shaders.rs` as the shader index/assembly surface
+- [x] RMFR-shaders-051 Avoid splitting shader source files purely for line count if no boundary
   benefit exists.
-- [~] RMFR-shaders-052 Keep WGSL validation tests aligned with any source reorganization.
+  - Landed so far:
+    - `crates/fret-render-wgpu/src/renderer/shaders.rs` is now 331 lines and no longer carries
+      inline WGSL bodies
+    - the reviewable units now live under
+      `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/*.wgsl`
+    - shader audit now closes the remaining split question for v1:
+      no further Rust-side splitting is needed without a new ownership boundary
+- [x] RMFR-shaders-052 Keep WGSL validation tests aligned with any source reorganization.
   - Landed so far:
     - `crates/fret-render-wgpu/src/renderer/tests.rs` now validates the `backdrop_warp_image`
       shader variants explicitly during WGSL parse and WebGPU validation coverage.
@@ -871,6 +881,9 @@ ID format:
     - the existing local naga validation test in
       `crates/fret-render-wgpu/src/renderer/shaders.rs` continued to validate `PATH_SHADER`
       unchanged
+    - shader audit now records these native WGSL parse/naga validation gates as sufficient v1
+      closure evidence, while the conditional wasm/browser Tint guard remains available for future
+      drift detection
 
 ---
 
