@@ -2330,6 +2330,7 @@ impl Default for TableKeyboardNavState {
 }
 
 #[allow(clippy::too_many_arguments)]
+#[track_caller]
 pub fn table_virtualized<H: UiHost, TData, IHeader, ICell>(
     cx: &mut ElementContext<'_, H>,
     data: &[TData],
@@ -2375,6 +2376,7 @@ where
 ///
 /// `copy_text_at` receives the data index for the selected/active leaf row.
 #[allow(clippy::too_many_arguments)]
+#[track_caller]
 pub fn table_virtualized_copyable<H: UiHost, TData, IHeader, ICell>(
     cx: &mut ElementContext<'_, H>,
     data: &[TData],
@@ -2433,6 +2435,7 @@ where
 /// The key benefit is that overscan window boundary updates can attach/detach body row subtrees
 /// without forcing a parent cache-root rerender under view-cache reuse.
 #[allow(clippy::too_many_arguments)]
+#[track_caller]
 pub fn table_virtualized_retained_v0<H: UiHost + 'static, TData>(
     cx: &mut ElementContext<'_, H>,
     data: Arc<[TData]>,
@@ -2574,9 +2577,9 @@ where
             .collect::<Vec<_>>(),
     );
 
-    let scroll_x = cx.with_state(ScrollHandle::default, |h| h.clone());
+    let scroll_x = cx.slot_state(ScrollHandle::default, |h| h.clone());
 
-    let entries = cx.with_state(RetainedTableRowsState::default, |st| {
+    let entries = cx.slot_state(RetainedTableRowsState::default, |st| {
         if st.last_items_revision != Some(items_revision) {
             st.last_items_revision = Some(items_revision);
 
@@ -3012,7 +3015,7 @@ where
         _last_labels_revision,
         typeahead,
         typeahead_timer,
-    ) = cx.with_state(RetainedTableKeyboardNavState::default, |nav| {
+    ) = cx.slot_state(RetainedTableKeyboardNavState::default, |nav| {
         if nav.last_labels_revision.get() != Some(items_revision) {
             nav.last_labels_revision.set(Some(items_revision));
 
@@ -3642,6 +3645,7 @@ where
 }
 
 #[allow(clippy::too_many_arguments)]
+#[track_caller]
 fn table_virtualized_impl<H: UiHost, TData, IHeader, ICell>(
     cx: &mut ElementContext<'_, H>,
     data: &[TData],
@@ -3700,7 +3704,7 @@ where
     let cell_px = resolve_cell_padding_x(theme);
     let cell_py = resolve_cell_padding_y(theme);
 
-    let scroll_x = cx.with_state(ScrollHandle::default, |h| h.clone());
+    let scroll_x = cx.slot_state(ScrollHandle::default, |h| h.clone());
 
     let grouping = if props.enable_column_grouping {
         state_value.grouping.as_slice()
@@ -3782,7 +3786,7 @@ where
     let has_row_pinning =
         grouping.is_empty() && is_some_rows_pinned(&state_value.row_pinning, None);
     let row_order = if grouping.is_empty() && !has_row_pinning {
-        Some(cx.with_state(FlatRowOrderCache::default, |cache| {
+        Some(cx.slot_state(FlatRowOrderCache::default, |cache| {
             let deps = FlatRowOrderDeps {
                 items_revision,
                 data_len: data.len(),
@@ -3936,7 +3940,7 @@ where
             Vec<DisplayRow>,
             TableViewOutput,
             Option<usize>,
-        ) = cx.with_state(GroupedDisplayCache::default, |cache| {
+        ) = cx.slot_state(GroupedDisplayCache::default, |cache| {
             if cache.deps.as_ref() == Some(&deps) {
                 return (cache.page_rows.clone(), cache.output.clone(), None);
             }
@@ -4335,7 +4339,7 @@ where
         active_command,
         typeahead,
         typeahead_timer,
-    ) = cx.with_state(TableKeyboardNavState::default, |st| {
+    ) = cx.slot_state(TableKeyboardNavState::default, |st| {
         (
             st.active_index.clone(),
             st.anchor_index.clone(),

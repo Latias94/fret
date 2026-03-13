@@ -506,6 +506,7 @@ where
 }
 
 /// Compatibility helper for simple string lists (used in demos).
+#[track_caller]
 pub fn list_from_strings<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     items: Model<Vec<String>>,
@@ -516,7 +517,7 @@ pub fn list_from_strings<H: UiHost + 'static>(
     let values = cx.watch_model(&items).layout().cloned_or_default();
     let values = Arc::new(values);
 
-    let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+    let scroll_handle = cx.slot_state(VirtualListScrollHandle::new, |h| h.clone());
     let items_revision = cx.app.models().revision(&items).unwrap_or(0);
 
     match selection {

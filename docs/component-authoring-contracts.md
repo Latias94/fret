@@ -193,6 +193,10 @@ Practical guidance:
 - Keep helper-local sync metadata small: previous-open flags, last-synced revisions, and similar
   scratch values belong in `slot_state(...)` or `state_for(keyed_slot_id(...), ...)`, not in
   compatibility `with_state(...)` wrappers that also manufacture models.
+- Helper-local runtime handles/caches follow the same rule: `ScrollHandle`,
+  `VirtualListScrollHandle`, row-order caches, grouped-display caches, typeahead buffers, and
+  similar non-provider internals should live in `slot_state(...)` unless they need an explicit,
+  externally chosen identity.
 - Avoid capturing element IDs in long-lived app state unless you also control their lifetime and
   re-derivation strategy (IDs are stable but not global identifiers).
 
