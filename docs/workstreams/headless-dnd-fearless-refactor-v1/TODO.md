@@ -135,7 +135,20 @@ This file tracks the execution checklist for `DESIGN.md`.
     - `ecosystem/fret-workspace/src/tab_strip/mod.rs`
     - `ecosystem/fret-docking/src/dock/space.rs`
     - `ecosystem/fret-docking/src/dock/tests/drag.rs`
-- [ ] Multi-rect droppables only if at least two consumers require them.
+- [x] Decide whether multi-rect droppables belong in the core snapshot now:
+  - Decision: defer from v1 for now; keep the core snapshot single-rect-per-droppable
+  - Reason: current shared consumers remain single-rect, while richer hit-region cases still use
+    product-local geometry rather than a shared registry-driven contract
+  - Follow-up trigger: revisit once at least two registry-driven consumers need one semantic
+    droppable to span multiple rects
+  - Evidence anchors:
+    - `docs/workstreams/headless-dnd-fearless-refactor-v1/MULTI_RECT_DROPPABLES_DECISION.md`
+    - `ecosystem/fret-dnd/src/registry.rs`
+    - `ecosystem/fret-ui-kit/src/dnd/registry.rs`
+    - `ecosystem/fret-ui-kit/src/recipes/sortable_dnd.rs`
+    - `ecosystem/fret-ui-shadcn/src/extras/kanban.rs`
+    - `ecosystem/fret-workspace/src/tab_strip/mod.rs`
+    - `ecosystem/fret-docking/src/dock/space.rs`
 - [ ] Sortable group semantics beyond the current minimal insertion helpers.
 
 ## Product adoption and gates

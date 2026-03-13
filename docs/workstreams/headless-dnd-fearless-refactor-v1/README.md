@@ -27,6 +27,7 @@ This directory contains:
 - `KEYBOARD_SENSOR_DESIGN_NOTE.md`: follow-on ownership and behavior note for keyboard-driven DnD
 - `AUTO_SCROLL_DRIVER_DESIGN_NOTE.md`: follow-on ownership and extraction note for continuous
   drag auto-scroll drivers
+- `MULTI_RECT_DROPPABLES_DECISION.md`: v1 decision note for one-droppable-many-rects support
 
 Primary contract references:
 
@@ -47,3 +48,5 @@ Current v1 scope decisions:
   same shared contract
 - modifier and auto-scroll core stay pure/data-only; actual scrolling side effects remain in
   product/integration code
+- multi-rect droppables are deferred until at least two registry-driven consumers need the same
+  shared contract

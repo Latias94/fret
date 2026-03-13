@@ -100,6 +100,17 @@ Recommendation:
 - do not widen `fret-dnd` yet;
 - first confirm at least two consumers need shared metadata semantics.
 
+The same conservative rule currently applies to multi-rect droppables:
+
+- keep the core snapshot single-rect-per-droppable in v1;
+- revisit only when at least two registry-driven consumers need one semantic target to span
+  multiple rects.
+
+Additional evidence anchors:
+
+- `docs/workstreams/headless-dnd-fearless-refactor-v1/MULTI_RECT_DROPPABLES_DECISION.md`
+- `ecosystem/fret-ui-kit/src/dnd/registry.rs`
+
 ### 3) Monitor/event surface is still absent
 
 There is no small monitor-style event stream yet for:
