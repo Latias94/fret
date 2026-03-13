@@ -409,6 +409,18 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu path_state_deduplicates_and_evicts_unreferenced_entries`
   - `cargo nextest run -p fret-render-wgpu render_plan_usage_detection_only_counts_path_msaa_batches`
   - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
+- The ninth renderer owner-state split has landed:
+  - render-plan reporting / dump state now lives under
+    `crates/fret-render-wgpu/src/renderer/render_plan_reporting.rs`
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns render-plan segment report
+    scratch, per-segment pass-count scratch, or render-plan JSON dump scratch directly
+  - `render_scene/plan_reporting.rs` now delegates to that owner instead of mutating loose
+    renderer scratch fields directly
+- Renderer render-plan reporting-state split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu diff_segment_reports_tracks_shape_changes_and_pass_growth`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

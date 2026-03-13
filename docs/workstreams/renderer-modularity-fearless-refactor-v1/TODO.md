@@ -558,10 +558,15 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/path.rs`
     - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns path intermediate attachments,
       path composite vertex storage, or path composite vertex capacity directly
+    - render-plan reporting/dump owner moved into
+      `crates/fret-render-wgpu/src/renderer/render_plan_reporting.rs`
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns render-plan segment report
+      scratch, per-segment pass-count scratch, or render-plan JSON dump scratch directly
   - Current next hotspot:
     - decide whether scene-encoding cache invalidation evidence belongs with diagnostics state or
       should stay coupled to `scene_encoding_cache.rs`
-    - evaluate scene-encoding shell and its invalidation/debug evidence as the next owner-state cut
+    - evaluate scene-encoding cache shell and its invalidation/debug evidence as the next
+      owner-state cut
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG
@@ -585,6 +590,8 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/path.rs`
     - path intermediate / composite scratch state now lives under
       `crates/fret-render-wgpu/src/renderer/path.rs`
+    - render-plan reporting / dump state now lives under
+      `crates/fret-render-wgpu/src/renderer/render_plan_reporting.rs`
 - [ ] RMFR-renderer-042 Reduce cross-domain mutable coupling inside `Renderer`.
 - [ ] RMFR-renderer-043 Keep service trait implementations readable after extraction.
 
@@ -742,10 +749,10 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: path intermediate/composite scratch owner state now lives under
-    `crates/fret-render-wgpu/src/renderer/path.rs`, and
-    `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns path intermediate attachments,
-    path composite vertex storage, or path composite vertex capacity directly.
+  - Latest landed slice: render-plan reporting/dump owner state now lives under
+    `crates/fret-render-wgpu/src/renderer/render_plan_reporting.rs`, and
+    `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns render-plan segment report
+    scratch, per-segment pass-count scratch, or render-plan JSON dump scratch directly.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

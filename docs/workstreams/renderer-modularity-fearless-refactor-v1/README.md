@@ -237,6 +237,10 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/path.rs`, and
   `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns path intermediate attachments, path
   composite vertex storage, or path composite vertex capacity directly.
+- Renderer render-plan reporting/dump owner state now also lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_reporting.rs`, and
+  `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns render-plan segment report scratch,
+  per-segment pass-count scratch, or render-plan JSON dump scratch directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

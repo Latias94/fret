@@ -37,6 +37,7 @@ mod render_plan;
 mod render_plan_compiler;
 mod render_plan_dump;
 mod render_plan_effects;
+mod render_plan_reporting;
 mod render_scene;
 mod render_text_dump;
 mod resources;
@@ -61,6 +62,7 @@ use intermediate_pool::*;
 use material_effects::*;
 use path::*;
 use render_plan::*;
+use render_plan_reporting::*;
 use scene_encoding_cache::SceneEncodingCache;
 use types::*;
 pub use types::{BlurQualityCounters, BlurQualitySnapshot};
@@ -93,10 +95,7 @@ pub struct Renderer {
     render_space_bytes_scratch: Vec<u8>,
     plan_quad_vertices_scratch: Vec<ViewportVertex>,
     plan_quad_vertex_bases_scratch: Vec<Option<u32>>,
-    render_plan_scene_draw_range_passes_scratch: Vec<u32>,
-    render_plan_path_msaa_batch_passes_scratch: Vec<u32>,
-    render_plan_segment_report_scratch: Vec<RenderPlanSegmentReport>,
-    render_plan_dump_scratch: render_plan_dump::RenderPlanJsonDumpScratch,
+    render_plan_reporting_state: RenderPlanReportingState,
     render_plan_strict_output_clear: bool,
     globals: GpuGlobals,
     textures: GpuTextures,
@@ -141,16 +140,6 @@ pub struct Renderer {
 
     material_effect_state: MaterialEffectState,
 }
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct RenderPlanSegmentReport {
-    draw_range: (usize, usize),
-    start_uniform_fingerprint: u64,
-    flags_mask: u8,
-    scene_draw_range_passes: u32,
-    path_msaa_batch_passes: u32,
-}
-
 pub struct RenderSceneParams<'a> {
     pub format: wgpu::TextureFormat,
     pub target_view: &'a wgpu::TextureView,

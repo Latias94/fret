@@ -236,6 +236,10 @@ For `Renderer` state-shell tightening, the same principle applies:
   intermediate attachments, composite quad vertex storage, and byte-estimate helpers should move
   behind the same path owner so config, plan sync, perf snapshots, and pass recorders stop
   depending on loose `Renderer` fields.
+- render-plan reporting/dump state is the matching diagnostics seam for planning observability:
+  per-segment pass-count scratch, segment report scratch, and JSON dump scratch should move behind
+  one owner so render-scene diagnostics code stops depending on transient renderer bookkeeping
+  fields.
 
 ### 5. Tighten public exports after evidence exists
 
