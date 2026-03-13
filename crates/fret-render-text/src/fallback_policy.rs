@@ -604,6 +604,40 @@ fn bundled_profile_contract_snapshot() -> fret_core::RendererBundledFontProfileS
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parley_shaper::ParleyShaper;
+
+    fn expected_bundled_only_default_common_fallback() -> Vec<String> {
+        let profile = fret_fonts::default_profile();
+        let mut seen = std::collections::HashSet::<String>::new();
+        let mut out = Vec::new();
+        for family in profile
+            .ui_sans_families
+            .iter()
+            .chain(profile.common_fallback_families.iter())
+        {
+            let key = family.to_ascii_lowercase();
+            if seen.insert(key) {
+                out.push((*family).to_string());
+            }
+        }
+        out
+    }
+
+    fn build_policy(
+        shaper: &mut ParleyShaper,
+        config: fret_core::TextFontFamilyConfig,
+        locale: Option<&str>,
+    ) -> TextFallbackPolicyV1 {
+        let _ = shaper.set_default_locale(locale.map(str::to_string));
+        let mut policy = TextFallbackPolicyV1::new(shaper);
+        policy.font_family_config = config;
+        policy.locale_bcp47 = locale.map(str::to_string);
+        policy.refresh_derived(shaper);
+        let _ =
+            shaper.set_common_fallback_stack_suffix(policy.common_fallback_stack_suffix.clone());
+        policy.recompute_key(shaper);
+        policy
+    }
 
     #[test]
     fn merged_static_family_lists_preserves_order_and_dedupes_case_insensitively() {
@@ -614,6 +648,154 @@ mod tests {
         assert_eq!(
             families.as_ref(),
             &["Inter", "Noto Sans CJK SC", "Noto Color Emoji"]
+        );
+    }
+
+    #[test]
+    fn bundled_only_default_candidates_use_profile_families() {
+        let shaper = ParleyShaper::new_without_system_fonts();
+        let profile = fret_fonts::default_profile();
+
+        assert_eq!(default_sans_candidates(&shaper), profile.ui_sans_families);
+        assert_eq!(default_serif_candidates(&shaper), profile.ui_serif_families);
+        assert_eq!(
+            default_monospace_candidates(&shaper),
+            profile.ui_mono_families
+        );
+        assert_eq!(
+            default_common_fallback_families(&shaper)
+                .iter()
+                .map(|family| (*family).to_string())
+                .collect::<Vec<_>>(),
+            expected_bundled_only_default_common_fallback()
+        );
+    }
+
+    #[test]
+    fn fallback_policy_key_changes_when_locale_changes() {
+        let mut shaper = ParleyShaper::new_without_system_fonts();
+        let config = fret_core::TextFontFamilyConfig {
+            common_fallback_injection: fret_core::TextCommonFallbackInjection::CommonFallback,
+            common_fallback: vec!["Noto Sans CJK SC".to_string()],
+            ..Default::default()
+        };
+
+        let en = build_policy(&mut shaper, config.clone(), Some("en-US"));
+        let zh = build_policy(&mut shaper, config, Some("zh-CN"));
+
+        assert_ne!(
+            en.fallback_policy_key, zh.fallback_policy_key,
+            "expected locale changes to participate in the fallback policy fingerprint"
+        );
+    }
+
+    #[test]
+    fn fallback_policy_key_changes_when_injection_mode_changes() {
+        let mut shaper = ParleyShaper::new_without_system_fonts();
+        let platform_default = build_policy(
+            &mut shaper,
+            fret_core::TextFontFamilyConfig {
+                common_fallback_injection: fret_core::TextCommonFallbackInjection::PlatformDefault,
+                common_fallback: vec!["Noto Sans CJK SC".to_string()],
+                ..Default::default()
+            },
+            Some("en-US"),
+        );
+        let common_fallback = build_policy(
+            &mut shaper,
+            fret_core::TextFontFamilyConfig {
+                common_fallback_injection: fret_core::TextCommonFallbackInjection::CommonFallback,
+                common_fallback: vec!["Noto Sans CJK SC".to_string()],
+                ..Default::default()
+            },
+            Some("en-US"),
+        );
+
+        assert_ne!(
+            platform_default.fallback_policy_key, common_fallback.fallback_policy_key,
+            "expected injection-mode changes to participate in the fallback policy fingerprint"
+        );
+    }
+
+    #[test]
+    fn diagnostics_snapshot_reports_profile_contract_and_defaults_in_bundled_only_mode() {
+        let mut shaper = ParleyShaper::new_without_system_fonts();
+        let config = fret_core::TextFontFamilyConfig {
+            common_fallback_injection: fret_core::TextCommonFallbackInjection::CommonFallback,
+            ui_sans: vec!["Inter".to_string()],
+            ui_mono: vec!["JetBrains Mono".to_string()],
+            common_fallback: vec!["Noto Sans Arabic".to_string()],
+            ..Default::default()
+        };
+        let policy = build_policy(&mut shaper, config.clone(), Some("en-US"));
+        let snapshot = policy.diagnostics_snapshot(fret_core::FrameId(7), 11, 13, &shaper);
+        let profile = fret_fonts::default_profile();
+
+        assert!(!snapshot.system_fonts_enabled);
+        assert!(snapshot.prefer_common_fallback);
+        assert_eq!(
+            snapshot.common_fallback_injection,
+            config.common_fallback_injection
+        );
+        assert_eq!(snapshot.configured_ui_sans_families, config.ui_sans);
+        assert_eq!(snapshot.configured_ui_serif_families, config.ui_serif);
+        assert_eq!(snapshot.configured_ui_mono_families, config.ui_mono);
+        assert_eq!(
+            snapshot.configured_common_fallback_families,
+            config.common_fallback
+        );
+        assert_eq!(
+            snapshot.default_ui_sans_candidates,
+            profile
+                .ui_sans_families
+                .iter()
+                .map(|family| (*family).to_string())
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(
+            snapshot.default_ui_serif_candidates,
+            profile
+                .ui_serif_families
+                .iter()
+                .map(|family| (*family).to_string())
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(
+            snapshot.default_ui_mono_candidates,
+            profile
+                .ui_mono_families
+                .iter()
+                .map(|family| (*family).to_string())
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(
+            snapshot.default_common_fallback_families,
+            expected_bundled_only_default_common_fallback()
+        );
+        assert_eq!(snapshot.bundled_profile_contract.name, profile.name);
+        assert_eq!(
+            snapshot.bundled_profile_contract.ui_sans_families,
+            profile
+                .ui_sans_families
+                .iter()
+                .map(|family| (*family).to_string())
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(
+            snapshot.bundled_profile_contract.ui_mono_families,
+            profile
+                .ui_mono_families
+                .iter()
+                .map(|family| (*family).to_string())
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(
+            snapshot.bundled_profile_contract.common_fallback_families,
+            profile
+                .common_fallback_families
+                .iter()
+                .map(|family| (*family).to_string())
+                .collect::<Vec<_>>()
         );
     }
 }

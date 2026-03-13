@@ -29,6 +29,9 @@ Status: Active
       selection/layout helpers).
 - [ ] FR-RENDER-TEXT-013 Add crate-local tests for fallback-policy key transitions on locale,
       injection mode, and system-font availability changes.
+      Progress: locale-change, injection-mode, and bundled-only diagnostics snapshot coverage now
+      lives in `crates/fret-render-text/src/fallback_policy.rs`; the remaining gap is an explicit
+      system-font-availability transition assertion.
 - [ ] FR-RENDER-TEXT-014 Add a bounded catalog-enumeration regression harness or perf check.
 
 ## `fret-launch`
