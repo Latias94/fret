@@ -135,6 +135,7 @@ mod no_services;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod renderdoc_capture;
 mod restart_trigger;
+mod scheduling_diagnostics;
 #[cfg(windows)]
 mod windows_menu;
 

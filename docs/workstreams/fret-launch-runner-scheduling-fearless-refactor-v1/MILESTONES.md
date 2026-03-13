@@ -17,6 +17,7 @@ Last updated: 2026-03-13
   - desktop `TickId` turn advancement and `FrameId` present commitment now use the shared helper,
   - native timer participation in the bounded drain has now been audited,
   - present diagnostics now observe the committed frame id through the shared seam,
+  - desktop-local scheduling/diagnostics helper extraction has started,
   - broader diagnostics auditing is still pending.
 - M3: Partial
   - web `TickId` turn advancement moved out of render entry,
@@ -118,9 +119,10 @@ Exit criteria:
 ## Remaining closeout blockers (from the current checkpoint)
 
 - diagnostics writes still need a turn/frame semantic audit,
-- module thinning is intentionally deferred until semantics and evidence are fully locked,
+- broader module thinning is still intentionally deferred until semantics and evidence are fully
+  locked,
 - remaining backend-local redraw logic still needs an explicit “acceptable sink wiring vs drift”
-  decision.
+  decision beyond the helper extraction already landed.
 
 ## Recommended continuation order
 

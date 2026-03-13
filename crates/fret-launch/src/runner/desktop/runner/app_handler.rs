@@ -4,7 +4,6 @@ use super::window::PendingWheelEvent;
 use super::*;
 use std::sync::{Arc, Mutex, OnceLock};
 
-use crate::runner::common::scheduling;
 use fret_core::time::Instant;
 use fret_platform::external_drop::ExternalDropProvider as _;
 
@@ -239,6 +238,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
         };
 
+        let mut redraw_bootstrap_windows: Vec<fret_core::AppWindowId> = Vec::new();
         for (app_window, state) in self.windows.iter_mut() {
             if state.surface.is_some() {
                 continue;
@@ -286,15 +286,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
             state.surface = Some(surface_state);
             state.window.request_redraw();
-            self.app.with_global_mut_untracked(
-                fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
-                |store, _app| {
-                    store.record(
-                        app_window,
-                        self.frame_id,
-                        fret_runtime::RunnerFrameDriveReason::SurfaceBootstrap,
-                    );
-                },
+            redraw_bootstrap_windows.push(app_window);
+        }
+
+        for app_window in redraw_bootstrap_windows {
+            self.record_frame_drive_reason(
+                app_window,
+                fret_runtime::RunnerFrameDriveReason::SurfaceBootstrap,
             );
         }
     }
@@ -2142,18 +2140,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                         context.queue.submit(cmd_buffers);
                         frame.present();
-                        let app = &mut self.app;
-                        scheduling::commit_presented_frame_and_then(
+                        super::scheduling_diagnostics::commit_presented_frame_for_window(
+                            &mut self.app,
                             &mut self.frame_id,
-                            |committed_frame_id| {
-                                app.set_frame_id(committed_frame_id);
-                                app.with_global_mut_untracked(
-                                    fret_runtime::RunnerPresentDiagnosticsStore::default,
-                                    |store, _app| {
-                                        store.record_present(app_window, committed_frame_id);
-                                    },
-                                );
-                            },
+                            app_window,
                         );
                         drop(engine_keepalive);
 
@@ -2199,19 +2189,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                     super::render::capture_surface_config_diagnostics_record(
                                         &surface.config,
                                     );
-                                state.window.request_redraw();
                                 let _ = surface;
                                 let _ = state;
                                 self.record_surface_config_snapshot(app_window, surface_record);
-                                self.app.with_global_mut_untracked(
-                                    fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
-                                    |store, _app| {
-                                        store.record(
-                                            app_window,
-                                            self.frame_id,
-                                            fret_runtime::RunnerFrameDriveReason::SurfaceRecoverLost,
-                                        );
-                                    },
+                                let _ = self.request_window_redraw_with_reason(
+                                    app_window,
+                                    fret_runtime::RunnerFrameDriveReason::SurfaceRecoverLost,
                                 );
                                 self.raf_windows.request(app_window);
                                 return;
@@ -2225,19 +2208,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                     super::render::capture_surface_config_diagnostics_record(
                                         &surface.config,
                                     );
-                                state.window.request_redraw();
                                 let _ = surface;
                                 let _ = state;
                                 self.record_surface_config_snapshot(app_window, surface_record);
-                                self.app.with_global_mut_untracked(
-                                    fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
-                                    |store, _app| {
-                                        store.record(
-                                            app_window,
-                                            self.frame_id,
-                                            fret_runtime::RunnerFrameDriveReason::SurfaceRecoverOutdated,
-                                        );
-                                    },
+                                let _ = self.request_window_redraw_with_reason(
+                                    app_window,
+                                    fret_runtime::RunnerFrameDriveReason::SurfaceRecoverOutdated,
                                 );
                                 self.raf_windows.request(app_window);
                                 return;
@@ -2248,16 +2224,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 // Transient on some platforms (especially during startup / resize).
                                 // Schedule a one-shot redraw so the window doesn't stay blank until
                                 // the next user input arrives.
-                                state.window.request_redraw();
-                                self.app.with_global_mut_untracked(
-                                    fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
-                                    |store, _app| {
-                                        store.record(
-                                            app_window,
-                                            self.frame_id,
-                                            fret_runtime::RunnerFrameDriveReason::SurfaceRecoverTimeout,
-                                        );
-                                    },
+                                let _ = state;
+                                let _ = self.request_window_redraw_with_reason(
+                                    app_window,
+                                    fret_runtime::RunnerFrameDriveReason::SurfaceRecoverTimeout,
                                 );
                                 self.raf_windows.request(app_window);
                                 return;
@@ -2897,21 +2867,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
         let wants_raf = self.raf_windows.has_pending();
         if wants_raf {
-            for app_window in self.raf_windows.drain() {
-                if let Some(state) = self.windows.get(app_window) {
-                    state.window.request_redraw();
-                    self.app.with_global_mut_untracked(
-                        fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
-                        |store, _app| {
-                            store.record(
-                                app_window,
-                                self.frame_id,
-                                fret_runtime::RunnerFrameDriveReason::AboutToWaitRaf,
-                            );
-                        },
-                    );
-                }
-            }
+            self.flush_raf_redraw_requests();
         }
 
         let next = match (next_deadline, wants_raf) {

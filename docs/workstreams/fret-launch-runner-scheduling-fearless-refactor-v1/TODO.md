@@ -48,6 +48,8 @@ Companion docs:
   - [x] Confirm redraw-request diagnostics remain intentionally app-owned in `fret-app` and use the
     current committed frame id at request time.
 - [ ] Thin `app_handler.rs` only after behavior remains unchanged.
+  - [x] Extract desktop runner-owned scheduling/diagnostics helpers into
+    `runner/desktop/runner/scheduling_diagnostics.rs`.
 
 ## Web runner adoption
 

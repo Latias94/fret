@@ -68,6 +68,19 @@ Implementation update (2026-03-13, batch 5):
   same-timestamp tie-breaking (`higher frame id wins`), so sample bundles no longer depend on
   HashMap iteration order when multiple windows update within the same millisecond.
 
+Implementation update (2026-03-13, batch 6):
+
+- Desktop runner-owned scheduling/diagnostics helpers now live in
+  `crates/fret-launch/src/runner/desktop/runner/scheduling_diagnostics.rs`.
+- `app_handler.rs`, `effects.rs`, and `window_lifecycle.rs` now call shared desktop-local helpers
+  for:
+  - frame-drive diagnostics writes,
+  - redraw+diagnostics pairs for runner-owned wake paths,
+  - RAF flush redraw writes,
+  - post-present frame commit + present diagnostics.
+- This batch is intentionally structural only: it does not widen public crate surfaces or change
+  the already-audited scheduling contract.
+
 ## Context
 
 Fret's architecture already places the scheduling and presentation responsibility in the correct

@@ -428,18 +428,10 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
             for effect in effects {
                 match effect {
                     Effect::Redraw(window) => {
-                        if let Some(state) = self.windows.get(window) {
-                            state.window.request_redraw();
-                            self.app.with_global_mut_untracked(
-                                fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
-                                |store, _app| {
-                                    store.record(
-                                        window,
-                                        self.frame_id,
-                                        fret_runtime::RunnerFrameDriveReason::EffectRedraw,
-                                    );
-                                },
-                            );
+                        if self.request_window_redraw_with_reason(
+                            window,
+                            fret_runtime::RunnerFrameDriveReason::EffectRedraw,
+                        ) {
                             // Some platforms may not wake the event loop for `request_redraw()`
                             // alone; scheduling a one-shot RAF ensures the first frame presents
                             // without requiring any input events.
@@ -547,15 +539,9 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                     Effect::RequestAnimationFrame(window) => {
                         self.raf_windows.request(window);
                         if self.windows.contains_key(window) {
-                            self.app.with_global_mut_untracked(
-                                fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
-                                |store, _app| {
-                                    store.record(
-                                        window,
-                                        self.frame_id,
-                                        fret_runtime::RunnerFrameDriveReason::EffectRequestAnimationFrame,
-                                    );
-                                },
+                            self.record_frame_drive_reason(
+                                window,
+                                fret_runtime::RunnerFrameDriveReason::EffectRequestAnimationFrame,
                             );
                         }
                     }
@@ -1947,41 +1933,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
             did_work |= self.propagate_global_changes();
 
             if self.streaming_uploads.has_pending() {
-                match self.streaming_uploads.pending_redraw_hint() {
-                    Some(windows) if windows.is_empty() => {
-                        let reason =
-                            fret_runtime::RunnerFrameDriveReason::for_streaming_pending_hint(
-                                windows.len(),
-                            );
-                        for (window, state) in self.windows.iter() {
-                            state.window.request_redraw();
-                            self.app.with_global_mut_untracked(
-                                fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
-                                |store, _app| {
-                                    store.record(window, self.frame_id, reason);
-                                },
-                            );
-                        }
-                    }
-                    Some(windows) => {
-                        let reason =
-                            fret_runtime::RunnerFrameDriveReason::for_streaming_pending_hint(
-                                windows.len(),
-                            );
-                        for window in windows {
-                            if let Some(state) = self.windows.get(window) {
-                                state.window.request_redraw();
-                                self.app.with_global_mut_untracked(
-                                    fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
-                                    |store, _app| {
-                                        store.record(window, self.frame_id, reason);
-                                    },
-                                );
-                            }
-                        }
-                    }
-                    None => {}
-                }
+                self.request_streaming_pending_redraws();
             }
 
             if !did_work {
