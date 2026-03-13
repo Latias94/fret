@@ -243,9 +243,22 @@ Notes:
 
 ### `fret-render`
 
-**What it is:** the wgpu renderer building blocks.
+**What it is:** the stable default facade over Fret's wgpu renderer building blocks.
 
 **Use it when:** you are extending or embedding the renderer (runner/app side), or doing rendering diagnostics.
+
+**Topology entrypoints:**
+
+- Editor-hosted convenience path:
+  create a `WgpuContext` with `WgpuContext::new()` / `WgpuContext::new_with_surface(...)`, then
+  build `Renderer` and `SurfaceState` from that context.
+- Engine-hosted direct path:
+  keep the host-owned `wgpu::Instance` / `Adapter` / `Device` / `Queue`, derive
+  `RendererCapabilities::from_adapter_device(...)`, then call `Renderer::new(...)`,
+  `SurfaceState::new(...)`, and `render_scene(...)` directly.
+
+**Reach for `fret-render-wgpu` directly when:** you need backend-specific diagnostics/report stores
+or helper surfaces that are intentionally not curated by the `fret-render` facade.
 
 ### `fret-platform`, `fret-platform-native`, `fret-platform-web`
 

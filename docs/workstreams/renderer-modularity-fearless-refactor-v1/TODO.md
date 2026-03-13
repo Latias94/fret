@@ -99,9 +99,12 @@ ID format:
     `wgpu::Instance/Adapter/Device/Queue` directly, derives capabilities via
     `RendererCapabilities::from_adapter_device(...)`, builds `Renderer::new(...)`, and renders an
     offscreen scene without `WgpuContext`.
-- [ ] RMFR-topology-023 Update docs/examples so both topology entrypoints are visible:
+- [x] RMFR-topology-023 Update docs/examples so both topology entrypoints are visible:
   - editor-hosted convenience path,
   - engine-hosted path.
+  - `crates/fret-render/src/lib.rs` now documents both entrypoints on the default facade.
+  - `crates/fret-render-wgpu/src/lib.rs` now documents the convenience-vs-direct backend seam.
+  - `docs/crate-usage-guide.md` now points advanced/manual integrators to the correct APIs.
 
 ---
 
@@ -524,7 +527,11 @@ ID format:
 - [x] RMFR-gates-072 Add targeted smoke coverage for host-provided GPU topology if absent.
   - Targeted gate: `cargo nextest run -p fret-render-wgpu renderer_accepts_host_provided_gpu_topology`
 - [ ] RMFR-gates-073 Keep render-plan semantics guardrails green for any planning/execution change.
-- [ ] RMFR-gates-074 If facade docs/examples change, leave evidence anchors in the workstream docs.
+- [x] RMFR-gates-074 If facade docs/examples change, leave evidence anchors in the workstream docs.
+  - Evidence anchors:
+    - `crates/fret-render/src/lib.rs`
+    - `crates/fret-render-wgpu/src/lib.rs`
+    - `docs/crate-usage-guide.md`
 
 ---
 

@@ -5,6 +5,19 @@
 //!
 //! Most apps should not depend on this crate directly; prefer the higher-level facades
 //! (`fret-framework` or the ecosystem `fret` crate) unless you are assembling a custom stack.
+//!
+//! Supported integration topologies:
+//!
+//! - Editor-hosted convenience path:
+//!   [`WgpuContext`] bootstraps `Instance` / `Adapter` / `Device` / `Queue` and remains the short
+//!   path for tools and first-party runners that let Fret own GPU initialization.
+//! - Engine-hosted direct path:
+//!   callers can keep host-owned GPU objects and use
+//!   [`RendererCapabilities::from_adapter_device`], [`Renderer::new`], [`SurfaceState::new`], and
+//!   [`Renderer::render_scene`] directly without constructing a [`WgpuContext`].
+//!
+//! See `tests/host_provided_gpu_topology_smoke.rs` for the smallest in-tree engine-hosted seam
+//! exercise.
 
 #![allow(clippy::too_many_arguments)]
 

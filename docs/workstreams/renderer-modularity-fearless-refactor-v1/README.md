@@ -80,8 +80,12 @@ As of 2026-03-13:
   host-provided GPU objects possible, and
   `crates/fret-render-wgpu/tests/host_provided_gpu_topology_smoke.rs` now locks that engine-hosted
   seam with a direct smoke path.
-- Some convenience/diagnostics surfaces and docs still privilege `WgpuContext`, so topology
-  teaching closure is not finished yet.
+- The public teaching surface now shows both topology entrypoints in:
+  - `crates/fret-render/src/lib.rs`
+  - `crates/fret-render-wgpu/src/lib.rs`
+  - `docs/crate-usage-guide.md`
+- Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
+  fully finished yet.
 - The first code slice has landed:
   - `crates/fret-render` now uses an explicit facade export list instead of wildcard re-export.
   - `RendererCapabilities::from_adapter_device(...)` now exists and is used by first-party runner

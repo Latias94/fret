@@ -3,6 +3,20 @@
 //! Today the default renderer is wgpu-based (`fret-render-wgpu`). This crate exists to keep the
 //! historical `fret-render` crate name stable while we split backend implementations into
 //! explicit crates.
+//!
+//! Supported integration topologies:
+//!
+//! - Editor-hosted convenience path:
+//!   create a [`WgpuContext`] with [`WgpuContext::new`] or [`WgpuContext::new_with_surface`], then
+//!   build [`Renderer`] and [`SurfaceState`] from that context's adapter/device.
+//! - Engine-hosted direct path:
+//!   keep the engine-owned `wgpu::Instance` / `Adapter` / `Device` / `Queue`, derive
+//!   [`RendererCapabilities`] with [`RendererCapabilities::from_adapter_device`],
+//!   then call [`Renderer::new`], [`SurfaceState::new`], and [`Renderer::render_scene`] directly
+//!   without routing through [`WgpuContext`].
+//!
+//! Depend on `fret-render-wgpu` directly only when you need backend-specific diagnostics or helper
+//! surfaces that are intentionally not part of this default facade.
 
 #[cfg(feature = "backend-wgpu")]
 pub use fret_render_wgpu::{

@@ -599,11 +599,17 @@ Current snapshot (2026-03-13):
     `wgpu::Instance/Adapter/Device/Queue` directly and proves
     `RendererCapabilities::from_adapter_device(...)` + `Renderer::new(...)` + offscreen
     `render_scene(...)` work without `WgpuContext`
+- Topology entrypoint docs are now explicit on the public teaching surface:
+  - `cargo test --doc -p fret-render -p fret-render-wgpu`: passed
+  - `crates/fret-render/src/lib.rs` documents editor-hosted and engine-hosted usage on the default
+    facade
+  - `crates/fret-render-wgpu/src/lib.rs` documents the backend convenience-vs-direct seam
+  - `docs/crate-usage-guide.md` points advanced/manual integrators to the correct topology APIs
 - The strongest current risks are:
   - wildcard facade exports,
   - oversized backend public surface,
   - a large multi-domain `Renderer` state owner,
-  - and incomplete docs/example closure for engine-hosted topology entrypoints.
+  - and some convenience/diagnostics ergonomics still skewing toward `WgpuContext`.
 
 ---
 
