@@ -595,12 +595,17 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/render_scene/executor_lifecycle.rs`
     - `crates/fret-render-wgpu/src/renderer/render_scene/executor.rs` now keeps only pass-record
       dispatch while target write-epoch and `ReleaseTarget` glue sit behind helper methods
+    - render-scene recorder execution facade moved into
+      `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now routes the
+      `CustomEffectV3` pass through executor helpers for source/mask view lookup, pyramid
+      reuse/scratch/cache, and destination intermediate allocation
   - Current next hotspot:
     - decide whether scene-encoding invalidation/debug evidence should stay coupled to
       `scene_encoding_cache.rs` or move closer to diagnostics state
-    - evaluate whether the remaining recorder-level access to `custom_effect_v3_pyramid` and
-      `intermediate_state.pool` should move behind narrower execution facades after executor-
-      lifecycle closure
+    - continue collapsing the remaining recorder-level `intermediate_state.pool` access in
+      `blit.rs`, `blur.rs`, `path_clip_mask.rs`, `backdrop_warp.rs`, `scene_draw.rs`,
+      `scale_nearest.rs`, and `path_msaa.rs` behind the same execution-facade pattern
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG
@@ -799,10 +804,12 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: render-scene executor lifecycle glue now lives under
-    `crates/fret-render-wgpu/src/renderer/render_scene/executor_lifecycle.rs`, and
-    `crates/fret-render-wgpu/src/renderer/render_scene/executor.rs` now keeps only pass-record
-    dispatch while target write-epoch and `ReleaseTarget` glue sit behind helper methods.
+  - Latest landed slice: render-scene recorder execution facade now lives under
+    `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs`, and the
+    `CustomEffectV3` path in
+    `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now routes
+    source/mask view lookup, pyramid reuse/scratch/cache, and destination intermediate allocation
+    through `RenderSceneExecutor` helpers.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

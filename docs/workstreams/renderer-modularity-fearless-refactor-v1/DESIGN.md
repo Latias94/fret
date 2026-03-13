@@ -263,6 +263,10 @@ For `Renderer` state-shell tightening, the same principle applies:
   target write-epoch updates and `ReleaseTarget` pool-release behavior should move behind one
   helper surface so `executor.rs` keeps only pass recording dispatch instead of inline lifecycle
   bookkeeping.
+- render-scene recorder execution facades are the matching recorder-access seam:
+  high-churn recorder helpers such as source/mask view lookup, intermediate target allocation, and
+  feature-local scratch/cache access should route through narrow executor helpers so recorder
+  modules stop reaching directly into `Renderer` owner shells.
 - render-text dump state is the matching diagnostics/export seam for text debugging:
   dump collection scratch and serialization scratch should move behind one owner so render-scene
   execution keeps only a thin bridge to `TextSystem`.

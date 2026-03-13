@@ -1162,58 +1162,24 @@ pub(in super::super) fn record_custom_effect_v3_pass(
         exec.frame_perf.uniform_bytes = exec.frame_perf.uniform_bytes.saturating_add(48);
     }
 
-    let Some(src_view) = require_color_src_view(
-        &mut *exec.frame_targets,
-        common.src,
-        common.src_size,
-        "CustomEffectV3",
-    ) else {
+    let Some(src_view) = exec.require_color_src_view(common.src, common.src_size, "CustomEffectV3")
+    else {
         return;
     };
-    let Some(src_raw_view) = require_color_src_view(
-        &mut *exec.frame_targets,
-        pass.src_raw,
-        common.src_size,
-        "CustomEffectV3",
-    ) else {
+    let Some(src_raw_view) =
+        exec.require_color_src_view(pass.src_raw, common.src_size, "CustomEffectV3")
+    else {
         return;
     };
 
     let pyramid_override_view = if pass.pyramid_wanted && pass.pyramid_levels >= 2 {
-        let reuse = exec.renderer.custom_effect_v3_pyramid.can_reuse(
-            pass.src_raw,
-            common.src_size,
-            exec.format,
-            pass.pyramid_levels,
-        );
-        if exec.perf_enabled {
-            if reuse {
-                exec.frame_perf.custom_effect_v3_pyramid_cache_hits = exec
-                    .frame_perf
-                    .custom_effect_v3_pyramid_cache_hits
-                    .saturating_add(1);
-            } else {
-                exec.frame_perf.custom_effect_v3_pyramid_cache_misses = exec
-                    .frame_perf
-                    .custom_effect_v3_pyramid_cache_misses
-                    .saturating_add(1);
-            }
-        }
-
-        let (mip_views, mip_sizes, full_view) = {
-            let scratch = exec.renderer.custom_effect_v3_pyramid.ensure_scratch(
-                exec.device,
-                common.src_size,
-                exec.format,
-                pass.pyramid_levels,
-            );
-
-            let mip_views = scratch.mip_views.iter().cloned().collect::<Vec<_>>();
-            let mip_sizes = (0..scratch.levels)
-                .map(|level| scratch.mip_size(level))
-                .collect::<Vec<_>>();
-            (mip_views, mip_sizes, scratch.full_view.clone())
-        };
+        let reuse =
+            exec.custom_effect_v3_pyramid_reuse(pass.src_raw, common.src_size, pass.pyramid_levels);
+        let scratch =
+            exec.custom_effect_v3_pyramid_scratch_snapshot(common.src_size, pass.pyramid_levels);
+        let mip_views = scratch.mip_views;
+        let mip_sizes = scratch.mip_sizes;
+        let full_view = scratch.full_view;
 
         if !reuse {
             exec.renderer.ensure_blit_pipeline(exec.device, exec.format);
@@ -1296,10 +1262,9 @@ pub(in super::super) fn record_custom_effect_v3_pass(
                 );
             }
 
-            exec.renderer.custom_effect_v3_pyramid.set_cache(
+            exec.set_custom_effect_v3_pyramid_cache(
                 pass.src_raw,
                 common.src_size,
-                exec.format,
                 pass.pyramid_levels,
             );
         }
@@ -1323,16 +1288,8 @@ pub(in super::super) fn record_custom_effect_v3_pass(
         view
     };
 
-    let dst_view_owned = ensure_color_dst_view_owned(
-        &mut *exec.frame_targets,
-        &mut exec.renderer.intermediate_state.pool,
-        exec.device,
-        common.dst,
-        common.dst_size,
-        exec.format,
-        exec.usage,
-        "CustomEffectV3",
-    );
+    let dst_view_owned =
+        exec.ensure_color_dst_view_owned(common.dst, common.dst_size, "CustomEffectV3");
     let dst_view = dst_view_owned.as_ref().unwrap_or(exec.target_view);
 
     let mut user0_incompatible = false;
@@ -1391,12 +1348,8 @@ pub(in super::super) fn record_custom_effect_v3_pass(
             .mask_uniform_index
             .expect("mask pass needs uniform index");
         let uniform_offset = (u64::from(mask_uniform_index) * uniform_stride) as u32;
-        let Some(mask_view) = require_mask_view(
-            &mut *exec.frame_targets,
-            mask.target,
-            mask.size,
-            "CustomEffectV3",
-        ) else {
+        let Some(mask_view) = exec.require_mask_view(mask.target, mask.size, "CustomEffectV3")
+        else {
             return;
         };
 

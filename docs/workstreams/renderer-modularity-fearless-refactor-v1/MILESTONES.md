@@ -531,6 +531,24 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu path_material_paint_renders_and_is_not_degraded`
   - `cargo nextest run -p fret-render-wgpu gpu_linear_gradient_smoke_conformance`
   - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v1_can_read_render_space_in_fragment`
+- The eighteenth renderer recorder-facade split has landed:
+  - render-scene recorder execution facade now lives under
+    `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs`
+  - the `CustomEffectV3` path in
+    `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now routes
+    source/mask view lookup, pyramid reuse/scratch/cache, and destination intermediate allocation
+    through `RenderSceneExecutor` helper methods
+  - `recorders/effects.rs` no longer reaches directly into `Renderer` for
+    `custom_effect_v3_pyramid` or `intermediate_state.pool` on that path
+- Renderer recorder-facade split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
+  - `cargo nextest run -p fret-render-wgpu gpu_text_linear_gradient_paint_varies_across_x`
+  - `cargo nextest run -p fret-render-wgpu path_material_paint_renders_and_is_not_degraded`
+  - `cargo nextest run -p fret-render-wgpu gpu_linear_gradient_smoke_conformance`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v1_can_read_render_space_in_fragment`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_src_raw_is_chain_root_and_differs_from_src_after_prior_step`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

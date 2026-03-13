@@ -7,6 +7,7 @@ mod encoding_cache;
 mod execute;
 mod executor;
 mod executor_lifecycle;
+mod executor_recorders;
 mod frame_bindings;
 mod frame_perf_init;
 mod frame_pipelines;

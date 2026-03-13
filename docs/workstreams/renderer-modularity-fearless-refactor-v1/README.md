@@ -274,6 +274,12 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/render_scene/executor_lifecycle.rs`, and
   `crates/fret-render-wgpu/src/renderer/render_scene/executor.rs` no longer owns target write-epoch
   bumps or `ReleaseTarget` pool-release glue inline.
+- Renderer render-scene recorder execution facade now also lives under
+  `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs`, and the
+  `CustomEffectV3` recorder path in
+  `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer reaches
+  through `Renderer` for pyramid reuse/scratch/cache or intermediate color-target allocation
+  inline.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:
