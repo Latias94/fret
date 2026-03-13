@@ -517,6 +517,58 @@ pub(super) fn delete_forward(st: &mut CodeEditorState) {
     st.caret_preferred_x = None;
 }
 
+pub(super) fn apply_ime_delete_surrounding(
+    st: &mut CodeEditorState,
+    before_bytes: usize,
+    after_bytes: usize,
+) -> Option<()> {
+    if before_bytes == 0 && after_bytes == 0 {
+        return None;
+    }
+
+    let len = st.buffer.len_bytes();
+    let range = st.selection.normalized();
+    let start = range.start.min(len);
+    let end = range.end.min(len);
+
+    let mut start_before = start.saturating_sub(before_bytes);
+    while start_before > 0 && !st.buffer.is_char_boundary(start_before) {
+        start_before = start_before.saturating_sub(1);
+    }
+
+    let mut end_after = end.saturating_add(after_bytes).min(len);
+    while end_after < len && !st.buffer.is_char_boundary(end_after) {
+        end_after = end_after.saturating_add(1);
+    }
+
+    if start_before == start && end_after == end {
+        return None;
+    }
+
+    let kept = st.buffer.slice_to_string(start..end).unwrap_or_default();
+    let deleted_before = start.saturating_sub(start_before);
+    let next_selection = Selection {
+        anchor: st.selection.anchor.saturating_sub(deleted_before),
+        focus: st.selection.focus.saturating_sub(deleted_before),
+    };
+    let kind = if before_bytes > 0 {
+        UndoGroupKind::Backspace
+    } else {
+        UndoGroupKind::DeleteForward
+    };
+
+    apply_and_record_edit_inner(
+        st,
+        kind,
+        Edit::Replace {
+            range: start_before..end_after,
+            text: kept,
+        },
+        next_selection,
+        true,
+    )
+}
+
 pub(super) fn move_caret_left(st: &mut CodeEditorState, extend: bool) {
     let caret = st.selection.caret().min(st.buffer.len_bytes());
     let mut new = st.buffer.prev_char_boundary(caret);
@@ -598,6 +650,16 @@ pub(super) fn apply_and_record_edit(
     edit: Edit,
     next_selection: Selection,
 ) -> Option<()> {
+    apply_and_record_edit_inner(st, kind, edit, next_selection, false)
+}
+
+fn apply_and_record_edit_inner(
+    st: &mut CodeEditorState,
+    kind: UndoGroupKind,
+    edit: Edit,
+    next_selection: Selection,
+    preserve_preedit: bool,
+) -> Option<()> {
     if !st.interaction.enabled || !st.interaction.editable {
         return None;
     }
@@ -621,7 +683,9 @@ pub(super) fn apply_and_record_edit(
         });
     }
 
-    st.set_preedit(None);
+    if !preserve_preedit {
+        st.set_preedit(None);
+    }
     let delta = {
         let group = st.undo_group.as_mut().expect("undo group must exist");
         st.buffer.apply_in_transaction(&mut group.tx, edit).ok()?

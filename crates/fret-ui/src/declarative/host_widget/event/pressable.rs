@@ -14,6 +14,7 @@ fn position_local(bounds: Rect, mapped: Point) -> Point {
 struct PressablePressTracking {
     pointer_id: Option<fret_core::PointerId>,
     down_position: Option<Point>,
+    down_hit_is_text_input: bool,
     down_hit_pressable_target: Option<crate::GlobalElementId>,
 }
 
@@ -402,6 +403,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                     |st| {
                         st.pointer_id = Some(*pointer_id);
                         st.down_position = Some(*position);
+                        st.down_hit_is_text_input = cx.pointer_hit_is_text_input;
                         st.down_hit_pressable_target = cx.pointer_hit_pressable_target;
                     },
                 );
@@ -493,18 +495,20 @@ pub(super) fn handle_pressable<H: UiHost>(
                 let pressed =
                     crate::elements::is_pressed_pressable(&mut *cx.app, window, this.element);
 
-                let (down_pointer_id, down_position) = crate::elements::with_element_state(
-                    &mut *cx.app,
-                    window,
-                    this.element,
-                    PressablePressTracking::default,
-                    |st| {
-                        let out = (st.pointer_id, st.down_position);
-                        st.pointer_id = None;
-                        st.down_position = None;
-                        out
-                    },
-                );
+                let (down_pointer_id, down_position, down_hit_is_text_input) =
+                    crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        this.element,
+                        PressablePressTracking::default,
+                        |st| {
+                            let out = (st.pointer_id, st.down_position, st.down_hit_is_text_input);
+                            st.pointer_id = None;
+                            st.down_position = None;
+                            st.down_hit_is_text_input = false;
+                            out
+                        },
+                    );
 
                 cx.release_pointer_capture();
                 if let Some(prev_node) =
@@ -533,9 +537,11 @@ pub(super) fn handle_pressable<H: UiHost>(
                 let hovered = cx.bounds.contains(*position) || moved <= 2.0;
 
                 let is_touch = *pointer_type == fret_core::PointerType::Touch;
-                if pressed && hovered && (!is_touch || *is_click) {
+                if pressed && hovered && (!is_touch || *is_click) && !down_hit_is_text_input {
                     // Pointer interactions should move focus to the pressable even when
-                    // activation is handled by component-owned pointer hooks.
+                    // activation is handled by component-owned pointer hooks. When the press
+                    // started inside a text-input descendant, keep focus on that descendant so
+                    // text input / IME routing is not stolen by an ancestor pressable.
                     //
                     // Note: `PressableProps.focusable` models the Tab-order "focus traversal stop"
                     // (Radix roving-focus `tabIndex=0` vs `-1`), not whether pointer clicks can
