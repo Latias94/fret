@@ -550,10 +550,15 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/material_effects.rs`
     - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns material registries, material
       budgets, custom-effect registries, or their generation counters directly
+    - path registry/cache state owner moved into
+      `crates/fret-render-wgpu/src/renderer/path.rs`
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns prepared path storage, path
+      cache entries, path cache capacity, or path cache epoch directly
   - Current next hotspot:
     - decide whether scene-encoding cache invalidation evidence belongs with diagnostics state or
       should stay coupled to `scene_encoding_cache.rs`
-    - evaluate path/path-cache shell and scene-encoding shell as the next owner-state cuts
+    - evaluate path intermediate/composite scratch state and scene-encoding shell as the next
+      owner-state cuts
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG
@@ -573,6 +578,8 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/diagnostics.rs`
     - material / custom-effect runtime state now lives under
       `crates/fret-render-wgpu/src/renderer/material_effects.rs`
+    - path registry / cache state now lives under
+      `crates/fret-render-wgpu/src/renderer/path.rs`
 - [ ] RMFR-renderer-042 Reduce cross-domain mutable coupling inside `Renderer`.
 - [ ] RMFR-renderer-043 Keep service trait implementations readable after extraction.
 
@@ -730,10 +737,10 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: material/custom-effect runtime owner state now lives under
-    `crates/fret-render-wgpu/src/renderer/material_effects.rs`, and
-    `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns material registries, material
-    budgets, custom-effect registries, or their generation counters directly.
+  - Latest landed slice: path registry/cache owner state now lives under
+    `crates/fret-render-wgpu/src/renderer/path.rs`, and
+    `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns prepared path storage, path cache
+    entries, path cache capacity, or path cache epoch directly.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

@@ -571,10 +571,7 @@ impl Renderer {
             path_composite_vertices,
             path_composite_vertex_capacity,
             text_system,
-            paths: SlotMap::with_key(),
-            path_cache: HashMap::new(),
-            path_cache_capacity: 2048,
-            path_cache_epoch: 0,
+            path_state: PathState::default(),
             svg_registry_state: svg::SvgRegistryState::new(),
             svg_raster_state: svg::SvgRasterState::default(),
             clip_path_mask_cache: ClipPathMaskCache::new((256 * 1024 * 1024) / 8),
@@ -588,42 +585,6 @@ impl Renderer {
             gpu_resources: super::gpu_resources::GpuResources::default(),
             scene_encoding_cache: super::scene_encoding_cache::SceneEncodingCache::default(),
             material_effect_state: MaterialEffectState::default(),
-        }
-    }
-
-    pub(super) fn bump_path_cache_epoch(&mut self) -> u64 {
-        self.path_cache_epoch = self.path_cache_epoch.wrapping_add(1);
-        self.path_cache_epoch
-    }
-
-    pub(super) fn prune_path_cache(&mut self) {
-        if self.path_cache.len() <= self.path_cache_capacity {
-            return;
-        }
-
-        // Simple O(n) eviction: drop least-recently-used entries with refs == 0.
-        // This keeps the implementation small and deterministic for MVP-PATH-2.
-        while self.path_cache.len() > self.path_cache_capacity {
-            let mut victim: Option<(PathCacheKey, CachedPathEntry)> = None;
-            for (k, v) in &self.path_cache {
-                if v.refs != 0 {
-                    continue;
-                }
-                let replace = match victim {
-                    None => true,
-                    Some((_, cur)) => v.last_used_epoch < cur.last_used_epoch,
-                };
-                if replace {
-                    victim = Some((*k, *v));
-                }
-            }
-
-            let Some((key, entry)) = victim else {
-                break;
-            };
-
-            self.path_cache.remove(&key);
-            self.paths.remove(entry.id);
         }
     }
 

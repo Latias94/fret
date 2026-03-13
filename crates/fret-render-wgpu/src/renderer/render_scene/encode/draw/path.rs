@@ -30,7 +30,7 @@ pub(in super::super) fn encode_path(
         return;
     }
 
-    let Some(prepared) = renderer.paths.get(path) else {
+    let Some(prepared) = renderer.path_state.prepared(path) else {
         if debug_path_draw_enabled() {
             eprintln!(
                 "encode_path: skipped (missing path) id={:?} origin=({:.1},{:.1}) sf={:.2}",
@@ -192,7 +192,7 @@ pub(in super::super) fn encode_clip_path_mask(
 ) -> Option<(u32, u32)> {
     state.flush_quad_batch();
 
-    let prepared = renderer.paths.get(path)?;
+    let prepared = renderer.path_state.prepared(path)?;
     if prepared.triangles.is_empty() {
         return None;
     }

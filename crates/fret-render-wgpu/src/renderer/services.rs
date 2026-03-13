@@ -335,58 +335,11 @@ impl fret_core::PathService for Renderer {
         style: fret_core::PathStyle,
         constraints: fret_core::PathConstraints,
     ) -> (fret_core::PathId, fret_core::PathMetrics) {
-        let key = path_cache_key(commands, style, constraints);
-        let epoch = self.bump_path_cache_epoch();
-
-        match self.path_cache.entry(key) {
-            Entry::Occupied(mut e) => {
-                let entry = e.get_mut();
-                entry.refs = entry.refs.saturating_add(1);
-                entry.last_used_epoch = epoch;
-                let id = entry.id;
-
-                if let Some(prepared) = self.paths.get(id) {
-                    return (id, prepared.metrics);
-                }
-
-                // Cache entry is stale (should be rare). Rebuild it.
-                e.remove();
-            }
-            Entry::Vacant(_) => {}
-        }
-
-        let metrics = metrics_from_path_commands(commands, style);
-        let (triangles, stroke_s01_mode) = tessellate_path_commands(commands, style, constraints);
-        let id = self.paths.insert(PreparedPath {
-            metrics,
-            triangles,
-            stroke_s01_mode,
-            cache_key: key,
-        });
-        self.path_cache.insert(
-            key,
-            CachedPathEntry {
-                id,
-                refs: 1,
-                last_used_epoch: epoch,
-            },
-        );
-        self.prune_path_cache();
-        (id, metrics)
+        self.path_state.prepare_path(commands, style, constraints)
     }
 
     fn release(&mut self, path: fret_core::PathId) {
-        let Some(cache_key) = self.paths.get(path).map(|p| p.cache_key) else {
-            return;
-        };
-
-        if let Some(entry) = self.path_cache.get_mut(&cache_key)
-            && entry.refs > 0
-        {
-            entry.refs -= 1;
-        }
-
-        self.prune_path_cache();
+        self.path_state.release_path(path);
     }
 }
 

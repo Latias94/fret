@@ -386,6 +386,17 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
   - `cargo nextest run -p fret-render-wgpu padded_blur_then_custom_uses_work_buffer`
   - `cargo nextest run -p fret-render-wgpu custom_v3_sources_plan_honors_group_pyramid_choice_and_group_roi`
+- The seventh renderer owner-state split has landed:
+  - path registry / cache state now lives under
+    `crates/fret-render-wgpu/src/renderer/path.rs`
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns prepared path storage, path cache
+    entries, path cache capacity, or path cache epoch directly
+  - `services.rs`, `resources.rs`, and path encoding paths now query that owner state instead of
+    reaching into loose renderer fields
+- Renderer path-state split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu path_state_deduplicates_and_evicts_unreferenced_entries`
+  - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

@@ -229,6 +229,10 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/material_effects.rs`, and
   `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns material registries, material
   budgets, custom-effect registries, or their generation counters directly.
+- Renderer path registry/cache owner state now also lives under
+  `crates/fret-render-wgpu/src/renderer/path.rs`, and
+  `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns prepared path storage, path cache
+  entries, path cache capacity, or path cache epoch directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

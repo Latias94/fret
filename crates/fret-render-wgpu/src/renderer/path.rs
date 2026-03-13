@@ -4,8 +4,127 @@ use lyon::tessellation::{
     BuffersBuilder, FillOptions, FillTessellator, FillVertex, StrokeOptions, StrokeTessellator,
     StrokeVertex, VertexBuffers,
 };
+use slotmap::SlotMap;
+use std::collections::HashMap;
 
 use super::{mix_f32, mix_u64};
+
+pub(super) struct PathState {
+    paths: SlotMap<fret_core::PathId, PreparedPath>,
+    path_cache: HashMap<PathCacheKey, CachedPathEntry>,
+    path_cache_capacity: usize,
+    path_cache_epoch: u64,
+}
+
+impl Default for PathState {
+    fn default() -> Self {
+        Self {
+            paths: SlotMap::with_key(),
+            path_cache: HashMap::new(),
+            path_cache_capacity: 2048,
+            path_cache_epoch: 0,
+        }
+    }
+}
+
+impl PathState {
+    pub(super) fn prepared(&self, path: fret_core::PathId) -> Option<&PreparedPath> {
+        self.paths.get(path)
+    }
+
+    pub(super) fn prepare_path(
+        &mut self,
+        commands: &[fret_core::PathCommand],
+        style: fret_core::PathStyle,
+        constraints: fret_core::PathConstraints,
+    ) -> (fret_core::PathId, fret_core::PathMetrics) {
+        let key = path_cache_key(commands, style, constraints);
+        let epoch = self.bump_cache_epoch();
+
+        match self.path_cache.entry(key) {
+            std::collections::hash_map::Entry::Occupied(mut entry) => {
+                let cached = entry.get_mut();
+                cached.refs = cached.refs.saturating_add(1);
+                cached.last_used_epoch = epoch;
+                let id = cached.id;
+
+                if let Some(prepared) = self.paths.get(id) {
+                    return (id, prepared.metrics);
+                }
+
+                entry.remove();
+            }
+            std::collections::hash_map::Entry::Vacant(_) => {}
+        }
+
+        let metrics = metrics_from_path_commands(commands, style);
+        let (triangles, stroke_s01_mode) = tessellate_path_commands(commands, style, constraints);
+        let id = self.paths.insert(PreparedPath {
+            metrics,
+            triangles,
+            stroke_s01_mode,
+            cache_key: key,
+        });
+        self.path_cache.insert(
+            key,
+            CachedPathEntry {
+                id,
+                refs: 1,
+                last_used_epoch: epoch,
+            },
+        );
+        self.prune_cache();
+        (id, metrics)
+    }
+
+    pub(super) fn release_path(&mut self, path: fret_core::PathId) {
+        let Some(cache_key) = self.paths.get(path).map(|prepared| prepared.cache_key) else {
+            return;
+        };
+
+        if let Some(entry) = self.path_cache.get_mut(&cache_key)
+            && entry.refs > 0
+        {
+            entry.refs -= 1;
+        }
+
+        self.prune_cache();
+    }
+
+    fn bump_cache_epoch(&mut self) -> u64 {
+        self.path_cache_epoch = self.path_cache_epoch.wrapping_add(1);
+        self.path_cache_epoch
+    }
+
+    fn prune_cache(&mut self) {
+        if self.path_cache.len() <= self.path_cache_capacity {
+            return;
+        }
+
+        while self.path_cache.len() > self.path_cache_capacity {
+            let mut victim: Option<(PathCacheKey, CachedPathEntry)> = None;
+            for (key, value) in &self.path_cache {
+                if value.refs != 0 {
+                    continue;
+                }
+                let replace = match victim {
+                    None => true,
+                    Some((_, current)) => value.last_used_epoch < current.last_used_epoch,
+                };
+                if replace {
+                    victim = Some((*key, *value));
+                }
+            }
+
+            let Some((key, entry)) = victim else {
+                break;
+            };
+
+            self.path_cache.remove(&key);
+            self.paths.remove(entry.id);
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) struct PathCacheKey {
@@ -688,4 +807,44 @@ pub(super) fn tessellate_path_commands(
         }
     }
     (out, stroke_s01_mode)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn rect_commands(origin: (f32, f32), size: (f32, f32)) -> Vec<fret_core::PathCommand> {
+        let (x, y) = origin;
+        let (w, h) = size;
+        vec![
+            fret_core::PathCommand::MoveTo(Point::new(Px(x), Px(y))),
+            fret_core::PathCommand::LineTo(Point::new(Px(x + w), Px(y))),
+            fret_core::PathCommand::LineTo(Point::new(Px(x + w), Px(y + h))),
+            fret_core::PathCommand::LineTo(Point::new(Px(x), Px(y + h))),
+            fret_core::PathCommand::Close,
+        ]
+    }
+
+    #[test]
+    fn path_state_deduplicates_and_evicts_unreferenced_entries() {
+        let mut state = PathState::default();
+        state.path_cache_capacity = 1;
+        let constraints = fret_core::PathConstraints { scale_factor: 1.0 };
+        let style = fret_core::PathStyle::Fill(fret_core::FillStyle::default());
+
+        let commands_a = rect_commands((0.0, 0.0), (10.0, 10.0));
+        let (path_a0, _) = state.prepare_path(&commands_a, style, constraints);
+        let (path_a1, _) = state.prepare_path(&commands_a, style, constraints);
+        assert_eq!(path_a0, path_a1);
+        assert!(state.prepared(path_a0).is_some());
+
+        state.release_path(path_a0);
+        state.release_path(path_a1);
+
+        let commands_b = rect_commands((20.0, 20.0), (8.0, 8.0));
+        let (path_b, _) = state.prepare_path(&commands_b, style, constraints);
+
+        assert!(state.prepared(path_a0).is_none());
+        assert!(state.prepared(path_b).is_some());
+    }
 }

@@ -229,6 +229,9 @@ For `Renderer` state-shell tightening, the same principle applies:
   side: registration maps, refcounts, generation counters, and author-facing degradation budgets
   should live together so services, scene encoding, and effect pipelines stop depending on loose
   `Renderer` fields.
+- path registry/cache state is the equivalent ownership seam for tessellated geometry: prepared
+  path storage, cache entries, eviction policy, and epoch tracking should move behind one owner so
+  path services and path encoding stop depending on four loose fields.
 
 ### 5. Tighten public exports after evidence exists
 

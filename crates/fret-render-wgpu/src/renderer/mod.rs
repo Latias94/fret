@@ -123,10 +123,7 @@ pub struct Renderer {
 
     text_system: TextSystem,
 
-    paths: SlotMap<fret_core::PathId, PreparedPath>,
-    path_cache: HashMap<PathCacheKey, CachedPathEntry>,
-    path_cache_capacity: usize,
-    path_cache_epoch: u64,
+    path_state: PathState,
 
     svg_registry_state: svg::SvgRegistryState,
     svg_raster_state: svg::SvgRasterState,
