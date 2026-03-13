@@ -140,6 +140,86 @@ fn padded_blur_then_custom_uses_work_buffer() {
 }
 
 #[test]
+fn padded_color_adjust_then_blur_uses_masked_commit_pass() {
+    let ctx = EffectCompileCtx {
+        viewport_size: (64, 64),
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 1.0,
+    };
+    let scissor = ScissorRect {
+        x: 10,
+        y: 12,
+        w: 20,
+        h: 18,
+    };
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::FilterContent,
+        fret_core::EffectChain::from_steps(&[
+            fret_core::EffectStep::ColorAdjust {
+                saturation: 1.2,
+                brightness: 0.1,
+                contrast: 0.9,
+            },
+            fret_core::EffectStep::GaussianBlur {
+                radius_px: fret_core::Px(14.0),
+                downsample: 2,
+            },
+        ]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        Some(7),
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    );
+
+    let copied_to_work = passes.iter().any(|pass| {
+        matches!(
+            pass,
+            RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+                src: PlanTarget::Intermediate0,
+                dst: PlanTarget::Intermediate1,
+                ..
+            })
+        )
+    });
+    assert!(
+        copied_to_work,
+        "padded color-adjust->blur should copy srcdst into a work buffer"
+    );
+
+    let final_commit = passes.iter().find_map(|pass| match pass {
+        RenderPlanPass::ColorAdjust(pass)
+            if pass.src == PlanTarget::Intermediate1
+                && pass.dst == PlanTarget::Intermediate0
+                && pass.dst_scissor == Some(LocalScissorRect(scissor))
+                && pass.saturation == 1.0
+                && pass.brightness == 1.0
+                && pass.contrast == 1.0 =>
+        {
+            Some(pass)
+        }
+        _ => None,
+    });
+    assert!(
+        final_commit
+            .is_some_and(|pass| { pass.mask_uniform_index.is_some() || pass.mask.is_some() }),
+        "padded masked fallback commit should reuse a no-op ColorAdjust pass"
+    );
+}
+
+#[test]
 fn custom_v2_masked_step_preserves_image_input_and_clip_coverage() {
     let ctx = EffectCompileCtx {
         viewport_size: (64, 64),

@@ -86,12 +86,13 @@ pub(super) struct BackdropSourceGroupCtx {
 
 mod blur;
 mod builtin;
+mod chain;
 mod custom;
 mod scissor;
 
 use self::blur::{
     compile_drop_shadow_in_place_masked, compile_gaussian_blur_in_place,
-    compile_gaussian_blur_in_place_masked, inflate_scissor_to_viewport, padded_chain_step_scissors,
+    compile_gaussian_blur_in_place_masked,
 };
 use self::builtin::{
     append_scissored_blur_in_place_single_scratch, append_scissored_blur_in_place_two_scratch,
@@ -102,11 +103,16 @@ use self::builtin::{
     apply_dither_step_masked, apply_noise_step, apply_noise_step_masked, apply_pixelate_step,
     apply_pixelate_step_masked, choose_clip_mask_target_capped, effect_blur_desired_downsample,
 };
+use self::chain::{ChainCoverage, try_apply_padded_chain_in_place};
 use self::custom::{
     apply_custom_v1_step, apply_custom_v1_step_masked, apply_custom_v2_step,
     apply_custom_v2_step_masked, apply_custom_v3_step, apply_custom_v3_step_masked,
-    plan_custom_v3_sources_and_charge_budget,
 };
+
+#[cfg(test)]
+use self::blur::inflate_scissor_to_viewport;
+#[cfg(test)]
+use self::custom::plan_custom_v3_sources_and_charge_budget;
 
 pub(super) fn choose_effect_blur_downsample_scale(
     viewport_size: (u32, u32),
@@ -228,6 +234,36 @@ pub(super) fn available_scratch_targets(
     out
 }
 
+fn is_custom_effect_step(step: &fret_core::EffectStep) -> bool {
+    matches!(
+        *step,
+        fret_core::EffectStep::CustomV1 { .. }
+            | fret_core::EffectStep::CustomV2 { .. }
+            | fret_core::EffectStep::CustomV3 { .. }
+    )
+}
+
+fn step_wants_custom_v3_raw(step: &fret_core::EffectStep) -> bool {
+    matches!(
+        *step,
+        fret_core::EffectStep::CustomV3 { sources, .. } if sources.want_raw
+    )
+}
+
+fn backdrop_source_group_parts(
+    backdrop_source_group: Option<BackdropSourceGroupCtx>,
+) -> (
+    Option<PlanTarget>,
+    Option<CustomV3PyramidChoice>,
+    Option<(ScissorRect, u32)>,
+) {
+    let group_raw = backdrop_source_group.map(|g| g.raw_target);
+    let group_pyramid = backdrop_source_group.and_then(|g| g.pyramid);
+    let group_pyramid_roi =
+        backdrop_source_group.and_then(|g| g.pyramid.map(|_| (g.scissor, g.pyramid_pad_px)));
+    (group_raw, group_pyramid, group_pyramid_roi)
+}
+
 pub(super) fn apply_chain_in_place(
     passes: &mut Vec<RenderPlanPass>,
     in_use_targets: &[PlanTarget],
@@ -252,21 +288,11 @@ pub(super) fn apply_chain_in_place(
         return None;
     }
 
-    let group_raw = backdrop_source_group.map(|g| g.raw_target);
-    let group_pyramid = backdrop_source_group.and_then(|g| g.pyramid);
-    let group_pyramid_roi =
-        backdrop_source_group.and_then(|g| g.pyramid.map(|_| (g.scissor, g.pyramid_pad_px)));
+    let (group_raw, _, _) = backdrop_source_group_parts(backdrop_source_group);
 
     let mut budget_bytes = ctx.intermediate_budget_bytes;
     let srcdst_bytes = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
-    let chain_has_custom_effect = steps.iter().any(|s| {
-        matches!(
-            *s,
-            fret_core::EffectStep::CustomV1 { .. }
-                | fret_core::EffectStep::CustomV2 { .. }
-                | fret_core::EffectStep::CustomV3 { .. }
-        )
-    });
+    let chain_has_custom_effect = steps.iter().any(is_custom_effect_step);
     let full_target_bytes = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
     let mut custom_chain_budget =
         chain_has_custom_effect.then_some(CustomEffectChainBudgetEvidence {
@@ -354,330 +380,30 @@ pub(super) fn apply_chain_in_place(
     // budget, we evaluate the chain into a work target using a per-step expanded scissor plan,
     // then composite the final result back into `srcdst` while applying clip/mask coverage exactly
     // once.
-    if steps.len() >= 2 {
-        let step_scissors = padded_chain_step_scissors(&steps, scissor, ctx.viewport_size, ctx);
-        let needs_padding = step_scissors.first().is_some_and(|s| *s != scissor);
-        let has_drop_shadow = steps
-            .iter()
-            .any(|s| matches!(*s, fret_core::EffectStep::DropShadowV1(_)));
-
-        let full = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
-        let min_budget_for_work = base_required_bytes_for_srcdst_and_two_scratch(full);
-        let has_work = scratch_targets.len() >= 2;
-        let has_mask = mask_uniform_index.is_some() || mask.is_some();
-        let last_step_is_custom = steps.last().is_some_and(|s| {
-            matches!(
-                *s,
-                fret_core::EffectStep::CustomV1 { .. }
-                    | fret_core::EffectStep::CustomV2 { .. }
-                    | fret_core::EffectStep::CustomV3 { .. }
-            )
-        });
-        let can_commit_with_mask = !has_mask
-            || last_step_is_custom
-            || color_adjust_enabled(ctx.viewport_size, ctx.format, budget_bytes);
-
-        if needs_padding
-            && !has_drop_shadow
-            && has_work
-            && budget_bytes >= min_budget_for_work
-            && can_commit_with_mask
-        {
-            let work = scratch_targets[0];
-            let chain_wants_raw = steps.iter().any(|s| match *s {
-                fret_core::EffectStep::CustomV3 { sources, .. } => sources.want_raw,
-                _ => false,
-            });
-            let chain_raw = (chain_wants_raw
-                && group_raw.is_none()
-                && scratch_targets.len() >= 3
-                && budget_bytes >= base_required_bytes_for_srcdst_and_three_scratch(full))
-            .then_some(scratch_targets[1]);
-
-            if let Some(e) = custom_chain_budget.as_mut() {
-                let required_full_targets = if chain_raw.is_some() { 4 } else { 3 };
-                e.base_required_full_targets = required_full_targets;
-                e.base_required_bytes =
-                    required_bytes_for_full_size_targets(full, required_full_targets as u64);
-            }
-
-            let work_scratch_targets = if chain_raw.is_some() {
-                &scratch_targets[2..]
-            } else {
-                &scratch_targets[1..]
-            };
-
-            if let Some(chain_raw) = chain_raw {
-                passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
-                    src: srcdst,
-                    dst: chain_raw,
-                    src_size: ctx.viewport_size,
-                    dst_size: ctx.viewport_size,
-                    dst_scissor: None,
-                    encode_output_srgb: false,
-                    load: wgpu::LoadOp::Clear(ctx.clear),
-                }));
-            }
-
-            passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
-                src: srcdst,
-                dst: work,
-                src_size: ctx.viewport_size,
-                dst_size: ctx.viewport_size,
-                dst_scissor: None,
-                encode_output_srgb: false,
-                load: wgpu::LoadOp::Clear(ctx.clear),
-            }));
-
-            let excluded_targets = 1u64.saturating_add(chain_raw.is_some() as u64);
-            let mut work_budget_bytes =
-                budget_excluding_full_size_targets(budget_bytes, full, excluded_targets);
-
-            // Apply all steps except the final one in-place on the work buffer using per-step
-            // padded scissors. The final step is handled separately so we can commit the result
-            // back into `srcdst` while applying clip/mask coverage exactly once.
-            let (head_steps, tail_step) = steps.split_at(steps.len().saturating_sub(1));
-            let (head_scissors, tail_scissor) =
-                step_scissors.split_at(step_scissors.len().saturating_sub(1));
-
-            for (step, step_scissor) in head_steps
-                .iter()
-                .copied()
-                .zip(head_scissors.iter().copied())
-            {
-                apply_step_in_place_with_scratch_targets(
-                    passes,
-                    work_scratch_targets,
-                    work,
-                    mode,
-                    step,
-                    quality,
-                    step_scissor,
-                    &mut work_budget_bytes,
-                    effect_degradations,
-                    effect_blur_quality,
-                    ctx,
-                    chain_raw,
-                    backdrop_source_group,
-                    &mut custom_chain_budget,
-                );
-            }
-
-            if let Some(&final_step) = tail_step.first()
-                && let Some(&final_scissor) = tail_scissor.first()
-                && last_step_is_custom
-                && matches!(
-                    final_step,
-                    fret_core::EffectStep::CustomV1 { .. }
-                        | fret_core::EffectStep::CustomV2 { .. }
-                        | fret_core::EffectStep::CustomV3 { .. }
-                )
-            {
-                // Optimized path: commit the final Custom effect step directly into `srcdst`, reading
-                // from the padded work buffer and applying clip/mask coverage exactly once.
-                debug_assert_eq!(
-                    final_scissor, scissor,
-                    "final scissor must be the original bounds"
-                );
-                match final_step {
-                    fret_core::EffectStep::CustomV1 {
-                        id,
-                        params,
-                        max_sample_offset_px: _,
-                    } => {
-                        passes.push(RenderPlanPass::CustomEffect(CustomEffectPass {
-                            common: super::CustomEffectPassCommon {
-                                src: work,
-                                dst: srcdst,
-                                src_size: ctx.viewport_size,
-                                dst_size: ctx.viewport_size,
-                                dst_scissor: Some(LocalScissorRect(scissor)),
-                                mask_uniform_index,
-                                mask,
-                                effect: id,
-                                params,
-                                load: wgpu::LoadOp::Load,
-                            },
-                        }));
-                    }
-                    fret_core::EffectStep::CustomV2 {
-                        id,
-                        params,
-                        max_sample_offset_px: _,
-                        input_image,
-                    } => {
-                        let (input_image, input_uv, input_sampling) = match input_image {
-                            None => (
-                                None,
-                                fret_core::scene::UvRect::FULL,
-                                fret_core::scene::ImageSamplingHint::Default,
-                            ),
-                            Some(input) => (Some(input.image), input.uv, input.sampling),
-                        };
-                        passes.push(RenderPlanPass::CustomEffectV2(CustomEffectV2Pass {
-                            common: super::CustomEffectPassCommon {
-                                src: work,
-                                dst: srcdst,
-                                src_size: ctx.viewport_size,
-                                dst_size: ctx.viewport_size,
-                                dst_scissor: Some(LocalScissorRect(scissor)),
-                                mask_uniform_index,
-                                mask,
-                                effect: id,
-                                params,
-                                load: wgpu::LoadOp::Load,
-                            },
-                            input_image,
-                            input_uv,
-                            input_sampling,
-                        }));
-                    }
-                    fret_core::EffectStep::CustomV3 {
-                        id,
-                        params,
-                        max_sample_offset_px: _,
-                        user0,
-                        user1,
-                        sources,
-                    } => {
-                        let (user0_image, user0_uv, user0_sampling) = match user0 {
-                            None => (
-                                None,
-                                fret_core::scene::UvRect::FULL,
-                                fret_core::scene::ImageSamplingHint::Default,
-                            ),
-                            Some(input) => (Some(input.image), input.uv, input.sampling),
-                        };
-                        let (user1_image, user1_uv, user1_sampling) = match user1 {
-                            None => (
-                                None,
-                                fret_core::scene::UvRect::FULL,
-                                fret_core::scene::ImageSamplingHint::Default,
-                            ),
-                            Some(input) => (Some(input.image), input.uv, input.sampling),
-                        };
-
-                        let v3_chain_raw = group_raw.or(chain_raw);
-                        let v3_sources_plan = plan_custom_v3_sources_and_charge_budget(
-                            sources,
-                            work,
-                            v3_chain_raw,
-                            group_pyramid,
-                            group_pyramid_roi,
-                            scissor,
-                            ctx,
-                            &mut work_budget_bytes,
-                            estimate_texture_bytes(ctx.viewport_size, ctx.format, 1),
-                            &mut effect_degradations.custom_effect_v3_sources,
-                        );
-
-                        if let Some(e) = custom_chain_budget.as_mut()
-                            && group_pyramid.is_none()
-                            && sources.pyramid.is_some()
-                            && v3_sources_plan.pyramid_levels >= 2
-                        {
-                            e.optional_pyramid_bytes = e.optional_pyramid_bytes.saturating_add(
-                                estimate_custom_v3_pyramid_bytes(
-                                    ctx.viewport_size,
-                                    ctx.format,
-                                    v3_sources_plan.pyramid_levels,
-                                ),
-                            );
-                        }
-
-                        passes.push(RenderPlanPass::CustomEffectV3(CustomEffectV3Pass {
-                            src_raw: v3_sources_plan.src_raw,
-                            src_pyramid: v3_sources_plan.src_raw,
-                            pyramid_levels: v3_sources_plan.pyramid_levels,
-                            pyramid_build_scissor: v3_sources_plan.pyramid_build_scissor,
-                            raw_wanted: sources.want_raw,
-                            pyramid_wanted: sources.pyramid.is_some(),
-                            common: super::CustomEffectPassCommon {
-                                src: work,
-                                dst: srcdst,
-                                src_size: ctx.viewport_size,
-                                dst_size: ctx.viewport_size,
-                                dst_scissor: Some(LocalScissorRect(scissor)),
-                                mask_uniform_index,
-                                mask,
-                                effect: id,
-                                params,
-                                load: wgpu::LoadOp::Load,
-                            },
-                            user0_image,
-                            user0_uv,
-                            user0_sampling,
-                            user1_image,
-                            user1_uv,
-                            user1_sampling,
-                        }));
-                    }
-                    _ => {}
-                }
-            } else {
-                // Fallback: apply the final step in-place on the work buffer, then composite the
-                // chain result back into `srcdst` under the original scissor.
-                if let Some(&final_step) = tail_step.first()
-                    && let Some(&final_scissor) = tail_scissor.first()
-                {
-                    apply_step_in_place_with_scratch_targets(
-                        passes,
-                        work_scratch_targets,
-                        work,
-                        mode,
-                        final_step,
-                        quality,
-                        final_scissor,
-                        &mut work_budget_bytes,
-                        effect_degradations,
-                        effect_blur_quality,
-                        ctx,
-                        chain_raw,
-                        backdrop_source_group,
-                        &mut custom_chain_budget,
-                    );
-                }
-
-                // For clip/mask coverage, we want the "masked blend" semantics used by effect passes
-                // (blend RGB, keep destination alpha), so we reuse a no-op ColorAdjust pass when a mask
-                // is present. This avoids having to introduce a dedicated masked blit pass.
-                if has_mask {
-                    passes.push(RenderPlanPass::ColorAdjust(ColorAdjustPass {
-                        src: work,
-                        dst: srcdst,
-                        src_size: ctx.viewport_size,
-                        dst_size: ctx.viewport_size,
-                        dst_scissor: Some(LocalScissorRect(scissor)),
-                        mask_uniform_index,
-                        mask,
-                        saturation: 1.0,
-                        brightness: 1.0,
-                        contrast: 1.0,
-                        load: wgpu::LoadOp::Load,
-                    }));
-                } else {
-                    passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
-                        src: work,
-                        dst: srcdst,
-                        src_size: ctx.viewport_size,
-                        dst_size: ctx.viewport_size,
-                        dst_scissor: Some(LocalScissorRect(scissor)),
-                        encode_output_srgb: false,
-                        load: wgpu::LoadOp::Load,
-                    }));
-                }
-            }
-
-            return custom_chain_budget;
-        }
+    if try_apply_padded_chain_in_place(
+        passes,
+        &steps,
+        scratch_targets.as_slice(),
+        srcdst,
+        mode,
+        quality,
+        scissor,
+        budget_bytes,
+        ChainCoverage {
+            mask_uniform_index,
+            mask,
+        },
+        effect_degradations,
+        effect_blur_quality,
+        ctx,
+        backdrop_source_group,
+        &mut custom_chain_budget,
+    ) {
+        return custom_chain_budget;
     }
 
-    let chain_wants_raw = group_raw.is_none()
-        && steps.len() >= 2
-        && steps.iter().any(|s| match *s {
-            fret_core::EffectStep::CustomV3 { sources, .. } => sources.want_raw,
-            _ => false,
-        });
+    let chain_wants_raw =
+        group_raw.is_none() && steps.len() >= 2 && steps.iter().any(step_wants_custom_v3_raw);
 
     let full = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
     let (chain_raw, scratch_targets): (Option<PlanTarget>, &[PlanTarget]) = if chain_wants_raw

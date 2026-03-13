@@ -1,3 +1,4 @@
+use super::blur::inflate_scissor_to_viewport;
 use super::*;
 
 use super::super::CustomEffectV3SourceDegradationCounters;
@@ -364,6 +365,23 @@ fn prepare_custom_effect_single_scratch(
     Some(scratch)
 }
 
+fn resolve_custom_effect_image_input(
+    input: Option<fret_core::scene::CustomEffectImageInputV1>,
+) -> (
+    Option<fret_core::ImageId>,
+    fret_core::scene::UvRect,
+    fret_core::scene::ImageSamplingHint,
+) {
+    match input {
+        None => (
+            None,
+            fret_core::scene::UvRect::FULL,
+            fret_core::scene::ImageSamplingHint::Default,
+        ),
+        Some(input) => (Some(input.image), input.uv, input.sampling),
+    }
+}
+
 fn apply_custom_v1_step_inner(
     passes: &mut Vec<RenderPlanPass>,
     scratch_targets: &[PlanTarget],
@@ -480,14 +498,7 @@ fn apply_custom_v2_step_inner(
         return;
     };
 
-    let (input_image, input_uv, input_sampling) = match input_image {
-        None => (
-            None,
-            fret_core::scene::UvRect::FULL,
-            fret_core::scene::ImageSamplingHint::Default,
-        ),
-        Some(input) => (Some(input.image), input.uv, input.sampling),
-    };
+    let (input_image, input_uv, input_sampling) = resolve_custom_effect_image_input(input_image);
     append_custom_effect_v2_in_place_single_scratch(
         passes,
         srcdst,
@@ -595,27 +606,10 @@ fn apply_custom_v3_step_inner(
         return;
     };
 
-    let (user0_image, user0_uv, user0_sampling) = match user0 {
-        None => (
-            None,
-            fret_core::scene::UvRect::FULL,
-            fret_core::scene::ImageSamplingHint::Default,
-        ),
-        Some(input) => (Some(input.image), input.uv, input.sampling),
-    };
-    let (user1_image, user1_uv, user1_sampling) = match user1 {
-        None => (
-            None,
-            fret_core::scene::UvRect::FULL,
-            fret_core::scene::ImageSamplingHint::Default,
-        ),
-        Some(input) => (Some(input.image), input.uv, input.sampling),
-    };
-
-    let group_raw = backdrop_source_group.map(|g| g.raw_target);
-    let group_pyramid = backdrop_source_group.and_then(|g| g.pyramid);
-    let group_pyramid_roi =
-        backdrop_source_group.and_then(|g| g.pyramid.map(|_| (g.scissor, g.pyramid_pad_px)));
+    let (user0_image, user0_uv, user0_sampling) = resolve_custom_effect_image_input(user0);
+    let (user1_image, user1_uv, user1_sampling) = resolve_custom_effect_image_input(user1);
+    let (group_raw, group_pyramid, group_pyramid_roi) =
+        super::backdrop_source_group_parts(backdrop_source_group);
 
     let v3_chain_raw = group_raw.or(custom_v3_chain_raw);
     let v3_sources_plan = plan_custom_v3_sources_and_charge_budget(
@@ -669,6 +663,150 @@ fn apply_custom_v3_step_inner(
         mask_uniform_index,
         mask,
     );
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(super) fn append_padded_chain_final_custom_step(
+    passes: &mut Vec<RenderPlanPass>,
+    work: PlanTarget,
+    srcdst: PlanTarget,
+    final_step: fret_core::EffectStep,
+    final_scissor: ScissorRect,
+    scissor: ScissorRect,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+    chain_raw: Option<PlanTarget>,
+    backdrop_source_group: Option<BackdropSourceGroupCtx>,
+    ctx: EffectCompileCtx,
+    work_budget_bytes: &mut u64,
+    effect_degradations: &mut super::super::EffectDegradationSnapshot,
+    custom_chain_budget: &mut Option<CustomEffectChainBudgetEvidence>,
+) -> bool {
+    debug_assert_eq!(
+        final_scissor, scissor,
+        "final scissor must be the original bounds"
+    );
+
+    match final_step {
+        fret_core::EffectStep::CustomV1 {
+            id,
+            params,
+            max_sample_offset_px: _,
+        } => {
+            passes.push(RenderPlanPass::CustomEffect(CustomEffectPass {
+                common: CustomEffectPassCommon {
+                    src: work,
+                    dst: srcdst,
+                    src_size: ctx.viewport_size,
+                    dst_size: ctx.viewport_size,
+                    dst_scissor: Some(LocalScissorRect(scissor)),
+                    mask_uniform_index,
+                    mask,
+                    effect: id,
+                    params,
+                    load: wgpu::LoadOp::Load,
+                },
+            }));
+            true
+        }
+        fret_core::EffectStep::CustomV2 {
+            id,
+            params,
+            max_sample_offset_px: _,
+            input_image,
+        } => {
+            let (input_image, input_uv, input_sampling) =
+                resolve_custom_effect_image_input(input_image);
+            passes.push(RenderPlanPass::CustomEffectV2(CustomEffectV2Pass {
+                common: CustomEffectPassCommon {
+                    src: work,
+                    dst: srcdst,
+                    src_size: ctx.viewport_size,
+                    dst_size: ctx.viewport_size,
+                    dst_scissor: Some(LocalScissorRect(scissor)),
+                    mask_uniform_index,
+                    mask,
+                    effect: id,
+                    params,
+                    load: wgpu::LoadOp::Load,
+                },
+                input_image,
+                input_uv,
+                input_sampling,
+            }));
+            true
+        }
+        fret_core::EffectStep::CustomV3 {
+            id,
+            params,
+            max_sample_offset_px: _,
+            user0,
+            user1,
+            sources,
+        } => {
+            let (user0_image, user0_uv, user0_sampling) = resolve_custom_effect_image_input(user0);
+            let (user1_image, user1_uv, user1_sampling) = resolve_custom_effect_image_input(user1);
+            let (group_raw, group_pyramid, group_pyramid_roi) =
+                super::backdrop_source_group_parts(backdrop_source_group);
+
+            let v3_chain_raw = group_raw.or(chain_raw);
+            let v3_sources_plan = plan_custom_v3_sources_and_charge_budget(
+                sources,
+                work,
+                v3_chain_raw,
+                group_pyramid,
+                group_pyramid_roi,
+                scissor,
+                ctx,
+                work_budget_bytes,
+                estimate_texture_bytes(ctx.viewport_size, ctx.format, 1),
+                &mut effect_degradations.custom_effect_v3_sources,
+            );
+
+            if let Some(evidence) = custom_chain_budget.as_mut()
+                && group_pyramid.is_none()
+                && sources.pyramid.is_some()
+                && v3_sources_plan.pyramid_levels >= 2
+            {
+                evidence.optional_pyramid_bytes = evidence.optional_pyramid_bytes.saturating_add(
+                    estimate_custom_v3_pyramid_bytes(
+                        ctx.viewport_size,
+                        ctx.format,
+                        v3_sources_plan.pyramid_levels,
+                    ),
+                );
+            }
+
+            passes.push(RenderPlanPass::CustomEffectV3(CustomEffectV3Pass {
+                src_raw: v3_sources_plan.src_raw,
+                src_pyramid: v3_sources_plan.src_raw,
+                pyramid_levels: v3_sources_plan.pyramid_levels,
+                pyramid_build_scissor: v3_sources_plan.pyramid_build_scissor,
+                raw_wanted: sources.want_raw,
+                pyramid_wanted: sources.pyramid.is_some(),
+                common: CustomEffectPassCommon {
+                    src: work,
+                    dst: srcdst,
+                    src_size: ctx.viewport_size,
+                    dst_size: ctx.viewport_size,
+                    dst_scissor: Some(LocalScissorRect(scissor)),
+                    mask_uniform_index,
+                    mask,
+                    effect: id,
+                    params,
+                    load: wgpu::LoadOp::Load,
+                },
+                user0_image,
+                user0_uv,
+                user0_sampling,
+                user1_image,
+                user1_uv,
+                user1_sampling,
+            }));
+            true
+        }
+        _ => false,
+    }
 }
 
 #[allow(clippy::too_many_arguments)]

@@ -173,6 +173,14 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/render_plan_effects/custom.rs`, and
   `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns masked
   `apply_chain_in_place(...)` branch handling for `CustomV1`/`CustomV2`/`CustomV3` directly.
+- Renderer padded-chain orchestration flow now also lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns the padded
+  work-buffer / optional raw-target / final-commit orchestration inside `apply_chain_in_place(...)`
+  directly.
+- Renderer padded-chain final Custom commit helpers now also live under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/custom.rs`, keeping effect-specific
+  final-step wiring out of the orchestration module.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

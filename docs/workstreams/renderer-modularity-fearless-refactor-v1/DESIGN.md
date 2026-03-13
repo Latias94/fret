@@ -169,6 +169,8 @@ following domains explicit:
   - scene encoding
   - render-plan compilation
   - degradation decisions
+  - effect-step helpers vs multi-step chain orchestration should remain explicit subdomains
+    inside render-plan effect planning
 - execution
   - uploads
   - pass recording
@@ -185,6 +187,12 @@ following domains explicit:
 
 The point is to move from "one large owner with many helper files" toward "explicit domains with
 owned boundaries."
+
+For `render_plan_effects`, that means the long-term boring shape is:
+
+- effect-specific apply/build helpers stay grouped by effect family,
+- padded/unpadded chain orchestration, raw-source selection, and final commit semantics live behind
+  explicit chain-level helpers instead of staying inline in `apply_chain_in_place(...)`.
 
 ### 5. Tighten public exports after evidence exists
 
