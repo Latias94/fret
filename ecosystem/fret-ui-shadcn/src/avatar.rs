@@ -735,7 +735,7 @@ impl AvatarFallback {
             let dt = fret_ui_kit::declarative::motion::effective_frame_delta_for_cx(cx);
             let delay = self.delay;
             let delay_ready =
-                cx.with_state_for(id, radix_avatar::AvatarFallbackDelay::default, |gate| {
+                cx.state_for(id, radix_avatar::AvatarFallbackDelay::default, |gate| {
                     gate.drive(frame_id, dt, delay, want_render)
                 });
             scheduling::set_continuous_frames(
