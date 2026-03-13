@@ -247,6 +247,17 @@ fn hash_bytes(bytes: &[u8]) -> u64 {
     hasher.finish()
 }
 
+fn font_environment_fingerprint(
+    all_font_names: &[String],
+    all_font_catalog_entries: &[FontCatalogEntryMetadata],
+) -> u64 {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    "fret.text.font_environment.v1".hash(&mut hasher);
+    all_font_names.hash(&mut hasher);
+    all_font_catalog_entries.hash(&mut hasher);
+    hasher.finish()
+}
+
 impl Default for ParleyShaper {
     fn default() -> Self {
         Self {
@@ -602,11 +613,28 @@ impl ParleyShaper {
             return false;
         }
 
-        self.fcx.collection = result.collection;
+        let crate::SystemFontRescanResult {
+            collection,
+            all_font_names,
+            all_font_catalog_entries,
+            environment_fingerprint,
+        } = result;
+
+        if self.current_font_environment_fingerprint() == environment_fingerprint {
+            return false;
+        }
+
+        self.fcx.collection = collection;
         self.invalidate_catalog_caches();
-        self.all_font_names_cache = Some(result.all_font_names);
-        self.all_font_catalog_entries_cache = Some(result.all_font_catalog_entries);
+        self.all_font_names_cache = Some(all_font_names);
+        self.all_font_catalog_entries_cache = Some(all_font_catalog_entries);
         true
+    }
+
+    fn current_font_environment_fingerprint(&mut self) -> u64 {
+        let all_font_names = self.all_font_names();
+        let all_font_catalog_entries = self.all_font_catalog_entries();
+        font_environment_fingerprint(&all_font_names, &all_font_catalog_entries)
     }
 
     fn base_line_metrics_cache_key(&self, style: &TextStyle, scale: f32) -> u64 {
@@ -1564,10 +1592,13 @@ pub fn run_system_font_rescan(seed: crate::SystemFontRescanSeed) -> crate::Syste
 
     let all_font_names = shaper.all_font_names();
     let all_font_catalog_entries = shaper.all_font_catalog_entries();
+    let environment_fingerprint =
+        font_environment_fingerprint(&all_font_names, &all_font_catalog_entries);
     crate::SystemFontRescanResult {
         collection: shaper.fcx.collection,
         all_font_names,
         all_font_catalog_entries,
+        environment_fingerprint,
     }
 }
 
@@ -1867,6 +1898,31 @@ mod tests {
     fn rescan_is_noop_when_system_fonts_disabled() {
         let shaper = ParleyShaper::new_without_system_fonts();
         assert!(shaper.system_font_rescan_seed().is_none());
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn rescan_apply_returns_false_when_environment_is_unchanged() {
+        let mut shaper = ParleyShaper::new();
+        let fingerprint_before = shaper.current_font_environment_fingerprint();
+        let seed = shaper
+            .system_font_rescan_seed()
+            .expect("expected system font rescan to be available");
+        let result = seed.run();
+
+        assert_eq!(
+            result.environment_fingerprint, fingerprint_before,
+            "expected background rescan to observe the same environment before apply"
+        );
+        assert!(
+            !shaper.apply_system_font_rescan_result(result),
+            "expected apply to short-circuit when the environment is unchanged"
+        );
+        assert_eq!(
+            shaper.current_font_environment_fingerprint(),
+            fingerprint_before,
+            "expected no-op apply to preserve the current font environment"
+        );
     }
 
     #[test]

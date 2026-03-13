@@ -157,19 +157,41 @@ fn text_locale_changes_font_stack_key() {
 
 #[cfg(not(target_arch = "wasm32"))]
 #[test]
-fn text_rescan_system_fonts_bumps_font_stack_key() {
+fn text_rescan_system_fonts_is_noop_when_environment_unchanged() {
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut text = super::TextSystem::new(&ctx.device);
 
     let k0 = text.font_stack_key();
-    assert!(text.rescan_system_fonts());
-    let k1 = text.font_stack_key();
-    assert_ne!(k0, k1);
+    let font_db_revision0 = text.font_runtime.font_db_revision;
+    let cache_resets0 = text.frame_perf.cache_resets;
+
+    let seed = text
+        .system_font_rescan_seed()
+        .expect("expected system font rescan to be available");
+    let result = seed.run();
+
+    assert!(
+        !text.apply_system_font_rescan_result(result),
+        "expected apply to short-circuit when the environment is unchanged"
+    );
+    assert_eq!(
+        text.font_stack_key(),
+        k0,
+        "expected no-op rescan apply to keep TextFontStackKey stable"
+    );
+    assert_eq!(
+        text.font_runtime.font_db_revision, font_db_revision0,
+        "expected no-op rescan apply to avoid bumping the font DB revision"
+    );
+    assert_eq!(
+        text.frame_perf.cache_resets, cache_resets0,
+        "expected no-op rescan apply to avoid cache-reset churn"
+    );
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 #[test]
-fn text_rescan_system_fonts_reapplies_generic_injection() {
+fn text_rescan_system_fonts_noop_preserves_generic_injection() {
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut text = super::TextSystem::new(&ctx.device);
 
@@ -205,7 +227,18 @@ fn text_rescan_system_fonts_reapplies_generic_injection() {
         "expected UI sans stack to be injected with the configured family"
     );
 
-    assert!(text.rescan_system_fonts());
+    let k0 = text.font_stack_key();
+    let font_db_revision0 = text.font_runtime.font_db_revision;
+    let cache_resets0 = text.frame_perf.cache_resets;
+    let seed = text
+        .system_font_rescan_seed()
+        .expect("expected system font rescan to be available");
+    let result = seed.run();
+
+    assert!(
+        !text.apply_system_font_rescan_result(result),
+        "expected apply to short-circuit when the environment is unchanged"
+    );
 
     let requested_id_after = text
         .parley_shaper
@@ -214,7 +247,24 @@ fn text_rescan_system_fonts_reapplies_generic_injection() {
     assert_eq!(
         text.parley_shaper.generic_family_ids(generic).first(),
         Some(&requested_id_after),
-        "expected UI sans stack injection to be re-applied after rescan"
+        "expected UI sans stack injection to remain intact across a no-op rescan apply"
+    );
+    assert_eq!(
+        requested_id_after, requested_id,
+        "expected no-op rescan apply to preserve resolved family identity"
+    );
+    assert_eq!(
+        text.font_stack_key(),
+        k0,
+        "expected no-op rescan apply to keep TextFontStackKey stable"
+    );
+    assert_eq!(
+        text.font_runtime.font_db_revision, font_db_revision0,
+        "expected no-op rescan apply to avoid bumping the font DB revision"
+    );
+    assert_eq!(
+        text.frame_perf.cache_resets, cache_resets0,
+        "expected no-op rescan apply to avoid cache-reset churn"
     );
 }
 

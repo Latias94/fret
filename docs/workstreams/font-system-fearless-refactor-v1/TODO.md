@@ -25,7 +25,7 @@ Background inputs:
   - [x] ADR 0147
   - [ ] ADR 0257
   - [x] ADR 0258
-  - [ ] ADR 0259
+  - [x] ADR 0259
   - [x] `docs/adr/IMPLEMENTATION_ALIGNMENT.md` entries as needed
 
 ## M1 — Reset runner publication to one canonical operation
@@ -82,19 +82,19 @@ Regression gates:
 
 ## M3 — Make rescan apply diff-based
 
-- [ ] Add a comparable fingerprint to the rescan result or a comparable renderer-owned environment
+- [x] Add a comparable fingerprint to the rescan result or a comparable renderer-owned environment
   snapshot.
-- [ ] Make `apply_system_font_rescan_result(...)` return `false` on an effective no-op.
-- [ ] Prevent no-op rescan apply from:
-  - [ ] bumping `TextFontStackKey`
-  - [ ] bumping font DB revision unnecessarily
-  - [ ] clearing text layout caches
-  - [ ] resetting glyph atlases
-- [ ] Keep injected-font retention bounded and documented.
+- [x] Make `apply_system_font_rescan_result(...)` return `false` on an effective no-op.
+- [x] Prevent no-op rescan apply from:
+  - [x] bumping `TextFontStackKey`
+  - [x] bumping font DB revision unnecessarily
+  - [x] clearing text layout caches
+  - [x] resetting glyph atlases
+- [x] Keep injected-font retention bounded and documented.
 
 Regression gates:
 
-- [ ] Add a unit/integration test for "no-op rescan does not change published font state".
+- [x] Add a unit/integration test for "no-op rescan does not change published font state".
 - [ ] Add a diagnostics/perf check showing that no-op rescan apply does not trigger cache-reset
   churn.
 
@@ -120,7 +120,7 @@ Regression gates:
 
 - [ ] There is one canonical runner publication path for font state.
 - [ ] Bundled font roles and profile guarantees live in one manifest-backed surface.
-- [ ] No-op rescan apply does not churn renderer caches or published keys.
+- [x] No-op rescan apply does not churn renderer caches or published keys.
 - [ ] Bundled-only determinism is explicit rather than inferred from scattered family-name lists.
 - [ ] The remaining font docs can clearly distinguish:
   - [ ] architecture/contracts

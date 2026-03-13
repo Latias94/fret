@@ -62,10 +62,20 @@ On desktop builds, we avoid enumerating the catalog on the UI thread at startup 
 
 Set `FRET_TEXT_SYSTEM_FONT_CATALOG_STARTUP_ASYNC=0` to force the old synchronous startup enumeration path.
 
-### 2.2) Re-apply font-family policy after swapping the font collection
+### 2.2) Re-apply font-family policy only when the effective collection changed
 
-Applying a system font rescan result replaces the underlying fontique collection. The renderer must re-apply the
-current font-family policy (`TextFontFamilyConfig`) after swapping the collection to ensure:
+Applying a system font rescan result first compares an environment fingerprint computed from the
+resolved font collection snapshot.
+
+If the fingerprint matches the renderer's current environment:
+
+- apply returns `false`,
+- the renderer keeps the current fontique collection,
+- `TextFontStackKey` and font-DB revision stay stable,
+- text caches and glyph atlases are not reset.
+
+If the fingerprint differs, the renderer replaces the underlying fontique collection and re-applies
+the current font-family policy (`TextFontFamilyConfig`) to ensure:
 
 - generic-family injections (UI/mono/emoji stacks) remain in effect,
 - common-fallback injection remains in effect,
@@ -96,6 +106,7 @@ debug-only “no system fonts” mode on native:
 ## Consequences
 
 - System font rescans do not have to block the UI thread on desktop (default).
+- Defensive/no-op rescans do not churn `TextFontStackKey`, font DB revision, or renderer caches.
 - Injected fonts remain available across rescans as long as their blobs are retained.
 - Under tight budgets, injected fonts may be dropped across a rescan boundary; this is an explicit tradeoff to prevent
   unbounded growth.
@@ -109,8 +120,8 @@ debug-only “no system fonts” mode on native:
   - `crates/fret-launch/src/runner/desktop/app_handler.rs`
 - Renderer seed/result split (background compute + main-thread apply):
   - `crates/fret-render-wgpu/src/text/mod.rs` (`SystemFontRescanSeed`, `SystemFontRescanResult`)
-  - `crates/fret-render-text/src/parley_shaper.rs` (`run_system_font_rescan`)
-- Renderer policy re-application after rescan:
+  - `crates/fret-render-text/src/parley_shaper.rs` (`run_system_font_rescan`, `apply_system_font_rescan_result`)
+- Renderer policy re-application after changed rescan:
   - `crates/fret-render-wgpu/src/text/mod.rs` (`TextSystem::apply_system_font_rescan_result`)
 - Injected font blob retention (dedupe + budgets):
   - `crates/fret-render-text/src/parley_shaper.rs` (`record_registered_font_blob`)

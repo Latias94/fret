@@ -2622,6 +2622,7 @@ name = "fret-runtime"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "fret-fonts",
  "fret-i18n",
  "serde",
  "serde_json",

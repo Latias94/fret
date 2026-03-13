@@ -23,7 +23,7 @@ pub fn effective_text_scale_factor(scale_factor: f32) -> f32 {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FontCatalogEntryMetadata {
     pub family: String,
     pub has_variable_axes: bool,
@@ -32,7 +32,7 @@ pub struct FontCatalogEntryMetadata {
     pub is_monospace_candidate: bool,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FontVariableAxisMetadata {
     pub tag: String,
     pub min_bits: u32,
@@ -49,6 +49,7 @@ pub struct SystemFontRescanResult {
     pub(crate) collection: parley::fontique::Collection,
     pub(crate) all_font_names: Vec<String>,
     pub(crate) all_font_catalog_entries: Vec<FontCatalogEntryMetadata>,
+    pub(crate) environment_fingerprint: u64,
 }
 
 const _: () = {
@@ -69,6 +70,7 @@ impl std::fmt::Debug for SystemFontRescanResult {
                 "all_font_catalog_entries_len",
                 &self.all_font_catalog_entries.len(),
             )
+            .field("environment_fingerprint", &self.environment_fingerprint)
             .finish_non_exhaustive()
     }
 }
