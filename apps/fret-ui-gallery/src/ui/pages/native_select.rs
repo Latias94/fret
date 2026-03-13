@@ -22,25 +22,33 @@ pub(super) fn preview_native_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let invalid = snippets::invalid::render(cx, invalid_value, invalid_open);
     let rtl = snippets::rtl::render(cx);
 
-    let native_select_vs_select = doc_layout::notes(
-        cx,
-        [
-            "Use `NativeSelect` when you want the simpler native-form-control authoring shape and a path toward backend-native picker semantics later.",
-            "Use `Select` when you need richer custom overlays, search/filtering, icons inside items, or broader menu-style composition today.",
-            "In the current Fret implementation, `NativeSelect` is a popover-backed fallback that preserves the shadcn surface while platform-native pickers remain future work.",
-        ],
-    );
+    let native_select_vs_select = doc_layout::notes_block([
+        "Use `NativeSelect` when you want the simpler native-form-control authoring shape and a path toward backend-native picker semantics later.",
+        "Use `Select` when you need richer custom overlays, search/filtering, icons inside items, or broader menu-style composition today.",
+        "In the current Fret implementation, `NativeSelect` is a popover-backed fallback that preserves the shadcn surface while platform-native pickers remain future work.",
+    ]);
 
-    let api_reference = doc_layout::notes(
+    let api_reference = doc_layout::notes_block([
+        "`NativeSelect::new(model, open)` and `new_controllable(...)` cover the controlled and default-value/open authoring paths.",
+        "`options(...)` and `optgroups(...)` are the source-aligned structured equivalent of upstream `NativeSelectOption` and `NativeSelectOptGroup` children, so no extra generic children API is needed here.",
+        "`size(...)`, `disabled(...)`, `aria_invalid(...)`, `control_id(...)`, `placeholder(...)`, and `a11y_label(...)` cover the documented control surface.",
+        "Trigger chrome, chevron icon, default heights (`default` / `sm`), and invalid/focus states remain recipe-owned; surrounding width caps and form/page layout remain caller-owned.",
+        "True backend-native parity remains deferred until platform-native select widgets are in scope.",
+    ]);
+    let native_select_vs_select = DocSection::build(
         cx,
-        [
-            "`NativeSelect::new(model, open)` and `new_controllable(...)` cover the controlled and default-value/open authoring paths.",
-            "`options(...)` and `optgroups(...)` are the source-aligned structured equivalent of upstream `NativeSelectOption` and `NativeSelectOptGroup` children, so no extra generic children API is needed here.",
-            "`size(...)`, `disabled(...)`, `aria_invalid(...)`, `control_id(...)`, `placeholder(...)`, and `a11y_label(...)` cover the documented control surface.",
-            "Trigger chrome, chevron icon, default heights (`default` / `sm`), and invalid/focus states remain recipe-owned; surrounding width caps and form/page layout remain caller-owned.",
-            "True backend-native parity remains deferred until platform-native select widgets are in scope.",
-        ],
-    );
+        "Native Select vs Select",
+        native_select_vs_select,
+    )
+    .description(
+        "Pick the simpler native-style surface only when you do not need the richer custom select recipe.",
+    )
+    .no_shell()
+    .test_id_prefix("ui-gallery-native-select-vs-select");
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .description("Public surface summary, ownership notes, and defer rationale.")
+        .no_shell()
+        .test_id_prefix("ui-gallery-native-select-api-reference");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -69,10 +77,7 @@ pub(super) fn preview_native_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .description("Show validation state with `aria_invalid(true)`.")
                 .test_id_prefix("ui-gallery-native-select-invalid")
                 .code_rust_from_file_region(snippets::invalid::SOURCE, "example"),
-            DocSection::new("Native Select vs Select", native_select_vs_select)
-                .description("Pick the simpler native-style surface only when you do not need the richer custom select recipe.")
-                .no_shell()
-                .test_id_prefix("ui-gallery-native-select-vs-select"),
+            native_select_vs_select,
             DocSection::new("RTL", rtl)
                 .description("Direction provider + popup alignment under RTL.")
                 .test_id_prefix("ui-gallery-native-select-rtl")
@@ -83,10 +88,7 @@ pub(super) fn preview_native_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 )
                 .test_id_prefix("ui-gallery-native-select-label")
                 .code_rust_from_file_region(snippets::label::SOURCE, "example"),
-            DocSection::new("API Reference", api_reference)
-                .description("Public surface summary, ownership notes, and defer rationale.")
-                .no_shell()
-                .test_id_prefix("ui-gallery-native-select-api-reference"),
+            api_reference,
         ],
     );
 

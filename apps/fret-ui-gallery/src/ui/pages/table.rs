@@ -11,15 +11,13 @@ pub(super) fn preview_table(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let actions = snippets::actions::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "API reference: `ecosystem/fret-ui-shadcn/src/table.rs`.",
-            "Table already exposes the upstream-shaped parts surface (`Table`, `TableHeader`, `TableBody`, `TableFooter`, `TableRow`, `TableHead`, `TableCell`, `TableCaption`), so the main parity gap here was usage clarity rather than missing mechanism or an extra compose builder.",
-            "Horizontal overflow handling lives in the root table container recipe, matching shadcn's responsive wrapper outcome.",
-            "For sorting, filtering, selection, and pagination, prefer `DataTable` recipes rather than pushing policy into the base `Table` surface.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "API reference: `ecosystem/fret-ui-shadcn/src/table.rs`.",
+        "Table already exposes the upstream-shaped parts surface (`Table`, `TableHeader`, `TableBody`, `TableFooter`, `TableRow`, `TableHead`, `TableCell`, `TableCaption`), so the main parity gap here was usage clarity rather than missing mechanism or an extra compose builder.",
+        "Horizontal overflow handling lives in the root table container recipe, matching shadcn's responsive wrapper outcome.",
+        "For sorting, filtering, selection, and pagination, prefer `DataTable` recipes rather than pushing policy into the base `Table` surface.",
+    ]);
+    let notes = DocSection::build(cx, "Notes", notes).description("API surface and parity notes.");
 
     let page = crate::ui::doc_layout::render_doc_page(
         cx,
@@ -45,7 +43,7 @@ pub(super) fn preview_table(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .description("Validates right-to-left direction support.")
                 .test_id_prefix("ui-gallery-table-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes).description("API surface and parity notes."),
+            notes,
         ],
     )
     .test_id("ui-gallery-table-root");

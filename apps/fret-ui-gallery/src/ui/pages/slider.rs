@@ -15,16 +15,14 @@ pub(super) fn preview_slider(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         let usage = cx.keyed("ui_gallery.slider.usage", |cx| snippets::usage::render(cx));
         let label = cx.keyed("ui_gallery.slider.label", |cx| snippets::label::render(cx));
 
-        let notes = doc_layout::notes(
-            cx,
-            [
+        let notes = doc_layout::notes_block([
                 "API reference: `ecosystem/fret-ui-shadcn/src/slider.rs` (Slider).",
                 "Slider already exposes the important authoring surface (`new`, `new_controllable`, range/step/orientation/on_value_commit), so the main parity gap here is usage clarity rather than missing composition APIs.",
                 "Uncontrolled sliders store their values in element state; controlled sliders store values in a shared model.",
                 "Prefer `on_value_commit` for expensive reactions (e.g. save, fetch) and use live updates for lightweight UI.",
                 "Vertical sliders should have an explicit height to avoid zero-size layouts.",
-            ],
-        );
+            ]);
+        let notes = DocSection::build(cx, "Notes", notes).description("Behavior notes.");
 
         let extras = cx.keyed("ui_gallery.slider.extras", |cx| {
             snippets::extras::render(cx, last_commit.clone())
@@ -48,7 +46,7 @@ pub(super) fn preview_slider(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 DocSection::new("Extras", extras)
                     .description("Fret extras: disabled, RTL, inverted, and onValueCommit.")
                     .code_rust_from_file_region(snippets::extras::SOURCE, "example"),
-                DocSection::new("Notes", notes).description("Behavior notes."),
+                notes,
             ],
         );
 

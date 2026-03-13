@@ -1,6 +1,6 @@
 use super::super::*;
 
-use crate::ui::doc_layout::{self, DocSection, notes};
+use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
 use fret::{UiChild, UiCx};
 use fret_ui_kit::ui::UiElementSinkExt as _;
@@ -8,44 +8,30 @@ use fret_ui_shadcn::facade as shadcn;
 
 pub(super) fn preview_ai_checkpoint_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let demo = snippets::checkpoint_demo::render(cx);
-    let features = notes(
-        cx,
-        [
-            "Simple flex layout with icon, trigger, and separator",
-            "Visual separator line for clear conversation breaks",
-            "Clickable restore button for reverting to checkpoint",
-            "Customizable icon (defaults to BookmarkIcon)",
-            "Keyboard accessible with proper ARIA labels",
-            "Responsive design that adapts to different screen sizes",
-            "Seamless light/dark theme integration",
-        ],
-    );
-    let customizable_icon = notes(
-        cx,
-        [
-            "Swap the default bookmark for a product-specific icon while keeping the surrounding checkpoint recipe unchanged.",
-            "Custom child content now inherits the same muted foreground baseline as the default bookmark icon.",
-            "`CheckpointIcon::children_many(...)` and `into_element_with_children(...)` make move-only Fret trees feel closer to the official React children API.",
-        ],
-    );
-    let manual_checkpoints = notes(
-        cx,
-        ["Allow users to manually create checkpoints at important conversation points."],
-    );
-    let automatic_checkpoints = notes(
-        cx,
-        ["Create checkpoints automatically after significant conversation milestones."],
-    );
-    let branching = notes(
-        cx,
-        [
-            "Use checkpoints to enable branching conversations where users can explore different paths.",
-        ],
-    );
-    let props = checkpoint_props_table(cx);
-    let props = props
-        .into_element(cx)
-        .test_id("ui-gallery-ai-checkpoint-props");
+    let features = doc_layout::notes_block([
+        "Simple flex layout with icon, trigger, and separator",
+        "Visual separator line for clear conversation breaks",
+        "Clickable restore button for reverting to checkpoint",
+        "Customizable icon (defaults to BookmarkIcon)",
+        "Keyboard accessible with proper ARIA labels",
+        "Responsive design that adapts to different screen sizes",
+        "Seamless light/dark theme integration",
+    ]);
+    let customizable_icon = doc_layout::notes_block([
+        "Swap the default bookmark for a product-specific icon while keeping the surrounding checkpoint recipe unchanged.",
+        "Custom child content now inherits the same muted foreground baseline as the default bookmark icon.",
+        "`CheckpointIcon::children_many(...)` and `into_element_with_children(...)` make move-only Fret trees feel closer to the official React children API.",
+    ]);
+    let manual_checkpoints = doc_layout::notes_block([
+        "Allow users to manually create checkpoints at important conversation points.",
+    ]);
+    let automatic_checkpoints = doc_layout::notes_block([
+        "Create checkpoints automatically after significant conversation milestones.",
+    ]);
+    let branching = doc_layout::notes_block([
+        "Use checkpoints to enable branching conversations where users can explore different paths.",
+    ]);
+    let props = checkpoint_props_table(cx).test_id("ui-gallery-ai-checkpoint-props");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -60,31 +46,31 @@ pub(super) fn preview_ai_checkpoint_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> V
                 .test_id_prefix("ui-gallery-ai-checkpoint-demo")
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::checkpoint_demo::SOURCE, "example"),
-            DocSection::new("Features", features)
+            DocSection::build(cx, "Features", features)
                 .description("Official AI Elements defaults and outcomes to keep in view while porting.")
                 .max_w(Px(980.0))
                 .no_shell(),
-            DocSection::new("Customizable Icon", customizable_icon)
+            DocSection::build(cx, "Customizable Icon", customizable_icon)
                 .description("The icon slot stays composable even though the default visual is a bookmark.")
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::checkpoint_demo::SOURCE, "custom_icon")
                 .no_shell(),
-            DocSection::new("Manual Checkpoints", manual_checkpoints)
+            DocSection::build(cx, "Manual Checkpoints", manual_checkpoints)
                 .description("Create a checkpoint at an explicit user-visible milestone.")
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::checkpoint_demo::SOURCE, "manual_checkpoints")
                 .no_shell(),
-            DocSection::new("Automatic Checkpoints", automatic_checkpoints)
+            DocSection::build(cx, "Automatic Checkpoints", automatic_checkpoints)
                 .description("Use a lightweight milestone rule when you want history snapshots without extra UI chrome.")
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::checkpoint_demo::SOURCE, "automatic_checkpoints")
                 .no_shell(),
-            DocSection::new("Branching Conversations", branching)
+            DocSection::build(cx, "Branching Conversations", branching)
                 .description("Restore earlier context while preserving the truncated tail as a branch.")
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::checkpoint_demo::SOURCE, "branching_conversations")
                 .no_shell(),
-            DocSection::new("Props", props)
+            DocSection::build(cx, "Props", props)
                 .description("Fret API surface for `fret_ui_ai::Checkpoint*` builders.")
                 .max_w(Px(980.0)),
         ],

@@ -2826,7 +2826,6 @@ dependencies = [
  "fret-node",
  "fret-query",
  "fret-render",
- "fret-router",
  "fret-runtime",
  "fret-ui",
  "fret-ui-ai",

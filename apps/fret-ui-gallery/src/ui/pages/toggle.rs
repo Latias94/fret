@@ -14,16 +14,17 @@ pub(super) fn preview_toggle(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
     let label = snippets::label::render(cx);
 
-    let api_reference = doc_layout::notes(
-        cx,
-        [
-            "`Toggle::uncontrolled(false)` mirrors the upstream `<Toggle />` quick-start path; `variant(...)`, `size(...)`, `disabled(...)`, and `a11y_label(...)` cover the documented control surface.",
-            "`children([...])` is the source-aligned Fret equivalent of upstream child content, while `label(...)` remains the ergonomic shortcut for the common icon-plus-text case.",
-            "Toggle chrome, size presets, horizontal padding, and pressed-state colors remain recipe-owned because the upstream component source defines those defaults on the component itself.",
-            "Surrounding toolbar layout, wrapping behavior, and label-to-control wiring remain caller-owned composition choices.",
-            "No extra generic `asChild` / `compose()` surface is needed here: `children([...])` already covers the composable content story without widening the primitive contract.",
-        ],
-    );
+    let api_reference = doc_layout::notes_block([
+        "`Toggle::uncontrolled(false)` mirrors the upstream `<Toggle />` quick-start path; `variant(...)`, `size(...)`, `disabled(...)`, and `a11y_label(...)` cover the documented control surface.",
+        "`children([...])` is the source-aligned Fret equivalent of upstream child content, while `label(...)` remains the ergonomic shortcut for the common icon-plus-text case.",
+        "Toggle chrome, size presets, horizontal padding, and pressed-state colors remain recipe-owned because the upstream component source defines those defaults on the component itself.",
+        "Surrounding toolbar layout, wrapping behavior, and label-to-control wiring remain caller-owned composition choices.",
+        "No extra generic `asChild` / `compose()` surface is needed here: `children([...])` already covers the composable content story without widening the primitive contract.",
+    ]);
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .test_id_prefix("ui-gallery-toggle-api-reference")
+        .description("Public surface summary and ownership notes.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -65,10 +66,7 @@ pub(super) fn preview_toggle(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 )
                 .test_id_prefix("ui-gallery-toggle-label")
                 .code_rust_from_file_region(snippets::label::SOURCE, "example"),
-            DocSection::new("API Reference", api_reference)
-                .no_shell()
-                .test_id_prefix("ui-gallery-toggle-api-reference")
-                .description("Public surface summary and ownership notes."),
+            api_reference,
         ],
     );
 

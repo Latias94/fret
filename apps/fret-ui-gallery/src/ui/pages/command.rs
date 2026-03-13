@@ -18,15 +18,14 @@ pub(super) fn preview_command_palette(
     let rtl = snippets::rtl::render(cx, last_action.clone());
     let loading_palette = snippets::loading::render(cx, last_action.clone());
 
-    let notes_stack = doc_layout::notes(
-        cx,
-        [
-            "Use `CommandDialog` for global discovery (Ctrl/Cmd+P), and keep `CommandPalette` embedded for local filtering surfaces.",
-            "Attach either `on_select`, `on_select_action`, or `on_select_value_action` for every interactive item; otherwise entries are treated as disabled.",
-            "Mirror docs order even when APIs differ so parity gaps stay explicit and testable. For Command, root chrome is recipe-owned while width caps such as `max-w-sm` remain caller-owned.",
-            "For long command catalogs, constrain list height via `refine_scroll_layout` to keep dialog geometry stable.",
-        ],
-    );
+    let notes_stack = doc_layout::notes_block([
+        "Use `CommandDialog` for global discovery (Ctrl/Cmd+P), and keep `CommandPalette` embedded for local filtering surfaces.",
+        "Attach either `on_select`, `on_select_action`, or `on_select_value_action` for every interactive item; otherwise entries are treated as disabled.",
+        "Mirror docs order even when APIs differ so parity gaps stay explicit and testable. For Command, root chrome is recipe-owned while width caps such as `max-w-sm` remain caller-owned.",
+        "For long command catalogs, constrain list height via `refine_scroll_layout` to keep dialog geometry stable.",
+    ]);
+    let notes_stack =
+        DocSection::build(cx, "Notes", notes_stack).test_id_prefix("ui-gallery-command-notes");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -103,8 +102,7 @@ pub(super) fn preview_command_palette(
                     snippets::action_first_view::SOURCE,
                     "example",
                 ),
-            DocSection::new("Notes", notes_stack)
-                .test_id_prefix("ui-gallery-command-notes"),
+            notes_stack,
         ],
     );
 

@@ -15,6 +15,9 @@ pub(super) fn preview_forms(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
 
     let notes = snippets::notes::render(cx);
+    let notes = DocSection::build(cx, "Notes", notes)
+        .description("API reference pointers and authoring notes.")
+        .code_rust_from_file_region(snippets::notes::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -46,9 +49,7 @@ pub(super) fn preview_forms(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             DocSection::new("RTL", rtl)
                 .description("Form composition under an RTL direction provider.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes)
-                .description("API reference pointers and authoring notes.")
-                .code_rust_from_file_region(snippets::notes::SOURCE, "example"),
+            notes,
         ],
     );
 

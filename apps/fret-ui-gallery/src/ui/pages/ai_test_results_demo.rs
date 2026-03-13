@@ -86,24 +86,19 @@ fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
 pub(super) fn preview_ai_test_results_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let overview = snippets::test_results_demo::render(cx);
-    let features = crate::ui::doc_layout::notes(
-        cx,
-        [
-            "Summary statistics (passed/failed/skipped)",
-            "Progress bar visualization",
-            "Collapsible test suites",
-            "Individual test status and duration",
-            "Error messages with stack traces",
-            "Color-coded status indicators",
-        ],
-    );
+    let features = crate::ui::doc_layout::notes_block([
+        "Summary statistics (passed/failed/skipped)",
+        "Progress bar visualization",
+        "Collapsible test suites",
+        "Individual test status and duration",
+        "Error messages with stack traces",
+        "Color-coded status indicators",
+    ]);
     let status_colors = status_colors_table(cx);
-    let status_colors = status_colors.into_element(cx);
     let basic = snippets::test_results_basic::render(cx);
     let suites = snippets::test_results_suites::render(cx);
     let errors = snippets::test_results_errors::render(cx);
     let props = parts_props_table(cx);
-    let props = props.into_element(cx);
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
@@ -115,8 +110,8 @@ pub(super) fn preview_ai_test_results_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
                 .description("Rust/Fret analogue of the official AI Elements all-in-one preview.")
                 .test_id_prefix("ui-gallery-ai-test-results-overview")
                 .code_rust_from_file_region(snippets::test_results_demo::SOURCE, "example"),
-            DocSection::new("Features", features).no_shell(),
-            DocSection::new("Status Colors", status_colors).no_shell(),
+            DocSection::build(cx, "Features", features).no_shell(),
+            DocSection::build(cx, "Status Colors", status_colors).no_shell(),
             DocSection::new("Basic Usage", basic)
                 .description(
                     "Summary badges and duration only, matching the official basic example.",
@@ -135,7 +130,7 @@ pub(super) fn preview_ai_test_results_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
                 )
                 .test_id_prefix("ui-gallery-ai-test-results-errors")
                 .code_rust_from_file_region(snippets::test_results_errors::SOURCE, "example"),
-            DocSection::new("Parts & Props", props).no_shell(),
+            DocSection::build(cx, "Parts & Props", props).no_shell(),
         ],
     );
 

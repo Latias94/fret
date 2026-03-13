@@ -16,16 +16,14 @@ pub(super) fn preview_tabs(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let vertical_line = snippets::vertical_line::render(cx);
     let extras = snippets::extras::render(cx);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "Preview follows upstream shadcn Tabs docs order first: Demo, Usage, Line, Vertical, Disabled, Icons, RTL; Fret-specific sections follow afterwards.",
-            "Tabs already exposes composable `TabsRoot` / `TabsList` / `TabsTrigger` / `TabsContent`, so the main parity gap here is documentation clarity rather than missing authoring APIs.",
-            "Keep root width caller-owned in examples such as Usage (`w-[400px]` upstream), while list/trigger chrome remains recipe-owned.",
-            "Password fields use `Input::password()` to mirror `type=\"password\"` in shadcn/ui examples.",
-            "API reference: `ecosystem/fret-ui-shadcn/src/tabs.rs`.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "Preview follows upstream shadcn Tabs docs order first: Demo, Usage, Line, Vertical, Disabled, Icons, RTL; Fret-specific sections follow afterwards.",
+        "Tabs already exposes composable `TabsRoot` / `TabsList` / `TabsTrigger` / `TabsContent`, so the main parity gap here is documentation clarity rather than missing authoring APIs.",
+        "Keep root width caller-owned in examples such as Usage (`w-[400px]` upstream), while list/trigger chrome remains recipe-owned.",
+        "Password fields use `Input::password()` to mirror `type=\"password\"` in shadcn/ui examples.",
+        "API reference: `ecosystem/fret-ui-shadcn/src/tabs.rs`.",
+    ]);
+    let notes = DocSection::build(cx, "Notes", notes).description("Parity notes and references.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -72,7 +70,7 @@ pub(super) fn preview_tabs(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .description("Fret-specific regression gates (flex-1 triggers).")
                 .test_id_prefix("ui-gallery-tabs-extras")
                 .code_rust_from_file_region(snippets::extras::SOURCE, "example"),
-            DocSection::new("Notes", notes).description("Parity notes and references."),
+            notes,
         ],
     );
 

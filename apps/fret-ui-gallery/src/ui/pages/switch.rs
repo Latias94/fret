@@ -16,16 +16,17 @@ pub(super) fn preview_switch(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let label = snippets::label::render(cx);
     let style_override = snippets::bluetooth::render(cx);
 
-    let api_reference = doc_layout::notes(
-        cx,
-        [
-            "`Switch::new(model)` is the Fret equivalent of the upstream `<Switch />`; `size(...)`, `disabled(...)`, `aria_invalid(...)`, `control_id(...)`, and `a11y_label(...)` now cover the documented control-level surface.",
-            "Track/thumb chrome and the intrinsic switch sizes remain recipe-owned because the upstream component source defines those defaults on the switch itself.",
-            "Caller-owned layout stays explicit for `max-w-*`, stacked field groups, and surrounding page/grid negotiation; the recipe should not absorb those constraints.",
-            "`FieldLabel::for_control(...)` plus `FieldLabel::wrap(...)` covers the source-aligned description and choice-card compositions without widening `Switch` into a generic children API.",
-            "`SwitchStyle` remains a focused Fret follow-up for token-safe track/thumb overrides; it is not part of the upstream docs path, but it is the right escape hatch when product recipes need custom checked colors.",
-        ],
-    );
+    let api_reference = doc_layout::notes_block([
+        "`Switch::new(model)` is the Fret equivalent of the upstream `<Switch />`; `size(...)`, `disabled(...)`, `aria_invalid(...)`, `control_id(...)`, and `a11y_label(...)` now cover the documented control-level surface.",
+        "Track/thumb chrome and the intrinsic switch sizes remain recipe-owned because the upstream component source defines those defaults on the switch itself.",
+        "Caller-owned layout stays explicit for `max-w-*`, stacked field groups, and surrounding page/grid negotiation; the recipe should not absorb those constraints.",
+        "`FieldLabel::for_control(...)` plus `FieldLabel::wrap(...)` covers the source-aligned description and choice-card compositions without widening `Switch` into a generic children API.",
+        "`SwitchStyle` remains a focused Fret follow-up for token-safe track/thumb overrides; it is not part of the upstream docs path, but it is the right escape hatch when product recipes need custom checked colors.",
+    ]);
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .test_id_prefix("ui-gallery-switch-api-reference")
+        .description("Public surface summary and ownership notes.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -75,10 +76,7 @@ pub(super) fn preview_switch(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .description("A Fret-specific follow-up showing `SwitchStyle` for custom checked-track color overrides.")
                 .test_id_prefix("ui-gallery-switch-style")
                 .code_rust_from_file_region(snippets::bluetooth::SOURCE, "example"),
-            DocSection::new("API Reference", api_reference)
-                .no_shell()
-                .test_id_prefix("ui-gallery-switch-api-reference")
-                .description("Public surface summary and ownership notes."),
+            api_reference,
         ],
     );
 

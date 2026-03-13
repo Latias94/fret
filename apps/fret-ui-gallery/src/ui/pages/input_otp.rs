@@ -17,16 +17,14 @@ pub(super) fn preview_input_otp(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let form = snippets::form::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "API reference: `ecosystem/fret-ui-shadcn/src/input_otp.rs`.",
-            "Default root gap and slot chrome ownership already match upstream source; the meaningful parity work here was form association (`control_id`) and separator semantics.",
-            "Invalid state is modeled via `InputOtp::aria_invalid(true)` (shadcn docs: `aria-invalid`).",
-            "Pattern parity: `InputOtpPattern::DigitsAndChars` mirrors shadcn `REGEXP_ONLY_DIGITS_AND_CHARS` outcomes.",
-            "`InputOTPSeparator` now maps to separator semantics, and `FieldLabel::for_control(...)` can focus the hidden text input via `InputOtp::control_id(...)`.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "API reference: `ecosystem/fret-ui-shadcn/src/input_otp.rs`.",
+        "Default root gap and slot chrome ownership already match upstream source; the meaningful parity work here was form association (`control_id`) and separator semantics.",
+        "Invalid state is modeled via `InputOtp::aria_invalid(true)` (shadcn docs: `aria-invalid`).",
+        "Pattern parity: `InputOtpPattern::DigitsAndChars` mirrors shadcn `REGEXP_ONLY_DIGITS_AND_CHARS` outcomes.",
+        "`InputOTPSeparator` now maps to separator semantics, and `FieldLabel::for_control(...)` can focus the hidden text input via `InputOtp::control_id(...)`.",
+    ]);
+    let notes = DocSection::build(cx, "Notes", notes).description("API surface and parity notes.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -74,7 +72,7 @@ pub(super) fn preview_input_otp(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             DocSection::new("RTL", rtl)
                 .description("Same OTP surface under an RTL direction provider.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes).description("API surface and parity notes."),
+            notes,
         ],
     );
 

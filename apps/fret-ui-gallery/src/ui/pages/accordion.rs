@@ -19,15 +19,15 @@ pub(super) fn preview_accordion(
     let card = snippets::card::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "Gallery sections mirror shadcn Accordion docs directly: Demo, Usage, Basic, Multiple, Disabled, Borders, Card, RTL.",
-            "API reference: `ecosystem/fret-ui-shadcn/src/accordion.rs`.",
-            "The legacy builder-style API remains available as a compact Fret shorthand, but the docs `Usage` section now prefers the composable Radix-shaped surface for parity.",
-            "Measured-height motion and roving focus behavior are framework-owned; these gallery sections focus on the public authoring surface and recipe outcomes.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "Gallery sections mirror shadcn Accordion docs directly: Demo, Usage, Basic, Multiple, Disabled, Borders, Card, RTL.",
+        "API reference: `ecosystem/fret-ui-shadcn/src/accordion.rs`.",
+        "The legacy builder-style API remains available as a compact Fret shorthand, but the docs `Usage` section now prefers the composable Radix-shaped surface for parity.",
+        "Measured-height motion and roving focus behavior are framework-owned; these gallery sections focus on the public authoring surface and recipe outcomes.",
+    ]);
+    let notes = DocSection::build(cx, "Notes", notes)
+        .test_id_prefix("ui-gallery-accordion-notes")
+        .description("Parity notes and references.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -69,9 +69,7 @@ pub(super) fn preview_accordion(
                 .description("Accordion layout should work under an RTL direction provider.")
                 .test_id_prefix("ui-gallery-accordion-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes)
-                .test_id_prefix("ui-gallery-accordion-notes")
-                .description("Parity notes and references."),
+            notes,
         ],
     );
 

@@ -51,6 +51,13 @@ impl DocSection {
         }
     }
 
+    pub(in crate::ui) fn build<P>(cx: &mut UiCx<'_>, title: &'static str, preview: P) -> Self
+    where
+        P: IntoUiElement<fret_app::App>,
+    {
+        Self::new(title, preview.into_element(cx))
+    }
+
     pub(in crate::ui) fn title_test_id(mut self, title_test_id: &'static str) -> Self {
         self.title_test_id = Some(title_test_id);
         self
@@ -185,7 +192,7 @@ pub(in crate::ui) fn wrap_preview_page(
         cx,
         intro,
         vec![
-            DocSection::new(section_title, preview)
+            DocSection::build(cx, section_title, preview)
                 .no_shell()
                 .max_w(Px(980.0)),
         ],
@@ -298,7 +305,7 @@ fn muted_inline<H: UiHost>(
     })
 }
 
-pub(in crate::ui) fn notes<I, T>(cx: &mut UiCx<'_>, lines: I) -> AnyElement
+pub(in crate::ui) fn notes_block<I, T>(lines: I) -> impl IntoUiElement<fret_app::App> + use<I, T>
 where
     I: IntoIterator<Item = T>,
     T: Into<Arc<str>>,
@@ -356,7 +363,6 @@ where
     .gap(Space::N1)
     .items_start()
     .layout(LayoutRefinement::default().w_full().min_w_0())
-    .into_element(cx)
 }
 
 pub(in crate::ui) fn icon(cx: &mut UiCx<'_>, id: &'static str) -> AnyElement {

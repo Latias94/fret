@@ -15,10 +15,13 @@ right-pane `Preview/Usage/Notes` layout and towards self-contained pages built w
 As part of the migration we also keep extracting small helpers into `apps/fret-ui-gallery/src/ui/doc_layout.rs`
 to reduce per-page boilerplate and keep docs pages visually consistent.
 
-- `doc_layout::notes(...)`: renders a muted notes stack.
+- `doc_layout::notes_block(...)`: renders a typed muted notes stack for prose/doc sections.
 - `doc_layout::rtl(...)`: wraps a preview in an RTL direction provider.
 - `doc_layout::icon(...)`: renders a static icon by ID (e.g. `lucide.info`).
 - `doc_layout::gap_card(...)`: renders a placeholder card for explicit parity gaps.
+
+The legacy `doc_layout::notes(...) -> AnyElement` shim is now removed. Pages should keep prose
+blocks on the typed lane and let the doc wrapper own the final landing.
 
 ## Status
 

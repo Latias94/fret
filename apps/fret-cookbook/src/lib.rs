@@ -181,6 +181,21 @@ mod authoring_surface_policy_tests {
         }
     }
 
+    fn assert_intentional_raw_retained_seam(src: &str, markers: &[&str], forbidden: &[&str]) {
+        let normalized = src.split_whitespace().collect::<String>();
+        for marker in markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(normalized.contains(&marker), "missing marker: {marker}");
+        }
+        for marker in forbidden {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "unexpected non-raw marker present: {marker}"
+            );
+        }
+    }
+
     #[test]
     fn onboarding_examples_use_the_new_app_surface() {
         assert_uses_app_surface(HELLO_EXAMPLE);
@@ -461,19 +476,29 @@ mod authoring_surface_policy_tests {
 
         assert_advanced_helpers_prefer_uicx(
             DROP_SHADOW_EXAMPLE,
-            &["let card = |cx: &mut UiCx<'_>, title: String| -> AnyElement"],
-            &["let card = |cx: &mut ElementContext<'_, KernelApp>, title: String| -> AnyElement"],
+            &[
+                "fn shadow_card(",
+                "title: String,",
+                ") -> impl IntoUiElement<KernelApp> + use<>",
+            ],
+            &[
+                "let card = |cx: &mut ElementContext<'_, KernelApp>, title: String| -> AnyElement",
+                "let card = |cx: &mut UiCx<'_>, title: String| -> AnyElement",
+            ],
         );
 
         assert_advanced_helpers_prefer_uicx(
             ICONS_AND_ASSETS_EXAMPLE,
             &[
                 "ui::v_flex(|cx: &mut UiCx<'_>| {",
-                "let render_image = |cx: &mut UiCx<'_>,",
+                "fn render_image_preview(",
+                "image: Option<ImageId>,",
+                ") -> impl IntoUiElement<KernelApp> + use<>",
             ],
             &[
                 "ui::v_flex(|cx: &mut ElementContext<'_, KernelApp>| {",
                 "let render_image = |cx: &mut ElementContext<'_, KernelApp>,",
+                "let render_image = |cx: &mut UiCx<'_>,",
             ],
         );
 
@@ -498,14 +523,36 @@ mod authoring_surface_policy_tests {
         assert_advanced_helpers_prefer_uicx(
             CUSTOM_V1_EXAMPLE,
             &[
-                "body: impl IntoUiElement<KernelApp>,",
-                "fn preview_content(cx: &mut UiCx<'_>, label: &str) -> AnyElement",
+                "fn panel_shell<B>(",
+                "title: &'static str,",
+                ") -> impl IntoUiElement<KernelApp> + use<B>",
+                "where B: IntoUiElement<KernelApp>",
+                "fn preview_content(",
+                "label: &'static str,",
+                ") -> impl IntoUiElement<KernelApp> + use<>",
                 "let swatch = |_cx: &mut UiCx<'_>, rgb: u32|",
             ],
             &[
                 "UiChildIntoElement<KernelApp>",
+                "fn panel_shell(cx: &mut ElementContext<'_, KernelApp>, title: &str, body: impl IntoUiElement<KernelApp>) -> AnyElement",
                 "fn preview_content(cx: &mut ElementContext<'_, KernelApp>, label: &str) -> AnyElement",
                 "let swatch = |_cx: &mut ElementContext<'_, KernelApp>, rgb: u32|",
+            ],
+        );
+    }
+
+    #[test]
+    fn retained_canvas_helpers_keep_raw_landing_seams() {
+        assert_intentional_raw_retained_seam(
+            CHART_INTERACTIONS_EXAMPLE,
+            &[
+                "fn chart_canvas(cx: &mut UiCx<'_>, st: &ChartInteractionsWindowState) -> AnyElement",
+                "RetainedSubtreeProps::new::<KernelApp>",
+                "cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true),",
+                "vec![cx.retained_subtree(props)]",
+            ],
+            &[
+                "fn chart_canvas(cx: &mut UiCx<'_>, st: &ChartInteractionsWindowState) -> impl IntoUiElement<KernelApp>",
             ],
         );
     }

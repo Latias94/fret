@@ -27,43 +27,46 @@ pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         cx,
         "A typical Field groups a label + control + optional helper/error text.",
     );
-    let form = doc_layout::notes(
-        cx,
-        [
-            "Use `Field` as the low-level label / control / description shell.",
-            "Use the `Form` recipe when you need validation adapters or form-library integration; that policy should not be pushed down into `Field` defaults.",
-            "This mirrors the upstream docs split between reusable field primitives and higher-level form guides.",
-        ],
-    );
-    let accessibility = doc_layout::notes(
-        cx,
-        [
-            "Use `FieldSet` + `FieldLegend` to group related controls for assistive technologies.",
-            "Associate labels via `FieldLabel::for_control(...)` plus matching control ids (or wrap rich choice-card content with `FieldLabel::wrap(...)`).",
-            "Use `FieldError` immediately after the control or inside `FieldContent`, and pair invalid styling with control-level `aria_invalid(true)`.",
-            "Use `FieldSeparator` sparingly so grouped sections remain understandable to screen readers.",
-        ],
-    );
-    let api_reference = doc_layout::notes(
-        cx,
-        [
-            "`Field::new([...])` is the core wrapper for a single field; `orientation(...)` covers the documented `vertical`, `horizontal`, and `responsive` layouts.",
-            "`FieldSet`, `FieldLegend`, `FieldGroup`, and `FieldSeparator` cover semantic grouping and section separation.",
-            "`FieldContent`, `FieldLabel`, `FieldTitle`, `FieldDescription`, and `FieldError` cover the documented content slots without needing an extra generic children / compose API.",
-            "Width ownership stays deliberate: `FieldDescription` keeps recipe-owned full-width wrapping, while plain `FieldLabel` / `FieldTitle` keep intrinsic-width defaults unless the surrounding `Field` orientation or call site requests full width.",
-        ],
-    );
+    let form = doc_layout::notes_block([
+        "Use `Field` as the low-level label / control / description shell.",
+        "Use the `Form` recipe when you need validation adapters or form-library integration; that policy should not be pushed down into `Field` defaults.",
+        "This mirrors the upstream docs split between reusable field primitives and higher-level form guides.",
+    ]);
+    let accessibility = doc_layout::notes_block([
+        "Use `FieldSet` + `FieldLegend` to group related controls for assistive technologies.",
+        "Associate labels via `FieldLabel::for_control(...)` plus matching control ids (or wrap rich choice-card content with `FieldLabel::wrap(...)`).",
+        "Use `FieldError` immediately after the control or inside `FieldContent`, and pair invalid styling with control-level `aria_invalid(true)`.",
+        "Use `FieldSeparator` sparingly so grouped sections remain understandable to screen readers.",
+    ]);
+    let api_reference = doc_layout::notes_block([
+        "`Field::new([...])` is the core wrapper for a single field; `orientation(...)` covers the documented `vertical`, `horizontal`, and `responsive` layouts.",
+        "`FieldSet`, `FieldLegend`, `FieldGroup`, and `FieldSeparator` cover semantic grouping and section separation.",
+        "`FieldContent`, `FieldLabel`, `FieldTitle`, `FieldDescription`, and `FieldError` cover the documented content slots without needing an extra generic children / compose API.",
+        "Width ownership stays deliberate: `FieldDescription` keeps recipe-owned full-width wrapping, while plain `FieldLabel` / `FieldTitle` keep intrinsic-width defaults unless the surrounding `Field` orientation or call site requests full width.",
+    ]);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "API reference: `ecosystem/fret-ui-shadcn/src/field.rs` (Field, FieldSet, FieldGroup, FieldLabel, FieldDescription, FieldSeparator).",
-            "Field page now mirrors the upstream docs path first: Usage, Anatomy, Form, the example set through Field Group, RTL, Responsive Layout, Validation and Errors, Accessibility, and API Reference.",
-            "Each section keeps a stable `test_id` so diag scripts can target specific examples.",
-            "No mechanism bug is indicated here; the current work is docs/public-surface parity and source-of-truth cleanup toward the base docs/examples.",
-            "`FieldTitle` and plain `FieldLabel` keep upstream-like intrinsic width defaults; full-width behavior belongs to `Field` orientation rules or wrapped card-style labels.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "API reference: `ecosystem/fret-ui-shadcn/src/field.rs` (Field, FieldSet, FieldGroup, FieldLabel, FieldDescription, FieldSeparator).",
+        "Field page now mirrors the upstream docs path first: Usage, Anatomy, Form, the example set through Field Group, RTL, Responsive Layout, Validation and Errors, Accessibility, and API Reference.",
+        "Each section keeps a stable `test_id` so diag scripts can target specific examples.",
+        "No mechanism bug is indicated here; the current work is docs/public-surface parity and source-of-truth cleanup toward the base docs/examples.",
+        "`FieldTitle` and plain `FieldLabel` keep upstream-like intrinsic width defaults; full-width behavior belongs to `Field` orientation rules or wrapped card-style labels.",
+    ]);
+    let form = DocSection::build(cx, "Form", form)
+        .no_shell()
+        .description(
+            "Keep low-level field layout separate from higher-level form adapters and validation policy.",
+        );
+    let accessibility = DocSection::build(cx, "Accessibility", accessibility)
+        .no_shell()
+        .description("Keyboard, labeling, grouping, and invalid-state guidance.");
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .description("Public surface summary and ownership notes.");
+    let notes = DocSection::build(cx, "Notes", notes)
+        .no_shell()
+        .description("API reference pointers and stability guidance.")
+        .test_id_prefix("ui-gallery-field-notes");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -124,9 +127,7 @@ shadcn::FieldSet::new([
 ])
 .into_element(cx);"#,
                 ),
-            DocSection::new("Form", form)
-                .no_shell()
-                .description("Keep low-level field layout separate from higher-level form adapters and validation policy."),
+            form,
             DocSection::new("Input", input)
                 .description("Basic text inputs with labels + helper copy.")
                 .code_rust_from_file_region(snippets::input::SOURCE, "example"),
@@ -170,16 +171,9 @@ shadcn::FieldSet::new([
             DocSection::new("Validation and Errors", validation_and_errors)
                 .description("Field invalid state + control `aria_invalid` styling.")
                 .code_rust_from_file_region(snippets::validation_and_errors::SOURCE, "example"),
-            DocSection::new("Accessibility", accessibility)
-                .no_shell()
-                .description("Keyboard, labeling, grouping, and invalid-state guidance."),
-            DocSection::new("API Reference", api_reference)
-                .no_shell()
-                .description("Public surface summary and ownership notes."),
-            DocSection::new("Notes", notes)
-                .no_shell()
-                .description("API reference pointers and stability guidance.")
-                .test_id_prefix("ui-gallery-field-notes"),
+            accessibility,
+            api_reference,
+            notes,
         ],
     );
 

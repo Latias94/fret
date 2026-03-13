@@ -8,13 +8,11 @@ pub(super) fn preview_icons(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let grid = snippets::grid::render(cx);
     let spinner_row = snippets::spinner::render(cx);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "Prefer stable icon IDs (e.g. `lucide.search`) so demos remain predictable across updates.",
-            "Icon size should be explicit in docs to avoid token drift.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "Prefer stable icon IDs (e.g. `lucide.search`) so demos remain predictable across updates.",
+        "Icon size should be explicit in docs to avoid token drift.",
+    ]);
+    let notes = DocSection::build(cx, "Notes", notes).description("Usage notes.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -27,7 +25,7 @@ pub(super) fn preview_icons(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             DocSection::new("Spinner", spinner_row)
                 .description("Spinner can be animated or static.")
                 .code_rust_from_file_region(snippets::spinner::SOURCE, "example"),
-            DocSection::new("Notes", notes).description("Usage notes."),
+            notes,
         ],
     );
 

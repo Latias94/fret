@@ -14,18 +14,20 @@ pub(super) fn preview_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let scrollable_content = snippets::scrollable_content::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "Preview follows upstream shadcn Dialog docs order first: Demo, Usage, Custom Close Button, No Close Button, Sticky Footer, Scrollable Content, RTL; the `Parts` adapter section follows afterwards.",
-            "`Dialog::compose()` is a recipe-level bridge for shadcn-style part composition without pushing children API concerns into the mechanism layer.",
-            "Part surface adapters exist for shadcn-style call sites (DialogTrigger/DialogPortal/DialogOverlay).",
-            "Default close affordance now lives in `DialogContent`, matching upstream; disable it with `show_close_button(false)`.",
-            "`DialogClose::from_scope()` remains available when a page wants an additional or fully custom close affordance inside dialog content.",
-            "Scrollable examples isolate long content in ScrollArea so footer/header placement remains predictable under constrained viewport sizes.",
-            "Each scenario has stable test IDs to support fretboard diag scripts and regression screenshots.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "Preview follows upstream shadcn Dialog docs order first: Demo, Usage, Custom Close Button, No Close Button, Sticky Footer, Scrollable Content, RTL; the `Parts` adapter section follows afterwards.",
+        "`Dialog::compose()` is a recipe-level bridge for shadcn-style part composition without pushing children API concerns into the mechanism layer.",
+        "Part surface adapters exist for shadcn-style call sites (DialogTrigger/DialogPortal/DialogOverlay).",
+        "Default close affordance now lives in `DialogContent`, matching upstream; disable it with `show_close_button(false)`.",
+        "`DialogClose::from_scope()` remains available when a page wants an additional or fully custom close affordance inside dialog content.",
+        "Scrollable examples isolate long content in ScrollArea so footer/header placement remains predictable under constrained viewport sizes.",
+        "Each scenario has stable test IDs to support fretboard diag scripts and regression screenshots.",
+    ]);
+    let notes = DocSection::build(cx, "Notes", notes)
+        .description(
+            "Keep test IDs stable so fretboard diag scripts and regression screenshots remain reusable.",
+        )
+        .test_id_prefix("ui-gallery-dialog-notes");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -44,7 +46,9 @@ pub(super) fn preview_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .description("Replace the close affordance with a custom footer action.")
                 .code_rust_from_file_region(snippets::custom_close_button::SOURCE, "example"),
             DocSection::new("No Close Button", no_close)
-                .description("Hide the default close button and rely on Escape or overlay dismissal.")
+                .description(
+                    "Hide the default close button and rely on Escape or overlay dismissal.",
+                )
                 .code_rust_from_file_region(snippets::no_close_button::SOURCE, "example"),
             DocSection::new("Sticky Footer", sticky_footer)
                 .description("Footer stays visible while the content scrolls.")
@@ -58,11 +62,7 @@ pub(super) fn preview_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             DocSection::new("Parts", parts)
                 .description("Fret-specific part surface adapters (Trigger/Portal/Overlay).")
                 .code_rust_from_file_region(snippets::parts::SOURCE, "example"),
-            DocSection::new("Notes", notes)
-                .description(
-                    "Keep test IDs stable so fretboard diag scripts and regression screenshots remain reusable.",
-                )
-                .test_id_prefix("ui-gallery-dialog-notes"),
+            notes,
         ],
     );
 

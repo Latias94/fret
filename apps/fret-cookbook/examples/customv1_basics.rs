@@ -61,20 +61,27 @@ fn install_custom_effect(app: &mut KernelApp, effects: &mut dyn fret_core::Custo
     app.set_global(CookbookCustomV1Effect(id));
 }
 
-fn panel_shell(cx: &mut UiCx<'_>, title: &str, body: impl IntoUiElement<KernelApp>) -> AnyElement {
+fn panel_shell<B>(
+    cx: &mut UiCx<'_>,
+    title: &'static str,
+    body: B,
+) -> impl IntoUiElement<KernelApp> + use<B>
+where
+    B: IntoUiElement<KernelApp>,
+{
     let theme = Theme::global(&*cx.app).snapshot();
     let body = body.into_element(cx);
 
-    shadcn::Card::build(|cx, out| {
+    shadcn::Card::build(move |cx, out| {
         out.push_ui(
             cx,
-            shadcn::CardHeader::build(|cx, out| {
+            shadcn::CardHeader::build(move |cx, out| {
                 out.push_ui(cx, shadcn::CardTitle::new(title));
             }),
         );
         out.push_ui(
             cx,
-            shadcn::CardContent::build(|cx, out| {
+            shadcn::CardContent::build(move |cx, out| {
                 out.push_ui(
                     cx,
                     ui::container(|_cx| vec![body])
@@ -90,11 +97,14 @@ fn panel_shell(cx: &mut UiCx<'_>, title: &str, body: impl IntoUiElement<KernelAp
     })
     .ui()
     .w_full()
-    .into_element(cx)
 }
 
-fn preview_content(cx: &mut UiCx<'_>, label: &str) -> AnyElement {
+fn preview_content(
+    cx: &mut UiCx<'_>,
+    label: &'static str,
+) -> impl IntoUiElement<KernelApp> + use<> {
     let theme = Theme::global(&*cx.app).snapshot();
+    let muted_foreground = ColorRef::Color(theme.color_token("muted-foreground"));
 
     let swatch = |_cx: &mut UiCx<'_>, rgb: u32| {
         ui::container(|_cx| Vec::<AnyElement>::new())
@@ -104,33 +114,30 @@ fn preview_content(cx: &mut UiCx<'_>, label: &str) -> AnyElement {
             .h_px(Px(44.0))
     };
 
-    let title = shadcn::Badge::new(label).variant(shadcn::BadgeVariant::Secondary);
-
-    let row = ui::h_flex(|cx| {
+    let row = ui::h_flex(move |cx| {
         ui::children![cx;
             swatch(cx, 0x0EA5E9),
             swatch(cx, 0xA855F7),
             swatch(cx, 0xF97316),
             cx.spacer(SpacerProps::default()),
-            title,
+            shadcn::Badge::new(label).variant(shadcn::BadgeVariant::Secondary),
         ]
     })
     .gap(Space::N2)
     .items_center();
 
-    ui::v_flex(|cx| {
+    ui::v_flex(move |cx| {
         ui::children![cx;
             row,
             ui::text("")
                 .text_sm()
-                .text_color(ColorRef::Color(theme.color_token("muted-foreground"))),
+                .text_color(muted_foreground),
         ]
     })
     .gap(Space::N2)
     .p(Space::N4)
     .w_full()
     .h_full()
-    .into_element(cx)
 }
 impl View for CustomV1BasicsView {
     fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
@@ -171,7 +178,8 @@ impl View for CustomV1BasicsView {
             "CustomV1: unavailable"
         })
         .variant(shadcn::BadgeVariant::Secondary)
-        .a11y(
+        .into_element(cx)
+        .attach_semantics(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Meter)
                 .test_id(TEST_ID_SUPPORTED)
@@ -184,7 +192,8 @@ impl View for CustomV1BasicsView {
             "Enabled: false"
         })
         .variant(shadcn::BadgeVariant::Secondary)
-        .a11y(
+        .into_element(cx)
+        .attach_semantics(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Meter)
                 .test_id(TEST_ID_ENABLED)
@@ -197,7 +206,8 @@ impl View for CustomV1BasicsView {
             "Registered: false"
         })
         .variant(shadcn::BadgeVariant::Secondary)
-        .a11y(
+        .into_element(cx)
+        .attach_semantics(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Meter)
                 .test_id(TEST_ID_REGISTERED)
@@ -207,7 +217,8 @@ impl View for CustomV1BasicsView {
         let strength_badge =
             shadcn::Badge::new(format!("Strength: {:.2}", strength.clamp(0.0, 1.0)))
                 .variant(shadcn::BadgeVariant::Secondary)
-                .a11y(
+                .into_element(cx)
+                .attach_semantics(
                     SemanticsDecoration::default()
                         .role(SemanticsRole::Meter)
                         .test_id(TEST_ID_STRENGTH)
@@ -219,23 +230,13 @@ impl View for CustomV1BasicsView {
             .variant(shadcn::ButtonVariant::Secondary)
             .action(act::SetStrengthLow)
             .disabled(!enabled)
-            .a11y(
-                SemanticsDecoration::default()
-                    .role(SemanticsRole::Button)
-                    .test_id(TEST_ID_STRENGTH_LOW)
-                    .label("Strength: low"),
-            );
+            .test_id(TEST_ID_STRENGTH_LOW);
 
         let strength_high = shadcn::Button::new("Strength: high")
             .variant(shadcn::ButtonVariant::Secondary)
             .action(act::SetStrengthHigh)
             .disabled(!enabled)
-            .a11y(
-                SemanticsDecoration::default()
-                    .role(SemanticsRole::Button)
-                    .test_id(TEST_ID_STRENGTH_HIGH)
-                    .label("Strength: high"),
-            );
+            .test_id(TEST_ID_STRENGTH_HIGH);
 
         let toggle_label = if enabled { "Disable" } else { "Enable" };
         let toolbar = ui::h_flex(|cx| {
@@ -258,7 +259,7 @@ impl View for CustomV1BasicsView {
         .wrap();
 
         let plain_body = preview_content(cx, "plain");
-        let plain = panel_shell(cx, "Plain", plain_body);
+        let plain = panel_shell(cx, "Plain", plain_body).into_element(cx);
 
         let custom_panel = if enabled && caps_supported {
             if let Some(effect) = effect_id {
@@ -281,6 +282,7 @@ impl View for CustomV1BasicsView {
                 layout.size.width = Length::Fill;
                 layout.size.height = Length::Fill;
 
+                let custom_preview = preview_content(cx, "customv1").into_element(cx);
                 let layer = cx.effect_layer_props(
                     EffectLayerProps {
                         layout,
@@ -288,10 +290,10 @@ impl View for CustomV1BasicsView {
                         chain,
                         quality: EffectQuality::Auto,
                     },
-                    |cx| vec![preview_content(cx, "customv1")],
+                    move |_cx| vec![custom_preview],
                 );
 
-                panel_shell(cx, "CustomV1 (FilterContent)", layer)
+                panel_shell(cx, "CustomV1 (FilterContent)", layer).into_element(cx)
             } else {
                 let alert = shadcn::Alert::new(ui::children![cx;
                     shadcn::AlertTitle::new("Effect not registered"),
@@ -299,11 +301,11 @@ impl View for CustomV1BasicsView {
                         "The WGSL program did not register (or GPU services are not ready).",
                     ),
                 ]);
-                panel_shell(cx, "CustomV1 (FilterContent)", alert)
+                panel_shell(cx, "CustomV1 (FilterContent)", alert).into_element(cx)
             }
         } else {
             let disabled_body = preview_content(cx, "disabled");
-            panel_shell(cx, "CustomV1 (FilterContent)", disabled_body)
+            panel_shell(cx, "CustomV1 (FilterContent)", disabled_body).into_element(cx)
         };
 
         let panels = ui::h_flex(|cx| ui::children![cx; plain, custom_panel])

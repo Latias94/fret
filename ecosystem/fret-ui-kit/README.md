@@ -8,6 +8,11 @@ This is the ecosystem layer that sits above `crates/fret-ui` (mechanisms/contrac
 - reusable policy/toolbox primitives (overlays, tooltips, tables, scrolling)
 - declarative authoring helpers (`use fret_ui_kit::prelude::*;`)
 
+Use `fret-ui-kit`'s broad prelude when you depend on this crate directly as a substrate/policy
+layer. If you are intentionally consuming the higher-level `fret` facade for reusable component
+code, prefer `use fret::component::prelude::*;` so app-facing builder/runtime names stay off the
+default teaching surface.
+
 ## Status
 
 Experimental learning project (not production-ready).

@@ -23,24 +23,27 @@ pub(super) fn preview_avatar(
     let rtl = snippets::rtl::render(cx, avatar_image.clone());
     let fallback = snippets::fallback_only::render(cx);
 
-    let api_reference = doc_layout::notes(
-        cx,
-        [
-            "`Avatar`, `AvatarImage`, and `AvatarFallback` cover the base shadcn/Base UI surface, while `AvatarBadge`, `AvatarGroup`, and `AvatarGroupCount` stay as explicit typed recipe parts.",
-            "`Avatar::new([..])` and `Avatar::children([..])` are already sufficient for composable avatar content; no extra generic children or slot-merge API is needed here.",
-            "Dropdown composition remains recipe-owned: the authored pressable child button is the trigger, and the nested avatar stays presentational content inside it.",
-        ],
-    );
+    let api_reference = doc_layout::notes_block([
+        "`Avatar`, `AvatarImage`, and `AvatarFallback` cover the base shadcn/Base UI surface, while `AvatarBadge`, `AvatarGroup`, and `AvatarGroupCount` stay as explicit typed recipe parts.",
+        "`Avatar::new([..])` and `Avatar::children([..])` are already sufficient for composable avatar content; no extra generic children or slot-merge API is needed here.",
+        "Dropdown composition remains recipe-owned: the authored pressable child button is the trigger, and the nested avatar stays presentational content inside it.",
+    ]);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "Core parity is already in a good place: default size, circular clipping, fallback timing, overlap geometry, and dropdown trigger attribution all match the audited upstream outcomes.",
-            "Gallery sections now mirror shadcn Avatar docs first: Demo, Usage, Basic, Badge, Badge with Icon, Avatar Group, Avatar Group Count, Avatar Group with Icon, Sizes, Dropdown, RTL, API Reference.",
-            "Fret uses `ImageId` / `Model<Option<ImageId>>` instead of DOM `src`, so the minimal usage snippet intentionally shows the asset-ready composition shape rather than a browser-only image URL prop.",
-            "`Fallback only` remains a Fret-specific follow-up section for compact regression coverage across sizes.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "Core parity is already in a good place: default size, circular clipping, fallback timing, overlap geometry, and dropdown trigger attribution all match the audited upstream outcomes.",
+        "Gallery sections now mirror shadcn Avatar docs first: Demo, Usage, Basic, Badge, Badge with Icon, Avatar Group, Avatar Group Count, Avatar Group with Icon, Sizes, Dropdown, RTL, API Reference.",
+        "Fret uses `ImageId` / `Model<Option<ImageId>>` instead of DOM `src`, so the minimal usage snippet intentionally shows the asset-ready composition shape rather than a browser-only image URL prop.",
+        "`Fallback only` remains a Fret-specific follow-up section for compact regression coverage across sizes.",
+    ]);
+
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .description("Public surface summary and composition ownership notes.")
+        .test_id_prefix("ui-gallery-avatar-api-reference");
+    let notes = DocSection::build(cx, "Notes", notes)
+        .no_shell()
+        .description("Usage notes.")
+        .test_id_prefix("ui-gallery-avatar-notes");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -94,18 +97,12 @@ pub(super) fn preview_avatar(
                 .description("Avatar should behave under an RTL direction provider.")
                 .test_id_prefix("ui-gallery-avatar-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("API Reference", api_reference)
-                .no_shell()
-                .description("Public surface summary and composition ownership notes.")
-                .test_id_prefix("ui-gallery-avatar-api-reference"),
+            api_reference,
             DocSection::new("Fallback only (Fret)", fallback)
                 .description("Fallback-only avatars at each size.")
                 .test_id_prefix("ui-gallery-avatar-fallback")
                 .code_rust_from_file_region(snippets::fallback_only::SOURCE, "example"),
-            DocSection::new("Notes", notes)
-                .no_shell()
-                .description("Usage notes.")
-                .test_id_prefix("ui-gallery-avatar-notes"),
+            notes,
         ],
     );
 

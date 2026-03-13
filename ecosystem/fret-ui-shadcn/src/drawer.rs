@@ -1524,40 +1524,31 @@ impl Default for DrawerDragRuntime {
     }
 }
 
-#[derive(Default)]
-struct DrawerDragState {
-    runtime: Option<Model<DrawerDragRuntime>>,
-    offset: Option<Model<Px>>,
-    was_open: bool,
+fn drawer_drag_was_open_state_id<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> fret_ui::GlobalElementId {
+    cx.keyed_slot_id("drawer_drag_was_open")
 }
 
 fn drawer_drag_models<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> (Model<DrawerDragRuntime>, Model<Px>, bool) {
-    let needs_init = cx.with_state(DrawerDragState::default, |state| {
-        state.runtime.is_none() || state.offset.is_none()
-    });
-
-    if needs_init {
-        let runtime = cx.app.models_mut().insert(DrawerDragRuntime::default());
-        let offset = cx.app.models_mut().insert(Px(0.0));
-        cx.with_state(DrawerDragState::default, |state| {
-            state.runtime = Some(runtime);
-            state.offset = Some(offset);
-        });
-    }
-
-    cx.with_state(DrawerDragState::default, |state| {
-        let runtime = state.runtime.clone().expect("drawer runtime model");
-        let offset = state.offset.clone().expect("drawer offset model");
-        (runtime, offset, state.was_open)
-    })
+    let runtime = cx.local_model_keyed("drawer_drag_runtime", DrawerDragRuntime::default);
+    let offset = cx.local_model_keyed("drawer_drag_offset", || Px(0.0));
+    let was_open_state = drawer_drag_was_open_state_id(cx);
+    let was_open = cx.state_for(was_open_state, || false, |state| *state);
+    (runtime, offset, was_open)
 }
 
 fn drawer_drag_set_was_open<H: UiHost>(cx: &mut ElementContext<'_, H>, was_open: bool) {
-    cx.with_state(DrawerDragState::default, |state| {
-        state.was_open = was_open;
-    });
+    let was_open_state = drawer_drag_was_open_state_id(cx);
+    cx.state_for(
+        was_open_state,
+        || false,
+        |state| {
+            *state = was_open;
+        },
+    );
 }
 
 fn drawer_drag_hit_test(bounds: fret_core::Rect, position: Point) -> bool {

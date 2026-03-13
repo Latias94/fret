@@ -10,16 +10,16 @@ pub(super) fn preview_label(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let label_in_field = snippets::label_in_field::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let api_reference = doc_layout::notes(
-        cx,
-        [
-            "`Label::new(text)` is the Fret equivalent of the upstream `<Label />`; `for_control(...)` covers the documented association path.",
-            "`Label` remains a lightweight text primitive; form structure, helper text, and error presentation belong to `Field`, `FieldLabel`, and related field parts.",
-            "`Label::for_control(...)` plus a control-side `control_id(...)` is the Fret bridge for the upstream `htmlFor` / `id` pairing and keeps click-to-focus behavior out of page code.",
-            "No extra generic children / `asChild` / `compose()` surface is needed here: upstream composition already happens around the label rather than through the label primitive itself.",
-            "This page is docs/public-surface parity work, not a mechanism-layer fix.",
-        ],
-    );
+    let api_reference = doc_layout::notes_block([
+        "`Label::new(text)` is the Fret equivalent of the upstream `<Label />`; `for_control(...)` covers the documented association path.",
+        "`Label` remains a lightweight text primitive; form structure, helper text, and error presentation belong to `Field`, `FieldLabel`, and related field parts.",
+        "`Label::for_control(...)` plus a control-side `control_id(...)` is the Fret bridge for the upstream `htmlFor` / `id` pairing and keeps click-to-focus behavior out of page code.",
+        "No extra generic children / `asChild` / `compose()` surface is needed here: upstream composition already happens around the label rather than through the label primitive itself.",
+        "This page is docs/public-surface parity work, not a mechanism-layer fix.",
+    ]);
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .description("Public surface summary and ownership notes.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -39,9 +39,7 @@ pub(super) fn preview_label(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             DocSection::new("RTL", rtl)
                 .description("Label and input alignment under an RTL direction provider.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("API Reference", api_reference)
-                .no_shell()
-                .description("Public surface summary and ownership notes."),
+            api_reference,
         ],
     );
 

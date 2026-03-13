@@ -14,19 +14,19 @@ pub(super) fn preview_alert(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let custom_colors = snippets::custom_colors::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "API reference: `ecosystem/fret-ui-shadcn/src/alert.rs` and `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`.",
-            "Modern upstream reference: `repo-ref/ui/apps/v4/registry/radix-vega/examples/alert-example.tsx` and `repo-ref/ui/apps/v4/registry/bases/radix/ui/alert.tsx`.",
-            "Keep alert copy concise and action-oriented; reserve longer guidance for Dialog or Sheet.",
-            "Prefer `AlertTitle::new_children(...)` when the title needs attributed text or a precomposed child subtree.",
-            "Prefer `AlertDescription::new_children(...)` when the description needs multiple paragraphs, lists, or rich text.",
-            "Gallery link examples open safe URLs in normal runs; scripted diag runs keep them deterministic by recording activation instead of launching the browser.",
-            "Use `Destructive` only for high-risk or blocking failures to preserve visual hierarchy.",
-            "Validate RTL + narrow layout so icon/title/description remain readable in editor sidebars.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "API reference: `ecosystem/fret-ui-shadcn/src/alert.rs` and `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`.",
+        "Modern upstream reference: `repo-ref/ui/apps/v4/registry/radix-vega/examples/alert-example.tsx` and `repo-ref/ui/apps/v4/registry/bases/radix/ui/alert.tsx`.",
+        "Keep alert copy concise and action-oriented; reserve longer guidance for Dialog or Sheet.",
+        "Prefer `AlertTitle::new_children(...)` when the title needs attributed text or a precomposed child subtree.",
+        "Prefer `AlertDescription::new_children(...)` when the description needs multiple paragraphs, lists, or rich text.",
+        "Gallery link examples open safe URLs in normal runs; scripted diag runs keep them deterministic by recording activation instead of launching the browser.",
+        "Use `Destructive` only for high-risk or blocking failures to preserve visual hierarchy.",
+        "Validate RTL + narrow layout so icon/title/description remain readable in editor sidebars.",
+    ]);
+    let notes = DocSection::build(cx, "Notes", notes)
+        .description("API reference pointers and caveats.")
+        .test_id_prefix("ui-gallery-alert-notes");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -61,9 +61,7 @@ pub(super) fn preview_alert(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             DocSection::new("RTL", rtl)
                 .description("Alert layout under an RTL direction provider.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes)
-                .description("API reference pointers and caveats.")
-                .test_id_prefix("ui-gallery-alert-notes"),
+            notes,
         ],
     );
 

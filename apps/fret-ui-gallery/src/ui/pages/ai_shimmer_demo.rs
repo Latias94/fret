@@ -11,22 +11,16 @@ pub(super) fn preview_ai_shimmer_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
     let durations = snippets::shimmer_duration_demo::render(cx);
     let elements = snippets::shimmer_elements_demo::render(cx);
 
-    let features = doc_layout::notes(
-        cx,
-        [
+    let features = doc_layout::notes_block([
             "Animated shimmer sweep aligned with AI Elements Shimmer.",
             "Configurable `duration_secs` and `spread` (defaults: 2s / 2).",
             "Theme-aware: uses `muted-foreground` as the base text and `background` as the highlight.",
             "Supports both explicit `text_style` overrides and inherited subtree typography via `use_resolved_passive_text`.",
             "A11y role mapping via `role` (rough equivalent of upstream `as`).",
-        ],
-    )
+        ])
     .test_id("ui-gallery-ai-shimmer-features");
 
-    let props = shimmer_props_table(cx);
-    let props = props
-        .into_element(cx)
-        .test_id("ui-gallery-ai-shimmer-props");
+    let props = shimmer_props_table(cx).test_id("ui-gallery-ai-shimmer-props");
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
@@ -37,7 +31,7 @@ pub(super) fn preview_ai_shimmer_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
             DocSection::new("Shimmer", demo)
                 .test_id_prefix("ui-gallery-ai-shimmer-demo")
                 .code_rust_from_file_region(snippets::shimmer_demo::SOURCE, "example"),
-            DocSection::new("Features", features).description("Key behavior and API notes."),
+            DocSection::build(cx, "Features", features).description("Key behavior and API notes."),
             DocSection::new("Different Durations", durations)
                 .test_id_prefix("ui-gallery-ai-shimmer-duration")
                 .code_rust_from_file_region(snippets::shimmer_duration_demo::SOURCE, "example"),
@@ -47,7 +41,7 @@ pub(super) fn preview_ai_shimmer_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
                 )
                 .test_id_prefix("ui-gallery-ai-shimmer-elements")
                 .code_rust_from_file_region(snippets::shimmer_elements_demo::SOURCE, "example"),
-            DocSection::new("Props", props)
+            DocSection::build(cx, "Props", props)
                 .description("Fret API surface for `fret_ui_ai::Shimmer`."),
         ],
     );

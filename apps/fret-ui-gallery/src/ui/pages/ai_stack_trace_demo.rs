@@ -9,14 +9,11 @@ pub(super) fn preview_ai_stack_trace_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> 
     let collapsed = snippets::stack_trace_collapsed::render(cx);
     let no_internal = snippets::stack_trace_no_internal::render(cx);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "Mechanism/lifecycle looked healthy here: the main mismatch was component-layer API shape and the docs page not mirroring the official AI Elements examples.",
-            "`StackTrace` now uses a closure-based compound children API so the UI Gallery example matches the upstream composition model without pushing policy into `fret-ui`.",
-            "The separate large-list page still covers scroll and click seams; this page now focuses on docs parity and copyable examples.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "Mechanism/lifecycle looked healthy here: the main mismatch was component-layer API shape and the docs page not mirroring the official AI Elements examples.",
+        "`StackTrace` now uses a closure-based compound children API so the UI Gallery example matches the upstream composition model without pushing policy into `fret-ui`.",
+        "The separate large-list page still covers scroll and click seams; this page now focuses on docs parity and copyable examples.",
+    ]);
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
@@ -36,7 +33,7 @@ pub(super) fn preview_ai_stack_trace_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> 
                 .description("Matches the official no-internal-frames example.")
                 .test_id_prefix("ui-gallery-ai-stack-trace-no-internal")
                 .code_rust_from_file_region(snippets::stack_trace_no_internal::SOURCE, "example"),
-            DocSection::new("Notes", notes)
+            DocSection::build(cx, "Notes", notes)
                 .description("Layering + parity findings for StackTrace."),
         ],
     );

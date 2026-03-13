@@ -14,17 +14,16 @@ pub(super) fn preview_tooltip(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let disabled_tooltip = snippets::disabled_button::render(cx);
     let rtl_row = snippets::rtl::render(cx);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "Tooltip already exposes shadcn-style part names (`TooltipTrigger`, `TooltipContent`, `TooltipProvider`), and `Tooltip::new(trigger, content)` is the recipe-level composition entry point.",
-            "Gallery sections mirror shadcn docs first; `Long Content` and `Keyboard Focus` are Fret-specific parity sections appended afterward.",
-            "Wrap related tooltips in one `TooltipProvider` to get consistent delay-group behavior.",
-            "Use concise content in tooltip panels; longer explanations should move to Popover or Dialog.",
-            "For disabled actions, use a non-disabled wrapper as trigger so hover/focus feedback still works.",
-            "Keep tooltip content keyboard-accessible: focus the trigger and verify `aria-describedby`.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "Tooltip already exposes shadcn-style part names (`TooltipTrigger`, `TooltipContent`, `TooltipProvider`), and `Tooltip::new(trigger, content)` is the recipe-level composition entry point.",
+        "Gallery sections mirror shadcn docs first; `Long Content` and `Keyboard Focus` are Fret-specific parity sections appended afterward.",
+        "Wrap related tooltips in one `TooltipProvider` to get consistent delay-group behavior.",
+        "Use concise content in tooltip panels; longer explanations should move to Popover or Dialog.",
+        "For disabled actions, use a non-disabled wrapper as trigger so hover/focus feedback still works.",
+        "Keep tooltip content keyboard-accessible: focus the trigger and verify `aria-describedby`.",
+    ]);
+    let notes = DocSection::build(cx, "Notes", notes)
+        .description("Implementation notes and regression guidelines.");
 
     let page = doc_layout::render_doc_page(
         cx,
@@ -61,8 +60,7 @@ pub(super) fn preview_tooltip(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             DocSection::new("Keyboard Focus", focus_row)
                 .description("Tooltips should open when the trigger receives keyboard focus.")
                 .code_rust_from_file_region(snippets::keyboard_focus::SOURCE, "example"),
-            DocSection::new("Notes", notes)
-                .description("Implementation notes and regression guidelines."),
+            notes,
         ],
     )
     .test_id("ui-gallery-tooltip-component");

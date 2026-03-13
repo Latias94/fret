@@ -10,14 +10,11 @@ pub(super) fn preview_ai_confirmation_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
     let accepted = snippets::confirmation_accepted::render(cx);
     let rejected = snippets::confirmation_rejected::render(cx);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "Confirmation still lives in the AI Elements/component layer: it composes Alert + Button outcomes rather than changing fret-ui runtime contracts.",
-            "Compound slot composition now matches the upstream AI Elements preview scripts, including `ConfirmationTitle` wrapping the request/accepted/rejected slots.",
-            "Keep the request state actionable and keep the accepted/rejected states read-only so the page mirrors the official preview scripts and docs examples.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "Confirmation still lives in the AI Elements/component layer: it composes Alert + Button outcomes rather than changing fret-ui runtime contracts.",
+        "Compound slot composition now matches the upstream AI Elements preview scripts, including `ConfirmationTitle` wrapping the request/accepted/rejected slots.",
+        "Keep the request state actionable and keep the accepted/rejected states read-only so the page mirrors the official preview scripts and docs examples.",
+    ]);
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
@@ -42,7 +39,7 @@ pub(super) fn preview_ai_confirmation_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
                 .description("Preview-script-aligned output-denied state with rejected feedback.")
                 .test_id_prefix("ui-gallery-ai-confirmation-rejected")
                 .code_rust_from_file_region(snippets::confirmation_rejected::SOURCE, "example"),
-            DocSection::new("Notes", notes)
+            DocSection::build(cx, "Notes", notes)
                 .description("Layering and parity notes for Confirmation."),
         ],
     );

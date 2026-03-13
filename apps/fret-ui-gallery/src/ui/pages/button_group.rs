@@ -22,32 +22,34 @@ pub(super) fn preview_button_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let text = snippets::text::render(cx);
     let flex_1 = snippets::flex_1_items::render(cx);
 
-    let vs_toggle_group = doc_layout::notes(
-        cx,
-        [
-            "Use `ButtonGroup` when grouped controls trigger actions such as submit, archive, or open-menu.",
-            "Use `ToggleGroup` when buttons represent pressed or selected state. Fret keeps that distinction as a separate typed surface instead of overloading `ButtonGroup` with toggle semantics.",
-        ],
-    );
+    let vs_toggle_group = doc_layout::notes_block([
+        "Use `ButtonGroup` when grouped controls trigger actions such as submit, archive, or open-menu.",
+        "Use `ToggleGroup` when buttons represent pressed or selected state. Fret keeps that distinction as a separate typed surface instead of overloading `ButtonGroup` with toggle semantics.",
+    ]);
 
-    let api_reference = doc_layout::notes(
-        cx,
-        [
-            "`ButtonGroup` exposes typed composition points for buttons, inputs, input groups, selects, dropdowns, popovers, and nested button groups, plus `orientation(...)` and `a11y_label(...)`.",
-            "`ButtonGroupSeparator` keeps divider ownership explicit through `orientation(...)` and layout refinements; default divider thickness remains recipe-owned.",
-            "`ButtonGroupText` uses `new(...)` for plain text and `new_children(...)` for custom inline content. This is Fret's explicit alternative to generic `asChild` prop merging (ADR 0115).",
-        ],
-    );
+    let api_reference = doc_layout::notes_block([
+        "`ButtonGroup` exposes typed composition points for buttons, inputs, input groups, selects, dropdowns, popovers, and nested button groups, plus `orientation(...)` and `a11y_label(...)`.",
+        "`ButtonGroupSeparator` keeps divider ownership explicit through `orientation(...)` and layout refinements; default divider thickness remains recipe-owned.",
+        "`ButtonGroupText` uses `new(...)` for plain text and `new_children(...)` for custom inline content. This is Fret's explicit alternative to generic `asChild` prop merging (ADR 0115).",
+    ]);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "Gallery sections now mirror shadcn Button Group docs first: Demo, Usage, Accessibility, ButtonGroup vs ToggleGroup, examples, RTL, API Reference.",
-            "`ButtonGroupText` and `Flex-1 items` remain after the upstream path as focused Fret follow-ups: one documents the explicit `new_children(...)` surface, the other demonstrates caller-owned flex negotiation.",
-            "Default-style ownership stays aligned with upstream: merged borders, outer radii, separator thickness, and nested-group gap are recipe-owned; width/flex growth remains caller-owned.",
-            "Accessibility matches the upstream intent: the root stamps `role=group`, and `a11y_label(...)` provides the `aria-label` equivalent without introducing a DOM-only API.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "Gallery sections now mirror shadcn Button Group docs first: Demo, Usage, Accessibility, ButtonGroup vs ToggleGroup, examples, RTL, API Reference.",
+        "`ButtonGroupText` and `Flex-1 items` remain after the upstream path as focused Fret follow-ups: one documents the explicit `new_children(...)` surface, the other demonstrates caller-owned flex negotiation.",
+        "Default-style ownership stays aligned with upstream: merged borders, outer radii, separator thickness, and nested-group gap are recipe-owned; width/flex growth remains caller-owned.",
+        "Accessibility matches the upstream intent: the root stamps `role=group`, and `a11y_label(...)` provides the `aria-label` equivalent without introducing a DOM-only API.",
+    ]);
+
+    let vs_toggle_group = DocSection::build(cx, "ButtonGroup vs ToggleGroup", vs_toggle_group)
+        .no_shell()
+        .test_id_prefix("ui-gallery-button-group-vs-toggle-group");
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .description("Public surface summary plus copyable examples for the core API pieces.")
+        .test_id_prefix("ui-gallery-button-group-api-reference")
+        .code_rust_from_file_region(snippets::api_reference::SOURCE, "example");
+    let notes = DocSection::build(cx, "Notes", notes)
+        .no_shell()
+        .test_id_prefix("ui-gallery-button-group-notes");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -64,9 +66,7 @@ pub(super) fn preview_button_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             DocSection::new("Accessibility", accessibility)
                 .test_id_prefix("ui-gallery-button-group-accessibility")
                 .code_rust_from_file_region(snippets::accessibility::SOURCE, "example"),
-            DocSection::new("ButtonGroup vs ToggleGroup", vs_toggle_group)
-                .no_shell()
-                .test_id_prefix("ui-gallery-button-group-vs-toggle-group"),
+            vs_toggle_group,
             DocSection::new("Orientation", orientation)
                 .test_id_prefix("ui-gallery-button-group-orientation")
                 .code_rust_from_file_region(snippets::orientation::SOURCE, "example"),
@@ -100,21 +100,14 @@ pub(super) fn preview_button_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             DocSection::new("RTL", rtl)
                 .test_id_prefix("ui-gallery-button-group-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("API Reference", api_reference)
-                .description(
-                    "Public surface summary plus copyable examples for the core API pieces.",
-                )
-                .test_id_prefix("ui-gallery-button-group-api-reference")
-                .code_rust_from_file_region(snippets::api_reference::SOURCE, "example"),
+            api_reference,
             DocSection::new("ButtonGroupText", text)
                 .test_id_prefix("ui-gallery-button-group-text")
                 .code_rust_from_file_region(snippets::text::SOURCE, "example"),
             DocSection::new("Flex-1 items (Fret)", flex_1)
                 .test_id_prefix("ui-gallery-button-group-flex1")
                 .code_rust_from_file_region(snippets::flex_1_items::SOURCE, "example"),
-            DocSection::new("Notes", notes)
-                .no_shell()
-                .test_id_prefix("ui-gallery-button-group-notes"),
+            notes,
         ],
     );
 

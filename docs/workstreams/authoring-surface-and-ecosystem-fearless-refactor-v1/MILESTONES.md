@@ -15,6 +15,15 @@ Meaning:
 - but hand off the remaining conversion-vocabulary redesign to
   `docs/workstreams/into-element-surface-fearless-refactor-v1/`.
 
+Closeout note on 2026-03-12:
+
+- the ecosystem trait budget is now largely settled rather than open-ended,
+- `fret-ui-shadcn` helper glue (`ui_ext/*`) is already on `IntoUiElement<H>`-based surfaces,
+- `fret-ui-shadcn` `ui_builder_ext/*::into_element(...)` methods are now treated as intentional
+  explicit landing seams rather than unfinished helper-return migrations,
+- remaining work is mainly continued first-party helper cleanup and broader conversion-surface
+  closure under the dedicated into-element workstream.
+
 If a proposed change is mainly about "too many `into_element` concepts" or "helper/component code
 still falls back to raw conversion vocabulary", it belongs in the follow-on workstream rather than
 reopening this one.

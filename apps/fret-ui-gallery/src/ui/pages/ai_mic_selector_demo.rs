@@ -44,26 +44,19 @@ fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
 pub(super) fn preview_ai_mic_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let demo = snippets::mic_selector_demo::render(cx);
-    let features = doc_layout::notes(
-        cx,
-        [
-            "Controlled and uncontrolled selection / open state are already covered at the component layer.",
-            "Trigger width is mirrored into the popover content, matching the official docs outcome.",
-            "Search, filtering, close-on-select, explicit item composition, and `(XXXX:XXXX)` device label parsing are now all covered at the selector surface.",
-            "The gallery now uses a Rust-native compound entrypoint plus a `MicSelectorList::into_element_with_children(...)` closure, so the example reads closer to the official docs composition.",
-            "A stable diag script already covers select + close behavior for this page.",
-        ],
-    );
+    let features = doc_layout::notes_block([
+        "Controlled and uncontrolled selection / open state are already covered at the component layer.",
+        "Trigger width is mirrored into the popover content, matching the official docs outcome.",
+        "Search, filtering, close-on-select, explicit item composition, and `(XXXX:XXXX)` device label parsing are now all covered at the selector surface.",
+        "The gallery now uses a Rust-native compound entrypoint plus a `MicSelectorList::into_element_with_children(...)` closure, so the example reads closer to the official docs composition.",
+        "A stable diag script already covers select + close behavior for this page.",
+    ]);
     let parts = parts_table(cx);
-    let parts = parts.into_element(cx);
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "This is not a `crates/fret-ui` mechanism bug. The remaining work is ecosystem API / docs parity.",
-            "By design, Fret keeps device enumeration, permission prompts, and `devicechange` handling app-owned; `MicSelector` only renders UI chrome and emits selection intent.",
-            "The main composition gap is now closed at the selector surface with a Rust closure-based `MicSelectorList::into_element_with_children(...)`, without pushing new policy into runtime contracts.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "This is not a `crates/fret-ui` mechanism bug. The remaining work is ecosystem API / docs parity.",
+        "By design, Fret keeps device enumeration, permission prompts, and `devicechange` handling app-owned; `MicSelector` only renders UI chrome and emits selection intent.",
+        "The main composition gap is now closed at the selector surface with a Rust closure-based `MicSelectorList::into_element_with_children(...)`, without pushing new policy into runtime contracts.",
+    ]);
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
@@ -78,13 +71,13 @@ pub(super) fn preview_ai_mic_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
                 ])
                 .test_id_prefix("ui-gallery-ai-mic-selector-demo")
                 .code_rust_from_file_region(snippets::mic_selector_demo::SOURCE, "example"),
-            DocSection::new("Features", features)
+            DocSection::build(cx, "Features", features)
                 .description("High-signal parity notes against the official AI Elements docs.")
                 .no_shell(),
-            DocSection::new("Parts & Props", parts)
+            DocSection::build(cx, "Parts & Props", parts)
                 .description("Which layer owns what, and where the current Rust surface still differs from upstream.")
                 .no_shell(),
-            DocSection::new("Notes", notes)
+            DocSection::build(cx, "Notes", notes)
                 .description("Layering and next-step parity notes.")
                 .no_shell(),
         ],

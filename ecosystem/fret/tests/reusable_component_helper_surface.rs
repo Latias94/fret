@@ -21,9 +21,7 @@ fn shadcn_docs_keep_reusable_helper_guidance_on_unified_component_conversion_tra
         "reusable generic helpers in `fret-ui-shadcn` / `fret-ui-kit` should converge on the unified"
     ));
     assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`IntoUiElement<H>`"));
-    assert!(SHADCN_DECLARATIVE_PROGRESS.contains(
-        "do not have to pre-land into `AnyElement`"
-    ));
+    assert!(SHADCN_DECLARATIVE_PROGRESS.contains("do not have to pre-land into `AnyElement`"));
 }
 
 #[test]

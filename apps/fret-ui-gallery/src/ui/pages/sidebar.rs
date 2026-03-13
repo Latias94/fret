@@ -12,14 +12,14 @@ pub(super) fn preview_sidebar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let mobile = snippets::mobile::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "Width ownership follows upstream: use `SidebarProvider::width`, `width_icon`, and `width_mobile` first; `Sidebar` keeps theme-token fallback defaults.",
-            "Keep `test_id_prefix` stable: `tools/diag-scripts/ui-gallery/sidebar/*` depend on DocSection tab trigger IDs.",
-            "Mobile example forces `is_mobile(true)` for deterministic overlay + focus-restore diagnostics.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "Width ownership follows upstream: use `SidebarProvider::width`, `width_icon`, and `width_mobile` first; `Sidebar` keeps theme-token fallback defaults.",
+        "Keep `test_id_prefix` stable: `tools/diag-scripts/ui-gallery/sidebar/*` depend on DocSection tab trigger IDs.",
+        "Mobile example forces `is_mobile(true)` for deterministic overlay + focus-restore diagnostics.",
+    ]);
+    let notes = DocSection::build(cx, "Notes", notes)
+        .no_shell()
+        .test_id_prefix("ui-gallery-sidebar-notes");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -63,9 +63,7 @@ pub(super) fn preview_sidebar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .test_id_prefix("ui-gallery-sidebar-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example")
                 .no_shell(),
-            DocSection::new("Notes", notes)
-                .no_shell()
-                .test_id_prefix("ui-gallery-sidebar-notes"),
+            notes,
         ],
     );
 

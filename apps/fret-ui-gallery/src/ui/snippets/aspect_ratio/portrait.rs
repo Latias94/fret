@@ -54,6 +54,7 @@ fn ratio_example<H: UiHost>(
     ui::h_flex(move |_cx| vec![frame])
         .layout(LayoutRefinement::default().w_full().min_w_0())
         .justify_center()
+        .into_element(cx)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -72,7 +73,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 pub fn render_preview<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     demo_image: Option<Model<Option<fret_core::ImageId>>>,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let asset_image = super::images::portrait_image_id(cx);
 
     let image = if let Some(image_id) = asset_image {

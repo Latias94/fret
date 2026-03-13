@@ -21,16 +21,16 @@ pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let muted = snippets::muted::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "API reference: `ecosystem/fret-ui-shadcn/src/typography.rs` and `ecosystem/fret-ui-shadcn/src/table.rs`.",
-            "Typography in shadcn is utility-driven; keep heading hierarchy semantic and consistent.",
-            "Use `lead` for intros, `muted` for hints, and avoid overusing large text in dense panels.",
-            "For long-form content, combine typography helpers with table/list blocks for readability.",
-            "Validate RTL and narrow viewport wrapping before shipping document-like surfaces.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "API reference: `ecosystem/fret-ui-shadcn/src/typography.rs` and `ecosystem/fret-ui-shadcn/src/table.rs`.",
+        "Typography in shadcn is utility-driven; keep heading hierarchy semantic and consistent.",
+        "Use `lead` for intros, `muted` for hints, and avoid overusing large text in dense panels.",
+        "For long-form content, combine typography helpers with table/list blocks for readability.",
+        "Validate RTL and narrow viewport wrapping before shipping document-like surfaces.",
+    ]);
+    let notes = DocSection::build(cx, "Notes", notes)
+        .test_id_prefix("ui-gallery-typography-notes")
+        .description("API reference pointers and authoring notes.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -81,9 +81,7 @@ pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             DocSection::new("RTL", rtl)
                 .description("Direction provider sample to validate RTL wrapping/alignment.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes)
-                .test_id_prefix("ui-gallery-typography-notes")
-                .description("API reference pointers and authoring notes."),
+            notes,
         ],
     );
 

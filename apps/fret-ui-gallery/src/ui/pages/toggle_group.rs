@@ -21,16 +21,17 @@ pub(super) fn preview_toggle_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let full_width_items = snippets::full_width_items::render(cx);
     let stretch = snippets::flex_1_items::render(cx);
 
-    let api_reference = doc_layout::notes(
-        cx,
-        [
-            "`ToggleGroup::single(...)`, `ToggleGroup::multiple(...)`, and their uncontrolled constructors cover the documented single/multiple selection paths.",
-            "`ToggleGroupItem::new(..., children)`, `child(...)`, and `children(...)` remain the source-aligned content surface; no extra generic `compose()` API is needed here.",
-            "`ToggleGroupItem::refine_layout(...)` and `refine_style(...)` now cover upstream custom item-root sizing and rounding without moving caller-owned recipe tweaks into the default component chrome.",
-            "Selection semantics, roving focus, segmented borders, and pressed-state chrome remain recipe-owned; item-root custom layout and surrounding width/flex negotiation remain caller-owned.",
-            "`Single`, `Small`, `Large`, `Label Association`, `Full Width Items`, and `Flex-1 Items` stay after the upstream docs path as focused Fret follow-ups and regression slices.",
-        ],
-    );
+    let api_reference = doc_layout::notes_block([
+        "`ToggleGroup::single(...)`, `ToggleGroup::multiple(...)`, and their uncontrolled constructors cover the documented single/multiple selection paths.",
+        "`ToggleGroupItem::new(..., children)`, `child(...)`, and `children(...)` remain the source-aligned content surface; no extra generic `compose()` API is needed here.",
+        "`ToggleGroupItem::refine_layout(...)` and `refine_style(...)` now cover upstream custom item-root sizing and rounding without moving caller-owned recipe tweaks into the default component chrome.",
+        "Selection semantics, roving focus, segmented borders, and pressed-state chrome remain recipe-owned; item-root custom layout and surrounding width/flex negotiation remain caller-owned.",
+        "`Single`, `Small`, `Large`, `Label Association`, `Full Width Items`, and `Flex-1 Items` stay after the upstream docs path as focused Fret follow-ups and regression slices.",
+    ]);
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .test_id_prefix("ui-gallery-toggle-group-api-reference")
+        .description("Public surface summary and ownership notes.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -74,10 +75,7 @@ pub(super) fn preview_toggle_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .description("Item ordering and pressed visuals under RTL.")
                 .test_id_prefix("ui-gallery-toggle-group-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("API Reference", api_reference)
-                .no_shell()
-                .test_id_prefix("ui-gallery-toggle-group-api-reference")
-                .description("Public surface summary and ownership notes."),
+            api_reference,
             DocSection::new("Single (Fret)", single)
                 .description("Focused single-selection regression example.")
                 .test_id_prefix("ui-gallery-toggle-group-single")

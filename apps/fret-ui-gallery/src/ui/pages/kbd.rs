@@ -17,16 +17,16 @@ pub(super) fn preview_kbd(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Use `Kbd` for a single key token and `KbdGroup` for shortcut chords or grouped hints.",
     );
 
-    let api_reference = doc_layout::notes(
-        cx,
-        [
-            "`Kbd::new(\"Ctrl\")` covers the default textual key token, while `Kbd::from_children([...])` covers icon-based keys such as Command or Arrow icons.",
-            "`KbdGroup::new([...])` is the public surface for grouped shortcuts and keeps spacing/chrome consistent across adjacent tokens.",
-            "Kbd chrome, fixed height, and text centering remain recipe-owned; composition into buttons, tooltips, and input-group addons stays caller-owned.",
-            "No extra generic `asChild` / `compose()` surface is needed here: upstream composition already happens around `Kbd`, and Fret matches that layering directly.",
-            "Keep `ui-gallery-kbd-*` test ids stable for diag scripts and future web-vs-fret gates.",
-        ],
-    );
+    let api_reference = doc_layout::notes_block([
+        "`Kbd::new(\"Ctrl\")` covers the default textual key token, while `Kbd::from_children([...])` covers icon-based keys such as Command or Arrow icons.",
+        "`KbdGroup::new([...])` is the public surface for grouped shortcuts and keeps spacing/chrome consistent across adjacent tokens.",
+        "Kbd chrome, fixed height, and text centering remain recipe-owned; composition into buttons, tooltips, and input-group addons stays caller-owned.",
+        "No extra generic `asChild` / `compose()` surface is needed here: upstream composition already happens around `Kbd`, and Fret matches that layering directly.",
+        "Keep `ui-gallery-kbd-*` test ids stable for diag scripts and future web-vs-fret gates.",
+    ]);
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .description("Public surface summary and ownership notes.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -63,9 +63,7 @@ shadcn::KbdGroup::new([
             DocSection::new("RTL", rtl)
                 .description("kbd token order should respect right-to-left direction context.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("API Reference", api_reference)
-                .no_shell()
-                .description("Public surface summary and ownership notes."),
+            api_reference,
         ],
     )
     .test_id("ui-gallery-kbd-component");

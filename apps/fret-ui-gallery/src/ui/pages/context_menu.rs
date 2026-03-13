@@ -18,16 +18,15 @@ pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let sides = snippets::sides::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "Preview follows the upstream shadcn Context Menu docs (v4 Base UI).",
-            "Context Menu already exposes shadcn-style parts plus `ContextMenuSub*` helpers, so the remaining gap is mostly docs/page parity rather than missing menu infrastructure.",
-            "A separate generic children API is not required here yet: typed menu entries stay explicit, while `into_element_parts(...)` keeps docs-style authoring ergonomic.",
-            "Examples are snippet-backed: preview and code stay in sync.",
-            "Keep `ui-gallery-context-menu-*` test IDs stable; multiple diag scripts depend on them.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "Preview follows the upstream shadcn Context Menu docs (v4 Base UI).",
+        "Context Menu already exposes shadcn-style parts plus `ContextMenuSub*` helpers, so the remaining gap is mostly docs/page parity rather than missing menu infrastructure.",
+        "A separate generic children API is not required here yet: typed menu entries stay explicit, while `into_element_parts(...)` keeps docs-style authoring ergonomic.",
+        "Examples are snippet-backed: preview and code stay in sync.",
+        "Keep `ui-gallery-context-menu-*` test IDs stable; multiple diag scripts depend on them.",
+    ]);
+    let notes =
+        DocSection::build(cx, "Notes", notes).test_id_prefix("ui-gallery-context-menu-notes");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -86,7 +85,7 @@ pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .description("RTL layout keeps spacing and submenu direction parity-auditable.")
                 .test_id_prefix("ui-gallery-context-menu-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes).test_id_prefix("ui-gallery-context-menu-notes"),
+            notes,
         ],
     );
 

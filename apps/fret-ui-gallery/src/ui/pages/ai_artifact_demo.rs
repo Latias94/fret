@@ -30,7 +30,7 @@ pub(super) fn preview_ai_artifact_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec
     #[cfg(feature = "gallery-dev")]
     {
         sections.push(
-            DocSection::new("With Code Display", snippets::artifact_code_display::render(cx))
+            DocSection::build(cx, "With Code Display", snippets::artifact_code_display::render(cx))
                 .description(
                     "Matches the official AI Elements preview structure: title + description on the left, action group on the right, and a code artifact body.",
                 )
@@ -40,7 +40,7 @@ pub(super) fn preview_ai_artifact_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec
     }
 
     sections.push(
-        DocSection::new("Close Toggle", snippets::artifact_demo::render(cx))
+        DocSection::build(cx, "Close Toggle", snippets::artifact_demo::render(cx))
             .description(
                 "Keeps the existing close/reset interaction demo and diag gate for lifecycle behavior.",
             )
@@ -49,7 +49,7 @@ pub(super) fn preview_ai_artifact_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec
     );
 
     sections.push(
-        DocSection::new("Notes", render_notes(cx).into_element(cx))
+        DocSection::build(cx, "Notes", render_notes(cx))
             .description("Parity findings and current API notes for Artifact."),
     );
 

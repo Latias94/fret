@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use fret_ui::Theme;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -37,7 +38,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 pub fn render_preview<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     demo_image: Option<Model<Option<fret_core::ImageId>>>,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let theme = Theme::global(&*cx.app);
     let muted_bg = theme.color_token("muted");
 

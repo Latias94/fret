@@ -91,29 +91,21 @@ fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 pub(super) fn preview_ai_commit_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let demo = snippets::commit_demo::render(cx);
     let custom_children = snippets::commit_custom_children::render(cx);
-    let features = doc_layout::notes(
-        cx,
-        [
-            "Commit hash display with copy button",
-            "Author avatar with initials",
-            "Relative timestamp formatting",
-            "Collapsible file changes list",
-            "Color-coded file status (added/modified/deleted/renamed)",
-            "Line additions/deletions count",
-        ],
-    );
-    let findings = doc_layout::notes(
-        cx,
-        [
-            "Mechanism/lifecycle looks healthy here: existing copy + large-list diag gates already cover toggle, copy feedback, and scroll seams.",
-            "The main drift was component-layer parity: the Gallery page was less docs-aligned than other AI Elements surfaces, and `Commit` was missing the three upstream custom-children slots.",
-            "`CommitFilePath::on_click(...)` remains an intentional Fret-only seam so apps can own file-open effects without pushing policy into `fret-ui`.",
-        ],
-    );
+    let features = doc_layout::notes_block([
+        "Commit hash display with copy button",
+        "Author avatar with initials",
+        "Relative timestamp formatting",
+        "Collapsible file changes list",
+        "Color-coded file status (added/modified/deleted/renamed)",
+        "Line additions/deletions count",
+    ]);
+    let findings = doc_layout::notes_block([
+        "Mechanism/lifecycle looks healthy here: existing copy + large-list diag gates already cover toggle, copy feedback, and scroll seams.",
+        "The main drift was component-layer parity: the Gallery page was less docs-aligned than other AI Elements surfaces, and `Commit` was missing the three upstream custom-children slots.",
+        "`CommitFilePath::on_click(...)` remains an intentional Fret-only seam so apps can own file-open effects without pushing policy into `fret-ui`.",
+    ]);
     let file_status = file_status_table(cx);
-    let file_status = file_status.into_element(cx);
     let props = parts_props_table(cx);
-    let props = props.into_element(cx);
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
@@ -125,16 +117,16 @@ pub(super) fn preview_ai_commit_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<A
                 .description("Rust/Fret analogue of the official AI Elements preview.")
                 .test_id_prefix("ui-gallery-ai-commit-demo")
                 .code_rust_from_file_region(snippets::commit_demo::SOURCE, "example"),
-            DocSection::new("Features", features).no_shell(),
-            DocSection::new("File Status", file_status).no_shell(),
+            DocSection::build(cx, "Features", features).no_shell(),
+            DocSection::build(cx, "File Status", file_status).no_shell(),
             DocSection::new("Custom Children", custom_children)
                 .description(
                     "Covers the three upstream custom-content slots: `CommitSeparator`, `CommitTimestamp`, and `CommitFileStatus`.",
                 )
                 .test_id_prefix("ui-gallery-ai-commit-custom-children")
                 .code_rust_from_file_region(snippets::commit_custom_children::SOURCE, "example"),
-            DocSection::new("Parts & Props", props).no_shell(),
-            DocSection::new("Notes", findings)
+            DocSection::build(cx, "Parts & Props", props).no_shell(),
+            DocSection::build(cx, "Notes", findings)
                 .description("Layering + parity findings for Commit."),
         ],
     );
