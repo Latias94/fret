@@ -358,6 +358,10 @@ Current snapshot (2026-03-12):
   - font face metadata helpers now live in
     `crates/fret-render-wgpu/src/text/prepare/face_metadata.rs`
   - `crates/fret-render-wgpu/src/text/prepare.rs` no longer hosts the font trace and decoration-metrics read chain inline
+- The eighty-third internal `text/mod.rs` split has landed:
+  - prepared-glyph materialization helpers now live in
+    `crates/fret-render-wgpu/src/text/prepare/glyph_materialize.rs`
+  - `crates/fret-render-wgpu/src/text/prepare.rs` no longer hosts the prepared-glyph materialize and atlas-commit chain inline
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed

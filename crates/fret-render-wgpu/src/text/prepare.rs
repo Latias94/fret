@@ -1,27 +1,20 @@
-use super::atlas::{GlyphAtlas, GlyphKey, subpixel_bin_as_float, subpixel_bin_q4, subpixel_bin_y};
-use super::{
-    GlyphInstance, GlyphQuadKind, TextBlob, TextFontFaceUsage, TextLine, TextShape, TextSystem,
-};
+use super::atlas::subpixel_bin_as_float;
+use super::{GlyphInstance, TextBlob, TextFontFaceUsage, TextLine, TextShape, TextSystem};
 use fret_core::{
     AttributedText, TextBlobId, TextConstraints, TextInputRef, TextMetrics, TextSpan, TextStyle,
     geometry::Px,
 };
 use fret_render_text::cache_keys::{TextBlobKey, TextShapeKey};
 use fret_render_text::font_instance_key::FontFaceKey;
-use fret_render_text::{
-    parley_shaper::ParleyGlyph,
-    prepare_layout::PreparedLine,
-    spans::{ResolvedSpan, paint_span_for_text_range},
-};
+use fret_render_text::spans::ResolvedSpan;
 use std::{collections::HashMap, sync::Arc};
 
 mod face_metadata;
 mod glyph_bounds;
 mod glyph_face;
+mod glyph_materialize;
 mod glyph_raster;
 mod glyph_render;
-
-use self::glyph_raster::{PreparedGlyphRaster, insert_prepared_glyph_raster_into_atlas};
 
 pub(super) struct PrepareShapeBuildContext {
     pub(super) wrapped: crate::text::wrapper::WrappedLayout,
@@ -275,106 +268,6 @@ impl TextSystem {
         })
     }
 
-    pub(super) fn materialize_prepared_line(
-        &mut self,
-        prepared_line: PreparedLine,
-        resolved_spans: Option<&[ResolvedSpan]>,
-        scale: f32,
-        epoch: u64,
-        glyphs: &mut Vec<GlyphInstance>,
-        face_usage: &mut HashMap<FontFaceKey, (u32, u32)>,
-        lines: &mut Vec<TextLine>,
-    ) {
-        let PreparedLine {
-            layout,
-            glyphs: prepared_glyphs,
-        } = prepared_line;
-        lines.push(layout);
-        self.materialize_prepared_line_glyphs(
-            prepared_glyphs,
-            resolved_spans,
-            scale,
-            epoch,
-            glyphs,
-            face_usage,
-        );
-    }
-
-    fn materialize_prepared_line_glyphs(
-        &mut self,
-        prepared_glyphs: Vec<ParleyGlyph>,
-        resolved_spans: Option<&[ResolvedSpan]>,
-        scale: f32,
-        epoch: u64,
-        glyphs: &mut Vec<GlyphInstance>,
-        face_usage: &mut HashMap<FontFaceKey, (u32, u32)>,
-    ) {
-        for glyph in prepared_glyphs {
-            let Some(instance) = self.materialize_prepared_line_glyph(
-                &glyph,
-                resolved_spans,
-                scale,
-                epoch,
-                face_usage,
-            ) else {
-                continue;
-            };
-            glyphs.push(instance);
-        }
-    }
-
-    fn materialize_prepared_line_glyph(
-        &mut self,
-        glyph: &ParleyGlyph,
-        resolved_spans: Option<&[ResolvedSpan]>,
-        scale: f32,
-        epoch: u64,
-        face_usage: &mut HashMap<FontFaceKey, (u32, u32)>,
-    ) -> Option<GlyphInstance> {
-        let context = self.prepare_prepared_glyph_context(glyph, face_usage)?;
-        let (x, x_bin, y, y_bin) = prepared_glyph_origin_bins(glyph);
-        let paint_span = prepared_glyph_paint_span(resolved_spans, glyph);
-        let (glyph_key, x0_px, y0_px, w_px, h_px) = self.resolve_prepared_glyph_bounds(
-            glyph,
-            context.glyph_id,
-            context.face_key,
-            context.size_bits,
-            x_bin,
-            y_bin,
-            x,
-            y,
-            epoch,
-        )?;
-        Some(prepared_glyph_instance(
-            glyph_key, x0_px, y0_px, w_px, h_px, paint_span, scale,
-        ))
-    }
-
-    fn insert_prepared_glyph_raster(&mut self, raster: PreparedGlyphRaster, epoch: u64) {
-        let atlas = self.prepared_glyph_atlas_mut(raster.kind());
-        insert_prepared_glyph_raster_into_atlas(atlas, raster, epoch);
-    }
-
-    fn commit_prepared_glyph_raster(
-        &mut self,
-        raster: PreparedGlyphRaster,
-        x: i32,
-        y: i32,
-        epoch: u64,
-    ) -> (GlyphKey, f32, f32, f32, f32) {
-        let bounds = raster.bounds(x, y);
-        self.insert_prepared_glyph_raster(raster, epoch);
-        bounds
-    }
-
-    fn prepared_glyph_atlas_mut(&mut self, kind: GlyphQuadKind) -> &mut GlyphAtlas {
-        match kind {
-            GlyphQuadKind::Mask => &mut self.mask_atlas,
-            GlyphQuadKind::Color => &mut self.color_atlas,
-            GlyphQuadKind::Subpixel => &mut self.subpixel_atlas,
-        }
-    }
-
     pub(super) fn wrap_for_prepare(
         &mut self,
         input: TextInputRef<'_>,
@@ -382,36 +275,6 @@ impl TextSystem {
     ) -> crate::text::wrapper::WrappedLayout {
         crate::text::wrapper::wrap_with_constraints(&mut self.parley_shaper, input, constraints)
     }
-}
-
-fn prepared_glyph_paint_span(
-    resolved_spans: Option<&[ResolvedSpan]>,
-    glyph: &ParleyGlyph,
-) -> Option<u16> {
-    resolved_spans
-        .and_then(|spans| paint_span_for_text_range(spans, &glyph.text_range, glyph.is_rtl))
-}
-
-fn prepared_glyph_instance(
-    glyph_key: GlyphKey,
-    x0_px: f32,
-    y0_px: f32,
-    w_px: f32,
-    h_px: f32,
-    paint_span: Option<u16>,
-    scale: f32,
-) -> GlyphInstance {
-    GlyphInstance {
-        rect: [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
-        paint_span,
-        key: glyph_key,
-    }
-}
-
-fn prepared_glyph_origin_bins(glyph: &ParleyGlyph) -> (i32, u8, i32, u8) {
-    let (x, x_bin) = subpixel_bin_q4(glyph.x);
-    let (y, y_bin) = subpixel_bin_y(glyph.y);
-    (x, x_bin, y, y_bin)
 }
 
 fn prepared_glyph_offset_px(x_bin: u8, y_bin: u8) -> parley::swash::zeno::Vector {
