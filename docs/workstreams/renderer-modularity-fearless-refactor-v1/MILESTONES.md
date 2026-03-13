@@ -42,6 +42,9 @@ Current snapshot (2026-03-13):
   - facade snapshot coverage locks `new` and `new_with_backends`
   - docs now state explicitly that `WgpuContext` is a supported convenience path, not the only
     first-class topology
+- The fifty-ninth internal `text/mod.rs` split has landed:
+  - shared text type shells now live under `crates/fret-render-wgpu/src/text/types.rs`
+  - `text/mod.rs` no longer owns glyph/blob/shape/helper type definitions directly
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

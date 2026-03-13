@@ -99,6 +99,8 @@ As of 2026-03-13:
 - `WgpuContext` remains on the stable default facade as the supported convenience/bootstrap path
   for Fret-owned GPU initialization, but the docs and gates now make clear that engine-hosted
   adapter/device flows are equally first-class.
+- Shared text type shells now live under `crates/fret-render-wgpu/src/text/types.rs`, and
+  `text/mod.rs` no longer owns glyph/blob/shape/helper type definitions directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

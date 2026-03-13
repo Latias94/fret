@@ -299,6 +299,9 @@ ID format:
     - prepared-glyph synthesis embolden extraction now lives behind a pure helper in
       `crates/fret-render-wgpu/src/text/prepare.rs`
     - `prepared_glyph_face_key(...)` no longer owns synthesis-embolden extraction directly
+    - shared text types and pure helper surfaces moved into
+      `crates/fret-render-wgpu/src/text/types.rs`
+    - `text/mod.rs` no longer owns glyph/blob/shape/type-shell definitions directly
     - prepared-glyph font-data cache writes now live behind a dedicated helper in
       `crates/fret-render-wgpu/src/text/prepare.rs`
     - `cache_prepared_glyph_face_data(...)` no longer owns font-data entry writes directly
