@@ -70,6 +70,12 @@ Current snapshot (2026-03-13):
     `FRET_RENDERPLAN_DUMP*` env gate plus final file emission
   - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps scratch rebuild, JSON
     assembly, serialization, and a thin gate/assemble/emit orchestration shell
+- The latest render-plan-reporting-perf split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_reporting_perf.rs` now owns custom-effect
+    requested/emitted counter collection, render-plan degradation perf accumulation, and focused
+    reporting-perf tests
+  - `crates/fret-render-wgpu/src/renderer/render_plan_reporting.rs` now keeps owner orchestration,
+    segment-report rebuild/diff, and dump scheduling
 - The latest custom-effect service split has landed:
   - `crates/fret-render-wgpu/src/renderer/services_custom_effects.rs` now owns custom-effect WGSL
     validation, capability gating, registration/unregister flow, and the focused service tests
@@ -919,6 +925,17 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu custom_effect_v3_summary_tracks_pyramid_levels_min_max_sum`
   - `cargo nextest run -p fret-render-wgpu target_usage_tracks_max_size`
   - `cargo nextest run -p fret-render-wgpu encode_custom_effect_v3_pass_keeps_distinct_source_targets`
+  - `cargo nextest run -p fret-render-wgpu diff_segment_reports_tracks_shape_changes_and_pass_growth`
+- The forty-second render-plan-reporting-perf split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_reporting_perf.rs` now owns custom-effect
+    requested/emitted counter collection, render-plan degradation perf accumulation, and focused
+    reporting-perf tests
+  - `crates/fret-render-wgpu/src/renderer/render_plan_reporting.rs` now keeps the reporting owner
+    shell, segment-report rebuild/diff, and dump scheduling
+- Renderer render-plan-reporting-perf split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu requested_and_emitted_custom_effect_counters_track_all_versions`
+  - `cargo nextest run -p fret-render-wgpu degradation_counters_track_reason_and_kind_totals`
   - `cargo nextest run -p fret-render-wgpu diff_segment_reports_tracks_shape_changes_and_pass_growth`
 - Renderer custom-v3-dispatch split verification remains green:
   - `cargo check -p fret-render-wgpu --tests`

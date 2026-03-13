@@ -762,6 +762,8 @@ ID format:
     - SVG unregister raster draining now also lives behind
       `crates/fret-render-wgpu/src/renderer/svg/mod.rs` and
       `crates/fret-render-wgpu/src/renderer/svg/cache.rs::unregister_svg_rasters(...)`
+    - render-plan perf-field mapping and degradation perf accumulation now also live under
+      `crates/fret-render-wgpu/src/renderer/render_plan_reporting_perf.rs`
 - [~] RMFR-renderer-043 Keep service trait implementations readable after extraction.
   - Landed so far:
     - custom-effect service WGSL validation, capability gating, registration, unregister flow, and
@@ -770,6 +772,9 @@ ID format:
     - SVG/material service impls plus sampled-material capability gating now also live under
       `crates/fret-render-wgpu/src/renderer/services_assets.rs`
     - `crates/fret-render-wgpu/src/renderer/services.rs` now keeps text/path service impls only
+    - `crates/fret-render-wgpu/src/renderer/render_plan_reporting.rs` now keeps reporting owner
+      orchestration only, while perf counter collection lives under
+      `crates/fret-render-wgpu/src/renderer/render_plan_reporting_perf.rs`
 
 ### D3. Shaders and pipelines
 

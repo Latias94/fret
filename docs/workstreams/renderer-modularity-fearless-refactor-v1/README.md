@@ -254,6 +254,12 @@ As of 2026-03-13:
     `FRET_RENDERPLAN_DUMP*` env gating and final file emission.
   - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps scratch rebuild,
     render-plan JSON assembly, serialization, and a thin gate/assemble/emit orchestration shell.
+- Renderer render-plan reporting perf mapping is now also split along diagnostics seams:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_reporting_perf.rs` now owns custom-effect
+    requested/emitted counter collection, render-plan degradation perf accumulation, and focused
+    reporting-perf regression tests.
+  - `crates/fret-render-wgpu/src/renderer/render_plan_reporting.rs` now keeps the reporting owner
+    shell, segment-report rebuild/diff, and dump scheduling.
 - Renderer path registry/cache owner state now also lives under
   `crates/fret-render-wgpu/src/renderer/path.rs`, and
   `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns prepared path storage, path cache

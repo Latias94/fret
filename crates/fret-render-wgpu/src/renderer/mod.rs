@@ -44,6 +44,7 @@ mod render_plan_dump_encode;
 mod render_plan_dump_summary;
 mod render_plan_effects;
 mod render_plan_reporting;
+mod render_plan_reporting_perf;
 mod render_scene;
 mod render_scene_config;
 mod render_text_dump;
