@@ -84,6 +84,9 @@ Guidelines:
   the default implementation surface for new framework/ecosystem code.
 - Likewise, use `state_for(...)` directly for explicit-identity slots in first-party code;
   `with_state_for(...)` remains a compatibility alias rather than the preferred teaching surface.
+- A lightweight repository gate keeps that contract honest:
+  `python3 tools/gate_no_first_party_with_state_alias_usage.py` forbids first-party Rust sources
+  from calling `.with_state(...)` or `.with_state_for(...)`.
 - Staged dialog/sheet draft models (pickers, selects, similar temporary edit state) should usually
   be authored as `local_model(...)` handles, while only small open-edge/runtime bookkeeping stays
   in `root_state(...)` or `slot_state(...)`.

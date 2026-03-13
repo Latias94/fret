@@ -100,6 +100,10 @@ def main(argv: list[str]) -> int:
         [py, str(repo_root / "tools/gate_no_models_mut_in_action_handlers.py")],
     )
     _run_checked(
+        "State policy (no first-party with_state compatibility alias usage)",
+        [py, str(repo_root / "tools/gate_no_first_party_with_state_alias_usage.py")],
+    )
+    _run_checked(
         "Teaching surfaces policy (only approved advanced on_action_notify cases)",
         [
             py,
