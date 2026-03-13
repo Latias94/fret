@@ -1,5 +1,6 @@
 use super::TextSystem;
 use super::atlas::{GlyphAtlas, TEXT_ATLAS_MAX_PAGES};
+use super::blob_state::TextBlobState;
 use super::face_cache::TextFaceCacheState;
 use super::frame_perf::TextFramePerfState;
 use super::pin_state::TextPinState;
@@ -8,8 +9,7 @@ use fret_render_text::fallback_policy::TextFallbackPolicyV1;
 use fret_render_text::font_stack::GenericFamilyInjectionState;
 use fret_render_text::font_trace::FontTraceState;
 use fret_render_text::measure::TextMeasureCaches;
-use slotmap::SlotMap;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::HashMap;
 
 const TEXT_ATLAS_WIDTH: u32 = 2048;
 const TEXT_ATLAS_HEIGHT: u32 = 2048;
@@ -75,11 +75,7 @@ pub(super) fn build_text_system(device: &wgpu::Device) -> TextSystem {
         quality: TextQualityState::new(TextQualitySettings::default()),
         generic_injections: GenericFamilyInjectionState::default(),
 
-        blobs: SlotMap::with_key(),
-        blob_cache: HashMap::new(),
-        blob_key_by_id: HashMap::new(),
-        released_blob_lru: VecDeque::new(),
-        released_blob_set: HashSet::new(),
+        blob_state: TextBlobState::new(),
         shape_cache: HashMap::new(),
         measure: TextMeasureCaches::new(),
 

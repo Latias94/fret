@@ -1,11 +1,8 @@
-use fret_core::TextBlobId;
-use slotmap::SlotMap;
-use std::{
-    collections::{HashMap, HashSet, VecDeque},
-    sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 
-use fret_render_text::cache_keys::{TextBlobKey, TextShapeKey};
+#[cfg(test)]
+use fret_render_text::cache_keys::TextBlobKey;
+use fret_render_text::cache_keys::TextShapeKey;
 
 #[cfg(test)]
 use fret_render_text::cache_keys::spans_paint_fingerprint;
@@ -22,6 +19,7 @@ pub use fret_render_text::{
 };
 
 mod atlas;
+mod blob_state;
 mod blobs;
 mod bootstrap;
 mod diagnostics;
@@ -38,6 +36,7 @@ mod types;
 use self::atlas::GlyphAtlas;
 #[cfg(test)]
 use self::atlas::GlyphKey;
+use self::blob_state::TextBlobState;
 use self::face_cache::TextFaceCacheState;
 use self::frame_perf::TextFramePerfState;
 use self::pin_state::TextPinState;
@@ -67,11 +66,7 @@ pub struct TextSystem {
     quality: TextQualityState,
     generic_injections: GenericFamilyInjectionState,
 
-    blobs: SlotMap<TextBlobId, TextBlob>,
-    blob_cache: HashMap<TextBlobKey, TextBlobId>,
-    blob_key_by_id: HashMap<TextBlobId, TextBlobKey>,
-    released_blob_lru: VecDeque<TextBlobId>,
-    released_blob_set: HashSet<TextBlobId>,
+    blob_state: TextBlobState,
     shape_cache: HashMap<TextShapeKey, Arc<TextShape>>,
     measure: TextMeasureCaches,
 

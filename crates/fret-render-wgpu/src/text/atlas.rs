@@ -771,7 +771,7 @@ impl TextSystem {
             let SceneOp::Text { text, .. } = *op else {
                 continue;
             };
-            let Some(blob) = self.blobs.get(text) else {
+            let Some(blob) = self.blob_state.blobs.get(text) else {
                 continue;
             };
             for glyph in blob.shape.glyphs.as_ref() {

@@ -76,7 +76,7 @@ impl TextSystem {
         for shape in self.shape_cache.values() {
             add_shape(shape);
         }
-        for blob in self.blobs.values() {
+        for blob in self.blob_state.blobs.values() {
             add_shape(&blob.shape);
         }
 
@@ -85,7 +85,7 @@ impl TextSystem {
         let mut seen_palettes: HashSet<usize> = HashSet::new();
         let mut seen_decorations: HashSet<usize> = HashSet::new();
 
-        for blob in self.blobs.values() {
+        for blob in self.blob_state.blobs.values() {
             if let Some(palette) = blob.paint_palette.as_ref() {
                 let ptr = palette.as_ptr() as usize;
                 if seen_palettes.insert(ptr) {
@@ -115,8 +115,8 @@ impl TextSystem {
             fallback_policy_key: self.fallback_policy.fallback_policy_key,
             frame_missing_glyphs: self.frame_perf.missing_glyphs,
             frame_texts_with_missing_glyphs: self.frame_perf.texts_with_missing_glyphs,
-            blobs_live: self.blobs.len() as u64,
-            blob_cache_entries: self.blob_cache.len() as u64,
+            blobs_live: self.blob_state.blobs.len() as u64,
+            blob_cache_entries: self.blob_state.blob_cache.len() as u64,
             shape_cache_entries: self.shape_cache.len() as u64,
             measure_cache_buckets: self.measure.buckets_len() as u64,
             shape_cache_bytes_estimate_total,

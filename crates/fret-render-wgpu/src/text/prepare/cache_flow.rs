@@ -12,10 +12,10 @@ impl TextSystem {
         style: &TextStyle,
         constraints: TextConstraints,
     ) -> Option<(TextBlobId, TextMetrics)> {
-        let id = self.blob_cache.get(key).copied()?;
+        let id = self.blob_state.blob_cache.get(key).copied()?;
 
         let mut hit: Option<(TextMetrics, u32, Arc<TextShape>, bool)> = None;
-        if let Some(blob) = self.blobs.get_mut(id) {
+        if let Some(blob) = self.blob_state.blobs.get_mut(id) {
             self.frame_perf.blob_cache_hits = self.frame_perf.blob_cache_hits.saturating_add(1);
             let was_released = blob.ref_count == 0;
             blob.ref_count = blob.ref_count.saturating_add(1);
@@ -37,8 +37,8 @@ impl TextSystem {
         }
 
         // Stale cache entry (shouldn't happen, but keep it robust).
-        self.blob_cache.remove(key);
-        self.blob_key_by_id.remove(&id);
+        self.blob_state.blob_cache.remove(key);
+        self.blob_state.blob_key_by_id.remove(&id);
         None
     }
 
@@ -60,8 +60,8 @@ impl TextSystem {
         self.record_shape_prepare_metrics(shape.missing_glyphs);
         self.maybe_record_font_trace_entry(text, style, constraints, &shape);
         let id = self.insert_prepared_blob(shape, paint_palette, decorations);
-        self.blob_cache.insert(key.clone(), id);
-        self.blob_key_by_id.insert(id, key);
+        self.blob_state.blob_cache.insert(key.clone(), id);
+        self.blob_state.blob_key_by_id.insert(id, key);
         (id, metrics)
     }
 
@@ -116,7 +116,7 @@ impl TextSystem {
         paint_palette: Option<Arc<[Option<fret_core::Color>]>>,
         decorations: Vec<super::super::TextDecoration>,
     ) -> TextBlobId {
-        let id = self.blobs.insert(TextBlob {
+        let id = self.blob_state.blobs.insert(TextBlob {
             shape,
             paint_palette,
             decorations: Arc::from(decorations),

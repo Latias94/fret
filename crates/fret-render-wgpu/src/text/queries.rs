@@ -7,7 +7,7 @@ use fret_core::{
 impl TextSystem {
     pub fn caret_x(&self, blob: TextBlobId, index: usize) -> Option<Px> {
         let blob_id = blob;
-        let blob = self.blobs.get(blob_id)?;
+        let blob = self.blob_state.blobs.get(blob_id)?;
         if blob.shape.lines.len() > 1 {
             return Some(
                 self.caret_rect(blob_id, index, CaretAffinity::Downstream)?
@@ -21,7 +21,7 @@ impl TextSystem {
 
     pub fn hit_test_x(&self, blob: TextBlobId, x: Px) -> Option<usize> {
         let blob_id = blob;
-        let blob = self.blobs.get(blob_id)?;
+        let blob = self.blob_state.blobs.get(blob_id)?;
         if blob.shape.lines.len() > 1 {
             return Some(self.hit_test_point(blob_id, Point::new(x, Px(0.0)))?.index);
         }
@@ -30,7 +30,7 @@ impl TextSystem {
     }
 
     pub fn caret_stops(&self, blob: TextBlobId) -> Option<&[(usize, Px)]> {
-        Some(self.blobs.get(blob)?.shape.caret_stops.as_ref())
+        Some(self.blob_state.blobs.get(blob)?.shape.caret_stops.as_ref())
     }
 
     pub fn caret_rect(
@@ -39,7 +39,7 @@ impl TextSystem {
         index: usize,
         affinity: CaretAffinity,
     ) -> Option<Rect> {
-        let blob = self.blobs.get(blob)?;
+        let blob = self.blob_state.blobs.get(blob)?;
         fret_render_text::geometry::caret_rect_from_lines(
             blob.shape.lines.as_ref(),
             index,
@@ -48,7 +48,7 @@ impl TextSystem {
     }
 
     pub fn hit_test_point(&self, blob: TextBlobId, point: Point) -> Option<HitTestResult> {
-        let blob = self.blobs.get(blob)?;
+        let blob = self.blob_state.blobs.get(blob)?;
         fret_render_text::geometry::hit_test_point_from_lines(blob.shape.lines.as_ref(), point)
     }
 
@@ -58,7 +58,7 @@ impl TextSystem {
         range: (usize, usize),
         out: &mut Vec<Rect>,
     ) -> Option<()> {
-        let blob = self.blobs.get(blob)?;
+        let blob = self.blob_state.blobs.get(blob)?;
         fret_render_text::geometry::selection_rects_from_lines(
             blob.shape.lines.as_ref(),
             range,
@@ -74,7 +74,7 @@ impl TextSystem {
         clip: Rect,
         out: &mut Vec<Rect>,
     ) -> Option<()> {
-        let blob = self.blobs.get(blob)?;
+        let blob = self.blob_state.blobs.get(blob)?;
         fret_render_text::geometry::selection_rects_from_lines_clipped(
             blob.shape.lines.as_ref(),
             range,
@@ -85,7 +85,7 @@ impl TextSystem {
     }
 
     pub fn first_line_metrics(&self, blob: TextBlobId) -> Option<TextLineMetrics> {
-        let blob = self.blobs.get(blob)?;
+        let blob = self.blob_state.blobs.get(blob)?;
         let line = blob.shape.lines.first()?;
         Some(TextLineMetrics {
             ascent: line.ascent,
@@ -95,7 +95,7 @@ impl TextSystem {
     }
 
     pub fn first_line_ink_metrics(&self, blob: TextBlobId) -> Option<TextInkMetrics> {
-        let blob = self.blobs.get(blob)?;
+        let blob = self.blob_state.blobs.get(blob)?;
         let line = blob.shape.lines.first()?;
         Some(TextInkMetrics {
             ascent: line.ink_ascent,
@@ -104,7 +104,7 @@ impl TextSystem {
     }
 
     pub fn last_line_metrics(&self, blob: TextBlobId) -> Option<TextLineMetrics> {
-        let blob = self.blobs.get(blob)?;
+        let blob = self.blob_state.blobs.get(blob)?;
         let line = blob.shape.lines.last()?;
         Some(TextLineMetrics {
             ascent: line.ascent,
@@ -114,7 +114,7 @@ impl TextSystem {
     }
 
     pub fn last_line_ink_metrics(&self, blob: TextBlobId) -> Option<TextInkMetrics> {
-        let blob = self.blobs.get(blob)?;
+        let blob = self.blob_state.blobs.get(blob)?;
         let line = blob.shape.lines.last()?;
         Some(TextInkMetrics {
             ascent: line.ink_ascent,
