@@ -61,6 +61,15 @@ This file tracks the execution checklist for `DESIGN.md`.
 
 ## M4 — First `dnd-kit`-style extension seams
 
+- [x] Add an activation-only seam for pending gesture flows that need threshold tracking without
+  full pointer-region updates.
+  - Evidence anchors:
+    - `ecosystem/fret-ui-kit/src/dnd/activation_probe.rs`
+    - `ecosystem/fret-workspace/src/tab_strip/mod.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/pending.rs`
+  - Gates:
+    - `ecosystem/fret-ui-kit/src/dnd/tests.rs`
+    - `ecosystem/fret-workspace/tests/tab_strip_drag_activation_threshold.rs`
 - [ ] Add richer pointer sensor configuration without introducing DOM assumptions:
   - activator/handle-oriented configuration
   - prevent-activation policy hook
@@ -88,6 +97,9 @@ This file tracks the execution checklist for `DESIGN.md`.
 - [x] Kanban gate added or strengthened.
 - [x] Docking tab hover/insert path verified against the new engine/controller shape.
 - [x] Carousel-vs-DnD arbitration gate remains green after adapter changes.
+- [x] Workspace tab-strip activation gate covers the activation-only seam.
+- [ ] Node retained-canvas activation gates should be rerun once `compat-retained-canvas` builds
+  again.
 
 ## Docs and contract follow-up
 

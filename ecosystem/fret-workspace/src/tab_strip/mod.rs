@@ -758,6 +758,20 @@ impl WorkspaceTabStrip {
                                                             ),
                                                         );
 
+                                                        let activation_probe =
+                                                            ui_dnd::DndActivationProbe::new(
+                                                                dnd.clone(),
+                                                                ui_dnd::DndActivationProbeConfig::for_kind(
+                                                                    DRAG_KIND_WORKSPACE_TAB,
+                                                                )
+                                                                .scope(dnd_scope)
+                                                                .activation_constraint(
+                                                                    ui_dnd::ActivationConstraint::Distance {
+                                                                        px: 6.0,
+                                                                    },
+                                                                ),
+                                                            );
+
                                                         let dnd_on_move: OnPressablePointerMove = {
                                                             let drag_model = drag_model.clone();
                                                             let tab_command = tab_drag_command.clone();
@@ -765,7 +779,8 @@ impl WorkspaceTabStrip {
                                                             let tab_drag_model = tab_drag_model_for_drag.clone();
                                                             let source_pane = pane_id_for_drag.clone();
                                                             let dragged_tab_id = tab_id.clone();
-                                                            let dnd = dnd.clone();
+                                                            let activation_probe =
+                                                                activation_probe.clone();
                                                             let scroll_handle = scroll_handle.clone();
                                                             let pinned_by_id = pinned_by_id.clone();
                                                             let canonical_tab_order = canonical_tab_order.clone();
@@ -813,22 +828,15 @@ impl WorkspaceTabStrip {
                                                                     let sensor_position = mv
                                                                         .position_window
                                                                         .unwrap_or(mv.position);
-                                                                    let sensor =
-                                                                        ui_dnd::handle_sensor_move_or_init_in_scope(
-                                                                            host.models_mut(),
-                                                                            &dnd,
-                                                                            acx.window,
-                                                                            DRAG_KIND_WORKSPACE_TAB,
-                                                                            dnd_scope,
-                                                                            mv.pointer_id,
-                                                                            start_tick,
-                                                                            sensor_start,
-                                                                            sensor_position,
-                                                                            mv.tick_id,
-                                                                            ui_dnd::ActivationConstraint::Distance {
-                                                                                px: 6.0,
-                                                                            },
-                                                                        );
+                                                                    let sensor = activation_probe.move_or_init(
+                                                                        host.models_mut(),
+                                                                        acx.window,
+                                                                        mv.pointer_id,
+                                                                        start_tick,
+                                                                        sensor_start,
+                                                                        sensor_position,
+                                                                        mv.tick_id,
+                                                                    );
                                                                     if !matches!(
                                                                         sensor,
                                                                         ui_dnd::SensorOutput::DragStart { .. }
@@ -850,12 +858,9 @@ impl WorkspaceTabStrip {
                                                                         }
                                                                     }
                                                                     activate_on_drag_start = true;
-                                                                    ui_dnd::clear_pointer_in_scope(
+                                                                    activation_probe.clear(
                                                                         host.models_mut(),
-                                                                        &dnd,
                                                                         acx.window,
-                                                                        DRAG_KIND_WORKSPACE_TAB,
-                                                                        dnd_scope,
                                                                         mv.pointer_id,
                                                                     );
                                                                 }
@@ -1046,7 +1051,8 @@ impl WorkspaceTabStrip {
                                                             let drag_model = drag_model.clone();
                                                             let tab_command = tab_drag_command.clone();
                                                             let tab_drag_model = tab_drag_model_for_drag.clone();
-                                                            let dnd = dnd.clone();
+                                                            let activation_probe =
+                                                                activation_probe.clone();
                                                             let pinned_by_id = pinned_by_id.clone();
                                                             let canonical_tab_order = canonical_tab_order.clone();
                                                             let two_row_pinned = use_separate_pinned_row;
@@ -1059,12 +1065,9 @@ impl WorkspaceTabStrip {
                                                                     .drag(up.pointer_id)
                                                                     .map(|session| session.position);
 
-                                                                ui_dnd::clear_pointer_in_scope(
+                                                                activation_probe.clear(
                                                                     host.models_mut(),
-                                                                    &dnd,
                                                                     acx.window,
-                                                                    DRAG_KIND_WORKSPACE_TAB,
-                                                                    dnd_scope,
                                                                     up.pointer_id,
                                                                 );
 

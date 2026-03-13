@@ -8,12 +8,14 @@
 //! Coordinate contract: when used with `fret-ui` events/layout, the canonical space is
 //! **window-local logical pixels** (ADR 0017 / ADR 0149 / ADR 0157).
 
+mod activation_probe;
 mod controller;
 mod forwarders;
 mod registry;
 mod service;
 mod types;
 
+pub use activation_probe::{DndActivationProbe, DndActivationProbeConfig};
 pub use controller::{
     clear_pointer, clear_pointer_default_scope, clear_pointer_in_scope, handle_pointer_cancel,
     handle_pointer_cancel_default_scope, handle_pointer_cancel_in_scope, handle_pointer_down,
@@ -29,12 +31,12 @@ pub use registry::{
     register_draggable_rect_in_scope, register_droppable_rect,
     register_droppable_rect_default_scope, register_droppable_rect_in_scope,
 };
-pub use service::{DndServiceModel, dnd_service_model, dnd_service_model_global};
-pub use types::{DND_SCOPE_DEFAULT, DndScopeId, DndUpdate};
+pub use service::{dnd_service_model, dnd_service_model_global, DndServiceModel};
+pub use types::{DndScopeId, DndUpdate, DND_SCOPE_DEFAULT};
 
 pub use fret_dnd::{
-    ActivationConstraint, AutoScrollConfig, AutoScrollRequest, Axis, CollisionStrategy,
-    DndCollision, DndItemId, InsertionSide, SensorOutput, insertion_side_for_pointer,
+    insertion_side_for_pointer, ActivationConstraint, AutoScrollConfig, AutoScrollRequest, Axis,
+    CollisionStrategy, DndCollision, DndItemId, InsertionSide, SensorOutput,
 };
 
 #[cfg(test)]

@@ -2,7 +2,7 @@ use super::*;
 
 use fret_app::App;
 use fret_core::{Point, PointerId, Px, Rect, Size};
-use fret_dnd::{Droppable, RegistrySnapshot, compute_dnd_frame};
+use fret_dnd::{compute_dnd_frame, Droppable, RegistrySnapshot};
 use fret_runtime::{DragKindId, FrameId, TickId};
 
 fn rect(x: f32, y: f32, w: f32, h: f32) -> Rect {
@@ -13,6 +13,60 @@ fn mk_service(app: &mut App) -> DndServiceModel {
     DndServiceModel {
         model: app.models_mut().insert(service::DndService::default()),
     }
+}
+
+#[test]
+fn activation_probe_starts_on_threshold_and_clears_tracking() {
+    let mut app = App::new();
+    let svc = mk_service(&mut app);
+    let window = fret_core::AppWindowId::default();
+    let pointer = PointerId(0);
+    let probe = DndActivationProbe::new(
+        svc.clone(),
+        DndActivationProbeConfig::for_kind(DragKindId(77))
+            .scope(DndScopeId(5))
+            .activation_constraint(ActivationConstraint::Distance { px: 6.0 }),
+    );
+
+    let start = Point::new(Px(0.0), Px(0.0));
+    let pending = probe.move_or_init(
+        app.models_mut(),
+        window,
+        pointer,
+        TickId(0),
+        start,
+        Point::new(Px(5.0), Px(0.0)),
+        TickId(1),
+    );
+    assert!(matches!(pending, SensorOutput::Pending));
+    assert!(pointer_is_tracking_any_sensor(
+        app.models(),
+        &svc,
+        window,
+        pointer
+    ));
+
+    let activated = probe.move_or_init(
+        app.models_mut(),
+        window,
+        pointer,
+        TickId(0),
+        start,
+        Point::new(Px(6.0), Px(0.0)),
+        TickId(2),
+    );
+    assert!(matches!(
+        activated,
+        SensorOutput::DragStart { .. } | SensorOutput::DragMove { .. }
+    ));
+
+    probe.clear(app.models_mut(), window, pointer);
+    assert!(!pointer_is_tracking_any_sensor(
+        app.models(),
+        &svc,
+        window,
+        pointer
+    ));
 }
 
 #[test]
