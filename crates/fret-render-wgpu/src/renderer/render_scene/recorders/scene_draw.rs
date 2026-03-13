@@ -1,15 +1,12 @@
-use super::super::super::frame_targets::FrameTargets;
 use super::super::super::*;
 use super::super::executor::{RecordPassCtx, RecordPassResources, RenderSceneExecutor};
-use super::super::helpers::{ensure_color_dst_view_owned, set_scissor_rect_absolute};
+use super::super::helpers::set_scissor_rect_absolute;
 
 pub(in super::super) struct SceneDrawRangePassArgs<'a> {
     pub(in super::super) device: &'a wgpu::Device,
     pub(in super::super) format: wgpu::TextureFormat,
-    pub(in super::super) target_view: &'a wgpu::TextureView,
-    pub(in super::super) usage: wgpu::TextureUsages,
     pub(in super::super) encoder: &'a mut wgpu::CommandEncoder,
-    pub(in super::super) frame_targets: &'a mut FrameTargets,
+    pub(in super::super) pass_target_view: &'a wgpu::TextureView,
     pub(in super::super) encoding: &'a SceneEncoding,
     pub(in super::super) render_space_offset_u32: u32,
     pub(in super::super) perf_enabled: bool,
@@ -30,12 +27,15 @@ pub(in super::super) fn record_scene_draw_range_pass(
     resources: &RecordPassResources<'_>,
     scene_pass: &SceneDrawRangePass,
 ) {
+    let target_view = exec.target_view;
     let device = exec.device;
     let format = exec.format;
-    let target_view = exec.target_view;
-    let usage = exec.usage;
+    let target_size = scene_pass.target_size;
+    let pass_target_view_owned =
+        exec.ensure_color_dst_view_owned(scene_pass.target, target_size, "SceneDrawRange");
+    let pass_target_view = pass_target_view_owned.as_ref().unwrap_or(target_view);
+
     let encoder = &mut *exec.encoder;
-    let frame_targets = &mut *exec.frame_targets;
     let encoding = exec.encoding;
     let perf_enabled = exec.perf_enabled;
     let frame_perf = &mut *exec.frame_perf;
@@ -45,10 +45,8 @@ pub(in super::super) fn record_scene_draw_range_pass(
     let mut args = SceneDrawRangePassArgs {
         device,
         format,
-        target_view,
-        usage,
         encoder,
-        frame_targets,
+        pass_target_view,
         encoding,
         render_space_offset_u32: ctx.render_space_offset_u32,
         perf_enabled,
@@ -72,10 +70,8 @@ impl Renderer {
     ) {
         let device = args.device;
         let format = args.format;
-        let target_view = args.target_view;
-        let usage = args.usage;
         let encoder = &mut *args.encoder;
-        let frame_targets = &mut *args.frame_targets;
+        let pass_target_view = args.pass_target_view;
         let encoding = args.encoding;
         let render_space_offset_u32 = args.render_space_offset_u32;
         let perf_enabled = args.perf_enabled;
@@ -93,17 +89,6 @@ impl Renderer {
         let target_origin = scene_pass.target_origin;
         let target_size = scene_pass.target_size;
         let load = scene_pass.load;
-        let pass_target_view_owned = ensure_color_dst_view_owned(
-            frame_targets,
-            &mut self.intermediate_state.pool,
-            device,
-            scene_pass.target,
-            target_size,
-            format,
-            usage,
-            "SceneDrawRange",
-        );
-        let pass_target_view = pass_target_view_owned.as_ref().unwrap_or(target_view);
 
         {
             enum ActivePipeline {

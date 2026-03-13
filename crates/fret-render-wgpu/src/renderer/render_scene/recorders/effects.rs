@@ -99,42 +99,30 @@ fn record_fullscreen_param_effect_pass<
 {
     let device = exec.device;
     let queue = exec.queue;
-    let format = exec.format;
     let target_view = exec.target_view;
     let viewport_size = exec.viewport_size;
-    let usage = exec.usage;
-    let encoder = &mut *exec.encoder;
-    let frame_targets = &mut *exec.frame_targets;
     let encoding = exec.encoding;
     let perf_enabled = exec.perf_enabled;
-    let frame_perf = &mut *exec.frame_perf;
-
-    let renderer = &mut *exec.renderer;
 
     {
-        let buffer = param_buffer(renderer);
+        let buffer = param_buffer(&*exec.renderer);
         queue.write_buffer(buffer, 0, param_bytes);
     }
     if perf_enabled {
-        frame_perf.uniform_bytes = frame_perf.uniform_bytes.saturating_add(param_uniform_bytes);
+        exec.frame_perf.uniform_bytes = exec
+            .frame_perf
+            .uniform_bytes
+            .saturating_add(param_uniform_bytes);
     }
 
-    let Some(src_view) = require_color_src_view(frame_targets, src, src_size, pass_name) else {
+    let Some(src_view) = exec.require_color_src_view(src, src_size, pass_name) else {
         return;
     };
 
-    let dst_view_owned = ensure_color_dst_view_owned(
-        frame_targets,
-        &mut renderer.intermediate_state.pool,
-        device,
-        dst,
-        dst_size,
-        format,
-        usage,
-        pass_name,
-    );
+    let dst_view_owned = exec.ensure_color_dst_view_owned(dst, dst_size, pass_name);
     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
+    let renderer = &*exec.renderer;
     let uniform_stride = renderer.uniform_stride();
 
     if let Some(mask) = mask {
@@ -149,8 +137,7 @@ fn record_fullscreen_param_effect_pass<
         let mask_uniform_index = mask_uniform_index.expect("mask pass needs uniform index");
         let uniform_offset = (u64::from(mask_uniform_index) * uniform_stride) as u32;
 
-        let Some(mask_view) = require_mask_view(frame_targets, mask.target, mask.size, pass_name)
-        else {
+        let Some(mask_view) = exec.require_mask_view(mask.target, mask.size, pass_name) else {
             return;
         };
 
@@ -177,7 +164,7 @@ fn record_fullscreen_param_effect_pass<
 
         let pipeline = pipeline_mask(renderer);
         run_fullscreen_triangle_pass_uniform_texture(
-            encoder,
+            &mut *exec.encoder,
             labels.pass_mask,
             pipeline,
             dst_view,
@@ -194,7 +181,11 @@ fn record_fullscreen_param_effect_pass<
             &[],
             dst_scissor,
             dst_size,
-            if perf_enabled { Some(frame_perf) } else { None },
+            if perf_enabled {
+                Some(&mut *exec.frame_perf)
+            } else {
+                None
+            },
         );
     } else if let Some(mask_uniform_index) = mask_uniform_index {
         if let Some(msg) = clip_full_size_msg {
@@ -213,7 +204,7 @@ fn record_fullscreen_param_effect_pass<
         );
         let pipeline = pipeline_masked(renderer);
         run_fullscreen_triangle_pass_uniform_texture(
-            encoder,
+            &mut *exec.encoder,
             labels.pass_masked,
             pipeline,
             dst_view,
@@ -230,7 +221,11 @@ fn record_fullscreen_param_effect_pass<
             &[],
             dst_scissor,
             dst_size,
-            if perf_enabled { Some(frame_perf) } else { None },
+            if perf_enabled {
+                Some(&mut *exec.frame_perf)
+            } else {
+                None
+            },
         );
     } else {
         let layout = layout_unmasked(renderer);
@@ -246,7 +241,7 @@ fn record_fullscreen_param_effect_pass<
         if unmasked_uses_uniforms {
             let pipeline = pipeline_unmasked(renderer);
             run_fullscreen_triangle_pass_uniform_texture(
-                encoder,
+                &mut *exec.encoder,
                 labels.pass_unmasked,
                 pipeline,
                 dst_view,
@@ -257,12 +252,16 @@ fn record_fullscreen_param_effect_pass<
                 &[],
                 dst_scissor,
                 dst_size,
-                if perf_enabled { Some(frame_perf) } else { None },
+                if perf_enabled {
+                    Some(&mut *exec.frame_perf)
+                } else {
+                    None
+                },
             );
         } else {
             let pipeline = pipeline_unmasked(renderer);
             run_fullscreen_triangle_pass(
-                encoder,
+                &mut *exec.encoder,
                 labels.pass_unmasked,
                 pipeline,
                 dst_view,
@@ -271,7 +270,11 @@ fn record_fullscreen_param_effect_pass<
                 &bind_group,
                 &[],
                 dst_scissor,
-                perf_enabled.then_some(frame_perf),
+                if perf_enabled {
+                    Some(&mut *exec.frame_perf)
+                } else {
+                    None
+                },
             );
         }
     }
@@ -312,34 +315,19 @@ fn record_fullscreen_texture_effect_pass<
     PipelineMask: for<'a> Fn(&'a Renderer) -> &'a wgpu::RenderPipeline,
 {
     let device = exec.device;
-    let format = exec.format;
     let target_view = exec.target_view;
     let viewport_size = exec.viewport_size;
-    let usage = exec.usage;
-    let encoder = &mut *exec.encoder;
-    let frame_targets = &mut *exec.frame_targets;
     let encoding = exec.encoding;
     let perf_enabled = exec.perf_enabled;
-    let frame_perf = &mut *exec.frame_perf;
 
-    let renderer = &mut *exec.renderer;
-
-    let Some(src_view) = require_color_src_view(frame_targets, src, src_size, pass_name) else {
+    let Some(src_view) = exec.require_color_src_view(src, src_size, pass_name) else {
         return;
     };
 
-    let dst_view_owned = ensure_color_dst_view_owned(
-        frame_targets,
-        &mut renderer.intermediate_state.pool,
-        device,
-        dst,
-        dst_size,
-        format,
-        usage,
-        pass_name,
-    );
+    let dst_view_owned = exec.ensure_color_dst_view_owned(dst, dst_size, pass_name);
     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
+    let renderer = &*exec.renderer;
     let uniform_stride = renderer.uniform_stride();
 
     if let Some(mask) = mask {
@@ -354,8 +342,7 @@ fn record_fullscreen_texture_effect_pass<
         let mask_uniform_index = mask_uniform_index.expect("mask pass needs uniform index");
         let uniform_offset = (u64::from(mask_uniform_index) * uniform_stride) as u32;
 
-        let Some(mask_view) = require_mask_view(frame_targets, mask.target, mask.size, pass_name)
-        else {
+        let Some(mask_view) = exec.require_mask_view(mask.target, mask.size, pass_name) else {
             return;
         };
 
@@ -377,7 +364,7 @@ fn record_fullscreen_texture_effect_pass<
 
         let pipeline = pipeline_mask(renderer);
         run_fullscreen_triangle_pass_uniform_texture(
-            encoder,
+            &mut *exec.encoder,
             labels.pass_mask,
             pipeline,
             dst_view,
@@ -394,7 +381,11 @@ fn record_fullscreen_texture_effect_pass<
             &[],
             dst_scissor,
             dst_size,
-            if perf_enabled { Some(frame_perf) } else { None },
+            if perf_enabled {
+                Some(&mut *exec.frame_perf)
+            } else {
+                None
+            },
         );
     } else if let Some(mask_uniform_index) = mask_uniform_index {
         if let Some(msg) = clip_full_size_msg {
@@ -406,7 +397,7 @@ fn record_fullscreen_texture_effect_pass<
         let bind_group = create_texture_bind_group(device, labels.bind_group, layout, &src_view);
         let pipeline = pipeline_masked(renderer);
         run_fullscreen_triangle_pass_uniform_texture(
-            encoder,
+            &mut *exec.encoder,
             labels.pass_masked,
             pipeline,
             dst_view,
@@ -423,14 +414,18 @@ fn record_fullscreen_texture_effect_pass<
             &[],
             dst_scissor,
             dst_size,
-            if perf_enabled { Some(frame_perf) } else { None },
+            if perf_enabled {
+                Some(&mut *exec.frame_perf)
+            } else {
+                None
+            },
         );
     } else {
         let layout = layout_unmasked(renderer);
         let bind_group = create_texture_bind_group(device, labels.bind_group, layout, &src_view);
         let pipeline = pipeline_unmasked(renderer);
         run_fullscreen_triangle_pass(
-            encoder,
+            &mut *exec.encoder,
             labels.pass_unmasked,
             pipeline,
             dst_view,
@@ -439,7 +434,11 @@ fn record_fullscreen_texture_effect_pass<
             &bind_group,
             &[],
             dst_scissor,
-            perf_enabled.then_some(frame_perf),
+            if perf_enabled {
+                Some(&mut *exec.frame_perf)
+            } else {
+                None
+            },
         );
     }
 }

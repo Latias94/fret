@@ -613,12 +613,17 @@ ID format:
     - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/path_msaa.rs` now routes
       pass target allocation through the same facade while leaving path-intermediate/composite draw
       logic local to the recorder
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs` now allocates
+      pass targets in the recorder shell before delegating to `Renderer::record_scene_draw_range_pass(...)`
+    - shared fullscreen param/texture helper flow in
+      `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now routes common
+      source/mask view lookup and destination allocation through `RenderSceneExecutor` helpers
   - Current next hotspot:
     - decide whether scene-encoding invalidation/debug evidence should stay coupled to
       `scene_encoding_cache.rs` or move closer to diagnostics state
-    - continue collapsing the remaining recorder-level target/helper access in `scene_draw.rs` and
-      the generic fullscreen-effect helpers inside `recorders/effects.rs` behind the same
-      execution-facade pattern
+    - continue collapsing the remaining bespoke effect-path helper access inside
+      `recorders/effects.rs`, especially `CustomEffectV2`, `CompositePremul`, and mask-target-only
+      paths that still call frame-target helpers directly
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG
@@ -820,9 +825,9 @@ ID format:
   - Latest landed slice: render-scene recorder execution facade now lives under
     `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs`, and the
     `CustomEffectV3`, fullscreen blit/blur, `scale_nearest`, `path_clip_mask`, `backdrop_warp`,
-    and `path_msaa` recorder paths now route source/mask view lookup,
-    pyramid reuse/scratch/cache, clip-path cache copy/store, and destination intermediate
-    allocation through `RenderSceneExecutor` helpers.
+    `path_msaa`, `scene_draw`, and shared fullscreen-helper effect paths now route source/mask
+    view lookup, pyramid reuse/scratch/cache, clip-path cache copy/store, and destination
+    intermediate allocation through `RenderSceneExecutor` helpers.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

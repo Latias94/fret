@@ -598,6 +598,25 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu gpu_backdrop_warp_v2_image_map_is_scissored_and_preserves_ordering`
   - `cargo nextest run -p fret-render-wgpu gpu_path_msaa_composite_vulkan_smoke`
   - `cargo nextest run -p fret-render-wgpu vulkan_path_msaa_pipeline_is_visible_by_default`
+- The twenty-second renderer recorder-facade split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs` now allocates
+    the pass target in the recorder shell before delegating to `Renderer::record_scene_draw_range_pass(...)`
+  - the shared fullscreen param/texture helper flow in
+    `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now routes common
+    source/mask view lookup and destination target allocation through executor helpers instead of
+    touching frame-target helpers inline
+  - `Renderer::record_scene_draw_range_pass(...)` no longer depends on frame-target allocation
+    state, and shared fullscreen effect helpers now share the same recorder-access seam as the
+    recorder shells that call them
+- Renderer scene-draw-and-fullscreen-helper split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
+  - `cargo nextest run -p fret-render-wgpu gpu_text_linear_gradient_paint_varies_across_x`
+  - `cargo nextest run -p fret-render-wgpu path_material_paint_renders_and_is_not_degraded`
+  - `cargo nextest run -p fret-render-wgpu gpu_backdrop_color_adjust_is_scissored_and_preserves_ordering`
+  - `cargo nextest run -p fret-render-wgpu gpu_backdrop_color_adjust_brightness_is_a_multiplier_with_identity_1`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v1_can_read_render_space_in_fragment`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

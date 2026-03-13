@@ -285,8 +285,12 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/path_clip_mask.rs`, plus the
   `backdrop_warp` and `path_msaa` paths in
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/backdrop_warp.rs` and
-  `path_msaa.rs`, no longer reach through `Renderer` for pyramid reuse/scratch/cache,
-  source/mask view lookup, clip-path cache copy/store, or intermediate target allocation inline.
+  `path_msaa.rs`, the `scene_draw` recorder shell in
+  `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`, and the shared
+  fullscreen effect helper flow in
+  `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs`, no longer reach
+  through `Renderer` for pyramid reuse/scratch/cache, source/mask view lookup, clip-path cache
+  copy/store, or intermediate target allocation inline.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

@@ -272,7 +272,9 @@ For `Renderer` state-shell tightening, the same principle applies:
   rule: target acquisition and cache copy/store glue should move first, while the draw algorithm
   stays in the recorder. Path/backdrop recorders follow the same staging: move target and
   view-selection access first, then revisit heavier service-local state only if it still blocks
-  modularity after the target-allocation seam is closed.
+  modularity after the target-allocation seam is closed. Once recorder shells stop owning target
+  allocation, the same seam should be reused by shared fullscreen helper flows and by renderer
+  methods that were only depending on recorder args for target allocation.
 - render-text dump state is the matching diagnostics/export seam for text debugging:
   dump collection scratch and serialization scratch should move behind one owner so render-scene
   execution keeps only a thin bridge to `TextSystem`.
