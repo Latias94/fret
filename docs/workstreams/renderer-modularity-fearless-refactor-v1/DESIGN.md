@@ -295,7 +295,10 @@ For `Renderer` state-shell tightening, the same principle applies:
   natural closure on the same path because they are execution-time preparation concerns rather than
   recorder-local draw semantics. Once those preparations are closed, param/meta upload and final
   masked-vs-unmasked dispatch can move to an effect-family helper module so the parent recorder
-  body becomes pure orchestration.
+  body becomes pure orchestration. If the remaining orchestration then only does
+  availability/fallback checks plus prepared-input sequencing, the family entrypoint itself should
+  move into that effect-local module as well so `recorders/effects.rs` stops acting as a pass
+  family index for code it no longer owns.
 - render-text dump state is the matching diagnostics/export seam for text debugging:
   dump collection scratch and serialization scratch should move behind one owner so render-scene
   execution keeps only a thin bridge to `TextSystem`.

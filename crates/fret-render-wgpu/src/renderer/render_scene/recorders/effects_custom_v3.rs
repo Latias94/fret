@@ -3,11 +3,71 @@ use super::super::executor::{RecordPassCtx, RenderSceneExecutor};
 use super::super::executor_recorders::{
     CustomEffectV3PreparedSourceViews, CustomEffectV3PreparedUserImages,
 };
+use super::blit::record_fullscreen_blit_pass;
 use super::effects::pack_effect_params_v1;
 use super::effects_bindings::{
     CustomEffectV3BindGroupMode, CustomEffectV3BindGroupResources,
     create_custom_effect_v3_pipeline_and_bind_group,
 };
+
+fn record_custom_effect_v3_fallback_blit(
+    exec: &mut RenderSceneExecutor<'_>,
+    common: CustomEffectPassCommon,
+) {
+    let blit = FullscreenBlitPass {
+        src: common.src,
+        dst: common.dst,
+        src_size: common.src_size,
+        dst_size: common.dst_size,
+        dst_scissor: common.dst_scissor,
+        encode_output_srgb: false,
+        load: common.load,
+    };
+    record_fullscreen_blit_pass(exec, &blit);
+}
+
+pub(in super::super) fn record_custom_effect_v3_pass(
+    exec: &mut RenderSceneExecutor<'_>,
+    ctx: &RecordPassCtx<'_>,
+    pass: &CustomEffectV3Pass,
+) {
+    let common = pass.common;
+    let effect = common.effect;
+
+    let Some(entry) = exec
+        .renderer
+        .material_effect_state
+        .custom_effects
+        .get(effect)
+    else {
+        record_custom_effect_v3_fallback_blit(exec, common);
+        return;
+    };
+    if entry.abi != CustomEffectAbi::V3 {
+        record_custom_effect_v3_fallback_blit(exec, common);
+        return;
+    }
+
+    exec.renderer
+        .ensure_custom_effect_v3_pipelines(exec.device, exec.format, effect);
+    if !exec
+        .renderer
+        .pipelines
+        .custom_effect_v3_pipelines
+        .contains_key(&effect)
+    {
+        record_custom_effect_v3_fallback_blit(exec, common);
+        return;
+    }
+
+    upload_custom_effect_v3_params_and_meta(exec, pass);
+
+    let Some(source_views) = exec.prepare_custom_effect_v3_source_views(pass) else {
+        return;
+    };
+    let prepared_user_images = exec.prepare_custom_effect_v3_user_images(pass);
+    record_custom_effect_v3_prepared_pass(exec, ctx, pass, &source_views, &prepared_user_images);
+}
 
 pub(super) fn upload_custom_effect_v3_params_and_meta(
     exec: &mut RenderSceneExecutor<'_>,

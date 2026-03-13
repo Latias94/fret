@@ -336,9 +336,12 @@ As of 2026-03-13:
     user-image inputs and keeps `CustomEffectV3` focused on destination routing and pass execution.
 - The remaining `CustomEffectV3` execution shell has also been split:
   - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_custom_v3.rs` now owns
-    v3 param/meta upload plus the final masked/unmasked dispatch flow.
-  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now keeps the v3
-    path focused on pipeline availability checks plus prepared-input orchestration.
+    the full `CustomEffectV3` recorder family entrypoint, including availability/fallback checks,
+    prepared-input orchestration, v3 param/meta upload, and the final masked/unmasked dispatch
+    flow.
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+    `CustomEffectV3` path at all; `recorders/mod.rs` now re-exports that recorder directly from
+    the family-local module.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:
