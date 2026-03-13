@@ -54,22 +54,8 @@ struct SortableDndState {
     pointers: HashMap<PointerId, SortablePointerState>,
 }
 
-#[derive(Debug, Default)]
-struct SortableDndStateModel {
-    model: Option<Model<SortableDndState>>,
-}
-
 fn get_state_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<SortableDndState> {
-    let existing = cx.with_state(SortableDndStateModel::default, |st| st.model.clone());
-    if let Some(m) = existing {
-        return m;
-    }
-
-    let model = cx.app.models_mut().insert(SortableDndState::default());
-    cx.with_state(SortableDndStateModel::default, |st| {
-        st.model = Some(model.clone());
-    });
-    model
+    cx.local_model(SortableDndState::default)
 }
 
 /// Sortable/reorder helper:

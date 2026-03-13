@@ -82,11 +82,6 @@ pub fn dialog_close_auto_focus_guard_hooks<H: UiHost>(
     on_dismiss_request: Option<OnDismissRequest>,
     on_close_auto_focus: Option<OnCloseAutoFocus>,
 ) -> (Option<OnDismissRequest>, Option<OnCloseAutoFocus>) {
-    #[derive(Default)]
-    struct DialogCloseAutoFocusGuardState {
-        dismiss_reason: Option<Model<Option<DismissReason>>>,
-    }
-
     let should_install = policy.prevent_on_outside_press
         || policy.prevent_on_focus_outside
         || on_dismiss_request.is_some();
@@ -98,17 +93,7 @@ pub fn dialog_close_auto_focus_guard_hooks<H: UiHost>(
         return (on_dismiss_request, on_close_auto_focus);
     }
 
-    let dismiss_reason = cx
-        .with_state(DialogCloseAutoFocusGuardState::default, |st| {
-            st.dismiss_reason.clone()
-        })
-        .unwrap_or_else(|| {
-            let model = cx.app.models_mut().insert(None);
-            cx.with_state(DialogCloseAutoFocusGuardState::default, |st| {
-                st.dismiss_reason = Some(model.clone());
-            });
-            model
-        });
+    let dismiss_reason = cx.local_model(|| None::<DismissReason>);
 
     // Clear stale reasons when the overlay is open again (new session).
     let open_now = cx.app.models().get_copied(&open).unwrap_or(false);
