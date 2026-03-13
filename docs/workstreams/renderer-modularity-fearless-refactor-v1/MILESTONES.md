@@ -549,6 +549,22 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu gpu_linear_gradient_smoke_conformance`
   - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v1_can_read_render_space_in_fragment`
   - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_src_raw_is_chain_root_and_differs_from_src_after_prior_step`
+- The nineteenth renderer recorder-facade split has landed:
+  - the existing render-scene recorder execution facade in
+    `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs` now also fronts the
+    fullscreen blit and blur recorders
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/blit.rs` and `blur.rs` no longer
+    reach directly into frame-target helpers or `intermediate_state.pool` for source/mask view
+    lookup or destination color-target allocation
+  - fullscreen-style recorders now share the same executor-level access seam as the earlier
+    `CustomEffectV3` path
+- Renderer fullscreen-recorder-facade split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu gpu_filter_content_blur_is_scissored_and_preserves_outside_content`
+  - `cargo nextest run -p fret-render-wgpu gpu_backdrop_blur_is_scissored_and_preserves_ordering`
+  - `cargo nextest run -p fret-render-wgpu gpu_scissored_blur_preserves_outside_region`
+  - `cargo nextest run -p fret-render-wgpu gpu_offscreen_identity_blit_matches_direct`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

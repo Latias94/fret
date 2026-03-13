@@ -1,8 +1,5 @@
 use super::super::super::*;
 use super::super::executor::{RecordPassCtx, RenderSceneExecutor};
-use super::super::helpers::{
-    ensure_color_dst_view_owned, require_color_src_view, require_mask_view,
-};
 
 pub(in super::super) fn record_blur_pass(
     exec: &mut RenderSceneExecutor<'_>,
@@ -10,34 +7,18 @@ pub(in super::super) fn record_blur_pass(
     pass: &BlurPass,
 ) {
     let device = exec.device;
-    let format = exec.format;
     let target_view = exec.target_view;
     let viewport_size = exec.viewport_size;
-    let usage = exec.usage;
-    let encoder = &mut *exec.encoder;
-    let frame_targets = &mut *exec.frame_targets;
     let encoding = exec.encoding;
     let perf_enabled = exec.perf_enabled;
-    let frame_perf = &mut *exec.frame_perf;
 
-    let renderer = &mut *exec.renderer;
-
-    let Some(src_view) = require_color_src_view(frame_targets, pass.src, pass.src_size, "Blur")
-    else {
+    let Some(src_view) = exec.require_color_src_view(pass.src, pass.src_size, "Blur") else {
         return;
     };
 
-    let dst_view_owned = ensure_color_dst_view_owned(
-        frame_targets,
-        &mut renderer.intermediate_state.pool,
-        device,
-        pass.dst,
-        pass.dst_size,
-        format,
-        usage,
-        "Blur",
-    );
+    let dst_view_owned = exec.ensure_color_dst_view_owned(pass.dst, pass.dst_size, "Blur");
     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+    let renderer = &*exec.renderer;
 
     if let Some(mask) = pass.mask {
         debug_assert!(matches!(
@@ -54,8 +35,7 @@ pub(in super::super) fn record_blur_pass(
             .expect("mask blur needs uniform index");
         let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride()) as u32;
 
-        let Some(mask_view) = require_mask_view(frame_targets, mask.target, mask.size, "Blur")
-        else {
+        let Some(mask_view) = exec.require_mask_view(mask.target, mask.size, "Blur") else {
             return;
         };
         let layout = renderer.blit_mask_bind_group_layout_ref();
@@ -81,7 +61,7 @@ pub(in super::super) fn record_blur_pass(
         };
 
         run_fullscreen_triangle_pass_uniform_texture(
-            encoder,
+            &mut *exec.encoder,
             label,
             pipeline,
             dst_view,
@@ -98,7 +78,11 @@ pub(in super::super) fn record_blur_pass(
             &[],
             pass.dst_scissor,
             pass.dst_size,
-            if perf_enabled { Some(frame_perf) } else { None },
+            if perf_enabled {
+                Some(&mut *exec.frame_perf)
+            } else {
+                None
+            },
         );
     } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
         let layout = renderer.blit_bind_group_layout_ref();
@@ -112,7 +96,7 @@ pub(in super::super) fn record_blur_pass(
         let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride()) as u32;
 
         run_fullscreen_triangle_pass_uniform_texture(
-            encoder,
+            &mut *exec.encoder,
             label,
             pipeline,
             dst_view,
@@ -129,7 +113,11 @@ pub(in super::super) fn record_blur_pass(
             &[],
             pass.dst_scissor,
             pass.dst_size,
-            if perf_enabled { Some(frame_perf) } else { None },
+            if perf_enabled {
+                Some(&mut *exec.frame_perf)
+            } else {
+                None
+            },
         );
     } else {
         let layout = renderer.blit_bind_group_layout_ref();
@@ -141,7 +129,7 @@ pub(in super::super) fn record_blur_pass(
             BlurAxis::Vertical => "fret blur-v pass",
         };
         run_fullscreen_triangle_pass(
-            encoder,
+            &mut *exec.encoder,
             label,
             blur_pipeline,
             dst_view,
@@ -150,7 +138,11 @@ pub(in super::super) fn record_blur_pass(
             &bind_group,
             &[],
             pass.dst_scissor,
-            if perf_enabled { Some(frame_perf) } else { None },
+            if perf_enabled {
+                Some(&mut *exec.frame_perf)
+            } else {
+                None
+            },
         );
     }
 }

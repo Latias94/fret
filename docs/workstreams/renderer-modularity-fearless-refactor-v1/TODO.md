@@ -600,12 +600,15 @@ ID format:
     - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now routes the
       `CustomEffectV3` pass through executor helpers for source/mask view lookup, pyramid
       reuse/scratch/cache, and destination intermediate allocation
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/blit.rs` and `blur.rs` now
+      route fullscreen source/mask view lookup and destination intermediate allocation through the
+      same executor helper surface
   - Current next hotspot:
     - decide whether scene-encoding invalidation/debug evidence should stay coupled to
       `scene_encoding_cache.rs` or move closer to diagnostics state
     - continue collapsing the remaining recorder-level `intermediate_state.pool` access in
-      `blit.rs`, `blur.rs`, `path_clip_mask.rs`, `backdrop_warp.rs`, `scene_draw.rs`,
-      `scale_nearest.rs`, and `path_msaa.rs` behind the same execution-facade pattern
+      `path_clip_mask.rs`, `backdrop_warp.rs`, `scene_draw.rs`, `scale_nearest.rs`, and
+      `path_msaa.rs` behind the same execution-facade pattern
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG
@@ -806,10 +809,9 @@ ID format:
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
   - Latest landed slice: render-scene recorder execution facade now lives under
     `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs`, and the
-    `CustomEffectV3` path in
-    `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now routes
-    source/mask view lookup, pyramid reuse/scratch/cache, and destination intermediate allocation
-    through `RenderSceneExecutor` helpers.
+    `CustomEffectV3`, fullscreen blit, and blur recorder paths now route source/mask view lookup,
+    pyramid reuse/scratch/cache, and destination intermediate allocation through
+    `RenderSceneExecutor` helpers.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:
