@@ -48,12 +48,12 @@ This file tracks the execution checklist for `DESIGN.md`.
 - [ ] Split `ecosystem/fret-ui-kit/src/dnd/controller.rs` by responsibility.
 - [x] Recenter the UI-kit controller around the headless engine output instead of hand-assembling
   partial `DndUpdate` values.
-- [ ] Make `DndPointerForwarders` the preferred path for new integrations.
+- [x] Make `DndPointerForwarders` the preferred path for new integrations.
 - [x] Migrate at least one first-party production integration away from hand-written forwarding:
   - sortable recipe
   - Kanban
   - or both
-- [ ] Add a small inventory note for remaining manual forwarding call sites.
+- [x] Add a small inventory note for remaining manual forwarding call sites.
   - Evidence anchors:
     - `ecosystem/fret-ui-kit/src/recipes/sortable_dnd.rs`
     - `ecosystem/fret-ui-shadcn/src/extras/kanban.rs`
@@ -87,7 +87,7 @@ This file tracks the execution checklist for `DESIGN.md`.
 - [x] Sortable recipe gate added or strengthened.
 - [ ] Kanban gate added or strengthened.
 - [ ] Docking tab hover/insert path verified against the new engine/controller shape.
-- [ ] Carousel-vs-DnD arbitration gate remains green after adapter changes.
+- [x] Carousel-vs-DnD arbitration gate remains green after adapter changes.
 
 ## Docs and contract follow-up
 
