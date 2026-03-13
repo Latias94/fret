@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use fret::interop::embedded_viewport as embedded;
-use fret::prelude::*;
+use fret::advanced::interop::embedded_viewport as embedded;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret::view::ViewWindowState;
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
-use fret_core::{Color, Corners, Edges, KeyCode, Px, SemanticsRole};
+use fret_core::{Color, Corners, Edges, KeyCode, PanelKind, Px, SemanticsRole};
 use fret_docking::{
-    DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, ViewportPanel,
-    runtime as dock_runtime,
+    DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx, DockPanelRegistryBuilder,
+    DockPanelRegistryService, ViewportPanel, runtime as dock_runtime,
 };
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{
@@ -44,10 +44,10 @@ const AUX_LOGICAL_WINDOW_ID: &str = "aux";
 const ENV_SINGLE_WINDOW: &str = "FRET_IMUI_EDITOR_PROOF_SINGLE_WINDOW";
 const ENV_EDITOR_PRESET: &str = "FRET_IMUI_EDITOR_PRESET";
 const ENV_PROOF_LAYOUT: &str = "FRET_IMUI_EDITOR_PROOF_LAYOUT";
-const EDITOR_HOST_BASE_COLOR: shadcn::shadcn_themes::ShadcnBaseColor =
-    shadcn::shadcn_themes::ShadcnBaseColor::Slate;
-const EDITOR_HOST_DEFAULT_SCHEME: shadcn::shadcn_themes::ShadcnColorScheme =
-    shadcn::shadcn_themes::ShadcnColorScheme::Dark;
+const EDITOR_HOST_BASE_COLOR: shadcn::themes::ShadcnBaseColor =
+    shadcn::themes::ShadcnBaseColor::Slate;
+const EDITOR_HOST_DEFAULT_SCHEME: shadcn::themes::ShadcnColorScheme =
+    shadcn::themes::ShadcnColorScheme::Dark;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 enum ImUiEditorProofLayout {
@@ -145,7 +145,9 @@ fn editor_text_assist_state_label(
     format!("Expanded ({visible_count} matches)")
 }
 
-fn editor_demo_name_assist_items(cx: &mut ElementContext<'_, App>) -> Arc<[TextAssistItem]> {
+fn editor_demo_name_assist_items(
+    cx: &mut ElementContext<'_, KernelApp>,
+) -> Arc<[TextAssistItem]> {
     named_demo_state(
         cx,
         "imui_editor_proof_demo.state.name_assist_items",
@@ -207,7 +209,7 @@ fn commit_editor_text_assist_selection(
 }
 
 fn render_editor_name_assist_surface(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     query_model: Model<String>,
     dismissed_query_model: Model<String>,
     active_item_id_model: Model<Option<Arc<str>>>,
@@ -576,24 +578,16 @@ fn render_editor_name_assist_surface(
 }
 
 fn replay_editor_theme_preset_on_global_changes(
-    app: &mut App,
-    window: AppWindowId,
-    _ui: &mut fret_ui::UiTree<App>,
+    app: &mut KernelApp,
+    _window: AppWindowId,
+    _ui: &mut fret_ui::UiTree<KernelApp>,
     _st: &mut ViewWindowState<ImUiEditorProofView>,
     changed: &[std::any::TypeId],
 ) {
-    let _ = fret_ui_editor::theme::sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metrics_change(
-        app,
-        changed,
-        |app| {
-            let _ = shadcn::sync_theme_from_environment(
-                app,
-                window,
-                EDITOR_HOST_BASE_COLOR,
-                EDITOR_HOST_DEFAULT_SCHEME,
-            );
-        },
-    );
+    let _ =
+        fret_ui_editor::theme::reapply_installed_editor_theme_preset_on_window_metrics_change(
+            app, changed,
+        );
 }
 
 fn configure_imui_editor_proof_driver(
@@ -650,11 +644,11 @@ pub fn run() -> anyhow::Result<()> {
     FretApp::new("imui-editor-proof-demo")
         .window("imui_editor_proof_demo", (1120.0, 720.0))
         .view_with_hooks::<ImUiEditorProofView>(configure_imui_editor_proof_driver)?
-        .init_app(move |app| {
+        .setup_with(move |app| {
             configure_single_window_caps_if_requested(app);
-            shadcn::install_app_with_theme(app, EDITOR_HOST_BASE_COLOR, EDITOR_HOST_DEFAULT_SCHEME);
+            shadcn::app::install_with_theme(app, EDITOR_HOST_BASE_COLOR, EDITOR_HOST_DEFAULT_SCHEME);
             fret_ui_editor::theme::install_editor_theme_preset_v1(app, editor_preset);
-            fret_icons_lucide::install_app(app);
+            fret_icons_lucide::app::install(app);
             install_dock_panel_registry(app);
         })
         .run()?;
@@ -833,7 +827,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
 
                     let controls = fret_ui_kit::ui::h_flex_build(move |cx, out| {
                         fret_imui::imui_build(cx, out, |ui| {
-                            if <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<App>>::button(
+                            if <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<KernelApp>>::button(
                                 ui,
                                 "Reset layout",
                             )
@@ -842,7 +836,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                 reset_dock_graph(ui.cx_mut().app, window);
                                 dock_runtime::request_dock_invalidation(ui.cx_mut().app, [window]);
                             }
-                            if <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<App>>::button(
+                            if <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<KernelApp>>::button(
                                 ui,
                                 "Center floatings",
                             )
