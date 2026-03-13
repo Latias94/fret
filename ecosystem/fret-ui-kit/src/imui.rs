@@ -1385,6 +1385,45 @@ fn finish_pressable_drag_on_pointer_up(
     }
 }
 
+fn populate_pressable_drag_response<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    id: GlobalElementId,
+    response: &mut ResponseExt,
+) {
+    response.drag.started = cx.take_transient_for(id, KEY_DRAG_STARTED);
+    response.drag.stopped = cx.take_transient_for(id, KEY_DRAG_STOPPED);
+    response.drag.dragging = false;
+    response.drag.delta = Point::default();
+    response.drag.total = Point::default();
+
+    let kind = drag_kind_for_element(id);
+    let pointer_id = cx.app.find_drag_pointer_id(|d| {
+        d.kind == kind && d.source_window == cx.window && d.current_window == cx.window
+    });
+    let drag_snapshot = pointer_id.and_then(|pointer_id| {
+        cx.app
+            .drag(pointer_id)
+            .filter(|drag| drag.kind == kind)
+            .map(|drag| (drag.dragging, drag.position, drag.start_position))
+    });
+    if let Some((dragging, current, start)) = drag_snapshot {
+        response.drag.dragging = dragging;
+        let (delta, total) = cx.with_state_for(id, DragReportState::default, |st| {
+            let prev = st.last_position.unwrap_or(current);
+            st.last_position = Some(current);
+            (point_sub(current, prev), point_sub(current, start))
+        });
+        if dragging {
+            response.drag.delta = delta;
+            response.drag.total = total;
+        }
+    } else {
+        cx.with_state_for(id, DragReportState::default, |st| {
+            st.last_position = None;
+        });
+    }
+}
+
 fn item_spacing_x_metric_ref() -> crate::MetricRef {
     crate::MetricRef::Token {
         key: crate::theme_tokens::metric::COMPONENT_IMUI_ITEM_SPACING_X_PX,
@@ -3958,37 +3997,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         |_app, v| *v,
                     )
                     .unwrap_or(None);
-                response.drag.started = cx.take_transient_for(id, KEY_DRAG_STARTED);
-                response.drag.stopped = cx.take_transient_for(id, KEY_DRAG_STOPPED);
-                response.drag.dragging = false;
-                response.drag.delta = Point::default();
-                response.drag.total = Point::default();
-                let kind = drag_kind_for_element(id);
-                let pointer_id = cx.app.find_drag_pointer_id(|d| {
-                    d.kind == kind && d.source_window == cx.window && d.current_window == cx.window
-                });
-                let drag_snapshot = pointer_id.and_then(|pointer_id| {
-                    cx.app
-                        .drag(pointer_id)
-                        .filter(|drag| drag.kind == kind)
-                        .map(|drag| (drag.dragging, drag.position, drag.start_position))
-                });
-                if let Some((dragging, current, start)) = drag_snapshot {
-                    response.drag.dragging = dragging;
-                    let (delta, total) = cx.with_state_for(id, DragReportState::default, |st| {
-                        let prev = st.last_position.unwrap_or(current);
-                        st.last_position = Some(current);
-                        (point_sub(current, prev), point_sub(current, start))
-                    });
-                    if dragging {
-                        response.drag.delta = delta;
-                        response.drag.total = total;
-                    }
-                } else {
-                    cx.with_state_for(id, DragReportState::default, |st| {
-                        st.last_position = None;
-                    });
-                }
+                populate_pressable_drag_response(cx, id, response);
                 response.core.rect = cx.last_bounds_for_element(id);
                 let hover_delay = install_hover_query_hooks_for_pressable(
                     cx,
@@ -4172,37 +4181,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         |_app, v| *v,
                     )
                     .unwrap_or(None);
-                response.drag.started = cx.take_transient_for(id, KEY_DRAG_STARTED);
-                response.drag.stopped = cx.take_transient_for(id, KEY_DRAG_STOPPED);
-                response.drag.dragging = false;
-                response.drag.delta = Point::default();
-                response.drag.total = Point::default();
-                let kind = drag_kind_for_element(id);
-                let pointer_id = cx.app.find_drag_pointer_id(|d| {
-                    d.kind == kind && d.source_window == cx.window && d.current_window == cx.window
-                });
-                let drag_snapshot = pointer_id.and_then(|pointer_id| {
-                    cx.app
-                        .drag(pointer_id)
-                        .filter(|drag| drag.kind == kind)
-                        .map(|drag| (drag.dragging, drag.position, drag.start_position))
-                });
-                if let Some((dragging, current, start)) = drag_snapshot {
-                    response.drag.dragging = dragging;
-                    let (delta, total) = cx.with_state_for(id, DragReportState::default, |st| {
-                        let prev = st.last_position.unwrap_or(current);
-                        st.last_position = Some(current);
-                        (point_sub(current, prev), point_sub(current, start))
-                    });
-                    if dragging {
-                        response.drag.delta = delta;
-                        response.drag.total = total;
-                    }
-                } else {
-                    cx.with_state_for(id, DragReportState::default, |st| {
-                        st.last_position = None;
-                    });
-                }
+                populate_pressable_drag_response(cx, id, response);
                 response.core.rect = cx.last_bounds_for_element(id);
                 let hover_delay = install_hover_query_hooks_for_pressable(
                     cx,
