@@ -60,7 +60,9 @@ Key upstream behaviors/surfaces:
   shadcn-style examples do not need to spell an explicit open model.
 - Pass: Controlled/uncontrolled open state parity remains available via
   `DropdownMenu::new_controllable(cx, open, default_open)` (Base UI / Radix `open` + `defaultOpen`).
-- Pass: An explicit managed-open seam now also exists as `DropdownMenu::from_open(open)`.
+- Pass: The explicit managed-open seams are `DropdownMenu::from_open(open)` and
+  `DropdownMenu::new_controllable(cx, open, default_open)`; the older one-arg `new(open)` alias has
+  been removed from the first-party surface.
 - Pass: Open lifecycle callbacks are available via `DropdownMenu::on_open_change` and
   `DropdownMenu::on_open_change_complete` (Base UI `onOpenChange` + `onOpenChangeComplete`).
 - Pass: `DropdownMenu::modal(bool)` is supported (default `true`).
