@@ -2,7 +2,7 @@
 
 Status: Draft
 
-Last updated: 2026-03-12
+Last updated: 2026-03-13
 
 ## Motivation
 
@@ -431,7 +431,12 @@ As of 2026-03-12:
 - The eighty-sixth internal text split has landed:
   - the live prepare-with-key driver now lives in
     `crates/fret-render-wgpu/src/text/prepare/driver.rs`
-  - `crates/fret-render-wgpu/src/text/mod.rs` currently routes through a soft-rollback shim while the old inline body awaits deletion in the next slice
+  - `crates/fret-render-wgpu/src/text/mod.rs` now delegates the live path through that driver
+- The eighty-seventh internal text split has landed:
+  - the temporary soft-rollback shim has been removed from
+    `crates/fret-render-wgpu/src/text/mod.rs`
+  - `prepare_with_key(...)` is now a thin delegation layer and
+    `crates/fret-render-wgpu/src/text/prepare/driver.rs` fully owns the live prepare flow
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed

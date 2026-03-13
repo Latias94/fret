@@ -8,7 +8,7 @@ Related:
 - Design: `docs/workstreams/renderer-modularity-fearless-refactor-v1/DESIGN.md`
 - TODO: `docs/workstreams/renderer-modularity-fearless-refactor-v1/TODO.md`
 
-Current snapshot (2026-03-12):
+Current snapshot (2026-03-13):
 
 - The renderer stack is not a rewrite candidate; it is a staged modularization candidate.
 - `fret-render-wgpu` baseline gates are green:
@@ -373,7 +373,12 @@ Current snapshot (2026-03-12):
 - The eighty-sixth internal `text/mod.rs` split has landed:
   - the live prepare-with-key driver now lives in
     `crates/fret-render-wgpu/src/text/prepare/driver.rs`
-  - `crates/fret-render-wgpu/src/text/mod.rs` currently routes through a soft-rollback shim while the old inline body awaits deletion in the next slice
+  - `crates/fret-render-wgpu/src/text/mod.rs` now delegates the live path through that driver
+- The eighty-seventh internal `text/mod.rs` split has landed:
+  - the temporary soft-rollback shim has been removed from
+    `crates/fret-render-wgpu/src/text/mod.rs`
+  - `prepare_with_key(...)` is now a thin delegation layer and
+    `crates/fret-render-wgpu/src/text/prepare/driver.rs` fully owns the live prepare flow
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
