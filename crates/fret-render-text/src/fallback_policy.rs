@@ -1,10 +1,6 @@
 use crate::parley_shaper::ParleyShaper;
 use parley::fontique::FamilyId as ParleyFamilyId;
-use std::{
-    collections::HashSet,
-    hash::{Hash as _, Hasher as _},
-    sync::OnceLock,
-};
+use std::{collections::HashSet, sync::OnceLock};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CommonFallbackMode {
@@ -92,42 +88,66 @@ impl TextFallbackPolicyV1 {
     }
 
     pub fn recompute_key(&mut self, shaper: &ParleyShaper) {
-        let mut hasher = std::collections::hash_map::DefaultHasher::new();
-        "fret.text.fallback_policy.v1".hash(&mut hasher);
+        let mut hasher = blake3::Hasher::new();
+        update_key_bytes(&mut hasher, "schema", b"fret.text.fallback_policy.v1");
+        update_key_u8(
+            &mut hasher,
+            "system_fonts_enabled",
+            u8::from(shaper.system_fonts_enabled()),
+        );
+        update_key_u8(
+            &mut hasher,
+            "common_fallback_mode",
+            match self.common_fallback_mode {
+                CommonFallbackMode::PreferSystemFallback => 0,
+                CommonFallbackMode::PreferCommonFallback => 1,
+            },
+        );
+        update_key_optional_lower_string(&mut hasher, "locale_bcp47", self.locale_bcp47.as_deref());
+        update_key_u8(
+            &mut hasher,
+            "common_fallback_injection",
+            match self.font_family_config.common_fallback_injection {
+                fret_core::TextCommonFallbackInjection::PlatformDefault => 0,
+                fret_core::TextCommonFallbackInjection::None => 1,
+                fret_core::TextCommonFallbackInjection::CommonFallback => 2,
+            },
+        );
+        update_key_normalized_string_list(
+            &mut hasher,
+            "configured_ui_sans_families",
+            &self.font_family_config.ui_sans,
+        );
+        update_key_normalized_string_list(
+            &mut hasher,
+            "configured_ui_serif_families",
+            &self.font_family_config.ui_serif,
+        );
+        update_key_normalized_string_list(
+            &mut hasher,
+            "configured_ui_mono_families",
+            &self.font_family_config.ui_mono,
+        );
+        update_key_normalized_string_list(
+            &mut hasher,
+            "configured_common_fallback_families",
+            &self.font_family_config.common_fallback,
+        );
+        update_key_normalized_static_str_list(
+            &mut hasher,
+            "default_common_fallback_families",
+            default_common_fallback_families(shaper),
+        );
+        update_key_lower_string(
+            &mut hasher,
+            "common_fallback_stack_suffix",
+            shaper.common_fallback_stack_suffix(),
+        );
 
-        shaper.system_fonts_enabled().hash(&mut hasher);
-        match self.common_fallback_mode {
-            CommonFallbackMode::PreferSystemFallback => 0u8.hash(&mut hasher),
-            CommonFallbackMode::PreferCommonFallback => 1u8.hash(&mut hasher),
-        }
-
-        self.locale_bcp47
-            .as_deref()
-            .map(|v| v.to_ascii_lowercase())
-            .hash(&mut hasher);
-
-        match self.font_family_config.common_fallback_injection {
-            fret_core::TextCommonFallbackInjection::PlatformDefault => 0u8.hash(&mut hasher),
-            fret_core::TextCommonFallbackInjection::None => 1u8.hash(&mut hasher),
-            fret_core::TextCommonFallbackInjection::CommonFallback => 2u8.hash(&mut hasher),
-        }
-
-        normalize_and_hash_family_candidates(&mut hasher, &self.font_family_config.ui_sans);
-        normalize_and_hash_family_candidates(&mut hasher, &self.font_family_config.ui_serif);
-        normalize_and_hash_family_candidates(&mut hasher, &self.font_family_config.ui_mono);
-        normalize_and_hash_family_candidates(&mut hasher, &self.font_family_config.common_fallback);
-
-        for &family in default_common_fallback_families(shaper) {
-            family.trim().to_ascii_lowercase().hash(&mut hasher);
-        }
-
-        shaper
-            .common_fallback_stack_suffix()
-            .trim()
-            .to_ascii_lowercase()
-            .hash(&mut hasher);
-
-        let key = hasher.finish();
+        let digest = hasher.finalize();
+        let mut key_bytes = [0u8; 8];
+        key_bytes.copy_from_slice(&digest.as_bytes()[..8]);
+        let key = u64::from_le_bytes(key_bytes);
         self.fallback_policy_key = if key == 0 { 1 } else { key };
     }
 
@@ -375,19 +395,68 @@ pub fn common_fallback_stack_suffix_max_families() -> usize {
     })
 }
 
-fn normalize_and_hash_family_candidates(
-    hasher: &mut std::collections::hash_map::DefaultHasher,
-    candidates: &[String],
-) {
+fn update_key_bytes(hasher: &mut blake3::Hasher, field: &str, bytes: &[u8]) {
+    hasher.update(field.as_bytes());
+    hasher.update(&[0]);
+    hasher.update(&(bytes.len() as u64).to_le_bytes());
+    hasher.update(bytes);
+}
+
+fn update_key_u8(hasher: &mut blake3::Hasher, field: &str, value: u8) {
+    update_key_bytes(hasher, field, &[value]);
+}
+
+fn update_key_u64(hasher: &mut blake3::Hasher, field: &str, value: u64) {
+    update_key_bytes(hasher, field, &value.to_le_bytes());
+}
+
+fn update_key_lower_string(hasher: &mut blake3::Hasher, field: &str, value: &str) {
+    update_key_bytes(hasher, field, value.trim().to_ascii_lowercase().as_bytes());
+}
+
+fn update_key_optional_lower_string(hasher: &mut blake3::Hasher, field: &str, value: Option<&str>) {
+    match value {
+        Some(value) => {
+            update_key_u8(hasher, &format!("{field}.present"), 1);
+            update_key_lower_string(hasher, field, value);
+        }
+        None => update_key_u8(hasher, &format!("{field}.present"), 0),
+    }
+}
+
+fn normalized_lower_strings(candidates: &[String]) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
-    for c in candidates {
-        let trimmed = c.trim();
+    for candidate in candidates {
+        let trimmed = candidate.trim();
         if trimmed.is_empty() {
             continue;
         }
         out.push(trimmed.to_ascii_lowercase());
     }
-    out.hash(hasher);
+    out
+}
+
+fn update_key_normalized_string_list(
+    hasher: &mut blake3::Hasher,
+    field: &str,
+    candidates: &[String],
+) {
+    let normalized = normalized_lower_strings(candidates);
+    update_key_u64(hasher, &format!("{field}.count"), normalized.len() as u64);
+    for (ix, candidate) in normalized.iter().enumerate() {
+        update_key_bytes(hasher, &format!("{field}[{ix}]"), candidate.as_bytes());
+    }
+}
+
+fn update_key_normalized_static_str_list(
+    hasher: &mut blake3::Hasher,
+    field: &str,
+    candidates: &[&'static str],
+) {
+    update_key_u64(hasher, &format!("{field}.count"), candidates.len() as u64);
+    for (ix, candidate) in candidates.iter().enumerate() {
+        update_key_lower_string(hasher, &format!("{field}[{ix}]"), candidate);
+    }
 }
 
 pub fn default_sans_candidates(shaper: &ParleyShaper) -> &'static [&'static str] {

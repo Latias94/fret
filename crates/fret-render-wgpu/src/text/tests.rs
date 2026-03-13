@@ -2682,6 +2682,159 @@ fn fallback_policy_key_changes_when_common_fallback_injection_changes() {
 }
 
 #[test]
+fn fallback_policy_key_changes_when_generic_candidate_order_changes() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut text = super::TextSystem::new(&ctx.device);
+
+    reset_bundled_only_font_runtime(&mut text);
+
+    let fonts: Vec<Vec<u8>> = fret_fonts::default_fonts()
+        .iter()
+        .map(|b| b.to_vec())
+        .collect();
+    let added = text.add_fonts(fonts);
+    assert!(added > 0, "expected bundled fonts to load");
+
+    let base = fret_core::TextFontFamilyConfig {
+        common_fallback_injection: fret_core::TextCommonFallbackInjection::None,
+        ui_sans: vec!["Inter".to_string(), "JetBrains Mono".to_string()],
+        ui_serif: vec!["Inter".to_string(), "JetBrains Mono".to_string()],
+        ui_mono: vec!["JetBrains Mono".to_string(), "Inter".to_string()],
+        ..Default::default()
+    };
+    let _ = text.set_font_families(&base);
+    let key_base = text.font_runtime.fallback_policy.fallback_policy_key;
+
+    let sans_reordered = fret_core::TextFontFamilyConfig {
+        ui_sans: vec!["JetBrains Mono".to_string(), "Inter".to_string()],
+        ..base.clone()
+    };
+    let _ = text.set_font_families(&sans_reordered);
+    let key_sans = text.font_runtime.fallback_policy.fallback_policy_key;
+
+    let serif_reordered = fret_core::TextFontFamilyConfig {
+        ui_serif: vec!["JetBrains Mono".to_string(), "Inter".to_string()],
+        ..base.clone()
+    };
+    let _ = text.set_font_families(&serif_reordered);
+    let key_serif = text.font_runtime.fallback_policy.fallback_policy_key;
+
+    let mono_reordered = fret_core::TextFontFamilyConfig {
+        ui_mono: vec!["Inter".to_string(), "JetBrains Mono".to_string()],
+        ..base
+    };
+    let _ = text.set_font_families(&mono_reordered);
+    let key_mono = text.font_runtime.fallback_policy.fallback_policy_key;
+
+    assert_ne!(
+        key_base, key_sans,
+        "expected fallback_policy_key to change when ui_sans candidate order changes"
+    );
+    assert_ne!(
+        key_base, key_serif,
+        "expected fallback_policy_key to change when ui_serif candidate order changes"
+    );
+    assert_ne!(
+        key_base, key_mono,
+        "expected fallback_policy_key to change when ui_mono candidate order changes"
+    );
+}
+
+#[test]
+fn ui_generic_resolution_prefers_first_available_configured_candidate() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut text = super::TextSystem::new(&ctx.device);
+
+    reset_bundled_only_font_runtime(&mut text);
+
+    let fonts: Vec<Vec<u8>> = fret_fonts::default_fonts()
+        .iter()
+        .map(|b| b.to_vec())
+        .collect();
+    let added = text.add_fonts(fonts);
+    assert!(added > 0, "expected bundled fonts to load");
+
+    let constraints = TextConstraints {
+        max_width: None,
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+        align: fret_core::TextAlign::Start,
+        scale_factor: 1.0,
+    };
+
+    let faces_for_family = |text: &mut super::TextSystem, family: &str| {
+        let style = TextStyle {
+            font: fret_core::FontId::family(family),
+            size: Px(24.0),
+            ..Default::default()
+        };
+        let (blob_id, _metrics) = text.prepare("m", &style, constraints);
+        let blob = text.blob(blob_id).expect("text blob");
+        blob.shape
+            .glyphs
+            .iter()
+            .map(|g| g.key.font)
+            .collect::<std::collections::HashSet<super::FontFaceKey>>()
+    };
+
+    let inter_faces = faces_for_family(&mut text, "Inter");
+    let jetbrains_faces = faces_for_family(&mut text, "JetBrains Mono");
+    assert!(
+        !inter_faces.is_empty() && !jetbrains_faces.is_empty(),
+        "expected explicit family shaping to resolve both candidates"
+    );
+    assert_ne!(
+        inter_faces, jetbrains_faces,
+        "expected the bundled candidates to produce distinct explicit face selections"
+    );
+
+    let config_inter_first = fret_core::TextFontFamilyConfig {
+        common_fallback_injection: fret_core::TextCommonFallbackInjection::None,
+        ui_sans: vec!["Inter".to_string(), "JetBrains Mono".to_string()],
+        ..Default::default()
+    };
+    let _ = text.set_font_families(&config_inter_first);
+    let style_ui = TextStyle {
+        font: fret_core::FontId::ui(),
+        size: Px(24.0),
+        ..Default::default()
+    };
+    let (blob_id, _metrics) = text.prepare("m", &style_ui, constraints);
+    let blob = text.blob(blob_id).expect("text blob");
+    let ui_inter_first = blob
+        .shape
+        .glyphs
+        .iter()
+        .map(|g| g.key.font)
+        .collect::<std::collections::HashSet<super::FontFaceKey>>();
+    assert!(
+        ui_inter_first.iter().any(|face| inter_faces.contains(face)),
+        "expected FontId::Ui to resolve through the first configured candidate when Inter is first"
+    );
+
+    let config_serif_first = fret_core::TextFontFamilyConfig {
+        common_fallback_injection: fret_core::TextCommonFallbackInjection::None,
+        ui_sans: vec!["JetBrains Mono".to_string(), "Inter".to_string()],
+        ..Default::default()
+    };
+    let _ = text.set_font_families(&config_serif_first);
+    let (blob_id, _metrics) = text.prepare("m", &style_ui, constraints);
+    let blob = text.blob(blob_id).expect("text blob");
+    let ui_serif_first = blob
+        .shape
+        .glyphs
+        .iter()
+        .map(|g| g.key.font)
+        .collect::<std::collections::HashSet<super::FontFaceKey>>();
+    assert!(
+        ui_serif_first
+            .iter()
+            .any(|face| jetbrains_faces.contains(face)),
+        "expected FontId::Ui to resolve through the reordered first configured candidate"
+    );
+}
+
+#[test]
 fn bundled_only_defaults_use_profile_ui_family_when_config_is_empty() {
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut text = super::TextSystem::new(&ctx.device);
