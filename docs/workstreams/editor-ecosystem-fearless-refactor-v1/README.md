@@ -82,6 +82,11 @@ Current checkpoint:
   callbacks for commit/cancel, assistive semantics placeholders for future completion/history
   popups, and a no-op session rule so focus/blur without an actual edit does not emit misleading
   outcome events,
+- `DragValue` and `AxisDragValue` now also expose explicit editor-layer outcome callbacks across
+  both scrub and typed-edit paths, and the promoted proof surface now carries a stable
+  `drag-value-demo.outcome` readout plus a focused diagnostics gate
+  (`tools/diag-scripts/ui-editor/imui/imui-editor-proof-drag-value-outcomes.json`) so numeric
+  editor sessions no longer need to infer commit/cancel indirectly from value drift alone,
 - editor preset replay is no longer proof-demo-local glue only: the editor theme helpers now expose
   a reusable "host theme sync, then editor preset replay" path for `WindowMetricsService`-driven
   resets, and the promoted proof demo uses that shared ordering,

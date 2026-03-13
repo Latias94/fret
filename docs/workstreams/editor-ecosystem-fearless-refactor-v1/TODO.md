@@ -167,8 +167,19 @@ Interaction contract:
 
 - [~] `EER-IMUI-120` Keep expanding `fret-ui-editor::imui` only as a thin facade over declarative
       controls; do not allow a second implementation tree to form.
-- [ ] `EER-EDITOR-121` Close `DragValue` for real editor workflows:
+- [~] `EER-EDITOR-121` Close `DragValue` for real editor workflows:
       prefix/suffix, clamp policy, step, decimals policy, unit helpers, and consistent commit/cancel.
+      Recent progress: `DragValue` and `AxisDragValue` now expose a shared editor-layer
+      commit/cancel outcome seam across both scrub and typed-edit paths, and the promoted proof
+      surface now carries a stable `drag-value-demo.outcome` readout plus a focused diagnostics
+      gate at
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-drag-value-outcomes.json`, which
+      currently proves scrub commit plus typed commit/cancel on the promoted proof surface.
+      Remaining work: clamp/step/decimals and unit-helper policy still need a real shared story,
+      composite propagation above the raw axis control (`VecEdit` / `TransformEdit`) still needs
+      an explicit follow-up decision instead of implicit behavior, and active-scrub Escape/cancel
+      still needs a more direct diagnostics route if we want that exact path gated without manual
+      repro.
 - [~] `EER-EDITOR-122` Close editor-grade text input policy beyond the baseline layer:
       password mode, completion/history hook placeholders, and richer editing hooks.
       Recent progress: buffered `TextField` now covers both single-line and multiline edit sessions

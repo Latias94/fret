@@ -16,10 +16,13 @@ pub mod transform_edit;
 pub mod vec_edit;
 
 pub use crate::primitives::{EditorTextCancelBehavior, EditorTextSelectionBehavior};
-pub use axis_drag_value::{AxisDragValue, AxisDragValueOptions, AxisDragValueResetAction};
+pub use axis_drag_value::{
+    AxisDragValue, AxisDragValueOptions, AxisDragValueOutcome, AxisDragValueResetAction,
+    OnAxisDragValueOutcome,
+};
 pub use checkbox::{Checkbox, CheckboxOptions};
 pub use color_edit::{ColorEdit, ColorEditOptions};
-pub use drag_value::{DragValue, DragValueOptions};
+pub use drag_value::{DragValue, DragValueOptions, DragValueOutcome, OnDragValueOutcome};
 pub use enum_select::{EnumSelect, EnumSelectItem, EnumSelectOptions};
 pub use field_status::{FieldStatus, FieldStatusBadge, FieldStatusBadgeOptions};
 pub use icon_button::{IconButton, IconButtonOptions, OnIconButtonActivate};

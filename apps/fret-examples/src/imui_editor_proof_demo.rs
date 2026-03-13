@@ -22,12 +22,12 @@ use fret_ui_editor::composites::{
     PropertyRow, PropertyRowReset,
 };
 use fret_ui_editor::controls::{
-    Checkbox, ColorEdit, ColorEditOptions, DragValue, EditorTextSelectionBehavior, EnumSelect,
-    EnumSelectItem, EnumSelectOptions, FieldStatus, FieldStatusBadge, NumericFormatFn,
-    NumericInput, NumericInputOptions, NumericParseFn, NumericValidateFn, Slider, SliderOptions,
-    TextAssistField, TextAssistFieldOptions, TextAssistFieldSurface, TextField, TextFieldMode,
-    TextFieldOptions, TextFieldOutcome, TransformEdit, TransformEditOptions, Vec3Edit,
-    VecEditOptions,
+    Checkbox, ColorEdit, ColorEditOptions, DragValue, DragValueOutcome,
+    EditorTextSelectionBehavior, EnumSelect, EnumSelectItem, EnumSelectOptions, FieldStatus,
+    FieldStatusBadge, NumericFormatFn, NumericInput, NumericInputOptions, NumericParseFn,
+    NumericValidateFn, Slider, SliderOptions, TextAssistField, TextAssistFieldOptions,
+    TextAssistFieldSurface, TextField, TextFieldMode, TextFieldOptions, TextFieldOutcome,
+    TransformEdit, TransformEditOptions, Vec3Edit, VecEditOptions,
 };
 use fret_ui_editor::imui as editor_imui;
 use fret_ui_editor::primitives::{percent_0_1_format, percent_0_1_parse};
@@ -397,6 +397,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
         .then_some("imui-editor-proof.main.tab-drag-anchor");
 
     let editor_value_model = editor_demo_value_model(cx);
+    let editor_drag_value_outcome_model = editor_demo_drag_value_outcome_model(cx);
     let editor_roughness_model = editor_demo_roughness_model(cx);
     let editor_metallic_model = editor_demo_metallic_model(cx);
     let editor_alpha_clip_model = editor_demo_alpha_clip_model(cx);
@@ -1205,12 +1206,39 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                             )),
                                                             |cx| cx.text("Opacity"),
                                                             |cx| {
+                                                                let outcome_model =
+                                                                    editor_drag_value_outcome_model
+                                                                        .clone();
                                                                 DragValue::new(
                                                                     editor_value_model.clone(),
                                                                     fmt.clone(),
                                                                     parse.clone(),
                                                                 )
                                                                 .validate(Some(validate.clone()))
+                                                                .on_outcome(Some(Arc::new(
+                                                                    move |host,
+                                                                          action_cx,
+                                                                          outcome: DragValueOutcome| {
+                                                                        let next =
+                                                                            edit_session_outcome_label(
+                                                                                outcome,
+                                                                            );
+                                                                        let _ = host
+                                                                            .models_mut()
+                                                                            .update(
+                                                                                &outcome_model,
+                                                                                |value| {
+                                                                                    value.clear();
+                                                                                    value.push_str(
+                                                                                        next,
+                                                                                    );
+                                                                                },
+                                                                            );
+                                                                        host.request_redraw(
+                                                                            action_cx.window,
+                                                                        );
+                                                                    },
+                                                                )))
                                                                 .options(
                                                                     fret_ui_editor::controls::DragValueOptions {
                                                                         test_id: Some(Arc::from(
@@ -1222,11 +1250,20 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                 .into_element(cx)
                                                             },
                                                             |cx| {
-                                                                Some(
-                                                                    FieldStatusBadge::new(
-                                                                        FieldStatus::Dirty,
+                                                                let outcome = cx
+                                                                    .get_model_cloned(
+                                                                        &editor_drag_value_outcome_model,
+                                                                        Invalidation::Paint,
                                                                     )
-                                                                    .into_element(cx),
+                                                                    .unwrap_or_else(|| {
+                                                                        "Idle".to_string()
+                                                                    });
+                                                                Some(
+                                                                    cx.text(outcome.clone())
+                                                                        .test_id(Arc::from(
+                                                                            "imui-editor-proof.editor.drag-value-demo.outcome",
+                                                                        ))
+                                                                        .a11y_label(outcome),
                                                                 )
                                                             },
                                                         ));
@@ -2628,6 +2665,16 @@ fn editor_demo_password_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Mode
     named_demo_state(cx, "imui_editor_proof_demo.model.password", |cx| {
         cx.app.models_mut().insert("secret42".to_string())
     })
+}
+
+fn editor_demo_drag_value_outcome_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<String> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.model.drag_value_outcome",
+        |cx| cx.app.models_mut().insert("Idle".to_string()),
+    )
 }
 
 fn editor_demo_password_outcome_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {

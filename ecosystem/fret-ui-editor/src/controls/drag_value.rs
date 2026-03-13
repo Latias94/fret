@@ -23,7 +23,7 @@ use crate::primitives::numeric_text_entry::{
 };
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
-use crate::primitives::{DragValueCore, DragValueCoreOptions};
+use crate::primitives::{DragValueCore, DragValueCoreOptions, EditSessionOutcome};
 use fret_core::text::{TextOverflow, TextWrap};
 use fret_core::{Corners, Edges, Px, TextAlign, TextStyle};
 use fret_runtime::Model;
@@ -45,6 +45,7 @@ enum DragValueMode {
 struct DragValueState {
     mode: DragValueMode,
     scrub_id: Option<fret_ui::GlobalElementId>,
+    scrub_revision: u64,
 }
 
 impl Default for DragValueState {
@@ -52,6 +53,7 @@ impl Default for DragValueState {
         Self {
             mode: DragValueMode::Scrub,
             scrub_id: None,
+            scrub_revision: 0,
         }
     }
 }
@@ -96,12 +98,17 @@ impl Default for DragValueOptions {
     }
 }
 
+pub type DragValueOutcome = EditSessionOutcome;
+pub type OnDragValueOutcome =
+    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, DragValueOutcome) + 'static>;
+
 #[derive(Clone)]
 pub struct DragValue<T> {
     model: Model<T>,
     format: NumericFormatFn<T>,
     parse: NumericParseFn<T>,
     validate: Option<NumericValidateFn<T>>,
+    on_outcome: Option<OnDragValueOutcome>,
     options: DragValueOptions,
 }
 
@@ -115,12 +122,18 @@ where
             format,
             parse,
             validate: None,
+            on_outcome: None,
             options: DragValueOptions::default(),
         }
     }
 
     pub fn validate(mut self, validate: Option<NumericValidateFn<T>>) -> Self {
         self.validate = validate;
+        self
+    }
+
+    pub fn on_outcome(mut self, on_outcome: Option<OnDragValueOutcome>) -> Self {
+        self.on_outcome = on_outcome;
         self
     }
 
@@ -156,13 +169,17 @@ where
             || Arc::new(Mutex::new(NumericTextEntryFocusHandoffState::default())),
             |s| s.clone(),
         );
+        let on_outcome = self.on_outcome.clone();
 
         let value = cx
             .get_model_copied(&self.model, Invalidation::Paint)
             .unwrap_or_default();
         let value_text = (self.format)(value);
 
-        let mode = state.lock().unwrap_or_else(|e| e.into_inner()).mode;
+        let (mode, scrub_revision) = {
+            let st = state.lock().unwrap_or_else(|e| e.into_inner());
+            (st.mode, st.scrub_revision)
+        };
 
         let typing = mode == DragValueMode::Typing;
         let prefix = self.options.prefix.clone();
@@ -195,148 +212,179 @@ where
         scrub_opts.enabled = mode == DragValueMode::Scrub;
         scrub_opts.scrub_on_double_click = false;
 
-        let state_for_scrub_record = state.clone();
-        let focus_handoff_for_double_click = focus_handoff.clone();
-        let scrub = DragValueCore::new(value, on_change_live)
-            .a11y_label(value_text.clone())
-            .options(scrub_opts)
-            .into_element(cx, move |cx, resp| {
-                // Record the scrub element id for focus restore from typing mode.
-                let scrub_id = cx.root_id();
-                let mut st = state_for_scrub_record
-                    .lock()
-                    .unwrap_or_else(|e| e.into_inner());
-                st.scrub_id = Some(scrub_id);
-
-                let state_for_double_click = state_for_scrub_record.clone();
-                let focus_handoff_for_double_click = focus_handoff_for_double_click.clone();
-                cx.pressable_add_on_pointer_down(Arc::new(
-                    move |host, action_cx, down: PointerDownCx| {
-                        if down.click_count < 2 {
-                            return PressablePointerDownResult::Continue;
-                        }
-
-                        let mut st = state_for_double_click
+        let state_for_scrub = state.clone();
+        let focus_handoff_for_scrub = focus_handoff.clone();
+        let on_outcome_for_scrub = on_outcome.clone();
+        let scrub = cx.keyed(
+            ("fret-ui-editor.drag_value.scrub", scrub_revision),
+            move |cx| {
+                let state_for_scrub_record = state_for_scrub.clone();
+                let focus_handoff_for_double_click = focus_handoff_for_scrub.clone();
+                let on_outcome_for_scrub_commit = on_outcome_for_scrub.clone();
+                let on_outcome_for_scrub_cancel = on_outcome_for_scrub.clone();
+                DragValueCore::new(value, on_change_live)
+                    .on_commit(Some(Arc::new(move |host, action_cx| {
+                        emit_drag_value_outcome(
+                            host,
+                            action_cx,
+                            on_outcome_for_scrub_commit.as_ref(),
+                            DragValueOutcome::Committed,
+                        );
+                    })))
+                    .on_cancel(Some(Arc::new(move |host, action_cx| {
+                        emit_drag_value_outcome(
+                            host,
+                            action_cx,
+                            on_outcome_for_scrub_cancel.as_ref(),
+                            DragValueOutcome::Canceled,
+                        );
+                    })))
+                    .a11y_label(value_text.clone())
+                    .options(scrub_opts)
+                    .into_element(cx, move |cx, resp| {
+                        // Record the scrub element id for focus restore from typing mode.
+                        let scrub_id = cx.root_id();
+                        let mut st = state_for_scrub_record
                             .lock()
                             .unwrap_or_else(|e| e.into_inner());
-                        st.mode = DragValueMode::Typing;
-                        {
-                            let mut handoff = focus_handoff_for_double_click
-                                .lock()
-                                .unwrap_or_else(|e| e.into_inner());
-                            arm_numeric_text_entry_focus_handoff(&mut handoff);
-                        }
-                        host.request_redraw(action_cx.window);
-                        PressablePointerDownResult::SkipDefaultAndStopPropagation
-                    },
-                ));
+                        st.scrub_id = Some(scrub_id);
 
-                let theme = Theme::global(&*cx.app);
-                let visuals = EditorWidgetVisuals::new(theme).frame_visuals(
-                    scrub_chrome,
-                    EditorFrameState {
-                        enabled: true,
-                        hovered: resp.hovered,
-                        pressed: resp.dragging || resp.pressed,
-                        focused: resp.focused || cx.is_focused_element(scrub_id),
-                        open: false,
-                        semantic: EditorFrameSemanticState::default(),
-                    },
-                );
+                        let state_for_double_click = state_for_scrub_record.clone();
+                        let focus_handoff_for_double_click = focus_handoff_for_double_click.clone();
+                        cx.pressable_add_on_pointer_down(Arc::new(
+                            move |host, action_cx, down: PointerDownCx| {
+                                if down.click_count < 2 {
+                                    return PressablePointerDownResult::Continue;
+                                }
 
-                let mut scrub_frame = cx.container(
-                    ContainerProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Fill,
-                                min_height: Some(Length::Px(density.row_height)),
-                                ..Default::default()
+                                let mut st = state_for_double_click
+                                    .lock()
+                                    .unwrap_or_else(|e| e.into_inner());
+                                st.mode = DragValueMode::Typing;
+                                {
+                                    let mut handoff = focus_handoff_for_double_click
+                                        .lock()
+                                        .unwrap_or_else(|e| e.into_inner());
+                                    arm_numeric_text_entry_focus_handoff(&mut handoff);
+                                }
+                                host.request_redraw(action_cx.window);
+                                PressablePointerDownResult::SkipDefaultAndStopPropagation
                             },
-                            ..Default::default()
-                        },
-                        padding: scrub_chrome.padding.into(),
-                        background: Some(visuals.bg),
-                        border: Edges::all(scrub_chrome.border_width),
-                        border_color: Some(visuals.border),
-                        corner_radii: Corners::all(scrub_chrome.radius),
-                        ..Default::default()
-                    },
-                    move |cx| {
+                        ));
+
                         let theme = Theme::global(&*cx.app);
-                        let affix_color = theme
-                            .color_by_key("muted-foreground")
-                            .or_else(|| theme.color_by_key("muted_foreground"))
-                            .unwrap_or_else(|| theme.color_token("foreground"));
-                        let divider = visuals.border;
-                        let value_text_el = cx.text_props(TextProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Auto,
+                        let visuals = EditorWidgetVisuals::new(theme).frame_visuals(
+                            scrub_chrome,
+                            EditorFrameState {
+                                enabled: true,
+                                hovered: resp.hovered,
+                                pressed: resp.dragging || resp.pressed,
+                                focused: resp.focused || cx.is_focused_element(scrub_id),
+                                open: false,
+                                semantic: EditorFrameSemanticState::default(),
+                            },
+                        );
+
+                        let mut scrub_frame = cx.container(
+                            ContainerProps {
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Fill,
+                                        min_height: Some(Length::Px(density.row_height)),
+                                        ..Default::default()
+                                    },
                                     ..Default::default()
                                 },
+                                padding: scrub_chrome.padding.into(),
+                                background: Some(visuals.bg),
+                                border: Edges::all(scrub_chrome.border_width),
+                                border_color: Some(visuals.border),
+                                corner_radii: Corners::all(scrub_chrome.radius),
                                 ..Default::default()
                             },
-                            text: value_text.clone(),
-                            style: Some(typography::as_control_text(TextStyle {
-                                size: scrub_chrome.text_px,
-                                line_height: Some(density.row_height),
-                                ..Default::default()
-                            })),
-                            color: Some(visuals.fg),
-                            wrap: TextWrap::None,
-                            overflow: TextOverflow::Ellipsis,
-                            align: TextAlign::Start,
-                            ink_overflow: Default::default(),
-                        });
-                        let mut value =
-                            editor_input_group_inset(cx, scrub_chrome.padding, value_text_el);
-                        if let Some(test_id) = value_test_id.as_ref() {
-                            value = value
-                                .test_id(test_id.clone())
-                                .a11y_label(value_text.clone());
+                            move |cx| {
+                                let theme = Theme::global(&*cx.app);
+                                let affix_color = theme
+                                    .color_by_key("muted-foreground")
+                                    .or_else(|| theme.color_by_key("muted_foreground"))
+                                    .unwrap_or_else(|| theme.color_token("foreground"));
+                                let divider = visuals.border;
+                                let value_text_el = cx.text_props(TextProps {
+                                    layout: LayoutStyle {
+                                        size: SizeStyle {
+                                            width: Length::Fill,
+                                            height: Length::Auto,
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    text: value_text.clone(),
+                                    style: Some(typography::as_control_text(TextStyle {
+                                        size: scrub_chrome.text_px,
+                                        line_height: Some(density.row_height),
+                                        ..Default::default()
+                                    })),
+                                    color: Some(visuals.fg),
+                                    wrap: TextWrap::None,
+                                    overflow: TextOverflow::Ellipsis,
+                                    align: TextAlign::Start,
+                                    ink_overflow: Default::default(),
+                                });
+                                let mut value = editor_input_group_inset(
+                                    cx,
+                                    scrub_chrome.padding,
+                                    value_text_el,
+                                );
+                                if let Some(test_id) = value_test_id.as_ref() {
+                                    value = value
+                                        .test_id(test_id.clone())
+                                        .a11y_label(value_text.clone());
+                                }
+                                let mut segments = Vec::new();
+                                if let Some(prefix) = prefix.clone() {
+                                    let mut segment = editor_text_segment(
+                                        cx,
+                                        density,
+                                        scrub_chrome.text_px,
+                                        prefix.clone(),
+                                        affix_color,
+                                        scrub_chrome.padding,
+                                    );
+                                    if let Some(test_id) = prefix_test_id.as_ref() {
+                                        segment =
+                                            segment.test_id(test_id.clone()).a11y_label(prefix);
+                                    }
+                                    segments.push(segment);
+                                    segments.push(editor_input_group_divider(cx, divider));
+                                }
+                                segments.push(value);
+                                if let Some(suffix) = suffix.clone() {
+                                    segments.push(editor_input_group_divider(cx, divider));
+                                    let mut segment = editor_text_segment(
+                                        cx,
+                                        density,
+                                        scrub_chrome.text_px,
+                                        suffix.clone(),
+                                        affix_color,
+                                        scrub_chrome.padding,
+                                    );
+                                    if let Some(test_id) = suffix_test_id.as_ref() {
+                                        segment =
+                                            segment.test_id(test_id.clone()).a11y_label(suffix);
+                                    }
+                                    segments.push(segment);
+                                }
+                                vec![editor_input_group_row(cx, Px(0.0), segments)]
+                            },
+                        );
+                        if let Some(test_id) = scrub_test_id.as_ref() {
+                            scrub_frame = scrub_frame.test_id(test_id.clone());
                         }
-                        let mut segments = Vec::new();
-                        if let Some(prefix) = prefix.clone() {
-                            let mut segment = editor_text_segment(
-                                cx,
-                                density,
-                                scrub_chrome.text_px,
-                                prefix.clone(),
-                                affix_color,
-                                scrub_chrome.padding,
-                            );
-                            if let Some(test_id) = prefix_test_id.as_ref() {
-                                segment = segment.test_id(test_id.clone()).a11y_label(prefix);
-                            }
-                            segments.push(segment);
-                            segments.push(editor_input_group_divider(cx, divider));
-                        }
-                        segments.push(value);
-                        if let Some(suffix) = suffix.clone() {
-                            segments.push(editor_input_group_divider(cx, divider));
-                            let mut segment = editor_text_segment(
-                                cx,
-                                density,
-                                scrub_chrome.text_px,
-                                suffix.clone(),
-                                affix_color,
-                                scrub_chrome.padding,
-                            );
-                            if let Some(test_id) = suffix_test_id.as_ref() {
-                                segment = segment.test_id(test_id.clone()).a11y_label(suffix);
-                            }
-                            segments.push(segment);
-                        }
-                        vec![editor_input_group_row(cx, Px(0.0), segments)]
-                    },
-                );
-                if let Some(test_id) = scrub_test_id.as_ref() {
-                    scrub_frame = scrub_frame.test_id(test_id.clone());
-                }
-                vec![scrub_frame]
-            });
+                        vec![scrub_frame]
+                    })
+            },
+        );
 
         let mut input_layout = self.options.layout;
         if !typing {
@@ -344,6 +392,7 @@ where
         }
 
         let state_for_input = state.clone();
+        let on_outcome_for_input = on_outcome.clone();
         let input_focus_target: Arc<Mutex<Option<fret_ui::GlobalElementId>>> =
             Arc::new(Mutex::new(None));
         let input = NumericInput::new(self.model.clone(), self.format.clone(), self.parse.clone())
@@ -367,9 +416,16 @@ where
                 match outcome {
                     NumericInputOutcome::Committed | NumericInputOutcome::Canceled => {
                         st.mode = DragValueMode::Scrub;
+                        st.scrub_revision = st.scrub_revision.wrapping_add(1);
                         if let Some(scrub_id) = st.scrub_id {
                             host.request_focus(scrub_id);
                         }
+                        emit_drag_value_outcome(
+                            host,
+                            action_cx,
+                            on_outcome_for_input.as_ref(),
+                            drag_value_outcome_from_numeric_input(outcome),
+                        );
                         host.request_redraw(action_cx.window);
                     }
                 }
@@ -415,4 +471,22 @@ fn hidden_layout(mut layout: LayoutStyle) -> LayoutStyle {
     };
     layout.overflow = Overflow::Clip;
     layout
+}
+
+fn drag_value_outcome_from_numeric_input(outcome: NumericInputOutcome) -> DragValueOutcome {
+    match outcome {
+        NumericInputOutcome::Committed => DragValueOutcome::Committed,
+        NumericInputOutcome::Canceled => DragValueOutcome::Canceled,
+    }
+}
+
+fn emit_drag_value_outcome(
+    host: &mut dyn UiActionHost,
+    action_cx: ActionCx,
+    on_outcome: Option<&OnDragValueOutcome>,
+    outcome: DragValueOutcome,
+) {
+    if let Some(cb) = on_outcome {
+        cb(host, action_cx, outcome);
+    }
 }
