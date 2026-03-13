@@ -42,3 +42,5 @@ Current v1 scope decisions:
   contract
 - monitor/event-surface extraction is deferred until at least two cross-cutting observers need the
   same shared contract
+- modifier and auto-scroll core stay pure/data-only; actual scrolling side effects remain in
+  product/integration code

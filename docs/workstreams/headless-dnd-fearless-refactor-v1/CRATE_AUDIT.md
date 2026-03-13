@@ -160,6 +160,7 @@ Evidence anchors:
 
 ## Gates run for this audit checkpoint
 
+- `cargo nextest run -p fret-dnd`
 - `cargo nextest run -p fret-ui-kit --features dnd dnd::tests::`
 - `cargo nextest run -p fret-ui-shadcn --test kanban_dnd_forwarders --test carousel_dnd_arbitration`
 - `python tools/check_layering.py`

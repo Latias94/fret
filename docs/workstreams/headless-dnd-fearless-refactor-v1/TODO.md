@@ -101,7 +101,16 @@ This file tracks the execution checklist for `DESIGN.md`.
     - `ecosystem/fret-ui-shadcn/src/extras/kanban.rs`
     - `ecosystem/fret-workspace/src/tab_strip/mod.rs`
     - `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/pending.rs`
-- [ ] Preserve the rule that modifiers and auto-scroll core remain pure/data-only.
+- [x] Preserve the rule that modifiers and auto-scroll core remain pure/data-only.
+  - Evidence: ADR 0157 already locks this as a contract invariant.
+  - Evidence anchors:
+    - `docs/adr/0157-headless-dnd-v1-contract-surface.md`
+    - `ecosystem/fret-dnd/src/modifier.rs`
+    - `ecosystem/fret-dnd/src/scroll.rs`
+    - `ecosystem/fret-dnd/src/frame.rs`
+    - `ecosystem/fret-dnd/src/engine.rs`
+    - `ecosystem/fret-workspace/src/tab_strip/kernel.rs`
+    - `ecosystem/fret-docking/src/dock/space.rs`
 
 ## M5 — Follow-on parity targets (do not block the main refactor)
 
