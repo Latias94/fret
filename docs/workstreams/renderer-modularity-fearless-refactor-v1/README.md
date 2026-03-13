@@ -329,6 +329,11 @@ As of 2026-03-13:
     accounting.
   - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now consumes prepared
     user-image inputs and keeps `CustomEffectV3` focused on destination routing and pass execution.
+- The remaining `CustomEffectV3` execution shell has also been split:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_custom_v3.rs` now owns
+    v3 param/meta upload plus the final masked/unmasked dispatch flow.
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now keeps the v3
+    path focused on pipeline availability checks plus prepared-input orchestration.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

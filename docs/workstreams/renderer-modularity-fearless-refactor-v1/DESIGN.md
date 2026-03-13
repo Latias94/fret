@@ -290,7 +290,9 @@ For `Renderer` state-shell tightening, the same principle applies:
   `src`/`src_raw`/`src_pyramid` choice graph and only consume prepared effect-local inputs.
   User-image fallback selection, sampler choice, and feature-local perf accounting are the next
   natural closure on the same path because they are execution-time preparation concerns rather than
-  recorder-local draw semantics.
+  recorder-local draw semantics. Once those preparations are closed, param/meta upload and final
+  masked-vs-unmasked dispatch can move to an effect-family helper module so the parent recorder
+  body becomes pure orchestration.
 - render-text dump state is the matching diagnostics/export seam for text debugging:
   dump collection scratch and serialization scratch should move behind one owner so render-scene
   execution keeps only a thin bridge to `TextSystem`.

@@ -647,11 +647,15 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs`
     - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
       `user0` / `user1` preparation flow directly
+    - `CustomEffectV3` param/meta upload and final masked/unmasked dispatch now live under
+      `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_custom_v3.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+      v3 upload/dispatch body directly
   - Current next hotspot:
     - decide whether scene-encoding invalidation/debug evidence should stay coupled to
       `scene_encoding_cache.rs` or move closer to diagnostics state
-    - decide whether `CustomEffectV3` uniform/meta upload and destination binding assembly should
-      split again so `effects.rs` keeps only final branch dispatch for the v3 path
+    - decide whether the now-thin `CustomEffectV3` orchestration shell should move entirely out of
+      `effects.rs`, or whether the remaining body is already the right long-term seam
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG

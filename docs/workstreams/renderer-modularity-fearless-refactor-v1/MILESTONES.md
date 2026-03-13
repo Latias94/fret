@@ -718,6 +718,21 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_backdrop_source_group_raw_snapshots_before_prior_backdrop_steps`
   - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_pyramid_level1_differs_from_raw_near_an_unaligned_edge`
   - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_rejects_non_filterable_user_image_formats_by_falling_back_and_counts_it`
+- The twenty-ninth renderer custom-v3-dispatch split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_custom_v3.rs` now owns
+    `CustomEffectV3` param/meta upload plus the final masked/unmasked dispatch flow
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` now reuses that
+    helper module and keeps the v3 path focused on pipeline availability checks plus prepared-input
+    orchestration
+  - the slice does not change effect semantics; it only narrows the parent recorder body down to
+    orchestration
+- Renderer custom-v3-dispatch split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_src_raw_is_chain_root_and_differs_from_src_after_prior_step`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_backdrop_source_group_raw_snapshots_before_prior_backdrop_steps`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_pyramid_level1_differs_from_raw_near_an_unaligned_edge`
+  - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v3_rejects_non_filterable_user_image_formats_by_falling_back_and_counts_it`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals
