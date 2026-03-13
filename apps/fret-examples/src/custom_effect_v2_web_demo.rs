@@ -38,7 +38,7 @@ use fret_ui_kit::custom_effects::CustomEffectProgramV2;
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::on_activate_request_redraw;
 use fret_ui_kit::ui;
-use fret_ui_kit::{Space, UiExt};
+use fret_ui_kit::{IntoUiElement, Space, UiExt};
 use fret_ui_shadcn::facade as shadcn;
 
 const WGSL: &str = r#"
@@ -388,7 +388,10 @@ impl CustomEffectV2WebDriver {
         )
     }
 
-    fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement {
+    fn lens(
+        cx: &mut ElementContext<'_, App>,
+        controls: &DemoControls,
+    ) -> impl IntoUiElement<App> + use<> {
         let theme = Theme::global(&*cx.app).snapshot();
 
         let caps = cx.app.global::<RendererCapabilities>().cloned();
@@ -572,7 +575,10 @@ impl CustomEffectV2WebDriver {
         )
     }
 
-    fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement {
+    fn inspector(
+        cx: &mut ElementContext<'_, App>,
+        controls: &DemoControls,
+    ) -> impl IntoUiElement<App> + use<> {
         let theme = Theme::global(&*cx.app).snapshot();
 
         let mode_value = Self::watch_opt_string(cx, &controls.mode, "backdrop");
@@ -928,7 +934,7 @@ impl CustomEffectV2WebDriver {
         row.layout.size.height = Length::Fill;
 
         vec![cx.flex(row, move |cx| {
-            let inspector = Self::inspector(cx, &controls);
+            let inspector = Self::inspector(cx, &controls).into_element(cx);
 
             let mut stage_layout = LayoutStyle::default();
             stage_layout.size.width = Length::Fill;
@@ -1046,9 +1052,9 @@ impl CustomEffectV2WebDriver {
                             ..Default::default()
                         },
                         move |cx| {
-                            vec![
-                                cx.flex(center, move |cx| vec![Self::lens(cx, &controls_for_lens)]),
-                            ]
+                            vec![cx.flex(center, move |cx| {
+                                vec![Self::lens(cx, &controls_for_lens).into_element(cx)]
+                            })]
                         },
                     );
                     items.push(overlay);

@@ -39,14 +39,56 @@ fn shadow_chain() -> EffectChain {
 
 struct DropShadowBasicsView;
 
+fn shadow_card(
+    cx: &mut UiCx<'_>,
+    title: String,
+    enabled: bool,
+    chain: EffectChain,
+) -> impl IntoUiElement<KernelApp> + use<> {
+    let theme = Theme::global(&*cx.app).snapshot();
+    let background = ColorRef::Color(theme.color_token("background"));
+    let border = ColorRef::Color(theme.color_token("border"));
+    let muted = ColorRef::Color(theme.color_token("muted"));
+
+    let surface = ui::v_flex(move |cx| {
+        ui::children![
+            cx;
+            shadcn::Label::new(title),
+            shadcn::Badge::new("DropShadowV1")
+                .variant(shadcn::BadgeVariant::Secondary),
+        ]
+    })
+    .gap(Space::N2)
+    .p(Space::N4)
+    .bg(background)
+    .border_1()
+    .border_color(border)
+    .rounded_md()
+    .size_full();
+
+    // Keep a fixed-size effect layer and pad inside it so the shadow has space.
+    let padded = ui::container(|_cx| [surface]).p(Space::N5).size_full();
+
+    let bounds = ui::container(|_cx| [padded])
+        .w_px(Px(260.0))
+        .h_px(Px(160.0))
+        .overflow_hidden()
+        .bg(muted)
+        .rounded_md();
+
+    if enabled {
+        ui::effect_layer(EffectMode::FilterContent, chain, move |_cx| [bounds]).into_element(cx)
+    } else {
+        bounds.into_element(cx)
+    }
+}
+
 impl View for DropShadowBasicsView {
     fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let theme = Theme::global(&*cx.app).snapshot();
-
         let enabled_state = cx.state().local_init(|| true);
         let stress_state = cx.state().local_init(|| false);
 
@@ -93,43 +135,6 @@ impl View for DropShadowBasicsView {
 
         let chain = shadow_chain();
 
-        let card = |cx: &mut UiCx<'_>, title: String| -> AnyElement {
-            let surface = ui::v_flex(|cx| {
-                ui::children![
-                    cx;
-                    shadcn::Label::new(title),
-                    shadcn::Badge::new("DropShadowV1")
-                        .variant(shadcn::BadgeVariant::Secondary),
-                ]
-            })
-            .gap(Space::N2)
-            .p(Space::N4)
-            .bg(ColorRef::Color(theme.color_token("background")))
-            .border_1()
-            .border_color(ColorRef::Color(theme.color_token("border")))
-            .rounded_md()
-            .size_full();
-
-            // Keep a fixed-size effect layer and pad inside it so the shadow has space.
-            let padded = ui::container(|_cx| [surface]).p(Space::N5).size_full();
-
-            let bounds = ui::container(|_cx| [padded])
-                .w_px(Px(260.0))
-                .h_px(Px(160.0))
-                .overflow_hidden()
-                .bg(ColorRef::Color(theme.color_token("muted")))
-                .rounded_md();
-
-            if enabled {
-                ui::effect_layer(EffectMode::FilterContent, chain.clone(), move |_cx| {
-                    [bounds]
-                })
-                .into_element(cx)
-            } else {
-                bounds.into_element(cx)
-            }
-        };
-
         let (rows, cols) = if stress {
             (4usize, 3usize)
         } else {
@@ -143,7 +148,10 @@ impl View for DropShadowBasicsView {
                         let mut row: Vec<AnyElement> = Vec::with_capacity(cols);
                         for c in 0..cols {
                             let i = r * cols + c;
-                            row.push(card(cx, format!("Card {i}")));
+                            row.push(
+                                shadow_card(cx, format!("Card {i}"), enabled, chain.clone())
+                                    .into_element(cx),
+                            );
                         }
                         row
                     })

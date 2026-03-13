@@ -1,7 +1,7 @@
 use fret::{FretApp, advanced::prelude::*, shadcn};
-use fret_core::ImageColorSpace;
+use fret_core::{ImageColorSpace, ImageId};
 use fret_icons::FrozenIconRegistry;
-use fret_ui::element::{ImageProps, SvgIconProps};
+use fret_ui::element::{ImageProps, LayoutStyle, SvgIconProps};
 use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -48,6 +48,38 @@ fn checkerboard_rgba8(width: u32, height: u32, cell: u32) -> Vec<u8> {
         }
     }
     out
+}
+
+fn render_image_preview(
+    cx: &mut UiCx<'_>,
+    title: &'static str,
+    image: Option<ImageId>,
+) -> impl IntoUiElement<KernelApp> + use<> {
+    let theme = Theme::global(&*cx.app).snapshot();
+    let border = ColorRef::Color(theme.color_token("border"));
+
+    let box_el = ui::container(move |cx| {
+        if let Some(image) = image {
+            let mut props = ImageProps::new(image);
+            let mut layout = LayoutStyle::default();
+            layout.size.width = Length::Fill;
+            layout.size.height = Length::Fill;
+            props.layout = layout;
+            [cx.image_props(props)]
+        } else {
+            [cx.spinner()]
+        }
+    })
+    .border_1()
+    .border_color(border)
+    .rounded(Radius::Lg)
+    .w_px(Px(160.0))
+    .h_px(Px(160.0))
+    .overflow_hidden();
+
+    ui::v_flex(move |cx| ui::children![cx; shadcn::Label::new(title), box_el])
+        .gap(Space::N2)
+        .w_full()
 }
 
 struct IconsAndAssetsBasicsView {
@@ -259,31 +291,6 @@ impl View for IconsAndAssetsBasicsView {
             fret_ui_assets::image_asset_state::ImageLoadingStatus::Error => "error",
         };
 
-        let render_image =
-            |cx: &mut UiCx<'_>, title: &str, st: &fret_ui_assets::ImageSourceState| -> AnyElement {
-                let box_el = ui::container(|cx| {
-                    if let Some(image) = st.image {
-                        let mut props = ImageProps::new(image);
-                        props.layout =
-                            style::layout_style(&theme, LayoutRefinement::default().size_full());
-                        [cx.image_props(props)]
-                    } else {
-                        [cx.spinner()]
-                    }
-                })
-                .border_1()
-                .border_color(ColorRef::Color(theme.color_token("border")))
-                .rounded(Radius::Lg)
-                .w_px(Px(160.0))
-                .h_px(Px(160.0))
-                .overflow_hidden();
-
-                ui::v_flex(|cx| ui::children![cx; shadcn::Label::new(title), box_el])
-                    .gap(Space::N2)
-                    .w_full()
-                    .into_element(cx)
-            };
-
         let image_panel = shadcn::Card::build(|cx, out| {
             out.push_ui(
                 cx,
@@ -319,8 +326,16 @@ impl View for IconsAndAssetsBasicsView {
                                 ui::h_flex(|cx| {
                                     ui::children![
                                         cx;
-                                        render_image(cx, "From path: `assets/textures/test.jpg`", &file_image_state),
-                                        render_image(cx, "From RGBA8 buffer", &memory_image_state),
+                                        render_image_preview(
+                                            cx,
+                                            "From path: `assets/textures/test.jpg`",
+                                            file_image_state.image,
+                                        ),
+                                        render_image_preview(
+                                            cx,
+                                            "From RGBA8 buffer",
+                                            memory_image_state.image,
+                                        ),
                                     ]
                                 })
                                 .gap(Space::N4)
@@ -357,10 +372,10 @@ impl View for IconsAndAssetsBasicsView {
                 ]
             } else if let Some(bytes) = svg_file_state.bytes.clone() {
                 let mut props = SvgIconProps::new(fret_ui::SvgSource::Bytes(bytes));
-                props.layout = style::layout_style(
-                    &theme,
-                    LayoutRefinement::default().w_px(Px(160.0)).h_px(Px(160.0)),
-                );
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(Px(160.0));
+                layout.size.height = Length::Px(Px(160.0));
+                props.layout = layout;
                 props.fit = fret_core::SvgFit::Contain;
                 props.color = theme.color_token("foreground");
                 ui::children![cx; cx.svg_icon_props(props)]
@@ -445,10 +460,10 @@ impl View for IconsAndAssetsBasicsView {
 fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-icons-and-assets-basics")
         .window("cookbook-icons-and-assets-basics", (960.0, 860.0))
-        // Register Lucide vendor icons during bootstrap so the icon SVG preload step (if enabled)
-        // includes them.
-        .register_icon_pack(fret_icons_lucide::register_vendor_icons)
-        .setup(fret_cookbook::install_cookbook_defaults)
+        .setup((
+            fret_cookbook::install_cookbook_defaults,
+            fret_icons_lucide::app::install,
+        ))
         .view::<IconsAndAssetsBasicsView>()?
         .run()
         .map_err(anyhow::Error::from)

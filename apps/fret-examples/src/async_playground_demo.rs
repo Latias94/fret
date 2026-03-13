@@ -295,8 +295,9 @@ impl View for AsyncPlaygroundView {
             .layout()
             .value_or_default();
 
-        let header = header_bar(cx, &mut self.st, theme.clone(), global_slow, dark);
-        let body = body(cx, &mut self.st, theme, global_slow, selected);
+        let header =
+            header_bar(cx, &mut self.st, theme.clone(), global_slow, dark).into_element(cx);
+        let body = body(cx, &mut self.st, theme, global_slow, selected).into_element(cx);
 
         cx.actions().models::<act::SelectTip>({
             let selected = self.st.selected.clone();
@@ -373,7 +374,7 @@ fn header_bar(
     theme: ThemeSnapshot,
     global_slow: bool,
     dark: bool,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let title = ui::text("Async Playground")
         .text_sm()
         .font_semibold()
@@ -423,10 +424,10 @@ fn body(
     theme: ThemeSnapshot,
     global_slow: bool,
     selected: QueryId,
-) -> AnyElement {
-    let left = catalog_panel(cx, st, theme.clone(), selected);
-    let mid = main_panel(cx, st, theme.clone(), global_slow, selected);
-    let right = inspector_panel(cx, st, theme, selected);
+) -> impl IntoUiElement<KernelApp> + use<> {
+    let left = catalog_panel(cx, st, theme.clone(), selected).into_element(cx);
+    let mid = main_panel(cx, st, theme.clone(), global_slow, selected).into_element(cx);
+    let right = inspector_panel(cx, st, theme, selected).into_element(cx);
 
     let sep_1 = shadcn::Separator::new()
         .orientation(SeparatorOrientation::Vertical)
@@ -449,7 +450,7 @@ fn catalog_panel(
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     selected: QueryId,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let catalog_scroll = st.catalog_scroll.clone();
     let header = ui::text("Catalog")
         .font_semibold()
@@ -569,7 +570,7 @@ fn main_panel(
     theme: ThemeSnapshot,
     global_slow: bool,
     selected: QueryId,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let mode = active_mode(cx, st);
 
     let title = ui::text(selected.label())
@@ -625,6 +626,7 @@ fn main_panel(
             selected,
             FetchMode::Sync,
         )
+        .into_element(cx)
     } else {
         ui::container(|_cx| Vec::<AnyElement>::new())
             .h_full()
@@ -639,6 +641,7 @@ fn main_panel(
             selected,
             FetchMode::Async,
         )
+        .into_element(cx)
     } else {
         ui::container(|_cx| Vec::<AnyElement>::new())
             .h_full()
@@ -680,7 +683,7 @@ fn inspector_panel(
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     selected: QueryId,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let policy = query_policy(cx, st, selected);
     let key = query_key_for_id(cx, st, selected);
     let snap = snapshot_entry_for_key(cx, key);
@@ -721,7 +724,7 @@ fn inspector_panel(
     .items_stretch()
     .into_element(cx);
 
-    let policy_editor = policy_editor(cx, st, theme.clone(), selected);
+    let policy_editor = policy_editor(cx, st, theme.clone(), selected).into_element(cx);
 
     let ns_row = ui::h_flex(|cx| {
         let input = shadcn::Input::new(st.namespace_input.clone())
@@ -773,7 +776,7 @@ fn policy_editor(
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     id: QueryId,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let config = st.configs.get(&id).expect("missing config");
 
     let stale = shadcn::Input::new(config.stale_time_s.clone())
@@ -839,7 +842,7 @@ fn query_panel_for_mode(
     global_slow: bool,
     selected: QueryId,
     mode: FetchMode,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let id = selected;
     let policy = query_policy(cx, st, id);
     let fail_mode = query_fail_mode(cx, st, id);
@@ -882,8 +885,9 @@ fn query_panel_for_mode(
     let snap = snapshot_entry_for_key(cx, key);
     observe_query_diag(st, id, &state, snap.as_ref());
 
-    let inputs = query_inputs_row(cx, st, theme.clone(), id);
-    let view = query_result_view(cx, theme, id, key, &state, snap.as_ref(), &policy);
+    let inputs = query_inputs_row(cx, st, theme.clone(), id).into_element(cx);
+    let view =
+        query_result_view(cx, theme, id, key, &state, snap.as_ref(), &policy).into_element(cx);
     ui::v_flex(|_cx| [inputs, view])
         .gap(Space::N4)
         .w_full()
@@ -896,7 +900,7 @@ fn query_inputs_row(
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     id: QueryId,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let mut children: Vec<AnyElement> = Vec::new();
     children.push(
         ui::text(match id {
@@ -944,7 +948,7 @@ fn query_result_view(
     state: &QueryState<Arc<str>>,
     snap: Option<&QuerySnapshotEntry>,
     policy: &QueryPolicy,
-) -> AnyElement {
+) -> impl IntoUiElement<KernelApp> + use<> {
     let stale = snap.map(|s| s.stale).unwrap_or(false);
     let badge = status_badge(
         cx,

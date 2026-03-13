@@ -33,7 +33,7 @@ use fret_ui_kit::custom_effects::CustomEffectProgramV2;
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::on_activate_request_redraw;
 use fret_ui_kit::ui;
-use fret_ui_kit::{Space, UiExt};
+use fret_ui_kit::{IntoUiElement, Space, UiExt};
 use fret_ui_shadcn::facade as shadcn;
 
 const WGSL: &str = r#"
@@ -288,7 +288,11 @@ impl CustomEffectV2GlassChromeWebDriver {
         });
     }
 
-    fn label_row(cx: &mut ElementContext<'_, App>, label: &str, value: String) -> AnyElement {
+    fn label_row(
+        cx: &mut ElementContext<'_, App>,
+        label: &str,
+        value: String,
+    ) -> impl IntoUiElement<App> + use<> {
         let theme = Theme::global(&*cx.app).snapshot();
 
         ui::h_flex(|cx| {
@@ -321,7 +325,10 @@ impl CustomEffectV2GlassChromeWebDriver {
         .into_element(cx)
     }
 
-    fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement {
+    fn lens(
+        cx: &mut ElementContext<'_, App>,
+        controls: &DemoControls,
+    ) -> impl IntoUiElement<App> + use<> {
         let theme = Theme::global(&*cx.app).snapshot();
 
         let caps = cx.app.global::<RendererCapabilities>().cloned();
@@ -482,7 +489,10 @@ impl CustomEffectV2GlassChromeWebDriver {
         )
     }
 
-    fn controls_panel(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement {
+    fn controls_panel(
+        cx: &mut ElementContext<'_, App>,
+        controls: &DemoControls,
+    ) -> impl IntoUiElement<App> + use<> {
         let enabled_model = controls.enabled.clone();
         let mode_model = controls.mode.clone();
         let mode_open_model = controls.mode_open.clone();
@@ -566,7 +576,7 @@ impl CustomEffectV2GlassChromeWebDriver {
 
         let uv_span_row = ui::v_flex(move |cx: &mut ElementContext<'_, App>| {
             [
-                Self::label_row(cx, "Uv span", format!("{uv_span:.2}")),
+                Self::label_row(cx, "Uv span", format!("{uv_span:.2}")).into_element(cx),
                 shadcn::Slider::new(uv_span_model.clone())
                     .range(0.05, 1.0)
                     .step(0.01)
@@ -578,7 +588,7 @@ impl CustomEffectV2GlassChromeWebDriver {
 
         let strength_row = ui::v_flex(move |cx| {
             [
-                Self::label_row(cx, "Strength", format!("{strength:.2}")),
+                Self::label_row(cx, "Strength", format!("{strength:.2}")).into_element(cx),
                 shadcn::Slider::new(strength_model.clone())
                     .range(0.0, 2.0)
                     .step(0.01)
@@ -590,7 +600,7 @@ impl CustomEffectV2GlassChromeWebDriver {
 
         let shininess_row = ui::v_flex(move |cx| {
             [
-                Self::label_row(cx, "Shininess", format!("{shininess:.0}")),
+                Self::label_row(cx, "Shininess", format!("{shininess:.0}")).into_element(cx),
                 shadcn::Slider::new(shininess_model.clone())
                     .range(1.0, 128.0)
                     .step(1.0)
@@ -602,7 +612,7 @@ impl CustomEffectV2GlassChromeWebDriver {
 
         let mix_row = ui::v_flex(move |cx| {
             [
-                Self::label_row(cx, "Mix", format!("{mix01:.2}")),
+                Self::label_row(cx, "Mix", format!("{mix01:.2}")).into_element(cx),
                 shadcn::Slider::new(mix01_model.clone())
                     .range(0.0, 1.0)
                     .step(0.01)
@@ -707,7 +717,7 @@ impl CustomEffectV2GlassChromeWebDriver {
         row.layout.size.height = Length::Fill;
 
         vec![cx.flex(row, move |cx| {
-            let inspector = Self::controls_panel(cx, &controls);
+            let inspector = Self::controls_panel(cx, &controls).into_element(cx);
 
             let mut stage_layout = LayoutStyle::default();
             stage_layout.size.width = Length::Fill;
@@ -754,7 +764,7 @@ impl CustomEffectV2GlassChromeWebDriver {
                     ));
 
                     if visible {
-                        items.push(Self::lens(cx, &controls_for_stage));
+                        items.push(Self::lens(cx, &controls_for_stage).into_element(cx));
                     }
 
                     items
