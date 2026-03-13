@@ -54,6 +54,54 @@ pub(super) fn preview_button(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let notes = DocSection::build(cx, "Notes", notes)
         .no_shell()
         .description("Parity notes and implementation pointers.");
+    let demo = DocSection::build(cx, "Demo", demo)
+        .description("Docs-aligned outline button + icon button preview.")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .description("Copyable minimal usage for `Button`.")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let size = DocSection::build(cx, "Size", size)
+        .description("Use `size(...)` to change text and icon button sizes.")
+        .code_rust_from_file_region(snippets::size::SOURCE, "example");
+    let default = DocSection::build(cx, "Default", default)
+        .code_rust_from_file_region(snippets::default::SOURCE, "example");
+    let outline = DocSection::build(cx, "Outline", outline)
+        .code_rust_from_file_region(snippets::outline::SOURCE, "example");
+    let secondary = DocSection::build(cx, "Secondary", secondary)
+        .code_rust_from_file_region(snippets::secondary::SOURCE, "example");
+    let ghost = DocSection::build(cx, "Ghost", ghost)
+        .code_rust_from_file_region(snippets::ghost::SOURCE, "example");
+    let destructive = DocSection::build(cx, "Destructive", destructive)
+        .code_rust_from_file_region(snippets::destructive::SOURCE, "example");
+    let link = DocSection::build(cx, "Link", link)
+        .description("The documented link variant remains a button-styled text action.")
+        .code_rust_from_file_region(snippets::link::SOURCE, "example");
+    let icon_only = DocSection::build(cx, "Icon", icon_only)
+        .description("Icon-only outline button.")
+        .code_rust_from_file_region(snippets::icon::SOURCE, "example");
+    let with_icon = DocSection::build(cx, "With Icon", with_icon)
+        .description("Leading and trailing icon patterns.")
+        .code_rust_from_file_region(snippets::with_icon::SOURCE, "example");
+    let rounded = DocSection::build(cx, "Rounded", rounded)
+        .description("Keep `rounded-full` as an explicit call-site refinement.")
+        .code_rust_from_file_region(snippets::rounded::SOURCE, "example");
+    let spinner = DocSection::build(cx, "Spinner", spinner)
+        .description("Disabled button compositions with inline spinners.")
+        .code_rust_from_file_region(snippets::loading::SOURCE, "example");
+    let button_group = DocSection::build(cx, "Button Group", button_group)
+        .description("See `ButtonGroup` for grouped actions with shared chrome.")
+        .code_rust_from_file_region(snippets::button_group::SOURCE, "example");
+    let link_render = DocSection::build(cx, "Link (Semantic)", link_render)
+        .description(
+            "Fret equivalent of the upstream second `Link` example (`buttonVariants` on a semantic link).",
+        )
+        .code_rust_from_file_region(snippets::link_render::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .description("Button layout under an RTL direction provider.")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+    let variants = DocSection::build(cx, "Variants Overview (Fret)", variants)
+        .description("Compact variant comparison kept for diagnostics and quick visual diffing.")
+        .code_rust_from_file_region(snippets::variants::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -61,54 +109,25 @@ pub(super) fn preview_button(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             "Preview mirrors the shadcn Button docs order first, then keeps a compact Fret-specific variants overview for fast visual comparison and existing diag coverage.",
         ),
         vec![
-            DocSection::new("Demo", demo)
-                .description("Docs-aligned outline button + icon button preview.")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .description("Copyable minimal usage for `Button`.")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
+            demo,
+            usage,
             cursor,
-            DocSection::new("Size", size)
-                .description("Use `size(...)` to change text and icon button sizes.")
-                .code_rust_from_file_region(snippets::size::SOURCE, "example"),
-            DocSection::new("Default", default)
-                .code_rust_from_file_region(snippets::default::SOURCE, "example"),
-            DocSection::new("Outline", outline)
-                .code_rust_from_file_region(snippets::outline::SOURCE, "example"),
-            DocSection::new("Secondary", secondary)
-                .code_rust_from_file_region(snippets::secondary::SOURCE, "example"),
-            DocSection::new("Ghost", ghost)
-                .code_rust_from_file_region(snippets::ghost::SOURCE, "example"),
-            DocSection::new("Destructive", destructive)
-                .code_rust_from_file_region(snippets::destructive::SOURCE, "example"),
-            DocSection::new("Link", link)
-                .description("The documented link variant remains a button-styled text action.")
-                .code_rust_from_file_region(snippets::link::SOURCE, "example"),
-            DocSection::new("Icon", icon_only)
-                .description("Icon-only outline button.")
-                .code_rust_from_file_region(snippets::icon::SOURCE, "example"),
-            DocSection::new("With Icon", with_icon)
-                .description("Leading and trailing icon patterns.")
-                .code_rust_from_file_region(snippets::with_icon::SOURCE, "example"),
-            DocSection::new("Rounded", rounded)
-                .description("Keep `rounded-full` as an explicit call-site refinement.")
-                .code_rust_from_file_region(snippets::rounded::SOURCE, "example"),
-            DocSection::new("Spinner", spinner)
-                .description("Disabled button compositions with inline spinners.")
-                .code_rust_from_file_region(snippets::loading::SOURCE, "example"),
-            DocSection::new("Button Group", button_group)
-                .description("See `ButtonGroup` for grouped actions with shared chrome.")
-                .code_rust_from_file_region(snippets::button_group::SOURCE, "example"),
-            DocSection::new("Link (Semantic)", link_render)
-                .description("Fret equivalent of the upstream second `Link` example (`buttonVariants` on a semantic link).")
-                .code_rust_from_file_region(snippets::link_render::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .description("Button layout under an RTL direction provider.")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            size,
+            default,
+            outline,
+            secondary,
+            ghost,
+            destructive,
+            link,
+            icon_only,
+            with_icon,
+            rounded,
+            spinner,
+            button_group,
+            link_render,
+            rtl,
             api_reference,
-            DocSection::new("Variants Overview (Fret)", variants)
-                .description("Compact variant comparison kept for diagnostics and quick visual diffing.")
-                .code_rust_from_file_region(snippets::variants::SOURCE, "example"),
+            variants,
             notes,
         ],
     );

@@ -479,8 +479,22 @@ Exit criteria:
   checkbox/radio/demo state beside the snippet itself, and
   `apps/fret-ui-gallery/src/ui/pages/menubar.rs` now routes those snippet-backed sections through
   `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
-- the next UI Gallery app-facing snippet batch is now the next remaining
-  `ElementContext<'_, H> -> AnyElement` default-authoring families.
+- the same UI Gallery default-app top-level snippet cleanup now also records the `popover` family:
+  `apps/fret-ui-gallery/src/ui/snippets/popover/{align,basic,demo,rtl,usage,with_form}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep their popover-local
+  form state beside the snippet itself, and
+  `apps/fret-ui-gallery/src/ui/pages/popover.rs` now routes those snippet-backed sections through
+  `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the same UI Gallery default-app top-level snippet cleanup now also records the `button` family:
+  `apps/fret-ui-gallery/src/ui/snippets/button/{demo,usage,size,default,outline,secondary,ghost,destructive,link,icon,with_icon,rounded,loading,button_group,link_render,rtl,variants}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/button.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{button_snippets_prefer_ui_cx_on_the_default_app_surface,button_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the next UI Gallery app-facing snippet batch is now `button_group`, then `input_group`,
+  followed by the next remaining `ElementContext<'_, H> -> AnyElement`
+  default-authoring families.
 - M6 raw-seam inventory now has executable source gates in `surface_policy_tests.rs`:
   explicit raw/bridge helpers are currently limited to
   `kbd.rs::kbd_icon(...)` and

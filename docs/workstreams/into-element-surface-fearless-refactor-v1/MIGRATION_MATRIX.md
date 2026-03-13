@@ -312,6 +312,21 @@ Execution note on 2026-03-13:
   `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
   now forbidden there by
   `ui_authoring_surface_default_app::{menubar_snippets_prefer_ui_cx_on_the_default_app_surface,menubar_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the `popover` family:
+  `apps/fret-ui-gallery/src/ui/snippets/popover/{align,basic,demo,rtl,usage,with_form}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep their popover-local
+  form state beside the snippet itself, and
+  `apps/fret-ui-gallery/src/ui/pages/popover.rs` now consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{popover_snippets_prefer_ui_cx_on_the_default_app_surface,popover_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the `button` family:
+  `apps/fret-ui-gallery/src/ui/snippets/button/{demo,usage,size,default,outline,secondary,ghost,destructive,link,icon,with_icon,rounded,loading,button_group,link_render,rtl,variants}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/button.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{button_snippets_prefer_ui_cx_on_the_default_app_surface,button_page_uses_typed_doc_sections_for_app_facing_snippets}`.
 - the cookbook advanced-example source gate now also records
   `apps/fret-cookbook/examples/customv1_basics.rs`,
   where `panel_shell(...)` and `preview_content(...)` now use `IntoUiElement<KernelApp>`-based

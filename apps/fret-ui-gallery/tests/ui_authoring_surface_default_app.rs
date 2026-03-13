@@ -479,6 +479,133 @@ fn menubar_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn button_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/button/demo.rs",
+            "src/ui/snippets/button/usage.rs",
+            "src/ui/snippets/button/size.rs",
+            "src/ui/snippets/button/default.rs",
+            "src/ui/snippets/button/outline.rs",
+            "src/ui/snippets/button/secondary.rs",
+            "src/ui/snippets/button/ghost.rs",
+            "src/ui/snippets/button/destructive.rs",
+            "src/ui/snippets/button/link.rs",
+            "src/ui/snippets/button/icon.rs",
+            "src/ui/snippets/button/with_icon.rs",
+            "src/ui/snippets/button/rounded.rs",
+            "src/ui/snippets/button/loading.rs",
+            "src/ui/snippets/button/button_group.rs",
+            "src/ui/snippets/button/link_render.rs",
+            "src/ui/snippets/button/rtl.rs",
+            "src/ui/snippets/button/variants.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/button",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn button_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/button.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Size\", size)",
+            "DocSection::build(cx, \"Default\", default)",
+            "DocSection::build(cx, \"Outline\", outline)",
+            "DocSection::build(cx, \"Secondary\", secondary)",
+            "DocSection::build(cx, \"Ghost\", ghost)",
+            "DocSection::build(cx, \"Destructive\", destructive)",
+            "DocSection::build(cx, \"Link\", link)",
+            "DocSection::build(cx, \"Icon\", icon_only)",
+            "DocSection::build(cx, \"With Icon\", with_icon)",
+            "DocSection::build(cx, \"Rounded\", rounded)",
+            "DocSection::build(cx, \"Spinner\", spinner)",
+            "DocSection::build(cx, \"Button Group\", button_group)",
+            "DocSection::build(cx, \"Link (Semantic)\", link_render)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Variants Overview (Fret)\", variants)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Size\", size)",
+            "DocSection::new(\"Default\", default)",
+            "DocSection::new(\"Outline\", outline)",
+            "DocSection::new(\"Secondary\", secondary)",
+            "DocSection::new(\"Ghost\", ghost)",
+            "DocSection::new(\"Destructive\", destructive)",
+            "DocSection::new(\"Link\", link)",
+            "DocSection::new(\"Icon\", icon_only)",
+            "DocSection::new(\"With Icon\", with_icon)",
+            "DocSection::new(\"Rounded\", rounded)",
+            "DocSection::new(\"Spinner\", spinner)",
+            "DocSection::new(\"Button Group\", button_group)",
+            "DocSection::new(\"Link (Semantic)\", link_render)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Variants Overview (Fret)\", variants)",
+        ],
+    );
+}
+
+#[test]
+fn popover_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/popover/align.rs",
+            "src/ui/snippets/popover/basic.rs",
+            "src/ui/snippets/popover/demo.rs",
+            "src/ui/snippets/popover/rtl.rs",
+            "src/ui/snippets/popover/usage.rs",
+            "src/ui/snippets/popover/with_form.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/popover",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn popover_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/popover.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Basic\", basic)",
+            "DocSection::build(cx, \"Align\", align)",
+            "DocSection::build(cx, \"With Form\", with_form)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Basic\", basic)",
+            "DocSection::new(\"Align\", align)",
+            "DocSection::new(\"With Form\", with_form)",
+            "DocSection::new(\"RTL\", rtl)",
+        ],
+    );
+}
+
+#[test]
 fn progress_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/progress.rs",

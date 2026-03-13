@@ -1,9 +1,10 @@
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let content = shadcn::PopoverContent::new([shadcn::PopoverHeader::new([
         shadcn::PopoverTitle::new("Title").into_element(cx),
         shadcn::PopoverDescription::new("Description text here.").into_element(cx),

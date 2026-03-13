@@ -1,11 +1,12 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
-        let popover = |cx: &mut ElementContext<'_, H>, label: &'static str, side| {
+        let popover = |cx: &mut UiCx<'_>, label: &'static str, side| {
             let content = shadcn::PopoverContent::new([shadcn::PopoverHeader::new([
                 shadcn::PopoverTitle::new("???????").into_element(cx),
                 shadcn::PopoverDescription::new("????? ??????? ??????.").into_element(cx),
