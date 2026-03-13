@@ -418,8 +418,39 @@ fn chart_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/chart/tooltip.rs",
             "src/ui/snippets/chart/usage.rs",
         ],
-        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
         "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/chart",
+        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn chart_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/chart.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo_cards)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Contracts\", contracts_overview)",
+            "DocSection::build(cx, \"Tooltip\", tooltip_content)",
+            "DocSection::build(cx, \"Legend\", legend_content)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo_cards)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Contracts\", contracts_overview)",
+            "DocSection::new(\"Tooltip\", tooltip_content)",
+            "DocSection::new(\"Legend\", legend_content)",
+            "DocSection::new(\"RTL\", rtl)",
+        ],
     );
 }
 

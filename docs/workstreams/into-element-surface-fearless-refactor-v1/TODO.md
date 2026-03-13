@@ -133,6 +133,7 @@ Validation snapshot on 2026-03-13:
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app navigation_menu_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app scroll_area_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app progress_ -- --nocapture`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app chart_ -- --nocapture`
 
 Implementation note on 2026-03-13:
 
@@ -221,10 +222,16 @@ Implementation note on 2026-03-13:
   now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and
   `apps/fret-ui-gallery/src/ui/pages/progress.rs` now routes those previews through
   `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the same UI Gallery top-level snippet cleanup now also covers the chart family:
+  `apps/fret-ui-gallery/src/ui/snippets/chart/{demo,usage,contracts,tooltip,legend,rtl}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and
+  `apps/fret-ui-gallery/src/ui/pages/chart.rs` now routes those previews through
+  `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
 - after `accordion` / `tabs` / `toggle` / `radio_group` / `slider` / `native_select` /
-  `resizable` / `navigation_menu` / `scroll_area` / `progress`, the next default-app UI Gallery
-  app-facing queue should move to `chart`, which is currently the smallest remaining multi-snippet
-  page-local family that still teaches top-level `UiCx -> AnyElement` returns.
+  `resizable` / `navigation_menu` / `scroll_area` / `progress` / `chart`, the next default-app
+  UI Gallery app-facing queue should move to `combobox`, which is now the clearest remaining
+  page-local family still teaching top-level `UiCx -> AnyElement` returns across a complete
+  first-party surface.
 - `apps/fret-cookbook/examples/customv1_basics.rs` now keeps both advanced reusable helpers
   `panel_shell(...)` and `preview_content(...)` on `IntoUiElement<KernelApp>`-based signatures
   instead of returning raw `AnyElement` for non-raw composition.

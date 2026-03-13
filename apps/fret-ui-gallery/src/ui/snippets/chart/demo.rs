@@ -1,14 +1,14 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::declarative::{CachedSubtreeExt as _, CachedSubtreeProps};
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     enum DemoChartKind {
         Area,
