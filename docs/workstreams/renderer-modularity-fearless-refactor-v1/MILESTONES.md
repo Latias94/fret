@@ -45,6 +45,11 @@ Current snapshot (2026-03-13):
 - The fifty-ninth internal `text/mod.rs` split has landed:
   - shared text type shells now live under `crates/fret-render-wgpu/src/text/types.rs`
   - `text/mod.rs` no longer owns glyph/blob/shape/helper type definitions directly
+- The sixtieth internal `text/mod.rs` split has landed:
+  - text bootstrap assembly now lives under `crates/fret-render-wgpu/src/text/bootstrap.rs`
+  - `TextSystem::new(...)` now delegates initial state assembly through that bootstrap module
+  - initial font-policy bootstrap finalization now lives under
+    `crates/fret-render-wgpu/src/text/fonts.rs`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

@@ -1,6 +1,12 @@
 use super::{TextFontFamilyConfig, TextSystem};
 
 impl TextSystem {
+    pub(super) fn finish_initial_font_bootstrap(&mut self) {
+        let _ = self.apply_font_families_inner(&self.fallback_policy.font_family_config.clone());
+        self.fallback_policy.recompute_key(&self.parley_shaper);
+        self.recompute_font_stack_key();
+    }
+
     /// Returns a sorted list of available font family names.
     ///
     /// This is intended for settings/UI pickers. The result is best-effort and platform-dependent.

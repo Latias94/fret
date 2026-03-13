@@ -302,6 +302,12 @@ ID format:
     - shared text types and pure helper surfaces moved into
       `crates/fret-render-wgpu/src/text/types.rs`
     - `text/mod.rs` no longer owns glyph/blob/shape/type-shell definitions directly
+    - text bootstrap assembly now lives in
+      `crates/fret-render-wgpu/src/text/bootstrap.rs`
+    - `TextSystem::new(...)` now delegates initial state assembly through that bootstrap module
+    - initial font-policy bootstrap finalization now lives in
+      `crates/fret-render-wgpu/src/text/fonts.rs`
+    - `TextSystem::new(...)` no longer owns fallback-policy/font-stack finalization directly
     - prepared-glyph font-data cache writes now live behind a dedicated helper in
       `crates/fret-render-wgpu/src/text/prepare.rs`
     - `cache_prepared_glyph_face_data(...)` no longer owns font-data entry writes directly

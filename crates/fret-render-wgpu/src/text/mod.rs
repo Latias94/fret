@@ -22,6 +22,7 @@ pub use fret_render_text::{
 
 mod atlas;
 mod blobs;
+mod bootstrap;
 mod diagnostics;
 mod fonts;
 mod measure;
@@ -30,7 +31,8 @@ mod quality;
 mod queries;
 mod types;
 
-use self::atlas::{GlyphAtlas, GlyphKey, TEXT_ATLAS_MAX_PAGES};
+use self::atlas::{GlyphAtlas, GlyphKey};
+use self::bootstrap::build_text_system;
 pub use self::quality::TextQualitySettings;
 use self::quality::TextQualityState;
 #[cfg(test)]
@@ -94,129 +96,7 @@ pub struct TextSystem {
 
 impl TextSystem {
     pub fn new(device: &wgpu::Device) -> Self {
-        let atlas_width = 2048;
-        let atlas_height = 2048;
-        let atlas_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("fret glyph atlas sampler"),
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
-            address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Linear,
-            mipmap_filter: wgpu::MipmapFilterMode::Nearest,
-            ..Default::default()
-        });
-
-        let atlas_bind_group_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("fret glyph atlas bind group layout"),
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Texture {
-                            multisampled: false,
-                            view_dimension: wgpu::TextureViewDimension::D2,
-                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                        },
-                        count: None,
-                    },
-                ],
-            });
-
-        let mask_atlas = GlyphAtlas::new(
-            device,
-            &atlas_bind_group_layout,
-            &atlas_sampler,
-            "fret glyph mask atlas",
-            atlas_width,
-            atlas_height,
-            wgpu::TextureFormat::R8Unorm,
-            0,
-            TEXT_ATLAS_MAX_PAGES,
-        );
-        let color_atlas = GlyphAtlas::new(
-            device,
-            &atlas_bind_group_layout,
-            &atlas_sampler,
-            "fret glyph color atlas",
-            atlas_width,
-            atlas_height,
-            wgpu::TextureFormat::Rgba8UnormSrgb,
-            0,
-            TEXT_ATLAS_MAX_PAGES,
-        );
-        let subpixel_atlas = GlyphAtlas::new(
-            device,
-            &atlas_bind_group_layout,
-            &atlas_sampler,
-            "fret glyph subpixel atlas",
-            atlas_width,
-            atlas_height,
-            wgpu::TextureFormat::Rgba8Unorm,
-            0,
-            TEXT_ATLAS_MAX_PAGES,
-        );
-
-        let parley_shaper = crate::text::parley_shaper::ParleyShaper::new();
-
-        let fallback_policy = TextFallbackPolicyV1::new(&parley_shaper);
-
-        let mut out = Self {
-            parley_shaper,
-            parley_scale: parley::swash::scale::ScaleContext::new(),
-            // Non-zero by default so callers can treat `0` as "unknown/uninitialized" if desired.
-            font_stack_key: 1,
-            font_db_revision: 1,
-            fallback_policy,
-            quality: TextQualityState::new(TextQualitySettings::default()),
-            generic_injections: GenericFamilyInjectionState::default(),
-
-            blobs: SlotMap::with_key(),
-            blob_cache: HashMap::new(),
-            blob_key_by_id: HashMap::new(),
-            released_blob_lru: VecDeque::new(),
-            released_blob_set: HashSet::new(),
-            shape_cache: HashMap::new(),
-            measure: TextMeasureCaches::new(),
-
-            mask_atlas,
-            color_atlas,
-            subpixel_atlas,
-            atlas_bind_group_layout,
-
-            text_pin_mask: vec![Vec::new(); 3],
-            text_pin_color: vec![Vec::new(); 3],
-            text_pin_subpixel: vec![Vec::new(); 3],
-            font_data_by_face: HashMap::new(),
-            font_instance_coords_by_face: HashMap::new(),
-            font_face_family_name_cache: HashMap::new(),
-
-            perf_frame_cache_resets: 0,
-            perf_frame_blob_cache_hits: 0,
-            perf_frame_blob_cache_misses: 0,
-            perf_frame_blobs_created: 0,
-            perf_frame_shape_cache_hits: 0,
-            perf_frame_shape_cache_misses: 0,
-            perf_frame_shapes_created: 0,
-            perf_frame_missing_glyphs: 0,
-            perf_frame_texts_with_missing_glyphs: 0,
-
-            glyph_atlas_epoch: 1,
-
-            font_trace: FontTraceState::default(),
-        };
-
-        let _ = out.apply_font_families_inner(&out.fallback_policy.font_family_config.clone());
-        out.fallback_policy.recompute_key(&out.parley_shaper);
-        out.recompute_font_stack_key();
-        out
+        build_text_system(device)
     }
 
     fn prepare_with_key(

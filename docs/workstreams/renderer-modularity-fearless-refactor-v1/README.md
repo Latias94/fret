@@ -101,6 +101,11 @@ As of 2026-03-13:
   adapter/device flows are equally first-class.
 - Shared text type shells now live under `crates/fret-render-wgpu/src/text/types.rs`, and
   `text/mod.rs` no longer owns glyph/blob/shape/helper type definitions directly.
+- Text bootstrap assembly now lives under `crates/fret-render-wgpu/src/text/bootstrap.rs`, and
+  `TextSystem::new(...)` now delegates initial state assembly through that bootstrap module.
+- Initial font-policy bootstrap finalization now lives under
+  `crates/fret-render-wgpu/src/text/fonts.rs`, and `TextSystem::new(...)` no longer owns
+  fallback-policy/font-stack finalization directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:
