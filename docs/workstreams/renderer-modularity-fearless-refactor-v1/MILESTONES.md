@@ -389,6 +389,13 @@ Current snapshot (2026-03-13):
     `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/*.wgsl`
   - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts those fullscreen effect
     shader families inline
+- The ninetieth renderer shader split has landed:
+  - the `backdrop_warp` WGSL sources now live under
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/{backdrop_warp,backdrop_warp_image,backdrop_warp_masked_part_a,backdrop_warp_masked_part_b,backdrop_warp_image_masked_part_a,backdrop_warp_image_masked_part_b,backdrop_warp_mask,backdrop_warp_image_mask}.wgsl`
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts the `backdrop_warp`
+    shader family inline
+  - `crates/fret-render-wgpu/src/renderer/tests.rs` now validates the `backdrop_warp_image`
+    shader variants explicitly during WGSL parse and WebGPU validation coverage
 - Surface inventory now exists and the first no-consumer facade shrink candidates are identified.
 - Slice 1 verification is green:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
@@ -398,6 +405,13 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
   - `python3 tools/check_layering.py`: passed
+- Renderer shader split verification is green after the `backdrop_warp` externalization:
+  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+  - `python3 tools/report_largest_files.py --top 30 --min-lines 800`: `renderer/shaders.rs`
+    dropped from 5986 lines to 4934 lines and no longer appears in the top-30 oversized file
+    report
 - The strongest current risks are:
   - wildcard facade exports,
   - oversized backend public surface,
