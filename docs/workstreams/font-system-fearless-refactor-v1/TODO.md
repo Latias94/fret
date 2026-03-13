@@ -23,7 +23,7 @@ Background inputs:
   becomes the execution lane.
 - [ ] Identify the ADR rows and alignment notes that must be updated when code lands:
   - [x] ADR 0147
-  - [ ] ADR 0257
+  - [x] ADR 0257
   - [x] ADR 0258
   - [x] ADR 0259
   - [x] `docs/adr/IMPLEMENTATION_ALIGNMENT.md` entries as needed
@@ -105,15 +105,15 @@ Regression gates:
 - [x] Ensure bundled profiles participate in that model explicitly rather than through duplicated
   hard-coded family lists.
 - [x] Add a human-auditable bundled-profile / font-environment snapshot where useful.
-- [ ] Confirm diagnostics bundles remain interpretable after the refactor:
-  - [ ] font trace
+- [x] Confirm diagnostics bundles remain interpretable after the refactor:
+  - [x] font trace
   - [x] fallback policy snapshot
-  - [ ] registered-font-blob counters
+  - [x] registered-font-blob counters
 
 Regression gates:
 
-- [ ] Extend the current mixed-script conformance coverage with profile-aware expectations.
-- [ ] Add at least one scripted diagnostics repro for bundled-only fallback behavior after the
+- [x] Extend the current mixed-script conformance coverage with profile-aware expectations.
+- [x] Add at least one scripted diagnostics repro for bundled-only fallback behavior after the
   reset.
 
 ## Exit criteria for calling the workstream "closed enough"

@@ -880,6 +880,26 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             &["web", "ime", "text-input", "wasm", "harness"],
         )],
     },
+    #[cfg(all(feature = "gallery-web-ime-harness", not(feature = "gallery-dev")))]
+    PageGroupSpec {
+        title: "Core (Text Harness)",
+        items: &[PageSpec::new(
+            PAGE_TEXT_MIXED_SCRIPT_FALLBACK,
+            "Text Mixed Script (Fallback)",
+            "Text / Mixed-Script Fallback (Bundled Fonts)",
+            "Font system workstream",
+            CMD_NAV_TEXT_MIXED_SCRIPT_FALLBACK,
+            &[
+                "text",
+                "fonts",
+                "fallback",
+                "cjk",
+                "emoji",
+                "diagnostics",
+                "no-tofu",
+            ],
+        )],
+    },
     #[cfg(feature = "gallery-dev")]
     PageGroupSpec {
         title: "Core (Dev)",

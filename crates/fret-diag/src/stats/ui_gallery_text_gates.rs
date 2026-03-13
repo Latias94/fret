@@ -2,6 +2,35 @@ use std::path::{Path, PathBuf};
 
 use crate::util::write_json_value;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct BundledProfileContractEvidence {
+    name: String,
+    expected_family_names: Vec<String>,
+    ui_sans_families: Vec<String>,
+    ui_serif_families: Vec<String>,
+    ui_mono_families: Vec<String>,
+    common_fallback_families: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct MixedScriptBundledFallbackEvidence {
+    system_fonts_enabled: bool,
+    prefer_common_fallback: bool,
+    configured_common_fallback_families: Vec<String>,
+    common_fallback_candidates: Vec<String>,
+    default_ui_sans_candidates: Vec<String>,
+    default_ui_serif_candidates: Vec<String>,
+    default_ui_mono_candidates: Vec<String>,
+    default_common_fallback_families: Vec<String>,
+    bundled_profile: BundledProfileContractEvidence,
+    font_trace_entry_count: usize,
+    font_trace_families: Vec<String>,
+    font_trace_common_fallback_families: Vec<String>,
+    missing_glyphs: u64,
+    registered_font_blobs_count: u64,
+    registered_font_blobs_total_bytes: u64,
+}
+
 fn find_latest_labeled_bundle_dir(out_dir: &Path, label: &str) -> Option<PathBuf> {
     let suffix = format!("-{label}");
     let mut best: Option<(u64, PathBuf)> = None;
@@ -39,6 +68,120 @@ fn bundle_last_snapshot_by_frame_id<'a>(
         .filter_map(|s| Some((s.get("frame_id")?.as_u64()?, s)))
         .max_by_key(|(frame_id, _)| *frame_id)
         .map(|(_, s)| s)
+}
+
+fn json_string_vec(value: Option<&serde_json::Value>) -> Vec<String> {
+    value
+        .and_then(|v| v.as_array())
+        .map(|values| {
+            values
+                .iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn push_unique_case_insensitive(out: &mut Vec<String>, value: &str) {
+    if out
+        .iter()
+        .any(|existing| existing.eq_ignore_ascii_case(value))
+    {
+        return;
+    }
+    out.push(value.to_string());
+}
+
+fn merge_case_insensitive_preserve_order(left: &[String], right: &[String]) -> Vec<String> {
+    let mut out = Vec::new();
+    for family in left.iter().chain(right.iter()) {
+        push_unique_case_insensitive(&mut out, family);
+    }
+    out
+}
+
+fn contains_case_insensitive(values: &[String], needle: &str) -> bool {
+    values
+        .iter()
+        .any(|candidate| candidate.eq_ignore_ascii_case(needle))
+}
+
+fn bundle_last_text_mixed_script_evidence(
+    bundle: &serde_json::Value,
+) -> Option<MixedScriptBundledFallbackEvidence> {
+    let best = bundle_last_snapshot_by_frame_id(bundle)?;
+
+    let resource_caches = best.get("resource_caches")?.as_object()?;
+    let render_text = resource_caches.get("render_text")?.as_object()?;
+    let policy = resource_caches
+        .get("render_text_fallback_policy")?
+        .as_object()?;
+    let bundled_profile = policy.get("bundled_profile_contract")?.as_object()?;
+
+    let mut font_trace_families = Vec::new();
+    let mut font_trace_common_fallback_families = Vec::new();
+    let font_trace_entry_count = resource_caches
+        .get("render_text_font_trace")
+        .and_then(|v| v.get("entries"))
+        .and_then(|v| v.as_array())
+        .map(|entries| {
+            for entry in entries {
+                let Some(families) = entry.get("families").and_then(|v| v.as_array()) else {
+                    continue;
+                };
+                for family in families {
+                    let Some(name) = family.get("family").and_then(|v| v.as_str()) else {
+                        continue;
+                    };
+                    push_unique_case_insensitive(&mut font_trace_families, name);
+                    if family.get("class").and_then(|v| v.as_str()) == Some("common_fallback") {
+                        push_unique_case_insensitive(
+                            &mut font_trace_common_fallback_families,
+                            name,
+                        );
+                    }
+                }
+            }
+            entries.len()
+        })
+        .unwrap_or_default();
+
+    Some(MixedScriptBundledFallbackEvidence {
+        system_fonts_enabled: policy.get("system_fonts_enabled")?.as_bool()?,
+        prefer_common_fallback: policy.get("prefer_common_fallback")?.as_bool()?,
+        configured_common_fallback_families: json_string_vec(
+            policy.get("configured_common_fallback_families"),
+        ),
+        common_fallback_candidates: json_string_vec(policy.get("common_fallback_candidates")),
+        default_ui_sans_candidates: json_string_vec(policy.get("default_ui_sans_candidates")),
+        default_ui_serif_candidates: json_string_vec(policy.get("default_ui_serif_candidates")),
+        default_ui_mono_candidates: json_string_vec(policy.get("default_ui_mono_candidates")),
+        default_common_fallback_families: json_string_vec(
+            policy.get("default_common_fallback_families"),
+        ),
+        bundled_profile: BundledProfileContractEvidence {
+            name: bundled_profile
+                .get("name")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .to_string(),
+            expected_family_names: json_string_vec(bundled_profile.get("expected_family_names")),
+            ui_sans_families: json_string_vec(bundled_profile.get("ui_sans_families")),
+            ui_serif_families: json_string_vec(bundled_profile.get("ui_serif_families")),
+            ui_mono_families: json_string_vec(bundled_profile.get("ui_mono_families")),
+            common_fallback_families: json_string_vec(
+                bundled_profile.get("common_fallback_families"),
+            ),
+        },
+        font_trace_entry_count,
+        font_trace_families,
+        font_trace_common_fallback_families,
+        missing_glyphs: render_text.get("frame_missing_glyphs")?.as_u64()?,
+        registered_font_blobs_count: render_text.get("registered_font_blobs_count")?.as_u64()?,
+        registered_font_blobs_total_bytes: render_text
+            .get("registered_font_blobs_total_bytes")?
+            .as_u64()?,
+    })
 }
 
 pub(crate) fn check_out_dir_for_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps(
@@ -204,39 +347,6 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_co
 ) -> Result<(), String> {
     const LABEL: &str = "ui-gallery-text-mixed-script-bundled-fallback-conformance";
 
-    fn bundle_last_text_policy_snapshot(
-        bundle: &serde_json::Value,
-    ) -> Option<(bool, bool, Vec<String>)> {
-        let best = bundle_last_snapshot_by_frame_id(bundle)?;
-
-        let policy = best
-            .get("resource_caches")?
-            .get("render_text_fallback_policy")?
-            .as_object()?;
-        let system_fonts_enabled = policy.get("system_fonts_enabled")?.as_bool()?;
-        let prefer_common_fallback = policy.get("prefer_common_fallback")?.as_bool()?;
-        let candidates = policy
-            .get("common_fallback_candidates")
-            .and_then(|v| v.as_array())
-            .map(|v| {
-                v.iter()
-                    .filter_map(|s| s.as_str().map(|s| s.to_string()))
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or_default();
-        Some((system_fonts_enabled, prefer_common_fallback, candidates))
-    }
-
-    fn bundle_last_text_missing_glyphs(bundle: &serde_json::Value) -> Option<u64> {
-        let best = bundle_last_snapshot_by_frame_id(bundle)?;
-
-        let render_text = best
-            .get("resource_caches")?
-            .get("render_text")?
-            .as_object()?;
-        render_text.get("frame_missing_glyphs")?.as_u64()
-    }
-
     let dir = find_latest_labeled_bundle_dir(out_dir, LABEL).ok_or_else(|| {
         format!(
             "ui-gallery text mixed-script bundled fallback gate expected a capture_bundle label={LABEL} under out_dir, but none was found\n  out_dir: {}",
@@ -248,16 +358,9 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_co
     let bytes = std::fs::read(&bundle_path).map_err(|e| e.to_string())?;
     let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
 
-    let (system_fonts_enabled, prefer_common_fallback, candidates) =
-        bundle_last_text_policy_snapshot(&bundle).ok_or_else(|| {
-            format!(
-                "ui-gallery text mixed-script bundled fallback gate expected renderer text fallback policy snapshot in bundle\n  bundle: {}",
-                bundle_path.display()
-            )
-        })?;
-    let missing_glyphs = bundle_last_text_missing_glyphs(&bundle).ok_or_else(|| {
+    let evidence = bundle_last_text_mixed_script_evidence(&bundle).ok_or_else(|| {
         format!(
-            "ui-gallery text mixed-script bundled fallback gate expected renderer text perf snapshot in bundle\n  bundle: {}",
+            "ui-gallery text mixed-script bundled fallback gate expected renderer text fallback policy + trace + perf snapshots in bundle\n  bundle: {}",
             bundle_path.display()
         )
     })?;
@@ -269,30 +372,142 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_co
         "bundle_dir": dir.display().to_string(),
         "bundle": bundle_path.display().to_string(),
         "fallback_policy": {
-            "system_fonts_enabled": system_fonts_enabled,
-            "prefer_common_fallback": prefer_common_fallback,
-            "common_fallback_candidates": candidates,
+            "system_fonts_enabled": evidence.system_fonts_enabled,
+            "prefer_common_fallback": evidence.prefer_common_fallback,
+            "configured_common_fallback_families": evidence.configured_common_fallback_families,
+            "common_fallback_candidates": evidence.common_fallback_candidates,
+            "default_ui_sans_candidates": evidence.default_ui_sans_candidates,
+            "default_ui_serif_candidates": evidence.default_ui_serif_candidates,
+            "default_ui_mono_candidates": evidence.default_ui_mono_candidates,
+            "default_common_fallback_families": evidence.default_common_fallback_families,
+            "bundled_profile_contract": {
+                "name": evidence.bundled_profile.name,
+                "expected_family_names": evidence.bundled_profile.expected_family_names,
+                "ui_sans_families": evidence.bundled_profile.ui_sans_families,
+                "ui_serif_families": evidence.bundled_profile.ui_serif_families,
+                "ui_mono_families": evidence.bundled_profile.ui_mono_families,
+                "common_fallback_families": evidence.bundled_profile.common_fallback_families,
+            },
         },
-        "render_text": { "frame_missing_glyphs": missing_glyphs },
+        "font_trace": {
+            "entry_count": evidence.font_trace_entry_count,
+            "families": evidence.font_trace_families,
+            "common_fallback_families": evidence.font_trace_common_fallback_families,
+        },
+        "render_text": {
+            "frame_missing_glyphs": evidence.missing_glyphs,
+            "registered_font_blobs_count": evidence.registered_font_blobs_count,
+            "registered_font_blobs_total_bytes": evidence.registered_font_blobs_total_bytes,
+        },
     });
     let _ = write_json_value(&evidence_path, &payload);
 
-    if system_fonts_enabled {
+    if evidence.system_fonts_enabled {
         return Err(format!(
             "ui-gallery text mixed-script bundled fallback gate failed: expected system_fonts_enabled=false for a deterministic (bundled-only) fallback baseline\n  hint: rerun with --env FRET_TEXT_SYSTEM_FONTS=0 and ensure bundled fonts are loaded (FRET_UI_GALLERY_BOOTSTRAP_FONTS=1)\n  evidence: {}",
             evidence_path.display()
         ));
     }
-    if !prefer_common_fallback {
+    if !evidence.prefer_common_fallback {
         return Err(format!(
             "ui-gallery text mixed-script bundled fallback gate failed: expected prefer_common_fallback=true when system fonts are disabled\n  evidence: {}",
             evidence_path.display()
         ));
     }
 
-    const EXPECTED: &[&str] = &["Noto Sans CJK SC", "Noto Sans Arabic", "Noto Color Emoji"];
-    for &family in EXPECTED {
-        if !candidates.iter().any(|c| c == family) {
+    if evidence.bundled_profile.name.is_empty() {
+        return Err(format!(
+            "ui-gallery text mixed-script bundled fallback gate failed: expected bundled_profile_contract.name to be non-empty\n  evidence: {}",
+            evidence_path.display()
+        ));
+    }
+
+    if evidence.default_ui_sans_candidates != evidence.bundled_profile.ui_sans_families {
+        return Err(format!(
+            "ui-gallery text mixed-script bundled fallback gate failed: expected default_ui_sans_candidates to match bundled_profile_contract.ui_sans_families under bundled-only mode\n  observed: {:?}\n  expected: {:?}\n  evidence: {}",
+            evidence.default_ui_sans_candidates,
+            evidence.bundled_profile.ui_sans_families,
+            evidence_path.display()
+        ));
+    }
+    if evidence.default_ui_serif_candidates != evidence.bundled_profile.ui_serif_families {
+        return Err(format!(
+            "ui-gallery text mixed-script bundled fallback gate failed: expected default_ui_serif_candidates to match bundled_profile_contract.ui_serif_families under bundled-only mode\n  observed: {:?}\n  expected: {:?}\n  evidence: {}",
+            evidence.default_ui_serif_candidates,
+            evidence.bundled_profile.ui_serif_families,
+            evidence_path.display()
+        ));
+    }
+    if evidence.default_ui_mono_candidates != evidence.bundled_profile.ui_mono_families {
+        return Err(format!(
+            "ui-gallery text mixed-script bundled fallback gate failed: expected default_ui_mono_candidates to match bundled_profile_contract.ui_mono_families under bundled-only mode\n  observed: {:?}\n  expected: {:?}\n  evidence: {}",
+            evidence.default_ui_mono_candidates,
+            evidence.bundled_profile.ui_mono_families,
+            evidence_path.display()
+        ));
+    }
+
+    let expected_default_common_fallback = merge_case_insensitive_preserve_order(
+        &evidence.bundled_profile.ui_sans_families,
+        &evidence.bundled_profile.common_fallback_families,
+    );
+    if evidence.default_common_fallback_families != expected_default_common_fallback {
+        return Err(format!(
+            "ui-gallery text mixed-script bundled fallback gate failed: expected default_common_fallback_families to be derived from bundled_profile_contract.ui_sans_families + common_fallback_families under bundled-only mode\n  observed: {:?}\n  expected: {:?}\n  evidence: {}",
+            evidence.default_common_fallback_families,
+            expected_default_common_fallback,
+            evidence_path.display()
+        ));
+    }
+    let expected_common_fallback_candidates = merge_case_insensitive_preserve_order(
+        &evidence.configured_common_fallback_families,
+        &evidence.default_common_fallback_families,
+    );
+    if evidence.common_fallback_candidates != expected_common_fallback_candidates {
+        return Err(format!(
+            "ui-gallery text mixed-script bundled fallback gate failed: expected common_fallback_candidates to match configured_common_fallback_families + default_common_fallback_families (case-insensitive, preserve order)\n  observed: {:?}\n  expected: {:?}\n  evidence: {}",
+            evidence.common_fallback_candidates,
+            expected_common_fallback_candidates,
+            evidence_path.display()
+        ));
+    }
+
+    if evidence.bundled_profile.common_fallback_families.is_empty() {
+        return Err(format!(
+            "ui-gallery text mixed-script bundled fallback gate failed: expected bundled_profile_contract.common_fallback_families to be non-empty for the mixed-script harness\n  evidence: {}",
+            evidence_path.display()
+        ));
+    }
+
+    let expected_profile_family_names = merge_case_insensitive_preserve_order(
+        &merge_case_insensitive_preserve_order(
+            &merge_case_insensitive_preserve_order(
+                &evidence.bundled_profile.ui_sans_families,
+                &evidence.bundled_profile.ui_serif_families,
+            ),
+            &evidence.bundled_profile.ui_mono_families,
+        ),
+        &evidence.bundled_profile.common_fallback_families,
+    );
+    for family in &expected_profile_family_names {
+        if !evidence
+            .bundled_profile
+            .expected_family_names
+            .iter()
+            .any(|candidate| candidate == family)
+        {
+            return Err(format!(
+                "ui-gallery text mixed-script bundled fallback gate failed: expected bundled_profile_contract.expected_family_names to include {family:?}\n  evidence: {}",
+                evidence_path.display()
+            ));
+        }
+    }
+    for family in &evidence.bundled_profile.common_fallback_families {
+        if !evidence
+            .common_fallback_candidates
+            .iter()
+            .any(|candidate| candidate == family)
+        {
             return Err(format!(
                 "ui-gallery text mixed-script bundled fallback gate failed: expected common_fallback_candidates to include {family:?}\n  evidence: {}",
                 evidence_path.display()
@@ -300,15 +515,306 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_co
         }
     }
 
-    if missing_glyphs != 0 {
+    if evidence.font_trace_entry_count == 0 {
+        return Err(format!(
+            "ui-gallery text mixed-script bundled fallback gate failed: expected bundle-scoped font trace entries for the scripted mixed-script sample\n  evidence: {}",
+            evidence_path.display()
+        ));
+    }
+    if evidence.font_trace_families.is_empty() {
+        return Err(format!(
+            "ui-gallery text mixed-script bundled fallback gate failed: expected font trace to record at least one resolved family for the scripted mixed-script sample\n  evidence: {}",
+            evidence_path.display()
+        ));
+    }
+    for family in &evidence.font_trace_families {
+        if !contains_case_insensitive(&evidence.bundled_profile.expected_family_names, family) {
+            return Err(format!(
+                "ui-gallery text mixed-script bundled fallback gate failed: expected font trace families to stay within bundled_profile_contract.expected_family_names under bundled-only mode\n  observed family: {:?}\n  allowed: {:?}\n  evidence: {}",
+                family,
+                evidence.bundled_profile.expected_family_names,
+                evidence_path.display()
+            ));
+        }
+    }
+    if evidence.font_trace_common_fallback_families.is_empty() {
+        return Err(format!(
+            "ui-gallery text mixed-script bundled fallback gate failed: expected font trace to record at least one common_fallback family usage for the scripted mixed-script sample\n  evidence: {}",
+            evidence_path.display()
+        ));
+    }
+    for family in &evidence.font_trace_common_fallback_families {
+        if !contains_case_insensitive(&evidence.common_fallback_candidates, family) {
+            return Err(format!(
+                "ui-gallery text mixed-script bundled fallback gate failed: expected font trace common_fallback families to stay within common_fallback_candidates\n  observed family: {:?}\n  allowed: {:?}\n  evidence: {}",
+                family,
+                evidence.common_fallback_candidates,
+                evidence_path.display()
+            ));
+        }
+    }
+
+    if evidence.registered_font_blobs_count == 0 || evidence.registered_font_blobs_total_bytes == 0
+    {
+        return Err(format!(
+            "ui-gallery text mixed-script bundled fallback gate failed: expected registered_font_blobs counters to stay populated under bundled-only mode\n  observed: count={} total_bytes={}\n  evidence: {}",
+            evidence.registered_font_blobs_count,
+            evidence.registered_font_blobs_total_bytes,
+            evidence_path.display()
+        ));
+    }
+
+    if evidence.missing_glyphs != 0 {
         return Err(format!(
             "ui-gallery text mixed-script bundled fallback gate failed: expected frame_missing_glyphs=0 under bundled fonts\n  observed: {}\n  evidence: {}",
-            missing_glyphs,
+            evidence.missing_glyphs,
             evidence_path.display()
         ));
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn now_unix_ms() -> u128 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system time should be after unix epoch")
+            .as_millis()
+    }
+
+    fn unique_tmp_dir(label: &str) -> PathBuf {
+        let path = std::env::temp_dir().join(format!(
+            "fret_diag_ui_gallery_text_gates_{label}_{}_{}",
+            std::process::id(),
+            now_unix_ms()
+        ));
+        std::fs::create_dir_all(&path).expect("create tmp dir");
+        path
+    }
+
+    fn write_labeled_bundle(out_dir: &Path, label: &str, bundle: &serde_json::Value) {
+        let dir = out_dir.join(format!("{}-{label}", now_unix_ms()));
+        std::fs::create_dir_all(&dir).expect("create bundle dir");
+        std::fs::write(
+            dir.join("bundle.json"),
+            serde_json::to_vec_pretty(bundle).expect("serialize bundle"),
+        )
+        .expect("write bundle");
+    }
+
+    fn bundled_mixed_script_bundle() -> serde_json::Value {
+        serde_json::json!({
+            "windows": [{
+                "snapshots": [{
+                    "frame_id": 7,
+                    "resource_caches": {
+                        "render_text": {
+                            "frame_missing_glyphs": 0,
+                            "registered_font_blobs_count": 4,
+                            "registered_font_blobs_total_bytes": 65536
+                        },
+                        "render_text_fallback_policy": {
+                            "system_fonts_enabled": false,
+                            "prefer_common_fallback": true,
+                            "configured_common_fallback_families": [],
+                            "common_fallback_candidates": [
+                                "Inter",
+                                "Noto Sans CJK SC",
+                                "Noto Sans Arabic",
+                                "Noto Color Emoji"
+                            ],
+                            "default_ui_sans_candidates": ["Inter"],
+                            "default_ui_serif_candidates": ["Source Serif 4"],
+                            "default_ui_mono_candidates": ["JetBrains Mono"],
+                            "default_common_fallback_families": [
+                                "Inter",
+                                "Noto Sans CJK SC",
+                                "Noto Sans Arabic",
+                                "Noto Color Emoji"
+                            ],
+                            "bundled_profile_contract": {
+                                "name": "default",
+                                "expected_family_names": [
+                                    "Inter",
+                                    "Source Serif 4",
+                                    "JetBrains Mono",
+                                    "Noto Sans CJK SC",
+                                    "Noto Sans Arabic",
+                                    "Noto Color Emoji"
+                                ],
+                                "ui_sans_families": ["Inter"],
+                                "ui_serif_families": ["Source Serif 4"],
+                                "ui_mono_families": ["JetBrains Mono"],
+                                "common_fallback_families": [
+                                    "Noto Sans CJK SC",
+                                    "Noto Sans Arabic",
+                                    "Noto Color Emoji"
+                                ]
+                            }
+                        },
+                        "render_text_font_trace": {
+                            "entries": [{
+                                "families": [
+                                    {
+                                        "family": "Inter",
+                                        "class": "requested",
+                                        "glyphs": 1,
+                                        "missing_glyphs": 0
+                                    },
+                                    {
+                                        "family": "Noto Sans CJK SC",
+                                        "class": "common_fallback",
+                                        "glyphs": 1,
+                                        "missing_glyphs": 0
+                                    },
+                                    {
+                                        "family": "Noto Color Emoji",
+                                        "class": "common_fallback",
+                                        "glyphs": 1,
+                                        "missing_glyphs": 0
+                                    }
+                                ]
+                            }]
+                        }
+                    }
+                }]
+            }]
+        })
+    }
+
+    #[test]
+    fn mixed_script_bundled_fallback_gate_accepts_profile_backed_snapshot() {
+        let out_dir = unique_tmp_dir("pass");
+        write_labeled_bundle(
+            &out_dir,
+            "ui-gallery-text-mixed-script-bundled-fallback-conformance",
+            &bundled_mixed_script_bundle(),
+        );
+
+        check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_conformance(&out_dir)
+            .expect("gate should pass");
+        assert!(
+            out_dir
+                .join("check.ui_gallery_text_mixed_script_bundled_fallback_conformance.json")
+                .is_file()
+        );
+    }
+
+    #[test]
+    fn mixed_script_bundled_fallback_gate_rejects_profile_drift_in_default_common_fallback() {
+        let out_dir = unique_tmp_dir("fail_profile_drift");
+        let mut bundle = bundled_mixed_script_bundle();
+        let defaults =
+            bundle["windows"][0]["snapshots"][0]["resource_caches"]["render_text_fallback_policy"]
+                ["default_common_fallback_families"]
+                .as_array_mut()
+                .expect("default_common_fallback_families array");
+        defaults.clear();
+        defaults.push(serde_json::json!("Noto Sans CJK SC"));
+
+        write_labeled_bundle(
+            &out_dir,
+            "ui-gallery-text-mixed-script-bundled-fallback-conformance",
+            &bundle,
+        );
+
+        let err =
+            check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_conformance(&out_dir)
+                .expect_err("gate should fail");
+        assert!(
+            err.contains("expected default_common_fallback_families to be derived"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn mixed_script_bundled_fallback_gate_accepts_curated_common_fallback_overrides() {
+        let out_dir = unique_tmp_dir("pass_curated_overrides");
+        let mut bundle = bundled_mixed_script_bundle();
+        bundle["windows"][0]["snapshots"][0]["resource_caches"]["render_text_fallback_policy"]["configured_common_fallback_families"] =
+            serde_json::json!(["Noto Sans CJK SC", "Segoe UI Emoji", "Segoe UI Symbol"]);
+        bundle["windows"][0]["snapshots"][0]["resource_caches"]["render_text_fallback_policy"]["common_fallback_candidates"] =
+            serde_json::json!([
+                "Noto Sans CJK SC",
+                "Segoe UI Emoji",
+                "Segoe UI Symbol",
+                "Inter",
+                "Noto Sans Arabic",
+                "Noto Color Emoji"
+            ]);
+
+        write_labeled_bundle(
+            &out_dir,
+            "ui-gallery-text-mixed-script-bundled-fallback-conformance",
+            &bundle,
+        );
+
+        check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_conformance(&out_dir)
+            .expect("gate should accept configured common fallback overrides");
+    }
+
+    #[test]
+    fn mixed_script_bundled_fallback_gate_accepts_trace_common_fallback_from_default_ui_family() {
+        let out_dir = unique_tmp_dir("pass_default_ui_trace");
+        let mut bundle = bundled_mixed_script_bundle();
+        bundle["windows"][0]["snapshots"][0]["resource_caches"]["render_text_font_trace"] = serde_json::json!({
+            "entries": [{
+                "families": [
+                    {
+                        "family": "Inter",
+                        "class": "common_fallback",
+                        "glyphs": 8,
+                        "missing_glyphs": 0
+                    }
+                ]
+            }]
+        });
+
+        write_labeled_bundle(
+            &out_dir,
+            "ui-gallery-text-mixed-script-bundled-fallback-conformance",
+            &bundle,
+        );
+
+        check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_conformance(&out_dir)
+            .expect("gate should accept default ui family when it participates in common fallback");
+    }
+
+    #[test]
+    fn mixed_script_bundled_fallback_gate_rejects_trace_family_outside_profile_contract() {
+        let out_dir = unique_tmp_dir("fail_trace_family_outside_profile");
+        let mut bundle = bundled_mixed_script_bundle();
+        bundle["windows"][0]["snapshots"][0]["resource_caches"]["render_text_font_trace"] = serde_json::json!({
+            "entries": [{
+                "families": [
+                    {
+                        "family": "System UI",
+                        "class": "common_fallback",
+                        "glyphs": 2,
+                        "missing_glyphs": 0
+                    }
+                ]
+            }]
+        });
+
+        write_labeled_bundle(
+            &out_dir,
+            "ui-gallery-text-mixed-script-bundled-fallback-conformance",
+            &bundle,
+        );
+
+        let err =
+            check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_conformance(&out_dir)
+                .expect_err("gate should reject trace families outside bundled profile contract");
+        assert!(
+            err.contains("expected font trace families to stay within bundled_profile_contract.expected_family_names"),
+            "{err}"
+        );
+    }
 }
 
 pub(crate) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_locale_change(

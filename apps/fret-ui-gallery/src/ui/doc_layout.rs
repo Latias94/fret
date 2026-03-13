@@ -188,16 +188,11 @@ pub(in crate::ui) fn wrap_preview_page(
         .gap(Space::N4)
         .items_start()
         .into_element(cx);
+    let preview_section = DocSection::build(cx, section_title, preview)
+        .no_shell()
+        .max_w(Px(980.0));
 
-    render_doc_page(
-        cx,
-        intro,
-        vec![
-            DocSection::build(cx, section_title, preview)
-                .no_shell()
-                .max_w(Px(980.0)),
-        ],
-    )
+    render_doc_page(cx, intro, vec![preview_section])
 }
 
 /// A flex row that wraps on narrow widths.

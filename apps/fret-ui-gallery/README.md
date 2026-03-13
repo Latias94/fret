@@ -21,6 +21,8 @@ Recommended order:
 By default the gallery only exposes a small set of Core pages + the Shadcn component set.
 
 - `gallery-dev`: shows internal harness/debug pages (perf torture pages, AI/Magic spikes, etc).
+- `gallery-web-ime-harness`: enables the lightweight text diagnostics harness pages used for IME and
+  bundled font fallback probes.
 - `gallery-material3`: enables Material 3 pages (pulls in optional `fret-ui-material3`).
 - `gallery-full`: enables everything (`gallery-dev` + `gallery-material3`).
 
@@ -36,6 +38,7 @@ By default the gallery only exposes a small set of Core pages + the Shadcn compo
 Optional:
 
 - Enable internal pages: `cargo run -p fret-ui-gallery --features gallery-dev`
+- Enable lightweight text harness pages: `cargo run -p fret-ui-gallery --features gallery-web-ime-harness`
 - Enable Material 3 pages: `cargo run -p fret-ui-gallery --features gallery-material3`
 - Enable all pages: `cargo run -p fret-ui-gallery --features gallery-full`
 - Start on a specific page: `FRET_UI_GALLERY_START_PAGE=data_table`
