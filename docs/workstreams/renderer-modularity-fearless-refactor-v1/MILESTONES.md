@@ -31,6 +31,12 @@ Current snapshot (2026-03-13):
     and input-meta upload, filterable user-image fallback resolution, and masked/unmasked dispatch
   - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
     `CustomEffectV2` recorder path at all
+- The latest `CompositePremul` family-entrypoint split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_composite.rs` now owns
+    the `CompositePremul` recorder entrypoint, including source/mask lookup, uniform routing, quad
+    vertex selection, and final draw dispatch
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+    `CompositePremul` recorder path at all
 - v1 start decisions are now locked:
   - no new renderer crates in v1,
   - `fret-render` stays the stable default facade,
@@ -766,6 +772,14 @@ Current snapshot (2026-03-13):
     `CustomEffectV2` recorder path at all, and `recorders/mod.rs` now re-exports that entrypoint
     directly from the family-local module
   - the slice does not change effect semantics; it only finishes the family-local ownership move
+- The thirty-third renderer composite-entrypoint split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_composite.rs` now owns
+    the `CompositePremul` recorder entrypoint, including source/mask lookup, uniform routing, quad
+    vertex selection, and final draw dispatch
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+    `CompositePremul` recorder path at all, and `recorders/mod.rs` now re-exports that entrypoint
+    directly from the family-local module
+  - the slice does not change effect semantics; it only finishes the family-local ownership move
 - Renderer custom-v3-dispatch split verification remains green:
   - `cargo check -p fret-render-wgpu --tests`
   - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
@@ -787,6 +801,12 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_rejects_non_filterable_input_format_by_falling_back`
   - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_compiles_and_runs_in_masked_path`
   - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v2_requested_but_skipped_under_tight_intermediate_budget`
+- Renderer composite-entrypoint split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite`
+  - `cargo nextest run -p fret-render-wgpu gpu_filter_content_blur_respects_rounded_clip_stack_on_composite`
+  - `cargo nextest run -p fret-render-wgpu gpu_backdrop_pixelate_respects_rounded_clip_stack_on_writeback`
+  - `cargo nextest run -p fret-render-wgpu gpu_backdrop_blur_respects_rounded_clip_stack_on_writeback`
 - Scene-encoding cache diagnostics split verification remains green:
   - `cargo check -p fret-render-wgpu --tests`
   - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`

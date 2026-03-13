@@ -301,7 +301,10 @@ For `Renderer` state-shell tightening, the same principle applies:
   family index for code it no longer owns. Small shared helpers such as parameter packing may
   still remain in `recorders/effects.rs` temporarily without blocking that ownership closure, as
   long as the family entrypoint and its effect-specific fallback/upload/dispatch logic move
-  together.
+  together. The same rule also applies to smaller self-contained writeback families such as
+  `CompositePremul`: if the recorder only consumes shared bind-group and draw helpers, its
+  entrypoint should also move into a family-local module instead of remaining under
+  `recorders/effects.rs`.
 - render-text dump state is the matching diagnostics/export seam for text debugging:
   dump collection scratch and serialization scratch should move behind one owner so render-scene
   execution keeps only a thin bridge to `TextSystem`.

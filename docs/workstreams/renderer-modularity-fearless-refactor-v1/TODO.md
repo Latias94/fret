@@ -666,10 +666,15 @@ ID format:
     - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
       `CustomEffectV2` recorder path; `recorders/mod.rs` now re-exports it directly from the
       family-local module while shared param packing still stays in `effects.rs`
+    - the `CompositePremul` recorder entrypoint now also lives under
+      `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_composite.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+      `CompositePremul` recorder path; `recorders/mod.rs` now re-exports it directly from the
+      family-local module while shared bind-group and quad-pass helpers stay in shared seams
   - Current next hotspot:
-    - decide whether `CompositePremul` should follow the same family-local module closure, or
-      whether `effects.rs` should remain the long-term home for smaller fullscreen/writeback
-      families after the custom-effect families have moved out
+    - decide whether `ClipMask` should now move into its own family-local module, or whether the
+      remaining `effects.rs` surface is now small enough to treat as the long-term home for the
+      last shared fullscreen utility families
     - decide whether render-plan / scene-encoding diagnostics should converge further behind one
       reporting seam, or whether adjacent owner-specific companion modules are the better v1 shape
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:

@@ -349,6 +349,13 @@ As of 2026-03-13:
   - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
     `CustomEffectV2` path; `recorders/mod.rs` now re-exports that recorder from the family-local
     module while shared parameter packing still stays in `effects.rs`.
+- The same closure now also covers `CompositePremul` as a small writeback family:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects_composite.rs` now owns
+    the `CompositePremul` recorder entrypoint, including source/mask lookup, uniform routing, quad
+    vertex selection, and final draw dispatch.
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
+    `CompositePremul` path; `recorders/mod.rs` now re-exports it from the family-local module
+    while shared bind-group and quad-pass helpers stay in their existing shared seams.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:
