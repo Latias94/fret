@@ -54,6 +54,12 @@ Current snapshot (2026-03-13):
     preparation, parameter packing, and final fullscreen dispatch
   - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
     `CustomEffectV1` recorder path at all
+- The latest render-plan-dump-summary split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump_summary.rs` now owns custom-effect
+    summaries, target-usage summaries, custom-effect-v3 diagnostics summaries, and the summary
+    regression tests
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps JSON schema/pass
+    encoding, env-triggered dump emission, and dump scratch orchestration
 - v1 start decisions are now locked:
   - no new renderer crates in v1,
   - `fret-render` stays the stable default facade,
@@ -822,6 +828,15 @@ Current snapshot (2026-03-13):
     directly from the family-local module
   - the slice does not change effect semantics; it only finishes the custom-effect family-local
     ownership closure for v1/v2/v3 entrypoints
+- The thirty-seventh render-plan-dump-summary split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump_summary.rs` now owns custom-effect
+    summaries, target-usage summaries, custom-effect-v3 diagnostics summaries, and the focused
+    summary regression tests
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` no longer owns those diagnostics
+    rollups; it now keeps JSON schema/pass encoding plus env-triggered dump emission and scratch
+    orchestration
+  - the slice does not change render-plan dump semantics; it only moves diagnostics-only summary
+    ownership behind a companion module
 - Renderer custom-v3-dispatch split verification remains green:
   - `cargo check -p fret-render-wgpu --tests`
   - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
@@ -867,6 +882,11 @@ Current snapshot (2026-03-13):
 - Renderer custom-v1-entrypoint split verification remains green:
   - `cargo check -p fret-render-wgpu --tests`
   - `cargo nextest run -p fret-render-wgpu gpu_custom_effect_v1_can_read_render_space_in_fragment`
+- Render-plan-dump-summary split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu custom_effect_summaries_include_abi_and_input_counts`
+  - `cargo nextest run -p fret-render-wgpu custom_effect_v3_summary_tracks_pyramid_levels_min_max_sum`
+  - `cargo nextest run -p fret-render-wgpu target_usage_tracks_max_size`
 - Scene-encoding cache diagnostics split verification remains green:
   - `cargo check -p fret-render-wgpu --tests`
   - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`

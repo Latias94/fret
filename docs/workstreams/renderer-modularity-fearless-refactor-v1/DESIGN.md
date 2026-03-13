@@ -239,7 +239,9 @@ For `Renderer` state-shell tightening, the same principle applies:
 - render-plan reporting/dump state is the matching diagnostics seam for planning observability:
   per-segment pass-count scratch, segment report scratch, and JSON dump scratch should move behind
   one owner so render-scene diagnostics code stops depending on transient renderer bookkeeping
-  fields.
+  fields. Once that state shell exists, dump-specific summaries such as custom-effect aggregates,
+  target-usage rollups, and diagnostics-only v3 counters should prefer adjacent companion modules
+  instead of re-growing the owner into another monolith.
 - scene-encoding cache state is the matching frame-reuse seam for encode-stage reuse:
   cache key construction inputs, hit/miss bookkeeping, miss-reason reporting, and cache/scratch
   storage should move behind one owner so render-scene execution stops depending on a loose cache

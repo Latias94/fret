@@ -686,13 +686,19 @@ ID format:
     - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
       `CustomEffectV1` recorder path; `recorders/mod.rs` now re-exports it directly from the
       family-local module while shared fullscreen helpers stay in `effects_shared.rs`
+    - render-plan dump summaries now live under
+      `crates/fret-render-wgpu/src/renderer/render_plan_dump_summary.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps JSON schema/pass
+      encoding plus env-triggered dump emission while custom-effect / target-usage / v3
+      diagnostics summaries moved behind the companion summary module
   - Current next hotspot:
+    - decide whether `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` should keep
+      env-trigger and file-emission orchestration together with JSON pass/schema encoding, or
+      whether one more schema/emit split would make the diagnostics seam cleaner
     - decide whether the remaining fullscreen utility families in `effects.rs` should now split
       further by family, or whether the current post-helper-extraction surface is already the
       right long-term home for `AlphaThreshold`, `ColorAdjust`, `ColorMatrix`, `Dither`, `Noise`,
       and `DropShadow`
-    - decide whether render-plan / scene-encoding diagnostics should converge further behind one
-      reporting seam, or whether adjacent owner-specific companion modules are the better v1 shape
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG

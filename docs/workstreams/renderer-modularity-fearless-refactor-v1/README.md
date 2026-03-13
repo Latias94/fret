@@ -375,6 +375,12 @@ As of 2026-03-13:
     custom pipeline preparation, parameter packing, and final fullscreen dispatch.
   - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` no longer owns the
     `CustomEffectV1` path; `recorders/mod.rs` now re-exports it from the family-local module.
+- Render-plan dump summary ownership is now isolated as a diagnostics companion:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump_summary.rs` now owns custom-effect
+    summaries, target-usage summaries, custom-effect-v3 diagnostics summaries, and their focused
+    tests.
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps JSON pass/schema
+    encoding, env-triggered dump emission, and scratch orchestration.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:
