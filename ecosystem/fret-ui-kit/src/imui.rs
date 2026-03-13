@@ -1482,6 +1482,104 @@ fn prepare_pressable_drag_on_pointer_down(
     }
 }
 
+fn prepare_pointer_region_drag_on_left_down(
+    host: &mut dyn fret_ui::action::UiPointerActionHost,
+    acx: fret_ui::action::ActionCx,
+    down: fret_ui::action::PointerDownCx,
+    drag_kind: Option<fret_runtime::DragKindId>,
+    cursor: Option<CursorIcon>,
+) -> bool {
+    if down.button != MouseButton::Left {
+        return false;
+    }
+
+    host.request_focus(acx.target);
+    if let Some(cursor) = cursor {
+        host.set_cursor_icon(cursor);
+    }
+    if let Some(drag_kind) = drag_kind {
+        host.capture_pointer();
+        if host.drag(down.pointer_id).is_none() {
+            host.begin_drag_with_kind(down.pointer_id, drag_kind, acx.window, down.position);
+        }
+    }
+    true
+}
+
+fn handle_pointer_region_drag_move_with_threshold(
+    host: &mut dyn fret_ui::action::UiPointerActionHost,
+    acx: fret_ui::action::ActionCx,
+    mv: fret_ui::action::PointerMoveCx,
+    drag_kind: fret_runtime::DragKindId,
+    drag_threshold: InteractionDragThreshold,
+) -> bool {
+    let Some(drag) = host.drag_mut(mv.pointer_id) else {
+        return false;
+    };
+    if drag.kind != drag_kind || drag.source_window != acx.window {
+        return false;
+    }
+
+    let outcome = update_thresholded_move(
+        drag,
+        acx.window,
+        mv.position,
+        mv.buttons.left,
+        drag_threshold,
+    );
+    if outcome == DragMoveOutcome::Canceled {
+        host.cancel_drag(mv.pointer_id);
+        host.release_pointer_capture();
+        host.notify(acx);
+        return false;
+    }
+
+    host.notify(acx);
+    false
+}
+
+fn handle_pointer_region_drag_move_immediate(
+    host: &mut dyn fret_ui::action::UiPointerActionHost,
+    acx: fret_ui::action::ActionCx,
+    mv: fret_ui::action::PointerMoveCx,
+    drag_kind: fret_runtime::DragKindId,
+) -> bool {
+    let Some(drag) = host.drag_mut(mv.pointer_id) else {
+        return false;
+    };
+    if drag.kind != drag_kind || drag.source_window != acx.window {
+        return false;
+    }
+
+    let outcome = update_immediate_move(drag, acx.window, mv.position, mv.buttons.left);
+    if outcome == DragMoveOutcome::Canceled {
+        host.cancel_drag(mv.pointer_id);
+        host.release_pointer_capture();
+        host.notify(acx);
+        return false;
+    }
+
+    host.notify(acx);
+    false
+}
+
+fn finish_pointer_region_drag(
+    host: &mut dyn fret_ui::action::UiPointerActionHost,
+    acx: fret_ui::action::ActionCx,
+    pointer_id: fret_core::PointerId,
+    drag_kind: fret_runtime::DragKindId,
+) -> bool {
+    if let Some(drag) = host.drag(pointer_id)
+        && drag.kind == drag_kind
+        && drag.source_window == acx.window
+    {
+        host.cancel_drag(pointer_id);
+    }
+    host.release_pointer_capture();
+    host.notify(acx);
+    false
+}
+
 fn item_spacing_x_metric_ref() -> crate::MetricRef {
     crate::MetricRef::Token {
         key: crate::theme_tokens::metric::COMPONENT_IMUI_ITEM_SPACING_X_PX,
@@ -2518,21 +2616,14 @@ where
 
         let drag_kind = area.drag_kind;
         cx.pointer_region_on_pointer_down(Arc::new(move |host, acx, down| {
-            if down.button != MouseButton::Left {
+            if !prepare_pointer_region_drag_on_left_down(
+                host,
+                acx,
+                down,
+                enable_drag.then_some(drag_kind),
+                None,
+            ) {
                 return false;
-            }
-
-            host.request_focus(acx.target);
-            if enable_drag {
-                host.capture_pointer();
-                if host.drag(down.pointer_id).is_none() {
-                    host.begin_drag_with_kind(
-                        down.pointer_id,
-                        drag_kind,
-                        acx.window,
-                        down.position,
-                    );
-                }
             }
             if down.click_count == 2
                 && let Some(on_left_double_click) = on_left_double_click_for_down.as_ref()
@@ -2563,44 +2654,14 @@ where
             if !enable_drag {
                 return false;
             }
-            let Some(drag) = host.drag_mut(mv.pointer_id) else {
-                return false;
-            };
-            if drag.kind != drag_kind || drag.source_window != acx.window {
-                return false;
-            }
-
-            let outcome = update_thresholded_move(
-                drag,
-                acx.window,
-                mv.position,
-                mv.buttons.left,
-                drag_threshold,
-            );
-            if outcome == DragMoveOutcome::Canceled {
-                host.cancel_drag(mv.pointer_id);
-                host.release_pointer_capture();
-                host.notify(acx);
-                return false;
-            }
-
-            host.notify(acx);
-            false
+            handle_pointer_region_drag_move_with_threshold(host, acx, mv, drag_kind, drag_threshold)
         }));
 
         cx.pointer_region_on_pointer_up(Arc::new(move |host, acx, up| {
             if !enable_drag {
                 return false;
             }
-            if let Some(drag) = host.drag(up.pointer_id)
-                && drag.kind == drag_kind
-                && drag.source_window == acx.window
-            {
-                host.cancel_drag(up.pointer_id);
-            }
-            host.release_pointer_capture();
-            host.notify(acx);
-            false
+            finish_pointer_region_drag(host, acx, up.pointer_id, drag_kind)
         }));
 
         let mut out = Vec::new();
@@ -5728,19 +5789,14 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
                                     cx.pointer_region_on_pointer_down(Arc::new(
                                         move |host, acx, down| {
-                                            if down.button != MouseButton::Left {
+                                            if !prepare_pointer_region_drag_on_left_down(
+                                                host,
+                                                acx,
+                                                down,
+                                                Some(drag_kind),
+                                                None,
+                                            ) {
                                                 return false;
-                                            }
-
-                                            host.request_focus(acx.target);
-                                            host.capture_pointer();
-                                            if host.drag(down.pointer_id).is_none() {
-                                                host.begin_drag_with_kind(
-                                                    down.pointer_id,
-                                                    drag_kind,
-                                                    acx.window,
-                                                    down.position,
-                                                );
                                             }
                                             host.record_transient_event(
                                                 fret_ui::action::ActionCx {
@@ -5757,45 +5813,24 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                     let drag_threshold = drag_threshold_for(cx);
                                     cx.pointer_region_on_pointer_move(Arc::new(
                                         move |host, acx, mv| {
-                                            let Some(drag) = host.drag_mut(mv.pointer_id) else {
-                                                return false;
-                                            };
-                                            if drag.kind != drag_kind
-                                                || drag.source_window != acx.window
-                                            {
-                                                return false;
-                                            }
-
-                                            let outcome = update_thresholded_move(
-                                                drag,
-                                                acx.window,
-                                                mv.position,
-                                                mv.buttons.left,
+                                            handle_pointer_region_drag_move_with_threshold(
+                                                host,
+                                                acx,
+                                                mv,
+                                                drag_kind,
                                                 drag_threshold,
-                                            );
-                                            if outcome == DragMoveOutcome::Canceled {
-                                                host.cancel_drag(mv.pointer_id);
-                                                host.release_pointer_capture();
-                                                host.notify(acx);
-                                                return false;
-                                            }
-
-                                            host.notify(acx);
-                                            false
+                                            )
                                         },
                                     ));
 
                                     cx.pointer_region_on_pointer_up(Arc::new(
                                         move |host, acx, up| {
-                                            if let Some(drag) = host.drag(up.pointer_id)
-                                                && drag.kind == drag_kind
-                                                && drag.source_window == acx.window
-                                            {
-                                                host.cancel_drag(up.pointer_id);
-                                            }
-                                            host.release_pointer_capture();
-                                            host.notify(acx);
-                                            false
+                                            finish_pointer_region_drag(
+                                                host,
+                                                acx,
+                                                up.pointer_id,
+                                                drag_kind,
+                                            )
                                         },
                                     ));
 
@@ -5987,20 +6022,14 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
                                 cx.pointer_region_on_pointer_down(Arc::new(
                                     move |host, acx, down| {
-                                        if down.button != MouseButton::Left {
+                                        if !prepare_pointer_region_drag_on_left_down(
+                                            host,
+                                            acx,
+                                            down,
+                                            Some(kind),
+                                            Some(cursor),
+                                        ) {
                                             return false;
-                                        }
-
-                                        host.request_focus(acx.target);
-                                        host.capture_pointer();
-                                        host.set_cursor_icon(cursor);
-                                        if host.drag(down.pointer_id).is_none() {
-                                            host.begin_drag_with_kind(
-                                                down.pointer_id,
-                                                kind,
-                                                acx.window,
-                                                down.position,
-                                            );
                                         }
                                         host.record_transient_event(
                                             fret_ui::action::ActionCx {
@@ -6017,42 +6046,14 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 cx.pointer_region_on_pointer_move(Arc::new(
                                     move |host, acx, mv| {
                                         host.set_cursor_icon(cursor);
-
-                                        let Some(drag) = host.drag_mut(mv.pointer_id) else {
-                                            return false;
-                                        };
-                                        if drag.kind != kind || drag.source_window != acx.window {
-                                            return false;
-                                        }
-
-                                        let outcome = update_immediate_move(
-                                            drag,
-                                            acx.window,
-                                            mv.position,
-                                            mv.buttons.left,
-                                        );
-                                        if outcome == DragMoveOutcome::Canceled {
-                                            host.cancel_drag(mv.pointer_id);
-                                            host.release_pointer_capture();
-                                            host.notify(acx);
-                                            return false;
-                                        }
-
-                                        host.notify(acx);
-                                        false
+                                        handle_pointer_region_drag_move_immediate(
+                                            host, acx, mv, kind,
+                                        )
                                     },
                                 ));
 
                                 cx.pointer_region_on_pointer_up(Arc::new(move |host, acx, up| {
-                                    if let Some(drag) = host.drag(up.pointer_id)
-                                        && drag.kind == kind
-                                        && drag.source_window == acx.window
-                                    {
-                                        host.cancel_drag(up.pointer_id);
-                                    }
-                                    host.release_pointer_capture();
-                                    host.notify(acx);
-                                    false
+                                    finish_pointer_region_drag(host, acx, up.pointer_id, kind)
                                 }));
 
                                 Vec::new()
