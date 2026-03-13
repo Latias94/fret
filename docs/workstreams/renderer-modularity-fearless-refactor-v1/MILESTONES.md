@@ -25,6 +25,18 @@ Current snapshot (2026-03-13):
   - `crates/fret-render` now uses explicit re-exports instead of wildcard facade export.
   - `RendererCapabilities::from_adapter_device(...)` now exists and is used in first-party runner
     adoption paths.
+- The latest facade shrink slice has landed:
+  - consumer rescan confirmed diagnostics/report stores remain real first-party
+    runner/bootstrap/tooling contracts on the default facade
+  - `crates/fret-render` no longer re-exports zero-direct-consumer advanced perf/init value
+    snapshots such as `RenderPerfSnapshot` and `WgpuInitDiagnosticsSnapshot`
+  - `crates/fret-render/src/lib.rs` now includes compile-fail doctests that guard those
+    backend-only names from re-entering the default facade by accident
+- The portable-value ownership audit is closed for v1:
+  - no additional value-contract move to `fret-render-core` improved ownership clarity
+  - cross-backend render-target metadata remains the canonical `fret-render-core` surface
+  - remaining value-ish exports are either `wgpu`-coupled or already aliased from their real owner
+    crates
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

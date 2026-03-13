@@ -67,7 +67,8 @@ This workstream exists to make renderer refactors boring, staged, and reversible
 
 As of 2026-03-13:
 
-- `crates/fret-render/src/lib.rs` is effectively a wildcard re-export facade.
+- `crates/fret-render/src/lib.rs` now uses an explicit curated re-export list instead of a
+  wildcard backend dump.
 - `crates/fret-render-wgpu/src/lib.rs` re-exports a broad mix of:
   - stable-facing contracts,
   - backend bootstrap helpers,
@@ -89,6 +90,12 @@ As of 2026-03-13:
   - `crates/fret-render/tests/facade_surface_snapshot.rs`
 - The default facade no longer re-exports nested diagnostics/detail leaf structs that had zero
   first-party consumers; those now stay backend-specific.
+- The default facade also no longer re-exports zero-direct-consumer advanced perf/init value
+  snapshots; diagnostics/report stores remain, but deeper value types now require
+  `fret-render-wgpu` directly.
+- The portable-value ownership audit is also closed for v1:
+  - render-target metadata already lives in `fret-render-core`
+  - no additional backend-owned value type move improved ownership clarity after audit
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

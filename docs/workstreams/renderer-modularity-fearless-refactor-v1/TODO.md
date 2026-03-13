@@ -85,8 +85,14 @@ ID format:
     `EffectDegradationCounters`, `WgpuAllocatorReportSummary`,
     `WgpuAllocatorReportTopAllocation`, `WgpuInitAttemptSnapshot`.
   - Parent snapshots/stores remain on the default facade for now.
-- [ ] RMFR-facade-013 Move or alias portable value contracts from backend-owned exports to
+- [x] RMFR-facade-013 Move or alias portable value contracts from backend-owned exports to
   `fret-render-core` where that improves ownership clarity.
+  - Audit result: no additional move landed for v1.
+  - Existing cross-backend render-target metadata/value enums already live in `fret-render-core`.
+  - Remaining default-facade value surfaces are either backend-owned by construction
+    (`ImageDescriptor`, `ClearColor`, perf/init snapshots with `wgpu` coupling) or already alias
+    their actual owner crates (`TextFontFamilyConfig` from `fret_core`,
+    `SystemFontRescan{Seed,Result}` from `fret-render-text`).
 - [x] RMFR-facade-014 Document the intended stable meaning of `crates/fret-render`.
   - `crates/fret-render/src/lib.rs`
   - `docs/crate-usage-guide.md`
@@ -521,8 +527,14 @@ ID format:
       path
     - `crates/fret-render-wgpu/src/svg.rs` now keeps only the internal fit-mode SVG raster
       entrypoints that active renderer code still uses
-- [ ] RMFR-exports-061 Decide whether backend-only diagnostics stores belong in the stable default
+- [x] RMFR-exports-061 Decide whether backend-only diagnostics stores belong in the stable default
   facade or under a more explicit backend namespace.
+  - Consumer rescan confirmed diagnostics/report stores and their immediate sample/count wrapper
+    types are real first-party runner/bootstrap contracts and stay on `crates/fret-render`.
+  - Zero-direct-consumer advanced perf/init value snapshots now stay backend-specific:
+    `RenderPerfSnapshot`, `IntermediatePerfSnapshot`, `SvgPerfSnapshot`,
+    `BlurQualitySnapshot`, `EffectDegradationSnapshot`, and
+    `WgpuInitDiagnosticsSnapshot`.
 - [ ] RMFR-exports-062 Confirm whether `WgpuContext` remains a stable convenience surface or should
   be demoted in guidance.
 - [x] RMFR-exports-063 Update first-party callers after any facade shrink.
@@ -536,6 +548,8 @@ ID format:
 - [x] RMFR-gates-071 Add a surface snapshot note or test proving the intended `fret-render` export
   set after facade curation.
   - Gate: `crates/fret-render/tests/facade_surface_snapshot.rs`
+  - Negative import guard: `crates/fret-render/src/lib.rs` compile-fail doctests for backend-only
+    advanced snapshot names
 - [x] RMFR-gates-072 Add targeted smoke coverage for host-provided GPU topology if absent.
   - Targeted gate: `cargo nextest run -p fret-render-wgpu renderer_accepts_host_provided_gpu_topology`
 - [ ] RMFR-gates-073 Keep render-plan semantics guardrails green for any planning/execution change.

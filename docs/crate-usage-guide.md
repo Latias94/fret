@@ -254,12 +254,16 @@ Notes:
 - Render-target / ingest contracts: `RenderTargetDescriptor`, `RenderTargetMetadata`, and the
   `RenderTarget*` value enums
 - Diagnostics/report stores for first-party runners/tooling: `RendererPerfFrameStore`,
-  `WgpuHubReportFrameStore`, `WgpuAllocatorReportFrameStore`
+  `RendererPerfFrameSample`, `WgpuHubReportCounts`, `WgpuHubReportFrameStore`,
+  `WgpuHubReportFrameSample`, `WgpuAllocatorReportFrameStore`,
+  `WgpuAllocatorReportFrameSample`
 - External image/SVG upload helpers and `viewport_overlay`
 
 Nested diagnostics detail structs stay backend-specific by default. Reach for `fret-render-wgpu`
-directly if you need names like adapter sub-snapshots, blur/effect counter leaf structs, allocator
-summary/top-allocation rows, or per-attempt init records.
+directly if you need names like `RenderPerfSnapshot`, `IntermediatePerfSnapshot`,
+`SvgPerfSnapshot`, `BlurQualitySnapshot`, `EffectDegradationSnapshot`,
+`WgpuInitDiagnosticsSnapshot`, adapter sub-snapshots, allocator summary/top-allocation rows, or
+per-attempt init records.
 
 **Topology entrypoints:**
 

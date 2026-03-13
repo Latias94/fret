@@ -1,16 +1,15 @@
 use fret_render::{
-    BlurQualitySnapshot, ClearColor, EffectDegradationSnapshot, ImageColorSpace, ImageDescriptor,
-    IntermediatePerfSnapshot, RenderError, RenderPerfSnapshot, RenderSceneParams,
+    ClearColor, ImageColorSpace, ImageDescriptor, RenderError, RenderSceneParams,
     RenderTargetAlphaMode, RenderTargetColorEncoding, RenderTargetColorPrimaries,
     RenderTargetColorRange, RenderTargetColorSpace, RenderTargetDescriptor,
     RenderTargetIngestStrategy, RenderTargetMatrixCoefficients, RenderTargetMetadata,
     RenderTargetOrientation, RenderTargetRotation, RenderTargetTransferFunction, Renderer,
     RendererCapabilities, RendererPerfFrameSample, RendererPerfFrameStore, SurfaceState,
-    SvgAlphaMask, SvgPerfSnapshot, SvgRgbaImage, UploadedRgba8Image, WgpuAdapterSelectionSnapshot,
+    SvgAlphaMask, SvgRgbaImage, UploadedRgba8Image, WgpuAdapterSelectionSnapshot,
     WgpuAllocatorReportFrameSample, WgpuAllocatorReportFrameStore, WgpuContext,
     WgpuHubReportCounts, WgpuHubReportFrameSample, WgpuHubReportFrameStore,
-    WgpuInitDiagnosticsSnapshot, create_rgba8_image_storage, upload_alpha_mask, upload_rgba_image,
-    upload_rgba8_image, viewport_overlay, write_rgba8_texture_region,
+    create_rgba8_image_storage, upload_alpha_mask, upload_rgba_image, upload_rgba8_image,
+    viewport_overlay, write_rgba8_texture_region,
 };
 
 #[test]
@@ -32,7 +31,6 @@ fn facade_surface_snapshot_matches_v1_contract_buckets() {
     // Bucket B: capability and adapter snapshots.
     let _ = std::mem::size_of::<RendererCapabilities>();
     let _ = std::mem::size_of::<WgpuAdapterSelectionSnapshot>();
-    let _ = std::mem::size_of::<WgpuInitDiagnosticsSnapshot>();
     let _ = RendererCapabilities::from_wgpu_context;
     let _ = RendererCapabilities::from_adapter_device;
     let _ = WgpuAdapterSelectionSnapshot::from_context;
@@ -52,12 +50,7 @@ fn facade_surface_snapshot_matches_v1_contract_buckets() {
     let _ = std::mem::size_of::<RenderTargetAlphaMode>();
     let _ = std::mem::size_of::<RenderTargetIngestStrategy>();
 
-    // Bucket B continued: diagnostics/report stores and snapshots.
-    let _ = std::mem::size_of::<BlurQualitySnapshot>();
-    let _ = std::mem::size_of::<EffectDegradationSnapshot>();
-    let _ = std::mem::size_of::<RenderPerfSnapshot>();
-    let _ = std::mem::size_of::<IntermediatePerfSnapshot>();
-    let _ = std::mem::size_of::<SvgPerfSnapshot>();
+    // Bucket B continued: diagnostics/report stores and samples.
     let _ = std::mem::size_of::<RendererPerfFrameSample>();
     let _ = std::mem::size_of::<RendererPerfFrameStore>();
     let _ = std::mem::size_of::<WgpuHubReportCounts>();
