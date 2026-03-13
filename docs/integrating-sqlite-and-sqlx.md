@@ -268,7 +268,7 @@ let key = QueryKey::<Vec<TodoRow>>::new("my_app.db.todos.v1", &epoch);
 
 ```rust
 let epoch = cx.watch_model(&db_epoch).paint().value_or_default();
-cx.with_state(|| 0u64, |last_epoch| {
+cx.root_state(|| 0u64, |last_epoch| {
     if *last_epoch != epoch {
         *last_epoch = epoch;
         let _ = fret_query::with_query_client(cx.app, |client, _app| {

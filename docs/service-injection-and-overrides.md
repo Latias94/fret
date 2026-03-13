@@ -101,7 +101,7 @@ fn with_provider<H: UiHost, R>(
     value: u32,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(MyProviderState::default, |st| {
+    let prev = cx.root_state(MyProviderState::default, |st| {
         let prev = st.current;
         st.current = Some(value);
         prev
@@ -109,7 +109,7 @@ fn with_provider<H: UiHost, R>(
 
     let out = f(cx);
 
-    cx.with_state(MyProviderState::default, |st| {
+    cx.root_state(MyProviderState::default, |st| {
         st.current = prev;
     });
 
