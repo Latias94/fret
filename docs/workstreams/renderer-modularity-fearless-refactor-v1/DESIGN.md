@@ -332,7 +332,10 @@ For `Renderer` state-shell tightening, the same principle applies:
   mixed family-plus-helper bucket. `CustomEffectV1` follows the same rule after `CustomEffectV2`
   and `CustomEffectV3`: once availability/fallback and effect-specific pipeline selection live
   together, the v1 family should also move into its own family-local module instead of remaining
-  as the last custom-effect entrypoint under the shared utility bucket.
+  as the last custom-effect entrypoint under the shared utility bucket. If the residual file then
+  only contains a handful of homogeneous fullscreen recorder entrypoints that all reuse the same
+  shared-helper surface and no longer own target allocation or cross-owner mutation, v1 can stop
+  there without forcing one-file-per-family splitting.
 - render-text dump state is the matching diagnostics/export seam for text debugging:
   dump collection scratch and serialization scratch should move behind one owner so render-scene
   execution keeps only a thin bridge to `TextSystem`.

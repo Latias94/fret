@@ -4,6 +4,13 @@ Status: Draft
 
 Last updated: 2026-03-13
 
+Related:
+
+- Design: `docs/workstreams/renderer-modularity-fearless-refactor-v1/DESIGN.md`
+- TODO: `docs/workstreams/renderer-modularity-fearless-refactor-v1/TODO.md`
+- Milestones: `docs/workstreams/renderer-modularity-fearless-refactor-v1/MILESTONES.md`
+- Finishing audit: `docs/workstreams/renderer-modularity-fearless-refactor-v1/FINISHING_AUDIT.md`
+
 ## Motivation
 
 Fret's renderer stack is already on the right architectural path:
@@ -263,6 +270,13 @@ As of 2026-03-13:
     reporting-perf regression tests.
   - `crates/fret-render-wgpu/src/renderer/render_plan_reporting.rs` now keeps the reporting owner
     shell, segment-report rebuild/diff, and dump scheduling.
+- Finishing audit now closes the remaining renderer modularity hotspot decisions for v1:
+  - `docs/workstreams/renderer-modularity-fearless-refactor-v1/FINISHING_AUDIT.md` records the
+    "do not split further" decision for
+    `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` and
+    `crates/fret-render-wgpu/src/renderer/services.rs`
+  - `RMFR-renderer-041`, `RMFR-renderer-042`, and `RMFR-renderer-043` are now treated as closed
+    for v1
 - Renderer path registry/cache owner state now also lives under
   `crates/fret-render-wgpu/src/renderer/path.rs`, and
   `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns prepared path storage, path cache

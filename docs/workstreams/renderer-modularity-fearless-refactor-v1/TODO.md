@@ -703,12 +703,12 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/render_plan_dump_assemble.rs`
     - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps serialization and only
       a thin gate/assemble/emit orchestration shell
-  - Current next hotspot:
-    - decide whether the remaining fullscreen utility families in `effects.rs` should now split
-      further by family, or whether the current post-helper-extraction surface is already the
-      right long-term home for `AlphaThreshold`, `ColorAdjust`, `ColorMatrix`, `Dither`, `Noise`,
-      and `DropShadow`
-- [ ] RMFR-renderer-041 Extract cohesive domain owners for:
+  - Finishing audit decision:
+    - `docs/workstreams/renderer-modularity-fearless-refactor-v1/FINISHING_AUDIT.md` closes the
+      remaining `effects.rs` hotspot for v1: the current post-helper-extraction surface is the
+      intended long-term home for `AlphaThreshold`, `ColorAdjust`, `ColorMatrix`, `Dither`,
+      `Noise`, and `DropShadow` unless future families introduce new owner-specific state
+- [x] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG
   - materials/custom effects
@@ -749,7 +749,9 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/render_scene/dispatch_state.rs`
     - render-scene executor lifecycle glue now lives under
       `crates/fret-render-wgpu/src/renderer/render_scene/executor_lifecycle.rs`
-- [~] RMFR-renderer-042 Reduce cross-domain mutable coupling inside `Renderer`.
+    - finishing audit now records v1 closure evidence in
+      `docs/workstreams/renderer-modularity-fearless-refactor-v1/FINISHING_AUDIT.md`
+- [x] RMFR-renderer-042 Reduce cross-domain mutable coupling inside `Renderer`.
   - Landed so far:
     - custom-effect hash/dedup/refcount/index mutation now lives under
       `crates/fret-render-wgpu/src/renderer/material_effects.rs`
@@ -764,7 +766,9 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/svg/cache.rs::unregister_svg_rasters(...)`
     - render-plan perf-field mapping and degradation perf accumulation now also live under
       `crates/fret-render-wgpu/src/renderer/render_plan_reporting_perf.rs`
-- [~] RMFR-renderer-043 Keep service trait implementations readable after extraction.
+    - finishing audit concludes the remaining `Renderer` fields are owner handles rather than loose
+      cross-domain mutable bookkeeping for v1
+- [x] RMFR-renderer-043 Keep service trait implementations readable after extraction.
   - Landed so far:
     - custom-effect service WGSL validation, capability gating, registration, unregister flow, and
       focused tests now live under
@@ -775,6 +779,9 @@ ID format:
     - `crates/fret-render-wgpu/src/renderer/render_plan_reporting.rs` now keeps reporting owner
       orchestration only, while perf counter collection lives under
       `crates/fret-render-wgpu/src/renderer/render_plan_reporting_perf.rs`
+    - finishing audit locks the current v1 boring shape:
+      `crates/fret-render-wgpu/src/renderer/services.rs` stays as the `TextService`/`PathService`
+      home and does not need further splitting
 
 ### D3. Shaders and pipelines
 

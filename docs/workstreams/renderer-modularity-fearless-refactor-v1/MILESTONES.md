@@ -78,6 +78,12 @@ Current snapshot (2026-03-13):
     reporting-perf tests
   - `crates/fret-render-wgpu/src/renderer/render_plan_reporting.rs` now keeps owner orchestration,
     segment-report rebuild/diff, and dump scheduling
+- The latest finishing audit has landed:
+  - `docs/workstreams/renderer-modularity-fearless-refactor-v1/FINISHING_AUDIT.md` now records
+    the v1 stop-point decision for
+    `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` and
+    `crates/fret-render-wgpu/src/renderer/services.rs`
+  - `RMFR-renderer-041`, `RMFR-renderer-042`, and `RMFR-renderer-043` are now closed for v1
 - The latest custom-effect service split has landed:
   - `crates/fret-render-wgpu/src/renderer/services_custom_effects.rs` now owns custom-effect WGSL
     validation, capability gating, registration/unregister flow, and the focused service tests
