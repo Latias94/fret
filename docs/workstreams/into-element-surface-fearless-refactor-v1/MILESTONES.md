@@ -422,6 +422,37 @@ Exit criteria:
   `pages/sidebar.rs` now stay on `DocSection::build(cx, ...)`; the old `UiCx -> AnyElement`
   teaching pattern is now forbidden there by
   `ui_authoring_surface_default_app::{remaining_app_facing_tail_snippets_prefer_ui_cx_on_the_default_app_surface,remaining_app_facing_tail_pages_use_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app top-level snippet cleanup now also records the `badge` family:
+  `apps/fret-ui-gallery/src/ui/snippets/badge/{demo,usage,spinner,rtl,counts,colors,link,icon,variants}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/badge.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{badge_snippets_prefer_ui_cx_on_the_default_app_surface,badge_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app top-level snippet cleanup now also records the
+  `aspect_ratio` family:
+  `apps/fret-ui-gallery/src/ui/snippets/aspect_ratio/{demo,usage,portrait,square,rtl}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`; the page surface on
+  `apps/fret-ui-gallery/src/ui/pages/aspect_ratio.rs` already stays on
+  `DocSection::build(cx, ...)`, while `render_preview(...)` remains the explicit asset-backed
+  preview seam and the top-level `render(...)` functions stay as the copyable code-surface seam.
+  This is now guarded by
+  `ui_authoring_surface_default_app::{aspect_ratio_snippets_prefer_ui_cx_on_the_default_app_surface,aspect_ratio_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app top-level snippet cleanup now also records the
+  `context_menu` family:
+  `apps/fret-ui-gallery/src/ui/snippets/context_menu/{demo,basic,usage,submenu,shortcuts,groups,icons,checkboxes,radio,destructive,sides,rtl}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/context_menu.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{context_menu_snippets_prefer_ui_cx_on_the_default_app_surface,context_menu_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app top-level snippet cleanup now also records the
+  `dropdown_menu` family:
+  `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/{avatar,basic,checkboxes,checkboxes_icons,complex,demo,destructive,icons,parts,radio_group,radio_icons,rtl,shortcuts,submenu,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep their menu-local
+  checkbox/radio/demo state beside the snippet itself, and
+  `apps/fret-ui-gallery/src/ui/pages/dropdown_menu.rs` now routes those snippet-backed sections
+  through `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
 - the same first-party teaching sweep now also closes the remaining default-root drift on the
   `tabs` / `toggle` / `accordion` lane:
   `tabs/{usage,demo,disabled,extras,icons,line,list,rtl,vertical,vertical_line}.rs`,
@@ -442,10 +473,14 @@ Exit criteria:
   `apps/fret-cookbook/examples/simple_todo_v2_target.rs`, and the scaffold `simple-todo` / `todo`
   templates now all use that helper, and the scaffold README/tests teach it as the default
   first-party keyed-list story.
-- the next UI Gallery app-facing snippet batch is now the first full legacy page-family sweep:
-  start with `badge`, then move through `aspect_ratio` and `context_menu`; these are the next
-  cohesive families still teaching `ElementContext<'_, H> -> AnyElement` on the default authoring
-  surface after the small `UiCx` tail cleanup landed.
+- the same UI Gallery default-app top-level snippet cleanup now also records the `menubar` family:
+  `apps/fret-ui-gallery/src/ui/snippets/menubar/{checkbox,demo,parts,radio,rtl,submenu,usage,with_icons}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep their menubar-local
+  checkbox/radio/demo state beside the snippet itself, and
+  `apps/fret-ui-gallery/src/ui/pages/menubar.rs` now routes those snippet-backed sections through
+  `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the next UI Gallery app-facing snippet batch is now the next remaining
+  `ElementContext<'_, H> -> AnyElement` default-authoring families.
 - M6 raw-seam inventory now has executable source gates in `surface_policy_tests.rs`:
   explicit raw/bridge helpers are currently limited to
   `kbd.rs::kbd_icon(...)` and

@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("radio.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_runtime::CommandId;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt as _;
@@ -17,7 +18,7 @@ fn trigger_surface<H: UiHost>(
         .test_id(test_id)
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let theme_mode = cx.local_model(|| Some(Arc::<str>::from("system")));
     let theme_mode_now = cx.watch_model(&theme_mode).layout().cloned().flatten();
 

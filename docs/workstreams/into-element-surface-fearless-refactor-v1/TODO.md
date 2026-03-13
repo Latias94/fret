@@ -139,6 +139,14 @@ Validation snapshot on 2026-03-13:
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app item_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app table_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app remaining_app_facing_tail -- --nocapture`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app badge_ -- --nocapture`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app aspect_ratio_ -- --nocapture`
+
+Validation addendum on 2026-03-14:
+
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app context_menu_ -- --nocapture`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app dropdown_menu_ -- --nocapture`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app menubar_ -- --nocapture`
 
 Implementation note on 2026-03-13:
 
@@ -260,11 +268,39 @@ Implementation note on 2026-03-13:
   now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`; the corresponding page
   sections on `pages/breadcrumb.rs`, `pages/date_picker.rs`, `pages/form.rs`, and
   `pages/sidebar.rs` now keep those snippet-owned app-facing sections on `DocSection::build(cx, ...)`.
+- the first full legacy page-family sweep is now open on the `badge` lane:
+  `apps/fret-ui-gallery/src/ui/snippets/badge/{demo,usage,spinner,rtl,counts,colors,link,icon,variants}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and
+  `apps/fret-ui-gallery/src/ui/pages/badge.rs` now routes those previews through
+  `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the same first full legacy page-family sweep now also covers `aspect_ratio`:
+  `apps/fret-ui-gallery/src/ui/snippets/aspect_ratio/{demo,usage,portrait,square,rtl}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`;
+  `pages/aspect_ratio.rs` already stays on `DocSection::build(cx, ...)`, while the
+  asset-backed gallery preview path remains intentionally on `render_preview(...)` and the
+  copyable top-level `render(...)` functions are explicitly retained as the code-surface seam.
+- the same first full legacy page-family sweep now also covers `context_menu`:
+  `apps/fret-ui-gallery/src/ui/snippets/context_menu/{demo,basic,usage,submenu,shortcuts,groups,icons,checkboxes,radio,destructive,sides,rtl}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and
+  `apps/fret-ui-gallery/src/ui/pages/context_menu.rs` now routes those snippet-backed sections
+  through `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the same first full legacy page-family sweep now also covers `dropdown_menu`:
+  `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/{avatar,basic,checkboxes,checkboxes_icons,complex,demo,destructive,icons,parts,radio_group,radio_icons,rtl,shortcuts,submenu,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep their menu-local
+  checkbox/radio/demo state beside the snippet itself, and
+  `apps/fret-ui-gallery/src/ui/pages/dropdown_menu.rs` now routes those snippet-backed sections
+  through `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the same first full legacy page-family sweep now also covers `menubar`:
+  `apps/fret-ui-gallery/src/ui/snippets/menubar/{checkbox,demo,parts,radio,rtl,submenu,usage,with_icons}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep their menubar-local
+  checkbox/radio/demo state beside the snippet itself, and
+  `apps/fret-ui-gallery/src/ui/pages/menubar.rs` now routes those snippet-backed sections through
+  `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
 - after `accordion` / `tabs` / `toggle` / `radio_group` / `slider` / `native_select` /
   `resizable` / `navigation_menu` / `scroll_area` / `progress` / `chart` / `combobox` /
   `carousel` / `item` / `table` plus the remaining curated tail snippets, the next default-app UI
-  Gallery app-facing queue should move to the first full legacy page-family sweep:
-  `badge`, followed by `aspect_ratio` and `context_menu`.
+  Gallery app-facing queue should move to the next full legacy page-family sweeps:
+  the next remaining `ElementContext<'_, H>`-based families.
 - `apps/fret-cookbook/examples/customv1_basics.rs` now keeps both advanced reusable helpers
   `panel_shell(...)` and `preview_content(...)` on `IntoUiElement<KernelApp>`-based signatures
   instead of returning raw `AnyElement` for non-raw composition.

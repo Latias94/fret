@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("complex.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt as _;
@@ -28,7 +29,7 @@ impl Default for ComplexMenuState {
     }
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let menu_state = cx.local_model(ComplexMenuState::default);
     let menu_state_now = cx
         .watch_model(&menu_state)

@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("radio_icons.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt as _;
@@ -12,7 +13,7 @@ struct CheckoutSettings {
     payment_method: Option<Arc<str>>,
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let checkout = cx.local_model(|| CheckoutSettings {
         payment_method: Some(Arc::<str>::from("card")),
     });

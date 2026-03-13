@@ -1,10 +1,11 @@
 pub const SOURCE: &str = include_str!("radio_group.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt as _;
-use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 #[derive(Default, Clone)]
@@ -12,7 +13,7 @@ struct PanelSettings {
     position: Option<Arc<str>>,
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let settings = cx.local_model(|| PanelSettings {
         position: Some(Arc::<str>::from("bottom")),
     });

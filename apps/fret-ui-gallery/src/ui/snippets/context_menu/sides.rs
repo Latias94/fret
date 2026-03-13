@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("sides.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_core::scene::DashPatternV1;
 use fret_runtime::CommandId;
@@ -80,7 +81,7 @@ fn side_menu<H: UiHost>(
         )
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app).snapshot();
     let gap = MetricRef::space(Space::N4).resolve(&theme);
     let layout = decl_style::layout_style(

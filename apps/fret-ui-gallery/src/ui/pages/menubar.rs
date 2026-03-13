@@ -21,6 +21,32 @@ pub(super) fn preview_menubar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Keep `ui-gallery-menubar-*` test IDs stable; multiple diag scripts depend on them.",
     ]);
     let notes = DocSection::build(cx, "Notes", notes).test_id_prefix("ui-gallery-menubar-notes");
+    let demo = DocSection::build(cx, "Demo", demo)
+        .test_id_prefix("ui-gallery-menubar-demo")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .title_test_id("ui-gallery-section-usage-title")
+        .description("Copyable shadcn-style composition reference for Menubar.")
+        .test_id_prefix("ui-gallery-menubar-usage")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let checkbox = DocSection::build(cx, "Checkbox", checkbox)
+        .test_id_prefix("ui-gallery-menubar-checkbox")
+        .code_rust_from_file_region(snippets::checkbox::SOURCE, "example");
+    let radio = DocSection::build(cx, "Radio", radio)
+        .test_id_prefix("ui-gallery-menubar-radio")
+        .code_rust_from_file_region(snippets::radio::SOURCE, "example");
+    let submenu = DocSection::build(cx, "Submenu", submenu)
+        .test_id_prefix("ui-gallery-menubar-submenu")
+        .code_rust_from_file_region(snippets::submenu::SOURCE, "example");
+    let with_icons = DocSection::build(cx, "With Icons", with_icons)
+        .test_id_prefix("ui-gallery-menubar-with-icons")
+        .code_rust_from_file_region(snippets::with_icons::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .test_id_prefix("ui-gallery-menubar-rtl")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+    let parts = DocSection::build(cx, "Parts", parts)
+        .test_id_prefix("ui-gallery-menubar-parts")
+        .code_rust_from_file_region(snippets::parts::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -28,33 +54,7 @@ pub(super) fn preview_menubar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             "Menubar examples, aligned with upstream shadcn docs (Base UI variant), plus a parts adapter demo.",
         ),
         vec![
-            DocSection::new("Demo", demo)
-                .test_id_prefix("ui-gallery-menubar-demo")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .title_test_id("ui-gallery-section-usage-title")
-                .description("Copyable shadcn-style composition reference for Menubar.")
-                .test_id_prefix("ui-gallery-menubar-usage")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Checkbox", checkbox)
-                .test_id_prefix("ui-gallery-menubar-checkbox")
-                .code_rust_from_file_region(snippets::checkbox::SOURCE, "example"),
-            DocSection::new("Radio", radio)
-                .test_id_prefix("ui-gallery-menubar-radio")
-                .code_rust_from_file_region(snippets::radio::SOURCE, "example"),
-            DocSection::new("Submenu", submenu)
-                .test_id_prefix("ui-gallery-menubar-submenu")
-                .code_rust_from_file_region(snippets::submenu::SOURCE, "example"),
-            DocSection::new("With Icons", with_icons)
-                .test_id_prefix("ui-gallery-menubar-with-icons")
-                .code_rust_from_file_region(snippets::with_icons::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .test_id_prefix("ui-gallery-menubar-rtl")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Parts", parts)
-                .test_id_prefix("ui-gallery-menubar-parts")
-                .code_rust_from_file_region(snippets::parts::SOURCE, "example"),
-            notes,
+            demo, usage, checkbox, radio, submenu, with_icons, rtl, parts, notes,
         ],
     );
 

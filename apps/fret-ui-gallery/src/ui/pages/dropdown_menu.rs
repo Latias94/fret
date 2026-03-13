@@ -42,11 +42,74 @@ pub(super) fn preview_dropdown_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .no_shell()
         .test_id_prefix("ui-gallery-dropdown-menu-api-reference")
-        .description(
-            "Public surface ownership, remaining authoring drift, and children API guidance.",
-        );
+        .description("Public surface ownership, composition notes, and children API guidance.");
     let notes =
         DocSection::build(cx, "Notes", notes).test_id_prefix("ui-gallery-dropdown-menu-notes");
+    let demo = DocSection::build(cx, "Demo", demo)
+        .description("Official shadcn-style dropdown menu demo with shortcuts and a submenu.")
+        .test_id_prefix("ui-gallery-dropdown-menu-demo")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .title_test_id("ui-gallery-section-usage-title")
+        .description("Copyable source-aligned usage closest to the official docs path.")
+        .test_id_prefix("ui-gallery-dropdown-menu-usage")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let basic = DocSection::build(cx, "Basic", basic)
+        .description("A minimal dropdown menu with labels, separators, and disabled items.")
+        .test_id_prefix("ui-gallery-dropdown-menu-basic")
+        .code_rust_from_file_region(snippets::basic::SOURCE, "example");
+    let submenu = DocSection::build(cx, "Submenu", submenu)
+        .description("Use `DropdownMenuSub*` helpers to nest secondary actions.")
+        .test_id_prefix("ui-gallery-dropdown-menu-submenu")
+        .code_rust_from_file_region(snippets::submenu::SOURCE, "example");
+    let shortcuts = DocSection::build(cx, "Shortcuts", shortcuts)
+        .description(
+            "Prefer `.shortcut(\"...\")` for copyable keyboard hints; keep `DropdownMenuShortcut` for custom trailing content.",
+        )
+        .test_id_prefix("ui-gallery-dropdown-menu-shortcuts")
+        .code_rust_from_file_region(snippets::shortcuts::SOURCE, "example");
+    let icons = DocSection::build(cx, "Icons", icons)
+        .description("Combine leading icons with labels for quicker scanning.")
+        .test_id_prefix("ui-gallery-dropdown-menu-icons")
+        .code_rust_from_file_region(snippets::icons::SOURCE, "example");
+    let checkboxes = DocSection::build(cx, "Checkboxes", checkboxes)
+        .description("Use checkbox items for toggle-style actions.")
+        .test_id_prefix("ui-gallery-dropdown-menu-checkboxes")
+        .code_rust_from_file_region(snippets::checkboxes::SOURCE, "example");
+    let checkboxes_icons = DocSection::build(cx, "Checkboxes Icons", checkboxes_icons)
+        .description("Add icons to checkbox items without disturbing the indicator slot.")
+        .test_id_prefix("ui-gallery-dropdown-menu-checkboxes-icons")
+        .code_rust_from_file_region(snippets::checkboxes_icons::SOURCE, "example");
+    let radio_group = DocSection::build(cx, "Radio Group", radio_group)
+        .description("Use radio items for mutually exclusive choices.")
+        .test_id_prefix("ui-gallery-dropdown-menu-radio-group")
+        .code_rust_from_file_region(snippets::radio_group::SOURCE, "example");
+    let radio_icons = DocSection::build(cx, "Radio Icons", radio_icons)
+        .description("Show radio options with icons while preserving row alignment.")
+        .test_id_prefix("ui-gallery-dropdown-menu-radio-icons")
+        .code_rust_from_file_region(snippets::radio_icons::SOURCE, "example");
+    let destructive = DocSection::build(cx, "Destructive", destructive)
+        .description("Use `variant=Destructive` for irreversible actions.")
+        .test_id_prefix("ui-gallery-dropdown-menu-destructive")
+        .code_rust_from_file_region(snippets::destructive::SOURCE, "example");
+    let avatar = DocSection::build(cx, "Avatar", avatar)
+        .description("An account menu triggered by an avatar-style button.")
+        .test_id_prefix("ui-gallery-dropdown-menu-avatar")
+        .code_rust_from_file_region(snippets::avatar::SOURCE, "example");
+    let complex = DocSection::build(cx, "Complex", complex)
+        .description("A richer menu mixing groups, icons, toggles, and nested submenus.")
+        .test_id_prefix("ui-gallery-dropdown-menu-complex")
+        .code_rust_from_file_region(snippets::complex::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .description("RTL layout keeps spacing, alignment, and submenu direction auditable.")
+        .test_id_prefix("ui-gallery-dropdown-menu-rtl")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+    let parts = DocSection::build(cx, "Parts", parts)
+        .description(
+            "Fret-only Trigger/Content adapter surface kept outside the upstream docs path.",
+        )
+        .test_id_prefix("ui-gallery-dropdown-menu-parts")
+        .code_rust_from_file_region(snippets::parts::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -54,68 +117,22 @@ pub(super) fn preview_dropdown_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             "Dropdown Menu examples aligned with the upstream shadcn docs path, plus Fret-specific API and parts notes after the docs-aligned sections.",
         ),
         vec![
-            DocSection::new("Demo", demo)
-                .description("Official shadcn-style dropdown menu demo with shortcuts and a submenu.")
-                .test_id_prefix("ui-gallery-dropdown-menu-demo")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .title_test_id("ui-gallery-section-usage-title")
-                .description("Copyable source-aligned usage closest to the official docs path.")
-                .test_id_prefix("ui-gallery-dropdown-menu-usage")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Basic", basic)
-                .description("A minimal dropdown menu with labels, separators, and disabled items.")
-                .test_id_prefix("ui-gallery-dropdown-menu-basic")
-                .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
-            DocSection::new("Submenu", submenu)
-                .description("Use `DropdownMenuSub*` helpers to nest secondary actions.")
-                .test_id_prefix("ui-gallery-dropdown-menu-submenu")
-                .code_rust_from_file_region(snippets::submenu::SOURCE, "example"),
-            DocSection::new("Shortcuts", shortcuts)
-                .description("Prefer `.shortcut(\"...\")` for copyable keyboard hints; keep `DropdownMenuShortcut` for custom trailing content.")
-                .test_id_prefix("ui-gallery-dropdown-menu-shortcuts")
-                .code_rust_from_file_region(snippets::shortcuts::SOURCE, "example"),
-            DocSection::new("Icons", icons)
-                .description("Combine leading icons with labels for quicker scanning.")
-                .test_id_prefix("ui-gallery-dropdown-menu-icons")
-                .code_rust_from_file_region(snippets::icons::SOURCE, "example"),
-            DocSection::new("Checkboxes", checkboxes)
-                .description("Use checkbox items for toggle-style actions.")
-                .test_id_prefix("ui-gallery-dropdown-menu-checkboxes")
-                .code_rust_from_file_region(snippets::checkboxes::SOURCE, "example"),
-            DocSection::new("Checkboxes Icons", checkboxes_icons)
-                .description("Add icons to checkbox items without disturbing the indicator slot.")
-                .test_id_prefix("ui-gallery-dropdown-menu-checkboxes-icons")
-                .code_rust_from_file_region(snippets::checkboxes_icons::SOURCE, "example"),
-            DocSection::new("Radio Group", radio_group)
-                .description("Use radio items for mutually exclusive choices.")
-                .test_id_prefix("ui-gallery-dropdown-menu-radio-group")
-                .code_rust_from_file_region(snippets::radio_group::SOURCE, "example"),
-            DocSection::new("Radio Icons", radio_icons)
-                .description("Show radio options with icons while preserving row alignment.")
-                .test_id_prefix("ui-gallery-dropdown-menu-radio-icons")
-                .code_rust_from_file_region(snippets::radio_icons::SOURCE, "example"),
-            DocSection::new("Destructive", destructive)
-                .description("Use `variant=Destructive` for irreversible actions.")
-                .test_id_prefix("ui-gallery-dropdown-menu-destructive")
-                .code_rust_from_file_region(snippets::destructive::SOURCE, "example"),
-            DocSection::new("Avatar", avatar)
-                .description("An account menu triggered by an avatar-style button.")
-                .test_id_prefix("ui-gallery-dropdown-menu-avatar")
-                .code_rust_from_file_region(snippets::avatar::SOURCE, "example"),
-            DocSection::new("Complex", complex)
-                .description("A richer menu mixing groups, icons, toggles, and nested submenus.")
-                .test_id_prefix("ui-gallery-dropdown-menu-complex")
-                .code_rust_from_file_region(snippets::complex::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .description("RTL layout keeps spacing, alignment, and submenu direction auditable.")
-                .test_id_prefix("ui-gallery-dropdown-menu-rtl")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            demo,
+            usage,
+            basic,
+            submenu,
+            shortcuts,
+            icons,
+            checkboxes,
+            checkboxes_icons,
+            radio_group,
+            radio_icons,
+            destructive,
+            avatar,
+            complex,
+            rtl,
             api_reference,
-            DocSection::new("Parts", parts)
-                .description("Fret-only Trigger/Content adapter surface kept outside the upstream docs path.")
-                .test_id_prefix("ui-gallery-dropdown-menu-parts")
-                .code_rust_from_file_region(snippets::parts::SOURCE, "example"),
+            parts,
             notes,
         ],
     );

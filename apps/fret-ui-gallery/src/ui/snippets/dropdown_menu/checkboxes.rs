@@ -1,10 +1,11 @@
 pub const SOURCE: &str = include_str!("checkboxes.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt as _;
-use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use fret_ui_shadcn::facade as shadcn;
 
 #[derive(Default, Clone)]
 struct AppearanceState {
@@ -13,7 +14,7 @@ struct AppearanceState {
     show_panel: bool,
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let appearance = cx.local_model(|| AppearanceState {
         show_status_bar: true,
         show_activity_bar: false,

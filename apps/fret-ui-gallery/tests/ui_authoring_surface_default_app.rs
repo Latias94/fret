@@ -185,6 +185,300 @@ fn progress_snippets_prefer_ui_cx_on_the_default_app_surface() {
 }
 
 #[test]
+fn badge_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/badge/demo.rs",
+            "src/ui/snippets/badge/usage.rs",
+            "src/ui/snippets/badge/spinner.rs",
+            "src/ui/snippets/badge/rtl.rs",
+            "src/ui/snippets/badge/counts.rs",
+            "src/ui/snippets/badge/colors.rs",
+            "src/ui/snippets/badge/link.rs",
+            "src/ui/snippets/badge/icon.rs",
+            "src/ui/snippets/badge/variants.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/badge",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn badge_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/badge.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Variants\", variants)",
+            "DocSection::build(cx, \"With Icon\", with_icon)",
+            "DocSection::build(cx, \"With Spinner\", with_spinner)",
+            "DocSection::build(cx, \"Link\", link)",
+            "DocSection::build(cx, \"Custom Colors\", colors)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Counts (Fret)\", counts)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Variants\", variants)",
+            "DocSection::new(\"With Icon\", with_icon)",
+            "DocSection::new(\"With Spinner\", with_spinner)",
+            "DocSection::new(\"Link\", link)",
+            "DocSection::new(\"Custom Colors\", colors)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Counts (Fret)\", counts)",
+        ],
+    );
+}
+
+#[test]
+fn aspect_ratio_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/aspect_ratio/demo.rs",
+            "src/ui/snippets/aspect_ratio/usage.rs",
+            "src/ui/snippets/aspect_ratio/portrait.rs",
+            "src/ui/snippets/aspect_ratio/square.rs",
+            "src/ui/snippets/aspect_ratio/rtl.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/aspect_ratio",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn aspect_ratio_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/aspect_ratio.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Square\", square)",
+            "DocSection::build(cx, \"Portrait\", portrait)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Square\", square)",
+            "DocSection::new(\"Portrait\", portrait)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Notes\", notes)",
+        ],
+    );
+}
+
+#[test]
+fn context_menu_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/context_menu/demo.rs",
+            "src/ui/snippets/context_menu/basic.rs",
+            "src/ui/snippets/context_menu/usage.rs",
+            "src/ui/snippets/context_menu/submenu.rs",
+            "src/ui/snippets/context_menu/shortcuts.rs",
+            "src/ui/snippets/context_menu/groups.rs",
+            "src/ui/snippets/context_menu/icons.rs",
+            "src/ui/snippets/context_menu/checkboxes.rs",
+            "src/ui/snippets/context_menu/radio.rs",
+            "src/ui/snippets/context_menu/destructive.rs",
+            "src/ui/snippets/context_menu/sides.rs",
+            "src/ui/snippets/context_menu/rtl.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/context_menu",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn context_menu_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/context_menu.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Basic\", basic)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Submenu\", submenu)",
+            "DocSection::build(cx, \"Shortcuts\", shortcuts)",
+            "DocSection::build(cx, \"Groups\", groups)",
+            "DocSection::build(cx, \"Icons\", icons)",
+            "DocSection::build(cx, \"Checkboxes\", checkboxes)",
+            "DocSection::build(cx, \"Radio\", radio)",
+            "DocSection::build(cx, \"Destructive\", destructive)",
+            "DocSection::build(cx, \"Sides\", sides)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Basic\", basic)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Submenu\", submenu)",
+            "DocSection::new(\"Shortcuts\", shortcuts)",
+            "DocSection::new(\"Groups\", groups)",
+            "DocSection::new(\"Icons\", icons)",
+            "DocSection::new(\"Checkboxes\", checkboxes)",
+            "DocSection::new(\"Radio\", radio)",
+            "DocSection::new(\"Destructive\", destructive)",
+            "DocSection::new(\"Sides\", sides)",
+            "DocSection::new(\"RTL\", rtl)",
+        ],
+    );
+}
+
+#[test]
+fn dropdown_menu_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/dropdown_menu/avatar.rs",
+            "src/ui/snippets/dropdown_menu/basic.rs",
+            "src/ui/snippets/dropdown_menu/checkboxes.rs",
+            "src/ui/snippets/dropdown_menu/checkboxes_icons.rs",
+            "src/ui/snippets/dropdown_menu/complex.rs",
+            "src/ui/snippets/dropdown_menu/demo.rs",
+            "src/ui/snippets/dropdown_menu/destructive.rs",
+            "src/ui/snippets/dropdown_menu/icons.rs",
+            "src/ui/snippets/dropdown_menu/parts.rs",
+            "src/ui/snippets/dropdown_menu/radio_group.rs",
+            "src/ui/snippets/dropdown_menu/radio_icons.rs",
+            "src/ui/snippets/dropdown_menu/rtl.rs",
+            "src/ui/snippets/dropdown_menu/shortcuts.rs",
+            "src/ui/snippets/dropdown_menu/submenu.rs",
+            "src/ui/snippets/dropdown_menu/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/dropdown_menu",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn dropdown_menu_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/dropdown_menu.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Basic\", basic)",
+            "DocSection::build(cx, \"Submenu\", submenu)",
+            "DocSection::build(cx, \"Shortcuts\", shortcuts)",
+            "DocSection::build(cx, \"Icons\", icons)",
+            "DocSection::build(cx, \"Checkboxes\", checkboxes)",
+            "DocSection::build(cx, \"Checkboxes Icons\", checkboxes_icons)",
+            "DocSection::build(cx, \"Radio Group\", radio_group)",
+            "DocSection::build(cx, \"Radio Icons\", radio_icons)",
+            "DocSection::build(cx, \"Destructive\", destructive)",
+            "DocSection::build(cx, \"Avatar\", avatar)",
+            "DocSection::build(cx, \"Complex\", complex)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Parts\", parts)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Basic\", basic)",
+            "DocSection::new(\"Submenu\", submenu)",
+            "DocSection::new(\"Shortcuts\", shortcuts)",
+            "DocSection::new(\"Icons\", icons)",
+            "DocSection::new(\"Checkboxes\", checkboxes)",
+            "DocSection::new(\"Checkboxes Icons\", checkboxes_icons)",
+            "DocSection::new(\"Radio Group\", radio_group)",
+            "DocSection::new(\"Radio Icons\", radio_icons)",
+            "DocSection::new(\"Destructive\", destructive)",
+            "DocSection::new(\"Avatar\", avatar)",
+            "DocSection::new(\"Complex\", complex)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Parts\", parts)",
+        ],
+    );
+}
+
+#[test]
+fn menubar_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/menubar/checkbox.rs",
+            "src/ui/snippets/menubar/demo.rs",
+            "src/ui/snippets/menubar/parts.rs",
+            "src/ui/snippets/menubar/radio.rs",
+            "src/ui/snippets/menubar/rtl.rs",
+            "src/ui/snippets/menubar/submenu.rs",
+            "src/ui/snippets/menubar/usage.rs",
+            "src/ui/snippets/menubar/with_icons.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/menubar",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn menubar_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/menubar.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Checkbox\", checkbox)",
+            "DocSection::build(cx, \"Radio\", radio)",
+            "DocSection::build(cx, \"Submenu\", submenu)",
+            "DocSection::build(cx, \"With Icons\", with_icons)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Parts\", parts)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Checkbox\", checkbox)",
+            "DocSection::new(\"Radio\", radio)",
+            "DocSection::new(\"Submenu\", submenu)",
+            "DocSection::new(\"With Icons\", with_icons)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Parts\", parts)",
+        ],
+    );
+}
+
+#[test]
 fn progress_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/progress.rs",
@@ -2413,10 +2707,10 @@ fn selected_context_menu_snippet_helpers_prefer_into_ui_element_over_anyelement(
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
             &[
-                "fn trigger_surface<H: UiHost>(label: &'static str) -> impl IntoUiElement<H> + use<H>",
+                "fn trigger_surface<H: UiHost>(label: &'static str, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
             ],
             &[
-                "fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str) -> AnyElement",
+                "fn trigger_surface<H: UiHost>(label: &'static str, test_id: &'static str,) -> AnyElement",
             ],
         );
     }
@@ -2424,15 +2718,17 @@ fn selected_context_menu_snippet_helpers_prefer_into_ui_element_over_anyelement(
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/context_menu/demo.rs",
         &[
-            "fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H>",
+            "fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
         ],
-        &["fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+        &[
+            "fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id: &'static str,) -> AnyElement",
+        ],
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/context_menu/sides.rs",
         &[
-            "fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            "fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
             "fn side_menu<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, side: shadcn::DropdownMenuSide, trigger_test_id: &'static str, content_test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
         ],
         &[

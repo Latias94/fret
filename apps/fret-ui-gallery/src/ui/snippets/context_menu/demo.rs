@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_core::scene::DashPatternV1;
 use fret_runtime::CommandId;
@@ -52,7 +53,7 @@ fn trigger_surface<H: UiHost>(
         .test_id(test_id)
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let menu_state = cx.local_model(|| BrowserMenuState {
         show_bookmarks: true,
         show_full_urls: false,
