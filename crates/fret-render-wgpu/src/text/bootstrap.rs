@@ -1,5 +1,6 @@
 use super::TextSystem;
 use super::atlas::{GlyphAtlas, TEXT_ATLAS_MAX_PAGES};
+use super::atlas_epoch::TextAtlasEpochState;
 use super::blob_state::TextBlobState;
 use super::face_cache::TextFaceCacheState;
 use super::frame_perf::TextFramePerfState;
@@ -89,7 +90,7 @@ pub(super) fn build_text_system(device: &wgpu::Device) -> TextSystem {
 
         frame_perf: TextFramePerfState::default(),
 
-        glyph_atlas_epoch: 1,
+        atlas_epoch: TextAtlasEpochState::new(1),
 
         font_trace: FontTraceState::default(),
     };

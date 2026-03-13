@@ -118,6 +118,8 @@ As of 2026-03-13:
   `text/mod.rs` no longer owns scene pin-ring bucket fields directly.
 - Text blob/cache state now lives under `crates/fret-render-wgpu/src/text/blob_state.rs`, and
   `text/mod.rs` no longer owns blob-cache/LRU state fields directly.
+- Text atlas epoch state now lives under `crates/fret-render-wgpu/src/text/atlas_epoch.rs`, and
+  `text/mod.rs` no longer owns the raw glyph-atlas epoch field directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:
@@ -388,6 +390,10 @@ As of 2026-03-13:
   - text blob/cache state under
     `crates/fret-render-wgpu/src/text/blob_state.rs`
   - `text/mod.rs` no longer owns blob-cache/LRU state fields directly
+- The latest internal text state-shell tightening slice has also moved:
+  - text atlas epoch state under
+    `crates/fret-render-wgpu/src/text/atlas_epoch.rs`
+  - `text/mod.rs` no longer owns the raw glyph-atlas epoch field directly
 - The sixty-second internal text split has landed:
   - prepared-glyph scaler size clamp now lives behind a pure helper in
     `crates/fret-render-wgpu/src/text/prepare.rs`

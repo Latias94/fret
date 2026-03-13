@@ -19,6 +19,7 @@ pub use fret_render_text::{
 };
 
 mod atlas;
+mod atlas_epoch;
 mod blob_state;
 mod blobs;
 mod bootstrap;
@@ -36,6 +37,7 @@ mod types;
 use self::atlas::GlyphAtlas;
 #[cfg(test)]
 use self::atlas::GlyphKey;
+use self::atlas_epoch::TextAtlasEpochState;
 use self::blob_state::TextBlobState;
 use self::face_cache::TextFaceCacheState;
 use self::frame_perf::TextFramePerfState;
@@ -80,7 +82,7 @@ pub struct TextSystem {
 
     frame_perf: TextFramePerfState,
 
-    glyph_atlas_epoch: u64,
+    atlas_epoch: TextAtlasEpochState,
 
     font_trace: FontTraceState,
 }

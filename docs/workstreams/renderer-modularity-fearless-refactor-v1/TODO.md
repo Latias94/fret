@@ -325,6 +325,9 @@ ID format:
     - text blob/cache state now lives in
       `crates/fret-render-wgpu/src/text/blob_state.rs`
     - `text/mod.rs` no longer owns blob-cache/LRU state fields directly
+    - text atlas epoch state now lives in
+      `crates/fret-render-wgpu/src/text/atlas_epoch.rs`
+    - `text/mod.rs` no longer owns the raw glyph-atlas epoch field directly
     - prepared-glyph font-data cache writes now live behind a dedicated helper in
       `crates/fret-render-wgpu/src/text/prepare.rs`
     - `cache_prepared_glyph_face_data(...)` no longer owns font-data entry writes directly
