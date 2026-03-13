@@ -3,42 +3,39 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
 use fret::{UiChild, UiCx};
-use fret_ui_kit::ui::UiElementSinkExt as _;
 
 fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let row = |part: &'static str, notes: &'static str| {
-        shadcn::TableRow::build(2, move |cx, out| {
-            out.push_ui(cx, shadcn::TableCell::build(ui::text(part)));
-            out.push_ui(cx, shadcn::TableCell::build(ui::text(notes)));
-        })
-    };
-
-    shadcn::Table::build(|cx, out| {
-        out.push_ui(
-            cx,
-            shadcn::TableHeader::build(|cx, out| {
-                out.push(
-                    shadcn::TableRow::build(2, |cx, out| {
-                        out.push(shadcn::TableHead::new("Part").into_element(cx));
-                        out.push(shadcn::TableHead::new("Notes").into_element(cx));
-                    })
-                    .into_element(cx),
-                );
-            }),
-        );
-        out.push_ui(
-            cx,
-            shadcn::TableBody::build(|cx, out| {
-                out.push_ui(cx, row("Context", "Root owns used/max tokens, optional usage costs, hover delays, and the provider scope."));
-                out.push_ui(cx, row("ContextTrigger", "Default trigger reads provider state; use `.children(...)` for a custom trigger surface."));
-                out.push_ui(cx, row("ContextContent", "Hover card content shell with divider, min width, and overflow defaults matching the docs card."));
-                out.push_ui(cx, row("Header / Body / Footer", "Each part supports custom children; the default footer renders total cost and apps can still override it with custom children or explicit cost values."));
-                out.push_ui(cx, row("Usage rows", "Input / Output / Reasoning / Cache rows auto-hide on zero tokens and accept custom children."));
-                out.push_ui(cx, row("Compound composition", "`Context::children([...])` now mirrors the upstream compound ordering directly; `into_element_with_children(...)` remains the late-binding escape hatch."));
-            }),
-        );
-    })
-    .into_element(cx)
+    doc_layout::text_table(
+        cx,
+        ["Part", "Notes"],
+        [
+            [
+                "Context",
+                "Root owns used/max tokens, optional usage costs, hover delays, and the provider scope.",
+            ],
+            [
+                "ContextTrigger",
+                "Default trigger reads provider state; use `.children(...)` for a custom trigger surface.",
+            ],
+            [
+                "ContextContent",
+                "Hover card content shell with divider, min width, and overflow defaults matching the docs card.",
+            ],
+            [
+                "Header / Body / Footer",
+                "Each part supports custom children; the default footer renders total cost and apps can still override it with custom children or explicit cost values.",
+            ],
+            [
+                "Usage rows",
+                "Input / Output / Reasoning / Cache rows auto-hide on zero tokens and accept custom children.",
+            ],
+            [
+                "Compound composition",
+                "`Context::children([...])` now mirrors the upstream compound ordering directly; `into_element_with_children(...)` remains the late-binding escape hatch.",
+            ],
+        ],
+        false,
+    )
 }
 
 pub(super) fn preview_ai_context_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {

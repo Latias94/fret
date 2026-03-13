@@ -1,87 +1,86 @@
 use super::super::*;
 
-use crate::ui::doc_layout::DocSection;
+use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
 use fret::{UiChild, UiCx};
-use fret_ui_kit::ui::UiElementSinkExt as _;
 
 fn status_colors_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let row = |status: &'static str, color: &'static str, use_case: &'static str| {
-        shadcn::TableRow::build(3, move |cx, out| {
-            out.push_ui(cx, shadcn::TableCell::build(ui::text(status)));
-            out.push_ui(cx, shadcn::TableCell::build(ui::text(color)));
-            out.push_ui(cx, shadcn::TableCell::build(ui::text(use_case)));
-        })
-    };
-
-    shadcn::Table::build(|cx, out| {
-        out.push_ui(
-            cx,
-            shadcn::TableHeader::build(|cx, out| {
-                out.push(
-                    shadcn::TableRow::build(3, |cx, out| {
-                        out.push(shadcn::TableHead::new("Status").into_element(cx));
-                        out.push(shadcn::TableHead::new("Color").into_element(cx));
-                        out.push(shadcn::TableHead::new("Use case").into_element(cx));
-                    })
-                    .into_element(cx),
-                );
-            }),
-        );
-        out.push_ui(
-            cx,
-            shadcn::TableBody::build(|cx, out| {
-                out.push_ui(cx, row("passed", "Green", "Test succeeded"));
-                out.push_ui(cx, row("failed", "Red", "Test failed"));
-                out.push_ui(cx, row("skipped", "Yellow", "Test skipped"));
-                out.push_ui(cx, row("running", "Blue", "Test in progress"));
-            }),
-        );
-    })
-    .into_element(cx)
+    doc_layout::text_table(
+        cx,
+        ["Status", "Color", "Use case"],
+        [
+            ["passed", "Green", "Test succeeded"],
+            ["failed", "Red", "Test failed"],
+            ["skipped", "Yellow", "Test skipped"],
+            ["running", "Blue", "Test in progress"],
+        ],
+        false,
+    )
 }
 
 fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let row = |part: &'static str, inputs: &'static str, notes: &'static str| {
-        shadcn::TableRow::build(3, move |cx, out| {
-            out.push_ui(cx, shadcn::TableCell::build(ui::text(part)));
-            out.push_ui(cx, shadcn::TableCell::build(ui::text(inputs)));
-            out.push_ui(cx, shadcn::TableCell::build(ui::text(notes)));
-        })
-    };
-
-    shadcn::Table::build(|cx, out| {
-        out.push_ui(
-            cx,
-            shadcn::TableHeader::build(|cx, out| {
-                out.push(
-                    shadcn::TableRow::build(3, |cx, out| {
-                        out.push(shadcn::TableHead::new("Part").into_element(cx));
-                        out.push(shadcn::TableHead::new("Key inputs").into_element(cx));
-                        out.push(shadcn::TableHead::new("Notes").into_element(cx));
-                    })
-                    .into_element(cx),
-                );
-            }),
-        );
-        out.push_ui(
-            cx,
-            shadcn::TableBody::build(|cx, out| {
-                out.push_ui(cx, row("TestResults", "summary", "Root surface; summary-driven parts can read from the root provider."));
-                out.push_ui(cx, row("TestResultsHeader", "children", "Header row with border-bottom + padding."));
-                out.push_ui(cx, row("TestResultsSummary", "summary | from_context()", "Renders pass/fail/skip badges."));
-                out.push_ui(cx, row("TestResultsDuration", "summary | from_context()", "Renders formatted duration when present."));
-                out.push_ui(cx, row("TestResultsProgress", "summary | from_context()", "Progress bar + pass ratio labels."));
-                out.push_ui(cx, row("TestResultsContent", "children", "Padded wrapper for suites and rows."));
-                out.push_ui(cx, row("TestSuite", "new(trigger, content) | named(name, status)", "Collapsible suite shell; root can now provide context for trigger/content parts."));
-                out.push_ui(cx, row("TestSuiteName", "new(name, status) | from_context() | children(...)", "Trigger row; can read suite context from the root and accept custom label children."));
-                out.push_ui(cx, row("TestSuiteStats", "passed, failed, skipped", "Optional trailing stats helper for custom suite rows."));
-                out.push_ui(cx, row("Test", "name, status, duration_ms, details, on_activate", "Row surface with optional error details and activation seam."));
-                out.push_ui(cx, row("TestStatus / TestName / TestDuration", "new(...) | from_context()", "Composable row parts for custom `Test::children(...)` layouts."));
-            }),
-        );
-    })
-    .into_element(cx)
+    doc_layout::text_table(
+        cx,
+        ["Part", "Key inputs", "Notes"],
+        [
+            [
+                "TestResults",
+                "summary",
+                "Root surface; summary-driven parts can read from the root provider.",
+            ],
+            [
+                "TestResultsHeader",
+                "children",
+                "Header row with border-bottom + padding.",
+            ],
+            [
+                "TestResultsSummary",
+                "summary | from_context()",
+                "Renders pass/fail/skip badges.",
+            ],
+            [
+                "TestResultsDuration",
+                "summary | from_context()",
+                "Renders formatted duration when present.",
+            ],
+            [
+                "TestResultsProgress",
+                "summary | from_context()",
+                "Progress bar + pass ratio labels.",
+            ],
+            [
+                "TestResultsContent",
+                "children",
+                "Padded wrapper for suites and rows.",
+            ],
+            [
+                "TestSuite",
+                "new(trigger, content) | named(name, status)",
+                "Collapsible suite shell; root can now provide context for trigger/content parts.",
+            ],
+            [
+                "TestSuiteName",
+                "new(name, status) | from_context() | children(...)",
+                "Trigger row; can read suite context from the root and accept custom label children.",
+            ],
+            [
+                "TestSuiteStats",
+                "passed, failed, skipped",
+                "Optional trailing stats helper for custom suite rows.",
+            ],
+            [
+                "Test",
+                "name, status, duration_ms, details, on_activate",
+                "Row surface with optional error details and activation seam.",
+            ],
+            [
+                "TestStatus / TestName / TestDuration",
+                "new(...) | from_context()",
+                "Composable row parts for custom `Test::children(...)` layouts.",
+            ],
+        ],
+        false,
+    )
 }
 
 pub(super) fn preview_ai_test_results_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
@@ -100,7 +99,7 @@ pub(super) fn preview_ai_test_results_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
     let errors = snippets::test_results_errors::render(cx);
     let props = parts_props_table(cx);
 
-    let body = crate::ui::doc_layout::render_doc_page(
+    let body = doc_layout::render_doc_page(
         cx,
         Some(
             "The TestResults component displays test suite results including summary statistics, progress, individual tests, and error details.",

@@ -3,43 +3,43 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
 use fret::{UiChild, UiCx};
-use fret_ui_kit::ui::UiElementSinkExt as _;
 
 fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let row = |part: &'static str, surface: &'static str| {
-        shadcn::TableRow::build(2, move |cx, out| {
-            out.push_ui(cx, shadcn::TableCell::build(ui::text(part)));
-            out.push_ui(cx, shadcn::TableCell::build(ui::text(surface)));
-        })
-    };
-
-    shadcn::Table::build(|cx, out| {
-        out.push_ui(
-            cx,
-            shadcn::TableHeader::build(|cx, out| {
-                out.push(
-                    shadcn::TableRow::build(2, |cx, out| {
-                        out.push(shadcn::TableHead::new("Part").into_element(cx));
-                        out.push(shadcn::TableHead::new("Fret surface").into_element(cx));
-                    })
-                    .into_element(cx),
-                );
-            }),
-        );
-        out.push_ui(
-            cx,
-            shadcn::TableBody::build(|cx, out| {
-                out.push_ui(cx, row("MicSelector", "UI-only root. Controlled state uses `value_model` / `open_model`; uncontrolled flows use `default_value` / `default_open`."));
-                out.push_ui(cx, row("MicSelectorTrigger", "Outline button trigger. Accepts arbitrary children, appends the chevrons icon, and anchors content width."));
-                out.push_ui(cx, row("MicSelectorValue", "Shows the selected device or placeholder text. Trailing `(XXXX:XXXX)` IDs are split and muted like upstream."));
-                out.push_ui(cx, row("MicSelectorContent", "Popover content + Command shell. Exposes separate popover and command refinement surfaces."));
-                out.push_ui(cx, row("MicSelectorInput", "Search field bound to the shared query model."));
-                out.push_ui(cx, row("MicSelectorList", "Supports auto rows, explicit `new_entries(...)`, and a Rust closure-based `into_element_with_children(...)` equivalent for upstream `children(data)` composition."));
-                out.push_ui(cx, row("MicSelectorItem + MicSelectorEmpty", "Thin selector-level wrappers over list row / empty-state outcomes. They add explicit AI Elements-style parts without moving behavior into `crates/fret-ui`."));
-            }),
-        );
-    })
-    .into_element(cx)
+    doc_layout::text_table(
+        cx,
+        ["Part", "Fret surface"],
+        [
+            [
+                "MicSelector",
+                "UI-only root. Controlled state uses `value_model` / `open_model`; uncontrolled flows use `default_value` / `default_open`.",
+            ],
+            [
+                "MicSelectorTrigger",
+                "Outline button trigger. Accepts arbitrary children, appends the chevrons icon, and anchors content width.",
+            ],
+            [
+                "MicSelectorValue",
+                "Shows the selected device or placeholder text. Trailing `(XXXX:XXXX)` IDs are split and muted like upstream.",
+            ],
+            [
+                "MicSelectorContent",
+                "Popover content + Command shell. Exposes separate popover and command refinement surfaces.",
+            ],
+            [
+                "MicSelectorInput",
+                "Search field bound to the shared query model.",
+            ],
+            [
+                "MicSelectorList",
+                "Supports auto rows, explicit `new_entries(...)`, and a Rust closure-based `into_element_with_children(...)` equivalent for upstream `children(data)` composition.",
+            ],
+            [
+                "MicSelectorItem + MicSelectorEmpty",
+                "Thin selector-level wrappers over list row / empty-state outcomes. They add explicit AI Elements-style parts without moving behavior into `crates/fret-ui`.",
+            ],
+        ],
+        false,
+    )
 }
 
 pub(super) fn preview_ai_mic_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {

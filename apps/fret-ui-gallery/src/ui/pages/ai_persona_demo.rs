@@ -1,9 +1,8 @@
 use super::super::*;
 
-use crate::ui::doc_layout::DocSection;
+use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
 use fret::{UiChild, UiCx};
-use fret_ui_kit::ui::UiElementSinkExt as _;
 
 fn states_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     crate::ui::doc_layout::notes_block([
@@ -16,41 +15,43 @@ fn states_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 }
 
 fn props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let row = |api: &'static str, inputs: &'static str, notes: &'static str| {
-        shadcn::TableRow::build(3, move |cx, out| {
-            out.push_ui(cx, shadcn::TableCell::build(ui::text(api)));
-            out.push_ui(cx, shadcn::TableCell::build(ui::text(inputs)));
-            out.push_ui(cx, shadcn::TableCell::build(ui::text(notes)));
-        })
-    };
-
-    shadcn::Table::build(|cx, out| {
-        out.push_ui(
-            cx,
-            shadcn::TableHeader::build(|cx, out| {
-                out.push(
-                    shadcn::TableRow::build(3, |cx, out| {
-                        out.push(shadcn::TableHead::new("API").into_element(cx));
-                        out.push(shadcn::TableHead::new("Inputs").into_element(cx));
-                        out.push(shadcn::TableHead::new("Notes").into_element(cx));
-                    })
-                    .into_element(cx),
-                );
-            }),
-        );
-        out.push_ui(
-            cx,
-            shadcn::TableBody::build(|cx, out| {
-                out.push_ui(cx, row("Persona::new(state)", "PersonaState", "Required root state; matches the upstream state taxonomy."));
-                out.push_ui(cx, row("variant(...)", "Obsidian | Mana | Opal | Halo | Glint | Command", "Visual shell selection; defaults to `Obsidian` like upstream docs."));
-                out.push_ui(cx, row("size(...)", "Px", "Typed size override; default is 64px to match upstream `size-16`."));
-                out.push_ui(cx, row("show_label(...)", "bool", "Gallery/documentation affordance; remains off by default for upstream-like output."));
-                out.push_ui(cx, row("refine_layout / refine_style", "LayoutRefinement / ChromeRefinement", "Typed equivalent to upstream `className` customization."));
-                out.push_ui(cx, row("into_element_with_children(...)", "custom center visual", "Fret-specific extension for composable custom visuals without forking the shell."));
-            }),
-        );
-    })
-    .into_element(cx)
+    doc_layout::text_table(
+        cx,
+        ["API", "Inputs", "Notes"],
+        [
+            [
+                "Persona::new(state)",
+                "PersonaState",
+                "Required root state; matches the upstream state taxonomy.",
+            ],
+            [
+                "variant(...)",
+                "Obsidian | Mana | Opal | Halo | Glint | Command",
+                "Visual shell selection; defaults to `Obsidian` like upstream docs.",
+            ],
+            [
+                "size(...)",
+                "Px",
+                "Typed size override; default is 64px to match upstream `size-16`.",
+            ],
+            [
+                "show_label(...)",
+                "bool",
+                "Gallery/documentation affordance; remains off by default for upstream-like output.",
+            ],
+            [
+                "refine_layout / refine_style",
+                "LayoutRefinement / ChromeRefinement",
+                "Typed equivalent to upstream `className` customization.",
+            ],
+            [
+                "into_element_with_children(...)",
+                "custom center visual",
+                "Fret-specific extension for composable custom visuals without forking the shell.",
+            ],
+        ],
+        false,
+    )
 }
 
 fn lifecycle_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
@@ -72,7 +73,7 @@ pub(super) fn preview_ai_persona_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
     let props = props_table(cx);
     let lifecycle = lifecycle_notes(cx);
 
-    let body = crate::ui::doc_layout::render_doc_page(
+    let body = doc_layout::render_doc_page(
         cx,
         Some(
             "Docs-aligned AI Elements Persona demo: interactive state controls, variant showcase, states/props reference, and a Fret-specific custom visual slot.",

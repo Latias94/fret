@@ -2,7 +2,11 @@ const LIB_RS: &str = include_str!("lib.rs");
 const APP_RS: &str = include_str!("app.rs");
 const ADVANCED_RS: &str = include_str!("advanced.rs");
 const README: &str = include_str!("../README.md");
+const ALERT_RS: &str = include_str!("alert.rs");
 const BADGE_RS: &str = include_str!("badge.rs");
+const CARD_RS: &str = include_str!("card.rs");
+const EMPTY_RS: &str = include_str!("empty.rs");
+const FIELD_RS: &str = include_str!("field.rs");
 const UI_EXT_SUPPORT_RS: &str = include_str!("ui_ext/support.rs");
 const UI_EXT_DATA_RS: &str = include_str!("ui_ext/data.rs");
 const ALERT_DIALOG_RS: &str = include_str!("alert_dialog.rs");
@@ -16,6 +20,7 @@ const INPUT_GROUP_RS: &str = include_str!("input_group.rs");
 const INPUT_OTP_RS: &str = include_str!("input_otp.rs");
 const KBD_RS: &str = include_str!("kbd.rs");
 const MENUBAR_RS: &str = include_str!("menubar.rs");
+const PAGINATION_RS: &str = include_str!("pagination.rs");
 const POPOVER_RS: &str = include_str!("popover.rs");
 const SEPARATOR_RS: &str = include_str!("separator.rs");
 const SHEET_RS: &str = include_str!("sheet.rs");
@@ -378,6 +383,211 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
                 "{label} reintroduced a pre-landed AnyElement constructor or wrapper"
             );
         }
+    }
+}
+
+#[test]
+fn card_helpers_prefer_typed_wrapper_outputs_when_no_raw_slot_storage_is_required() {
+    let normalized = normalize_ws(CARD_RS);
+    let required_markers = [
+        "pub fn card<H: UiHost, I, F, T>( f: F, ) -> CardBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
+        "pub fn card_sized<H: UiHost, I, F, T>( size: CardSize, f: F, ) -> CardBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
+        "pub fn card_header<H: UiHost, I, F, T>( f: F, ) -> CardHeaderBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
+        "pub fn card_action<H: UiHost, I, F, T>( f: F, ) -> CardActionBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
+        "pub fn card_title<T>(text: T) -> CardTitle where T: Into<Arc<str>>,",
+        "pub fn card_description<T>(text: T) -> CardDescription where T: Into<Arc<str>>,",
+        "pub fn card_description_children<H: UiHost, I, F, T>( f: F, ) -> CardDescriptionBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
+        "pub fn card_content<H: UiHost, I, F, T>( f: F, ) -> CardContentBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
+        "pub fn card_footer<H: UiHost, I, F, T>( f: F, ) -> CardFooterBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
+    ];
+    let forbidden_markers = [
+        "pub fn card<H: UiHost, I>(cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+        "pub fn card_sized<H: UiHost, I>(cx: &mut ElementContext<'_, H>, size: CardSize, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+        "pub fn card_header<H: UiHost, I>(cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+        "pub fn card_action<H: UiHost, I>(cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+        "pub fn card_title<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
+        "pub fn card_description<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
+        "pub fn card_description_children<H: UiHost, I>(cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+        "pub fn card_content<H: UiHost, I>(cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+        "pub fn card_footer<H: UiHost, I>(cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "card.rs should expose typed wrapper outputs for the default authoring surface"
+        );
+    }
+    for marker in forbidden_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            !normalized.contains(&marker),
+            "card.rs reintroduced pre-landed AnyElement wrapper signatures on the public surface"
+        );
+    }
+}
+
+#[test]
+fn alert_helpers_prefer_typed_wrapper_outputs_when_no_raw_slot_storage_is_required() {
+    let normalized = normalize_ws(ALERT_RS);
+    let required_markers = [
+        "pub fn alert<H: UiHost, I, F, T>( f: F, ) -> AlertBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
+    ];
+    let forbidden_markers = [
+        "pub fn alert<H: UiHost>(cx: &mut ElementContext<'_, H>, variant: AlertVariant, children: impl IntoIterator<Item = AnyElement>) -> AnyElement",
+        "pub fn alert<H: UiHost, I>(cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "alert.rs should expose typed wrapper outputs for the default authoring surface"
+        );
+    }
+    for marker in forbidden_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            !normalized.contains(&marker),
+            "alert.rs reintroduced pre-landed AnyElement wrapper signatures on the public surface"
+        );
+    }
+}
+
+#[test]
+fn table_helpers_prefer_typed_wrapper_outputs_when_no_raw_slot_storage_is_required() {
+    let normalized = normalize_ws(TABLE_RS);
+    let required_markers = [
+        "pub fn table<H: UiHost, I, F, T>( f: F, ) -> TableBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
+        "pub fn table_header<H: UiHost, I, F, T>( f: F, ) -> TableHeaderBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
+        "pub fn table_body<H: UiHost, I, F, T>( f: F, ) -> TableBodyBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
+        "pub fn table_footer<H: UiHost, I, F, T>( f: F, ) -> TableFooterBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
+        "pub fn table_row<H: UiHost, I, F, T>( cols: u16, f: F, ) -> TableRowBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
+        "pub fn table_head<T>(text: T) -> TableHead where T: Into<Arc<str>>,",
+        "pub fn table_cell<H: UiHost, T>(child: T) -> TableCellBuild<H, T> where T: IntoUiElement<H>,",
+        "pub fn table_caption<T>(text: T) -> TableCaption where T: Into<Arc<str>>,",
+    ];
+    let forbidden_markers = [
+        "pub fn table<H: UiHost, I>(cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+        "pub fn table_header<H: UiHost, I>(cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+        "pub fn table_body<H: UiHost, I>(cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+        "pub fn table_footer<H: UiHost, I>(cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+        "pub fn table_row<H: UiHost, I>(cx: &mut ElementContext<'_, H>, cols: u16, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+        "pub fn table_head<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
+        "pub fn table_cell<H: UiHost>(cx: &mut ElementContext<'_, H>, child: impl IntoUiElement<H>) -> AnyElement",
+        "pub fn table_caption<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "table.rs should expose typed wrapper outputs for the default authoring surface"
+        );
+    }
+    for marker in forbidden_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            !normalized.contains(&marker),
+            "table.rs reintroduced pre-landed AnyElement wrapper signatures on the public surface"
+        );
+    }
+}
+
+#[test]
+fn field_helpers_prefer_typed_wrapper_outputs_when_no_raw_slot_storage_is_required() {
+    let normalized = normalize_ws(FIELD_RS);
+    let required_markers = [
+        "pub fn field_set<H: UiHost, I, F, T>( f: F, ) -> FieldSetBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
+        "pub fn field_group<H: UiHost, I, F, T>( f: F, ) -> FieldGroupBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
+    ];
+    let forbidden_markers = [
+        "pub fn field_set<H: UiHost, I>( cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+        "pub fn field_group<H: UiHost, I>( cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "field.rs should expose typed wrapper outputs for the default authoring surface"
+        );
+    }
+    for marker in forbidden_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            !normalized.contains(&marker),
+            "field.rs reintroduced pre-landed AnyElement wrapper signatures on the public surface"
+        );
+    }
+}
+
+#[test]
+fn empty_helpers_prefer_typed_wrapper_outputs_when_no_raw_slot_storage_is_required() {
+    let normalized = normalize_ws(EMPTY_RS);
+    let required_markers = [
+        "pub fn empty<H: UiHost, I, F, T>( f: F, ) -> EmptyBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
+        "pub fn empty_header<H: UiHost, I, F, T>( f: F, ) -> EmptyHeaderBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
+        "pub fn empty_media<H: UiHost, I, F, T>( f: F, ) -> EmptyMediaBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
+        "pub fn empty_title<T>(text: T) -> EmptyTitle where T: Into<Arc<str>>,",
+        "pub fn empty_description<T>(text: T) -> EmptyDescription where T: Into<Arc<str>>,",
+        "pub fn empty_content<H: UiHost, I, F, T>( f: F, ) -> EmptyContentBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
+    ];
+    let forbidden_markers = [
+        "pub fn empty<H: UiHost, I>(cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+        "pub fn empty_header<H: UiHost, I>(cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+        "pub fn empty_media<H: UiHost, I>(cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+        "pub fn empty_title<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
+        "pub fn empty_description<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
+        "pub fn empty_content<H: UiHost, I>(cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "empty.rs should expose typed wrapper outputs for the default authoring surface"
+        );
+    }
+    for marker in forbidden_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            !normalized.contains(&marker),
+            "empty.rs reintroduced pre-landed AnyElement wrapper signatures on the public surface"
+        );
+    }
+}
+
+#[test]
+fn pagination_helpers_prefer_typed_wrapper_outputs_when_no_raw_slot_storage_is_required() {
+    let normalized = normalize_ws(PAGINATION_RS);
+    let required_markers = [
+        "pub fn pagination<H: UiHost, I, F, T>( f: F, ) -> PaginationBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
+        "pub fn pagination_content<H: UiHost, I, F, T>( f: F, ) -> PaginationContentBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
+        "pub fn pagination_item<H: UiHost, T>(child: T) -> PaginationItemBuild<H, T> where T: IntoUiElement<H>,",
+        "pub fn pagination_link<H: UiHost, I, F, T>( f: F, ) -> PaginationLinkBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
+    ];
+    let forbidden_markers = [
+        "pub fn pagination<H: UiHost, I>(cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+        "pub fn pagination_content<H: UiHost, I>(cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+        "pub fn pagination_item<H: UiHost>(cx: &mut ElementContext<'_, H>, child: impl IntoUiElement<H>) -> AnyElement",
+        "pub fn pagination_link<H: UiHost, I>(cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "pagination.rs should expose typed wrapper outputs for the default authoring surface"
+        );
+    }
+    for marker in forbidden_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            !normalized.contains(&marker),
+            "pagination.rs reintroduced pre-landed AnyElement wrapper signatures on the public surface"
+        );
     }
 }
 

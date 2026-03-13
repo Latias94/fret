@@ -140,7 +140,7 @@ pub use accordion::{
     AccordionTrigger, accordion_multiple, accordion_multiple_uncontrolled, accordion_single,
     accordion_single_uncontrolled,
 };
-pub use alert::{Alert, AlertAction, AlertDescription, AlertTitle, AlertVariant};
+pub use alert::{Alert, AlertAction, AlertDescription, AlertTitle, AlertVariant, alert};
 pub use alert_dialog::{
     AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogContentSize,
     AlertDialogDescription, AlertDialogFooter, AlertDialogHandle, AlertDialogHeader,
@@ -255,10 +255,12 @@ pub use dropdown_menu::{
 };
 pub use empty::{
     Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyMediaVariant, EmptyTitle,
+    empty, empty_content, empty_description, empty_header, empty_media, empty_title,
 };
 pub use field::{
     Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend,
-    FieldLegendVariant, FieldOrientation, FieldSeparator, FieldSet, FieldTitle,
+    FieldLegendVariant, FieldOrientation, FieldSeparator, FieldSet, FieldTitle, field_group,
+    field_set,
 };
 pub use form::{
     Form, FormControl, FormDescription, FormErrorVisibility, FormField, FormItem, FormLabel,
@@ -301,7 +303,8 @@ pub use navigation_menu::{
 };
 pub use pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
-    PaginationLinkSize, PaginationNext, PaginationPrevious,
+    PaginationLinkSize, PaginationNext, PaginationPrevious, pagination, pagination_content,
+    pagination_item, pagination_link,
 };
 pub use popover::{
     Popover, PopoverAlign, PopoverAnchor, PopoverContent, PopoverDescription, PopoverHeader,
@@ -349,6 +352,8 @@ pub use spinner::Spinner;
 pub use switch::{Switch, SwitchSize, switch};
 pub use table::{
     Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow,
+    table, table_body, table_caption, table_cell, table_footer, table_head, table_header,
+    table_row,
 };
 pub use tabs::{
     Tabs, TabsContent, TabsItem, TabsList, TabsListVariant, TabsListVariants, TabsRoot,
@@ -380,7 +385,7 @@ pub mod facade {
         AccordionTrigger, accordion_multiple, accordion_multiple_uncontrolled, accordion_single,
         accordion_single_uncontrolled,
     };
-    pub use crate::alert::{Alert, AlertAction, AlertDescription, AlertTitle, AlertVariant};
+    pub use crate::alert::{Alert, AlertAction, AlertDescription, AlertTitle, AlertVariant, alert};
     pub use crate::alert_dialog::{
         AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
         AlertDialogContentSize, AlertDialogDescription, AlertDialogFooter, AlertDialogHandle,
@@ -488,11 +493,13 @@ pub mod facade {
     };
     pub use crate::empty::{
         Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyMediaVariant,
-        EmptyTitle,
+        EmptyTitle, empty, empty_content, empty_description, empty_header, empty_media,
+        empty_title,
     };
     pub use crate::field::{
         Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend,
-        FieldLegendVariant, FieldOrientation, FieldSeparator, FieldSet, FieldTitle,
+        FieldLegendVariant, FieldOrientation, FieldSeparator, FieldSet, FieldTitle, field_group,
+        field_set,
     };
     pub use crate::form::{
         Form, FormControl, FormDescription, FormErrorVisibility, FormField, FormItem, FormLabel,
@@ -538,7 +545,8 @@ pub mod facade {
     };
     pub use crate::pagination::{
         Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
-        PaginationLinkSize, PaginationNext, PaginationPrevious,
+        PaginationLinkSize, PaginationNext, PaginationPrevious, pagination, pagination_content,
+        pagination_item, pagination_link,
     };
     pub use crate::popover::{
         Popover, PopoverAlign, PopoverAnchor, PopoverContent, PopoverDescription, PopoverHeader,
@@ -586,6 +594,8 @@ pub mod facade {
     pub use crate::switch::{Switch, SwitchSize, switch};
     pub use crate::table::{
         Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow,
+        table, table_body, table_caption, table_cell, table_footer, table_head, table_header,
+        table_row,
     };
     pub use crate::tabs::{
         Tabs, TabsContent, TabsItem, TabsList, TabsListVariant, TabsListVariants, TabsRoot,

@@ -178,19 +178,31 @@ impl Alert {
     }
 }
 
-pub fn alert<H: UiHost>(
+fn extend_landed_children<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
-    variant: AlertVariant,
-    children: impl IntoIterator<Item = AnyElement>,
-) -> AnyElement {
-    let children = children.into_iter().collect();
-    alert_with_patch(
-        cx,
-        variant,
-        children,
-        ChromeRefinement::default(),
-        LayoutRefinement::default(),
-    )
+    out: &mut Vec<AnyElement>,
+    children: I,
+) where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    for child in children {
+        out.push(child.into_element(cx));
+    }
+}
+
+pub fn alert<H: UiHost, I, F, T>(
+    f: F,
+) -> AlertBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    Alert::build(move |cx, out| {
+        let children = f(cx);
+        extend_landed_children(cx, out, children);
+    })
 }
 
 pub struct AlertBuild<H, B> {
@@ -286,6 +298,20 @@ where
             .refine_layout(self.layout)
             .into_element(cx)
     }
+}
+
+impl<H: UiHost, B> UiPatchTarget for AlertActionBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsLayout for AlertActionBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
 }
 
 impl<H: UiHost, B> IntoUiElement<H> for AlertActionBuild<H, B>

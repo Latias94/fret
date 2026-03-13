@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_kit::IntoUiElement as _;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -3170,28 +3171,31 @@ fn web_vs_fret_layout_calendar_background_transparent_in_card_content_scope() {
         let month_model = month_model.clone();
         let selected = selected.clone();
 
-        vec![fret_ui_shadcn::card::card_content(cx, move |cx| {
-            let calendar = fret_ui_shadcn::Calendar::new(month_model.clone(), selected.clone())
-                .into_element(cx);
-            let container_props = match &calendar.kind {
-                fret_ui::element::ElementKind::Container(props) => props,
-                fret_ui::element::ElementKind::LayoutQueryRegion(_) => calendar
-                    .children
-                    .first()
-                    .and_then(|c| match &c.kind {
-                        fret_ui::element::ElementKind::Container(props) => Some(props),
-                        _ => None,
-                    })
-                    .expect("expected calendar root container child under LayoutQueryRegion"),
-                other => panic!("expected calendar root container, got {other:?}"),
-            };
-            let bg = container_props
-                .background
-                .expect("calendar root background (resolved)");
-            calendar_bg.set(Some(bg));
+        vec![
+            fret_ui_shadcn::card::card_content(move |cx| {
+                let calendar = fret_ui_shadcn::Calendar::new(month_model.clone(), selected.clone())
+                    .into_element(cx);
+                let container_props = match &calendar.kind {
+                    fret_ui::element::ElementKind::Container(props) => props,
+                    fret_ui::element::ElementKind::LayoutQueryRegion(_) => calendar
+                        .children
+                        .first()
+                        .and_then(|c| match &c.kind {
+                            fret_ui::element::ElementKind::Container(props) => Some(props),
+                            _ => None,
+                        })
+                        .expect("expected calendar root container child under LayoutQueryRegion"),
+                    other => panic!("expected calendar root container, got {other:?}"),
+                };
+                let bg = container_props
+                    .background
+                    .expect("calendar root background (resolved)");
+                calendar_bg.set(Some(bg));
 
-            [calendar]
-        })]
+                [calendar]
+            })
+            .into_element(cx),
+        ]
     };
 
     let mut ui: UiTree<App> = UiTree::new();
