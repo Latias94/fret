@@ -2,6 +2,7 @@ use super::TextSystem;
 use super::atlas::{GlyphAtlas, TEXT_ATLAS_MAX_PAGES};
 use super::face_cache::TextFaceCacheState;
 use super::frame_perf::TextFramePerfState;
+use super::pin_state::TextPinState;
 use super::quality::{TextQualitySettings, TextQualityState};
 use fret_render_text::fallback_policy::TextFallbackPolicyV1;
 use fret_render_text::font_stack::GenericFamilyInjectionState;
@@ -87,9 +88,7 @@ pub(super) fn build_text_system(device: &wgpu::Device) -> TextSystem {
         subpixel_atlas: bootstrap.subpixel_atlas,
         atlas_bind_group_layout: bootstrap.atlas_bind_group_layout,
 
-        text_pin_mask: vec![Vec::new(); 3],
-        text_pin_color: vec![Vec::new(); 3],
-        text_pin_subpixel: vec![Vec::new(); 3],
+        pin_state: TextPinState::with_ring_len(3),
         face_cache: TextFaceCacheState::default(),
 
         frame_perf: TextFramePerfState::default(),

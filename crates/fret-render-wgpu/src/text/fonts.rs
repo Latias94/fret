@@ -120,9 +120,7 @@ impl TextSystem {
         self.mask_atlas.reset();
         self.color_atlas.reset();
         self.subpixel_atlas.reset();
-        self.text_pin_mask.iter_mut().for_each(|v| v.clear());
-        self.text_pin_color.iter_mut().for_each(|v| v.clear());
-        self.text_pin_subpixel.iter_mut().for_each(|v| v.clear());
+        self.pin_state.clear();
         self.face_cache.clear();
     }
 

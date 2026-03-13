@@ -752,19 +752,13 @@ impl TextSystem {
     }
 
     pub fn prepare_for_scene(&mut self, scene: &Scene, frame_index: u64) {
-        let ring_len = self
-            .text_pin_mask
-            .len()
-            .min(self.text_pin_color.len())
-            .min(self.text_pin_subpixel.len());
+        let ring_len = self.pin_state.ring_len();
         if ring_len == 0 {
             return;
         }
         let bucket = (frame_index as usize) % ring_len;
 
-        let old_mask = std::mem::take(&mut self.text_pin_mask[bucket]);
-        let old_color = std::mem::take(&mut self.text_pin_color[bucket]);
-        let old_subpixel = std::mem::take(&mut self.text_pin_subpixel[bucket]);
+        let (old_mask, old_color, old_subpixel) = self.pin_state.take_bucket(bucket);
         self.mask_atlas.dec_live_refs(&old_mask);
         self.color_atlas.dec_live_refs(&old_color);
         self.subpixel_atlas.dec_live_refs(&old_subpixel);
@@ -796,9 +790,9 @@ impl TextSystem {
         }
 
         let epoch = frame_index;
-        let mut new_mask: Vec<GlyphKey> = mask_keys.into_iter().collect();
-        let mut new_color: Vec<GlyphKey> = color_keys.into_iter().collect();
-        let mut new_subpixel: Vec<GlyphKey> = subpixel_keys.into_iter().collect();
+        let new_mask: Vec<GlyphKey> = mask_keys.into_iter().collect();
+        let new_color: Vec<GlyphKey> = color_keys.into_iter().collect();
+        let new_subpixel: Vec<GlyphKey> = subpixel_keys.into_iter().collect();
 
         for &key in &new_mask {
             self.ensure_glyph_in_atlas(key, epoch);
@@ -814,9 +808,8 @@ impl TextSystem {
         self.color_atlas.inc_live_refs(&new_color);
         self.subpixel_atlas.inc_live_refs(&new_subpixel);
 
-        self.text_pin_mask[bucket].append(&mut new_mask);
-        self.text_pin_color[bucket].append(&mut new_color);
-        self.text_pin_subpixel[bucket].append(&mut new_subpixel);
+        self.pin_state
+            .append_bucket(bucket, new_mask, new_color, new_subpixel);
     }
 
     pub(super) fn ensure_glyph_in_atlas(&mut self, key: GlyphKey, epoch: u64) {

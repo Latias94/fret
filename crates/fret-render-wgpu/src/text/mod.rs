@@ -29,14 +29,18 @@ mod face_cache;
 mod fonts;
 mod frame_perf;
 mod measure;
+mod pin_state;
 mod prepare;
 mod quality;
 mod queries;
 mod types;
 
-use self::atlas::{GlyphAtlas, GlyphKey};
+use self::atlas::GlyphAtlas;
+#[cfg(test)]
+use self::atlas::GlyphKey;
 use self::face_cache::TextFaceCacheState;
 use self::frame_perf::TextFramePerfState;
+use self::pin_state::TextPinState;
 pub use self::quality::TextQualitySettings;
 use self::quality::TextQualityState;
 #[cfg(test)]
@@ -76,9 +80,7 @@ pub struct TextSystem {
     subpixel_atlas: GlyphAtlas,
     atlas_bind_group_layout: wgpu::BindGroupLayout,
 
-    text_pin_mask: Vec<Vec<GlyphKey>>,
-    text_pin_color: Vec<Vec<GlyphKey>>,
-    text_pin_subpixel: Vec<Vec<GlyphKey>>,
+    pin_state: TextPinState,
     face_cache: TextFaceCacheState,
 
     frame_perf: TextFramePerfState,
