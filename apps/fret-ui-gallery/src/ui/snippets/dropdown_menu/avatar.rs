@@ -19,7 +19,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     );
 
     super::preview_frame_with(cx, move |cx| {
-        shadcn::DropdownMenu::new_controllable(cx, None, false).build_parts(
+        shadcn::DropdownMenu::uncontrolled(cx).build_parts(
             cx,
             trigger,
             shadcn::DropdownMenuContent::new()

@@ -723,6 +723,26 @@ fn hover_card_root_promotes_typed_new_and_keeps_raw_root_seams_explicit() {
 }
 
 #[test]
+fn dropdown_menu_root_promotes_uncontrolled_builder_path_and_keeps_managed_open_seams_explicit() {
+    let normalized = normalize_ws(DROPDOWN_MENU_RS);
+    let required_markers = [
+        "pub fn from_open(open: Model<bool>) -> Self {",
+        "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {",
+        "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self {",
+        "pub fn build<H: UiHost, I>(",
+        "pub fn build_parts<H: UiHost, I>(",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "dropdown_menu.rs should promote `uncontrolled(...)` + `build(...)` / `build_parts(...)` for the default authoring path while keeping managed-open seams explicit"
+        );
+    }
+}
+
+#[test]
 fn tooltip_root_promotes_typed_new_and_keeps_raw_root_seams_explicit() {
     let normalized = normalize_ws(TOOLTIP_RS);
     let required_markers = [

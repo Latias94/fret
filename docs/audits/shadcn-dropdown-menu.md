@@ -56,8 +56,11 @@ Key upstream behaviors/surfaces:
 - Pass: Dismissible popover (outside press + Escape) via `window_overlays`.
 - Pass: On open, focus moves to the first focusable descendant (driven by overlay policy), enabling
   keyboard navigation inside the menu.
-- Pass: Controlled/uncontrolled open state parity is available via
+- Pass: The default copyable root path is now `DropdownMenu::uncontrolled(cx)`, so common
+  shadcn-style examples do not need to spell an explicit open model.
+- Pass: Controlled/uncontrolled open state parity remains available via
   `DropdownMenu::new_controllable(cx, open, default_open)` (Base UI / Radix `open` + `defaultOpen`).
+- Pass: An explicit managed-open seam now also exists as `DropdownMenu::from_open(open)`.
 - Pass: Open lifecycle callbacks are available via `DropdownMenu::on_open_change` and
   `DropdownMenu::on_open_change_complete` (Base UI `onOpenChange` + `onOpenChangeComplete`).
 - Pass: `DropdownMenu::modal(bool)` is supported (default `true`).
@@ -107,13 +110,17 @@ Still missing (relative to upstream shadcn/ui v4):
 Notes on API mapping:
 
 - Pass: Fret still supports the direct typed builder entry point
-  `DropdownMenu::into_element(trigger, entries)`.
+  `DropdownMenu::uncontrolled(cx).build(cx, trigger, entries)` for the default authoring path.
 - Pass: Fret also exposes a parts bridge via `DropdownMenu::into_element_parts(...)`, so shadcn-style
   `DropdownMenuTrigger` / `DropdownMenuContent` call sites no longer need to be translated into a
   different authoring shape.
+- Pass: Managed-open callers can stay explicit via `DropdownMenu::from_open(open)` without pushing
+  that model-owned seam into copied examples.
 - Pass: Checkable items now expose a source-aligned snapshot + callback path:
   - `DropdownMenuCheckboxItem::from_checked(...)` + `.on_checked_change(...)`
   - `DropdownMenuRadioGroup::from_value(...)` + `.on_value_change(...)`
+- Pass: `DropdownMenu::test_id_prefix(...)` derives the content id on the `role=menu` semantics
+  node itself (for example `dd-content`) and keeps deterministic item ids for automation.
 - Note: Fret intentionally does not add a separate generic `compose()` builder for `DropdownMenu`
   today. The typed `DropdownMenuEntry` model is already the important contract, and the parts bridge
   keeps placement/content slots explicit without weakening entry semantics.

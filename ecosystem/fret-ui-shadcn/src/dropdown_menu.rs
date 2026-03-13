@@ -13,7 +13,7 @@ use fret_ui::action::{
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PositionStyle, PressableProps, RingStyle, RovingFlexProps, RovingFocusProps,
-    ScrollAxis, ScrollProps, SemanticsDecoration, SizeStyle,
+    ScrollAxis, ScrollProps, SemanticsDecoration, SemanticsProps, SizeStyle,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -3138,7 +3138,8 @@ impl std::fmt::Debug for DropdownMenu {
 }
 
 impl DropdownMenu {
-    pub fn new(open: Model<bool>) -> Self {
+    /// Explicit advanced seam for authoring against an already-managed open model.
+    pub fn from_open(open: Model<bool>) -> Self {
         Self {
             open,
             disabled: false,
@@ -3160,6 +3161,18 @@ impl DropdownMenu {
             on_open_change: None,
             on_open_change_complete: None,
         }
+    }
+
+    /// Compatibility alias for call sites that still own the open model explicitly.
+    pub fn new(open: Model<bool>) -> Self {
+        Self::from_open(open)
+    }
+
+    /// Default typed root constructor for the common uncontrolled dropdown-menu authoring path.
+    ///
+    /// This stores the internal `open` model at the root call site and starts closed.
+    pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {
+        Self::new_controllable(cx, None, false)
     }
 
     /// Creates a dropdown menu with a controlled/uncontrolled open model (Radix `open` / `defaultOpen`).
@@ -3740,11 +3753,21 @@ impl DropdownMenu {
                     };
 
                     let placed_local = Rect::new(Point::new(Px(0.0), Px(0.0)), placed.size);
+                    let test_id_prefix_for_rows = test_id_prefix.clone();
+                    let test_id_prefix_for_submenu = test_id_prefix.clone();
 
-                    let (content_id, content) = menu::content_panel::menu_content_semantics_with_id(
-                        cx,
-                        content_layout,
-                        move |cx| {
+                    let content_test_id = test_id_prefix
+                        .as_deref()
+                        .map(|prefix| Arc::<str>::from(format!("{prefix}-content")));
+                    let (content_id, content) =
+                        menu::content_panel::menu_content_semantics_with_id_props(
+                            cx,
+                            SemanticsProps {
+                                layout: content_layout,
+                                test_id: content_test_id,
+                                ..Default::default()
+                            },
+                            move |cx| {
                             vec![popper_content::popper_wrapper_at(
                                 cx,
                                 placed_local,
@@ -3878,6 +3901,7 @@ impl DropdownMenu {
 
                                                     #[derive(Clone)]
                                                     struct RenderEnv {
+                                                        test_id_prefix: Option<Arc<str>>,
                                                         scroll_id: GlobalElementId,
                                                         scroll_handle: ScrollHandle,
                                                         reserve_leading_slot_enabled: bool,
@@ -4378,7 +4402,14 @@ impl DropdownMenu {
                                                             .a11y_label
                                                             .clone()
                                                             .or_else(|| Some(label.clone()));
-                                                        let test_id = item.test_id.clone();
+                                                        let test_id = item.test_id.clone().or_else(|| {
+                                                            env.test_id_prefix.as_ref().map(|prefix| {
+                                                                Arc::<str>::from(format!(
+                                                                    "{prefix}-item-{}",
+                                                                    test_id_slug(value.as_ref())
+                                                                ))
+                                                            })
+                                                        });
                                                         let chrome_test_id = test_id
                                                             .clone()
                                                             .map(|id| Arc::<str>::from(format!("{id}.chrome")));
@@ -4804,6 +4835,8 @@ impl DropdownMenu {
                                                     }
 
                                                     let env = RenderEnv {
+                                                        test_id_prefix: test_id_prefix_for_rows
+                                                            .clone(),
                                                         scroll_id,
                                                         scroll_handle: scroll_handle.clone(),
                                                         reserve_leading_slot_enabled,
@@ -4869,11 +4902,6 @@ impl DropdownMenu {
                             )]
                         },
                     );
-                    let content = if let Some(prefix) = test_id_prefix.as_deref() {
-                        content.test_id(format!("{prefix}-content"))
-                    } else {
-                        content
-                    };
                     let content = if hide_semantics_when_closed {
                         content.attach_semantics(SemanticsDecoration {
                             hidden: Some(true),
@@ -5012,7 +5040,7 @@ impl DropdownMenu {
                             text_style.weight = FontWeight::NORMAL;
 
                             let submenu_style = DropdownMenuSubmenuPanelStyleEnv {
-                                test_id_prefix: test_id_prefix.clone(),
+                                test_id_prefix: test_id_prefix_for_submenu.clone(),
                                 theme: theme.clone(),
                                 chrome: submenu_chrome.clone(),
                                 align_leading_icons,
@@ -5321,6 +5349,23 @@ mod tests {
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let menu_a = DropdownMenu::new_controllable(cx, None, false);
             let menu_b = DropdownMenu::new_controllable(cx, None, false);
+
+            assert_ne!(menu_a.open.id(), menu_b.open.id());
+        });
+    }
+
+    #[test]
+    fn dropdown_menu_uncontrolled_multiple_instances_do_not_share_open_model() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let menu_a = DropdownMenu::uncontrolled(cx);
+            let menu_b = DropdownMenu::uncontrolled(cx);
 
             assert_ne!(menu_a.open.id(), menu_b.open.id());
         });
@@ -5955,55 +6000,64 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
-        app.set_frame_id(next_frame);
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices,
+                      open: Model<bool>| {
+            let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+            app.set_frame_id(next_frame);
 
-        let changed_models = app.take_changed_models();
-        let changed_globals = app.take_changed_globals();
-        let _ = fret_ui::frame_pipeline::propagate_changes(
-            &mut ui,
-            &mut app,
-            &changed_models,
-            &changed_globals,
-        );
+            let changed_models = app.take_changed_models();
+            let changed_globals = app.take_changed_globals();
+            let _ = fret_ui::frame_pipeline::propagate_changes(
+                ui,
+                app,
+                &changed_models,
+                &changed_globals,
+            );
 
-        OverlayController::begin_frame(&mut app, window);
-        let root = fret_ui::declarative::render_root(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            "dropdown-menu-test-id-prefix",
-            move |cx| {
-                vec![
-                    DropdownMenu::new(open.clone())
-                        .test_id_prefix("dd")
-                        .into_element(
-                            cx,
-                            |cx| {
-                                cx.container(
-                                    ContainerProps {
-                                        layout: {
-                                            let mut layout = LayoutStyle::default();
-                                            layout.size.width = Length::Px(Px(120.0));
-                                            layout.size.height = Length::Px(Px(40.0));
-                                            layout
+            OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "dropdown-menu-test-id-prefix",
+                move |cx| {
+                    vec![
+                        DropdownMenu::from_open(open.clone())
+                            .test_id_prefix("dd")
+                            .into_element(
+                                cx,
+                                |cx| {
+                                    cx.container(
+                                        ContainerProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(120.0));
+                                                layout.size.height = Length::Px(Px(40.0));
+                                                layout
+                                            },
+                                            ..Default::default()
                                         },
-                                        ..Default::default()
-                                    },
-                                    |_cx| Vec::new(),
-                                )
-                            },
-                            |_cx| vec![DropdownMenuItem::new("Alpha").value("alpha").into()],
-                        ),
-                ]
-            },
-        );
-        ui.set_root(root);
-        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
-        ui.request_semantics_snapshot();
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+                                        |_cx| Vec::new(),
+                                    )
+                                },
+                                |_cx| vec![DropdownMenuItem::new("Alpha").value("alpha").into()],
+                            ),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+        };
+
+        // First frame establishes trigger bounds; second frame mounts the anchored menu content.
+        render(&mut ui, &mut app, &mut services, open.clone());
+        render(&mut ui, &mut app, &mut services, open.clone());
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
         let ids: Vec<&str> = snap
@@ -6013,8 +6067,6 @@ mod tests {
             .collect();
         assert!(ids.iter().copied().any(|id| id == "dd-content"));
         assert!(ids.iter().copied().any(|id| id == "dd-item-alpha"));
-
-        let _ = root;
     }
 
     fn render_frame_capture_submenu_models(
