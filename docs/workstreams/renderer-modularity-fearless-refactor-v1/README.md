@@ -484,6 +484,14 @@ As of 2026-03-12:
   - the existing WGSL parse/WebGPU validation coverage in
     `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover
     `PATH_CLIP_MASK_SHADER` without test-surface changes
+- The ninety-fifth renderer shader split has landed:
+  - the `QUAD_SHADER_PART_A/B` WGSL sources now live under
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/{quad_part_a,quad_part_b}.wgsl`
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` no longer hosts the quad shader envelope
+    inline
+  - the existing WGSL parse/WebGPU validation coverage in
+    `crates/fret-render-wgpu/src/renderer/tests.rs` continued to cover the assembled
+    `quad_shader_source()` output without test-surface changes
 - Slice 1 verification passed after the first facade/topology changes:
   - `cargo nextest run -p fret-render -p fret-render-wgpu`: 221/221 passed
   - `cargo check -p fret-launch -p fret-examples`: passed
@@ -656,6 +664,13 @@ As of 2026-03-12:
   - `python3 tools/check_layering.py`: passed
   - `python3 tools/report_largest_files.py --top 30 --min-lines 800`: `renderer/shaders.rs`
     dropped from 3701 lines to 3666 lines while staying out of the top-30 oversized file report
+- Renderer shader split verification remains green after the `QUAD_SHADER_PART_A/B`
+  externalization:
+  - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
+  - `cargo check -p fret-launch -p fret-examples`: passed
+  - `python3 tools/check_layering.py`: passed
+  - `python3 tools/report_largest_files.py --top 30 --min-lines 800`: `renderer/shaders.rs`
+    dropped from 3666 lines to 2773 lines while staying out of the top-30 oversized file report
 - Baseline gates passed during the pre-workstream audit:
   - `cargo nextest run -p fret-render-wgpu`: 220/220 passed
   - `python3 tools/check_layering.py`: passed
