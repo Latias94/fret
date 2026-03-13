@@ -229,6 +229,16 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/material_effects.rs`, and
   `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns material registries, material
   budgets, custom-effect registries, or their generation counters directly.
+- Renderer custom-effect service orchestration is now also split along owner seams:
+  - `crates/fret-render-wgpu/src/renderer/services_custom_effects.rs` now owns custom-effect WGSL
+    validation, capability gating, registry coordination, and the focused custom-effect service
+    regression tests.
+  - `crates/fret-render-wgpu/src/renderer/material_effects.rs` now owns custom-effect
+    hash/dedup/refcount/index mutation helpers.
+  - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` now owns custom-effect pipeline-cache
+    eviction as one explicit helper.
+  - `crates/fret-render-wgpu/src/renderer/services.rs` no longer owns custom-effect service impls
+    or cross-owner registry/pipeline mutation inline.
 - Renderer path registry/cache owner state now also lives under
   `crates/fret-render-wgpu/src/renderer/path.rs`, and
   `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns prepared path storage, path cache

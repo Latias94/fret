@@ -229,6 +229,11 @@ For `Renderer` state-shell tightening, the same principle applies:
   side: registration maps, refcounts, generation counters, and author-facing degradation budgets
   should live together so services, scene encoding, and effect pipelines stop depending on loose
   `Renderer` fields.
+- once those registry shells exist, service-local custom-effect coordination becomes the next
+  readability seam: WGSL validation/build flow, capability gating, and pipeline-cache eviction
+  should move into companion service modules that talk to the registry and pipeline owners through
+  narrow helper methods instead of mutating hash indexes and cache maps inline from
+  `services.rs`.
 - path registry/cache state is the equivalent ownership seam for tessellated geometry: prepared
   path storage, cache entries, eviction policy, and epoch tracking should move behind one owner so
   path services and path encoding stop depending on four loose fields.

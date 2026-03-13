@@ -745,8 +745,21 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/render_scene/dispatch_state.rs`
     - render-scene executor lifecycle glue now lives under
       `crates/fret-render-wgpu/src/renderer/render_scene/executor_lifecycle.rs`
-- [ ] RMFR-renderer-042 Reduce cross-domain mutable coupling inside `Renderer`.
-- [ ] RMFR-renderer-043 Keep service trait implementations readable after extraction.
+- [~] RMFR-renderer-042 Reduce cross-domain mutable coupling inside `Renderer`.
+  - Landed so far:
+    - custom-effect hash/dedup/refcount/index mutation now lives under
+      `crates/fret-render-wgpu/src/renderer/material_effects.rs`
+    - custom-effect pipeline-cache eviction now lives behind
+      `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs::evict_custom_effect_pipelines(...)`
+    - the custom-effect service path now coordinates those owner helpers instead of mutating
+      registry and pipeline maps inline from `services.rs`
+- [~] RMFR-renderer-043 Keep service trait implementations readable after extraction.
+  - Landed so far:
+    - custom-effect service WGSL validation, capability gating, registration, unregister flow, and
+      focused tests now live under
+      `crates/fret-render-wgpu/src/renderer/services_custom_effects.rs`
+    - `crates/fret-render-wgpu/src/renderer/services.rs` now keeps text/path/SVG/material service
+      impls only
 
 ### D3. Shaders and pipelines
 
@@ -902,12 +915,12 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: render-scene recorder execution facade now lives under
-    `crates/fret-render-wgpu/src/renderer/render_scene/executor_recorders.rs`, and the
-    `CustomEffectV3`, fullscreen blit/blur, `scale_nearest`, `path_clip_mask`, `backdrop_warp`,
-    `path_msaa`, `scene_draw`, and shared fullscreen-helper effect paths now route source/mask
-    view lookup, pyramid reuse/scratch/cache, clip-path cache copy/store, and destination
-    intermediate allocation through `RenderSceneExecutor` helpers.
+  - Latest landed slice: custom-effect service ownership now routes through dedicated owner seams:
+    `crates/fret-render-wgpu/src/renderer/services_custom_effects.rs` now owns WGSL validation,
+    capability gating, and focused service tests, while
+    `crates/fret-render-wgpu/src/renderer/material_effects.rs` and
+    `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` now own custom-effect registry and
+    pipeline-cache mutation helpers.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

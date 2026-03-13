@@ -65,6 +65,15 @@ Current snapshot (2026-03-13):
     postprocess, and effect-marker JSON schema encoding plus focused encoding tests
   - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps segment/count/
     degradation assembly and final dump emission orchestration
+- The latest custom-effect service split has landed:
+  - `crates/fret-render-wgpu/src/renderer/services_custom_effects.rs` now owns custom-effect WGSL
+    validation, capability gating, registration/unregister flow, and the focused service tests
+  - `crates/fret-render-wgpu/src/renderer/material_effects.rs` now owns custom-effect
+    hash/dedup/refcount/index mutation helpers
+  - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` now owns custom-effect pipeline-cache
+    eviction via one explicit helper
+  - `crates/fret-render-wgpu/src/renderer/services.rs` now keeps text/path/SVG/material service
+    impls only
 - v1 start decisions are now locked:
   - no new renderer crates in v1,
   - `fret-render` stays the stable default facade,
@@ -849,6 +858,25 @@ Current snapshot (2026-03-13):
     now keeps segment/count/degradation assembly and final dump emission orchestration
   - the slice does not change render-plan dump semantics; it only moves JSON encoding ownership
     behind a companion module
+- The thirty-ninth custom-effect-service split has landed:
+  - `crates/fret-render-wgpu/src/renderer/services_custom_effects.rs` now owns custom-effect WGSL
+    validation/build flow, capability gating, register/unregister orchestration, and the focused
+    custom-effect service regression tests
+  - `crates/fret-render-wgpu/src/renderer/material_effects.rs` now owns custom-effect
+    hash/dedup/refcount/index mutation helpers
+  - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` now owns custom-effect pipeline-cache
+    eviction via `evict_custom_effect_pipelines(...)`
+  - `crates/fret-render-wgpu/src/renderer/services.rs` no longer owns custom-effect service impls
+    or cross-owner registry/pipeline mutation inline
+- Renderer custom-effect-service split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu sampled_material_registration_is_capability_gated`
+  - `cargo nextest run -p fret-render-wgpu custom_effect_wgsl_size_limit_is_enforced`
+  - `cargo nextest run -p fret-render-wgpu custom_effect_wgsl_empty_is_rejected`
+  - `cargo nextest run -p fret-render-wgpu custom_effect_wgsl_minimal_program_validates`
+  - `cargo nextest run -p fret-render-wgpu custom_effect_v2_wgsl_minimal_program_validates`
+  - `cargo nextest run -p fret-render-wgpu custom_effect_v3_wgsl_minimal_program_validates`
+  - `cargo nextest run -p fret-render-wgpu unregister_custom_effect_evicts_custom_effect_pipelines`
 - Renderer custom-v3-dispatch split verification remains green:
   - `cargo check -p fret-render-wgpu --tests`
   - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`

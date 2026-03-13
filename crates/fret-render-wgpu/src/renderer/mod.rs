@@ -50,6 +50,7 @@ mod resources;
 mod scene_encoding_cache;
 mod scene_encoding_cache_diagnostics;
 mod services;
+mod services_custom_effects;
 mod shaders;
 mod svg;
 #[cfg(test)]
