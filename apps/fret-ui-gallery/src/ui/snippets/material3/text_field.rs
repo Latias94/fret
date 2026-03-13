@@ -5,13 +5,13 @@ use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    disabled: Model<bool>,
-    error: Model<bool>,
-) -> AnyElement {
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let demo_field = material3::TextField::uncontrolled(cx);
     let value = demo_field.value_model();
+    let disabled_toggle = material3::Switch::uncontrolled(cx, false);
+    let disabled = disabled_toggle.selected_model();
+    let error_toggle = material3::Switch::uncontrolled(cx, false);
+    let error = error_toggle.selected_model();
     let icons_value = cx.local_model_keyed("icons_value", String::new);
 
     let disabled_now = cx
@@ -24,12 +24,14 @@ pub fn render<H: UiHost>(
     let toggles = ui::h_row(move |cx| {
         vec![
             cx.text("disabled"),
-            material3::Switch::new(disabled.clone())
+            disabled_toggle
+                .clone()
                 .a11y_label("Disable text field")
                 .test_id("ui-gallery-material3-text-field-disabled")
                 .into_element(cx),
             cx.text("error"),
-            material3::Switch::new(error.clone())
+            error_toggle
+                .clone()
                 .a11y_label("Toggle error state")
                 .test_id("ui-gallery-material3-text-field-error")
                 .into_element(cx),

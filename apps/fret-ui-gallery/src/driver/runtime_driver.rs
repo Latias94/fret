@@ -286,19 +286,7 @@ struct UiGalleryWindowState {
     #[cfg(feature = "gallery-dev")]
     markdown_link_gate_last_activation: Model<Option<Arc<str>>>,
     #[cfg(feature = "gallery-material3")]
-    material3_slider_value: Model<f32>,
-    #[cfg(feature = "gallery-material3")]
     material3_expressive: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    material3_text_field_disabled: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    material3_text_field_error: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    material3_autocomplete_disabled: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    material3_autocomplete_error: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    material3_menu_open: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
     input_file_value: Model<String>,
@@ -370,19 +358,7 @@ impl UiGalleryWindowState {
             #[cfg(feature = "gallery-dev")]
             switch: self.switch.clone(),
             #[cfg(feature = "gallery-material3")]
-            material3_slider_value: self.material3_slider_value.clone(),
-            #[cfg(feature = "gallery-material3")]
             material3_expressive: self.material3_expressive.clone(),
-            #[cfg(feature = "gallery-material3")]
-            material3_text_field_disabled: self.material3_text_field_disabled.clone(),
-            #[cfg(feature = "gallery-material3")]
-            material3_text_field_error: self.material3_text_field_error.clone(),
-            #[cfg(feature = "gallery-material3")]
-            material3_autocomplete_disabled: self.material3_autocomplete_disabled.clone(),
-            #[cfg(feature = "gallery-material3")]
-            material3_autocomplete_error: self.material3_autocomplete_error.clone(),
-            #[cfg(feature = "gallery-material3")]
-            material3_menu_open: self.material3_menu_open.clone(),
             text_input: self.text_input.clone(),
             text_area: self.text_area.clone(),
             input_file_value: self.input_file_value.clone(),

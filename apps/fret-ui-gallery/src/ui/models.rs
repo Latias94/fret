@@ -60,19 +60,7 @@ pub(crate) struct UiGalleryModels {
     pub(crate) switch: Model<bool>,
 
     #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_slider_value: Model<f32>,
-    #[cfg(feature = "gallery-material3")]
     pub(crate) material3_expressive: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_text_field_disabled: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_text_field_error: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_autocomplete_disabled: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_autocomplete_error: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_menu_open: Model<bool>,
 
     pub(crate) text_input: Model<String>,
     pub(crate) text_area: Model<String>,

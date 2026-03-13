@@ -685,6 +685,29 @@ mod tests {
     }
 
     #[test]
+    fn material3_slider_offers_uncontrolled_copyable_value_paths() {
+        let normalized = normalize_ws(include_str!("slider.rs"));
+        let required_markers = [
+            "pub fn new(value: Model<f32>) -> Self {",
+            "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, value: Option<Model<f32>>, default_value: f32, ) -> Self {",
+            "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>, default_value: f32) -> Self {",
+            "pub fn value_model(&self) -> Model<f32> {",
+            "pub fn new(values: Model<[f32; 2]>) -> Self {",
+            "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, values: Option<Model<[f32; 2]>>, default_values: [f32; 2], ) -> Self {",
+            "pub fn uncontrolled<H: UiHost>( cx: &mut ElementContext<'_, H>, default_values: [f32; 2], ) -> Self {",
+            "pub fn values_model(&self) -> Model<[f32; 2]> {",
+        ];
+
+        for marker in required_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                normalized.contains(&marker),
+                "slider.rs should keep controlled `Slider::new(value)` / `RangeSlider::new(values)` seams and expose controllable/uncontrolled helpers plus model accessors for copyable teaching surfaces"
+            );
+        }
+    }
+
+    #[test]
     fn material3_date_picker_dialog_offers_uncontrolled_copyable_open_month_and_selected_paths() {
         let normalized = normalize_ws(include_str!("date_picker.rs"));
         let required_markers = [

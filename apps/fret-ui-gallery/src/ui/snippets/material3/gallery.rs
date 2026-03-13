@@ -8,11 +8,7 @@ use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    material3_text_field_disabled: Model<bool>,
-    material3_text_field_error: Model<bool>,
-) -> AnyElement {
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let checkbox_root = material3::Checkbox::uncontrolled(cx, false);
     let material3_checkbox = checkbox_root.checked_model();
     let switch_root = material3::Switch::uncontrolled(cx, false);
@@ -27,6 +23,10 @@ pub fn render<H: UiHost>(
     let material3_navigation_bar_value = navigation_bar_root.value_model();
     let text_field_root = material3::TextField::uncontrolled(cx);
     let material3_text_field_value = text_field_root.value_model();
+    let text_field_disabled_root = material3::Switch::uncontrolled(cx, false);
+    let material3_text_field_disabled = text_field_disabled_root.selected_model();
+    let text_field_error_root = material3::Switch::uncontrolled(cx, false);
+    let material3_text_field_error = text_field_error_root.selected_model();
 
     let disabled = cx
         .get_model_copied(&material3_text_field_disabled, Invalidation::Layout)
@@ -244,11 +244,13 @@ pub fn render<H: UiHost>(
     out.push(
         ui::h_row(|cx| {
             vec![
-                shadcn::Switch::new(material3_text_field_disabled.clone())
+                text_field_disabled_root
+                    .clone()
                     .a11y_label("Disable Text Field")
                     .into_element(cx),
                 cx.text("Disabled"),
-                shadcn::Switch::new(material3_text_field_error.clone())
+                text_field_error_root
+                    .clone()
                     .a11y_label("Text Field Error")
                     .into_element(cx),
                 cx.text("Error"),

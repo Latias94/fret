@@ -62,11 +62,8 @@ pub(in crate::ui) fn preview_material3_switch(cx: &mut UiCx<'_>) -> Vec<AnyEleme
     )
 }
 
-pub(in crate::ui) fn preview_material3_slider(
-    cx: &mut UiCx<'_>,
-    value: Model<f32>,
-) -> Vec<AnyElement> {
-    let demo = snippets::material3::slider::render(cx, value);
+pub(in crate::ui) fn preview_material3_slider(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    let demo = snippets::material3::slider::render(cx);
 
     render_material3_demo_page(
         cx,

@@ -38,12 +38,8 @@ pub(in crate::ui) fn preview_material3_select(cx: &mut UiCx<'_>) -> Vec<AnyEleme
     )
 }
 
-pub(in crate::ui) fn preview_material3_autocomplete(
-    cx: &mut UiCx<'_>,
-    disabled: Model<bool>,
-    error: Model<bool>,
-) -> Vec<AnyElement> {
-    let demo = snippets::material3::autocomplete::render(cx, disabled, error);
+pub(in crate::ui) fn preview_material3_autocomplete(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    let demo = snippets::material3::autocomplete::render(cx);
 
     render_material3_demo_page(
         cx,
@@ -53,12 +49,8 @@ pub(in crate::ui) fn preview_material3_autocomplete(
     )
 }
 
-pub(in crate::ui) fn preview_material3_text_field(
-    cx: &mut UiCx<'_>,
-    disabled: Model<bool>,
-    error: Model<bool>,
-) -> Vec<AnyElement> {
-    let demo = snippets::material3::text_field::render(cx, disabled, error);
+pub(in crate::ui) fn preview_material3_text_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    let demo = snippets::material3::text_field::render(cx);
 
     render_material3_demo_page(
         cx,

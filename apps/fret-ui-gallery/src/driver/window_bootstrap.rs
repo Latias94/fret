@@ -302,19 +302,7 @@ impl UiGalleryDriver {
         #[cfg(feature = "gallery-dev")]
         let markdown_link_gate_last_activation = app.models_mut().insert(None::<Arc<str>>);
         #[cfg(feature = "gallery-material3")]
-        let material3_slider_value = app.models_mut().insert(0.3f32);
-        #[cfg(feature = "gallery-material3")]
         let material3_expressive = app.models_mut().insert(false);
-        #[cfg(feature = "gallery-material3")]
-        let material3_text_field_disabled = app.models_mut().insert(false);
-        #[cfg(feature = "gallery-material3")]
-        let material3_text_field_error = app.models_mut().insert(false);
-        #[cfg(feature = "gallery-material3")]
-        let material3_autocomplete_disabled = app.models_mut().insert(false);
-        #[cfg(feature = "gallery-material3")]
-        let material3_autocomplete_error = app.models_mut().insert(false);
-        #[cfg(feature = "gallery-material3")]
-        let material3_menu_open = app.models_mut().insert(false);
         let text_input = app.models_mut().insert(String::new());
         let text_area = app.models_mut().insert(String::new());
         let input_file_value = app.models_mut().insert(String::new());
@@ -486,19 +474,7 @@ impl UiGalleryDriver {
             #[cfg(feature = "gallery-dev")]
             markdown_link_gate_last_activation,
             #[cfg(feature = "gallery-material3")]
-            material3_slider_value,
-            #[cfg(feature = "gallery-material3")]
             material3_expressive,
-            #[cfg(feature = "gallery-material3")]
-            material3_text_field_disabled,
-            #[cfg(feature = "gallery-material3")]
-            material3_text_field_error,
-            #[cfg(feature = "gallery-material3")]
-            material3_autocomplete_disabled,
-            #[cfg(feature = "gallery-material3")]
-            material3_autocomplete_error,
-            #[cfg(feature = "gallery-material3")]
-            material3_menu_open,
             text_input,
             text_area,
             input_file_value,

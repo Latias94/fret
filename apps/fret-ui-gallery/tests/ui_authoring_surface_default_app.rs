@@ -4245,16 +4245,21 @@ fn material3_autocomplete_snippet_prefers_uncontrolled_query_and_dialog_roots() 
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/autocomplete.rs",
         &[
-            "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, disabled: Model<bool>, error: Model<bool>, ) -> AnyElement {",
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
             "let outlined_autocomplete = material3::Autocomplete::uncontrolled(cx);",
             "let value = outlined_autocomplete.query_model();",
             "let dialog = material3::Dialog::uncontrolled(cx);",
             "let dialog_open = dialog.open_model();",
+            "let disabled_toggle = material3::Switch::uncontrolled(cx, false);",
+            "let disabled = disabled_toggle.selected_model();",
+            "let error_toggle = material3::Switch::uncontrolled(cx, false);",
+            "let error = error_toggle.selected_model();",
             "let exposed_dropdown = material3::ExposedDropdown::new_controllable( cx, None, Some(Arc::<str>::from(\"beta\")), None, String::new(), );",
             "let exposed_selected_value = exposed_dropdown.selected_value_model();",
             "let exposed_query = exposed_dropdown.query_model();",
         ],
         &[
+            "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, disabled: Model<bool>, error: Model<bool>, ) -> AnyElement {",
             "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, value: Model<String>, disabled: Model<bool>, error: Model<bool>, dialog_open: Model<bool>, ) -> AnyElement {",
             "material3::Dialog::new(dialog_open.clone())",
             "let exposed_selected_value = cx.local_model_keyed(\"exposed_selected_value\", || Some(Arc::<str>::from(\"beta\")));",
@@ -4367,6 +4372,18 @@ fn material3_selection_and_field_snippets_prefer_uncontrolled_value_roots() {
     );
 
     assert_material3_snippet_prefers_copyable_root(
+        "src/ui/snippets/material3/slider.rs",
+        &[
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "let slider = material3::Slider::uncontrolled(cx, 0.3);",
+            "let value = slider.value_model();",
+        ],
+        &[
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, value: Model<f32>) -> AnyElement {",
+        ],
+    );
+
+    assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/tabs.rs",
         &[
             "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
@@ -4429,11 +4446,16 @@ fn material3_selection_and_field_snippets_prefer_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/text_field.rs",
         &[
-            "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, disabled: Model<bool>, error: Model<bool>, ) -> AnyElement {",
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
             "let demo_field = material3::TextField::uncontrolled(cx);",
             "let value = demo_field.value_model();",
+            "let disabled_toggle = material3::Switch::uncontrolled(cx, false);",
+            "let disabled = disabled_toggle.selected_model();",
+            "let error_toggle = material3::Switch::uncontrolled(cx, false);",
+            "let error = error_toggle.selected_model();",
         ],
         &[
+            "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, disabled: Model<bool>, error: Model<bool>, ) -> AnyElement {",
             "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, value: Model<String>, disabled: Model<bool>, error: Model<bool>, ) -> AnyElement {",
         ],
     );
@@ -4474,11 +4496,15 @@ fn material3_composite_snippets_prefer_local_uncontrolled_value_roots() {
             "let list_root = material3::List::uncontrolled(cx, \"alpha\");",
             "let navigation_bar_root = material3::NavigationBar::uncontrolled(cx, \"search\");",
             "let text_field_root = material3::TextField::uncontrolled(cx);",
+            "let text_field_disabled_root = material3::Switch::uncontrolled(cx, false);",
+            "let text_field_error_root = material3::Switch::uncontrolled(cx, false);",
         ],
         &[
             "material3_checkbox: Model<bool>,",
             "material3_switch: Model<bool>,",
             "material3_radio_value: Model<Option<Arc<str>>>,",
+            "material3_text_field_disabled: Model<bool>,",
+            "material3_text_field_error: Model<bool>,",
             "material3_tabs_value: Model<Arc<str>>,",
             "material3_list_value: Model<Arc<str>>,",
             "material3_navigation_bar_value: Model<Arc<str>>,",
@@ -4498,11 +4524,18 @@ fn material3_composite_snippets_prefer_local_uncontrolled_value_roots() {
             "let tabs_root = material3::Tabs::uncontrolled(cx, \"overview\");",
             "let navigation_bar_root = material3::NavigationBar::uncontrolled(cx, \"search\");",
             "let text_field_root = material3::TextField::uncontrolled(cx);",
+            "let text_field_disabled_root = material3::Switch::uncontrolled(cx, false);",
+            "let text_field_error_root = material3::Switch::uncontrolled(cx, false);",
+            "let dropdown_root = material3::DropdownMenu::uncontrolled(cx).a11y_label(\"Material 3 Menu\");",
+            "let open = dropdown_root.open_model();",
         ],
         &[
             "material3_checkbox: Model<bool>,",
             "material3_switch: Model<bool>,",
             "material3_radio_value: Model<Option<Arc<str>>>,",
+            "material3_text_field_disabled: Model<bool>,",
+            "material3_text_field_error: Model<bool>,",
+            "material3_menu_open: Model<bool>,",
             "material3_tabs_value: Model<Arc<str>>,",
             "material3_navigation_bar_value: Model<Arc<str>>,",
             "material3_text_field_value: Model<String>,",
@@ -4511,7 +4544,7 @@ fn material3_composite_snippets_prefer_local_uncontrolled_value_roots() {
 }
 
 #[test]
-fn material3_choice_control_pages_do_not_route_demo_only_runtime_models() {
+fn material3_pages_do_not_route_demo_only_runtime_models() {
     for (relative_path, required_markers, forbidden_markers) in [
         (
             "src/ui/pages/material3/controls.rs",
@@ -4519,41 +4552,71 @@ fn material3_choice_control_pages_do_not_route_demo_only_runtime_models() {
                 "pub(in crate::ui) fn preview_material3_touch_targets(cx: &mut UiCx<'_>) -> Vec<AnyElement> {",
                 "pub(in crate::ui) fn preview_material3_checkbox(cx: &mut UiCx<'_>) -> Vec<AnyElement> {",
                 "pub(in crate::ui) fn preview_material3_switch(cx: &mut UiCx<'_>) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_slider(cx: &mut UiCx<'_>) -> Vec<AnyElement> {",
                 "pub(in crate::ui) fn preview_material3_radio(cx: &mut UiCx<'_>) -> Vec<AnyElement> {",
             ],
             vec![
                 "pub(in crate::ui) fn preview_material3_touch_targets( cx: &mut UiCx<'_>, material3_checkbox: Model<bool>, material3_switch: Model<bool>, material3_radio_value: Model<Option<Arc<str>>>, ) -> Vec<AnyElement> {",
                 "pub(in crate::ui) fn preview_material3_checkbox( cx: &mut UiCx<'_>, checked: Model<bool>, ) -> Vec<AnyElement> {",
                 "pub(in crate::ui) fn preview_material3_switch( cx: &mut UiCx<'_>, selected: Model<bool>, ) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_slider( cx: &mut UiCx<'_>, value: Model<f32>, ) -> Vec<AnyElement> {",
                 "pub(in crate::ui) fn preview_material3_radio( cx: &mut UiCx<'_>, group_value: Model<Option<Arc<str>>>, ) -> Vec<AnyElement> {",
             ],
         ),
         (
             "src/ui/pages/material3/gallery.rs",
             vec![
-                "pub(in crate::ui) fn preview_material3_gallery( cx: &mut UiCx<'_>, material3_text_field_disabled: Model<bool>, material3_text_field_error: Model<bool>, last_action: Model<Arc<str>>, ) -> Vec<AnyElement> {",
-                "pub(in crate::ui) fn preview_material3_state_matrix( cx: &mut UiCx<'_>, material3_text_field_disabled: Model<bool>, material3_text_field_error: Model<bool>, material3_menu_open: Model<bool>, last_action: Model<Arc<str>>, ) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_gallery( cx: &mut UiCx<'_>, last_action: Model<Arc<str>>, ) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_state_matrix( cx: &mut UiCx<'_>, last_action: Model<Arc<str>>, ) -> Vec<AnyElement> {",
             ],
             vec![
                 "material3_checkbox: Model<bool>,",
                 "material3_switch: Model<bool>,",
                 "material3_radio_value: Model<Option<Arc<str>>>,",
+                "material3_text_field_disabled: Model<bool>,",
+                "material3_text_field_error: Model<bool>,",
+                "material3_menu_open: Model<bool>,",
+            ],
+        ),
+        (
+            "src/ui/pages/material3/inputs.rs",
+            vec![
+                "pub(in crate::ui) fn preview_material3_autocomplete(cx: &mut UiCx<'_>) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_text_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {",
+            ],
+            vec![
+                "pub(in crate::ui) fn preview_material3_autocomplete( cx: &mut UiCx<'_>, disabled: Model<bool>, error: Model<bool>, ) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_text_field( cx: &mut UiCx<'_>, disabled: Model<bool>, error: Model<bool>, ) -> Vec<AnyElement> {",
             ],
         ),
         (
             "src/ui/content.rs",
             vec![
-                "pages::material3::preview_material3_gallery( cx, material3_text_field_disabled, material3_text_field_error, last_action.clone(), )",
-                "pages::material3::preview_material3_state_matrix( cx, material3_text_field_disabled, material3_text_field_error, material3_menu_open, last_action.clone(), )",
+                "pages::material3::preview_material3_slider(cx)",
+                "pages::material3::preview_material3_gallery(cx, last_action.clone())",
+                "pages::material3::preview_material3_state_matrix(cx, last_action.clone())",
                 "pages::material3::preview_material3_touch_targets(cx)",
                 "pages::material3::preview_material3_checkbox(cx)",
                 "pages::material3::preview_material3_switch(cx)",
                 "pages::material3::preview_material3_radio(cx)",
+                "pages::material3::preview_material3_autocomplete(cx)",
+                "pages::material3::preview_material3_text_field(cx)",
             ],
             vec![
+                "let material3_slider_value = models.material3_slider_value.clone();",
+                "let material3_text_field_disabled = models.material3_text_field_disabled.clone();",
+                "let material3_text_field_error = models.material3_text_field_error.clone();",
+                "let material3_autocomplete_disabled = models.material3_autocomplete_disabled.clone();",
+                "let material3_autocomplete_error = models.material3_autocomplete_error.clone();",
+                "let material3_menu_open = models.material3_menu_open.clone();",
                 "let material3_checkbox = models.material3_checkbox.clone();",
                 "let material3_switch = models.material3_switch.clone();",
                 "let material3_radio_value = models.material3_radio_value.clone();",
+                "pages::material3::preview_material3_slider(cx, material3_slider_value)",
+                "pages::material3::preview_material3_gallery( cx, material3_text_field_disabled, material3_text_field_error, last_action.clone(), )",
+                "pages::material3::preview_material3_state_matrix( cx, material3_text_field_disabled, material3_text_field_error, material3_menu_open, last_action.clone(), )",
+                "pages::material3::preview_material3_autocomplete( cx, material3_autocomplete_disabled, material3_autocomplete_error, )",
+                "pages::material3::preview_material3_text_field( cx, material3_text_field_disabled, material3_text_field_error, )",
                 "pages::material3::preview_material3_checkbox(cx, material3_checkbox)",
                 "pages::material3::preview_material3_switch(cx, material3_switch)",
                 "pages::material3::preview_material3_radio(cx, material3_radio_value)",
@@ -4563,30 +4626,42 @@ fn material3_choice_control_pages_do_not_route_demo_only_runtime_models() {
             "src/ui/models.rs",
             vec![],
             vec![
-                "pub(crate) material3_checkbox: Model<bool>,",
-                "pub(crate) material3_switch: Model<bool>,",
-                "pub(crate) material3_radio_value: Model<Option<Arc<str>>>,",
+                "pub(crate) material3_slider_value: Model<f32>,",
+                "pub(crate) material3_text_field_disabled: Model<bool>,",
+                "pub(crate) material3_text_field_error: Model<bool>,",
+                "pub(crate) material3_autocomplete_disabled: Model<bool>,",
+                "pub(crate) material3_autocomplete_error: Model<bool>,",
+                "pub(crate) material3_menu_open: Model<bool>,",
             ],
         ),
         (
             "src/driver/runtime_driver.rs",
             vec![],
             vec![
-                "material3_checkbox: Model<bool>,",
-                "material3_switch: Model<bool>,",
-                "material3_radio_value: Model<Option<Arc<str>>>,",
-                "material3_checkbox: self.material3_checkbox.clone(),",
-                "material3_switch: self.material3_switch.clone(),",
-                "material3_radio_value: self.material3_radio_value.clone(),",
+                "material3_slider_value: Model<f32>,",
+                "material3_text_field_disabled: Model<bool>,",
+                "material3_text_field_error: Model<bool>,",
+                "material3_autocomplete_disabled: Model<bool>,",
+                "material3_autocomplete_error: Model<bool>,",
+                "material3_menu_open: Model<bool>,",
+                "material3_slider_value: self.material3_slider_value.clone(),",
+                "material3_text_field_disabled: self.material3_text_field_disabled.clone(),",
+                "material3_text_field_error: self.material3_text_field_error.clone(),",
+                "material3_autocomplete_disabled: self.material3_autocomplete_disabled.clone(),",
+                "material3_autocomplete_error: self.material3_autocomplete_error.clone(),",
+                "material3_menu_open: self.material3_menu_open.clone(),",
             ],
         ),
         (
             "src/driver/window_bootstrap.rs",
             vec![],
             vec![
-                "let material3_checkbox = app.models_mut().insert(false);",
-                "let material3_switch = app.models_mut().insert(false);",
-                "let material3_radio_value = app.models_mut().insert(None::<Arc<str>>);",
+                "let material3_slider_value = app.models_mut().insert(0.3f32);",
+                "let material3_text_field_disabled = app.models_mut().insert(false);",
+                "let material3_text_field_error = app.models_mut().insert(false);",
+                "let material3_autocomplete_disabled = app.models_mut().insert(false);",
+                "let material3_autocomplete_error = app.models_mut().insert(false);",
+                "let material3_menu_open = app.models_mut().insert(false);",
             ],
         ),
     ] {

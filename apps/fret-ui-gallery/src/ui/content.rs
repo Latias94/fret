@@ -318,19 +318,7 @@ fn page_preview(
     #[cfg(feature = "gallery-dev")]
     let switch = models.switch.clone();
     #[cfg(feature = "gallery-material3")]
-    let material3_slider_value = models.material3_slider_value.clone();
-    #[cfg(feature = "gallery-material3")]
     let material3_expressive = models.material3_expressive.clone();
-    #[cfg(feature = "gallery-material3")]
-    let material3_text_field_disabled = models.material3_text_field_disabled.clone();
-    #[cfg(feature = "gallery-material3")]
-    let material3_text_field_error = models.material3_text_field_error.clone();
-    #[cfg(feature = "gallery-material3")]
-    let material3_autocomplete_disabled = models.material3_autocomplete_disabled.clone();
-    #[cfg(feature = "gallery-material3")]
-    let material3_autocomplete_error = models.material3_autocomplete_error.clone();
-    #[cfg(feature = "gallery-material3")]
-    let material3_menu_open = models.material3_menu_open.clone();
     let text_input = models.text_input.clone();
     let text_area = models.text_area.clone();
     let _input_file_value = models.input_file_value.clone();
@@ -608,24 +596,13 @@ fn page_preview(
         #[cfg(feature = "gallery-material3")]
         PAGE_MATERIAL3_GALLERY => {
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-                pages::material3::preview_material3_gallery(
-                    cx,
-                    material3_text_field_disabled,
-                    material3_text_field_error,
-                    last_action.clone(),
-                )
+                pages::material3::preview_material3_gallery(cx, last_action.clone())
             })
         }
         #[cfg(feature = "gallery-material3")]
         PAGE_MATERIAL3_STATE_MATRIX => {
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-                pages::material3::preview_material3_state_matrix(
-                    cx,
-                    material3_text_field_disabled,
-                    material3_text_field_error,
-                    material3_menu_open,
-                    last_action.clone(),
-                )
+                pages::material3::preview_material3_state_matrix(cx, last_action.clone())
             })
         }
         #[cfg(feature = "gallery-material3")]
@@ -661,7 +638,7 @@ fn page_preview(
         #[cfg(feature = "gallery-material3")]
         PAGE_MATERIAL3_SLIDER => {
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-                pages::material3::preview_material3_slider(cx, material3_slider_value)
+                pages::material3::preview_material3_slider(cx)
             })
         }
         #[cfg(feature = "gallery-material3")]
@@ -715,21 +692,13 @@ fn page_preview(
         #[cfg(feature = "gallery-material3")]
         PAGE_MATERIAL3_AUTOCOMPLETE => {
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-                pages::material3::preview_material3_autocomplete(
-                    cx,
-                    material3_autocomplete_disabled,
-                    material3_autocomplete_error,
-                )
+                pages::material3::preview_material3_autocomplete(cx)
             })
         }
         #[cfg(feature = "gallery-material3")]
         PAGE_MATERIAL3_TEXT_FIELD => {
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-                pages::material3::preview_material3_text_field(
-                    cx,
-                    material3_text_field_disabled,
-                    material3_text_field_error,
-                )
+                pages::material3::preview_material3_text_field(cx)
             })
         }
         #[cfg(feature = "gallery-material3")]

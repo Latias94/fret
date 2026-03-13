@@ -561,9 +561,11 @@ fn render_search_view<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Vec<AnyEleme
 
 fn render_menu<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    open: Model<bool>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
+    let dropdown_root = material3::DropdownMenu::uncontrolled(cx).a11y_label("Material 3 Menu");
+    let open = dropdown_root.open_model();
+
     fn on_select(id: &'static str, last_action: Model<Arc<str>>) -> OnActivate {
         Arc::new(move |host, action_cx, _reason| {
             let _ = host.models_mut().update(&last_action, |v| {
@@ -581,44 +583,39 @@ fn render_menu<H: UiHost>(
         })
     };
 
-    let dropdown = material3::DropdownMenu::new(open.clone())
-        .a11y_label("Material 3 Menu")
-        .into_element(
-            cx,
-            move |cx| {
-                material3::Button::new("Open menu")
-                    .variant(material3::ButtonVariant::Outlined)
-                    .on_activate(toggle_open.clone())
-                    .into_element(cx)
-            },
-            move |_cx| {
-                vec![
-                    material3::MenuEntry::Item(
-                        material3::MenuItem::new("Cut")
-                            .on_select(on_select("material3.menu.cut", last_action.clone())),
-                    ),
-                    material3::MenuEntry::Item(
-                        material3::MenuItem::new("Copy")
-                            .on_select(on_select("material3.menu.copy", last_action.clone())),
-                    ),
-                    material3::MenuEntry::Item(material3::MenuItem::new("Paste").disabled(true)),
-                    material3::MenuEntry::Separator,
-                    material3::MenuEntry::Item(
-                        material3::MenuItem::new("Settings")
-                            .on_select(on_select("material3.menu.settings", last_action)),
-                    ),
-                ]
-            },
-        );
+    let dropdown = dropdown_root.into_element(
+        cx,
+        move |cx| {
+            material3::Button::new("Open menu")
+                .variant(material3::ButtonVariant::Outlined)
+                .on_activate(toggle_open.clone())
+                .into_element(cx)
+        },
+        move |_cx| {
+            vec![
+                material3::MenuEntry::Item(
+                    material3::MenuItem::new("Cut")
+                        .on_select(on_select("material3.menu.cut", last_action.clone())),
+                ),
+                material3::MenuEntry::Item(
+                    material3::MenuItem::new("Copy")
+                        .on_select(on_select("material3.menu.copy", last_action.clone())),
+                ),
+                material3::MenuEntry::Item(material3::MenuItem::new("Paste").disabled(true)),
+                material3::MenuEntry::Separator,
+                material3::MenuEntry::Item(
+                    material3::MenuItem::new("Settings")
+                        .on_select(on_select("material3.menu.settings", last_action)),
+                ),
+            ]
+        },
+    );
 
     vec![dropdown]
 }
 
 pub fn render<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    material3_text_field_disabled: Model<bool>,
-    material3_text_field_error: Model<bool>,
-    material3_menu_open: Model<bool>,
     last_action: Model<Arc<str>>,
 ) -> AnyElement {
     let checkbox_root = material3::Checkbox::uncontrolled(cx, false);
@@ -633,6 +630,10 @@ pub fn render<H: UiHost>(
     let material3_navigation_bar_value = navigation_bar_root.value_model();
     let text_field_root = material3::TextField::uncontrolled(cx);
     let material3_text_field_value = text_field_root.value_model();
+    let text_field_disabled_root = material3::Switch::uncontrolled(cx, false);
+    let material3_text_field_disabled = text_field_disabled_root.selected_model();
+    let text_field_error_root = material3::Switch::uncontrolled(cx, false);
+    let material3_text_field_error = text_field_error_root.selected_model();
 
     let last = cx
         .app
@@ -709,11 +710,13 @@ pub fn render<H: UiHost>(
 
         let toggles = ui::h_row(move |cx| {
             vec![
-                material3::Switch::new(material3_text_field_disabled.clone())
+                text_field_disabled_root
+                    .clone()
                     .a11y_label("Text field disabled")
                     .into_element(cx),
                 cx.text(format!("disabled={disabled}")),
-                material3::Switch::new(material3_text_field_error.clone())
+                text_field_error_root
+                    .clone()
                     .a11y_label("Text field error")
                     .into_element(cx),
                 cx.text(format!("error={error}")),
@@ -816,7 +819,7 @@ pub fn render<H: UiHost>(
     );
 
     out.push(cx.text("— Menu —"));
-    out.extend(render_menu(cx, material3_menu_open, last_action.clone()));
+    out.extend(render_menu(cx, last_action.clone()));
 
     out.push(cx.text(format!("last action: {last}")));
 
