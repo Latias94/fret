@@ -77,10 +77,18 @@ This file tracks the execution checklist for `DESIGN.md`.
   - Evidence anchors:
     - `ecosystem/fret-ui-kit/src/dnd/forwarders.rs`
     - `ecosystem/fret-ui-kit/src/dnd/tests.rs`
-- [ ] Decide whether to add lightweight draggable/droppable metadata now:
-  - `type`
-  - `accept`
-  - collision-strategy hook
+- [x] Decide whether to add lightweight draggable/droppable metadata now:
+  - Decision: defer from v1 for now; do not widen `fret-dnd` yet
+  - Reason: Kanban is one heterogeneous consumer, but there is not yet a second first-party
+    registry-driven consumer that needs the same shared contract
+  - Follow-up trigger: revisit once a second real consumer needs shared `type` / `accept` /
+    collision-policy semantics
+  - Evidence anchors:
+    - `docs/workstreams/headless-dnd-fearless-refactor-v1/DROPPABLE_METADATA_DECISION.md`
+    - `ecosystem/fret-ui-kit/src/recipes/sortable_dnd.rs`
+    - `ecosystem/fret-ui-shadcn/src/extras/kanban.rs`
+    - `ecosystem/fret-workspace/src/tab_strip/mod.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/pending.rs`
 - [ ] Add a small monitor/event surface only if at least two consumers need it.
 - [ ] Preserve the rule that modifiers and auto-scroll core remain pure/data-only.
 

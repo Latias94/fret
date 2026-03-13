@@ -21,6 +21,8 @@ This directory contains:
 - `TODO.md`: execution checklist
 - `MILESTONES.md`: staged acceptance criteria and gates
 - `CRATE_AUDIT.md`: boundary snapshot, current parity gaps, and landable follow-on steps
+- `DROPPABLE_METADATA_DECISION.md`: v1 decision note for `type` / `accept` / collision-hook
+  metadata
 
 Primary contract references:
 
