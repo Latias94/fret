@@ -587,11 +587,15 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/frame_binding_state.rs`
     - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns `uniform_bind_group` or
       `UniformResources` directly
+    - render-scene dispatch owner moved into
+      `crates/fret-render-wgpu/src/renderer/render_scene/dispatch_state.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/dispatch.rs` now keeps only transient
+      execution-state wiring plus delegation
   - Current next hotspot:
     - decide whether scene-encoding invalidation/debug evidence should stay coupled to
       `scene_encoding_cache.rs` or move closer to diagnostics state
-    - evaluate whether the remaining render-scene dispatch/executor glue should move behind a
-      shared execution owner after frame-binding closure
+    - evaluate whether the remaining executor/write-epoch and release-target glue should move
+      behind a narrower execution facade after dispatch-state closure
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG
@@ -629,6 +633,8 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/geometry_upload.rs`
     - frame-binding state now lives under
       `crates/fret-render-wgpu/src/renderer/frame_binding_state.rs`
+    - render-scene dispatch state now lives under
+      `crates/fret-render-wgpu/src/renderer/render_scene/dispatch_state.rs`
 - [ ] RMFR-renderer-042 Reduce cross-domain mutable coupling inside `Renderer`.
 - [ ] RMFR-renderer-043 Keep service trait implementations readable after extraction.
 
@@ -786,10 +792,10 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: frame-binding owner state now lives under
-    `crates/fret-render-wgpu/src/renderer/frame_binding_state.rs`, and
-    `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns `uniform_bind_group` or
-    `UniformResources` directly.
+  - Latest landed slice: render-scene dispatch state now lives under
+    `crates/fret-render-wgpu/src/renderer/render_scene/dispatch_state.rs`, and
+    `crates/fret-render-wgpu/src/renderer/render_scene/dispatch.rs` now keeps only transient
+    execution-state wiring plus delegation.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

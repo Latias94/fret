@@ -255,6 +255,10 @@ For `Renderer` state-shell tightening, the same principle applies:
   the base uniform bind group, uniform/clip/mask/render-space buffer ownership, resize/rebuild
   policy, and per-frame upload helpers should move behind one owner so render-scene binding/upload
   paths stop depending on loose `Renderer` fields.
+- render-scene dispatch state is the matching transient execution seam:
+  command encoder ownership, frame-target lifetime, scale-param cursor state, quad-vertex sizing,
+  and pass-loop orchestration should move behind one owner so `dispatch.rs` stops owning
+  short-lived execution plumbing inline.
 - render-text dump state is the matching diagnostics/export seam for text debugging:
   dump collection scratch and serialization scratch should move behind one owner so render-scene
   execution keeps only a thin bridge to `TextSystem`.

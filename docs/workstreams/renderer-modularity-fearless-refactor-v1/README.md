@@ -266,6 +266,10 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/frame_binding_state.rs`, and
   `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns `uniform_bind_group` or
   `UniformResources` directly.
+- Renderer render-scene dispatch state now also lives under
+  `crates/fret-render-wgpu/src/renderer/render_scene/dispatch_state.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_scene/dispatch.rs` now keeps only a thin wrapper
+  around transient execution-state assembly and finalization.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:
