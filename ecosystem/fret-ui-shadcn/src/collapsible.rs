@@ -1,5 +1,6 @@
 //! shadcn/ui `Collapsible` (headless).
 
+use std::marker::PhantomData;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -15,7 +16,10 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
 use fret_ui_kit::primitives::collapsible as radix_collapsible;
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement};
+use fret_ui_kit::{
+    ChromeRefinement, IntoUiElement, LayoutRefinement, UiPatch, UiPatchTarget, UiSupportsChrome,
+    UiSupportsLayout,
+};
 
 use crate::overlay_motion;
 
@@ -397,22 +401,200 @@ impl CollapsibleContent {
     }
 }
 
-pub fn collapsible<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    open: Model<bool>,
-    trigger: impl FnOnce(&mut ElementContext<'_, H>, bool) -> AnyElement,
-    content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
-) -> AnyElement {
-    Collapsible::new(open).into_element(cx, trigger, content)
+pub struct CollapsibleBuild<H, Trigger, Content> {
+    root: Collapsible,
+    trigger: Option<Trigger>,
+    content: Option<Content>,
+    _phantom: PhantomData<fn() -> H>,
 }
 
-pub fn collapsible_uncontrolled<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+impl<H, Trigger, Content> CollapsibleBuild<H, Trigger, Content> {
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.root = self.root.disabled(disabled);
+        self
+    }
+
+    pub fn force_mount_content(mut self, force_mount_content: bool) -> Self {
+        self.root = self.root.force_mount_content(force_mount_content);
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.root = self.root.refine_style(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.root = self.root.refine_layout(layout);
+        self
+    }
+}
+
+impl<H, Trigger, Content, TriggerEl, ContentEl> CollapsibleBuild<H, Trigger, Content>
+where
+    H: UiHost,
+    Trigger: FnOnce(&mut ElementContext<'_, H>, bool) -> TriggerEl,
+    Content: FnOnce(&mut ElementContext<'_, H>) -> ContentEl,
+    TriggerEl: IntoUiElement<H>,
+    ContentEl: IntoUiElement<H>,
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let trigger = self
+            .trigger
+            .expect("expected collapsible trigger builder closure");
+        let content = self
+            .content
+            .expect("expected collapsible content builder closure");
+
+        self.root.into_element(
+            cx,
+            move |cx, is_open| trigger(cx, is_open).into_element(cx),
+            move |cx| content(cx).into_element(cx),
+        )
+    }
+}
+
+impl<H, Trigger, Content> UiPatchTarget for CollapsibleBuild<H, Trigger, Content> {
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H, Trigger, Content> UiSupportsChrome for CollapsibleBuild<H, Trigger, Content> {}
+
+impl<H, Trigger, Content> UiSupportsLayout for CollapsibleBuild<H, Trigger, Content> {}
+
+impl<H, Trigger, Content, TriggerEl, ContentEl> IntoUiElement<H>
+    for CollapsibleBuild<H, Trigger, Content>
+where
+    H: UiHost,
+    Trigger: FnOnce(&mut ElementContext<'_, H>, bool) -> TriggerEl,
+    Content: FnOnce(&mut ElementContext<'_, H>) -> ContentEl,
+    TriggerEl: IntoUiElement<H>,
+    ContentEl: IntoUiElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CollapsibleBuild::into_element(self, cx)
+    }
+}
+
+pub struct CollapsibleUncontrolledBuild<H, Trigger, Content> {
+    root: Collapsible,
+    trigger: Option<Trigger>,
+    content: Option<Content>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H, Trigger, Content> CollapsibleUncontrolledBuild<H, Trigger, Content> {
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.root = self.root.disabled(disabled);
+        self
+    }
+
+    pub fn force_mount_content(mut self, force_mount_content: bool) -> Self {
+        self.root = self.root.force_mount_content(force_mount_content);
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.root = self.root.refine_style(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.root = self.root.refine_layout(layout);
+        self
+    }
+}
+
+impl<H, Trigger, Content, TriggerEl, ContentEl> CollapsibleUncontrolledBuild<H, Trigger, Content>
+where
+    H: UiHost,
+    Trigger: FnOnce(&mut ElementContext<'_, H>, Model<bool>, bool) -> TriggerEl,
+    Content: FnOnce(&mut ElementContext<'_, H>) -> ContentEl,
+    TriggerEl: IntoUiElement<H>,
+    ContentEl: IntoUiElement<H>,
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let trigger = self
+            .trigger
+            .expect("expected uncontrolled collapsible trigger builder closure");
+        let content = self
+            .content
+            .expect("expected uncontrolled collapsible content builder closure");
+
+        self.root.into_element_with_open_model(
+            cx,
+            move |cx, open, is_open| trigger(cx, open, is_open).into_element(cx),
+            move |cx| content(cx).into_element(cx),
+        )
+    }
+}
+
+impl<H, Trigger, Content> UiPatchTarget for CollapsibleUncontrolledBuild<H, Trigger, Content> {
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H, Trigger, Content> UiSupportsChrome for CollapsibleUncontrolledBuild<H, Trigger, Content> {}
+
+impl<H, Trigger, Content> UiSupportsLayout for CollapsibleUncontrolledBuild<H, Trigger, Content> {}
+
+impl<H, Trigger, Content, TriggerEl, ContentEl> IntoUiElement<H>
+    for CollapsibleUncontrolledBuild<H, Trigger, Content>
+where
+    H: UiHost,
+    Trigger: FnOnce(&mut ElementContext<'_, H>, Model<bool>, bool) -> TriggerEl,
+    Content: FnOnce(&mut ElementContext<'_, H>) -> ContentEl,
+    TriggerEl: IntoUiElement<H>,
+    ContentEl: IntoUiElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CollapsibleUncontrolledBuild::into_element(self, cx)
+    }
+}
+
+pub fn collapsible<H: UiHost, Trigger, Content, TriggerEl, ContentEl>(
+    open: Model<bool>,
+    trigger: Trigger,
+    content: Content,
+) -> CollapsibleBuild<H, Trigger, Content>
+where
+    Trigger: FnOnce(&mut ElementContext<'_, H>, bool) -> TriggerEl,
+    Content: FnOnce(&mut ElementContext<'_, H>) -> ContentEl,
+    TriggerEl: IntoUiElement<H>,
+    ContentEl: IntoUiElement<H>,
+{
+    CollapsibleBuild {
+        root: Collapsible::new(open),
+        trigger: Some(trigger),
+        content: Some(content),
+        _phantom: PhantomData,
+    }
+}
+
+pub fn collapsible_uncontrolled<H: UiHost, Trigger, Content, TriggerEl, ContentEl>(
     default_open: bool,
-    trigger: impl FnOnce(&mut ElementContext<'_, H>, Model<bool>, bool) -> AnyElement,
-    content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
-) -> AnyElement {
-    Collapsible::uncontrolled(default_open).into_element_with_open_model(cx, trigger, content)
+    trigger: Trigger,
+    content: Content,
+) -> CollapsibleUncontrolledBuild<H, Trigger, Content>
+where
+    Trigger: FnOnce(&mut ElementContext<'_, H>, Model<bool>, bool) -> TriggerEl,
+    Content: FnOnce(&mut ElementContext<'_, H>) -> ContentEl,
+    TriggerEl: IntoUiElement<H>,
+    ContentEl: IntoUiElement<H>,
+{
+    CollapsibleUncontrolledBuild {
+        root: Collapsible::uncontrolled(default_open),
+        trigger: Some(trigger),
+        content: Some(content),
+        _phantom: PhantomData,
+    }
 }
 
 /// Upstream-shaped Collapsible primitives (`Collapsible`/`CollapsibleTrigger`/`CollapsibleContent`).
@@ -962,5 +1144,70 @@ mod tests {
         let _ = crate::collapsible::primitives::CollapsibleContent::new(Vec::<
             fret_ui::element::AnyElement,
         >::new());
+    }
+
+    fn contains_text(root: &AnyElement, expected: &str) -> bool {
+        match &root.kind {
+            ElementKind::Text(props) if props.text.as_ref() == expected => true,
+            _ => root
+                .children
+                .iter()
+                .any(|child| contains_text(child, expected)),
+        }
+    }
+
+    #[test]
+    fn collapsible_helper_accepts_typed_trigger_and_content() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let open = app.models_mut().insert(true);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(240.0), Px(160.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            collapsible(
+                open.clone(),
+                |_cx, is_open| {
+                    let label = if is_open { "Open" } else { "Closed" };
+                    fret_ui_kit::ui::text(label)
+                },
+                |_cx| fret_ui_kit::ui::text("Body"),
+            )
+            .into_element(cx)
+        });
+
+        assert!(contains_text(&element, "Open"));
+        assert!(contains_text(&element, "Body"));
+    }
+
+    #[test]
+    fn collapsible_uncontrolled_helper_accepts_typed_trigger_and_content() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(240.0), Px(160.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            collapsible_uncontrolled(
+                true,
+                |_cx, _open, is_open| {
+                    let label = if is_open {
+                        "Uncontrolled Open"
+                    } else {
+                        "Uncontrolled Closed"
+                    };
+                    fret_ui_kit::ui::text(label)
+                },
+                |_cx| fret_ui_kit::ui::text("Body"),
+            )
+            .into_element(cx)
+        });
+
+        assert!(contains_text(&element, "Uncontrolled Open"));
+        assert!(contains_text(&element, "Body"));
     }
 }

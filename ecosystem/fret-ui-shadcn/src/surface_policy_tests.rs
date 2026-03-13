@@ -4,6 +4,7 @@ const ADVANCED_RS: &str = include_str!("advanced.rs");
 const README: &str = include_str!("../README.md");
 const ALERT_RS: &str = include_str!("alert.rs");
 const BADGE_RS: &str = include_str!("badge.rs");
+const COLLAPSIBLE_RS: &str = include_str!("collapsible.rs");
 const CARD_RS: &str = include_str!("card.rs");
 const EMPTY_RS: &str = include_str!("empty.rs");
 const FIELD_RS: &str = include_str!("field.rs");
@@ -383,6 +384,34 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
                 "{label} reintroduced a pre-landed AnyElement constructor or wrapper"
             );
         }
+    }
+}
+
+#[test]
+fn collapsible_helpers_prefer_typed_build_outputs_when_no_raw_slot_storage_is_required() {
+    let normalized = normalize_ws(COLLAPSIBLE_RS);
+    let required_markers = [
+        "pub fn collapsible<H: UiHost, Trigger, Content, TriggerEl, ContentEl>( open: Model<bool>, trigger: Trigger, content: Content, ) -> CollapsibleBuild<H, Trigger, Content>",
+        "pub fn collapsible_uncontrolled<H: UiHost, Trigger, Content, TriggerEl, ContentEl>( default_open: bool, trigger: Trigger, content: Content, ) -> CollapsibleUncontrolledBuild<H, Trigger, Content>",
+    ];
+    let forbidden_markers = [
+        "pub fn collapsible<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Model<bool>, trigger: impl FnOnce(&mut ElementContext<'_, H>, bool) -> AnyElement, content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement, ) -> AnyElement",
+        "pub fn collapsible_uncontrolled<H: UiHost>( cx: &mut ElementContext<'_, H>, default_open: bool, trigger: impl FnOnce(&mut ElementContext<'_, H>, Model<bool>, bool) -> AnyElement, content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement, ) -> AnyElement",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "collapsible.rs should expose typed helper outputs for the default authoring surface"
+        );
+    }
+    for marker in forbidden_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            !normalized.contains(&marker),
+            "collapsible.rs reintroduced pre-landed AnyElement helper signatures on the public surface"
+        );
     }
 }
 
