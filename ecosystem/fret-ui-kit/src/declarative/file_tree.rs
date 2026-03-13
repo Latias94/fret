@@ -120,6 +120,7 @@ fn rebuild_entries(
     (entries, index_by_id)
 }
 
+#[track_caller]
 pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     items: Model<Vec<TreeItem>>,
@@ -144,7 +145,7 @@ pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
         )
     };
 
-    let entries: Arc<Vec<TreeEntry>> = cx.with_state(FileTreeRowsState::default, |rows_state| {
+    let entries: Arc<Vec<TreeEntry>> = cx.slot_state(FileTreeRowsState::default, |rows_state| {
         if rows_state.last_items_revision != Some(items_revision)
             || rows_state.last_state_revision != Some(state_revision)
         {

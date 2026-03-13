@@ -158,12 +158,13 @@ fn drive_transition_with_durations_and_easing_impl<H: UiHost>(
 ) -> TransitionOutput {
     let (open_ticks, close_ticks) =
         effective_transition_durations_for_cx(cx, open_ticks, close_ticks);
+    let driver_state_slot = cx.slot_id();
 
     let reduced_motion = super::prefers_reduced_motion(cx, Invalidation::Paint, false);
     if reduced_motion || (open_ticks == 0 && close_ticks == 0) {
         let app_tick = cx.app.tick_id().0;
         let frame_tick = cx.frame_id.0;
-        cx.with_state(TransitionDriverState::default, |st| {
+        cx.state_for(driver_state_slot, TransitionDriverState::default, |st| {
             st.initialized = true;
             st.last_app_tick = app_tick;
             st.last_frame_tick = frame_tick;
@@ -179,72 +180,73 @@ fn drive_transition_with_durations_and_easing_impl<H: UiHost>(
     let app_tick = cx.app.tick_id().0;
     let frame_tick = cx.frame_id.0;
 
-    let (output, start_lease, stop_lease) = cx.with_state(TransitionDriverState::default, |st| {
-        if st.configured_open_ticks != open_ticks || st.configured_close_ticks != close_ticks {
-            st.configured_open_ticks = open_ticks;
-            st.configured_close_ticks = close_ticks;
-            st.timeline.set_durations(open_ticks, close_ticks);
-        }
-
-        let mut advance_tick = false;
-
-        if !st.initialized {
-            st.initialized = true;
-            st.last_app_tick = app_tick;
-            st.last_frame_tick = frame_tick;
-            advance_tick = true;
-
-            if !animate_on_mount {
-                if open {
-                    for _ in 0..=open_ticks.max(1) {
-                        st.tick = st.tick.saturating_add(1);
-                        let seeded = st.timeline.update_with_easing(true, st.tick, ease);
-                        if !seeded.animating {
-                            break;
-                        }
-                    }
-                } else {
-                    let _ = st.timeline.update_with_easing(false, st.tick, ease);
-                }
-
-                let settled = TransitionOutput {
-                    present: open,
-                    linear: if open { 1.0 } else { 0.0 },
-                    progress: if open { 1.0 } else { 0.0 },
-                    animating: false,
-                };
-                return (settled, false, false);
+    let (output, start_lease, stop_lease) =
+        cx.state_for(driver_state_slot, TransitionDriverState::default, |st| {
+            if st.configured_open_ticks != open_ticks || st.configured_close_ticks != close_ticks {
+                st.configured_open_ticks = open_ticks;
+                st.configured_close_ticks = close_ticks;
+                st.timeline.set_durations(open_ticks, close_ticks);
             }
-        }
 
-        // Drive transitions from time progression (frame/app ticks), not call count. This avoids
-        // accidental speed-ups when the same transition is evaluated multiple times within a
-        // single render pass.
-        if st.last_frame_tick != frame_tick {
-            st.last_frame_tick = frame_tick;
-            advance_tick = true;
-        } else if st.last_app_tick != app_tick {
-            st.last_app_tick = app_tick;
-            advance_tick = true;
-        }
+            let mut advance_tick = false;
 
-        if advance_tick {
-            st.tick = st.tick.saturating_add(1);
-        }
+            if !st.initialized {
+                st.initialized = true;
+                st.last_app_tick = app_tick;
+                st.last_frame_tick = frame_tick;
+                advance_tick = true;
 
-        let output = st.timeline.update_with_easing(open, st.tick, ease);
-        let start_lease = output.animating && st.lease.is_none();
-        let stop_lease = !output.animating && st.lease.is_some();
-        (output, start_lease, stop_lease)
-    });
+                if !animate_on_mount {
+                    if open {
+                        for _ in 0..=open_ticks.max(1) {
+                            st.tick = st.tick.saturating_add(1);
+                            let seeded = st.timeline.update_with_easing(true, st.tick, ease);
+                            if !seeded.animating {
+                                break;
+                            }
+                        }
+                    } else {
+                        let _ = st.timeline.update_with_easing(false, st.tick, ease);
+                    }
+
+                    let settled = TransitionOutput {
+                        present: open,
+                        linear: if open { 1.0 } else { 0.0 },
+                        progress: if open { 1.0 } else { 0.0 },
+                        animating: false,
+                    };
+                    return (settled, false, false);
+                }
+            }
+
+            // Drive transitions from time progression (frame/app ticks), not call count. This avoids
+            // accidental speed-ups when the same transition is evaluated multiple times within a
+            // single render pass.
+            if st.last_frame_tick != frame_tick {
+                st.last_frame_tick = frame_tick;
+                advance_tick = true;
+            } else if st.last_app_tick != app_tick {
+                st.last_app_tick = app_tick;
+                advance_tick = true;
+            }
+
+            if advance_tick {
+                st.tick = st.tick.saturating_add(1);
+            }
+
+            let output = st.timeline.update_with_easing(open, st.tick, ease);
+            let start_lease = output.animating && st.lease.is_none();
+            let stop_lease = !output.animating && st.lease.is_some();
+            (output, start_lease, stop_lease)
+        });
 
     if start_lease {
         let lease = cx.begin_continuous_frames();
-        cx.with_state(TransitionDriverState::default, |st| {
+        cx.state_for(driver_state_slot, TransitionDriverState::default, |st| {
             st.lease = Some(lease);
         });
     } else if stop_lease {
-        cx.with_state(TransitionDriverState::default, |st| {
+        cx.state_for(driver_state_slot, TransitionDriverState::default, |st| {
             st.lease = None;
         });
     }
@@ -374,12 +376,13 @@ pub fn drive_transition_with_durations_and_cubic_bezier<H: UiHost>(
         |cx| {
             let (open_ticks, close_ticks) =
                 effective_transition_durations_for_cx(cx, open_ticks, close_ticks);
+            let driver_state_slot = cx.slot_id();
 
             let reduced_motion = super::prefers_reduced_motion(cx, Invalidation::Paint, false);
             if reduced_motion || (open_ticks == 0 && close_ticks == 0) {
                 let app_tick = cx.app.tick_id().0;
                 let frame_tick = cx.frame_id.0;
-                cx.with_state(TransitionDriverState::default, |st| {
+                cx.state_for(driver_state_slot, TransitionDriverState::default, |st| {
                     st.initialized = true;
                     st.last_app_tick = app_tick;
                     st.last_frame_tick = frame_tick;
@@ -396,7 +399,7 @@ pub fn drive_transition_with_durations_and_cubic_bezier<H: UiHost>(
             let frame_tick = cx.frame_id.0;
 
             let (output, start_lease, stop_lease) =
-                cx.with_state(TransitionDriverState::default, |st| {
+                cx.state_for(driver_state_slot, TransitionDriverState::default, |st| {
                     let mut advance_tick = false;
                     if st.configured_open_ticks != open_ticks
                         || st.configured_close_ticks != close_ticks
@@ -436,11 +439,11 @@ pub fn drive_transition_with_durations_and_cubic_bezier<H: UiHost>(
 
             if start_lease {
                 let lease = cx.begin_continuous_frames();
-                cx.with_state(TransitionDriverState::default, |st| {
+                cx.state_for(driver_state_slot, TransitionDriverState::default, |st| {
                     st.lease = Some(lease);
                 });
             } else if stop_lease {
-                cx.with_state(TransitionDriverState::default, |st| {
+                cx.state_for(driver_state_slot, TransitionDriverState::default, |st| {
                     st.lease = None;
                 });
             }
@@ -489,12 +492,13 @@ pub fn drive_transition_with_durations_and_cubic_bezier_with_mount_behavior<H: U
         |cx| {
             let (open_ticks, close_ticks) =
                 effective_transition_durations_for_cx(cx, open_ticks, close_ticks);
+            let driver_state_slot = cx.slot_id();
 
             let reduced_motion = super::prefers_reduced_motion(cx, Invalidation::Paint, false);
             if reduced_motion || (open_ticks == 0 && close_ticks == 0) {
                 let app_tick = cx.app.tick_id().0;
                 let frame_tick = cx.frame_id.0;
-                cx.with_state(TransitionDriverState::default, |st| {
+                cx.state_for(driver_state_slot, TransitionDriverState::default, |st| {
                     st.initialized = true;
                     st.last_app_tick = app_tick;
                     st.last_frame_tick = frame_tick;
@@ -511,7 +515,7 @@ pub fn drive_transition_with_durations_and_cubic_bezier_with_mount_behavior<H: U
             let frame_tick = cx.frame_id.0;
 
             let (output, start_lease, stop_lease) =
-                cx.with_state(TransitionDriverState::default, |st| {
+                cx.state_for(driver_state_slot, TransitionDriverState::default, |st| {
                     let mut advance_tick = false;
                     if st.configured_open_ticks != open_ticks
                         || st.configured_close_ticks != close_ticks
@@ -577,11 +581,11 @@ pub fn drive_transition_with_durations_and_cubic_bezier_with_mount_behavior<H: U
 
             if start_lease {
                 let lease = cx.begin_continuous_frames();
-                cx.with_state(TransitionDriverState::default, |st| {
+                cx.state_for(driver_state_slot, TransitionDriverState::default, |st| {
                     st.lease = Some(lease);
                 });
             } else if stop_lease {
-                cx.with_state(TransitionDriverState::default, |st| {
+                cx.state_for(driver_state_slot, TransitionDriverState::default, |st| {
                     st.lease = None;
                 });
             }

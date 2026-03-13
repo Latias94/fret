@@ -222,12 +222,14 @@ pub fn measured_height_motion_for_root<H: UiHost>(
     ease: fn(f32) -> f32,
 ) -> MeasuredHeightMotionOutput {
     let state_id = cx.root_id();
+    let hold_state_slot = cx.slot_id();
     let last_height = last_measured_height_for(cx, state_id);
     let has_measurement = last_height.0 > 0.0;
     let wants_measurement = open && !has_measurement;
     let open_for_motion = open && has_measurement;
 
-    let (opening_hold_pending, closing_hold_pending) = cx.with_state(
+    let (opening_hold_pending, closing_hold_pending) = cx.state_for(
+        hold_state_slot,
         MeasuredHeightEndpointHoldState::default,
         |st: &mut MeasuredHeightEndpointHoldState| {
             let prev_open = st.last_open_requested;
@@ -285,7 +287,8 @@ pub fn measured_height_motion_for_root<H: UiHost>(
     // noticeable as a last-moment "snap" when content disappears. Hold a single zero-height frame
     // at the start of opening and the end of closing to better match CSS keyframe endpoints.
     if open && opening_hold_pending && has_measurement && transition.animating {
-        cx.with_state(
+        cx.state_for(
+            hold_state_slot,
             MeasuredHeightEndpointHoldState::default,
             |st: &mut MeasuredHeightEndpointHoldState| st.opening_hold_pending = false,
         );
@@ -303,7 +306,8 @@ pub fn measured_height_motion_for_root<H: UiHost>(
     }
 
     if !open && closing_hold_pending && !transition.present {
-        cx.with_state(
+        cx.state_for(
+            hold_state_slot,
             MeasuredHeightEndpointHoldState::default,
             |st: &mut MeasuredHeightEndpointHoldState| st.closing_hold_pending = false,
         );
@@ -344,12 +348,14 @@ pub fn measured_height_motion_for_root_with_cubic_bezier<H: UiHost>(
     bezier: CubicBezier,
 ) -> MeasuredHeightMotionOutput {
     let state_id = cx.root_id();
+    let hold_state_slot = cx.slot_id();
     let last_height = last_measured_height_for(cx, state_id);
     let has_measurement = last_height.0 > 0.0;
     let wants_measurement = open && !has_measurement;
     let open_for_motion = open && has_measurement;
 
-    let (opening_hold_pending, closing_hold_pending) = cx.with_state(
+    let (opening_hold_pending, closing_hold_pending) = cx.state_for(
+        hold_state_slot,
         MeasuredHeightEndpointHoldState::default,
         |st: &mut MeasuredHeightEndpointHoldState| {
             let prev_open = st.last_open_requested;
@@ -404,7 +410,8 @@ pub fn measured_height_motion_for_root_with_cubic_bezier<H: UiHost>(
     );
 
     if open && opening_hold_pending && has_measurement && transition.animating {
-        cx.with_state(
+        cx.state_for(
+            hold_state_slot,
             MeasuredHeightEndpointHoldState::default,
             |st: &mut MeasuredHeightEndpointHoldState| st.opening_hold_pending = false,
         );
@@ -422,7 +429,8 @@ pub fn measured_height_motion_for_root_with_cubic_bezier<H: UiHost>(
     }
 
     if !open && closing_hold_pending && !transition.present {
-        cx.with_state(
+        cx.state_for(
+            hold_state_slot,
             MeasuredHeightEndpointHoldState::default,
             |st: &mut MeasuredHeightEndpointHoldState| st.closing_hold_pending = false,
         );

@@ -73,6 +73,9 @@ Guidelines:
 - Keep only small synchronization scratch in helper slots: previous-open edges, last-synced state
   revisions, and other non-observable runtime metadata should live in `slot_state(...)` or an
   explicit `state_for(keyed_slot_id(...), ...)` slot.
+- When an ecosystem helper exposes `slot_state(...)`, `slot_id(...)`, or `local_model(...)`
+  internally, prefer `#[track_caller]` on the public helper entrypoint so slot identity follows the
+  app callsite rather than collapsing onto the helper implementation line.
 - Reserve `with_state + App::models_mut().insert(...)` for low-level migration/compat work, not as
   the teaching surface for new code.
 - First-party teaching surfaces should follow the same rule: `ecosystem/fret-ui-shadcn` examples,

@@ -223,7 +223,7 @@ pub fn tooltip_trigger_update_gates<H: UiHost>(
         .copied()
         .unwrap_or(false);
 
-    let left_hover = cx.with_state(TooltipTriggerHoverEdgeState::default, |st| {
+    let left_hover = cx.slot_state(TooltipTriggerHoverEdgeState::default, |st| {
         let left = st.was_hovered && !hovered;
         st.was_hovered = hovered;
         left
@@ -655,34 +655,45 @@ pub fn tooltip_update_interaction<H: UiHost>(
     cfg: TooltipInteractionConfig,
 ) -> TooltipInteractionUpdate {
     let tooltip_id = cx.root_id();
+    let open_broadcast_slot = cx.slot_id();
+    let hover_intent_slot = cx.slot_id();
+    let focus_edge_slot = cx.slot_id();
     let (last_id, token) = last_opened_tooltip(cx).unwrap_or((tooltip_id, 0));
-    let should_close_because_other_opened =
-        cx.with_state(TooltipOpenBroadcastState::default, |st| {
+    let should_close_because_other_opened = cx.state_for(
+        open_broadcast_slot,
+        TooltipOpenBroadcastState::default,
+        |st| {
             let should_close = token > st.last_seen_open_token && last_id != tooltip_id;
             st.last_seen_open_token = token;
             should_close
-        });
+        },
+    );
     if should_close_because_other_opened {
-        cx.with_state(HoverIntentState::default, |st| st.set_open(false));
+        cx.state_for(hover_intent_slot, HoverIntentState::default, |st| {
+            st.set_open(false)
+        });
     }
 
     let now = cx.app.frame_id().0;
 
-    let was_open = cx.with_state(HoverIntentState::default, |st| st.is_open());
-
-    let (close_delay_ticks, blurred) = cx.with_state(TooltipFocusEdgeState::default, |st| {
-        let was = st.was_focused;
-        st.was_focused = trigger_focused;
-        let blurred = was && !trigger_focused;
-
-        let close_delay_ticks = if blurred || trigger_focused {
-            0
-        } else {
-            cfg.close_delay_ticks_override.unwrap_or(0)
-        };
-
-        (close_delay_ticks, blurred)
+    let was_open = cx.state_for(hover_intent_slot, HoverIntentState::default, |st| {
+        st.is_open()
     });
+
+    let (close_delay_ticks, blurred) =
+        cx.state_for(focus_edge_slot, TooltipFocusEdgeState::default, |st| {
+            let was = st.was_focused;
+            st.was_focused = trigger_focused;
+            let blurred = was && !trigger_focused;
+
+            let close_delay_ticks = if blurred || trigger_focused {
+                0
+            } else {
+                cfg.close_delay_ticks_override.unwrap_or(0)
+            };
+
+            (close_delay_ticks, blurred)
+        });
 
     let open_delay_ticks = if trigger_focused {
         0
@@ -695,7 +706,9 @@ pub fn tooltip_update_interaction<H: UiHost>(
     let intent_cfg = HoverIntentConfig::new(open_delay_ticks, close_delay_ticks);
 
     if force_close {
-        cx.with_state(HoverIntentState::default, |st| st.set_open(false));
+        cx.state_for(hover_intent_slot, HoverIntentState::default, |st| {
+            st.set_open(false)
+        });
         if was_open {
             note_closed(cx, now);
         }
@@ -728,7 +741,7 @@ pub fn tooltip_update_interaction<H: UiHost>(
     let HoverIntentUpdate {
         open,
         wants_continuous_ticks,
-    } = cx.with_state(HoverIntentState::default, |st| {
+    } = cx.state_for(hover_intent_slot, HoverIntentState::default, |st| {
         st.update(
             trigger_hovered || trigger_focused || pointer_safe,
             now,
@@ -738,9 +751,13 @@ pub fn tooltip_update_interaction<H: UiHost>(
 
     if !was_open && open {
         let token = note_opened_tooltip(cx, tooltip_id);
-        cx.with_state(TooltipOpenBroadcastState::default, |st| {
-            st.last_seen_open_token = token;
-        });
+        cx.state_for(
+            open_broadcast_slot,
+            TooltipOpenBroadcastState::default,
+            |st| {
+                st.last_seen_open_token = token;
+            },
+        );
     }
 
     if was_open && !open {

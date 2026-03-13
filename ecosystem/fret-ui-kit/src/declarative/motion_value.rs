@@ -155,7 +155,7 @@ pub fn drive_motion_value_f32<H: UiHost>(
             let frame_id = cx.frame_id.0;
             let dt = effective_frame_delta_for_cx(cx);
 
-            let out = cx.with_state(MotionValueF32State::default, |st| {
+            let out = cx.slot_state(MotionValueF32State::default, |st| {
                 if !st.initialized {
                     st.initialized = true;
                     st.last_frame_id = frame_id;

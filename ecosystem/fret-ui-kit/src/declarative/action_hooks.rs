@@ -117,20 +117,24 @@ pub trait ActionHooksExt {
 
     fn dismissible_close_bool_weak(&mut self, open: &WeakModel<bool>);
 
+    #[track_caller]
     fn roving_select_option_arc_str(
         &mut self,
         model: &Model<Option<Arc<str>>>,
         values: Arc<[Arc<str>]>,
     );
 
+    #[track_caller]
     fn roving_select_option_arc_str_weak(
         &mut self,
         model: &WeakModel<Option<Arc<str>>>,
         values: Arc<[Arc<str>]>,
     );
 
+    #[track_caller]
     fn roving_typeahead_first_char_arc_str(&mut self, labels: Arc<[Arc<str>]>);
 
+    #[track_caller]
     fn roving_typeahead_prefix_arc_str(&mut self, labels: Arc<[Arc<str>]>, timeout_ticks: u64);
 
     /// Install an APG-aligned default keyboard navigation policy for `RovingFlex`.
@@ -361,6 +365,7 @@ impl<H: UiHost> ActionHooksExt for ElementContext<'_, H> {
         }));
     }
 
+    #[track_caller]
     fn roving_select_option_arc_str(
         &mut self,
         model: &Model<Option<Arc<str>>>,
@@ -372,7 +377,7 @@ impl<H: UiHost> ActionHooksExt for ElementContext<'_, H> {
             handler: fret_ui::action::OnRovingActiveChange,
         }
 
-        let handler = self.with_state(
+        let handler = self.slot_state(
             || {
                 let values_cell: Rc<RefCell<Arc<[Arc<str>]>>> =
                     Rc::new(RefCell::new(values.clone()));
@@ -402,6 +407,7 @@ impl<H: UiHost> ActionHooksExt for ElementContext<'_, H> {
         self.roving_add_on_active_change(handler);
     }
 
+    #[track_caller]
     fn roving_select_option_arc_str_weak(
         &mut self,
         model: &WeakModel<Option<Arc<str>>>,
@@ -413,7 +419,7 @@ impl<H: UiHost> ActionHooksExt for ElementContext<'_, H> {
             handler: fret_ui::action::OnRovingActiveChange,
         }
 
-        let handler = self.with_state(
+        let handler = self.slot_state(
             || {
                 let values_cell: Rc<RefCell<Arc<[Arc<str>]>>> =
                     Rc::new(RefCell::new(values.clone()));
@@ -443,10 +449,12 @@ impl<H: UiHost> ActionHooksExt for ElementContext<'_, H> {
         self.roving_add_on_active_change(handler);
     }
 
+    #[track_caller]
     fn roving_typeahead_first_char_arc_str(&mut self, labels: Arc<[Arc<str>]>) {
         roving_focus_group::typeahead_first_char_arc_str(self, labels);
     }
 
+    #[track_caller]
     fn roving_typeahead_prefix_arc_str(&mut self, labels: Arc<[Arc<str>]>, timeout_ticks: u64) {
         roving_focus_group::typeahead_prefix_arc_str(self, labels, timeout_ticks);
     }

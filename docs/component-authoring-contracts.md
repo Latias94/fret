@@ -175,9 +175,10 @@ Public constructors/setters that accept children should use:
 Practical note (ecosystem ergonomics):
 
 - If an ecosystem-level helper or component entrypoint calls `cx.scope(...)` / `cx.keyed(...)` /
-  `cx.named(...)` internally, prefer marking that helper/entrypoint `#[track_caller]` so element
-  identity is anchored at the **application callsite** rather than the helper’s source line. This
-  reduces “state sticks to the wrong sibling after insertion” bugs in toolbars and forms.
+  `cx.named(...)` / `cx.slot_state(...)` / `cx.slot_id(...)` / `cx.local_model(...)` internally,
+  prefer marking that helper/entrypoint `#[track_caller]` so identity is anchored at the
+  **application callsite** rather than the helper’s source line. This reduces “state sticks to the
+  wrong sibling after insertion” bugs in toolbars, forms, and repeated helper invocations.
 
 Practical guidance:
 
@@ -197,6 +198,12 @@ Practical guidance:
   `VirtualListScrollHandle`, row-order caches, grouped-display caches, typeahead buffers, and
   similar non-provider internals should live in `slot_state(...)` unless they need an explicit,
   externally chosen identity.
+- If one helper must read/update the same helper-local slot multiple times in one render pass
+  (for example transition leases or tooltip hover/broadcast runtime), allocate the slot once via
+  `slot_id()` and then use `state_for(slot, ...)` for every access in that helper.
+- When a public helper/component entrypoint allocates helper-local slots or models, prefer
+  `#[track_caller]` on that entrypoint so repeated use from the same parent render gets
+  caller-local state instead of collapsing onto the helper's source line.
 - Avoid capturing element IDs in long-lived app state unless you also control their lifetime and
   re-derivation strategy (IDs are stable but not global identifiers).
 

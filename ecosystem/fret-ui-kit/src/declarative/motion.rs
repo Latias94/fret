@@ -269,7 +269,7 @@ pub fn drive_tween_f32<H: UiHost>(
             let frame_id = cx.frame_id.0;
             let dt = effective_frame_delta_for_cx(cx);
 
-            let out = cx.with_state(TweenF32State::default, |st| {
+            let out = cx.slot_state(TweenF32State::default, |st| {
                 if !st.initialized {
                     st.initialized = true;
                     st.last_frame_id = frame_id;
@@ -446,7 +446,7 @@ pub fn drive_tween_color<H: UiHost>(
             let frame_id = cx.frame_id.0;
             let dt = effective_frame_delta_for_cx(cx);
 
-            let out = cx.with_state(TweenColorState::default, |st| {
+            let out = cx.slot_state(TweenColorState::default, |st| {
                 if !st.initialized {
                     st.initialized = true;
                     st.last_frame_id = frame_id;
@@ -614,7 +614,7 @@ pub fn drive_tween_f32_unclamped<H: UiHost>(
             let frame_id = cx.frame_id.0;
             let dt = effective_frame_delta_for_cx(cx);
 
-            let out = cx.with_state(TweenF32State::default, |st| {
+            let out = cx.slot_state(TweenF32State::default, |st| {
                 if !st.initialized {
                     st.initialized = true;
                     st.last_frame_id = frame_id;
@@ -752,7 +752,7 @@ pub fn drive_loop_progress_keyed<H: UiHost, K: Hash>(
         let frame_id = cx.frame_id.0;
         let dt = effective_frame_delta_for_cx(cx);
 
-        let out = cx.with_state(LoopProgressState::default, |st| {
+        let out = cx.slot_state(LoopProgressState::default, |st| {
             if !st.initialized {
                 st.initialized = true;
                 st.last_frame_id = frame_id;
@@ -854,11 +854,12 @@ pub fn drive_inertia_f32<H: UiHost>(
     bounce_spring: SpringDescription,
     tolerance: Tolerance,
 ) -> DrivenMotionF32 {
+    let inertia_state_slot = cx.keyed_slot_id("drive_inertia_f32");
     let reduced_motion = super::prefers_reduced_motion(cx, Invalidation::Paint, false);
     if reduced_motion {
         set_continuous_frames(cx, false);
         return DrivenMotionF32 {
-            value: cx.with_state(InertiaF32State::default, |st| st.value),
+            value: cx.state_for(inertia_state_slot, InertiaF32State::default, |st| st.value),
             velocity: 0.0,
             animating: false,
         };
@@ -871,7 +872,7 @@ pub fn drive_inertia_f32<H: UiHost>(
             let frame_id = cx.frame_id.0;
             let dt = effective_frame_delta_for_cx(cx);
 
-            let out = cx.with_state(InertiaF32State::default, |st| {
+            let out = cx.state_for(inertia_state_slot, InertiaF32State::default, |st| {
                 if !st.initialized {
                     st.initialized = true;
                     st.last_frame_id = frame_id;
@@ -1021,7 +1022,7 @@ pub fn drive_spring_f32<H: UiHost>(
             let frame_id = cx.frame_id.0;
             let dt = effective_frame_delta_for_cx(cx);
 
-            let out = cx.with_state(SpringF32State::default, |st| {
+            let out = cx.slot_state(SpringF32State::default, |st| {
                 if !st.initialized {
                     st.initialized = true;
                     st.last_frame_id = frame_id;

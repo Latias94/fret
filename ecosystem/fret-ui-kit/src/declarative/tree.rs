@@ -106,6 +106,7 @@ fn rebuild_entries(
 /// This is intentionally minimal:
 /// - selection/expand policies live in the parent `TreeView` widget,
 /// - this function only renders rows and dispatches `tree.select.<id>` / `tree.toggle.<id>` commands.
+#[track_caller]
 pub fn tree_view<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     items: Model<Vec<crate::TreeItem>>,
@@ -125,6 +126,7 @@ pub fn tree_view<H: UiHost>(
 /// - This defaults to fixed row height for predictable perf. If you need variable-height rows,
 ///   use [`tree_view_retained_with_measure_mode`] with `VirtualListMeasureMode::Measured`.
 /// - `debug_row_test_id_prefix` is intended for scripted UI Gallery harnesses.
+#[track_caller]
 pub fn tree_view_retained<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     items: Model<Vec<crate::TreeItem>>,
@@ -143,6 +145,7 @@ pub fn tree_view_retained<H: UiHost + 'static>(
 }
 
 /// A variant of [`tree_view_retained`] that allows opting into measured (variable-height) rows.
+#[track_caller]
 pub fn tree_view_retained_with_measure_mode<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     items: Model<Vec<crate::TreeItem>>,
@@ -161,6 +164,7 @@ pub fn tree_view_retained_with_measure_mode<H: UiHost + 'static>(
     )
 }
 
+#[track_caller]
 pub fn tree_view_with_renderer<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     items: Model<Vec<crate::TreeItem>>,
@@ -184,7 +188,7 @@ pub fn tree_view_with_renderer<H: UiHost>(
     let row_py = resolve_row_padding_y(theme);
     let indent = resolve_indent(theme);
 
-    let (entries, index_by_id, scroll) = cx.with_state(TreeRowsState::default, |rows_state| {
+    let (entries, index_by_id, scroll) = cx.slot_state(TreeRowsState::default, |rows_state| {
         if rows_state.last_items_revision != Some(items_revision)
             || rows_state.last_state_revision != Some(state_revision)
         {
@@ -367,6 +371,7 @@ pub fn tree_view_with_renderer<H: UiHost>(
     )
 }
 
+#[track_caller]
 fn tree_view_retained_impl<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     items: Model<Vec<crate::TreeItem>>,
@@ -391,7 +396,7 @@ fn tree_view_retained_impl<H: UiHost + 'static>(
     let row_py = resolve_row_padding_y(theme);
     let indent = resolve_indent(theme);
 
-    let (entries, index_by_id, scroll) = cx.with_state(TreeRowsState::default, |rows_state| {
+    let (entries, index_by_id, scroll) = cx.slot_state(TreeRowsState::default, |rows_state| {
         if rows_state.last_items_revision != Some(items_revision)
             || rows_state.last_state_revision != Some(state_revision)
         {
