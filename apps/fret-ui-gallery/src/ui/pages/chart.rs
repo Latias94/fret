@@ -12,17 +12,16 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let legend_content = snippets::legend::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let notes_stack = doc_layout::notes(
-        cx,
-        [
-            "API reference: `ecosystem/fret-ui-shadcn/src/chart.rs`.",
-            "Chart already exposes the important authoring surface (`ChartConfig`, `ChartContainer`, `ChartTooltip`, `ChartTooltipContent`, `ChartLegend`, `ChartLegendContent`), so the main parity gap here was usage clarity rather than missing mechanism work in the shadcn-facing layer.",
-            "Demo cards are rendered with `delinea` + `fret-chart` (not Recharts); this is a stand-in to keep chart layout real in native builds.",
-            "The shadcn `ChartTooltipContent` / `ChartLegendContent` recipes are validated independently (no runtime wire-up yet).",
-            "Keep color mapping stable through `chart-*` tokens to avoid dark-theme drift.",
-            "`fret-chart::ChartCanvas` exposes an accessibility layer via keyboard focus + arrow navigation, mirroring Recharts `accessibilityLayer` outcomes at a high level.",
-        ],
-    );
+    let notes_stack = doc_layout::notes_block([
+        "API reference: `ecosystem/fret-ui-shadcn/src/chart.rs`.",
+        "Chart already exposes the important authoring surface (`ChartConfig`, `ChartContainer`, `ChartTooltip`, `ChartTooltipContent`, `ChartLegend`, `ChartLegendContent`), so the main parity gap here was usage clarity rather than missing mechanism work in the shadcn-facing layer.",
+        "Demo cards are rendered with `delinea` + `fret-chart` (not Recharts); this is a stand-in to keep chart layout real in native builds.",
+        "The shadcn `ChartTooltipContent` / `ChartLegendContent` recipes are validated independently (no runtime wire-up yet).",
+        "Keep color mapping stable through `chart-*` tokens to avoid dark-theme drift.",
+        "`fret-chart::ChartCanvas` exposes an accessibility layer via keyboard focus + arrow navigation, mirroring Recharts `accessibilityLayer` outcomes at a high level.",
+    ]);
+    let notes_stack =
+        DocSection::build(cx, "Notes", notes_stack).description("API surface and parity notes.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -49,7 +48,7 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             DocSection::new("RTL", rtl)
                 .test_id_prefix("ui-gallery-chart-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes_stack).description("API surface and parity notes."),
+            notes_stack,
         ],
     );
 

@@ -14,17 +14,19 @@ pub(super) fn preview_data_table(
     let rtl_demo = snippets::rtl_demo::render(cx);
     let code_preview = snippets::code_outline::render(cx);
 
-    let api_reference = doc_layout::notes(
-        cx,
-        [
-            "Data Table in shadcn is a guide recipe (TanStack Table + table primitives), not a single fixed widget; treat this page as a living parity surface.",
-            "Default recipe here means: explicit TableState + TableViewOutput + one toolbar + one footer, without pretending business-table state can be hidden.",
-            "Everything below Default Recipe should be read as advanced reference material, not as the baseline authoring path.",
-            "Prefer small, explicit recipe surfaces (toolbar/pagination/column header) that can be reused by apps and gated by diag scripts.",
-            "Ownership: recipe owns chrome/row heights/selection/pagination/column-action menus; callers own data shape, filtering rules, and page width/height negotiation.",
-            "`DataGrid` remains the canvas-first option for dense editor surfaces; use `experimental::DataGridElement` when you need richer per-cell UI than the guide-style table surface.",
-        ],
-    );
+    let api_reference = doc_layout::notes_block([
+        "Data Table in shadcn is a guide recipe (TanStack Table + table primitives), not a single fixed widget; treat this page as a living parity surface.",
+        "Default recipe here means: explicit TableState + TableViewOutput + one toolbar + one footer, without pretending business-table state can be hidden.",
+        "Everything below Default Recipe should be read as advanced reference material, not as the baseline authoring path.",
+        "Prefer small, explicit recipe surfaces (toolbar/pagination/column header) that can be reused by apps and gated by diag scripts.",
+        "Ownership: recipe owns chrome/row heights/selection/pagination/column-action menus; callers own data shape, filtering rules, and page width/height negotiation.",
+        "`DataGrid` remains the canvas-first option for dense editor surfaces; use `experimental::DataGridElement` when you need richer per-cell UI than the guide-style table surface.",
+    ]);
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .description("Extension-surface summary and ownership notes.")
+        .no_shell()
+        .max_w(Px(980.0))
+        .test_id_prefix("ui-gallery-data-table-api-reference");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -55,11 +57,7 @@ pub(super) fn preview_data_table(
                 .test_id_prefix("ui-gallery-data-table-guide-outline")
                 .description("Compact map of the reusable pieces that correspond to the upstream guide chapters.")
                 .code_rust_from_file_region(snippets::code_outline::SOURCE, "example"),
-            DocSection::new("API Reference", api_reference)
-                .description("Extension-surface summary and ownership notes.")
-                .no_shell()
-                .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-data-table-api-reference"),
+            api_reference,
         ],
     );
 

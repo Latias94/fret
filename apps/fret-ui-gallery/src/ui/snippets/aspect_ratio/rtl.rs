@@ -74,7 +74,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 pub fn render_preview<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     demo_image: Option<Model<Option<fret_core::ImageId>>>,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let asset_image = super::images::landscape_image_id(cx);
     if asset_image.is_none() && demo_image.is_none() {
         return render(cx);

@@ -14,6 +14,9 @@ pub(super) fn preview_resizable(
     let vertical = snippets::vertical::render(cx);
     let rtl = snippets::rtl::render(cx);
     let notes = snippets::notes::render(cx);
+    let notes = DocSection::build(cx, "Notes", notes)
+        .description("Parity notes and references.")
+        .test_id_prefix("ui-gallery-resizable-notes");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -39,9 +42,7 @@ pub(super) fn preview_resizable(
                 .description("Direction provider coverage for hit-testing and handle affordances.")
                 .test_id_prefix("ui-gallery-resizable-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes)
-                .description("Parity notes and references.")
-                .test_id_prefix("ui-gallery-resizable-notes"),
+            notes,
         ],
     );
 

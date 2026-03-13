@@ -21,27 +21,30 @@ pub(super) fn preview_dropdown_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
     let parts = snippets::parts::render(cx);
 
-    let api_reference = doc_layout::notes(
-        cx,
-        [
-            "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/base/dropdown-menu.mdx`.",
-            "`DropdownMenu::build_parts(...)` and `into_element_parts(...)` are the source-aligned authoring helpers for `Trigger` / `Content`; they keep typed `DropdownMenuEntry` values explicit instead of introducing a generic slot/asChild surface.",
-            "`DropdownMenuCheckboxItem::from_checked(...)` / `.on_checked_change(...)` and `DropdownMenuRadioGroup::from_value(...)` / `.on_value_change(...)` now cover the upstream snapshot + callback path without forcing per-item `Model<_>` state.",
-            "A separate generic `compose()` / nested children API is still not the next recommended step here; the parts bridge already covers `Trigger` / `Content`, and typed entries remain the more important contract.",
-        ],
-    );
+    let api_reference = doc_layout::notes_block([
+        "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/base/dropdown-menu.mdx`.",
+        "`DropdownMenu::build_parts(...)` and `into_element_parts(...)` are the source-aligned authoring helpers for `Trigger` / `Content`; they keep typed `DropdownMenuEntry` values explicit instead of introducing a generic slot/asChild surface.",
+        "`DropdownMenuCheckboxItem::from_checked(...)` / `.on_checked_change(...)` and `DropdownMenuRadioGroup::from_value(...)` / `.on_value_change(...)` now cover the upstream snapshot + callback path without forcing per-item `Model<_>` state.",
+        "A separate generic `compose()` / nested children API is still not the next recommended step here; the parts bridge already covers `Trigger` / `Content`, and typed entries remain the more important contract.",
+    ]);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "Preview follows the upstream shadcn Dropdown Menu docs (v4 Base UI) order first, then appends Fret-only follow-ups.",
-            "Mechanism parity is largely covered already: existing web-vs-fret chrome/placement gates and dropdown diag scripts cover placement, dismissal, focus restore, submenu routing, and safe-corridor behavior.",
-            "The checkable examples now demonstrate snapshot + callback authoring, so simple menus do not need one `Model<bool>` per checkbox row.",
-            "The `Parts` section is intentionally outside the upstream docs path: it documents the Fret adapter surface rather than a missing shadcn feature.",
-            "Examples are snippet-backed, so preview and code stay in sync.",
-            "Keep `ui-gallery-dropdown-menu-*` test IDs stable; multiple diag scripts depend on them.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "Preview follows the upstream shadcn Dropdown Menu docs (v4 Base UI) order first, then appends Fret-only follow-ups.",
+        "Mechanism parity is largely covered already: existing web-vs-fret chrome/placement gates and dropdown diag scripts cover placement, dismissal, focus restore, submenu routing, and safe-corridor behavior.",
+        "The checkable examples now demonstrate snapshot + callback authoring, so simple menus do not need one `Model<bool>` per checkbox row.",
+        "The `Parts` section is intentionally outside the upstream docs path: it documents the Fret adapter surface rather than a missing shadcn feature.",
+        "Examples are snippet-backed, so preview and code stay in sync.",
+        "Keep `ui-gallery-dropdown-menu-*` test IDs stable; multiple diag scripts depend on them.",
+    ]);
+
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .test_id_prefix("ui-gallery-dropdown-menu-api-reference")
+        .description(
+            "Public surface ownership, remaining authoring drift, and children API guidance.",
+        );
+    let notes =
+        DocSection::build(cx, "Notes", notes).test_id_prefix("ui-gallery-dropdown-menu-notes");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -106,15 +109,12 @@ pub(super) fn preview_dropdown_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .description("RTL layout keeps spacing, alignment, and submenu direction auditable.")
                 .test_id_prefix("ui-gallery-dropdown-menu-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("API Reference", api_reference)
-                .no_shell()
-                .test_id_prefix("ui-gallery-dropdown-menu-api-reference")
-                .description("Public surface ownership, remaining authoring drift, and children API guidance."),
+            api_reference,
             DocSection::new("Parts", parts)
                 .description("Fret-only Trigger/Content adapter surface kept outside the upstream docs path.")
                 .test_id_prefix("ui-gallery-dropdown-menu-parts")
                 .code_rust_from_file_region(snippets::parts::SOURCE, "example"),
-            DocSection::new("Notes", notes).test_id_prefix("ui-gallery-dropdown-menu-notes"),
+            notes,
         ],
     );
 

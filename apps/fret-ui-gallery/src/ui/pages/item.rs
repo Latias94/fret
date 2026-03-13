@@ -25,17 +25,17 @@ pub(super) fn preview_item(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Use `Field` when the row owns a form control such as a checkbox, input, radio, or select. Use `Item` when the row only presents media, title, description, and actions.",
     );
 
-    let api_reference = doc_layout::notes(
-        cx,
-        [
-            "`Item::new([...])` plus `ItemMedia`, `ItemContent`, `ItemTitle`, `ItemDescription`, `ItemActions`, `ItemGroup`, and `ItemHeader` matches the upstream slot model directly.",
-            "`ItemRender::Link` is the Fret equivalent of the upstream `render={<a ... />}` pattern and keeps link semantics on the pressable root rather than burying them in a nested child.",
-            "Intrinsic item chrome, slot spacing, and size presets remain recipe-owned because the upstream component source defines those defaults on the item itself.",
-            "Caller-owned layout stays explicit for `max-w-*`, grid placement, page columns, and broader list composition. The recipe should not absorb those negotiation rules.",
-            "No extra generic `asChild` / `compose()` surface is needed here: the existing slot parts and `ItemRender::Link` already cover the documented composition model.",
-            "`ItemSize::Xs` is already supported in Fret and is now shown explicitly in the gallery size example.",
-        ],
-    );
+    let api_reference = doc_layout::notes_block([
+        "`Item::new([...])` plus `ItemMedia`, `ItemContent`, `ItemTitle`, `ItemDescription`, `ItemActions`, `ItemGroup`, and `ItemHeader` matches the upstream slot model directly.",
+        "`ItemRender::Link` is the Fret equivalent of the upstream `render={<a ... />}` pattern and keeps link semantics on the pressable root rather than burying them in a nested child.",
+        "Intrinsic item chrome, slot spacing, and size presets remain recipe-owned because the upstream component source defines those defaults on the item itself.",
+        "Caller-owned layout stays explicit for `max-w-*`, grid placement, page columns, and broader list composition. The recipe should not absorb those negotiation rules.",
+        "No extra generic `asChild` / `compose()` surface is needed here: the existing slot parts and `ItemRender::Link` already cover the documented composition model.",
+        "`ItemSize::Xs` is already supported in Fret and is now shown explicitly in the gallery size example.",
+    ]);
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .description("Public surface summary and ownership notes.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -93,9 +93,7 @@ pub(super) fn preview_item(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .description("RTL smoke check for the item recipe and slot ordering.")
                 .no_shell()
                 .code_rust_from_file_region(snippets::extras_rtl::SOURCE, "example"),
-            DocSection::new("API Reference", api_reference)
-                .no_shell()
-                .description("Public surface summary and ownership notes."),
+            api_reference,
             DocSection::new("Gallery", gallery)
                 .description(
                     "Extended regression coverage snapshot: columns plus mixed compositions.",

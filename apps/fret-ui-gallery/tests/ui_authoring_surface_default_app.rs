@@ -475,9 +475,9 @@ fn selected_ai_doc_page_helpers_prefer_uichild_over_anyelement() {
     assert_selected_page_helpers_prefer_ui_child(
         "src/ui/pages/ai_persona_demo.rs",
         &[
-            "fn states_notes(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "fn states_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<>",
             "fn props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
-            "fn lifecycle_notes(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "fn lifecycle_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<>",
         ],
         &[
             "fn states_notes(cx: &mut UiCx<'_>) -> AnyElement",
@@ -560,6 +560,700 @@ fn selected_ai_doc_page_helpers_prefer_uichild_over_anyelement() {
 }
 
 #[test]
+fn selected_material3_page_helpers_prefer_uichild_over_anyelement() {
+    assert_selected_page_helpers_prefer_ui_child(
+        "src/ui/pages/material3/shared.rs",
+        &[
+            "fn material3_variant_toggle_row(cx: &mut UiCx<'_>, material3_expressive: Model<bool>,) -> impl UiChild + use<>",
+        ],
+        &[
+            "fn material3_variant_toggle_row(cx: &mut UiCx<'_>, material3_expressive: Model<bool>,) -> AnyElement",
+        ],
+    );
+}
+
+#[test]
+fn selected_material3_wrapper_helpers_prefer_into_ui_element_over_anyelement() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/material3/shared.rs",
+        &[
+            "fn render_material3_demo_page<D>(cx: &mut UiCx<'_>, intro: Option<&'static str>, demo: D, source: &'static str,) -> Vec<AnyElement> where D: IntoUiElement<fret_app::App>",
+        ],
+        &[
+            "fn render_material3_demo_page(cx: &mut UiCx<'_>, intro: Option<&'static str>, demo: AnyElement, source: &'static str,) -> Vec<AnyElement>",
+        ],
+    );
+}
+
+#[test]
+fn selected_doc_pages_prefer_docsection_build_for_typed_previews() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/aspect_ratio.rs",
+        &[
+            "let demo = snippets::demo::render_preview(cx, wide_image.clone());",
+            "let square = snippets::square::render_preview(cx, square_image);",
+            "let portrait = snippets::portrait::render_preview(cx, tall_image);",
+            "let rtl = snippets::rtl::render_preview(cx, wide_image);",
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Square\", square)",
+            "DocSection::build(cx, \"Portrait\", portrait)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+        ],
+        &[
+            "let demo = snippets::demo::render_preview(cx, wide_image.clone()).into_element(cx);",
+            "let square = snippets::square::render_preview(cx, square_image).into_element(cx);",
+            "let portrait = snippets::portrait::render_preview(cx, tall_image).into_element(cx);",
+            "let rtl = snippets::rtl::render_preview(cx, wide_image).into_element(cx);",
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Square\", square)",
+            "DocSection::new(\"Portrait\", portrait)",
+            "DocSection::new(\"RTL\", rtl)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/ai_artifact_demo.rs",
+        &[
+            "DocSection::build(cx, \"With Code Display\", snippets::artifact_code_display::render(cx))",
+            "DocSection::build(cx, \"Close Toggle\", snippets::artifact_demo::render(cx))",
+            "DocSection::build(cx, \"Notes\", render_notes(cx))",
+        ],
+        &[
+            "DocSection::new(\"With Code Display\", snippets::artifact_code_display::render(cx))",
+            "DocSection::new(\"Close Toggle\", snippets::artifact_demo::render(cx))",
+            "DocSection::new(\"Notes\", render_notes(cx).into_element(cx))",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/ai_model_selector_demo.rs",
+        &[
+            "let parts = parts_table(cx);",
+            "DocSection::build(cx, \"Parts & Props\", parts)",
+        ],
+        &[
+            "let parts = parts_table(cx);let parts = parts.into_element(cx);",
+            "DocSection::new(\"Parts & Props\", parts)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/ai_mic_selector_demo.rs",
+        &[
+            "let parts = parts_table(cx);",
+            "DocSection::build(cx, \"Parts & Props\", parts)",
+        ],
+        &[
+            "let parts = parts_table(cx);let parts = parts.into_element(cx);",
+            "DocSection::new(\"Parts & Props\", parts)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/ai_voice_selector_demo.rs",
+        &[
+            "let parts = parts_table(cx);",
+            "DocSection::build(cx, \"Parts & Props\", parts)",
+        ],
+        &[
+            "let parts = parts_table(cx);let parts = parts.into_element(cx);",
+            "DocSection::new(\"Parts & Props\", parts)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/ai_context_demo.rs",
+        &[
+            "let parts = parts_table(cx);",
+            "DocSection::build(cx, \"Parts & Props\", parts)",
+        ],
+        &[
+            "let parts = parts_table(cx);let parts = parts.into_element(cx);",
+            "DocSection::new(\"Parts & Props\", parts)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/ai_file_tree_demo.rs",
+        &[
+            "let basic = snippets::file_tree_basic::preview(cx);",
+            "let expanded = snippets::file_tree_expanded::preview(cx);",
+            "let large = snippets::file_tree_large::preview(cx);",
+            "DocSection::build(cx, \"Basic Usage\", basic)",
+            "DocSection::build(cx, \"Default Expanded\", expanded)",
+            "DocSection::build(cx, \"Large (Virtualized)\", large)",
+        ],
+        &[
+            "let basic = snippets::file_tree_basic::preview(cx).into_element(cx);",
+            "let expanded = snippets::file_tree_expanded::preview(cx).into_element(cx);",
+            "DocSection::new(\"Basic Usage\", basic)",
+            "DocSection::new(\"Default Expanded\", expanded)",
+            "DocSection::new(\"Large (Virtualized)\", large)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/ai_commit_demo.rs",
+        &[
+            "let file_status = file_status_table(cx);",
+            "let props = parts_props_table(cx);",
+            "DocSection::build(cx, \"File Status\", file_status)",
+            "DocSection::build(cx, \"Parts & Props\", props)",
+        ],
+        &[
+            "let file_status = file_status_table(cx);let file_status = file_status.into_element(cx);",
+            "let props = parts_props_table(cx);let props = props.into_element(cx);",
+            "DocSection::new(\"File Status\", file_status)",
+            "DocSection::new(\"Parts & Props\", props)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/ai_test_results_demo.rs",
+        &[
+            "let status_colors = status_colors_table(cx);",
+            "let props = parts_props_table(cx);",
+            "DocSection::build(cx, \"Status Colors\", status_colors)",
+            "DocSection::build(cx, \"Parts & Props\", props)",
+        ],
+        &[
+            "let status_colors = status_colors_table(cx);let status_colors = status_colors.into_element(cx);",
+            "let props = parts_props_table(cx);let props = props.into_element(cx);",
+            "DocSection::new(\"Status Colors\", status_colors)",
+            "DocSection::new(\"Parts & Props\", props)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/ai_persona_demo.rs",
+        &[
+            "fn states_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "fn lifecycle_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "crate::ui::doc_layout::notes_block([",
+            "let states = states_notes(cx);",
+            "let props = props_table(cx);",
+            "let lifecycle = lifecycle_notes(cx);",
+            "DocSection::build(cx, \"States\", states)",
+            "DocSection::build(cx, \"Props & Extensions\", props)",
+            "DocSection::build(cx, \"Lifecycle & Ownership\", lifecycle)",
+        ],
+        &[
+            "crate::ui::doc_layout::notes(",
+            "let states = states_notes(cx);let states = states.into_element(cx);",
+            "let props = props_table(cx);let props = props.into_element(cx);",
+            "let lifecycle = lifecycle_notes(cx);let lifecycle = lifecycle.into_element(cx);",
+            "DocSection::new(\"States\", states)",
+            "DocSection::new(\"Props & Extensions\", props)",
+            "DocSection::new(\"Lifecycle & Ownership\", lifecycle)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/ai_checkpoint_demo.rs",
+        &[
+            "let props = checkpoint_props_table(cx).test_id(\"ui-gallery-ai-checkpoint-props\");",
+            "DocSection::build(cx, \"Props\", props)",
+        ],
+        &[
+            "let props = checkpoint_props_table(cx);let props = props.into_element(cx).test_id(\"ui-gallery-ai-checkpoint-props\");",
+            "DocSection::new(\"Props\", props)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/ai_chain_of_thought_demo.rs",
+        &[
+            "let props = chain_of_thought_props_table(cx).test_id(\"ui-gallery-ai-chain-of-thought-props\");",
+            "DocSection::build(cx, \"Props\", props)",
+        ],
+        &[
+            "let props = chain_of_thought_props_table(cx);let props = props.into_element(cx).test_id(\"ui-gallery-ai-chain-of-thought-props\");",
+            "DocSection::new(\"Props\", props)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/ai_shimmer_demo.rs",
+        &[
+            "let props = shimmer_props_table(cx).test_id(\"ui-gallery-ai-shimmer-props\");",
+            "DocSection::build(cx, \"Props\", props)",
+        ],
+        &[
+            "let props = shimmer_props_table(cx);let props = props.into_element(cx).test_id(\"ui-gallery-ai-shimmer-props\");",
+            "DocSection::new(\"Props\", props)",
+        ],
+    );
+}
+
+#[test]
+fn selected_doc_pages_prefer_docsection_build_for_typed_notes_blocks() {
+    for relative_path in [
+        "src/ui/pages/ai_agent_demo.rs",
+        "src/ui/pages/ai_attachments_demo.rs",
+        "src/ui/pages/ai_confirmation_demo.rs",
+        "src/ui/pages/ai_inline_citation_demo.rs",
+        "src/ui/pages/ai_message_demo.rs",
+        "src/ui/pages/ai_speech_input_demo.rs",
+        "src/ui/pages/ai_stack_trace_demo.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["notes_block([", "DocSection::build(cx, \"Notes\", notes)"],
+            &["notes(cx,", "DocSection::new(\"Notes\", notes)"],
+        );
+    }
+
+    for relative_path in [
+        "src/ui/pages/ai_model_selector_demo.rs",
+        "src/ui/pages/ai_mic_selector_demo.rs",
+        "src/ui/pages/ai_voice_selector_demo.rs",
+        "src/ui/pages/ai_context_demo.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "let features = doc_layout::notes_block([",
+                "let notes = doc_layout::notes_block([",
+                "DocSection::build(cx, \"Features\", features)",
+                "DocSection::build(cx, \"Notes\", notes)",
+            ],
+            &[
+                "let features = doc_layout::notes(",
+                "let notes = doc_layout::notes(",
+                "DocSection::new(\"Features\", features)",
+                "DocSection::new(\"Notes\", notes)",
+            ],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/ai_commit_demo.rs",
+        &[
+            "let features = doc_layout::notes_block([",
+            "let findings = doc_layout::notes_block([",
+            "DocSection::build(cx, \"Features\", features)",
+            "DocSection::build(cx, \"Notes\", findings)",
+        ],
+        &[
+            "let features = doc_layout::notes(",
+            "let findings = doc_layout::notes(",
+            "DocSection::new(\"Features\", features)",
+            "DocSection::new(\"Notes\", findings)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/ai_test_results_demo.rs",
+        &[
+            "let features = crate::ui::doc_layout::notes_block([",
+            "DocSection::build(cx, \"Features\", features)",
+        ],
+        &[
+            "let features = crate::ui::doc_layout::notes(",
+            "DocSection::new(\"Features\", features)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/ai_chain_of_thought_demo.rs",
+        &[
+            "let features = doc_layout::notes_block([",
+            "DocSection::build(cx, \"Features\", features)",
+        ],
+        &[
+            "let features = doc_layout::notes(",
+            "DocSection::new(\"Features\", features)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/ai_shimmer_demo.rs",
+        &[
+            "let features = doc_layout::notes_block([",
+            "DocSection::build(cx, \"Features\", features)",
+        ],
+        &[
+            "let features = doc_layout::notes(",
+            "DocSection::new(\"Features\", features)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/ai_checkpoint_demo.rs",
+        &[
+            "let features = doc_layout::notes_block([",
+            "let customizable_icon = doc_layout::notes_block([",
+            "let manual_checkpoints = doc_layout::notes_block([",
+            "let automatic_checkpoints = doc_layout::notes_block([",
+            "let branching = doc_layout::notes_block([",
+            "DocSection::build(cx, \"Features\", features)",
+            "DocSection::build(cx, \"Customizable Icon\", customizable_icon)",
+            "DocSection::build(cx, \"Manual Checkpoints\", manual_checkpoints)",
+            "DocSection::build(cx, \"Automatic Checkpoints\", automatic_checkpoints)",
+            "DocSection::build(cx, \"Branching Conversations\", branching)",
+        ],
+        &[
+            "let features = notes(",
+            "let customizable_icon = notes(",
+            "let manual_checkpoints = notes(",
+            "let automatic_checkpoints = notes(",
+            "let branching = notes(",
+            "DocSection::new(\"Features\", features)",
+            "DocSection::new(\"Customizable Icon\", customizable_icon)",
+            "DocSection::new(\"Manual Checkpoints\", manual_checkpoints)",
+            "DocSection::new(\"Automatic Checkpoints\", automatic_checkpoints)",
+            "DocSection::new(\"Branching Conversations\", branching)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/avatar.rs",
+        &[
+            "let api_reference = doc_layout::notes_block([",
+            "let notes = doc_layout::notes_block([",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
+            "DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "let api_reference = doc_layout::notes(",
+            "let notes = doc_layout::notes(",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Notes\", notes)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/button.rs",
+        &[
+            "let cursor = doc_layout::notes_block([",
+            "let api_reference = doc_layout::notes_block([",
+            "let notes = doc_layout::notes_block([",
+            "DocSection::build(cx, \"Cursor\", cursor)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
+            "DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "let cursor = doc_layout::notes(",
+            "let api_reference = doc_layout::notes(",
+            "let notes = doc_layout::notes(",
+            "DocSection::new(\"Cursor\", cursor)",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Notes\", notes)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/button_group.rs",
+        &[
+            "let vs_toggle_group = doc_layout::notes_block([",
+            "let api_reference = doc_layout::notes_block([",
+            "let notes = doc_layout::notes_block([",
+            "DocSection::build(cx, \"ButtonGroup vs ToggleGroup\", vs_toggle_group)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
+            "DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "let vs_toggle_group = doc_layout::notes(",
+            "let api_reference = doc_layout::notes(",
+            "let notes = doc_layout::notes(",
+            "DocSection::new(\"ButtonGroup vs ToggleGroup\", vs_toggle_group)",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Notes\", notes)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/alert_dialog.rs",
+        &[
+            "let api_reference = doc_layout::notes_block([",
+            "let extras = doc_layout::notes_block([",
+            "let notes = doc_layout::notes_block([",
+            "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+            "let extras = DocSection::build(cx, \"Fret Extras\", extras)",
+            "let notes = DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "let api_reference = doc_layout::notes(",
+            "let extras = doc_layout::notes(",
+            "let notes = doc_layout::notes(",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Fret Extras\", extras)",
+            "DocSection::new(\"Notes\", notes)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/hover_card.rs",
+        &[
+            "let api_reference = doc_layout::notes_block([",
+            "let notes = doc_layout::notes_block([",
+            "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+            "let notes = DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "let api_reference = doc_layout::notes(",
+            "let notes = doc_layout::notes(",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Notes\", notes)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/dropdown_menu.rs",
+        &[
+            "let api_reference = doc_layout::notes_block([",
+            "let notes = doc_layout::notes_block([",
+            "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+            "let notes = DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "let api_reference = doc_layout::notes(",
+            "let notes = doc_layout::notes(",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Notes\", notes)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/calendar.rs",
+        &[
+            "let about = doc_layout::notes_block([",
+            "let date_picker = doc_layout::notes_block([",
+            "let selected_date_timezone = doc_layout::notes_block([",
+            "let notes = doc_layout::notes_block([",
+            "let about = DocSection::build(cx, \"About\", about)",
+            "let date_picker = DocSection::build(cx, \"Date Picker\", date_picker)",
+            "let selected_date_timezone = DocSection::build(cx, \"Selected Date (With TimeZone)\", selected_date_timezone)",
+            "let notes = DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "let about = doc_layout::notes(",
+            "let date_picker = doc_layout::notes(",
+            "let selected_date_timezone = doc_layout::notes(",
+            "let notes = doc_layout::notes(",
+            "DocSection::new(\"About\", about)",
+            "DocSection::new(\"Date Picker\", date_picker)",
+            "DocSection::new(\"Selected Date (With TimeZone)\", selected_date_timezone)",
+            "DocSection::new(\"Notes\", notes)",
+        ],
+    );
+
+    for relative_path in [
+        "src/ui/pages/accordion.rs",
+        "src/ui/pages/alert.rs",
+        "src/ui/pages/dialog.rs",
+        "src/ui/pages/navigation_menu.rs",
+        "src/ui/pages/select.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "let notes = doc_layout::notes_block([",
+                "let notes = DocSection::build(cx, \"Notes\", notes)",
+            ],
+            &[
+                "let notes = doc_layout::notes(",
+                "DocSection::new(\"Notes\", notes)",
+            ],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/sheet.rs",
+        &[
+            "let api_reference = doc_layout::notes_block([",
+            "let notes = doc_layout::notes_block([",
+            "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+            "let notes = DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "let api_reference = doc_layout::notes(",
+            "let notes = doc_layout::notes(",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Notes\", notes)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/drawer.rs",
+        &[
+            "let api_reference = doc_layout::notes_block([",
+            "let notes = doc_layout::notes_block([",
+            "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+            "let notes = DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "let api_reference = doc_layout::notes(",
+            "let notes = doc_layout::notes(",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Notes\", notes)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/popover.rs",
+        &[
+            "let api_reference = doc_layout::notes_block([",
+            "let notes = doc_layout::notes_block([",
+            "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+            "let notes = DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "let api_reference = doc_layout::notes(",
+            "let notes = doc_layout::notes(",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Notes\", notes)",
+        ],
+    );
+
+    for relative_path in [
+        "src/ui/pages/context_menu.rs",
+        "src/ui/pages/menubar.rs",
+        "src/ui/pages/progress.rs",
+        "src/ui/pages/pagination.rs",
+        "src/ui/pages/tabs.rs",
+        "src/ui/pages/scroll_area.rs",
+        "src/ui/pages/slider.rs",
+        "src/ui/pages/icons.rs",
+        "src/ui/pages/typography.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "let notes = doc_layout::notes_block([",
+                "let notes = DocSection::build(cx, \"Notes\", notes)",
+            ],
+            &[
+                "let notes = doc_layout::notes(",
+                "DocSection::new(\"Notes\", notes)",
+            ],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/command.rs",
+        &[
+            "let notes_stack = doc_layout::notes_block([",
+            "let notes_stack = DocSection::build(cx, \"Notes\", notes_stack)",
+        ],
+        &[
+            "let notes_stack = doc_layout::notes(",
+            "DocSection::new(\"Notes\", notes_stack)",
+        ],
+    );
+
+    for relative_path in [
+        "src/ui/pages/badge.rs",
+        "src/ui/pages/checkbox.rs",
+        "src/ui/pages/collapsible.rs",
+        "src/ui/pages/empty.rs",
+        "src/ui/pages/input.rs",
+        "src/ui/pages/label.rs",
+        "src/ui/pages/kbd.rs",
+        "src/ui/pages/spinner.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "let api_reference = doc_layout::notes_block([",
+                "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+            ],
+            &[
+                "let api_reference = doc_layout::notes(",
+                "DocSection::new(\"API Reference\", api_reference)",
+            ],
+        );
+    }
+
+    for relative_path in [
+        "src/ui/pages/switch.rs",
+        "src/ui/pages/toggle.rs",
+        "src/ui/pages/toggle_group.rs",
+        "src/ui/pages/separator.rs",
+        "src/ui/pages/textarea.rs",
+        "src/ui/pages/radio_group.rs",
+        "src/ui/pages/skeleton.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "let api_reference = doc_layout::notes_block([",
+                "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+            ],
+            &[
+                "let api_reference = doc_layout::notes(",
+                "DocSection::new(\"API Reference\", api_reference)",
+            ],
+        );
+    }
+
+    for relative_path in [
+        "src/ui/pages/tooltip.rs",
+        "src/ui/pages/table.rs",
+        "src/ui/pages/image_object_fit.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "let notes = doc_layout::notes_block([",
+                "let notes = DocSection::build(cx, \"Notes\", notes)",
+            ],
+            &[
+                "let notes = doc_layout::notes(",
+                "DocSection::new(\"Notes\", notes)",
+            ],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/breadcrumb.rs",
+        &[
+            "let api_reference = doc_layout::notes_block([",
+            "let notes = doc_layout::notes_block([",
+            "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+            "let notes = DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "let api_reference = doc_layout::notes(",
+            "let notes = doc_layout::notes(",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Notes\", notes)",
+        ],
+    );
+
+    for relative_path in [
+        "src/ui/pages/card.rs",
+        "src/ui/pages/input_otp.rs",
+        "src/ui/pages/sidebar.rs",
+        "src/ui/pages/aspect_ratio.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "let notes = doc_layout::notes_block([",
+                "DocSection::build(cx, \"Notes\", notes)",
+            ],
+            &[
+                "let notes = doc_layout::notes(",
+                "DocSection::new(\"Notes\", notes)",
+            ],
+        );
+    }
+
+    for relative_path in [
+        "src/ui/pages/resizable.rs",
+        "src/ui/pages/sonner.rs",
+        "src/ui/pages/form.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["DocSection::build(cx, \"Notes\", notes)"],
+            &["DocSection::new(\"Notes\", notes)"],
+        );
+    }
+}
+
+#[test]
 fn selected_badge_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     for relative_path in [
         "src/ui/snippets/badge/demo.rs",
@@ -578,6 +1272,126 @@ fn selected_badge_snippet_helpers_prefer_into_ui_element_over_anyelement() {
             ],
         );
     }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/carousel.rs",
+        &[
+            "let about = doc_layout::notes_block([",
+            "let api_reference = doc_layout::notes_block([",
+            "let about = DocSection::build(cx, \"About\", about)",
+            "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+        ],
+        &[
+            "let about = doc_layout::notes(",
+            "let api_reference = doc_layout::notes(",
+            "DocSection::new(\"About\", about)",
+            "DocSection::new(\"API Reference\", api_reference)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/chart.rs",
+        &[
+            "let notes_stack = doc_layout::notes_block([",
+            "let notes_stack = DocSection::build(cx, \"Notes\", notes_stack)",
+        ],
+        &[
+            "let notes_stack = doc_layout::notes(",
+            "DocSection::new(\"Notes\", notes_stack)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/combobox.rs",
+        &[
+            "let notes = doc_layout::notes_block([",
+            "let notes = DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "let notes = doc_layout::notes(",
+            "DocSection::new(\"Notes\", notes)",
+        ],
+    );
+
+    for relative_path in ["src/ui/pages/data_table.rs", "src/ui/pages/item.rs"] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "let api_reference = doc_layout::notes_block([",
+                "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+            ],
+            &[
+                "let api_reference = doc_layout::notes(",
+                "DocSection::new(\"API Reference\", api_reference)",
+            ],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/native_select.rs",
+        &[
+            "let native_select_vs_select = doc_layout::notes_block([",
+            "let api_reference = doc_layout::notes_block([",
+            "DocSection::build(cx, \"Native Select vs Select\", native_select_vs_select",
+            "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+        ],
+        &[
+            "let native_select_vs_select = doc_layout::notes(",
+            "let api_reference = doc_layout::notes(",
+            "DocSection::new(\"Native Select vs Select\", native_select_vs_select)",
+            "DocSection::new(\"API Reference\", api_reference)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/date_picker.rs",
+        &["DocSection::build(cx, \"Notes\", notes_stack)"],
+        &["DocSection::new(\"Notes\", notes_stack)"],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/field.rs",
+        &[
+            "let form = doc_layout::notes_block([",
+            "let accessibility = doc_layout::notes_block([",
+            "let api_reference = doc_layout::notes_block([",
+            "let notes = doc_layout::notes_block([",
+            "let form = DocSection::build(cx, \"Form\", form)",
+            "let accessibility = DocSection::build(cx, \"Accessibility\", accessibility)",
+            "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+            "let notes = DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "let form = doc_layout::notes(",
+            "let accessibility = doc_layout::notes(",
+            "let api_reference = doc_layout::notes(",
+            "let notes = doc_layout::notes(",
+            "DocSection::new(\"Form\", form)",
+            "DocSection::new(\"Accessibility\", accessibility)",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Notes\", notes)",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/input_group.rs",
+        &[
+            "let align = doc_layout::notes_block([",
+            "let api_reference = doc_layout::notes_block([",
+            "let notes = doc_layout::notes_block([",
+            "let align = DocSection::build(cx, \"Align\", align)",
+            "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+            "let notes = DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "let align = doc_layout::notes(",
+            "let api_reference = doc_layout::notes(",
+            "let notes = doc_layout::notes(",
+            "DocSection::new(\"Align\", align)",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Notes\", notes)",
+        ],
+    );
 }
 
 #[test]
@@ -1447,6 +2261,16 @@ fn selected_sidebar_snippet_helpers_prefer_into_ui_element_over_anyelement() {
 
 #[test]
 fn selected_aspect_ratio_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/aspect_ratio/demo.rs",
+        &[
+            "pub fn render_preview<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &[
+            "pub fn render_preview<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> AnyElement",
+        ],
+    );
+
     for relative_path in [
         "src/ui/snippets/aspect_ratio/portrait.rs",
         "src/ui/snippets/aspect_ratio/square.rs",
@@ -1473,10 +2297,12 @@ fn selected_aspect_ratio_snippet_helpers_prefer_into_ui_element_over_anyelement(
             &[
                 image_helper,
                 "fn ratio_example<H: UiHost>(cx: &mut ElementContext<'_, H>, ratio: f32, max_w: Px, test_id: &'static str, content_test_id: &'static str, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> impl IntoUiElement<H> + use<H>",
+                "pub fn render_preview<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> impl IntoUiElement<H> + use<H>",
             ],
             &[
                 image_helper_old,
                 "fn ratio_example<H: UiHost>(cx: &mut ElementContext<'_, H>, ratio: f32, max_w: Px, test_id: &'static str, content_test_id: &'static str, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> AnyElement",
+                "pub fn render_preview<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> AnyElement",
             ],
         );
     }
@@ -1638,6 +2464,19 @@ fn selected_alert_snippet_helpers_prefer_into_ui_element_over_anyelement() {
 }
 
 #[test]
+fn selected_slider_snippet_helpers_prefer_into_ui_element_over_anyelement() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/slider/demo.rs",
+        &[
+            "fn controlled<H: UiHost>(cx: &mut ElementContext<'_, H>, controlled_values: Model<Vec<f32>>,) -> impl IntoUiElement<H> + use<H>",
+        ],
+        &[
+            "fn controlled<H: UiHost>(cx: &mut ElementContext<'_, H>, controlled_values: Model<Vec<f32>>,) -> AnyElement",
+        ],
+    );
+}
+
+#[test]
 fn selected_motion_presets_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/motion_presets/fluid_tabs_demo.rs",
@@ -1718,9 +2557,15 @@ fn gallery_internal_wrapper_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/doc_layout.rs",
         &[
+            "fn build<P>(cx: &mut UiCx<'_>, title: &'static str, preview: P) -> Self where P: IntoUiElement<fret_app::App>",
+            "fn notes_block<I, T>(lines: I) -> impl IntoUiElement<fret_app::App> + use<I, T> where I: IntoIterator<Item = T>, T: Into<Arc<str>>",
             "fn demo_shell<B>(cx: &mut UiCx<'_>, max_w: Px, body: B,) -> impl IntoUiElement<fret_app::App> + use<B> where B: IntoUiElement<fret_app::App>",
         ],
-        &["fn demo_shell(cx: &mut UiCx<'_>, max_w: Px, body: AnyElement) -> AnyElement"],
+        &[
+            "fn demo_shell(cx: &mut UiCx<'_>, max_w: Px, body: AnyElement) -> AnyElement",
+            "fn notes_block<I, T>(cx: &mut UiCx<'_>, lines: I) -> AnyElement",
+            "fn notes<I, T>(cx: &mut UiCx<'_>, lines: I) -> AnyElement",
+        ],
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(

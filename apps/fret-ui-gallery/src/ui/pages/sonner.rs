@@ -14,6 +14,9 @@ pub(super) fn preview_sonner(
     let position = snippets::position::render(cx, last_action.clone(), sonner_position);
     let extras = snippets::extras::render(cx, last_action.clone());
     let notes = snippets::notes::render(cx, last_action);
+    let notes = DocSection::build(cx, "Notes", notes)
+        .description("Status + parity notes.")
+        .test_id_prefix("ui-gallery-sonner-notes");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -43,9 +46,7 @@ pub(super) fn preview_sonner(
                 .description("Pinned + swipe-dismiss toasts.")
                 .test_id_prefix("ui-gallery-sonner-extras")
                 .code_rust_from_file_region(snippets::extras::SOURCE, "example"),
-            DocSection::new("Notes", notes)
-                .description("Status + parity notes.")
-                .test_id_prefix("ui-gallery-sonner-notes"),
+            notes,
         ],
     );
 

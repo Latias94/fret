@@ -14,15 +14,13 @@ pub(super) fn preview_menubar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
     let parts = snippets::parts::render(cx);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "Preview follows the upstream shadcn Menubar docs (v4 Base UI): Demo, Usage, Checkbox, Radio, Submenu, With Icons, RTL.",
-            "This page also includes a `Parts` section for the Trigger/Content authoring adapter surface.",
-            "Menubar already has a usable parts bridge, so the remaining parity gap here is mostly documentation clarity rather than missing mechanism.",
-            "Keep `ui-gallery-menubar-*` test IDs stable; multiple diag scripts depend on them.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "Preview follows the upstream shadcn Menubar docs (v4 Base UI): Demo, Usage, Checkbox, Radio, Submenu, With Icons, RTL.",
+        "This page also includes a `Parts` section for the Trigger/Content authoring adapter surface.",
+        "Menubar already has a usable parts bridge, so the remaining parity gap here is mostly documentation clarity rather than missing mechanism.",
+        "Keep `ui-gallery-menubar-*` test IDs stable; multiple diag scripts depend on them.",
+    ]);
+    let notes = DocSection::build(cx, "Notes", notes).test_id_prefix("ui-gallery-menubar-notes");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -56,7 +54,7 @@ pub(super) fn preview_menubar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             DocSection::new("Parts", parts)
                 .test_id_prefix("ui-gallery-menubar-parts")
                 .code_rust_from_file_region(snippets::parts::SOURCE, "example"),
-            DocSection::new("Notes", notes).test_id_prefix("ui-gallery-menubar-notes"),
+            notes,
         ],
     );
 

@@ -31,25 +31,27 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         let orientation_vertical = snippets::orientation_vertical::render(cx);
         let rtl = snippets::rtl::render(cx);
 
-        let about = doc_layout::notes(
-            cx,
-            [
+        let about = doc_layout::notes_block([
                 "Upstream shadcn Carousel is built on Embla; Fret mirrors the authoring outcomes with an Embla-style headless engine plus a compact builder and a parts surface.",
                 "The upstream demo uses responsive item widths (`md:basis-1/2` / `lg:basis-1/3`). Fret mirrors this via `CarouselItem::viewport_layout_breakpoint(tailwind::MD/LG, ...)`.",
                 "Spacing parity depends on pairing `track_start_neg_margin` with `item_padding_start` (shadcn `-ml-*` + `pl-*`).",
                 "The extra sections below exist to keep engine + diagnostics coverage visible (loop downgrade, focus watch, duration, wheel gestures, etc.).",
-            ],
-        );
+            ]);
 
-        let api_reference = doc_layout::notes(
-            cx,
-            [
+        let api_reference = doc_layout::notes_block([
                 "API reference: `ecosystem/fret-ui-shadcn/src/carousel.rs`.",
                 "`Carousel::new/items` is the compact builder path, while `CarouselContent`, `CarouselItem`, `CarouselPrevious`, and `CarouselNext` are exposed through `Carousel::into_element_parts(...)` for upstream-shaped copyable examples.",
                 "Carousel chrome, buttons, and the Embla-style headless behaviors stay recipe-owned; surrounding width/height negotiation and breakpoint choices remain caller-owned.",
                 "No extra generic `compose()` / children surface is needed here because the parts authoring surface already maps to the upstream exports.",
-            ],
-        );
+            ]);
+        let about = DocSection::build(cx, "About", about)
+            .description("Background, ownership notes, and why extra diagnostics sections exist.")
+            .no_shell()
+            .test_id_prefix("ui-gallery-carousel-about");
+        let api_reference = DocSection::build(cx, "API Reference", api_reference)
+            .description("Public surface summary and ownership notes.")
+            .no_shell()
+            .test_id_prefix("ui-gallery-carousel-api-reference");
 
         let body = doc_layout::render_doc_page(
             cx,
@@ -62,10 +64,7 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
                     .test_id_prefix("ui-gallery-carousel-demo")
                     .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-                DocSection::new("About", about)
-                    .description("Background, ownership notes, and why extra diagnostics sections exist.")
-                    .no_shell()
-                    .test_id_prefix("ui-gallery-carousel-about"),
+                about,
                 DocSection::new("Usage", usage)
                     .description("Copyable minimal usage for the builder + parts authoring surface.")
                     .test_id_prefix("ui-gallery-carousel-usage")
@@ -197,10 +196,7 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                     .description("Content-driven height changes (used by the motion pilot suite).")
                     .test_id_prefix("ui-gallery-carousel-expandable")
                     .code_rust_from_file_region(snippets::expandable::SOURCE, "example"),
-                DocSection::new("API Reference", api_reference)
-                    .description("Public surface summary and ownership notes.")
-                    .no_shell()
-                    .test_id_prefix("ui-gallery-carousel-api-reference"),
+                api_reference,
             ],
         );
 

@@ -1,22 +1,24 @@
 use super::*;
-use fret::UiCx;
+use fret::{UiChild, UiCx};
+use fret_ui_kit::IntoUiElement;
 
 use crate::ui::doc_layout::{self, DocSection};
 
 pub(super) const MATERIAL3_INTRO: &str =
     "Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code).";
 
-pub(super) fn render_material3_demo_page(
+pub(super) fn render_material3_demo_page<D>(
     cx: &mut UiCx<'_>,
     intro: Option<&'static str>,
-    demo: AnyElement,
+    demo: D,
     source: &'static str,
-) -> Vec<AnyElement> {
-    let page = doc_layout::render_doc_page(
-        cx,
-        intro,
-        vec![DocSection::new("Demo", demo).code_rust_from_file_region(source, "example")],
-    );
+) -> Vec<AnyElement>
+where
+    D: IntoUiElement<fret_app::App>,
+{
+    let demo_section =
+        DocSection::build(cx, "Demo", demo).code_rust_from_file_region(source, "example");
+    let page = doc_layout::render_doc_page(cx, intro, vec![demo_section]);
 
     vec![page]
 }
@@ -35,7 +37,7 @@ where
         .unwrap_or(false);
 
     let mut out: Vec<AnyElement> = Vec::new();
-    out.push(material3_variant_toggle_row(cx, material3_expressive));
+    out.push(material3_variant_toggle_row(cx, material3_expressive).into_element(cx));
 
     let body = if enabled {
         crate::ui::material3::context::with_material_design_variant(
@@ -54,7 +56,7 @@ where
 pub(in crate::ui) fn material3_variant_toggle_row(
     cx: &mut UiCx<'_>,
     material3_expressive: Model<bool>,
-) -> AnyElement {
+) -> impl UiChild + use<> {
     let enabled = cx
         .get_model_copied(&material3_expressive, Invalidation::Layout)
         .unwrap_or(false);

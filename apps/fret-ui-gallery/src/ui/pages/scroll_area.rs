@@ -13,16 +13,14 @@ pub(super) fn preview_scroll_area(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let nested_scroll_routing = snippets::nested_scroll_routing::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "API reference: `ecosystem/fret-ui-shadcn/src/scroll_area.rs` (ScrollArea, ScrollAreaRoot, ScrollAreaViewport, ScrollAreaScrollbar, ScrollAreaCorner).",
-            "ScrollArea already exposes both a compact builder and a Radix-shaped composable surface, so the main parity gap here is usage clarity rather than missing authoring APIs.",
-            "ScrollArea is for custom scrollbars + consistent styling; use native scrolling when you don't need custom chrome.",
-            "Keep scroll region sizes explicit in docs to avoid layout drift.",
-            "Horizontal rails are easiest to reason about when the child has a fixed width.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "API reference: `ecosystem/fret-ui-shadcn/src/scroll_area.rs` (ScrollArea, ScrollAreaRoot, ScrollAreaViewport, ScrollAreaScrollbar, ScrollAreaCorner).",
+        "ScrollArea already exposes both a compact builder and a Radix-shaped composable surface, so the main parity gap here is usage clarity rather than missing authoring APIs.",
+        "ScrollArea is for custom scrollbars + consistent styling; use native scrolling when you don't need custom chrome.",
+        "Keep scroll region sizes explicit in docs to avoid layout drift.",
+        "Horizontal rails are easiest to reason about when the child has a fixed width.",
+    ]);
+    let notes = DocSection::build(cx, "Notes", notes).description("Usage notes and caveats.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -53,7 +51,7 @@ pub(super) fn preview_scroll_area(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             DocSection::new("RTL", rtl)
                 .description("ScrollArea behavior under an RTL direction provider.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes).description("Usage notes and caveats."),
+            notes,
         ],
     );
 

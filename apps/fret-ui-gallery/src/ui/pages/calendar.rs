@@ -28,45 +28,47 @@ pub(super) fn preview_calendar(
     let locale = snippets::locale::render(cx);
     let responsive_mixed_semantics = snippets::responsive_mixed_semantics::render(cx);
 
-    let about = doc_layout::notes(
-        cx,
-        [
-            "Fret's `Calendar` plays the same role that React DayPicker does upstream, but the month grid and selection logic live in `fret_ui_headless::calendar` instead of a DOM package.",
-            "The shadcn recipe layer in `ecosystem/fret-ui-shadcn/src/calendar.rs` owns the visual parity surface: caption layout, navigation buttons, day-cell chrome, and slot-aware backgrounds.",
-        ],
-    );
+    let about = doc_layout::notes_block([
+        "Fret's `Calendar` plays the same role that React DayPicker does upstream, but the month grid and selection logic live in `fret_ui_headless::calendar` instead of a DOM package.",
+        "The shadcn recipe layer in `ecosystem/fret-ui-shadcn/src/calendar.rs` owns the visual parity surface: caption layout, navigation buttons, day-cell chrome, and slot-aware backgrounds.",
+    ]);
 
-    let date_picker = doc_layout::notes(
-        cx,
-        [
-            "Use the dedicated `Date Picker` page when the calendar should be composed with a trigger, field, and popover; that composition remains a separate recipe rather than being folded into `Calendar` itself.",
-            "This mirrors the upstream docs split between the base `Calendar` component and higher-level date-picker recipes.",
-        ],
-    );
+    let date_picker = doc_layout::notes_block([
+        "Use the dedicated `Date Picker` page when the calendar should be composed with a trigger, field, and popover; that composition remains a separate recipe rather than being folded into `Calendar` itself.",
+        "This mirrors the upstream docs split between the base `Calendar` component and higher-level date-picker recipes.",
+    ]);
 
-    let selected_date_timezone = doc_layout::notes(
-        cx,
-        [
-            "Upstream documents a `timeZone` prop because JS `Date` can shift the highlighted day across offsets when a calendar works with date-times.",
-            "Fret `Calendar` selections are `time::Date`, so date-only selection does not need a calendar-level timezone prop to keep the chosen day stable.",
-            "If an app needs time-of-day or instant semantics, keep timezone conversion at the surrounding form / date-picker boundary rather than inside the base calendar recipe.",
-        ],
-    );
+    let selected_date_timezone = doc_layout::notes_block([
+        "Upstream documents a `timeZone` prop because JS `Date` can shift the highlighted day across offsets when a calendar works with date-times.",
+        "Fret `Calendar` selections are `time::Date`, so date-only selection does not need a calendar-level timezone prop to keep the chosen day stable.",
+        "If an app needs time-of-day or instant semantics, keep timezone conversion at the surrounding form / date-picker boundary rather than inside the base calendar recipe.",
+    ]);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "API reference: `ecosystem/fret-ui-shadcn/src/calendar.rs` (Calendar).",
-            "Calendar exposes both `new(...)` for externally owned month state and `new_controllable(...)` for copyable docs/gallery-style authoring.",
-            "For the closest source-aligned equivalent to upstream `selected/onSelect`, pass your selected model into `Calendar::new_controllable(cx, Some(selected), default_selected)` and let the calendar own only the visible month state.",
-            "Gallery sections now mirror the upstream docs path first: Demo, Usage, About, Date Picker, Persian / Hijri / Jalali Calendar, Selected Date (With TimeZone), core examples, RTL. Fret-only extensions stay after that path.",
-            "Default-style ownership follows shadcn upstream: recipe defaults own the inner calendar chrome (`bg-background`, padding, day-cell styling), while example-level `rounded-lg border`, `p-0`, and custom `--cell-size` tweaks stay caller-owned.",
-            "Fret uses `time::Date` for selections, so timezone offset issues from JS `Date` do not apply.",
-            "Set `FRET_UI_GALLERY_FIXED_TODAY=YYYY-MM-DD` to make presets deterministic in screenshots/tests.",
-            "Diagnostics use inner `ui-gallery.calendar.*` test_id prefixes from snippets, while page sections keep `ui-gallery-calendar-*` doc IDs.",
-            "Upstream uses a DayPicker-style `components.DayButton` escape hatch; in Fret the equivalent customization surface is `CalendarDayButton` plus refinements, so a generic children API is not currently warranted.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "API reference: `ecosystem/fret-ui-shadcn/src/calendar.rs` (Calendar).",
+        "Calendar exposes both `new(...)` for externally owned month state and `new_controllable(...)` for copyable docs/gallery-style authoring.",
+        "For the closest source-aligned equivalent to upstream `selected/onSelect`, pass your selected model into `Calendar::new_controllable(cx, Some(selected), default_selected)` and let the calendar own only the visible month state.",
+        "Gallery sections now mirror the upstream docs path first: Demo, Usage, About, Date Picker, Persian / Hijri / Jalali Calendar, Selected Date (With TimeZone), core examples, RTL. Fret-only extensions stay after that path.",
+        "Default-style ownership follows shadcn upstream: recipe defaults own the inner calendar chrome (`bg-background`, padding, day-cell styling), while example-level `rounded-lg border`, `p-0`, and custom `--cell-size` tweaks stay caller-owned.",
+        "Fret uses `time::Date` for selections, so timezone offset issues from JS `Date` do not apply.",
+        "Set `FRET_UI_GALLERY_FIXED_TODAY=YYYY-MM-DD` to make presets deterministic in screenshots/tests.",
+        "Diagnostics use inner `ui-gallery.calendar.*` test_id prefixes from snippets, while page sections keep `ui-gallery-calendar-*` doc IDs.",
+        "Upstream uses a DayPicker-style `components.DayButton` escape hatch; in Fret the equivalent customization surface is `CalendarDayButton` plus refinements, so a generic children API is not currently warranted.",
+    ]);
+
+    let about = DocSection::build(cx, "About", about)
+        .no_shell()
+        .test_id_prefix("ui-gallery-calendar-about");
+    let date_picker = DocSection::build(cx, "Date Picker", date_picker)
+        .no_shell()
+        .test_id_prefix("ui-gallery-calendar-date-picker");
+    let selected_date_timezone =
+        DocSection::build(cx, "Selected Date (With TimeZone)", selected_date_timezone)
+            .no_shell()
+            .test_id_prefix("ui-gallery-calendar-selected-date-timezone");
+    let notes = DocSection::build(cx, "Notes", notes)
+        .no_shell()
+        .test_id_prefix("ui-gallery-calendar-notes");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -82,19 +84,13 @@ pub(super) fn preview_calendar(
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-calendar-usage")
                 .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("About", about)
-                .no_shell()
-                .test_id_prefix("ui-gallery-calendar-about"),
-            DocSection::new("Date Picker", date_picker)
-                .no_shell()
-                .test_id_prefix("ui-gallery-calendar-date-picker"),
+            about,
+            date_picker,
             DocSection::new("Persian / Hijri / Jalali Calendar", hijri)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-calendar-hijri")
                 .code_rust_from_file_region(snippets::hijri::SOURCE, "example"),
-            DocSection::new("Selected Date (With TimeZone)", selected_date_timezone)
-                .no_shell()
-                .test_id_prefix("ui-gallery-calendar-selected-date-timezone"),
+            selected_date_timezone,
             DocSection::new("Basic", basic)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-calendar-basic")
@@ -150,9 +146,7 @@ pub(super) fn preview_calendar(
                     snippets::responsive_mixed_semantics::SOURCE,
                     "example",
                 ),
-            DocSection::new("Notes", notes)
-                .no_shell()
-                .test_id_prefix("ui-gallery-calendar-notes"),
+            notes,
         ],
     );
 

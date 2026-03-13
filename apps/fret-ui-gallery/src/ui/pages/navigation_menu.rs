@@ -11,15 +11,14 @@ pub(super) fn preview_navigation_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo_with_toggle = snippets::demo::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "Navigation Menu already exposes a shadcn-friendly builder surface, so the remaining drift is mainly public-surface/docs parity rather than mechanism coverage.",
-            "Top-level docs-style links now map to a contentless `NavigationMenuItem` with `href` / `target` / `rel`; trigger chrome stays recipe-owned instead of leaking page-level classes into the component default.",
-            "`navigation_menu_trigger_style()` intentionally stays a typed layout helper; hover/open chrome remains recipe-owned, while `w-full` / `min-w-0` / width negotiation remain caller-owned.",
-            "Container query toggle is a Fret-specific extra used to audit viewport-vs-container breakpoint behavior.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "Navigation Menu already exposes a shadcn-friendly builder surface, so the remaining drift is mainly public-surface/docs parity rather than mechanism coverage.",
+        "Top-level docs-style links now map to a contentless `NavigationMenuItem` with `href` / `target` / `rel`; trigger chrome stays recipe-owned instead of leaking page-level classes into the component default.",
+        "`navigation_menu_trigger_style()` intentionally stays a typed layout helper; hover/open chrome remains recipe-owned, while `w-full` / `min-w-0` / width negotiation remain caller-owned.",
+        "Container query toggle is a Fret-specific extra used to audit viewport-vs-container breakpoint behavior.",
+    ]);
+    let notes =
+        DocSection::build(cx, "Notes", notes).test_id_prefix("ui-gallery-navigation-menu-notes");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -47,7 +46,7 @@ pub(super) fn preview_navigation_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             DocSection::new("Container Query Toggle", demo_with_toggle)
                 .description("Compare viewport-driven and container-driven md breakpoint behavior.")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Notes", notes).test_id_prefix("ui-gallery-navigation-menu-notes"),
+            notes,
         ],
     );
 

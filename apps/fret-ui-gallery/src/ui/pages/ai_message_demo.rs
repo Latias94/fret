@@ -7,15 +7,12 @@ use fret::UiCx;
 pub(super) fn preview_ai_message_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let usage = snippets::message_usage::render(cx);
     let demo = snippets::message_demo::render(cx);
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "The underlying behavior looks healthy: alignment, width constraints, and markdown rendering all live in `fret-ui-ai` recipe/policy code rather than `crates/fret-ui` mechanisms.",
-            "The main upstream drift is API ergonomics, not rendering correctness: Fret currently passes `MessageRole` to both `Message` and `MessageContent` because styling is resolved eagerly in a self-rendering tree instead of via DOM parent selectors.",
-            "Usage examples in Fret intentionally keep user messages on the plain-text path and reserve `MessageResponse` for assistant markdown, matching the current `fret-ui-ai` content model.",
-            "This page now mirrors the official AI Elements docs shape more closely: a full usage example first, then focused surface demos. Branching remains available on the dedicated Message Branch page when `gallery-dev` is enabled.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "The underlying behavior looks healthy: alignment, width constraints, and markdown rendering all live in `fret-ui-ai` recipe/policy code rather than `crates/fret-ui` mechanisms.",
+        "The main upstream drift is API ergonomics, not rendering correctness: Fret currently passes `MessageRole` to both `Message` and `MessageContent` because styling is resolved eagerly in a self-rendering tree instead of via DOM parent selectors.",
+        "Usage examples in Fret intentionally keep user messages on the plain-text path and reserve `MessageResponse` for assistant markdown, matching the current `fret-ui-ai` content model.",
+        "This page now mirrors the official AI Elements docs shape more closely: a full usage example first, then focused surface demos. Branching remains available on the dedicated Message Branch page when `gallery-dev` is enabled.",
+    ]);
 
     let mut sections = vec![
         DocSection::new("Usage with Conversation + PromptInput", usage)
@@ -40,7 +37,7 @@ pub(super) fn preview_ai_message_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
     }
 
     sections.push(
-        DocSection::new("Notes", notes)
+        DocSection::build(cx, "Notes", notes)
             .description("Parity findings and current API trade-offs for Message."),
     );
 

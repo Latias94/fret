@@ -43,26 +43,19 @@ fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
 pub(super) fn preview_ai_voice_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let demo = snippets::voice_selector_demo::render(cx);
-    let features = doc_layout::notes(
-        cx,
-        [
-            "This is the most complete AI selector compound surface in Fret today, and it is the right baseline for selector naming parity.",
-            "The demo already covers searchable selection, grouped entries, metadata rows, and preview actions without leaking policy into the runtime layer.",
-            "`VoiceSelectorEmpty`, `Group`, `Item`, `Separator`, and `Shortcut` deliberately stay aligned with shared `Command*` semantics.",
-            "Voice inventory and preview playback remain app-owned so the example stays copy-paste friendly and backend-agnostic.",
-            "Rust now uses the same root-level `into_element_with_children(...)` compound entrypoint as `MicSelector`, while still keeping voice-specific metadata parts explicit.",
-        ],
-    );
+    let features = doc_layout::notes_block([
+        "This is the most complete AI selector compound surface in Fret today, and it is the right baseline for selector naming parity.",
+        "The demo already covers searchable selection, grouped entries, metadata rows, and preview actions without leaking policy into the runtime layer.",
+        "`VoiceSelectorEmpty`, `Group`, `Item`, `Separator`, and `Shortcut` deliberately stay aligned with shared `Command*` semantics.",
+        "Voice inventory and preview playback remain app-owned so the example stays copy-paste friendly and backend-agnostic.",
+        "Rust now uses the same root-level `into_element_with_children(...)` compound entrypoint as `MicSelector`, while still keeping voice-specific metadata parts explicit.",
+    ]);
     let parts = parts_table(cx);
-    let parts = parts.into_element(cx);
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "Compared with the React docs, Rust exposes `use_voice_selector_controller(...)` rather than a `useVoiceSelector()` hook name, but the intent is the same: read selector context from descendants.",
-            "If we later tighten parity further, the next place to invest is shared `Command` composition and docs examples, not `crates/fret-ui` mechanisms.",
-            "This component is intentionally richer than `ModelSelector`; its metadata and preview parts are selector policy, not a universal contract every AI selector must copy.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "Compared with the React docs, Rust exposes `use_voice_selector_controller(...)` rather than a `useVoiceSelector()` hook name, but the intent is the same: read selector context from descendants.",
+        "If we later tighten parity further, the next place to invest is shared `Command` composition and docs examples, not `crates/fret-ui` mechanisms.",
+        "This component is intentionally richer than `ModelSelector`; its metadata and preview parts are selector policy, not a universal contract every AI selector must copy.",
+    ]);
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
@@ -77,13 +70,13 @@ pub(super) fn preview_ai_voice_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) 
                 ])
                 .test_id_prefix("ui-gallery-ai-voice-selector-demo")
                 .code_rust_from_file_region(snippets::voice_selector_demo::SOURCE, "example"),
-            DocSection::new("Features", features)
+            DocSection::build(cx, "Features", features)
                 .description("High-signal parity notes against the official AI Elements docs.")
                 .no_shell(),
-            DocSection::new("Parts & Props", parts)
+            DocSection::build(cx, "Parts & Props", parts)
                 .description("Which surfaces are selector-owned versus shared with the underlying command layer.")
                 .no_shell(),
-            DocSection::new("Notes", notes)
+            DocSection::build(cx, "Notes", notes)
                 .description("Layering and next-step parity guidance.")
                 .no_shell(),
         ],

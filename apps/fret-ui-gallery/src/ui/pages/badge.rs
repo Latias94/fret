@@ -15,16 +15,16 @@ pub(super) fn preview_badge(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
     let counts = snippets::counts::render(cx);
 
-    let api_reference = doc_layout::notes(
-        cx,
-        [
-            "`Badge::new(label)` and `variant(...)` cover the documented `default`, `secondary`, `destructive`, `outline`, `ghost`, and `link` recipe surface.",
-            "`BadgeRender::Link` is the Fret equivalent of the upstream `render` / `asChild` outcome and keeps link semantics on the badge-owned render surface without widening the mechanism layer.",
-            "Icons, spinners, and custom color overrides stay on the badge recipe surface, while page-level width negotiation remains caller-owned.",
-            "`Counts (Fret)` intentionally stays after the upstream path so compact numeric badge diagnostics remain stable without polluting the docs-aligned example sequence.",
-            "This page is docs/public-surface parity work, not a mechanism-layer fix.",
-        ],
-    );
+    let api_reference = doc_layout::notes_block([
+        "`Badge::new(label)` and `variant(...)` cover the documented `default`, `secondary`, `destructive`, `outline`, `ghost`, and `link` recipe surface.",
+        "`BadgeRender::Link` is the Fret equivalent of the upstream `render` / `asChild` outcome and keeps link semantics on the badge-owned render surface without widening the mechanism layer.",
+        "Icons, spinners, and custom color overrides stay on the badge recipe surface, while page-level width negotiation remains caller-owned.",
+        "`Counts (Fret)` intentionally stays after the upstream path so compact numeric badge diagnostics remain stable without polluting the docs-aligned example sequence.",
+        "This page is docs/public-surface parity work, not a mechanism-layer fix.",
+    ]);
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .description("Public surface summary and ownership notes.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -56,9 +56,7 @@ pub(super) fn preview_badge(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             DocSection::new("RTL", rtl)
                 .description("Render the badge under an RTL direction provider.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("API Reference", api_reference)
-                .no_shell()
-                .description("Public surface summary and ownership notes."),
+            api_reference,
             DocSection::new("Counts (Fret)", counts)
                 .description("Compact numeric badges kept as a focused Fret follow-up for diag coverage.")
                 .code_rust_from_file_region(snippets::counts::SOURCE, "example"),

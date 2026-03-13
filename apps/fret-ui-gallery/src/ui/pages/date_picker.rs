@@ -154,6 +154,10 @@ pub(super) fn preview_date_picker(
         rtl_selected.clone(),
     );
     let notes_stack = snippets::notes::render(cx);
+    let notes_stack = DocSection::build(cx, "Notes", notes_stack)
+        .description("Guidelines and parity notes for date picker recipes.")
+        .max_w(Px(980.0))
+        .code_rust_from_file_region(snippets::notes::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -250,10 +254,7 @@ pub(super) fn preview_date_picker(
                 )
                 .max_w(Px(980.0))
                 .no_shell(),
-            DocSection::new("Notes", notes_stack)
-                .description("Guidelines and parity notes for date picker recipes.")
-                .max_w(Px(980.0))
-                .code_rust_from_file_region(snippets::notes::SOURCE, "example"),
+            notes_stack,
         ],
     );
 

@@ -11,17 +11,15 @@ pub(super) fn preview_pagination(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let icons_only = snippets::icons_only::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "API reference: `ecosystem/fret-ui-shadcn/src/pagination.rs`.",
-            "Gallery sections mirror shadcn Pagination docs first: Demo, Usage, Simple, Icons Only, RTL.",
-            "Pagination already exposes the upstream-shaped parts surface (`Pagination`, `PaginationContent`, `PaginationItem`, `PaginationLink`, `PaginationPrevious`, `PaginationNext`, `PaginationEllipsis`), so the main parity gap here was usage clarity rather than missing mechanism or a generic compose builder.",
-            "Fret keeps navigation wiring in the app layer: `PaginationLink` exposes command/action hooks instead of a DOM-specific `href`, while preserving link semantics and active-page state.",
-            "The Next.js and changelog sections in upstream docs map to app-layer routing guidance plus the existing `text(...)` parity on `PaginationPrevious` / `PaginationNext`, so they stay documented here as notes rather than separate demos.",
-            "The root approximates upstream `<nav aria-label=\"pagination\">` with `Region + label`, and the content/items emit `List` / `ListItem` semantics to mirror the upstream `ul/li` structure.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "API reference: `ecosystem/fret-ui-shadcn/src/pagination.rs`.",
+        "Gallery sections mirror shadcn Pagination docs first: Demo, Usage, Simple, Icons Only, RTL.",
+        "Pagination already exposes the upstream-shaped parts surface (`Pagination`, `PaginationContent`, `PaginationItem`, `PaginationLink`, `PaginationPrevious`, `PaginationNext`, `PaginationEllipsis`), so the main parity gap here was usage clarity rather than missing mechanism or a generic compose builder.",
+        "Fret keeps navigation wiring in the app layer: `PaginationLink` exposes command/action hooks instead of a DOM-specific `href`, while preserving link semantics and active-page state.",
+        "The Next.js and changelog sections in upstream docs map to app-layer routing guidance plus the existing `text(...)` parity on `PaginationPrevious` / `PaginationNext`, so they stay documented here as notes rather than separate demos.",
+        "The root approximates upstream `<nav aria-label=\"pagination\">` with `Region + label`, and the content/items emit `List` / `ListItem` semantics to mirror the upstream `ul/li` structure.",
+    ]);
+    let notes = DocSection::build(cx, "Notes", notes).description("API surface and parity notes.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -49,7 +47,7 @@ pub(super) fn preview_pagination(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .description("RTL smoke check for icon direction and localized numerals.")
                 .test_id_prefix("ui-gallery-pagination-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes).description("API surface and parity notes."),
+            notes,
         ],
     );
 

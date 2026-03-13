@@ -18,16 +18,16 @@ pub(super) fn preview_checkbox(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let table = snippets::table::render(cx);
     let rtl_section = snippets::rtl::render(cx);
 
-    let api_reference = doc_layout::notes(
-        cx,
-        [
-            "`Checkbox::new(Model<bool>)`, `Checkbox::new_optional(Model<Option<bool>>)` and `Checkbox::new_tristate(...)` cover the important checked and mixed-state authoring paths.",
-            "Checkbox remains a leaf control surface: label, helper text, and larger click targets are composed through `FieldLabel`, `FieldDescription`, and surrounding field/layout recipes rather than a generic `compose()` API.",
-            "Visual defaults such as control size, border, focus ring, and indicator chrome stay recipe-owned, while row width and form layout remain caller-owned.",
-            "`Label Association` and `With Title` stay after the upstream docs path because they document Fret-specific control-registry and wrapped-field composition patterns.",
-            "This page is docs/public-surface parity work, not a mechanism-layer fix.",
-        ],
-    );
+    let api_reference = doc_layout::notes_block([
+        "`Checkbox::new(Model<bool>)`, `Checkbox::new_optional(Model<Option<bool>>)` and `Checkbox::new_tristate(...)` cover the important checked and mixed-state authoring paths.",
+        "Checkbox remains a leaf control surface: label, helper text, and larger click targets are composed through `FieldLabel`, `FieldDescription`, and surrounding field/layout recipes rather than a generic `compose()` API.",
+        "Visual defaults such as control size, border, focus ring, and indicator chrome stay recipe-owned, while row width and form layout remain caller-owned.",
+        "`Label Association` and `With Title` stay after the upstream docs path because they document Fret-specific control-registry and wrapped-field composition patterns.",
+        "This page is docs/public-surface parity work, not a mechanism-layer fix.",
+    ]);
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .description("Public surface summary and ownership notes.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -66,9 +66,7 @@ pub(super) fn preview_checkbox(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             DocSection::new("RTL", rtl_section)
                 .description("Checkbox and label alignment under an RTL direction provider.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("API Reference", api_reference)
-                .no_shell()
-                .description("Public surface summary and ownership notes."),
+            api_reference,
             DocSection::new("Label Association (Fret)", label)
                 .description("Use `FieldLabel::for_control` plus `Checkbox::control_id` so label clicks toggle the checkbox.")
                 .test_id_prefix("ui-gallery-checkbox-label")

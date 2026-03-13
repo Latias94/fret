@@ -27,34 +27,37 @@ pub(super) fn preview_input_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         cx,
         "Use the part-based InputGroup surface for direct shadcn docs parity, or the high-level `InputGroup::new(model)` shorthand when you want a compact Fret builder.",
     );
-    let align = doc_layout::notes(
-        cx,
-        [
-            "Use `InputGroupAddon::align(...)` to map the upstream `inline-start`, `inline-end`, `block-start`, and `block-end` positions.",
-            "For proper focus routing, keep the addon after the control in authored order; use `align(...)` to position it visually.",
-            "Use inline alignments with `InputGroupInput`, and block alignments with `InputGroupTextarea` / textarea-style controls.",
-        ],
-    );
-    let api_reference = doc_layout::notes(
-        cx,
-        [
-            "Part-based API matches the upstream docs: `InputGroup`, `InputGroupAddon`, `InputGroupButton`, `InputGroupInput`, `InputGroupTextarea`, and `InputGroupText`.",
-            "Fret also keeps the high-level `InputGroup::new(model)` shorthand for common input / textarea groups with `leading`, `trailing`, `block_start`, and `block_end` slots.",
-            "`InputGroupAddon::align(...)` covers the documented addon positioning surface, while `InputGroupButton::size(...)` covers `xs`, `sm`, `icon-xs`, and `icon-sm`.",
-            "Root `w-full min-w-0` remains recipe-owned because the upstream source puts it on the component root; explicit caller overrides still win when set.",
-        ],
-    );
+    let align = doc_layout::notes_block([
+        "Use `InputGroupAddon::align(...)` to map the upstream `inline-start`, `inline-end`, `block-start`, and `block-end` positions.",
+        "For proper focus routing, keep the addon after the control in authored order; use `align(...)` to position it visually.",
+        "Use inline alignments with `InputGroupInput`, and block alignments with `InputGroupTextarea` / textarea-style controls.",
+    ]);
+    let api_reference = doc_layout::notes_block([
+        "Part-based API matches the upstream docs: `InputGroup`, `InputGroupAddon`, `InputGroupButton`, `InputGroupInput`, `InputGroupTextarea`, and `InputGroupText`.",
+        "Fret also keeps the high-level `InputGroup::new(model)` shorthand for common input / textarea groups with `leading`, `trailing`, `block_start`, and `block_end` slots.",
+        "`InputGroupAddon::align(...)` covers the documented addon positioning surface, while `InputGroupButton::size(...)` covers `xs`, `sm`, `icon-xs`, and `icon-sm`.",
+        "Root `w-full min-w-0` remains recipe-owned because the upstream source puts it on the component root; explicit caller overrides still win when set.",
+    ]);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "API reference: `ecosystem/fret-ui-shadcn/src/input_group.rs` (InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput, InputGroupTextarea, InputGroupText).",
-            "The current parity work here is page/public-surface alignment, not a mechanism bug.",
-            "Both public surfaces stay intentional: part-based primitives for direct docs parity, and the compact `InputGroup::new(model)` shorthand for ergonomic app code.",
-            "`Custom Input` is expressed as composition via slots / parts (no dedicated \"custom control\" type).",
-            "Keep `ui-gallery-input-group-text-*` test IDs stable for non-overlap regression scripts.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "API reference: `ecosystem/fret-ui-shadcn/src/input_group.rs` (InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput, InputGroupTextarea, InputGroupText).",
+        "The current parity work here is page/public-surface alignment, not a mechanism bug.",
+        "Both public surfaces stay intentional: part-based primitives for direct docs parity, and the compact `InputGroup::new(model)` shorthand for ergonomic app code.",
+        "`Custom Input` is expressed as composition via slots / parts (no dedicated \"custom control\" type).",
+        "Keep `ui-gallery-input-group-text-*` test IDs stable for non-overlap regression scripts.",
+    ]);
+    let align = DocSection::build(cx, "Align", align)
+        .no_shell()
+        .description(
+            "Addon alignment and authored-order guidance before the four placement examples.",
+        );
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .description("Public surface summary and ownership notes.");
+    let notes = DocSection::build(cx, "Notes", notes)
+        .no_shell()
+        .test_id_prefix("ui-gallery-input-group-notes")
+        .description("API reference pointers and invariants.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -88,9 +91,7 @@ shadcn::InputGroup::new(query).into_element_parts(cx, |cx| {
     ]
 });"#,
                 ),
-            DocSection::new("Align", align)
-                .no_shell()
-                .description("Addon alignment and authored-order guidance before the four placement examples."),
+            align,
             DocSection::new("Align / inline-start", align_inline_start)
                 .description("Inline-start addon (leading slot).")
                 .test_id_prefix("ui-gallery-input-group-align-inline-start")
@@ -143,9 +144,7 @@ shadcn::InputGroup::new(query).into_element_parts(cx, |cx| {
                 .description("InputGroup layout under an RTL direction provider.")
                 .test_id_prefix("ui-gallery-input-group-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("API Reference", api_reference)
-                .no_shell()
-                .description("Public surface summary and ownership notes."),
+            api_reference,
             DocSection::new("Tooltip", tooltip)
                 .description("Tooltips can wrap icon buttons inside input group addons.")
                 .test_id_prefix("ui-gallery-input-group-tooltip")
@@ -162,10 +161,7 @@ shadcn::InputGroup::new(query).into_element_parts(cx, |cx| {
                 )
                 .test_id_prefix("ui-gallery-input-group-button-group")
                 .code_rust_from_file_region(snippets::button_group::SOURCE, "example"),
-            DocSection::new("Notes", notes)
-                .no_shell()
-                .test_id_prefix("ui-gallery-input-group-notes")
-                .description("API reference pointers and invariants."),
+            notes,
         ],
     );
 

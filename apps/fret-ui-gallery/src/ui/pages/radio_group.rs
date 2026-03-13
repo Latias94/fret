@@ -15,16 +15,17 @@ pub(super) fn preview_radio_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
     let label = snippets::label::render(cx);
 
-    let api_reference = doc_layout::notes(
-        cx,
-        [
-            "`RadioGroup::uncontrolled(default)` and `RadioGroup::new(model)` cover the documented uncontrolled and controlled authoring paths.",
-            "`RadioGroupItem::children(...)` and `variant(RadioGroupItemVariant::ChoiceCard)` cover the richer description and choice-card compositions without introducing a generic `compose()` API.",
-            "Selection semantics, roving navigation, icon chrome, border, and focus ring remain recipe-owned; surrounding fieldset and row layout remain caller-owned composition.",
-            "`Label Association` stays after the upstream docs path because it documents the Fret-specific `control_id(...)` bridge rather than an upstream section heading.",
-            "This page is docs/public-surface parity work, not a mechanism-layer fix.",
-        ],
-    );
+    let api_reference = doc_layout::notes_block([
+        "`RadioGroup::uncontrolled(default)` and `RadioGroup::new(model)` cover the documented uncontrolled and controlled authoring paths.",
+        "`RadioGroupItem::children(...)` and `variant(RadioGroupItemVariant::ChoiceCard)` cover the richer description and choice-card compositions without introducing a generic `compose()` API.",
+        "Selection semantics, roving navigation, icon chrome, border, and focus ring remain recipe-owned; surrounding fieldset and row layout remain caller-owned composition.",
+        "`Label Association` stays after the upstream docs path because it documents the Fret-specific `control_id(...)` bridge rather than an upstream section heading.",
+        "This page is docs/public-surface parity work, not a mechanism-layer fix.",
+    ]);
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .test_id_prefix("ui-gallery-radio-group-api-reference")
+        .description("Public surface summary and ownership notes.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -63,10 +64,7 @@ pub(super) fn preview_radio_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .description("Radio group layout and content order under RTL.")
                 .test_id_prefix("ui-gallery-radio-group-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("API Reference", api_reference)
-                .no_shell()
-                .test_id_prefix("ui-gallery-radio-group-api-reference")
-                .description("Public surface summary and ownership notes."),
+            api_reference,
             DocSection::new("Label Association (Fret)", label)
                 .description("Use `FieldLabel::for_control` plus `RadioGroup::control_id` to focus the active item on label click.")
                 .test_id_prefix("ui-gallery-radio-group-label")

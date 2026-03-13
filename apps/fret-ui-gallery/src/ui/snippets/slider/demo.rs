@@ -6,7 +6,7 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 fn controlled<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     controlled_values: Model<Vec<f32>>,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let values_snapshot: Vec<f32> = cx
         .get_model_cloned(&controlled_values, Invalidation::Paint)
         .unwrap_or_default();
@@ -36,7 +36,6 @@ fn controlled<H: UiHost>(
     ui::v_flex(|_cx| vec![header, slider])
         .gap(Space::N3)
         .layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
-        .into_element(cx)
 }
 
 pub fn render<H: UiHost>(
@@ -96,7 +95,9 @@ pub fn render<H: UiHost>(
             .test_id("ui-gallery-slider-demo-vertical")
     };
 
-    let controlled = controlled(cx, controlled_values).test_id("ui-gallery-slider-demo-controlled");
+    let controlled = controlled(cx, controlled_values)
+        .into_element(cx)
+        .test_id("ui-gallery-slider-demo-controlled");
 
     fret_ui_kit::ui::h_flex(|_cx| vec![single, range, multiple, vertical, controlled])
         .gap(Space::N6)

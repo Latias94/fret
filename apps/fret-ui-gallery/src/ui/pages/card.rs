@@ -271,18 +271,15 @@ pub(super) fn preview_card(
         sections.push(with_card_code(section, snippets::meeting_notes::SOURCE));
     }
     if (bisect & BISECT_DISABLE_CARD_SECTION_NOTES) == 0 {
-        let notes = doc_layout::notes(
-            cx,
-            [
-                "Card root width is caller-owned; express upstream `w-full max-w-sm` at the call site with `refine_layout(...)`.",
-                "Grid/flex demo pages should put `w_full`, `min_w_0`, and `max_w(...)` on the page cell rather than baking them into the Card recipe.",
-                "`CardFooter` now owns a fill-width + `min-w-0` inner row/column budget so footer-only text wraps against the card width instead of collapsing into one word per line.",
-                "If you prefer builder-style composition, use `Card::build(...)` or `card(cx, ...)`; slot types also expose `build(...)` variants.",
-                "MediaImage demos use `ImageSourceElementContextExt` to resolve local/URL image sources into `ImageId`.",
-            ],
-        );
+        let notes = doc_layout::notes_block([
+            "Card root width is caller-owned; express upstream `w-full max-w-sm` at the call site with `refine_layout(...)`.",
+            "Grid/flex demo pages should put `w_full`, `min_w_0`, and `max_w(...)` on the page cell rather than baking them into the Card recipe.",
+            "`CardFooter` now owns a fill-width + `min-w-0` inner row/column budget so footer-only text wraps against the card width instead of collapsing into one word per line.",
+            "If you prefer builder-style composition, use `Card::build(...)` or `card(cx, ...)`; slot types also expose `build(...)` variants.",
+            "MediaImage demos use `ImageSourceElementContextExt` to resolve local/URL image sources into `ImageId`.",
+        ]);
         sections.push(
-            DocSection::new("Notes", notes)
+            DocSection::build(cx, "Notes", notes)
                 .test_id_root("ui-gallery-card-section-notes")
                 .test_id_prefix("ui-gallery-card-section-notes")
                 .description("Implementation notes and pointers."),

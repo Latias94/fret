@@ -25,14 +25,13 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let invalid = snippets::invalid::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "Select is a Popover + Listbox recipe. Use it for rich overlays and custom interactions.",
-            "This page keeps stable `test_id`s for `tools/diag-scripts/ui-gallery/select/*`.",
-            "Use `SelectTriggerSize::Sm` to match compact shadcn control heights.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "Select is a Popover + Listbox recipe. Use it for rich overlays and custom interactions.",
+        "This page keeps stable `test_id`s for `tools/diag-scripts/ui-gallery/select/*`.",
+        "Use `SelectTriggerSize::Sm` to match compact shadcn control heights.",
+    ]);
+    let notes =
+        DocSection::build(cx, "Notes", notes).description("Parity notes and usage guidance.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -76,7 +75,7 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .description("All shadcn components should work under an RTL direction provider.")
                 .test_id_prefix("ui-gallery-select-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes).description("Parity notes and usage guidance."),
+            notes,
         ],
     );
 

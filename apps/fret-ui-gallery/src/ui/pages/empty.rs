@@ -13,17 +13,17 @@ pub(super) fn preview_empty(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let input_group = snippets::input_group::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let api_reference = doc_layout::notes(
-        cx,
-        [
-            "`Empty::new([...])` plus `EmptyHeader`, `EmptyMedia`, `EmptyTitle`, `EmptyDescription`, and `EmptyContent` matches the upstream slot model directly.",
-            "`EmptyMedia::variant(...)` covers the documented `default` and `icon` media variants without widening the public surface.",
-            "Gallery section order now mirrors the upstream Empty docs first: `Demo`, `Usage`, the example set through `RTL`, then `API Reference`.",
-            "Current recipe defaults intentionally remain aligned to the in-repo `new-york-v4` web geometry gates (`p-6 md:p-12`, `gap-6`, dashed card chrome) rather than re-translating the base source classes one-to-one in this pass.",
-            "Caller-owned refinements stay explicit for preview height, background paint, inline content layout, embedded `InputGroup` width, and page/grid placement constraints.",
-            "No extra generic `asChild` / `compose()` surface is needed here: the existing children-based slot API already matches the upstream composition model.",
-        ],
-    );
+    let api_reference = doc_layout::notes_block([
+        "`Empty::new([...])` plus `EmptyHeader`, `EmptyMedia`, `EmptyTitle`, `EmptyDescription`, and `EmptyContent` matches the upstream slot model directly.",
+        "`EmptyMedia::variant(...)` covers the documented `default` and `icon` media variants without widening the public surface.",
+        "Gallery section order now mirrors the upstream Empty docs first: `Demo`, `Usage`, the example set through `RTL`, then `API Reference`.",
+        "Current recipe defaults intentionally remain aligned to the in-repo `new-york-v4` web geometry gates (`p-6 md:p-12`, `gap-6`, dashed card chrome) rather than re-translating the base source classes one-to-one in this pass.",
+        "Caller-owned refinements stay explicit for preview height, background paint, inline content layout, embedded `InputGroup` width, and page/grid placement constraints.",
+        "No extra generic `asChild` / `compose()` surface is needed here: the existing children-based slot API already matches the upstream composition model.",
+    ]);
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .description("Ownership notes, source-of-truth mapping, and public-surface guidance.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -55,9 +55,7 @@ pub(super) fn preview_empty(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             DocSection::new("RTL", rtl)
                 .description("Empty layout should follow right-to-left direction context.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("API Reference", api_reference)
-                .no_shell()
-                .description("Ownership notes, source-of-truth mapping, and public-surface guidance."),
+            api_reference,
         ],
     )
     .test_id("ui-gallery-empty-component");

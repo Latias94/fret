@@ -13,22 +13,16 @@ pub(super) fn preview_ai_chain_of_thought_demo(
     let usage = snippets::chain_of_thought_demo::render(cx);
     let composable = snippets::chain_of_thought_composable::render(cx);
 
-    let features = doc_layout::notes(
-        cx,
-        [
+    let features = doc_layout::notes_block([
             "Collapsible reasoning trace aligned with the official AI Elements ChainOfThought example.",
             "Controlled / uncontrolled state parity via `open_model(...)` and `default_open(...)`.",
             "Docs-style compound composition via `ChainOfThought::header(...).content(...)` or `children([...])`, so the Gallery code stays close to the official examples.",
             "Rich slot composition for header copy, step labels, and step descriptions via child elements.",
             "Search results and image captions reuse the same shadcn badge + muted caption treatment as upstream.",
-        ],
-    )
+        ])
     .test_id("ui-gallery-ai-chain-of-thought-features");
 
-    let props = chain_of_thought_props_table(cx);
-    let props = props
-        .into_element(cx)
-        .test_id("ui-gallery-ai-chain-of-thought-props");
+    let props = chain_of_thought_props_table(cx).test_id("ui-gallery-ai-chain-of-thought-props");
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
@@ -47,9 +41,9 @@ pub(super) fn preview_ai_chain_of_thought_demo(
                     snippets::chain_of_thought_composable::SOURCE,
                     "example",
                 ),
-            DocSection::new("Features", features)
+            DocSection::build(cx, "Features", features)
                 .description("Behavior and composition notes mapped from the official docs."),
-            DocSection::new("Props", props)
+            DocSection::build(cx, "Props", props)
                 .description("Fret API surface for `fret_ui_ai::ChainOfThought*` builders."),
         ],
     );

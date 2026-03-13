@@ -13,16 +13,17 @@ pub(super) fn preview_collapsible(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let file_tree = snippets::file_tree::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let api_reference = doc_layout::notes(
-        cx,
-        [
-            "`Collapsible::new(Model<bool>)` and `Collapsible::uncontrolled(default_open)` cover the documented controlled and uncontrolled authoring paths.",
-            "`fret_ui_shadcn::collapsible::primitives::{Collapsible, CollapsibleTrigger, CollapsibleContent}` is the source-aligned children surface for free-form composition.",
-            "The top-level `fret_ui_shadcn::Collapsible` wrapper stays a compact Fret-first builder for dense editor UIs, so no extra generic `compose()` API is needed here.",
-            "Disclosure state, trigger semantics, and measured open/close motion remain recipe/primitive-owned; surrounding width, gap, and card/layout constraints remain caller-owned.",
-            "This page is docs/public-surface parity work, not a mechanism-layer fix.",
-        ],
-    );
+    let api_reference = doc_layout::notes_block([
+        "`Collapsible::new(Model<bool>)` and `Collapsible::uncontrolled(default_open)` cover the documented controlled and uncontrolled authoring paths.",
+        "`fret_ui_shadcn::collapsible::primitives::{Collapsible, CollapsibleTrigger, CollapsibleContent}` is the source-aligned children surface for free-form composition.",
+        "The top-level `fret_ui_shadcn::Collapsible` wrapper stays a compact Fret-first builder for dense editor UIs, so no extra generic `compose()` API is needed here.",
+        "Disclosure state, trigger semantics, and measured open/close motion remain recipe/primitive-owned; surrounding width, gap, and card/layout constraints remain caller-owned.",
+        "This page is docs/public-surface parity work, not a mechanism-layer fix.",
+    ]);
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .test_id_prefix("ui-gallery-collapsible-api-reference")
+        .description("Public surface summary and ownership notes.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -63,10 +64,7 @@ pub(super) fn preview_collapsible(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 )
                 .test_id_prefix("ui-gallery-collapsible-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("API Reference", api_reference)
-                .no_shell()
-                .test_id_prefix("ui-gallery-collapsible-api-reference")
-                .description("Public surface summary and ownership notes."),
+            api_reference,
         ],
     );
 

@@ -28,16 +28,16 @@ pub(super) fn preview_combobox(
     let input_group = snippets::input_group::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "API reference: `ecosystem/fret-ui-shadcn/src/combobox.rs`.",
-            "Combobox is intentionally a Popover + Command recipe surface; it already supports upstream-shaped authoring through `Combobox::into_element_parts(...)` with trigger/input/content patches, so the main parity gap here was usage clarity rather than missing mechanism work.",
-            "Multi-select chips is a recipe-level surface (`ComboboxChips`) built on top of Command + Popover primitives.",
-            "For invalid visuals today, apply style overrides on trigger and pair with field-level error copy.",
-            "When adding richer item/group APIs, keep test IDs stable so existing diag scripts remain reusable.",
-        ],
-    );
+    let notes = doc_layout::notes_block([
+        "API reference: `ecosystem/fret-ui-shadcn/src/combobox.rs`.",
+        "Combobox is intentionally a Popover + Command recipe surface; it already supports upstream-shaped authoring through `Combobox::into_element_parts(...)` with trigger/input/content patches, so the main parity gap here was usage clarity rather than missing mechanism work.",
+        "Multi-select chips is a recipe-level surface (`ComboboxChips`) built on top of Command + Popover primitives.",
+        "For invalid visuals today, apply style overrides on trigger and pair with field-level error copy.",
+        "When adding richer item/group APIs, keep test IDs stable so existing diag scripts remain reusable.",
+    ]);
+    let notes = DocSection::build(cx, "Notes", notes)
+        .test_id_prefix("ui-gallery-combobox-notes")
+        .description("Guidelines and parity notes for combobox recipes.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -144,9 +144,7 @@ pub(super) fn preview_combobox(
             DocSection::new("Extras: RTL", rtl)
                 .description("All shadcn components should work under an RTL direction provider.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes)
-                .test_id_prefix("ui-gallery-combobox-notes")
-                .description("Guidelines and parity notes for combobox recipes."),
+            notes,
         ],
     );
 

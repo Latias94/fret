@@ -26,17 +26,18 @@ pub(super) fn preview_input(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Bind `Input` to a model, then compose it with `Field` parts when you need labels, descriptions, or validation copy.",
     );
 
-    let api_reference = doc_layout::notes(
-        cx,
-        [
-            "`Input::new(model)` is the Fret equivalent of the upstream `<Input />`; `placeholder(...)`, `disabled(...)`, and `aria_invalid(...)` cover the documented core surface.",
-            "`Input` root width/height defaults remain recipe-owned (`w-full min-w-0` plus the control height) because the upstream recipe defines those constraints on the component itself.",
-            "`control_id(...)` plus `FieldLabel::for_control(...)` is the Fret path for label association; it stays a focused follow-up example instead of widening the base Input API.",
-            "Native file inputs are authored as `Input` + `Browse` button composition; Fret does not mirror DOM `type=\"file\"` directly, and diagnostics runs mock the picker to keep scripted gates deterministic.",
-            "Required markers remain label/call-site composition; the recipe owns input chrome, not surrounding form-policy affordances.",
-            "Keep `ui-gallery-input-basic` stable for IME routing regression scripts.",
-        ],
-    );
+    let api_reference = doc_layout::notes_block([
+        "`Input::new(model)` is the Fret equivalent of the upstream `<Input />`; `placeholder(...)`, `disabled(...)`, and `aria_invalid(...)` cover the documented core surface.",
+        "`Input` root width/height defaults remain recipe-owned (`w-full min-w-0` plus the control height) because the upstream recipe defines those constraints on the component itself.",
+        "`control_id(...)` plus `FieldLabel::for_control(...)` is the Fret path for label association; it stays a focused follow-up example instead of widening the base Input API.",
+        "Native file inputs are authored as `Input` + `Browse` button composition; Fret does not mirror DOM `type=\"file\"` directly, and diagnostics runs mock the picker to keep scripted gates deterministic.",
+        "Required markers remain label/call-site composition; the recipe owns input chrome, not surrounding form-policy affordances.",
+        "Keep `ui-gallery-input-basic` stable for IME routing regression scripts.",
+    ]);
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .test_id_prefix("ui-gallery-input-api-reference")
+        .description("Public surface summary, ownership notes, and current caveats.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -104,10 +105,7 @@ shadcn::Input::new(value)
                 )
                 .test_id_prefix("ui-gallery-input-label")
                 .code_rust_from_file_region(snippets::label::SOURCE, "example"),
-            DocSection::new("API Reference", api_reference)
-                .no_shell()
-                .test_id_prefix("ui-gallery-input-api-reference")
-                .description("Public surface summary, ownership notes, and current caveats."),
+            api_reference,
         ],
     );
 

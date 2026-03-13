@@ -15,16 +15,17 @@ pub(super) fn preview_textarea(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let button = snippets::button::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let api_reference = doc_layout::notes(
-        cx,
-        [
-            "`Textarea::new(model)` is the Fret equivalent of the upstream `<Textarea />`; `placeholder(...)`, `disabled(...)`, `aria_invalid(...)`, and `min_height(...)` cover the documented core surface.",
-            "`Textarea` keeps control chrome, root `w-full min-w-0`, minimum height, and resize-handle behavior recipe-owned; surrounding width caps and form layout stay caller-owned.",
-            "`control_id(...)` plus `FieldLabel::for_control(...)` is the focused Fret bridge for label association and belongs in a follow-up example rather than widening the base Textarea API.",
-            "No extra generic `compose()` / `asChild` surface is needed here: upstream composition happens around the textarea via `Field` or simple stacked layout, and Fret already matches that layering.",
-            "Placeholder text is shown when the model is empty, and the resize affordance is available unless the textarea is disabled.",
-        ],
-    );
+    let api_reference = doc_layout::notes_block([
+        "`Textarea::new(model)` is the Fret equivalent of the upstream `<Textarea />`; `placeholder(...)`, `disabled(...)`, `aria_invalid(...)`, and `min_height(...)` cover the documented core surface.",
+        "`Textarea` keeps control chrome, root `w-full min-w-0`, minimum height, and resize-handle behavior recipe-owned; surrounding width caps and form layout stay caller-owned.",
+        "`control_id(...)` plus `FieldLabel::for_control(...)` is the focused Fret bridge for label association and belongs in a follow-up example rather than widening the base Textarea API.",
+        "No extra generic `compose()` / `asChild` surface is needed here: upstream composition happens around the textarea via `Field` or simple stacked layout, and Fret already matches that layering.",
+        "Placeholder text is shown when the model is empty, and the resize affordance is available unless the textarea is disabled.",
+    ]);
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .test_id_prefix("ui-gallery-textarea-api-reference")
+        .description("Public surface summary and ownership notes.");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -60,10 +61,7 @@ pub(super) fn preview_textarea(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 .description("Textarea composition under an RTL direction provider.")
                 .test_id_prefix("ui-gallery-textarea-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("API Reference", api_reference)
-                .no_shell()
-                .test_id_prefix("ui-gallery-textarea-api-reference")
-                .description("Public surface summary and ownership notes."),
+            api_reference,
             DocSection::new("With Text", with_text)
                 .description("A helper-text composition that stays as a Fret follow-up example.")
                 .test_id_prefix("ui-gallery-textarea-with-text")
