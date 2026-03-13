@@ -301,7 +301,7 @@ fn fret_popover_tracks_trigger_when_underlay_scrolls() {
                         ..Default::default()
                     },
                     move |cx| {
-                        vec![Popover::new(open.clone()).into_element(
+                        vec![Popover::from_open(open.clone()).into_element_with(
                             cx,
                             move |cx| {
                                 cx.semantics(

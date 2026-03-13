@@ -29,6 +29,10 @@ const SHEET_RS: &str = include_str!("sheet.rs");
 const TABLE_RS: &str = include_str!("table.rs");
 const TOOLTIP_RS: &str = include_str!("tooltip.rs");
 const TYPOGRAPHY_RS: &str = include_str!("typography.rs");
+const CHECKBOX_RS: &str = include_str!("checkbox.rs");
+const COMBOBOX_RS: &str = include_str!("combobox.rs");
+const PROGRESS_RS: &str = include_str!("progress.rs");
+const SWITCH_RS: &str = include_str!("switch.rs");
 const UI_BUILDER_EXT_BREADCRUMB_RS: &str = include_str!("ui_builder_ext/breadcrumb.rs");
 const UI_BUILDER_EXT_COLLAPSIBLE_RS: &str = include_str!("ui_builder_ext/collapsible.rs");
 const UI_BUILDER_EXT_COMMAND_DIALOG_RS: &str = include_str!("ui_builder_ext/command_dialog.rs");
@@ -38,6 +42,31 @@ const UI_BUILDER_EXT_OVERLAY_ROOTS_RS: &str = include_str!("ui_builder_ext/overl
 
 fn normalize_ws(source: &str) -> String {
     source.split_whitespace().collect()
+}
+
+fn public_anyelement_signatures(source: &str) -> Vec<String> {
+    let normalized = source.split_whitespace().collect::<Vec<_>>().join(" ");
+    let mut out = Vec::new();
+    let mut rest = normalized.as_str();
+
+    while let Some(start) = rest.find("pub fn ") {
+        let tail = &rest[start..];
+        let end_brace = tail.find('{');
+        let end_semi = tail.find(';');
+        let end = match (end_brace, end_semi) {
+            (Some(a), Some(b)) => a.min(b),
+            (Some(a), None) => a,
+            (None, Some(b)) => b,
+            (None, None) => tail.len(),
+        };
+        let signature = &tail[..end];
+        if signature.contains("-> AnyElement") {
+            out.push(signature.trim().to_owned());
+        }
+        rest = &tail[end..];
+    }
+
+    out
 }
 
 #[test]
@@ -71,6 +100,9 @@ fn curated_facade_keeps_app_theme_and_raw_seams_explicit() {
     assert!(LIB_RS.contains("pub use crate::*;"));
     assert!(LIB_RS.contains("pub mod advanced;"));
     assert!(LIB_RS.contains("pub use fret_ui_kit::IntoUiElement;"));
+    assert!(LIB_RS.contains("UiElementTestIdExt"));
+    assert!(LIB_RS.contains("UiElementA11yExt"));
+    assert!(LIB_RS.contains("UiElementKeyContextExt"));
     assert!(ADVANCED_RS.contains("pub fn sync_theme_from_environment("));
     assert!(ADVANCED_RS.contains("pub fn install_with_ui_services("));
 }
@@ -326,6 +358,18 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             ][..],
         ),
         (
+            "checkbox.rs",
+            CHECKBOX_RS,
+            &[
+                "pub fn checkbox<H: UiHost>(model: Model<bool>) -> impl IntoUiElement<H> + use<H>",
+                "pub fn checkbox_opt<H: UiHost>(model: Model<Option<bool>>) -> impl IntoUiElement<H> + use<H>",
+            ][..],
+            &[
+                "pub fn checkbox<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<bool>) -> AnyElement",
+                "pub fn checkbox_opt<H: UiHost>( cx: &mut ElementContext<'_, H>, model: Model<Option<bool>>, ) -> AnyElement",
+            ][..],
+        ),
+        (
             "command.rs",
             COMMAND_RS,
             &[
@@ -364,10 +408,30 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             ][..],
         ),
         (
+            "progress.rs",
+            PROGRESS_RS,
+            &["pub fn progress<H: UiHost>(model: Model<f32>) -> impl IntoUiElement<H> + use<H>"][..],
+            &[
+                "pub fn progress<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<f32>) -> AnyElement",
+            ][..],
+        ),
+        (
             "separator.rs",
             SEPARATOR_RS,
             &["pub fn separator<H: UiHost>() -> impl IntoUiElement<H> + use<H> {"][..],
             &["pub fn separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"][..],
+        ),
+        (
+            "switch.rs",
+            SWITCH_RS,
+            &[
+                "pub fn switch<H: UiHost>(model: Model<bool>) -> impl IntoUiElement<H> + use<H>",
+                "pub fn switch_opt<H: UiHost>(model: Model<Option<bool>>) -> impl IntoUiElement<H> + use<H>",
+            ][..],
+            &[
+                "pub fn switch<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<bool>) -> AnyElement",
+                "pub fn switch_opt<H: UiHost>( cx: &mut ElementContext<'_, H>, model: Model<Option<bool>>, ) -> AnyElement",
+            ][..],
         ),
     ] {
         let normalized = normalize_ws(source);
@@ -416,7 +480,6 @@ fn collapsible_helpers_prefer_typed_build_outputs_when_no_raw_slot_storage_is_re
     }
 }
 
-
 #[test]
 fn breadcrumb_primitives_prefer_typed_child_conversion_before_the_landing_seam() {
     let normalized = normalize_ws(BREADCRUMB_RS);
@@ -443,7 +506,6 @@ fn breadcrumb_primitives_prefer_typed_child_conversion_before_the_landing_seam()
     }
 }
 
-
 #[test]
 fn breadcrumb_link_and_page_keep_raw_children_as_an_explicit_escape_hatch() {
     let normalized = normalize_ws(BREADCRUMB_RS);
@@ -454,9 +516,8 @@ fn breadcrumb_link_and_page_keep_raw_children_as_an_explicit_escape_hatch() {
         "pub struct BreadcrumbPageBuild<H, Children> {",
         "pub fn children<H: UiHost, I, TChild, Children>( self, children: Children, ) -> BreadcrumbPageBuild<H, Children> where Children: FnOnce(&mut ElementContext<'_, H>) -> I, I: IntoIterator<Item = TChild>, TChild: IntoUiElement<H>,",
     ];
-    let forbidden_markers = [
-        "pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {",
-    ];
+    let forbidden_markers =
+        ["pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {"];
 
     for marker in required_markers {
         let marker = normalize_ws(marker);
@@ -470,6 +531,39 @@ fn breadcrumb_link_and_page_keep_raw_children_as_an_explicit_escape_hatch() {
         assert!(
             !normalized.contains(&marker),
             "breadcrumb.rs reintroduced raw `children(...)` as the default primitive surface"
+        );
+    }
+}
+
+#[test]
+fn popover_root_promotes_typed_new_and_keeps_advanced_and_raw_root_seams_explicit() {
+    let normalized = normalize_ws(POPOVER_RS);
+    let required_markers = [
+        "pub fn from_open(open: Model<bool>) -> Self {",
+        "pub fn new<H: UiHost>( cx: &mut ElementContext<'_, H>, trigger: impl IntoUiElement<H>, content: impl IntoUiElement<H>, ) -> Self {",
+        "pub fn new_raw<H: UiHost>( cx: &mut ElementContext<'_, H>, trigger: AnyElement, content: AnyElement, ) -> Self {",
+        "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, trigger: impl IntoUiElement<H>, content: impl IntoUiElement<H>, ) -> Self {",
+        "pub fn from_open_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self {",
+        "pub fn new_controllable_raw<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, trigger: AnyElement, content: AnyElement, ) -> Self {",
+    ];
+    let forbidden_markers = [
+        "pub fn build<H: UiHost>(",
+        "pub fn new(open: Model<bool>) -> Self {",
+        "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self {",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "popover.rs should promote `new(...)` / `new_controllable(...)` as the typed root constructors while keeping `from_open(...)` and raw root seams explicit"
+        );
+    }
+    for marker in forbidden_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            !normalized.contains(&marker),
+            "popover.rs reintroduced legacy root constructors after promoting the typed `new(...)` surface"
         );
     }
 }
@@ -765,6 +859,76 @@ fn kbd_icon_stays_an_explicit_raw_helper_for_kbd_child_lists() {
             "kbd.rs should not pretend the `kbd_icon(...)` helper is typed while `Kbd::from_children(...)` still owns a raw child list"
         );
     }
+}
+
+#[test]
+fn combobox_anchor_stays_an_explicit_raw_wrapper_until_anchor_storage_is_typed() {
+    assert!(
+        COMBOBOX_RS.contains(
+            "This intentionally stays raw because `PopoverAnchor::new(...)` stores a concrete landed child."
+        ),
+        "combobox.rs should keep the raw `use_combobox_anchor(...)` seam explicitly documented"
+    );
+
+    let normalized = normalize_ws(COMBOBOX_RS);
+    let required_markers = ["pub fn use_combobox_anchor(child: AnyElement) -> PopoverAnchor"];
+    let forbidden_markers = [
+        "pub fn use_combobox_anchor<H: UiHost>(cx: &mut ElementContext<'_, H>, child: impl IntoUiElement<H>) -> PopoverAnchor",
+        "pub fn use_combobox_anchor<H: UiHost, T>(cx: &mut ElementContext<'_, H>, child: T) -> PopoverAnchor where T: IntoUiElement<H>",
+        "pub fn use_combobox_anchor(child: impl IntoUiElement<_>) -> PopoverAnchor",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "combobox.rs should keep the raw `use_combobox_anchor(...)` signature explicit"
+        );
+    }
+    for marker in forbidden_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            !normalized.contains(&marker),
+            "combobox.rs should not pretend the anchor wrapper is typed while `PopoverAnchor::new(...)` still owns a raw landed child"
+        );
+    }
+}
+
+#[test]
+fn thin_constructor_trial_modules_keep_public_anyelement_free_functions_explicit_and_rare() {
+    let mut hits = Vec::new();
+    for (label, source) in [
+        ("src/badge.rs", BADGE_RS),
+        ("src/checkbox.rs", CHECKBOX_RS),
+        ("src/command.rs", COMMAND_RS),
+        ("src/empty.rs", EMPTY_RS),
+        ("src/input_group.rs", INPUT_GROUP_RS),
+        ("src/input_otp.rs", INPUT_OTP_RS),
+        ("src/kbd.rs", KBD_RS),
+        ("src/pagination.rs", PAGINATION_RS),
+        ("src/progress.rs", PROGRESS_RS),
+        ("src/separator.rs", SEPARATOR_RS),
+        ("src/switch.rs", SWITCH_RS),
+    ] {
+        for signature in public_anyelement_signatures(source) {
+            if signature.contains("(self")
+                || signature.contains("( self")
+                || signature.contains("(mut self")
+                || signature.contains("( mut self")
+            {
+                continue;
+            }
+            hits.push(format!("{label}: {signature}"));
+        }
+    }
+
+    assert_eq!(
+        hits,
+        vec![String::from(
+            "src/kbd.rs: pub fn kbd_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: IconId) -> AnyElement"
+        )],
+        "thin-constructor trial modules should not grow new public free-function `-> AnyElement` helpers without an explicit raw-seam decision"
+    );
 }
 
 #[test]

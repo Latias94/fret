@@ -1134,9 +1134,9 @@ fn render_controls_panel(
                     .map(|f| f.disallow_left_edge.clone())
                     .unwrap_or_else(|| Arc::new(AtomicBool::new(false)));
 
-                let popover = shadcn::Popover::new(popover_open.clone())
+                let popover = shadcn::Popover::from_open(popover_open.clone())
                     .auto_focus(true)
-                    .into_element(
+                    .into_element_with(
                         cx,
                         |cx| {
                             shadcn::Button::new("Open popover")

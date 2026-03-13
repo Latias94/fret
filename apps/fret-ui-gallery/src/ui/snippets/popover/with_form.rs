@@ -49,18 +49,18 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .refine_layout(LayoutRefinement::default().w_px(Px(256.0)))
     .test_id("ui-gallery-popover-with-form-panel");
 
-    let popover = shadcn::Popover::new_controllable(cx, None, false)
-        .align(shadcn::PopoverAlign::Start)
-        .build(
-            cx,
-            shadcn::PopoverTrigger::build(
-                shadcn::Button::new("Open Popover")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .test_id("ui-gallery-popover-with-form-trigger"),
-            ),
-            content,
-        )
-        .test_id("ui-gallery-popover-with-form-popover");
+    let popover = shadcn::Popover::new(
+        cx,
+        shadcn::PopoverTrigger::build(
+            shadcn::Button::new("Open Popover")
+                .variant(shadcn::ButtonVariant::Outline)
+                .test_id("ui-gallery-popover-with-form-trigger"),
+        ),
+        content,
+    )
+    .align(shadcn::PopoverAlign::Start)
+    .into_element(cx)
+    .test_id("ui-gallery-popover-with-form-popover");
 
     centered(popover)
         .into_element(cx)

@@ -287,7 +287,7 @@ fn popover(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement {
         });
     });
 
-    shadcn::Popover::new(popover_open.clone())
+    shadcn::Popover::from_open(popover_open.clone())
         .auto_focus(true)
         .on_dismiss_request(Some(popover_on_dismiss))
         .into_element(
@@ -577,7 +577,7 @@ fn sheet(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement {
 fn portal_geometry(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement {
     let portal_geometry_popover_open = models.portal_geometry_popover_open.clone();
 
-    let popover = shadcn::Popover::new(portal_geometry_popover_open.clone())
+    let popover = shadcn::Popover::from_open(portal_geometry_popover_open.clone())
         .side(shadcn::PopoverSide::Right)
         .align(shadcn::PopoverAlign::Start)
         .side_offset(Px(8.0))

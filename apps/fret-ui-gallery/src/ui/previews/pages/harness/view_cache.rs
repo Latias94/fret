@@ -181,9 +181,9 @@ pub(in crate::ui) fn preview_view_cache(
             .a11y_label("Cached textarea")
             .into_element(cx);
 
-        let popover = shadcn::Popover::new(view_cache_popover_open.clone())
+        let popover = shadcn::Popover::from_open(view_cache_popover_open.clone())
             .auto_focus(true)
-            .into_element(
+            .into_element_with(
                 cx,
                 |cx| {
                     shadcn::Button::new("Popover (cached trigger)")

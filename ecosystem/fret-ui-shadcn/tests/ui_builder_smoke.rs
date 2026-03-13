@@ -47,7 +47,7 @@ fn ui_builder_overlay_roots_compile<H: UiHost>(
     );
 
     let _ = fret_ui_shadcn::PopoverUiBuilderExt::into_element(
-        Popover::new(popover_open.clone()).ui(),
+        Popover::from_open(popover_open.clone()).ui(),
         cx,
         |cx| Button::new("trigger").into_element(cx),
         |cx| PopoverContent::new(Vec::new()).into_element(cx),
@@ -354,7 +354,7 @@ fn ui_builder_smoke_applies_supported_patches() {
 
     let _ = Dialog::new(dialog_open).ui().build();
     let _ = AlertDialog::new(alert_dialog_open.clone()).ui().build();
-    let _ = Popover::new(popover_open).ui().build();
+    let _ = Popover::from_open(popover_open).ui().build();
     let _ = Sheet::new(sheet_open).ui().build();
     let _ = Drawer::new(drawer_open).ui().build();
     let _ = DropdownMenu::new(dropdown_menu_open).ui().build();

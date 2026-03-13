@@ -12,15 +12,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             ])
             .into_element(cx)]);
 
-            shadcn::Popover::new_controllable(cx, None, false)
-                .side(side)
-                .build(
-                    cx,
-                    shadcn::PopoverTrigger::build(
-                        shadcn::Button::new(label).variant(shadcn::ButtonVariant::Outline),
-                    ),
-                    content,
-                )
+            shadcn::Popover::new(
+                cx,
+                shadcn::PopoverTrigger::build(
+                    shadcn::Button::new(label).variant(shadcn::ButtonVariant::Outline),
+                ),
+                content,
+            )
+            .side(side)
+            .into_element(cx)
         };
 
         fret_ui_kit::ui::h_flex(move |cx| {

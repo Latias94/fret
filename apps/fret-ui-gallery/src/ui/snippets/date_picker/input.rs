@@ -109,12 +109,12 @@ pub fn render<H: UiHost>(
             .test_id("ui-gallery-date-picker-input-calendar")
     };
 
-    let popover = shadcn::Popover::new(open.clone())
+    let popover = shadcn::Popover::from_open(open.clone())
         .side(shadcn::PopoverSide::Bottom)
         .align(shadcn::PopoverAlign::End)
         .align_offset(Px(-8.0))
         .side_offset(Px(10.0))
-        .into_element(
+        .into_element_with(
             cx,
             move |cx| {
                 let trigger = shadcn::InputGroupButton::new("")

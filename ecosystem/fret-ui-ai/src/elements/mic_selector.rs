@@ -224,7 +224,7 @@ impl MicSelector {
         let children_for_trigger = children.clone();
         let children_for_content = children;
 
-        Popover::new(open.clone()).into_element_with_anchor(
+        Popover::from_open(open.clone()).into_element_with_anchor(
             cx,
             move |cx| {
                 cx.provide(controller_for_trigger.clone(), |cx| {
@@ -273,7 +273,7 @@ impl MicSelector {
         let controller_for_trigger = controller.clone();
         let controller_for_content = controller.clone();
 
-        Popover::new(open.clone()).into_element_with_anchor(
+        Popover::from_open(open.clone()).into_element_with_anchor(
             cx,
             move |cx| {
                 cx.provide(controller_for_trigger.clone(), |cx| {

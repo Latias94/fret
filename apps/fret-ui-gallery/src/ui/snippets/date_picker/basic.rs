@@ -48,10 +48,10 @@ pub fn render<H: UiHost>(
 
     shadcn::Field::new([
         shadcn::FieldLabel::new("Date").into_element(cx),
-        shadcn::Popover::new(open.clone())
+        shadcn::Popover::from_open(open.clone())
             .side(shadcn::PopoverSide::Bottom)
             .align(shadcn::PopoverAlign::Start)
-            .into_element(
+            .into_element_with(
                 cx,
                 |cx| {
                     let mut button = shadcn::Button::new(button_text)

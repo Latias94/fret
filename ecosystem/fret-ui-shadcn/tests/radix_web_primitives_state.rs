@@ -1744,7 +1744,7 @@ fn radix_web_popover_open_close_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::Popover::new(open.clone()).into_element(
+        fret_ui_shadcn::Popover::from_open(open.clone()).into_element_with(
             cx,
             |cx| {
                 fret_ui_shadcn::Button::new("Open Popover")

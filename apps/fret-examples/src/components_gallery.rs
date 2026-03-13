@@ -1191,9 +1191,9 @@ impl ComponentsGalleryDriver {
                                                         );
 
                                                 let popover =
-                                                    shadcn::Popover::new(popover_open.clone())
+                                                    shadcn::Popover::from_open(popover_open.clone())
                                                     .auto_focus(true)
-                                                    .into_element(
+                                                    .into_element_with(
                                                         cx,
                                                         |cx| {
                                                             shadcn::Button::new("Popover")

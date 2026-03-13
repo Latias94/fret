@@ -3973,10 +3973,10 @@ fn render_calendar_root_background_in_popover_scope(
         };
 
         vec![
-            fret_ui_shadcn::Popover::new(open.clone())
+            fret_ui_shadcn::Popover::from_open(open.clone())
                 .side(fret_ui_shadcn::PopoverSide::Bottom)
                 .align(fret_ui_shadcn::PopoverAlign::Start)
-                .into_element(
+                .into_element_with(
                     cx,
                     move |cx| {
                         fret_ui_shadcn::Button::new("Open")

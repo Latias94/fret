@@ -455,10 +455,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let dob_field = shadcn::FormField::new(
         form_state.clone(),
         "dob",
-        [shadcn::Popover::new(dob_open.clone())
+        [shadcn::Popover::from_open(dob_open.clone())
             .side(shadcn::PopoverSide::Bottom)
             .align(shadcn::PopoverAlign::Start)
-            .into_element(
+            .into_element_with(
                 cx,
                 |cx| {
                     shadcn::Button::new(dob_text)

@@ -47,7 +47,7 @@ fn build_popover_surface_colors_demo(
 ) -> AnyElement {
     use fret_ui_shadcn::{Button, ButtonVariant, Popover, PopoverContent};
 
-    Popover::new(open.clone()).into_element(
+    Popover::from_open(open.clone()).into_element_with(
         cx,
         |cx| {
             Button::new("Open popover")
@@ -67,7 +67,7 @@ fn build_popover_surface_colors_demo(
 }
 
 fn build_popover_simple(cx: &mut ElementContext<'_, App>, open: &Model<bool>) -> AnyElement {
-    fret_ui_shadcn::Popover::new(open.clone()).into_element(
+    fret_ui_shadcn::Popover::from_open(open.clone()).into_element_with(
         cx,
         |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
         |cx| fret_ui_shadcn::PopoverContent::new(Vec::new()).into_element(cx),

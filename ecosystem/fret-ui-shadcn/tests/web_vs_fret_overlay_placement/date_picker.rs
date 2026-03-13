@@ -41,10 +41,10 @@ fn web_vs_fret_date_picker_with_presets_select_listbox_scroll_matches_web_scroll
             let value = value.clone();
 
             vec![
-                fret_ui_shadcn::Popover::new(popover_open)
+                fret_ui_shadcn::Popover::from_open(popover_open)
                     .align(fret_ui_shadcn::PopoverAlign::Start)
                     .side(fret_ui_shadcn::PopoverSide::Bottom)
-                    .into_element(
+                    .into_element_with(
                         cx,
                         |cx| {
                             fret_ui_shadcn::Button::new("Pick a date")

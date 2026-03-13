@@ -174,9 +174,10 @@ fn popover_hover_last_pointer_model<H: UiHost>(
 /// This is a non-modal, dismissible overlay built on:
 /// - per-window overlay roots (ADR 0067)
 /// - click-through outside-press observer pass (ADR 0069)
-#[derive(Clone)]
 pub struct Popover {
     open: Model<bool>,
+    trigger_child: Option<AnyElement>,
+    content_child: Option<AnyElement>,
     trigger_override: Option<fret_ui::elements::GlobalElementId>,
     align: PopoverAlign,
     side: PopoverSide,
@@ -216,6 +217,8 @@ impl std::fmt::Debug for Popover {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Popover")
             .field("open", &"<model>")
+            .field("trigger_child", &self.trigger_child.is_some())
+            .field("content_child", &self.content_child.is_some())
             .field("trigger_override", &self.trigger_override)
             .field("align", &self.align)
             .field("side", &self.side)
@@ -260,9 +263,12 @@ impl std::fmt::Debug for Popover {
 }
 
 impl Popover {
-    pub fn new(open: Model<bool>) -> Self {
+    /// Explicit advanced seam for authoring against an already-managed open model.
+    pub fn from_open(open: Model<bool>) -> Self {
         Self {
             open,
+            trigger_child: None,
+            content_child: None,
             trigger_override: None,
             align: PopoverAlign::default(),
             side: PopoverSide::default(),
@@ -298,6 +304,26 @@ impl Popover {
         }
     }
 
+    /// Default typed root constructor for the common uncontrolled popover authoring path.
+    pub fn new<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl IntoUiElement<H>,
+        content: impl IntoUiElement<H>,
+    ) -> Self {
+        let trigger = trigger.into_element(cx);
+        let content = content.into_element(cx);
+        Self::new_raw(cx, trigger, content)
+    }
+
+    /// Explicit raw root seam for already-landed trigger/content elements.
+    pub fn new_raw<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        trigger: AnyElement,
+        content: AnyElement,
+    ) -> Self {
+        Self::new_controllable_raw(cx, None, false, trigger, content)
+    }
+
     /// Creates a popover with a controlled/uncontrolled open model (Radix `open` / `defaultOpen`).
     ///
     /// Note: If `open` is `None`, the internal model is stored in element state at the call site.
@@ -306,27 +332,44 @@ impl Popover {
         cx: &mut ElementContext<'_, H>,
         open: Option<Model<bool>>,
         default_open: bool,
+        trigger: impl IntoUiElement<H>,
+        content: impl IntoUiElement<H>,
+    ) -> Self {
+        let trigger = trigger.into_element(cx);
+        let content = content.into_element(cx);
+        Self::new_controllable_raw(cx, open, default_open, trigger, content)
+    }
+
+    /// Explicit advanced seam for authoring against a controlled/uncontrolled open model while
+    /// still supplying trigger/content manually through `into_element(...)`.
+    pub fn from_open_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: Option<Model<bool>>,
+        default_open: bool,
     ) -> Self {
         let open = radix_popover::PopoverRoot::new()
             .open(open)
             .default_open(default_open)
             .open_model(cx);
-        Self::new(open)
+        Self::from_open(open)
     }
 
-    /// Host-bound builder-first helper that late-lands the trigger/content at the root call site.
-    #[track_caller]
-    pub fn build<H: UiHost>(
-        self,
+    /// Explicit raw root seam for controlled/uncontrolled authoring with already-landed
+    /// trigger/content parts.
+    pub fn new_controllable_raw<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
-        trigger: impl IntoUiElement<H>,
-        content: impl IntoUiElement<H>,
-    ) -> AnyElement {
-        self.into_element(
-            cx,
-            move |cx| trigger.into_element(cx),
-            move |cx| content.into_element(cx),
-        )
+        open: Option<Model<bool>>,
+        default_open: bool,
+        trigger: AnyElement,
+        content: AnyElement,
+    ) -> Self {
+        Self::from_open_controllable(cx, open, default_open).with_root_parts(trigger, content)
+    }
+
+    fn with_root_parts(mut self, trigger: AnyElement, content: AnyElement) -> Self {
+        self.trigger_child = Some(trigger);
+        self.content_child = Some(content);
+        self
     }
 
     pub fn align(mut self, align: PopoverAlign) -> Self {
@@ -585,7 +628,7 @@ impl Popover {
     }
 
     #[track_caller]
-    pub fn into_element<H: UiHost>(
+    pub fn into_element_with<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
@@ -1196,6 +1239,21 @@ impl Popover {
     }
 }
 
+impl<H: UiHost> IntoUiElement<H> for Popover {
+    #[track_caller]
+    fn into_element(mut self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let trigger = self
+            .trigger_child
+            .take()
+            .expect("Popover::into_element(cx) requires trigger/content; use Popover::new(...) / Popover::new_controllable(...) or the advanced from_open(...).into_element_with(...) seam");
+        let content = self
+            .content_child
+            .take()
+            .expect("Popover::into_element(cx) requires trigger/content; use Popover::new(...) / Popover::new_controllable(...) or the advanced from_open(...).into_element_with(...) seam");
+        self.into_element_with(cx, move |_cx| trigger, move |_cx| content)
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 struct PopoverTriggerContract {
     auto_toggle: bool,
@@ -1699,7 +1757,9 @@ mod tests {
                             vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
                         },
                     ));
-                let popover = Popover::new(open.clone()).build(cx, trigger, content);
+                let popover =
+                    Popover::new_controllable(cx, Some(open.clone()), false, trigger, content)
+                        .into_element(cx);
                 vec![popover]
             },
         );
@@ -1742,7 +1802,7 @@ mod tests {
     }
 
     #[test]
-    fn popover_new_controllable_uses_controlled_model_when_provided() {
+    fn popover_from_open_controllable_uses_controlled_model_when_provided() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let bounds = Rect::new(
@@ -1753,13 +1813,13 @@ mod tests {
         let controlled = app.models_mut().insert(true);
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            let popover = Popover::new_controllable(cx, Some(controlled.clone()), false);
+            let popover = Popover::from_open_controllable(cx, Some(controlled.clone()), false);
             assert_eq!(popover.open, controlled);
         });
     }
 
     #[test]
-    fn popover_new_controllable_applies_default_open() {
+    fn popover_from_open_controllable_applies_default_open() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let bounds = Rect::new(
@@ -1768,13 +1828,35 @@ mod tests {
         );
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            let popover = Popover::new_controllable(cx, None, true);
+            let popover = Popover::from_open_controllable(cx, None, true);
             let open = cx
                 .watch_model(&popover.open)
                 .layout()
                 .copied()
                 .unwrap_or(false);
             assert!(open);
+        });
+    }
+
+    #[test]
+    fn popover_new_into_element_accepts_late_landed_trigger_and_content() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let content = PopoverContent::new(vec![ui::raw_text("tip").into_element(cx)]);
+            let popover = Popover::new(
+                cx,
+                PopoverTrigger::build(crate::Button::new("trigger")),
+                content,
+            )
+            .into_element(cx);
+
+            assert_eq!(popover.id, popover.id);
         });
     }
 
@@ -1923,10 +2005,10 @@ mod tests {
 
                 let popover_focus_id_out = popover_focus_id_out.clone();
                 let popover_content_id_out = popover_content_id_out.clone();
-                let popover = Popover::new(open.clone())
+                let popover = Popover::from_open(open.clone())
                     .auto_focus(true)
                     .arrow(arrow)
-                    .into_element(
+                    .into_element_with(
                         cx,
                         |_cx| trigger,
                         move |cx| {
@@ -2008,7 +2090,7 @@ mod tests {
 
                     let query_for_content = query.clone();
                     let content_id_out = content_id_out.clone();
-                    let popover = Popover::new(open.clone()).into_element(
+                    let popover = Popover::from_open(open.clone()).into_element_with(
                         cx,
                         |_cx| trigger,
                         move |cx| {
@@ -2159,12 +2241,12 @@ mod tests {
 
                 let popover_focus_id_out = popover_focus_id_out.clone();
                 let popover_content_id_out = popover_content_id_out.clone();
-                let popover = Popover::new(open.clone())
+                let popover = Popover::from_open(open.clone())
                     .auto_focus(true)
                     .arrow(arrow)
                     .on_open_auto_focus(on_open_auto_focus.clone())
                     .on_close_auto_focus(on_close_auto_focus.clone())
-                    .into_element(
+                    .into_element_with(
                         cx,
                         |_cx| trigger,
                         move |cx| {
@@ -2266,11 +2348,11 @@ mod tests {
                 );
 
                 let redirect_focus_id_cell = redirect_focus_id_cell.clone();
-                let popover = Popover::new(open.clone())
+                let popover = Popover::from_open(open.clone())
                     .auto_focus(true)
                     .arrow(arrow)
                     .on_open_auto_focus(on_open_auto_focus.clone())
-                    .into_element(
+                    .into_element_with(
                         cx,
                         |_cx| trigger,
                         move |cx| {
@@ -2708,9 +2790,9 @@ mod tests {
                     },
                 );
 
-                let popover = Popover::new(open.clone())
+                let popover = Popover::from_open(open.clone())
                     .consume_outside_pointer_events(true)
-                    .into_element(
+                    .into_element_with(
                         cx,
                         |_cx| trigger,
                         |cx| {
@@ -2840,9 +2922,9 @@ mod tests {
                     },
                 );
 
-                let popover = Popover::new(open.clone())
+                let popover = Popover::from_open(open.clone())
                     .on_dismiss_request(Some(handler.clone()))
-                    .into_element(
+                    .into_element_with(
                         cx,
                         |_cx| trigger,
                         |cx| {
@@ -3072,7 +3154,7 @@ mod tests {
                     .test_id("popover-avatar-trigger")
                     .into_element(cx);
 
-                vec![Popover::new(open.clone()).into_element(
+                vec![Popover::from_open(open.clone()).into_element_with(
                     cx,
                     |cx| PopoverTrigger::new(trigger).into_element(cx),
                     |cx| {
@@ -3164,9 +3246,9 @@ mod tests {
                         move |cx| {
                             let popover_content_id_out = popover_content_id_out.clone();
                             vec![
-                                Popover::new(open.clone())
+                                Popover::from_open(open.clone())
                                     .side(PopoverSide::Bottom)
-                                    .into_element(
+                                    .into_element_with(
                                         cx,
                                         |cx| {
                                             cx.pressable_with_id(
@@ -3727,7 +3809,7 @@ mod tests {
                         );
 
                         let anchor_id = anchor_id_out_for_frame.get().expect("anchor id");
-                        let popover = Popover::new(open.clone())
+                        let popover = Popover::from_open(open.clone())
                             .anchor_element(anchor_id)
                             .into_element_with_anchor(
                                 cx,
@@ -3861,9 +3943,9 @@ mod tests {
                         anchor_id_out_for_frame.set(Some(anchor.id));
 
                         let anchor_id = anchor_id_out_for_frame.get().expect("anchor id");
-                        let popover = Popover::new(open.clone())
+                        let popover = Popover::from_open(open.clone())
                             .anchor_element(anchor_id)
-                            .into_element(
+                            .into_element_with(
                                 cx,
                                 move |cx| {
                                     let open = open.clone();
@@ -4018,10 +4100,10 @@ mod tests {
                     },
                 );
 
-                let popover = Popover::new(open.clone())
+                let popover = Popover::from_open(open.clone())
                     .modal(true)
                     .auto_focus(true)
-                    .into_element(
+                    .into_element_with(
                         cx,
                         |_cx| trigger,
                         |cx| {
@@ -4179,11 +4261,11 @@ mod tests {
                     |cx, _st| vec![cx.container(ContainerProps::default(), |_cx| Vec::new())],
                 );
 
-                let popover = Popover::new(open.clone())
+                let popover = Popover::from_open(open.clone())
                     .modal(true)
                     .auto_focus(true)
                     .on_dismiss_request(Some(handler.clone()))
-                    .into_element(
+                    .into_element_with(
                         cx,
                         |_cx| trigger,
                         |cx| {
@@ -4347,10 +4429,10 @@ mod tests {
                         },
                     );
 
-                    let popover = Popover::new(open.clone())
+                    let popover = Popover::from_open(open.clone())
                         .modal(true)
                         .auto_focus(true)
-                        .into_element(
+                        .into_element_with(
                             cx,
                             |_cx| trigger,
                             |cx| {
@@ -4547,10 +4629,10 @@ mod tests {
                             },
                         );
 
-                        let popover = Popover::new(open.clone())
+                        let popover = Popover::from_open(open.clone())
                             .modal(true)
                             .auto_focus(false)
-                            .into_element(
+                            .into_element_with(
                                 cx,
                                 |_cx| trigger,
                                 |cx| {
@@ -4762,10 +4844,10 @@ mod tests {
                     );
 
                     let focusable_id_out = focusable_id_out.clone();
-                    let popover = Popover::new(open.clone())
+                    let popover = Popover::from_open(open.clone())
                         .modal(true)
                         .auto_focus(false)
-                        .into_element(
+                        .into_element_with(
                             cx,
                             |_cx| trigger,
                             move |cx| {
@@ -4969,12 +5051,12 @@ mod tests {
 
                     let focusable_id_out = focusable_id_out.clone();
                     let handler = handler.clone();
-                    let popover = Popover::new(open.clone())
+                    let popover = Popover::from_open(open.clone())
                         .modal(true)
                         .auto_focus(false)
                         .consume_outside_pointer_events(true)
                         .on_close_auto_focus(Some(handler))
-                        .into_element(
+                        .into_element_with(
                             cx,
                             |_cx| trigger,
                             move |cx| {
@@ -5195,8 +5277,9 @@ mod tests {
                                 },
                             );
 
-                            let popover =
-                                Popover::new(open.clone()).auto_focus(false).into_element(
+                            let popover = Popover::from_open(open.clone())
+                                .auto_focus(false)
+                                .into_element_with(
                                     cx,
                                     |_cx| trigger,
                                     move |cx| {
@@ -5406,7 +5489,7 @@ mod tests {
                 ))
                 .into_element(cx);
 
-                let popover = Popover::new(open.clone()).into_element(
+                let popover = Popover::from_open(open.clone()).into_element_with(
                     cx,
                     |_cx| trigger,
                     |cx| {
@@ -5515,7 +5598,7 @@ mod tests {
                 .auto_toggle(false)
                 .into_element(cx);
 
-                let popover = Popover::new(open.clone()).into_element(
+                let popover = Popover::from_open(open.clone()).into_element_with(
                     cx,
                     |_cx| trigger,
                     |cx| {
@@ -5624,11 +5707,11 @@ mod tests {
                         .auto_toggle(false)
                         .into_element(cx);
 
-                        let popover = Popover::new(open.clone())
+                        let popover = Popover::from_open(open.clone())
                             .open_on_hover(true)
                             .hover_open_delay_frames(0)
                             .hover_close_delay_frames(0)
-                            .into_element(
+                            .into_element_with(
                                 cx,
                                 |_cx| trigger,
                                 |cx| {
@@ -5744,11 +5827,11 @@ mod tests {
                         .auto_toggle(false)
                         .into_element(cx);
 
-                        let popover = Popover::new(open.clone())
+                        let popover = Popover::from_open(open.clone())
                             .open_on_hover(true)
                             .hover_open_delay_frames(0)
                             .hover_close_delay_frames(0)
-                            .into_element(
+                            .into_element_with(
                                 cx,
                                 |_cx| trigger,
                                 |cx| {
@@ -5877,11 +5960,11 @@ mod tests {
                         .auto_toggle(false)
                         .into_element(cx);
 
-                        let popover = Popover::new(open.clone())
+                        let popover = Popover::from_open(open.clone())
                             .open_on_hover(true)
                             .hover_open_delay_frames(0)
                             .hover_close_delay_frames(0)
-                            .into_element(
+                            .into_element_with(
                                 cx,
                                 |_cx| trigger,
                                 |cx| {
@@ -6047,10 +6130,10 @@ mod tests {
                 .into_element(cx);
 
                 let detached_id = detached_trigger.id;
-                let popover = Popover::new(open.clone())
+                let popover = Popover::from_open(open.clone())
                     .trigger_element(detached_id)
                     .anchor_element(detached_id)
-                    .into_element(
+                    .into_element_with(
                         cx,
                         |cx| {
                             cx.container(
@@ -6204,10 +6287,10 @@ mod tests {
 
                         let focusable_a_id = focusable_a_id.clone();
                         let focusable_b_id = focusable_b_id.clone();
-                        let popover = Popover::new(open.clone())
+                        let popover = Popover::from_open(open.clone())
                             .modal_trap_focus(true)
                             .auto_focus(true)
-                            .into_element(
+                            .into_element_with(
                                 cx,
                                 |_cx| trigger,
                                 move |cx| {
@@ -6369,8 +6452,8 @@ mod tests {
         );
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |_cx| {
-            let a = Popover::new(open.clone()).keep_mounted(true);
-            let b = Popover::new(open.clone()).force_mount(true);
+            let a = Popover::from_open(open.clone()).keep_mounted(true);
+            let b = Popover::from_open(open.clone()).force_mount(true);
             assert!(a.keep_mounted);
             assert!(b.keep_mounted);
         });
@@ -6380,8 +6463,8 @@ mod tests {
     fn popover_shift_cross_axis_defaults_to_true_and_can_be_disabled() {
         let mut app = App::new();
         let open = app.models_mut().insert(false);
-        let a = Popover::new(open.clone());
-        let b = Popover::new(open).shift_cross_axis(false);
+        let a = Popover::from_open(open.clone());
+        let b = Popover::from_open(open).shift_cross_axis(false);
         assert_eq!(a.shift_cross_axis.unwrap_or(true), true);
         assert_eq!(b.shift_cross_axis.unwrap_or(true), false);
     }
@@ -6391,13 +6474,13 @@ mod tests {
         let mut app = App::new();
         let open = app.models_mut().insert(false);
 
-        let non_modal = Popover::new(open.clone()).modal_mode(PopoverModalMode::NonModal);
+        let non_modal = Popover::from_open(open.clone()).modal_mode(PopoverModalMode::NonModal);
         assert_eq!(non_modal.modal_mode, PopoverModalMode::NonModal);
 
-        let modal = Popover::new(open.clone()).modal_mode(PopoverModalMode::Modal);
+        let modal = Popover::from_open(open.clone()).modal_mode(PopoverModalMode::Modal);
         assert_eq!(modal.modal_mode, PopoverModalMode::Modal);
 
-        let trap_focus = Popover::new(open).modal_mode(PopoverModalMode::TrapFocus);
+        let trap_focus = Popover::from_open(open).modal_mode(PopoverModalMode::TrapFocus);
         assert_eq!(trap_focus.modal_mode, PopoverModalMode::TrapFocus);
     }
 }

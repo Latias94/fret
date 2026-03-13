@@ -49,10 +49,10 @@ fn build_date_picker_with_presets_select_open(
     let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
     let open = open.clone();
 
-    fret_ui_shadcn::Popover::new(open.clone())
+    fret_ui_shadcn::Popover::from_open(open.clone())
         .align(fret_ui_shadcn::PopoverAlign::Start)
         .side(fret_ui_shadcn::PopoverSide::Bottom)
-        .into_element(
+        .into_element_with(
             cx,
             |cx| {
                 fret_ui_shadcn::Button::new("Pick a date")

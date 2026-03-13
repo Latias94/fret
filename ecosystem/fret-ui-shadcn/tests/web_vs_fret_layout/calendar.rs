@@ -1,5 +1,4 @@
 use super::*;
-use fret_ui_kit::IntoUiElement as _;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -3069,12 +3068,12 @@ fn web_vs_fret_layout_calendar_22_open_background_matches_web() {
     let render = move |cx: &mut fret_ui::ElementContext<'_, App>| {
         use fret_ui_kit::{LengthRefinement, Space};
 
-        let popover =
-            fret_ui_shadcn::Popover::new(open.clone()).align(fret_ui_shadcn::PopoverAlign::Start);
+        let popover = fret_ui_shadcn::Popover::from_open(open.clone())
+            .align(fret_ui_shadcn::PopoverAlign::Start);
         let calendar_bg = calendar_bg_for_render.clone();
         let month_model = month_model.clone();
         let selected = selected.clone();
-        vec![popover.into_element(
+        vec![popover.into_element_with(
             cx,
             |cx| fret_ui_shadcn::Button::new("Select date").into_element(cx),
             move |cx| {

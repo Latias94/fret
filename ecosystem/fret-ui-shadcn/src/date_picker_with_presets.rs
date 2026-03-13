@@ -162,11 +162,11 @@ impl DatePickerWithPresets {
                 None => placeholder,
             };
 
-            Popover::new(open.clone())
+            Popover::from_open(open.clone())
                 .side(PopoverSide::Bottom)
                 .align(PopoverAlign::Start)
                 .initial_focus_from_cell(initial_focus_out.clone())
-                .into_element(
+                .into_element_with(
                     cx,
                     move |cx| {
                         let theme = Theme::global(&*cx.app).snapshot();

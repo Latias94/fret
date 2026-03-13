@@ -19,7 +19,7 @@ fn web_vs_fret_overlay_placement_smoke_cases_match_web_fixtures() {
                     &case.web_name,
                     Some("dialog"),
                     |cx, open| {
-                        fret_ui_shadcn::Popover::new(open.clone()).into_element(
+                        fret_ui_shadcn::Popover::from_open(open.clone()).into_element_with(
                             cx,
                             |cx| {
                                 fret_ui_shadcn::Button::new("Open popover")

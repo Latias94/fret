@@ -46,10 +46,10 @@ pub fn render<H: UiHost>(
         .map(format_date_lll_dd_y_en)
         .unwrap_or_else(|| String::from("Pick a date"));
 
-    shadcn::Popover::new(open.clone())
+    shadcn::Popover::from_open(open.clone())
         .side(shadcn::PopoverSide::Bottom)
         .align(shadcn::PopoverAlign::Start)
-        .into_element(
+        .into_element_with(
             cx,
             |cx| {
                 let mut button = shadcn::Button::new(button_text)
