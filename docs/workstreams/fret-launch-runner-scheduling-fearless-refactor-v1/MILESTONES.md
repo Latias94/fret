@@ -33,7 +33,9 @@ Last updated: 2026-03-13
   - diagnostics audit now explicitly records that `SurfaceBootstrap` startup writes are
     mutually exclusive while redraw-request diagnostics remain app-owned current-frame snapshots,
   - streaming-pending redraw diagnostics now use the same reason classification on desktop and web,
-  - aggregate runtime diagnostics are deterministic under same-millisecond multi-window updates.
+  - aggregate runtime diagnostics are deterministic under same-millisecond multi-window updates,
+  - remaining web redraw sink wiring is now explicitly split between scheduling diagnostics,
+    sink-only redraw helpers, and one callback-local DOM wake path.
 
 ## M0 — Workstream agreed
 
@@ -121,12 +123,9 @@ Exit criteria:
 
 - diagnostics writes still need a turn/frame semantic audit,
 - broader module thinning is still intentionally deferred until semantics and evidence are fully
-  locked,
-- remaining backend-local redraw logic still needs an explicit “acceptable sink wiring vs drift”
-  decision beyond the helper extraction already landed.
+  locked.
 
 ## Recommended continuation order
 
 1. Land a dedicated slice for diagnostics meaning and regression evidence.
-2. Decide whether remaining redraw sink wiring is acceptable as-is.
-3. Only then decide whether structural thinning belongs here or in a separate workstream.
+2. Only then decide whether structural thinning belongs here or in a separate workstream.

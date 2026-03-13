@@ -93,6 +93,19 @@ Implementation update (2026-03-13, batch 7):
 - This batch keeps the existing single-window web behavior intact; it is a backend-local structural
   consolidation, not a scheduling contract change.
 
+Implementation update (2026-03-13, batch 8):
+
+- Web sink-only redraw helpers now live in
+  `crates/fret-launch/src/runner/web/redraw_sink.rs`.
+- `app_handler.rs`, `effects.rs`, and `streaming_images.rs` now route queued-event and
+  resource/window-sync redraws through a dedicated sink helper that intentionally does not write
+  `RunnerFrameDriveDiagnosticsStore`.
+- Redraw sink audit result:
+  - runner-owned scheduling redraws stay in `web/scheduling_diagnostics.rs`,
+  - sink-only redraws stay in `web/redraw_sink.rs`,
+  - the only remaining direct web `request_redraw()` call is the devtools inbox DOM callback,
+    where the closure has no mutable runner access and only needs a best-effort wake.
+
 ## Context
 
 Fret's architecture already places the scheduling and presentation responsibility in the correct
@@ -456,8 +469,7 @@ Recommended scope:
 Follow-up only if needed:
 
 - tighten diagnostics around the shared RAF queue,
-- decide whether any remaining redraw-related duplication is actually semantic drift or only sink
-  wiring.
+- further thin sink-only redraw wiring only if module size pressure justifies the churn.
 
 ### Slice B — diagnostics semantic audit
 
@@ -545,5 +557,4 @@ Completed:
 Recommended next code batch:
 
 1. audit diagnostics stores keyed by `TickId` / `FrameId`,
-2. decide whether any remaining backend-local redraw logic is acceptable sink wiring,
-3. only then thin large backend modules.
+2. only then thin large backend modules when the payoff is clear.

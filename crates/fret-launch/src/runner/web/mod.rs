@@ -20,6 +20,7 @@ mod app_handler;
 mod effects;
 mod gfx_init;
 mod ime_mount;
+mod redraw_sink;
 mod render_loop;
 mod scheduling_diagnostics;
 mod streaming_images;
