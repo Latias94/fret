@@ -696,10 +696,14 @@ ID format:
     - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps segment/count/
       degradation assembly plus final dump emission while JSON encoding moved behind the companion
       encode module
+    - render-plan dump env gating and file emission now live under
+      `crates/fret-render-wgpu/src/renderer/render_plan_dump_emit.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps scratch rebuild,
+      JSON assembly, serialization, and only a thin gate/assemble/emit orchestration shell
   - Current next hotspot:
     - decide whether `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` should keep
-      env-trigger and file-emission orchestration together with segment/count/degradation
-      assembly, or whether one more assembly/emit split would make the diagnostics seam cleaner
+      segment/count/degradation assembly together with serialization now that env-trigger and
+      file-emission ownership have moved into `render_plan_dump_emit.rs`
     - decide whether the remaining fullscreen utility families in `effects.rs` should now split
       further by family, or whether the current post-helper-extraction surface is already the
       right long-term home for `AlphaThreshold`, `ColorAdjust`, `ColorMatrix`, `Dither`, `Noise`,
@@ -921,13 +925,10 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: SVG/material service ownership now routes through dedicated owner seams:
-    `crates/fret-render-wgpu/src/renderer/services_assets.rs` now owns `SvgService`,
-    `MaterialService`, and sampled-material capability gating, while
-    `crates/fret-render-wgpu/src/renderer/material_effects.rs`,
-    `crates/fret-render-wgpu/src/renderer/svg/mod.rs`, and
-    `crates/fret-render-wgpu/src/renderer/svg/cache.rs` now own the remaining registry and
-    raster-cleanup mutation helpers for those services.
+  - Latest landed slice: render-plan dump emit ownership now routes through a dedicated companion
+    module: `crates/fret-render-wgpu/src/renderer/render_plan_dump_emit.rs` now owns env gating
+    and file emission, while `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps
+    scratch rebuild, JSON assembly, serialization, and thin orchestration only.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

@@ -65,6 +65,11 @@ Current snapshot (2026-03-13):
     postprocess, and effect-marker JSON schema encoding plus focused encoding tests
   - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps segment/count/
     degradation assembly and final dump emission orchestration
+- The latest render-plan-dump-emit split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump_emit.rs` now owns the
+    `FRET_RENDERPLAN_DUMP*` env gate plus final file emission
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps scratch rebuild, JSON
+    assembly, serialization, and a thin gate/assemble/emit orchestration shell
 - The latest custom-effect service split has landed:
   - `crates/fret-render-wgpu/src/renderer/services_custom_effects.rs` now owns custom-effect WGSL
     validation, capability gating, registration/unregister flow, and the focused service tests
@@ -902,6 +907,19 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu registry_deduplicates_svg_bytes_and_tracks_refcounts`
   - `cargo nextest run -p fret-render-wgpu gpu_dot_grid_material_smoke_conformance`
   - `cargo nextest run -p fret-render-wgpu sampled_noise_material_uses_catalog_texture_layer`
+- The forty-first render-plan-dump-emit split has landed:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump_emit.rs` now owns the
+    `FRET_RENDERPLAN_DUMP*` env gate and final file emission
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps segment/count/
+    degradation scratch rebuild, JSON assembly, serialization, and a thin
+    gate/assemble/emit orchestration shell
+- Renderer render-plan-dump-emit split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu custom_effect_summaries_include_abi_and_input_counts`
+  - `cargo nextest run -p fret-render-wgpu custom_effect_v3_summary_tracks_pyramid_levels_min_max_sum`
+  - `cargo nextest run -p fret-render-wgpu target_usage_tracks_max_size`
+  - `cargo nextest run -p fret-render-wgpu encode_custom_effect_v3_pass_keeps_distinct_source_targets`
+  - `cargo nextest run -p fret-render-wgpu diff_segment_reports_tracks_shape_changes_and_pass_growth`
 - Renderer custom-v3-dispatch split verification remains green:
   - `cargo check -p fret-render-wgpu --tests`
   - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`

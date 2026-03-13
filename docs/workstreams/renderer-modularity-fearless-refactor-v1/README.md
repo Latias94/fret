@@ -249,6 +249,11 @@ As of 2026-03-13:
     and `crates/fret-render-wgpu/src/renderer/svg/cache.rs` now exposes a narrow
     `unregister_svg_rasters(...)` helper for service-local cleanup.
   - `crates/fret-render-wgpu/src/renderer/services.rs` now keeps text/path service impls only.
+- Renderer render-plan dump emit/orchestration is now also split along diagnostics seams:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump_emit.rs` now owns the
+    `FRET_RENDERPLAN_DUMP*` env gating and final file emission.
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` now keeps scratch rebuild,
+    render-plan JSON assembly, serialization, and a thin gate/assemble/emit orchestration shell.
 - Renderer path registry/cache owner state now also lives under
   `crates/fret-render-wgpu/src/renderer/path.rs`, and
   `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns prepared path storage, path cache

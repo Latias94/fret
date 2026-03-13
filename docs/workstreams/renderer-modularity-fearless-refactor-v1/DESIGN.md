@@ -252,7 +252,10 @@ For `Renderer` state-shell tightening, the same principle applies:
   target-usage rollups, and diagnostics-only v3 counters should prefer adjacent companion modules
   instead of re-growing the owner into another monolith. The same applies to JSON schema/pass
   encoding helpers: pass/postprocess/effect-marker encoders should live in adjacent companions so
-  dump emission stays a thin assembly/orchestration layer.
+  dump emission stays a thin assembly/orchestration layer. Env-trigger policy and filesystem
+  emission follow the same rule: they should prefer one adjacent emit companion module so the owner
+  file keeps scratch rebuild, JSON assembly, and serialization flow without re-growing the
+  diagnostics seam.
 - scene-encoding cache state is the matching frame-reuse seam for encode-stage reuse:
   cache key construction inputs, hit/miss bookkeeping, miss-reason reporting, and cache/scratch
   storage should move behind one owner so render-scene execution stops depending on a loose cache

@@ -3,6 +3,8 @@ use super::render_plan::{
     DebugPostprocess, RenderPlan, RenderPlanDegradation, RenderPlanDegradationKind,
     RenderPlanDegradationReason, RenderPlanPass,
 };
+#[cfg(not(target_arch = "wasm32"))]
+use super::render_plan_dump_emit::{emit_render_plan_dump_json, should_emit_render_plan_dump};
 use super::render_plan_dump_encode::{
     JsonDumpDebugPostprocess, JsonDumpEffectMarker, JsonDumpPass, encode_debug_postprocess,
     encode_effect_marker, encode_pass,
@@ -11,9 +13,6 @@ use super::render_plan_dump_summary::{
     JsonDumpCustomEffectSummary, JsonDumpCustomEffectV3DiagnosticsSummary, JsonDumpTargetUsage,
     encode_custom_effect_v3_diagnostics_summary, summarize_custom_effects, summarize_target_usage,
 };
-
-#[cfg(not(target_arch = "wasm32"))]
-use std::path::PathBuf;
 
 #[derive(Debug, serde::Serialize)]
 struct JsonDumpSegmentFlags {
@@ -175,59 +174,7 @@ fn encode_degradation(d: RenderPlanDegradation) -> JsonDumpDegradation {
     }
 }
 
-fn parse_env_u64(name: &str) -> Option<u64> {
-    std::env::var(name).ok().and_then(|v| v.parse::<u64>().ok())
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn dump_dir_from_env() -> PathBuf {
-    std::env::var_os("FRET_RENDERPLAN_DUMP_DIR")
-        .filter(|v| !v.is_empty())
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(".fret").join("renderplan"))
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn should_dump_frame(frame_index: u64) -> bool {
-    if std::env::var_os("FRET_RENDERPLAN_DUMP")
-        .filter(|v| !v.is_empty())
-        .is_none()
-    {
-        return false;
-    }
-
-    if let Some(frame) = parse_env_u64("FRET_RENDERPLAN_DUMP_FRAME") {
-        return frame_index == frame;
-    }
-
-    let after = parse_env_u64("FRET_RENDERPLAN_DUMP_AFTER_FRAMES").unwrap_or(1);
-    if frame_index < after {
-        return false;
-    }
-
-    if let Some(every) = parse_env_u64("FRET_RENDERPLAN_DUMP_EVERY") {
-        return every > 0 && (frame_index - after).is_multiple_of(every);
-    }
-
-    static DUMPED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-    !DUMPED.swap(true, std::sync::atomic::Ordering::SeqCst)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub(super) fn maybe_dump_render_plan_json(
-    plan: &RenderPlan,
-    viewport_size: (u32, u32),
-    format: wgpu::TextureFormat,
-    frame_index: u64,
-    postprocess: DebugPostprocess,
-    ordered_draws_len: usize,
-    effect_markers: &[EffectMarker],
-    dump_scratch: &mut RenderPlanJsonDumpScratch,
-) {
-    if !should_dump_frame(frame_index) {
-        return;
-    }
-
+fn rebuild_segment_pass_counts(plan: &RenderPlan, dump_scratch: &mut RenderPlanJsonDumpScratch) {
     dump_scratch.segment_pass_counts.resize(
         plan.segments.len(),
         JsonDumpSegmentPassCounts {
@@ -241,37 +188,39 @@ pub(super) fn maybe_dump_render_plan_json(
             scene_draw_range: 0,
             path_msaa_batch: 0,
         });
-    for p in &plan.passes {
-        match p {
-            RenderPlanPass::SceneDrawRange(p) => {
-                if let Some(c) = dump_scratch.segment_pass_counts.get_mut(p.segment.0) {
-                    c.scene_draw_range += 1;
+    for pass in &plan.passes {
+        match pass {
+            RenderPlanPass::SceneDrawRange(pass) => {
+                if let Some(count) = dump_scratch.segment_pass_counts.get_mut(pass.segment.0) {
+                    count.scene_draw_range += 1;
                 }
             }
-            RenderPlanPass::PathMsaaBatch(p) => {
-                if let Some(c) = dump_scratch.segment_pass_counts.get_mut(p.segment.0) {
-                    c.path_msaa_batch += 1;
+            RenderPlanPass::PathMsaaBatch(pass) => {
+                if let Some(count) = dump_scratch.segment_pass_counts.get_mut(pass.segment.0) {
+                    count.path_msaa_batch += 1;
                 }
             }
             _ => {}
         }
     }
+}
 
+fn rebuild_segment_dump_scratch(plan: &RenderPlan, dump_scratch: &mut RenderPlanJsonDumpScratch) {
     dump_scratch.segments.clear();
     dump_scratch.segments.reserve(plan.segments.len());
-    for (ix, s) in plan.segments.iter().enumerate() {
+    for (ix, segment) in plan.segments.iter().enumerate() {
         dump_scratch.segments.push(JsonDumpSegment {
-            id: s.id.0,
-            draw_range: [s.draw_range.start, s.draw_range.end],
-            start_uniform_index: s.start_uniform_index,
-            start_uniform_fingerprint: format!("0x{:016x}", s.start_uniform_fingerprint),
+            id: segment.id.0,
+            draw_range: [segment.draw_range.start, segment.draw_range.end],
+            start_uniform_index: segment.start_uniform_index,
+            start_uniform_fingerprint: format!("0x{:016x}", segment.start_uniform_fingerprint),
             flags: JsonDumpSegmentFlags {
-                has_quad: s.flags.has_quad,
-                has_viewport: s.flags.has_viewport,
-                has_image: s.flags.has_image,
-                has_mask: s.flags.has_mask,
-                has_text: s.flags.has_text,
-                has_path: s.flags.has_path,
+                has_quad: segment.flags.has_quad,
+                has_viewport: segment.flags.has_viewport,
+                has_image: segment.flags.has_image,
+                has_mask: segment.flags.has_mask,
+                has_text: segment.flags.has_text,
+                has_path: segment.flags.has_path,
             },
             pass_counts: dump_scratch.segment_pass_counts.get(ix).copied().unwrap_or(
                 JsonDumpSegmentPassCounts {
@@ -281,32 +230,66 @@ pub(super) fn maybe_dump_render_plan_json(
             ),
         });
     }
+}
 
+fn rebuild_effect_marker_dump_scratch(
+    effect_markers: &[EffectMarker],
+    dump_scratch: &mut RenderPlanJsonDumpScratch,
+) {
     dump_scratch.effect_markers.clear();
     dump_scratch.effect_markers.reserve(effect_markers.len());
-    for m in effect_markers.iter().copied() {
-        dump_scratch.effect_markers.push(encode_effect_marker(m));
+    for marker in effect_markers.iter().copied() {
+        dump_scratch
+            .effect_markers
+            .push(encode_effect_marker(marker));
     }
+}
 
+fn rebuild_degradation_dump_scratch(
+    plan: &RenderPlan,
+    dump_scratch: &mut RenderPlanJsonDumpScratch,
+) {
     dump_scratch.degradations.clear();
     dump_scratch.degradations.reserve(plan.degradations.len());
-    for d in plan.degradations.iter().copied() {
-        dump_scratch.degradations.push(encode_degradation(d));
+    for degradation in plan.degradations.iter().copied() {
+        dump_scratch
+            .degradations
+            .push(encode_degradation(degradation));
     }
+}
 
+fn rebuild_pass_dump_scratch(plan: &RenderPlan, dump_scratch: &mut RenderPlanJsonDumpScratch) {
     dump_scratch.passes.clear();
     dump_scratch.passes.reserve(plan.passes.len());
-    for p in &plan.passes {
-        dump_scratch.passes.push(encode_pass(p));
+    for pass in &plan.passes {
+        dump_scratch.passes.push(encode_pass(pass));
     }
+}
 
+fn rebuild_render_plan_json_dump_scratch(
+    plan: &RenderPlan,
+    effect_markers: &[EffectMarker],
+    dump_scratch: &mut RenderPlanJsonDumpScratch,
+) {
+    rebuild_segment_pass_counts(plan, dump_scratch);
+    rebuild_segment_dump_scratch(plan, dump_scratch);
+    rebuild_effect_marker_dump_scratch(effect_markers, dump_scratch);
+    rebuild_degradation_dump_scratch(plan, dump_scratch);
+    rebuild_pass_dump_scratch(plan, dump_scratch);
     dump_scratch.custom_effects = summarize_custom_effects(&plan.passes);
     dump_scratch.target_usage = summarize_target_usage(&plan.passes);
+}
 
-    let dir = dump_dir_from_env();
-    let _ = std::fs::create_dir_all(&dir);
-
-    let dump = RenderPlanJsonDump {
+fn assemble_render_plan_json_dump<'a>(
+    plan: &'a RenderPlan,
+    viewport_size: (u32, u32),
+    format: wgpu::TextureFormat,
+    frame_index: u64,
+    postprocess: DebugPostprocess,
+    ordered_draws_len: usize,
+    dump_scratch: &'a RenderPlanJsonDumpScratch,
+) -> RenderPlanJsonDump<'a> {
+    RenderPlanJsonDump {
         schema_version: 7,
         frame_index,
         viewport_size: [viewport_size.0, viewport_size.1],
@@ -324,14 +307,44 @@ pub(super) fn maybe_dump_render_plan_json(
         ),
         degradations: &dump_scratch.degradations,
         passes: &dump_scratch.passes,
-    };
+    }
+}
 
-    let file = dir.join(format!("renderplan.frame{frame_index}.json"));
-    dump_scratch.bytes.clear();
-    if serde_json::to_writer_pretty(&mut dump_scratch.bytes, &dump).is_err() {
+#[cfg(not(target_arch = "wasm32"))]
+pub(super) fn maybe_dump_render_plan_json(
+    plan: &RenderPlan,
+    viewport_size: (u32, u32),
+    format: wgpu::TextureFormat,
+    frame_index: u64,
+    postprocess: DebugPostprocess,
+    ordered_draws_len: usize,
+    effect_markers: &[EffectMarker],
+    dump_scratch: &mut RenderPlanJsonDumpScratch,
+) {
+    if !should_emit_render_plan_dump(frame_index) {
         return;
     }
-    let _ = std::fs::write(&file, &dump_scratch.bytes);
+
+    rebuild_render_plan_json_dump_scratch(plan, effect_markers, dump_scratch);
+    let mut bytes = std::mem::take(&mut dump_scratch.bytes);
+    bytes.clear();
+    {
+        let dump = assemble_render_plan_json_dump(
+            plan,
+            viewport_size,
+            format,
+            frame_index,
+            postprocess,
+            ordered_draws_len,
+            dump_scratch,
+        );
+        if serde_json::to_writer_pretty(&mut bytes, &dump).is_err() {
+            dump_scratch.bytes = bytes;
+            return;
+        }
+    }
+    emit_render_plan_dump_json(frame_index, &bytes);
+    dump_scratch.bytes = bytes;
 }
 
 #[cfg(target_arch = "wasm32")]
