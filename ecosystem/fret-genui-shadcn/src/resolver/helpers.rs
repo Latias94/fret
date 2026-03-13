@@ -304,103 +304,49 @@ impl ShadcnResolver {
 
     pub(super) fn ensure_string_model<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
+        key: &ElementKey,
         initial: String,
     ) -> Model<String> {
-        #[derive(Default)]
-        struct ModelState {
-            model: Option<Model<String>>,
-        }
-        let existing = cx.with_state(ModelState::default, |st| st.model.clone());
-        if let Some(model) = existing {
-            return model;
-        }
-        let model = cx.app.models_mut().insert(initial);
-        cx.with_state(ModelState::default, |st| st.model = Some(model.clone()));
-        model
+        cx.local_model_keyed(key.clone(), move || initial)
     }
 
     pub(super) fn ensure_optional_arc_str_model<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
+        key: &ElementKey,
         initial: Option<Arc<str>>,
     ) -> Model<Option<Arc<str>>> {
-        #[derive(Default)]
-        struct ModelState {
-            model: Option<Model<Option<Arc<str>>>>,
-        }
-        let existing = cx.with_state(ModelState::default, |st| st.model.clone());
-        if let Some(model) = existing {
-            return model;
-        }
-        let model = cx.app.models_mut().insert(initial);
-        cx.with_state(ModelState::default, |st| st.model = Some(model.clone()));
-        model
+        cx.local_model_keyed(key.clone(), move || initial)
     }
 
     pub(super) fn ensure_vec_f32_model<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
+        key: &ElementKey,
         initial: Vec<f32>,
     ) -> Model<Vec<f32>> {
-        #[derive(Default)]
-        struct ModelState {
-            model: Option<Model<Vec<f32>>>,
-        }
-        let existing = cx.with_state(ModelState::default, |st| st.model.clone());
-        if let Some(model) = existing {
-            return model;
-        }
-        let model = cx.app.models_mut().insert(initial);
-        cx.with_state(ModelState::default, |st| st.model = Some(model.clone()));
-        model
+        cx.local_model_keyed(key.clone(), move || initial)
     }
 
     pub(super) fn ensure_f32_model<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
+        key: &ElementKey,
         initial: f32,
     ) -> Model<f32> {
-        #[derive(Default)]
-        struct ModelState {
-            model: Option<Model<f32>>,
-        }
-        let existing = cx.with_state(ModelState::default, |st| st.model.clone());
-        if let Some(model) = existing {
-            return model;
-        }
-        let model = cx.app.models_mut().insert(initial);
-        cx.with_state(ModelState::default, |st| st.model = Some(model.clone()));
-        model
+        cx.local_model_keyed(key.clone(), move || initial)
     }
 
     pub(super) fn ensure_bool_model<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
+        key: &ElementKey,
         initial: bool,
     ) -> Model<bool> {
-        #[derive(Default)]
-        struct ModelState {
-            model: Option<Model<bool>>,
-        }
-        let existing = cx.with_state(ModelState::default, |st| st.model.clone());
-        if let Some(model) = existing {
-            return model;
-        }
-        let model = cx.app.models_mut().insert(initial);
-        cx.with_state(ModelState::default, |st| st.model = Some(model.clone()));
-        model
+        cx.local_model_keyed(key.clone(), move || initial)
     }
 
     pub(super) fn ensure_vec_arc_str_model<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
+        key: &ElementKey,
         initial: Vec<Arc<str>>,
     ) -> Model<Vec<Arc<str>>> {
-        #[derive(Default)]
-        struct ModelState {
-            model: Option<Model<Vec<Arc<str>>>>,
-        }
-        let existing = cx.with_state(ModelState::default, |st| st.model.clone());
-        if let Some(model) = existing {
-            return model;
-        }
-        let model = cx.app.models_mut().insert(initial);
-        cx.with_state(ModelState::default, |st| st.model = Some(model.clone()));
-        model
+        cx.local_model_keyed(key.clone(), move || initial)
     }
 }

@@ -402,6 +402,7 @@ impl RangeSlider {
     }
 }
 
+#[track_caller]
 pub fn slider<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     value: Model<f32>,
@@ -423,14 +424,17 @@ pub fn slider<H: UiHost>(
         state_layer: StateLayerAnimator,
     }
 
-    let (mut dragging_model, mut hovered_model) = cx.with_state(Runtime::default, |st| {
-        (st.dragging.clone(), st.hovered.clone())
-    });
+    let runtime_slot = cx.slot_id();
+
+    let (mut dragging_model, mut hovered_model) =
+        cx.state_for(runtime_slot, Runtime::default, |st| {
+            (st.dragging.clone(), st.hovered.clone())
+        });
 
     if dragging_model.is_none() {
         let model = cx.app.models_mut().insert(false);
         let value = model.clone();
-        cx.with_state(Runtime::default, move |st| {
+        cx.state_for(runtime_slot, Runtime::default, move |st| {
             st.dragging = Some(value.clone())
         });
         dragging_model = Some(model);
@@ -438,7 +442,9 @@ pub fn slider<H: UiHost>(
     if hovered_model.is_none() {
         let model = cx.app.models_mut().insert(false);
         let value = model.clone();
-        cx.with_state(Runtime::default, move |st| st.hovered = Some(value.clone()));
+        cx.state_for(runtime_slot, Runtime::default, move |st| {
+            st.hovered = Some(value.clone())
+        });
         hovered_model = Some(model);
     }
 
@@ -515,7 +521,7 @@ pub fn slider<H: UiHost>(
         value: Option<Arc<str>>,
     }
 
-    let value_text = cx.with_state(DerivedValueString::default, |st| {
+    let value_text = cx.slot_state(DerivedValueString::default, |st| {
         let bits = value_now.to_bits();
         if st.value.is_none() || st.bits != bits {
             st.bits = bits;
@@ -621,7 +627,7 @@ pub fn slider<H: UiHost>(
 
         let now_frame = cx.frame_id.0;
         let (state_layer_opacity, state_layer_want_frames) =
-            cx.with_state(Runtime::default, |st| {
+            cx.state_for(runtime_slot, Runtime::default, |st| {
                 if (state_layer_target - st.state_layer_target).abs() > 1e-6 {
                     st.state_layer_target = state_layer_target;
                     st.state_layer.set_target(
@@ -1115,6 +1121,7 @@ pub fn slider<H: UiHost>(
     })
 }
 
+#[track_caller]
 pub fn range_slider<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     values: Model<[f32; 2]>,
@@ -1139,8 +1146,10 @@ pub fn range_slider<H: UiHost>(
         state_layer_end: StateLayerAnimator,
     }
 
+    let runtime_slot = cx.slot_id();
+
     let (mut dragging_model, mut hovered_model, mut active_thumb_model) =
-        cx.with_state(Runtime::default, |st| {
+        cx.state_for(runtime_slot, Runtime::default, |st| {
             (
                 st.dragging.clone(),
                 st.hovered.clone(),
@@ -1151,7 +1160,7 @@ pub fn range_slider<H: UiHost>(
     if dragging_model.is_none() {
         let model = cx.app.models_mut().insert(false);
         let value = model.clone();
-        cx.with_state(Runtime::default, move |st| {
+        cx.state_for(runtime_slot, Runtime::default, move |st| {
             st.dragging = Some(value.clone())
         });
         dragging_model = Some(model);
@@ -1159,13 +1168,15 @@ pub fn range_slider<H: UiHost>(
     if hovered_model.is_none() {
         let model = cx.app.models_mut().insert(false);
         let value = model.clone();
-        cx.with_state(Runtime::default, move |st| st.hovered = Some(value.clone()));
+        cx.state_for(runtime_slot, Runtime::default, move |st| {
+            st.hovered = Some(value.clone())
+        });
         hovered_model = Some(model);
     }
     if active_thumb_model.is_none() {
         let model = cx.app.models_mut().insert(0u8);
         let value = model.clone();
-        cx.with_state(Runtime::default, move |st| {
+        cx.state_for(runtime_slot, Runtime::default, move |st| {
             st.active_thumb = Some(value.clone())
         });
         active_thumb_model = Some(model);
@@ -1230,7 +1241,7 @@ pub fn range_slider<H: UiHost>(
         value: Option<Arc<str>>,
     }
 
-    let range_value_text = cx.with_state(DerivedRangeValueString::default, |st| {
+    let range_value_text = cx.slot_state(DerivedRangeValueString::default, |st| {
         let start_bits = values_now[0].to_bits();
         let end_bits = values_now[1].to_bits();
         if st.value.is_none() || st.start_bits != start_bits || st.end_bits != end_bits {
@@ -1273,7 +1284,7 @@ pub fn range_slider<H: UiHost>(
         }
 
         let (start_label, end_label, start_test_id, end_test_id) =
-            cx.with_state(DerivedThumbStrings::default, |st| {
+            cx.slot_state(DerivedThumbStrings::default, |st| {
                 if st.start_label.is_none()
                     || st.label_base.as_deref() != Some(thumb_label_base.as_ref())
                     || st.test_id_base.as_deref() != test_id.as_deref()
@@ -1306,7 +1317,7 @@ pub fn range_slider<H: UiHost>(
             end: Option<Arc<str>>,
         }
 
-        let (start_value_text, end_value_text) = cx.with_state(DerivedThumbValues::default, |st| {
+        let (start_value_text, end_value_text) = cx.slot_state(DerivedThumbValues::default, |st| {
             let start_bits = values_now[0].to_bits();
             let end_bits = values_now[1].to_bits();
             if st.start.is_none() || st.start_bits != start_bits {
@@ -1631,7 +1642,7 @@ pub fn range_slider<H: UiHost>(
             0.0
         };
         let (state_layer_opacity_start, state_layer_opacity_end, state_layer_want_frames) = cx
-            .with_state(Runtime::default, |st| {
+            .state_for(runtime_slot, Runtime::default, |st| {
                 if (target_start - st.state_layer_target_start).abs() > 1e-6 {
                     st.state_layer_target_start = target_start;
                     st.state_layer_start.set_target(

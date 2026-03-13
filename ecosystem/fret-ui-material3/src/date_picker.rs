@@ -235,7 +235,6 @@ impl std::fmt::Debug for DatePickerDialog {
 
 #[derive(Default)]
 struct DialogRuntime {
-    models: Option<DialogModels>,
     was_open: bool,
 }
 
@@ -312,22 +311,14 @@ impl DatePickerDialog {
                 .get_model_copied(&self.open, Invalidation::Layout)
                 .unwrap_or(false);
 
-            let prev_open = cx.with_state(DialogRuntime::default, |st| st.was_open);
-            cx.with_state(DialogRuntime::default, |st| st.was_open = open_now);
+            let prev_open = cx.root_state(DialogRuntime::default, |st| st.was_open);
+            cx.root_state(DialogRuntime::default, |st| st.was_open = open_now);
 
-            let existing = cx.with_state(DialogRuntime::default, |st| st.models.clone());
-            let models = match existing {
-                Some(models) => models,
-                None => {
-                    let today = OffsetDateTime::now_utc().date();
-                    let draft_month = cx.app.models_mut().insert(CalendarMonth::from_date(today));
-                    let draft_selected = cx.app.models_mut().insert(None::<Date>);
-                    let models = DialogModels {
-                        draft_month,
-                        draft_selected,
-                    };
-                    cx.with_state(DialogRuntime::default, |st| st.models = Some(models.clone()));
-                    models
+            let models = {
+                let today = OffsetDateTime::now_utc().date();
+                DialogModels {
+                    draft_month: cx.local_model(|| CalendarMonth::from_date(today)),
+                    draft_selected: cx.local_model(|| None::<Date>),
                 }
             };
 
@@ -425,7 +416,7 @@ impl DatePickerDialog {
                 }
 
                 let (scrim_test_id, panel_test_id) =
-                    cx.with_state(DerivedTestIds::default, |st| {
+                    cx.slot_state(DerivedTestIds::default, |st| {
                         if st.base.as_deref() != self.test_id.as_deref() {
                             st.base = self.test_id.clone();
                             st.scrim = st.base.as_ref().map(|id| {
@@ -783,6 +774,7 @@ fn date_picker_body<H: UiHost>(
     )
 }
 
+#[track_caller]
 fn month_nav_header<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     token_variant: DatePickerTokenVariant,
@@ -797,7 +789,7 @@ fn month_nav_header<H: UiHost>(
         title: Option<Arc<str>>,
     }
 
-    let title = cx.with_state(DerivedTitle::default, |st| {
+    let title = cx.slot_state(DerivedTitle::default, |st| {
         if st.title.is_none() || st.month != Some(month.month) || st.year != month.year {
             st.month = Some(month.month);
             st.year = month.year;
@@ -876,7 +868,7 @@ fn month_nav_header<H: UiHost>(
         next: Option<Arc<str>>,
     }
 
-    let (prev_test_id, next_test_id) = cx.with_state(DerivedNavTestIds::default, |st| {
+    let (prev_test_id, next_test_id) = cx.slot_state(DerivedNavTestIds::default, |st| {
         if st.prev.is_none() || st.base.as_deref() != Some(base_id.as_ref()) || st.tag != Some(tag)
         {
             st.base = Some(base_id.clone());
@@ -941,6 +933,7 @@ fn weekdays_row<H: UiHost>(
     })
 }
 
+#[track_caller]
 fn dates_grid<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     token_variant: DatePickerTokenVariant,
@@ -988,7 +981,7 @@ fn dates_grid<H: UiHost>(
         cell_test_ids: Option<Arc<[Arc<str>]>>,
     }
 
-    let cell_test_ids = cx.with_state(DerivedGridTestIds::default, |st| {
+    let cell_test_ids = cx.slot_state(DerivedGridTestIds::default, |st| {
         if st.cell_test_ids.is_none() || st.base.as_deref() != Some(base_id.as_ref()) {
             st.base = Some(base_id.clone());
             let mut out: Vec<Arc<str>> = Vec::with_capacity(42);

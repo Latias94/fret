@@ -385,25 +385,16 @@ struct SelectRuntimeModels {
     listbox_element_id: Rc<Cell<Option<GlobalElementId>>>,
 }
 
+#[track_caller]
 fn select_runtime_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> SelectRuntimeModels {
-    #[derive(Default)]
-    struct State {
-        models: Option<SelectRuntimeModels>,
+    SelectRuntimeModels {
+        open: cx.local_model(|| false),
+        scroll_handle: cx.slot_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone()),
+        listbox_element_id: cx.slot_state(
+            || Rc::new(Cell::new(None::<GlobalElementId>)),
+            |id| id.clone(),
+        ),
     }
-
-    let existing = cx.with_state(State::default, |st| st.models.clone());
-    if let Some(models) = existing {
-        return models;
-    }
-
-    let models = SelectRuntimeModels {
-        open: cx.app.models_mut().insert(false),
-        scroll_handle: fret_ui::scroll::ScrollHandle::default(),
-        listbox_element_id: Rc::new(Cell::new(None)),
-    };
-
-    cx.with_state(State::default, |st| st.models = Some(models.clone()));
-    models
 }
 
 fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select) -> AnyElement {
@@ -437,7 +428,7 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
         struct OpenState {
             last_open: bool,
         }
-        let opening = cx.with_state(OpenState::default, |st| {
+        let opening = cx.slot_state(OpenState::default, |st| {
             let opening = is_open && !st.last_open;
             st.last_open = is_open;
             opening
@@ -957,7 +948,7 @@ fn select_trigger_element<H: UiHost>(
                 let should_float = focused || open || populated;
 
                 let (float_progress, float_want_frames) =
-                    cx.with_state(SelectTriggerRuntime::default, |rt| {
+                    cx.slot_state(SelectTriggerRuntime::default, |rt| {
                         if rt.float_target != should_float {
                             rt.float_target = should_float;
                             rt.float.set_target(
@@ -972,7 +963,7 @@ fn select_trigger_element<H: UiHost>(
                     });
 
                 let (chevron_progress, chevron_want_frames) =
-                    cx.with_state(SelectChevronRuntime::default, |rt| {
+                    cx.slot_state(SelectChevronRuntime::default, |rt| {
                         if rt.target_open != open {
                             rt.target_open = open;
                             rt.anim.set_target(
@@ -1807,7 +1798,7 @@ fn select_listbox_panel<H: UiHost>(
         listbox: Option<Arc<str>>,
     }
 
-    let listbox_test_id = cx.with_state(DerivedTestIds::default, |st| {
+    let listbox_test_id = cx.slot_state(DerivedTestIds::default, |st| {
         if st.base.as_deref() != test_id.as_deref() {
             st.base = test_id.clone();
             st.listbox = st
@@ -1837,7 +1828,7 @@ fn select_listbox_panel<H: UiHost>(
         two_line: bool,
     }
 
-    let (disabled, typeahead_items, two_line) = cx.with_state(DerivedItems::default, |st| {
+    let (disabled, typeahead_items, two_line) = cx.slot_state(DerivedItems::default, |st| {
         let ptr = Arc::as_ptr(&items) as *const SelectItem as usize;
         let len = items.len();
         if st.disabled.is_none() || st.ptr != ptr || st.len != len {

@@ -106,6 +106,7 @@ fn build_line_numbers(prepared: &crate::prepare::PreparedCodeBlock) -> Arc<str> 
     })
 }
 
+#[track_caller]
 fn resolve_code_block_cached_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
@@ -113,7 +114,7 @@ fn resolve_code_block_cached_text<H: UiHost>(
     disable_ligatures: bool,
     disable_contextual_alternates: bool,
 ) -> (AttributedText, Option<Arc<str>>) {
-    cx.with_state(CodeBlockTextCache::default, |st| {
+    cx.slot_state(CodeBlockTextCache::default, |st| {
         let theme_revision = theme.revision();
         let needs_rebuild = st.rich.is_none()
             || st.theme_revision != theme_revision
@@ -392,6 +393,7 @@ impl CodeBlock {
     }
 }
 
+#[track_caller]
 pub fn code_block<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     code: &str,
@@ -454,6 +456,7 @@ impl Default for CodeBlockUiOptions {
     }
 }
 
+#[track_caller]
 pub fn code_block_with<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     code: &str,
@@ -471,6 +474,7 @@ pub fn code_block_with<H: UiHost + 'static>(
     )
 }
 
+#[track_caller]
 pub fn code_block_with_header_slots<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     code: &str,
@@ -500,13 +504,13 @@ pub fn code_block_with_header_slots<H: UiHost + 'static>(
     props.layout.position = PositionStyle::Relative;
 
     let language = language.map(str::trim).filter(|s| !s.is_empty());
-    let prepared = cx.with_state(CodeBlockPreparedState::default, |st| {
+    let prepared = cx.slot_state(CodeBlockPreparedState::default, |st| {
         st.prepare(code, language, show_line_numbers);
         st.prepared.clone()
     });
 
     let code = Arc::<str>::from(code.to_string());
-    let feedback = cx.with_state(CopyFeedbackRef::default, |st| st.clone());
+    let feedback = cx.slot_state(CopyFeedbackRef::default, |st| st.clone());
 
     cx.container(props, |cx| {
         vec![cx.hover_region(HoverRegionProps::default(), |cx, hovered| {
@@ -680,6 +684,7 @@ fn render_code_block_header<H: UiHost>(
 }
 
 #[allow(clippy::too_many_arguments)]
+#[track_caller]
 fn render_code_block_body<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
@@ -796,7 +801,7 @@ fn render_code_block_body<H: UiHost + 'static>(
                 if let (Some(max_height), true) = (max_height, needs_scroll_y) {
                     let thumb = theme.color_token("scrollbar.thumb.background");
                     let thumb_hover = theme.color_token("scrollbar.thumb.hover.background");
-                    let handle = cx.with_state(ScrollHandle::default, |h| h.clone());
+                    let handle = cx.slot_state(ScrollHandle::default, |h| h.clone());
 
                     let outer_layout = {
                         let mut layout = LayoutStyle::default();
@@ -1150,6 +1155,7 @@ fn render_code_block_line_row<H: UiHost>(
 }
 
 #[allow(clippy::too_many_arguments)]
+#[track_caller]
 fn render_code_block_windowed_lines<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
@@ -1172,12 +1178,12 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
     let theme_revision = theme.revision();
     let prepared_revision = prepared.revision;
 
-    let line_rich_cache = cx.with_state(
+    let line_rich_cache = cx.slot_state(
         || Rc::new(RefCell::new(CodeBlockWindowedLineRichCache::default())),
         |h| h.clone(),
     );
 
-    let scroll_y_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+    let scroll_y_handle = cx.slot_state(VirtualListScrollHandle::new, |h| h.clone());
     let mut list_options = VirtualListOptions::fixed(row_h, overscan.max(1));
     list_options.items_revision = prepared.revision;
     list_options.key_cache = VirtualListKeyCacheMode::VisibleOnly;
@@ -1231,7 +1237,7 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
 
     let list_id = list.id;
 
-    let scroll_x_handle = cx.with_state(ScrollHandle::default, |h| h.clone());
+    let scroll_x_handle = cx.slot_state(ScrollHandle::default, |h| h.clone());
     let scroll_x_layout = {
         let mut layout = LayoutStyle::default();
         layout.size.width = Length::Fill;
@@ -1455,6 +1461,7 @@ fn render_code_block_with_line_numbers<H: UiHost>(
         .into_element(cx)
 }
 
+#[track_caller]
 fn render_code_block_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
@@ -1504,7 +1511,7 @@ fn render_code_block_text<H: UiHost>(
         layout
     };
 
-    let handle = cx.with_state(ScrollHandle::default, |h| h.clone());
+    let handle = cx.slot_state(ScrollHandle::default, |h| h.clone());
     let scroll = cx.scroll(
         ScrollProps {
             layout: scroll_layout,

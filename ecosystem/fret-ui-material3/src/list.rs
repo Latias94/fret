@@ -162,7 +162,7 @@ impl List {
                 disabled: Option<Arc<[bool]>>,
             }
 
-            let disabled_items = cx.with_state(DerivedItems::default, |st| {
+            let disabled_items = cx.slot_state(DerivedItems::default, |st| {
                 let ptr = Arc::as_ptr(&items) as *const ListItem as usize;
                 let len = items.len();
                 if st.disabled.is_none() || st.ptr != ptr || st.len != len {

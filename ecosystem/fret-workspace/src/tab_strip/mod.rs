@@ -421,7 +421,7 @@ impl WorkspaceTabStrip {
                     reveal_pending,
                     cached_tab_rects,
                     cached_scroll_viewport,
-                ) = cx.with_state(
+                ) = cx.root_state(
                     WorkspaceTabStripState::default,
                     |state| {
                         (
@@ -2220,7 +2220,7 @@ impl WorkspaceTabStrip {
                             };
                             if !rects.is_empty() || viewport_now.is_some() {
                                 let rects_for_cache = rects.clone();
-                                cx.with_state(WorkspaceTabStripState::default, |state| {
+                                cx.root_state(WorkspaceTabStripState::default, |state| {
                                     if !rects_for_cache.is_empty() {
                                         state.last_tab_rects = rects_for_cache;
                                     }
@@ -2705,7 +2705,7 @@ impl WorkspaceTabStrip {
                         }
                     }
 
-                    cx.with_state(WorkspaceTabStripState::default, |state| {
+                    cx.root_state(WorkspaceTabStripState::default, |state| {
                         state.last_active = active.clone();
                         state.reveal_pending = reveal_pending;
                     });

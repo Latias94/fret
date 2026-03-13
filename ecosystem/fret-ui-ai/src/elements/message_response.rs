@@ -149,25 +149,7 @@ impl MessageResponse {
             }
         }
 
-        #[derive(Default)]
-        struct ExpandedModelState {
-            model: Option<fret_runtime::Model<std::collections::HashSet<BlockId>>>,
-        }
-
-        let expanded = cx.with_state(ExpandedModelState::default, |st| st.model.clone());
-        let expanded = match expanded {
-            Some(model) => model,
-            None => {
-                let model = cx
-                    .app
-                    .models_mut()
-                    .insert(std::collections::HashSet::<BlockId>::new());
-                cx.with_state(ExpandedModelState::default, |st| {
-                    st.model = Some(model.clone())
-                });
-                model
-            }
-        };
+        let expanded = cx.local_model(std::collections::HashSet::<BlockId>::new);
 
         let expanded_snapshot = cx
             .get_model_cloned(&expanded, Invalidation::Paint)
@@ -191,7 +173,7 @@ impl MessageResponse {
             components.code_block_actions = Some(Arc::new(move |cx, info| {
                 let is_expanded = expanded_snapshot.contains(&info.id);
 
-                let ordinal = cx.with_state(CodeActionOrdinalState::default, |st| {
+                let ordinal = cx.root_state(CodeActionOrdinalState::default, |st| {
                     if let Some(v) = st.map.get(&info.id) {
                         return *v;
                     }
@@ -251,7 +233,7 @@ impl MessageResponse {
             use std::cell::RefCell;
             use std::rc::Rc;
 
-            let stream = cx.with_state(
+            let stream = cx.slot_state(
                 || Rc::<RefCell<StreamingState>>::new(RefCell::new(StreamingState::default())),
                 |st| st.clone(),
             );

@@ -158,7 +158,7 @@ impl Snippet {
         children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
     ) -> AnyElement {
         if let Some(code) = self.code.clone() {
-            cx.with_state(SnippetLocalState::default, |st| {
+            cx.root_state(SnippetLocalState::default, |st| {
                 st.context = Some(SnippetContext { code });
             });
         }
@@ -464,7 +464,7 @@ impl SnippetCopyButton {
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let feedback = cx.with_state(CopyFeedbackRef::default, |st| st.clone());
+        let feedback = cx.slot_state(CopyFeedbackRef::default, |st| st.clone());
 
         let code = self
             .code

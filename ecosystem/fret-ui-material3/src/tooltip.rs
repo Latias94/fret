@@ -65,6 +65,7 @@ fn apply_tooltip_inherited_fg(mut element: AnyElement, fg: Color) -> AnyElement 
     element
 }
 
+#[track_caller]
 fn stabilize_popper_desired_size<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     desired: Size,
@@ -83,7 +84,7 @@ fn stabilize_popper_desired_size<H: UiHost>(
         Px(0.5)
     };
 
-    cx.with_state(State::default, |st| {
+    cx.slot_state(State::default, |st| {
         let next = match st.last {
             None => desired,
             Some(prev) => {
@@ -194,30 +195,18 @@ struct TooltipTriggerEventModels {
     open: fret_runtime::Model<bool>,
 }
 
+#[track_caller]
 fn tooltip_trigger_event_models<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> TooltipTriggerEventModels {
-    #[derive(Default)]
-    struct State {
-        models: Option<TooltipTriggerEventModels>,
-    }
-
-    let existing = cx.with_state(State::default, |st| st.models.clone());
-    if let Some(models) = existing {
-        return models;
-    }
-
-    let models = TooltipTriggerEventModels {
-        has_pointer_move_opened: cx.app.models_mut().insert(false),
+    TooltipTriggerEventModels {
+        has_pointer_move_opened: cx.local_model(|| false),
         pointer_transit_geometry: tooltip_provider::pointer_transit_geometry_model(cx),
-        suppress_hover_open: cx.app.models_mut().insert(false),
-        suppress_focus_open: cx.app.models_mut().insert(false),
-        close_requested: cx.app.models_mut().insert(false),
-        open: cx.app.models_mut().insert(false),
-    };
-
-    cx.with_state(State::default, |st| st.models = Some(models.clone()));
-    models
+        suppress_hover_open: cx.local_model(|| false),
+        suppress_focus_open: cx.local_model(|| false),
+        close_requested: cx.local_model(|| false),
+        open: cx.local_model(|| false),
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -267,7 +256,7 @@ fn tooltip_policy_root<H: UiHost>(
             .copied()
             .unwrap_or(false);
 
-        let left_hover = cx.with_state(TooltipTriggerHoverEdgeState::default, |st| {
+        let left_hover = cx.slot_state(TooltipTriggerHoverEdgeState::default, |st| {
             let left = st.was_hovered && !hovered;
             st.was_hovered = hovered;
             left
@@ -819,7 +808,7 @@ impl PlainTooltip {
                 .copied()
                 .unwrap_or(false);
 
-            let left_hover = cx.with_state(TooltipTriggerHoverEdgeState::default, |st| {
+            let left_hover = cx.slot_state(TooltipTriggerHoverEdgeState::default, |st| {
                 let left = st.was_hovered && !hovered;
                 st.was_hovered = hovered;
                 left

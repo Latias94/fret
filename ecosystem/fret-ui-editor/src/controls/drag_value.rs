@@ -161,11 +161,11 @@ where
     }
 
     fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let state: Arc<Mutex<DragValueState>> = cx.with_state(
+        let state: Arc<Mutex<DragValueState>> = cx.slot_state(
             || Arc::new(Mutex::new(DragValueState::default())),
             |s| s.clone(),
         );
-        let focus_handoff: Arc<Mutex<NumericTextEntryFocusHandoffState>> = cx.with_state(
+        let focus_handoff: Arc<Mutex<NumericTextEntryFocusHandoffState>> = cx.slot_state(
             || Arc::new(Mutex::new(NumericTextEntryFocusHandoffState::default())),
             |s| s.clone(),
         );

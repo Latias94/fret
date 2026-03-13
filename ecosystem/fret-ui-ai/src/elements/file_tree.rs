@@ -254,24 +254,12 @@ impl FileTree {
         &self,
         cx: &mut ElementContext<'_, H>,
     ) -> Model<HashSet<Arc<str>>> {
-        #[derive(Default)]
-        struct ExpandedState {
-            model: Option<Model<HashSet<Arc<str>>>>,
-        }
-
         if let Some(model) = self.expanded_paths.clone() {
             return model;
         }
 
-        let existing = cx.with_state(ExpandedState::default, |st| st.model.clone());
-        if let Some(existing) = existing {
-            return existing;
-        }
-
         let seed: HashSet<Arc<str>> = self.default_expanded.iter().cloned().collect();
-        let model = cx.app.models_mut().insert(seed);
-        cx.with_state(ExpandedState::default, |st| st.model = Some(model.clone()));
-        model
+        cx.local_model(move || seed)
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -316,7 +304,7 @@ impl FileTree {
         let rows_by_id: Arc<HashMap<fret_ui_kit::TreeItemId, FileTreeRowPayload>> =
             Arc::new(rows_by_id);
 
-        let scroll = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+        let scroll = cx.slot_state(VirtualListScrollHandle::new, |h| h.clone());
 
         let row_height = theme
             .metric_by_key("fret.ai.file_tree.row_height")

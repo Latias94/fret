@@ -18,25 +18,12 @@ use fret_ui_shadcn::{Button, ButtonGroup, ButtonSize, ButtonVariant};
 
 pub type OnMessageBranchChange = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, usize) + 'static>;
 
-#[derive(Debug, Clone, Default)]
-struct MessageBranchState {
-    current_branch: Option<Model<usize>>,
-}
-
+#[track_caller]
 fn ensure_branch_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     default_branch: usize,
 ) -> Model<usize> {
-    let existing = cx.with_state(MessageBranchState::default, |st| st.current_branch.clone());
-    if let Some(model) = existing {
-        return model;
-    }
-
-    let model = cx.app.models_mut().insert(default_branch);
-    cx.with_state(MessageBranchState::default, |st| {
-        st.current_branch = Some(model.clone())
-    });
-    model
+    cx.local_model(move || default_branch)
 }
 
 /// A branching container aligned with AI Elements `MessageBranch`.

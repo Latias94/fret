@@ -156,7 +156,7 @@ fn conversation_scroll_handle<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     provided_handle: Option<ScrollHandle>,
 ) -> ScrollHandle {
-    cx.with_state(ConversationRuntimeState::default, |state| {
+    cx.root_state(ConversationRuntimeState::default, |state| {
         if let Some(handle) = provided_handle {
             state.handle = handle;
         }
@@ -184,7 +184,7 @@ fn render_conversation_root<H: UiHost>(
     let offset = handle.offset();
     let is_at_bottom = (max.y.0 - offset.y.0) <= stick_threshold.0;
 
-    let effectively_at_bottom = cx.with_state(ConversationRuntimeState::default, |state| {
+    let effectively_at_bottom = cx.root_state(ConversationRuntimeState::default, |state| {
         let eligible = state.was_at_bottom || state.pending_scroll_frames > 0 || is_at_bottom;
 
         if !state.initialized {
@@ -581,7 +581,7 @@ impl ConversationTranscript {
 
         let show_scroll_to_bottom_button = self.show_scroll_to_bottom_button;
         let provided_handle = self.scroll_handle;
-        let handle = cx.with_state(ConversationState::default, |st| {
+        let handle = cx.root_state(ConversationState::default, |st| {
             if let Some(handle) = provided_handle.clone() {
                 st.handle = handle;
             }
@@ -592,7 +592,7 @@ impl ConversationTranscript {
         let offset = handle.offset();
         let is_at_bottom = (max.y.0 - offset.y.0) <= stick_threshold.0;
 
-        let effectively_at_bottom = cx.with_state(ConversationState::default, |st| {
+        let effectively_at_bottom = cx.root_state(ConversationState::default, |st| {
             let eligible = st.was_at_bottom || st.pending_scroll_frames > 0 || is_at_bottom;
 
             if !st.initialized {
@@ -880,7 +880,7 @@ impl Conversation {
             .merge(LayoutRefinement::default().w_full().h_full().relative());
         let handle = conversation_scroll_handle(cx, self.scroll_handle.clone());
         let context = ConversationContext::new(handle.clone());
-        cx.with_state(ConversationLocalState::default, |state| {
+        cx.root_state(ConversationLocalState::default, |state| {
             state.context = Some(context);
         });
         let built_children = children(cx);

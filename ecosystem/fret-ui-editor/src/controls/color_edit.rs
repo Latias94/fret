@@ -545,59 +545,17 @@ fn parse_hex(text: &str, show_alpha: bool) -> Option<Color> {
     Some(out)
 }
 
+#[track_caller]
 fn popup_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
-    let m = cx.with_state(|| None::<Model<bool>>, |st| st.clone());
-    match m {
-        Some(m) => m,
-        None => {
-            let m = cx.app.models_mut().insert(false);
-            cx.with_state(
-                || None::<Model<bool>>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some(m.clone());
-                    }
-                },
-            );
-            m
-        }
-    }
+    cx.local_model(|| false)
 }
 
+#[track_caller]
 fn draft_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
-    let m = cx.with_state(|| None::<Model<String>>, |st| st.clone());
-    match m {
-        Some(m) => m,
-        None => {
-            let m = cx.app.models_mut().insert(String::new());
-            cx.with_state(
-                || None::<Model<String>>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some(m.clone());
-                    }
-                },
-            );
-            m
-        }
-    }
+    cx.local_model(String::new)
 }
 
+#[track_caller]
 fn error_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Option<Arc<str>>> {
-    let m = cx.with_state(|| None::<Model<Option<Arc<str>>>>, |st| st.clone());
-    match m {
-        Some(m) => m,
-        None => {
-            let m = cx.app.models_mut().insert(None::<Arc<str>>);
-            cx.with_state(
-                || None::<Model<Option<Arc<str>>>>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some(m.clone());
-                    }
-                },
-            );
-            m
-        }
-    }
+    cx.local_model(|| None::<Arc<str>>)
 }

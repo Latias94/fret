@@ -565,7 +565,7 @@ fn navigation_rail_item<H: UiHost>(
                             BadgeValue::Text(value) => Badge::text(value),
                         };
 
-                        let badge_test_id = cx.with_state(DerivedBadgeTestId::default, |st| {
+                        let badge_test_id = cx.slot_state(DerivedBadgeTestId::default, |st| {
                             if st.base.as_deref() != test_id.as_deref() {
                                 st.base = test_id.clone();
                                 st.badge = st

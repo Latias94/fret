@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use fret_core::geometry::{Corners, Edges, Point, Px};
 use fret_core::{Color, Transform2D};
-use fret_runtime::Model;
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::element::{
     AnyElement, ContainerProps, HoverRegionProps, LayoutStyle, Length, Overflow,
@@ -44,11 +43,6 @@ impl Default for DockProps {
     }
 }
 
-#[derive(Default)]
-struct DockModels {
-    pointer_local: Option<Model<Option<Point>>>,
-}
-
 fn scale_about(center: Point, s: f32) -> Transform2D {
     Transform2D::translation(center)
         * Transform2D::scale_uniform(s)
@@ -73,6 +67,7 @@ fn dock_item_scale(pointer_x: Option<Px>, item_center_x: Px, magnify: f32, radiu
     (1.0 + magnify * w).clamp(1.0, 16.0)
 }
 
+#[track_caller]
 pub fn dock<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     props: DockProps,
@@ -81,17 +76,7 @@ pub fn dock<H: UiHost, I>(
 where
     I: IntoIterator<Item = AnyElement>,
 {
-    let pointer_local = cx.with_state(DockModels::default, |st| st.pointer_local.clone());
-    let pointer_local = match pointer_local {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(None);
-            cx.with_state(DockModels::default, |st| {
-                st.pointer_local = Some(model.clone());
-            });
-            model
-        }
-    };
+    let pointer_local = cx.local_model(|| None::<Point>);
 
     let pointer_local_value = cx
         .get_model_copied(&pointer_local, Invalidation::Paint)

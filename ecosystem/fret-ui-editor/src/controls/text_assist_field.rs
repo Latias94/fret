@@ -785,23 +785,9 @@ fn accept_text_assist_match(
     host.request_redraw(action_cx.window);
 }
 
+#[track_caller]
 fn overlay_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
-    let model = cx.with_state(|| None::<Model<bool>>, |st| st.clone());
-    match model {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(
-                || None::<Model<bool>>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some(model.clone());
-                    }
-                },
-            );
-            model
-        }
-    }
+    cx.local_model(|| false)
 }
 
 #[cfg(test)]

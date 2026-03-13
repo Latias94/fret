@@ -66,6 +66,9 @@ Guidelines:
 
 - Prefer `local_model_keyed(...)` as the default copyable authoring surface when the state is local
   to one element subtree but still needs to be a `Model<T>`.
+- For generated/spec-driven UI surfaces that already expose a stable semantic identity (for example
+  GenUI `ElementKey`), key authored models and helper sync slots directly from that semantic id via
+  `local_model_keyed(...)` / `keyed_slot_state(...)` instead of relying on call order.
 - For recipe-local binding sets (dropdown checkbox models, per-column visibility/pinning toggles,
   faceted filter options, similar “one model per semantic id” surfaces), derive each binding with
   `local_model_keyed((surface, semantic_id), ...)` instead of caching a `Vec<Model<_>>` inside
@@ -76,6 +79,12 @@ Guidelines:
 - When an ecosystem helper exposes `slot_state(...)`, `slot_id(...)`, or `local_model(...)`
   internally, prefer `#[track_caller]` on the public helper entrypoint so slot identity follows the
   app callsite rather than collapsing onto the helper implementation line.
+- When a helper really wants **root-scoped shared runtime state**, spell that intent with
+  `root_state(...)` directly; keep `with_state(...)` as a compatibility/migration alias rather than
+  the default implementation surface for new framework/ecosystem code.
+- Staged dialog/sheet draft models (pickers, selects, similar temporary edit state) should usually
+  be authored as `local_model(...)` handles, while only small open-edge/runtime bookkeeping stays
+  in `root_state(...)` or `slot_state(...)`.
 - Reserve `with_state + App::models_mut().insert(...)` for low-level migration/compat work, not as
   the teaching surface for new code.
 - First-party teaching surfaces should follow the same rule: `ecosystem/fret-ui-shadcn` examples,

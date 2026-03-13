@@ -613,7 +613,7 @@ impl Dialog {
                                     scrim: Option<Arc<str>>,
                                 }
 
-                                let scrim_test_id = cx.with_state(DerivedTestId::default, |st| {
+                                let scrim_test_id = cx.slot_state(DerivedTestId::default, |st| {
                                     if st.base.as_deref() != self.test_id.as_deref() {
                                         st.base = self.test_id.clone();
                                         st.scrim = st.base.as_ref().map(|id| {

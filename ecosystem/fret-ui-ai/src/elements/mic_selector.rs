@@ -76,20 +76,9 @@ fn use_mic_selector_anchor_width<H: UiHost>(cx: &ElementContext<'_, H>) -> Optio
     cx.provided::<MicSelectorAnchorWidth>().and_then(|st| st.0)
 }
 
-#[derive(Default)]
-struct MicSelectorState {
-    query: Option<Model<String>>,
-}
-
+#[track_caller]
 fn query_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
-    cx.with_state(MicSelectorState::default, |st| st.query.clone())
-        .unwrap_or_else(|| {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(MicSelectorState::default, |st| {
-                st.query = Some(model.clone())
-            });
-            model
-        })
+    cx.local_model(String::new)
 }
 
 fn muted_fg(theme: &Theme) -> Color {

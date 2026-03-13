@@ -620,7 +620,7 @@ impl TerminalCopyButton {
             return cx.text("");
         };
         let theme = Theme::global(&*cx.app).clone();
-        let feedback = cx.with_state(CopyFeedbackRef::default, |st| st.clone());
+        let feedback = cx.slot_state(CopyFeedbackRef::default, |st| st.clone());
 
         let output = controller.output;
         let on_copy = self.on_copy;
@@ -922,9 +922,9 @@ impl TerminalContent {
         output.hash(&mut hasher);
         let output_hash = hasher.finish();
 
-        let handle = cx.with_state(TerminalContentState::default, |st| st.handle.clone());
+        let handle = cx.root_state(TerminalContentState::default, |st| st.handle.clone());
 
-        cx.with_state(TerminalContentState::default, |st| {
+        cx.root_state(TerminalContentState::default, |st| {
             if !st.initialized {
                 st.initialized = true;
                 st.last_hash = output_hash;

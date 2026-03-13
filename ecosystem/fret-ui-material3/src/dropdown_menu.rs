@@ -249,7 +249,7 @@ impl DropdownMenu {
                     test_id: Option<Arc<str>>,
                 }
 
-                let default_test_id = cx.with_state(DerivedDefaultTestId::default, |st| {
+                let default_test_id = cx.slot_state(DerivedDefaultTestId::default, |st| {
                     if st.test_id.is_none() || st.trigger != trigger_id.0 {
                         st.trigger = trigger_id.0;
                         st.test_id = Some(Arc::<str>::from(format!(

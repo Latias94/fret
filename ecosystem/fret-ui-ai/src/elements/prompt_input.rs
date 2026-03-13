@@ -541,6 +541,7 @@ pub struct PromptInputSlots {
     pub block_end: Vec<AnyElement>,
 }
 
+#[track_caller]
 fn prompt_input_referenced_sources_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     controlled: Option<Model<Vec<AttachmentSourceDocumentData>>>,
@@ -548,26 +549,7 @@ fn prompt_input_referenced_sources_model<H: UiHost>(
     if let Some(model) = controlled {
         return model;
     }
-
-    #[derive(Default)]
-    struct LocalState {
-        model: Option<Model<Vec<AttachmentSourceDocumentData>>>,
-    }
-
-    let existing = cx.with_state(LocalState::default, |st| st.model.clone());
-    let model = match existing {
-        Some(m) => m,
-        None => {
-            let m = cx
-                .app
-                .models_mut()
-                .insert(Vec::<AttachmentSourceDocumentData>::new());
-            cx.with_state(LocalState::default, |st| st.model = Some(m.clone()));
-            m
-        }
-    };
-
-    model
+    cx.local_model(Vec::<AttachmentSourceDocumentData>::new)
 }
 
 #[derive(Clone)]
@@ -2226,23 +2208,9 @@ impl PromptInputActionMenuContent {
     }
 }
 
-#[derive(Default)]
-struct PromptInputActionMenuState {
-    open: Option<Model<bool>>,
-}
-
+#[track_caller]
 fn prompt_input_action_menu_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
-    let open = cx.with_state(PromptInputActionMenuState::default, |st| st.open.clone());
-    match open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(PromptInputActionMenuState::default, |st| {
-                st.open = Some(model.clone())
-            });
-            model
-        }
-    }
+    cx.local_model(|| false)
 }
 
 /// Action menu root aligned with AI Elements `PromptInputActionMenu`.

@@ -507,7 +507,7 @@ pub(crate) fn editor_joined_input_frame_with_overrides<H: UiHost>(
     build_contents: impl FnOnce(&mut ElementContext<'_, H>) -> EditorJoinedInputContents,
 ) -> AnyElement {
     cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
-        let pointer_state: Arc<Mutex<JoinedInputPointerState>> = cx.with_state(
+        let pointer_state: Arc<Mutex<JoinedInputPointerState>> = cx.slot_state(
             || Arc::new(Mutex::new(JoinedInputPointerState::default())),
             |s| s.clone(),
         );

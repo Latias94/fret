@@ -82,7 +82,7 @@ impl<H: UiHost> ComponentResolver<H> for ShadcnResolver {
             "Slider" => Ok(self.render_slider(cx, key, props, children)),
             "Label" => Ok(self.render_label(cx, resolved_props, children)),
             "Alert" => Ok(self.render_alert(cx, key, props, children)),
-            "Progress" => Ok(self.render_progress(cx, props, children)),
+            "Progress" => Ok(self.render_progress(cx, key, props, children)),
             "Spinner" => Ok(self.render_spinner(cx, props, children)),
             "Skeleton" => Ok(self.render_skeleton(cx, props, children)),
             "Badge" => Ok(self.render_badge(cx, resolved_props, children)),

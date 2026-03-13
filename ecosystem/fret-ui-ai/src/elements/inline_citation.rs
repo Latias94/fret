@@ -371,12 +371,6 @@ impl InlineCitation {
     ) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        #[derive(Default)]
-        struct InlineCitationState {
-            index: Option<Model<usize>>,
-            open: Option<Model<bool>>,
-        }
-
         let resolved_sources = self.sources.as_ref().map(|sources| {
             let mut out: Vec<SourceItem> = Vec::new();
             for id in self.source_ids.iter() {
@@ -444,17 +438,7 @@ impl InlineCitation {
             .as_ref()
             .map(|id| Arc::<str>::from(format!("{id}-label")));
 
-        let open_model = cx.with_state(InlineCitationState::default, |st| st.open.clone());
-        let open_model = match open_model {
-            Some(model) => model,
-            None => {
-                let model = cx.app.models_mut().insert(false);
-                cx.with_state(InlineCitationState::default, |st| {
-                    st.open = Some(model.clone())
-                });
-                model
-            }
-        };
+        let open_model = cx.local_model(|| false);
         let open_now = cx
             .get_model_copied(&open_model, Invalidation::Paint)
             .unwrap_or(false);
@@ -503,17 +487,7 @@ impl InlineCitation {
                 .into_element(cx);
         }
 
-        let index_model = cx.with_state(InlineCitationState::default, |st| st.index.clone());
-        let index_model = match index_model {
-            Some(model) => model,
-            None => {
-                let model = cx.app.models_mut().insert(0usize);
-                cx.with_state(InlineCitationState::default, |st| {
-                    st.index = Some(model.clone())
-                });
-                model
-            }
-        };
+        let index_model = cx.local_model(|| 0usize);
 
         let index_now = cx
             .get_model_copied(&index_model, Invalidation::Paint)

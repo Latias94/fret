@@ -298,33 +298,33 @@ struct AutocompleteRuntimeModels {
     scroll_viewport_id: Rc<Cell<Option<GlobalElementId>>>,
 }
 
+#[track_caller]
 fn autocomplete_runtime_models<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> AutocompleteRuntimeModels {
-    #[derive(Default)]
-    struct State {
-        models: Option<AutocompleteRuntimeModels>,
+    AutocompleteRuntimeModels {
+        open: cx.local_model(|| false),
+        suppress_open: cx.local_model(|| false),
+        active_index: cx.local_model(|| None::<usize>),
+        scroll_handle: cx.slot_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone()),
+        input_element_id: cx.slot_state(
+            || Rc::new(Cell::new(None::<GlobalElementId>)),
+            |id| id.clone(),
+        ),
+        field_element_id: cx.slot_state(
+            || Rc::new(Cell::new(None::<GlobalElementId>)),
+            |id| id.clone(),
+        ),
+        listbox_element_id: cx.slot_state(
+            || Rc::new(Cell::new(None::<GlobalElementId>)),
+            |id| id.clone(),
+        ),
+        option_elements: cx.slot_state(|| Rc::new(RefCell::new(Vec::new())), |els| els.clone()),
+        scroll_viewport_id: cx.slot_state(
+            || Rc::new(Cell::new(None::<GlobalElementId>)),
+            |id| id.clone(),
+        ),
     }
-
-    let existing = cx.with_state(State::default, |st| st.models.clone());
-    if let Some(models) = existing {
-        return models;
-    }
-
-    let models = AutocompleteRuntimeModels {
-        open: cx.app.models_mut().insert(false),
-        suppress_open: cx.app.models_mut().insert(false),
-        active_index: cx.app.models_mut().insert(None),
-        scroll_handle: fret_ui::scroll::ScrollHandle::default(),
-        input_element_id: Rc::new(Cell::new(None)),
-        field_element_id: Rc::new(Cell::new(None)),
-        listbox_element_id: Rc::new(Cell::new(None)),
-        option_elements: Rc::new(RefCell::new(Vec::new())),
-        scroll_viewport_id: Rc::new(Cell::new(None)),
-    };
-
-    cx.with_state(State::default, |st| st.models = Some(models.clone()));
-    models
 }
 
 #[derive(Default)]
@@ -454,7 +454,7 @@ fn autocomplete_into_element<H: UiHost>(
             .is_some_and(|id| cx.is_focused_element(id));
 
         let (filtered_items, query_changed, focus_gained) =
-            cx.with_state(AutocompleteFrameState::default, |st| {
+            cx.slot_state(AutocompleteFrameState::default, |st| {
             let changed = st.last_query != query;
             let ptr = Arc::as_ptr(&autocomplete.items) as *const AutocompleteItem as usize;
             let len = autocomplete.items.len();
@@ -567,7 +567,7 @@ fn autocomplete_into_element<H: UiHost>(
                     dropdown_menu_tokens::easing(theme),
                 )
             };
-            cx.with_state(AutocompleteChevronRuntime::default, |rt| {
+            cx.slot_state(AutocompleteChevronRuntime::default, |rt| {
                 if rt.target_open != open_now {
                     rt.target_open = open_now;
                     rt.anim.set_target(
@@ -1002,7 +1002,7 @@ fn autocomplete_listbox_panel<H: UiHost>(
         listbox: Option<Arc<str>>,
     }
 
-    let listbox_test_id = cx.with_state(DerivedTestIds::default, |st| {
+    let listbox_test_id = cx.slot_state(DerivedTestIds::default, |st| {
         if st.base.as_deref() != test_id.as_deref() {
             st.base = test_id.clone();
             st.listbox = st
@@ -1029,7 +1029,7 @@ fn autocomplete_listbox_panel<H: UiHost>(
         option_test_ids: Option<Arc<[Option<Arc<str>>]>>,
     }
 
-    let option_test_ids = cx.with_state(DerivedOptionTestIds::default, |st| {
+    let option_test_ids = cx.slot_state(DerivedOptionTestIds::default, |st| {
         let ptr = Arc::as_ptr(&items) as *const AutocompleteItem as usize;
         let len = items.len();
         if st.option_test_ids.is_none()

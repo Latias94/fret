@@ -208,7 +208,7 @@ impl AiConversationTranscript {
 
         #[cfg(debug_assertions)]
         {
-            let needs_check = cx.with_state(ConversationState::default, |st| {
+            let needs_check = cx.root_state(ConversationState::default, |st| {
                 !st.checked_ids_once
                     || st.checked_ids_revision != revision
                     || st.checked_ids_len != self.messages.len()
@@ -216,7 +216,7 @@ impl AiConversationTranscript {
             if needs_check {
                 debug_assert_unique_message_ids(&self.messages);
                 let len = self.messages.len();
-                cx.with_state(ConversationState::default, move |st| {
+                cx.root_state(ConversationState::default, move |st| {
                     st.checked_ids_once = true;
                     st.checked_ids_revision = revision;
                     st.checked_ids_len = len;
@@ -225,7 +225,7 @@ impl AiConversationTranscript {
         }
 
         let provided_handle = self.scroll_handle;
-        let handle = cx.with_state(ConversationState::default, |st| {
+        let handle = cx.root_state(ConversationState::default, |st| {
             if let Some(handle) = provided_handle.clone() {
                 st.handle = handle;
             }
@@ -237,7 +237,7 @@ impl AiConversationTranscript {
         let is_at_bottom = (max.y.0 - offset.y.0) <= stick_threshold.0;
 
         let (_effectively_at_bottom, needs_followup_frame) =
-            cx.with_state(ConversationState::default, |st| {
+            cx.root_state(ConversationState::default, |st| {
                 let eligible = st.was_at_bottom || st.pending_scroll_frames > 0 || is_at_bottom;
 
                 if !st.initialized {

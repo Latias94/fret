@@ -1968,7 +1968,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// This is a policy hook mechanism (ADR 0074): components decide what activation does (model
     /// writes, overlay requests, command dispatch), while the runtime remains mechanism-only.
     pub fn pressable_on_activate(&mut self, handler: OnActivate) {
-        self.with_state(PressableActionHooks::default, |hooks| {
+        self.root_state(PressableActionHooks::default, |hooks| {
             hooks.on_activate = Some(handler);
         });
     }
@@ -1980,7 +1980,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn pressable_add_on_activate(&mut self, handler: OnActivate) {
-        self.with_state(PressableActionHooks::default, |hooks| {
+        self.root_state(PressableActionHooks::default, |hooks| {
             hooks.on_activate = match hooks.on_activate.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2010,7 +2010,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn pressable_clear_on_activate(&mut self) {
-        self.with_state(PressableActionHooks::default, |hooks| {
+        self.root_state(PressableActionHooks::default, |hooks| {
             hooks.on_activate = None;
         });
     }
@@ -2021,7 +2021,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// This is a policy hook mechanism (ADR 0074): components decide what activation does
     /// (open URL, dispatch command, etc.), while the runtime remains mechanism-only.
     pub fn selectable_text_on_activate_span(&mut self, handler: OnSelectableTextActivateSpan) {
-        self.with_state(SelectableTextActionHooks::default, |hooks| {
+        self.root_state(SelectableTextActionHooks::default, |hooks| {
             hooks.on_activate_span = Some(handler);
         });
     }
@@ -2037,7 +2037,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn selectable_text_clear_on_activate_span(&mut self) {
-        self.with_state(SelectableTextActionHooks::default, |hooks| {
+        self.root_state(SelectableTextActionHooks::default, |hooks| {
             hooks.on_activate_span = None;
         });
     }
@@ -2053,19 +2053,19 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// This is a policy hook mechanism (ADR 0074): components can opt into Radix-style "select on
     /// mouse down" semantics without changing the default click-like activation behavior.
     pub fn pressable_on_pointer_down(&mut self, handler: OnPressablePointerDown) {
-        self.with_state(PressableActionHooks::default, |hooks| {
+        self.root_state(PressableActionHooks::default, |hooks| {
             hooks.on_pointer_down = Some(handler);
         });
     }
 
     pub fn pressable_on_pointer_move(&mut self, handler: OnPressablePointerMove) {
-        self.with_state(PressableActionHooks::default, |hooks| {
+        self.root_state(PressableActionHooks::default, |hooks| {
             hooks.on_pointer_move = Some(handler);
         });
     }
 
     pub fn pressable_on_pointer_up(&mut self, handler: OnPressablePointerUp) {
-        self.with_state(PressableActionHooks::default, |hooks| {
+        self.root_state(PressableActionHooks::default, |hooks| {
             hooks.on_pointer_up = Some(handler);
         });
     }
@@ -2101,7 +2101,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn pressable_add_on_pointer_down(&mut self, handler: OnPressablePointerDown) {
-        self.with_state(PressableActionHooks::default, |hooks| {
+        self.root_state(PressableActionHooks::default, |hooks| {
             hooks.on_pointer_down = match hooks.on_pointer_down.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2125,7 +2125,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn pressable_add_on_pointer_move(&mut self, handler: OnPressablePointerMove) {
-        self.with_state(PressableActionHooks::default, |hooks| {
+        self.root_state(PressableActionHooks::default, |hooks| {
             hooks.on_pointer_move = match hooks.on_pointer_move.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2141,7 +2141,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn pressable_add_on_pointer_up(&mut self, handler: OnPressablePointerUp) {
-        self.with_state(PressableActionHooks::default, |hooks| {
+        self.root_state(PressableActionHooks::default, |hooks| {
             hooks.on_pointer_up = match hooks.on_pointer_up.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2237,19 +2237,19 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn pressable_clear_on_pointer_down(&mut self) {
-        self.with_state(PressableActionHooks::default, |hooks| {
+        self.root_state(PressableActionHooks::default, |hooks| {
             hooks.on_pointer_down = None;
         });
     }
 
     pub fn pressable_clear_on_pointer_move(&mut self) {
-        self.with_state(PressableActionHooks::default, |hooks| {
+        self.root_state(PressableActionHooks::default, |hooks| {
             hooks.on_pointer_move = None;
         });
     }
 
     pub fn pressable_clear_on_pointer_up(&mut self) {
-        self.with_state(PressableActionHooks::default, |hooks| {
+        self.root_state(PressableActionHooks::default, |hooks| {
             hooks.on_pointer_up = None;
         });
     }
@@ -2259,13 +2259,13 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// This is a mechanism-only hook: the runtime tracks hover deterministically and invokes
     /// component code on hover transitions, without baking hover policy into `fret-ui`.
     pub fn pressable_on_hover_change(&mut self, handler: OnHoverChange) {
-        self.with_state(PressableHoverActionHooks::default, |hooks| {
+        self.root_state(PressableHoverActionHooks::default, |hooks| {
             hooks.on_hover_change = Some(handler);
         });
     }
 
     pub fn pressable_add_on_hover_change(&mut self, handler: OnHoverChange) {
-        self.with_state(PressableHoverActionHooks::default, |hooks| {
+        self.root_state(PressableHoverActionHooks::default, |hooks| {
             hooks.on_hover_change = match hooks.on_hover_change.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2280,7 +2280,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn pressable_clear_on_hover_change(&mut self) {
-        self.with_state(PressableHoverActionHooks::default, |hooks| {
+        self.root_state(PressableHoverActionHooks::default, |hooks| {
             hooks.on_hover_change = None;
         });
     }
@@ -2350,13 +2350,13 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         &mut self,
         handler: crate::action::OnInternalDrag,
     ) {
-        self.with_state(crate::action::InternalDragActionHooks::default, |hooks| {
+        self.root_state(crate::action::InternalDragActionHooks::default, |hooks| {
             hooks.on_internal_drag = Some(handler);
         });
     }
 
     pub fn internal_drag_region_clear_on_internal_drag(&mut self) {
-        self.with_state(crate::action::InternalDragActionHooks::default, |hooks| {
+        self.root_state(crate::action::InternalDragActionHooks::default, |hooks| {
             hooks.on_internal_drag = None;
         });
     }
@@ -2382,13 +2382,13 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         &mut self,
         handler: crate::action::OnExternalDrag,
     ) {
-        self.with_state(crate::action::ExternalDragActionHooks::default, |hooks| {
+        self.root_state(crate::action::ExternalDragActionHooks::default, |hooks| {
             hooks.on_external_drag = Some(handler);
         });
     }
 
     pub fn external_drag_region_clear_on_external_drag(&mut self) {
-        self.with_state(crate::action::ExternalDragActionHooks::default, |hooks| {
+        self.root_state(crate::action::ExternalDragActionHooks::default, |hooks| {
             hooks.on_external_drag = None;
         });
     }
@@ -2398,13 +2398,13 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// This is a mechanism-only hook point: components decide what a pointer down does (open a
     /// context menu, start a drag, request focus, etc.), while the runtime remains policy-free.
     pub fn pointer_region_on_pointer_down(&mut self, handler: OnPointerDown) {
-        self.with_state(PointerActionHooks::default, |hooks| {
+        self.root_state(PointerActionHooks::default, |hooks| {
             hooks.on_pointer_down = Some(handler);
         });
     }
 
     pub fn pointer_region_add_on_pointer_down(&mut self, handler: OnPointerDown) {
-        self.with_state(PointerActionHooks::default, |hooks| {
+        self.root_state(PointerActionHooks::default, |hooks| {
             hooks.on_pointer_down = match hooks.on_pointer_down.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2418,7 +2418,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn pointer_region_clear_on_pointer_down(&mut self) {
-        self.with_state(PointerActionHooks::default, |hooks| {
+        self.root_state(PointerActionHooks::default, |hooks| {
             hooks.on_pointer_down = None;
         });
     }
@@ -2428,13 +2428,13 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// This hook is invoked when the pointer region receives `PointerEvent::Move` events via
     /// normal hit-testing or pointer capture.
     pub fn pointer_region_on_pointer_move(&mut self, handler: OnPointerMove) {
-        self.with_state(PointerActionHooks::default, |hooks| {
+        self.root_state(PointerActionHooks::default, |hooks| {
             hooks.on_pointer_move = Some(handler);
         });
     }
 
     pub fn pointer_region_add_on_pointer_move(&mut self, handler: OnPointerMove) {
-        self.with_state(PointerActionHooks::default, |hooks| {
+        self.root_state(PointerActionHooks::default, |hooks| {
             hooks.on_pointer_move = match hooks.on_pointer_move.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2448,7 +2448,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn pointer_region_clear_on_pointer_move(&mut self) {
-        self.with_state(PointerActionHooks::default, |hooks| {
+        self.root_state(PointerActionHooks::default, |hooks| {
             hooks.on_pointer_move = None;
         });
     }
@@ -2458,7 +2458,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// This hook is invoked when the pointer region receives `PointerEvent::Up` events via
     /// normal hit-testing or pointer capture.
     pub fn pointer_region_on_pointer_up(&mut self, handler: OnPointerUp) {
-        self.with_state(PointerActionHooks::default, |hooks| {
+        self.root_state(PointerActionHooks::default, |hooks| {
             hooks.on_pointer_up = Some(handler);
         });
     }
@@ -2468,25 +2468,25 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// This hook is invoked when the runtime receives `Event::PointerCancel` for a pointer stream
     /// that was previously interacting with this region (typically via pointer capture).
     pub fn pointer_region_on_pointer_cancel(&mut self, handler: OnPointerCancel) {
-        self.with_state(PointerActionHooks::default, |hooks| {
+        self.root_state(PointerActionHooks::default, |hooks| {
             hooks.on_pointer_cancel = Some(handler);
         });
     }
 
     pub fn pointer_region_on_wheel(&mut self, handler: OnWheel) {
-        self.with_state(PointerActionHooks::default, |hooks| {
+        self.root_state(PointerActionHooks::default, |hooks| {
             hooks.on_wheel = Some(handler);
         });
     }
 
     pub fn pointer_region_on_pinch_gesture(&mut self, handler: OnPinchGesture) {
-        self.with_state(PointerActionHooks::default, |hooks| {
+        self.root_state(PointerActionHooks::default, |hooks| {
             hooks.on_pinch_gesture = Some(handler);
         });
     }
 
     pub fn pointer_region_add_on_pointer_up(&mut self, handler: OnPointerUp) {
-        self.with_state(PointerActionHooks::default, |hooks| {
+        self.root_state(PointerActionHooks::default, |hooks| {
             hooks.on_pointer_up = match hooks.on_pointer_up.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2500,7 +2500,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn pointer_region_add_on_wheel(&mut self, handler: OnWheel) {
-        self.with_state(PointerActionHooks::default, |hooks| {
+        self.root_state(PointerActionHooks::default, |hooks| {
             hooks.on_wheel = match hooks.on_wheel.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2514,7 +2514,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn pointer_region_add_on_pinch_gesture(&mut self, handler: OnPinchGesture) {
-        self.with_state(PointerActionHooks::default, |hooks| {
+        self.root_state(PointerActionHooks::default, |hooks| {
             hooks.on_pinch_gesture = match hooks.on_pinch_gesture.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2528,19 +2528,19 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn pointer_region_clear_on_pointer_up(&mut self) {
-        self.with_state(PointerActionHooks::default, |hooks| {
+        self.root_state(PointerActionHooks::default, |hooks| {
             hooks.on_pointer_up = None;
         });
     }
 
     pub fn pointer_region_clear_on_wheel(&mut self) {
-        self.with_state(PointerActionHooks::default, |hooks| {
+        self.root_state(PointerActionHooks::default, |hooks| {
             hooks.on_wheel = None;
         });
     }
 
     pub fn pointer_region_clear_on_pinch_gesture(&mut self) {
-        self.with_state(PointerActionHooks::default, |hooks| {
+        self.root_state(PointerActionHooks::default, |hooks| {
             hooks.on_pinch_gesture = None;
         });
     }
@@ -2549,7 +2549,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         &mut self,
         handler: crate::action::OnTextInputRegionTextInput,
     ) {
-        self.with_state(
+        self.root_state(
             crate::action::TextInputRegionActionHooks::default,
             |hooks| {
                 hooks.on_text_input = Some(handler);
@@ -2558,7 +2558,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn text_input_region_clear_on_text_input(&mut self) {
-        self.with_state(
+        self.root_state(
             crate::action::TextInputRegionActionHooks::default,
             |hooks| {
                 hooks.on_text_input = None;
@@ -2567,7 +2567,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn text_input_region_on_ime(&mut self, handler: crate::action::OnTextInputRegionIme) {
-        self.with_state(
+        self.root_state(
             crate::action::TextInputRegionActionHooks::default,
             |hooks| {
                 hooks.on_ime = Some(handler);
@@ -2576,7 +2576,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn text_input_region_clear_on_ime(&mut self) {
-        self.with_state(
+        self.root_state(
             crate::action::TextInputRegionActionHooks::default,
             |hooks| {
                 hooks.on_ime = None;
@@ -2588,7 +2588,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         &mut self,
         handler: crate::action::OnTextInputRegionClipboardText,
     ) {
-        self.with_state(
+        self.root_state(
             crate::action::TextInputRegionActionHooks::default,
             |hooks| {
                 hooks.on_clipboard_text = Some(handler);
@@ -2597,7 +2597,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn text_input_region_clear_on_clipboard_text(&mut self) {
-        self.with_state(
+        self.root_state(
             crate::action::TextInputRegionActionHooks::default,
             |hooks| {
                 hooks.on_clipboard_text = None;
@@ -2609,7 +2609,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         &mut self,
         handler: crate::action::OnTextInputRegionClipboardUnavailable,
     ) {
-        self.with_state(
+        self.root_state(
             crate::action::TextInputRegionActionHooks::default,
             |hooks| {
                 hooks.on_clipboard_unavailable = Some(handler);
@@ -2618,7 +2618,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn text_input_region_clear_on_clipboard_unavailable(&mut self) {
-        self.with_state(
+        self.root_state(
             crate::action::TextInputRegionActionHooks::default,
             |hooks| {
                 hooks.on_clipboard_unavailable = None;
@@ -2630,7 +2630,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         &mut self,
         handler: crate::action::OnTextInputRegionSetSelection,
     ) {
-        self.with_state(
+        self.root_state(
             crate::action::TextInputRegionActionHooks::default,
             |hooks| {
                 hooks.on_set_selection = Some(handler);
@@ -2639,7 +2639,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn text_input_region_clear_on_set_selection(&mut self) {
-        self.with_state(
+        self.root_state(
             crate::action::TextInputRegionActionHooks::default,
             |hooks| {
                 hooks.on_set_selection = None;
@@ -2651,7 +2651,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         &mut self,
         handler: crate::action::OnTextInputRegionPlatformTextInputQuery,
     ) {
-        self.with_state(
+        self.root_state(
             crate::action::TextInputRegionActionHooks::default,
             |hooks| {
                 hooks.on_platform_text_input_query = Some(handler);
@@ -2660,7 +2660,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn text_input_region_clear_on_platform_text_input_query(&mut self) {
-        self.with_state(
+        self.root_state(
             crate::action::TextInputRegionActionHooks::default,
             |hooks| {
                 hooks.on_platform_text_input_query = None;
@@ -2672,7 +2672,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         &mut self,
         handler: crate::action::OnTextInputRegionPlatformTextInputReplaceTextInRangeUtf16,
     ) {
-        self.with_state(
+        self.root_state(
             crate::action::TextInputRegionActionHooks::default,
             |hooks| {
                 hooks.on_platform_text_input_replace_text_in_range_utf16 = Some(handler);
@@ -2681,7 +2681,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn text_input_region_clear_on_platform_text_input_replace_text_in_range_utf16(&mut self) {
-        self.with_state(
+        self.root_state(
             crate::action::TextInputRegionActionHooks::default,
             |hooks| {
                 hooks.on_platform_text_input_replace_text_in_range_utf16 = None;
@@ -2693,7 +2693,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         &mut self,
         handler: crate::action::OnTextInputRegionPlatformTextInputReplaceAndMarkTextInRangeUtf16,
     ) {
-        self.with_state(
+        self.root_state(
             crate::action::TextInputRegionActionHooks::default,
             |hooks| {
                 hooks.on_platform_text_input_replace_and_mark_text_in_range_utf16 = Some(handler);
@@ -2704,7 +2704,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn text_input_region_clear_on_platform_text_input_replace_and_mark_text_in_range_utf16(
         &mut self,
     ) {
-        self.with_state(
+        self.root_state(
             crate::action::TextInputRegionActionHooks::default,
             |hooks| {
                 hooks.on_platform_text_input_replace_and_mark_text_in_range_utf16 = None;
@@ -2944,7 +2944,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// `render_dismissible_root_with_hooks(...)` and
     /// wants full control over dismissal semantics (ADR 0074).
     pub fn dismissible_on_dismiss_request(&mut self, handler: OnDismissRequest) {
-        self.with_state(DismissibleActionHooks::default, |hooks| {
+        self.root_state(DismissibleActionHooks::default, |hooks| {
             hooks.on_dismiss_request = Some(handler);
         });
     }
@@ -2954,13 +2954,13 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// This is used for overlay policies that need global pointer movement (e.g. submenu
     /// safe-hover corridors) without making the overlay hit-testable outside its content.
     pub fn dismissible_on_pointer_move(&mut self, handler: OnDismissiblePointerMove) {
-        self.with_state(DismissibleActionHooks::default, |hooks| {
+        self.root_state(DismissibleActionHooks::default, |hooks| {
             hooks.on_pointer_move = Some(handler);
         });
     }
 
     pub fn dismissible_add_on_dismiss_request(&mut self, handler: OnDismissRequest) {
-        self.with_state(DismissibleActionHooks::default, |hooks| {
+        self.root_state(DismissibleActionHooks::default, |hooks| {
             hooks.on_dismiss_request = match hooks.on_dismiss_request.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2975,7 +2975,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn dismissible_add_on_pointer_move(&mut self, handler: OnDismissiblePointerMove) {
-        self.with_state(DismissibleActionHooks::default, |hooks| {
+        self.root_state(DismissibleActionHooks::default, |hooks| {
             hooks.on_pointer_move = match hooks.on_pointer_move.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -2989,13 +2989,13 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn dismissible_clear_on_dismiss_request(&mut self) {
-        self.with_state(DismissibleActionHooks::default, |hooks| {
+        self.root_state(DismissibleActionHooks::default, |hooks| {
             hooks.on_dismiss_request = None;
         });
     }
 
     pub fn dismissible_clear_on_pointer_move(&mut self) {
-        self.with_state(DismissibleActionHooks::default, |hooks| {
+        self.root_state(DismissibleActionHooks::default, |hooks| {
             hooks.on_pointer_move = None;
         });
     }
@@ -3008,13 +3008,13 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// Components can implement “automatic activation” (e.g. Tabs) by updating selection models
     /// here, keeping selection policy out of the runtime (ADR 0074).
     pub fn roving_on_active_change(&mut self, handler: OnRovingActiveChange) {
-        self.with_state(RovingActionHooks::default, |hooks| {
+        self.root_state(RovingActionHooks::default, |hooks| {
             hooks.on_active_change = Some(handler);
         });
     }
 
     pub fn roving_add_on_active_change(&mut self, handler: OnRovingActiveChange) {
-        self.with_state(RovingActionHooks::default, |hooks| {
+        self.root_state(RovingActionHooks::default, |hooks| {
             hooks.on_active_change = match hooks.on_active_change.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -3029,7 +3029,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn roving_clear_on_active_change(&mut self) {
-        self.with_state(RovingActionHooks::default, |hooks| {
+        self.root_state(RovingActionHooks::default, |hooks| {
             hooks.on_active_change = None;
         });
     }
@@ -3039,13 +3039,13 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// When set, the runtime forwards alphanumeric key presses to this handler so components can
     /// decide how typeahead should work (buffering, prefix matching, wrapping, etc.).
     pub fn roving_on_typeahead(&mut self, handler: OnRovingTypeahead) {
-        self.with_state(RovingActionHooks::default, |hooks| {
+        self.root_state(RovingActionHooks::default, |hooks| {
             hooks.on_typeahead = Some(handler);
         });
     }
 
     pub fn roving_add_on_typeahead(&mut self, handler: OnRovingTypeahead) {
-        self.with_state(RovingActionHooks::default, |hooks| {
+        self.root_state(RovingActionHooks::default, |hooks| {
             hooks.on_typeahead = match hooks.on_typeahead.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -3059,26 +3059,26 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn roving_clear_on_typeahead(&mut self) {
-        self.with_state(RovingActionHooks::default, |hooks| {
+        self.root_state(RovingActionHooks::default, |hooks| {
             hooks.on_typeahead = None;
         });
     }
 
     pub fn roving_on_key_down(&mut self, handler: OnKeyDown) {
-        self.with_state(RovingActionHooks::default, |hooks| {
+        self.root_state(RovingActionHooks::default, |hooks| {
             hooks.on_key_down.clear();
             hooks.on_key_down.push(handler);
         });
     }
 
     pub fn roving_add_on_key_down(&mut self, handler: OnKeyDown) {
-        self.with_state(RovingActionHooks::default, |hooks| {
+        self.root_state(RovingActionHooks::default, |hooks| {
             hooks.on_key_down.push(handler);
         });
     }
 
     pub fn roving_clear_on_key_down(&mut self) {
-        self.with_state(RovingActionHooks::default, |hooks| {
+        self.root_state(RovingActionHooks::default, |hooks| {
             hooks.on_key_down.clear();
         });
     }
@@ -3088,13 +3088,13 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// This is invoked for key down events that bubble through the roving container so component
     /// code can decide which child should become focused (arrow keys, Home/End, etc.).
     pub fn roving_on_navigate(&mut self, handler: OnRovingNavigate) {
-        self.with_state(RovingActionHooks::default, |hooks| {
+        self.root_state(RovingActionHooks::default, |hooks| {
             hooks.on_navigate = Some(handler);
         });
     }
 
     pub fn roving_add_on_navigate(&mut self, handler: OnRovingNavigate) {
-        self.with_state(RovingActionHooks::default, |hooks| {
+        self.root_state(RovingActionHooks::default, |hooks| {
             hooks.on_navigate = match hooks.on_navigate.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -3111,7 +3111,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     pub fn roving_clear_on_navigate(&mut self) {
-        self.with_state(RovingActionHooks::default, |hooks| {
+        self.root_state(RovingActionHooks::default, |hooks| {
             hooks.on_navigate = None;
         });
     }
@@ -3571,7 +3571,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 crate::element::VirtualListMeasureMode::Known => options.key_cache,
             };
 
-            let range = cx.with_state(VirtualListState::default, |state| {
+            let range = cx.root_state(VirtualListState::default, |state| {
                 let axis = options.axis;
                 let (viewport, offset) = match axis {
                     fret_core::Axis::Vertical => (state.viewport_h, state.offset_y),
@@ -3837,7 +3837,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             indices.sort_unstable();
             indices.dedup();
 
-            let visible_items = cx.with_state(VirtualListState::default, |state| {
+            let visible_items = cx.root_state(VirtualListState::default, |state| {
                 indices
                     .iter()
                     .map(|&idx| {
@@ -4076,18 +4076,18 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             move |i| (key_at_for_keys)(i),
             range_extractor,
             move |cx, items| {
-                cx.with_state(
+                cx.root_state(
                     crate::windowed_surface_host::RetainedVirtualListHostMarker::default,
                     |_| {},
                 );
                 // Keep the retained keep-alive bucket's element-local state alive across frames
                 // (including view-cache hits) so window shifts can actually reuse previously
                 // mounted item subtrees. The actual budget is controlled by `VirtualListProps`.
-                cx.with_state(
+                cx.root_state(
                     crate::windowed_surface_host::RetainedVirtualListKeepAliveState::default,
                     |_| {},
                 );
-                cx.with_state(
+                cx.root_state(
                     || crate::windowed_surface_host::RetainedVirtualListHostCallbacks::<H> {
                         key_at: Arc::clone(&key_at),
                         row: Arc::clone(&row),

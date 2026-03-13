@@ -330,7 +330,7 @@ impl AiChat {
         };
 
         let provided_handle = self.scroll_handle;
-        let handle = cx.with_state(AiChatState::default, |st| {
+        let handle = cx.root_state(AiChatState::default, |st| {
             if let Some(handle) = provided_handle.clone() {
                 st.handle = handle;
             }

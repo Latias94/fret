@@ -141,7 +141,7 @@ impl Reasoning {
         let layout = self.layout;
 
         cx.scope(move |cx| {
-            let logic = cx.with_state(ReasoningLogicRef::default, |st| st.clone());
+            let logic = cx.root_state(ReasoningLogicRef::default, |st| st.clone());
 
             let theme = Theme::global(&*cx.app).clone();
             let wrapper = cx.container(
@@ -216,7 +216,7 @@ impl Reasoning {
                                 }
                             }
 
-                            cx.with_state(ReasoningContextState::default, |ctx_state| {
+                            cx.root_state(ReasoningContextState::default, |ctx_state| {
                                 ctx_state.open = Some(open.clone());
                                 ctx_state.is_open = is_open;
                                 ctx_state.is_streaming = is_streaming;
@@ -589,7 +589,7 @@ mod tests {
 
         let element =
             fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
-                cx.with_state(ReasoningContextState::default, |st| {
+                cx.root_state(ReasoningContextState::default, |st| {
                     st.open = Some(open.clone());
                     st.is_open = true;
                     st.is_streaming = true;
@@ -628,7 +628,7 @@ mod tests {
 
         let element =
             fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
-                cx.with_state(ReasoningContextState::default, |st| {
+                cx.root_state(ReasoningContextState::default, |st| {
                     st.open = Some(open.clone());
                     st.is_open = true;
                     st.is_streaming = false;

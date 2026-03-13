@@ -183,7 +183,7 @@ where
         let density = EditorDensity::resolve(theme);
 
         let opts = resolve_options(theme, self.options);
-        let state: Arc<Mutex<DragState<T>>> = cx.with_state(
+        let state: Arc<Mutex<DragState<T>>> = cx.slot_state(
             || Arc::new(Mutex::new(DragState::<T>::default())),
             |s| s.clone(),
         );

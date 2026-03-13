@@ -252,7 +252,7 @@ pub fn material_ink_layer_for_pressable<H: UiHost>(
     let bounds = cx
         .last_bounds_for_element(cx.root_id())
         .unwrap_or(cx.bounds);
-    let last_down = cx.with_state(fret_ui::element::PointerRegionState::default, |st| {
+    let last_down = cx.root_state(fret_ui::element::PointerRegionState::default, |st| {
         st.last_down
     });
 
@@ -445,7 +445,7 @@ pub fn material_ink_layer_for_pressable_with_ripple_bounds<H: UiHost>(
     let bounds = cx
         .last_bounds_for_element(cx.root_id())
         .unwrap_or(cx.bounds);
-    let last_down = cx.with_state(fret_ui::element::PointerRegionState::default, |st| {
+    let last_down = cx.root_state(fret_ui::element::PointerRegionState::default, |st| {
         st.last_down
     });
 

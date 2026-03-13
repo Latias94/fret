@@ -179,12 +179,6 @@ impl ExposedDropdown {
     }
 }
 
-#[derive(Default)]
-struct ExposedDropdownRuntimeState {
-    query: Option<Model<String>>,
-    input_id_out: Option<Rc<Cell<Option<GlobalElementId>>>>,
-}
-
 fn label_for_value<'a>(items: &'a [AutocompleteItem], value: &str) -> Option<&'a Arc<str>> {
     items
         .iter()
@@ -199,26 +193,13 @@ fn exposed_dropdown_into_element<H: UiHost>(
     cx.scope(|cx| {
         let query = match exposed.query.clone() {
             Some(v) => v,
-            None => {
-                let existing =
-                    cx.with_state(ExposedDropdownRuntimeState::default, |st| st.query.clone());
-                if let Some(model) = existing {
-                    model
-                } else {
-                    let model = cx.app.models_mut().insert(String::new());
-                    cx.with_state(ExposedDropdownRuntimeState::default, |st| {
-                        st.query = Some(model.clone())
-                    });
-                    model
-                }
-            }
+            None => cx.local_model(String::new),
         };
 
-        let input_id_out = cx.with_state(ExposedDropdownRuntimeState::default, |st| {
-            st.input_id_out
-                .get_or_insert_with(|| Rc::new(Cell::new(None)))
-                .clone()
-        });
+        let input_id_out = cx.slot_state(
+            || Rc::new(Cell::new(None::<GlobalElementId>)),
+            |id| id.clone(),
+        );
 
         let selected_value = cx
             .get_model_cloned(&exposed.selected_value, Invalidation::Layout)

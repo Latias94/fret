@@ -345,7 +345,7 @@ fn render_element_node<H: UiHost, R: ComponentResolver<H>>(
             repeat_index,
         };
 
-        cx.with_state(GenUiRenderScope::default, |st| {
+        cx.root_state(GenUiRenderScope::default, |st| {
             st.state = Some(runtime.state.clone());
             st.action_queue = runtime.action_queue.clone();
             st.auto_apply_standard_actions = runtime.auto_apply_standard_actions;

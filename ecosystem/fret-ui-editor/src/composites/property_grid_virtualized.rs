@@ -139,7 +139,7 @@ impl PropertyGridVirtualized {
             )
         };
 
-        let scroll = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+        let scroll = cx.slot_state(VirtualListScrollHandle::new, |h| h.clone());
         let mut list_options = VirtualListOptions::new(density.row_height, self.options.overscan);
         list_options.items_revision = self.options.items_revision;
         list_options.gap = row_gap;

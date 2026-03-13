@@ -137,7 +137,7 @@ impl SearchView {
                         was_focused_input: bool,
                     }
 
-                    let focus_gained = cx.with_state(FrameState::default, |st| {
+                    let focus_gained = cx.slot_state(FrameState::default, |st| {
                         let focus_gained = focused_input && !st.was_focused_input;
                         st.was_focused_input = focused_input;
                         focus_gained

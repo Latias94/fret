@@ -67,7 +67,7 @@ pub fn markdown_with<H: UiHost + 'static>(
     let markdown_theme = MarkdownTheme::resolve(&theme);
 
     let snapshot = cx.named("markdown", |cx| {
-        cx.with_state(MarkdownCachedState::new, |state| {
+        cx.root_state(MarkdownCachedState::new, |state| {
             state.snapshot_for_source(source)
         })
     });
@@ -199,6 +199,7 @@ pub fn markdown_streaming_pulldown_with<H: UiHost + 'static>(
     )
 }
 
+#[track_caller]
 fn markdown_mdstream_pulldown_with<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
@@ -210,7 +211,7 @@ fn markdown_mdstream_pulldown_with<H: UiHost + 'static>(
     let committed = doc.committed();
     let pending = doc.pending();
 
-    let log_once = cx.with_state(
+    let log_once = cx.slot_state(
         || false,
         |logged| {
             if *logged {
@@ -317,6 +318,7 @@ fn markdown_mdstream_pulldown_with<H: UiHost + 'static>(
     .into_element(cx)
 }
 
+#[track_caller]
 fn render_mdstream_block_with_events<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
@@ -465,7 +467,7 @@ fn render_mdstream_block_with_events<H: UiHost + 'static>(
                     latex = from_events;
                 }
             }
-            let log_once = cx.with_state(
+            let log_once = cx.slot_state(
                 || false,
                 |logged| {
                     if *logged {

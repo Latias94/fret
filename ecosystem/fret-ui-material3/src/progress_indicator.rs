@@ -127,7 +127,7 @@ impl LinearProgressIndicator {
         let now_frame = cx.frame_id.0;
         let indeterminate_start_frame = is_indeterminate
             .then(|| {
-                cx.with_state(IndeterminateRuntime::default, |st| {
+                cx.slot_state(IndeterminateRuntime::default, |st| {
                     st.start_frame.get_or_insert(now_frame);
                     st.start_frame.unwrap_or(now_frame)
                 })
@@ -545,7 +545,7 @@ impl CircularProgressIndicator {
         let now_frame = cx.frame_id.0;
         let indeterminate_start_frame = is_indeterminate
             .then(|| {
-                cx.with_state(IndeterminateRuntime::default, |st| {
+                cx.slot_state(IndeterminateRuntime::default, |st| {
                     st.start_frame.get_or_insert(now_frame);
                     st.start_frame.unwrap_or(now_frame)
                 })

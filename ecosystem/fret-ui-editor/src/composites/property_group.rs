@@ -369,21 +369,7 @@ impl PropertyGroup {
     }
 }
 
+#[track_caller]
 fn collapsed_model<H: UiHost>(cx: &mut ElementContext<'_, H>, default: bool) -> Model<bool> {
-    let m = cx.with_state(|| None::<Model<bool>>, |st| st.clone());
-    match m {
-        Some(m) => m,
-        None => {
-            let m = cx.app.models_mut().insert(default);
-            cx.with_state(
-                || None::<Model<bool>>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some(m.clone());
-                    }
-                },
-            );
-            m
-        }
-    }
+    cx.local_model(move || default)
 }

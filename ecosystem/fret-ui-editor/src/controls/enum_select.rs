@@ -967,23 +967,9 @@ fn sanitize_test_id_segment(raw: &str) -> String {
     out
 }
 
+#[track_caller]
 fn open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
-    let m = cx.with_state(|| None::<Model<bool>>, |st| st.clone());
-    match m {
-        Some(m) => m,
-        None => {
-            let m = cx.app.models_mut().insert(false);
-            cx.with_state(
-                || None::<Model<bool>>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some(m.clone());
-                    }
-                },
-            );
-            m
-        }
-    }
+    cx.local_model(|| false)
 }
 
 #[cfg(test)]
@@ -1073,21 +1059,7 @@ mod tests {
     }
 }
 
+#[track_caller]
 fn filter_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
-    let m = cx.with_state(|| None::<Model<String>>, |st| st.clone());
-    match m {
-        Some(m) => m,
-        None => {
-            let m = cx.app.models_mut().insert(String::new());
-            cx.with_state(
-                || None::<Model<String>>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some(m.clone());
-                    }
-                },
-            );
-            m
-        }
-    }
+    cx.local_model(String::new)
 }

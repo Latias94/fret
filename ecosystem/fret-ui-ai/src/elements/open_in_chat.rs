@@ -94,21 +94,9 @@ pub fn use_open_in_controller<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<O
     cx.provided::<OpenInController>().cloned()
 }
 
-#[derive(Default)]
-struct OpenInMenuState {
-    open: Option<Model<bool>>,
-}
-
+#[track_caller]
 fn open_in_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
-    let open = cx.with_state(OpenInMenuState::default, |st| st.open.clone());
-    match open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(OpenInMenuState::default, |st| st.open = Some(model.clone()));
-            model
-        }
-    }
+    cx.local_model(|| false)
 }
 
 #[derive(Clone)]

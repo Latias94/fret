@@ -606,27 +606,14 @@ impl TextField {
     }
 }
 
+#[track_caller]
 fn draft_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
-    let draft = cx.with_state(|| None::<Model<String>>, |st| st.clone());
-    match draft {
-        Some(draft) => draft,
-        None => {
-            let draft = cx.app.models_mut().insert(String::new());
-            cx.with_state(
-                || None::<Model<String>>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some(draft.clone());
-                    }
-                },
-            );
-            draft
-        }
-    }
+    cx.local_model(String::new)
 }
 
+#[track_caller]
 fn buffered_state<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Arc<Mutex<BufferedTextFieldState>> {
-    cx.with_state(
+    cx.slot_state(
         || Arc::new(Mutex::new(BufferedTextFieldState::default())),
         |st| st.clone(),
     )

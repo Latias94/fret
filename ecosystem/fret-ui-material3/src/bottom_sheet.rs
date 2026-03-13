@@ -150,7 +150,7 @@ impl DockedBottomSheet {
                     drag_handle: Option<Arc<str>>,
                 }
 
-                let drag_handle_test_id = cx.with_state(DerivedDragHandleTestId::default, |st| {
+                let drag_handle_test_id = cx.slot_state(DerivedDragHandleTestId::default, |st| {
                     if st.base.as_deref() != test_id_for_children.as_deref() {
                         st.base = test_id_for_children.clone();
                         st.drag_handle = st
@@ -348,7 +348,7 @@ impl ModalBottomSheet {
                     sheet: Option<Arc<str>>,
                 }
 
-                let (scrim_test_id, sheet_test_id) = cx.with_state(DerivedTestIds::default, |st| {
+                let (scrim_test_id, sheet_test_id) = cx.slot_state(DerivedTestIds::default, |st| {
                     if st.base.as_deref() != test_id.as_deref() {
                         st.base = test_id.clone();
                         st.scrim =

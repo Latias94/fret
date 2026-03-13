@@ -192,13 +192,16 @@ impl TransformEdit {
             .get_model_copied(&linked_scale, Invalidation::Layout)
             .unwrap_or(false)
         {
+            let sync_slot = uniform_scale_sync_slot(cx);
             uniform_scale_sync(
                 cx,
+                sync_slot,
                 &linked_scale,
                 (&self.scale_x, &self.scale_y, &self.scale_z),
             );
         } else {
-            cx.with_state(|| None::<(f64, f64, f64)>, |st| *st = None);
+            let sync_slot = uniform_scale_sync_slot(cx);
+            cx.state_for(sync_slot, || None::<(f64, f64, f64)>, |st| *st = None);
         }
 
         let pos = (self.pos_x.clone(), self.pos_y.clone(), self.pos_z.clone());
@@ -691,23 +694,14 @@ fn section_col_with_link<H: UiHost>(
     col
 }
 
+#[track_caller]
 fn linked_scale_model<H: UiHost>(cx: &mut ElementContext<'_, H>, default: bool) -> Model<bool> {
-    let m = cx.with_state(|| None::<Model<bool>>, |st| st.clone());
-    match m {
-        Some(m) => m,
-        None => {
-            let m = cx.app.models_mut().insert(default);
-            cx.with_state(
-                || None::<Model<bool>>,
-                |st| {
-                    if st.is_none() {
-                        *st = Some(m.clone());
-                    }
-                },
-            );
-            m
-        }
-    }
+    cx.local_model(move || default)
+}
+
+#[track_caller]
+fn uniform_scale_sync_slot<H: UiHost>(cx: &mut ElementContext<'_, H>) -> fret_ui::GlobalElementId {
+    cx.slot_id()
 }
 
 fn approx_eq(a: f64, b: f64) -> bool {
@@ -716,6 +710,7 @@ fn approx_eq(a: f64, b: f64) -> bool {
 
 fn uniform_scale_sync<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
+    sync_slot: fret_ui::GlobalElementId,
     _linked: &Model<bool>,
     scale: (&Model<f64>, &Model<f64>, &Model<f64>),
 ) {
@@ -728,7 +723,8 @@ fn uniform_scale_sync<H: UiHost>(
             .unwrap_or(1.0),
     );
 
-    let next = cx.with_state(
+    let next = cx.state_for(
+        sync_slot,
         || None::<(f64, f64, f64)>,
         |last| {
             let last_v = *last;
@@ -774,7 +770,8 @@ fn uniform_scale_sync<H: UiHost>(
     }
 
     if did {
-        cx.with_state(
+        cx.state_for(
+            sync_slot,
             || None::<(f64, f64, f64)>,
             |last| *last = Some((ux, uy, uz)),
         );

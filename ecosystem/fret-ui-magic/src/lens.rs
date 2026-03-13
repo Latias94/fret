@@ -3,7 +3,6 @@ use std::sync::Arc;
 use fret_core::geometry::{Corners, Edges, Point, Px, Size};
 use fret_core::scene::{ColorSpace, GradientStop, MAX_STOPS, Mask, RadialGradient, TileMode};
 use fret_core::{Color, Transform2D};
-use fret_runtime::Model;
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::element::{
     AnyElement, ContainerProps, FocusTraversalGateProps, HitTestGateProps, HoverRegionProps,
@@ -52,11 +51,6 @@ impl Default for LensProps {
     }
 }
 
-#[derive(Default)]
-struct LensModels {
-    pointer_local: Option<Model<Option<Point>>>,
-}
-
 fn radial_mask(center: Point, lens_size: Px, feather: Px) -> Mask {
     let radius = Px((lens_size.0 * 0.5).max(0.0));
     let opaque = Color {
@@ -97,6 +91,7 @@ fn zoom_about(center: Point, scale: f32) -> Transform2D {
     to_center * Transform2D::scale_uniform(scale) * from_center
 }
 
+#[track_caller]
 pub fn lens<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     props: LensProps,
@@ -105,17 +100,7 @@ pub fn lens<H: UiHost, I>(
 where
     I: IntoIterator<Item = AnyElement>,
 {
-    let pointer_local = cx.with_state(LensModels::default, |st| st.pointer_local.clone());
-    let pointer_local = match pointer_local {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(None);
-            cx.with_state(LensModels::default, |st| {
-                st.pointer_local = Some(model.clone());
-            });
-            model
-        }
-    };
+    let pointer_local = cx.local_model(|| None::<Point>);
 
     let pointer_local_value = cx
         .get_model_copied(&pointer_local, Invalidation::Paint)

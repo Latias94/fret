@@ -41,10 +41,11 @@ enum NumericReplacementPlan {
     ClearAndConsume,
 }
 
+#[track_caller]
 pub(crate) fn numeric_text_entry_focus_state<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> Arc<Mutex<NumericTextEntryFocusState>> {
-    cx.with_state(
+    cx.slot_state(
         || Arc::new(Mutex::new(NumericTextEntryFocusState::default())),
         |state| state.clone(),
     )
