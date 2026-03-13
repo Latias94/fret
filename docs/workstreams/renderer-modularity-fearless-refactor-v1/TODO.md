@@ -541,10 +541,15 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/svg/mod.rs`
     - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns `svg_renderer`, `svgs`, or
       `svg_hash_index` directly
+    - diagnostics/perf state owner moved into
+      `crates/fret-render-wgpu/src/renderer/diagnostics.rs`
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns render perf enablement,
+      pending render-target ingest counters, last-frame perf snapshots, render-plan segment
+      history, or render-scene frame index directly
   - Current next hotspot:
-    - evaluate diagnostics state as the next pure owner-state cut, especially
-      `perf_enabled/perf/last_frame_perf/render_scene_frame_index`
-    - evaluate remaining material/custom-effect runtime shells after diagnostics state
+    - evaluate remaining material/custom-effect runtime shells as the next owner-state cut
+    - decide whether scene-encoding cache invalidation evidence belongs with diagnostics state or
+      should stay coupled to `scene_encoding_cache.rs`
 - [ ] RMFR-renderer-041 Extract cohesive domain owners for:
   - text
   - SVG
@@ -560,6 +565,8 @@ ID format:
       `crates/fret-render-wgpu/src/renderer/intermediate_pool.rs`
     - SVG registry / service state now lives under
       `crates/fret-render-wgpu/src/renderer/svg/mod.rs`
+    - diagnostics / perf state now lives under
+      `crates/fret-render-wgpu/src/renderer/diagnostics.rs`
 - [ ] RMFR-renderer-042 Reduce cross-domain mutable coupling inside `Renderer`.
 - [ ] RMFR-renderer-043 Keep service trait implementations readable after extraction.
 
@@ -717,10 +724,11 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: SVG registry/service owner state now lives under
-    `crates/fret-render-wgpu/src/renderer/svg/mod.rs`, and
-    `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns `svg_renderer`, `svgs`, or
-    `svg_hash_index` directly.
+  - Latest landed slice: diagnostics/perf owner state now lives under
+    `crates/fret-render-wgpu/src/renderer/diagnostics.rs`, and
+    `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns render perf enablement, pending
+    render-target ingest counters, last-frame perf snapshots, render-plan segment history, or
+    render-scene frame index directly.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

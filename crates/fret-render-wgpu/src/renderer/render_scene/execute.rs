@@ -10,8 +10,7 @@ impl Renderer {
         queue: &wgpu::Queue,
         params: RenderSceneParams<'_>,
     ) -> wgpu::CommandBuffer {
-        self.render_scene_frame_index = self.render_scene_frame_index.saturating_add(1);
-        let frame_index = self.render_scene_frame_index;
+        let frame_index = self.diagnostics_state.next_render_scene_frame_index();
         self.custom_effect_v3_pyramid.reset_frame_local_caches();
 
         let RenderSceneParams {
@@ -47,7 +46,7 @@ impl Renderer {
         };
         let _render_scene_guard = render_scene_span.enter();
 
-        let perf_enabled = self.perf_enabled;
+        let perf_enabled = self.diagnostics_state.perf_enabled();
         let mut frame_perf = RenderPerfStats::default();
         if perf_enabled {
             self.begin_frame_perf_collection(&mut frame_perf);

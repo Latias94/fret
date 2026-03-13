@@ -208,7 +208,7 @@ impl Renderer {
 
             let mut segments_changed: u64 = 0;
             let mut segments_passes_increased: u64 = 0;
-            if let Some(prev) = &self.last_render_plan_segment_report {
+            if let Some(prev) = &self.diagnostics_state.last_render_plan_segment_report {
                 if prev.len() != self.render_plan_segment_report_scratch.len() {
                     segments_changed = self.render_plan_segment_report_scratch.len() as u64;
                 } else {
@@ -237,10 +237,14 @@ impl Renderer {
             }
             frame_perf.render_plan_segments_changed = segments_changed;
             frame_perf.render_plan_segments_passes_increased = segments_passes_increased;
-            if let Some(prev) = self.last_render_plan_segment_report.as_mut() {
+            if let Some(prev) = self
+                .diagnostics_state
+                .last_render_plan_segment_report
+                .as_mut()
+            {
                 std::mem::swap(prev, &mut self.render_plan_segment_report_scratch);
             } else {
-                self.last_render_plan_segment_report =
+                self.diagnostics_state.last_render_plan_segment_report =
                     Some(std::mem::take(&mut self.render_plan_segment_report_scratch));
             }
         }

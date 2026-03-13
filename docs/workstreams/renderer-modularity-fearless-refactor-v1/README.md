@@ -220,6 +220,11 @@ As of 2026-03-13:
   `crates/fret-render-wgpu/src/renderer/svg/mod.rs`, and
   `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns `svg_renderer`, `svgs`, or
   `svg_hash_index` directly.
+- Renderer diagnostics/perf owner state now also lives under
+  `crates/fret-render-wgpu/src/renderer/diagnostics.rs`, and
+  `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns render perf enablement, pending
+  render-target ingest counters, last-frame perf snapshots, render-plan segment history, or render
+  scene frame index directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

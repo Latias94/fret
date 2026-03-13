@@ -359,6 +359,19 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu registry_deduplicates_svg_bytes_and_tracks_refcounts`
   - `cargo nextest run -p fret-render-wgpu svg_draw_rect_centers_contained_raster`
   - `cargo nextest run -p fret-render-wgpu svg_draw_rect_width_can_overflow_height`
+- The fifth renderer owner-state split has landed:
+  - diagnostics / perf state now lives under
+    `crates/fret-render-wgpu/src/renderer/diagnostics.rs`
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` no longer owns render perf enablement, pending
+    render-target ingest counters, last-frame perf snapshots, render-plan segment history, or
+    render-scene frame index directly
+  - `config.rs`, `resources.rs`, and render-scene perf/reporting paths now query that owner state
+    instead of reaching into loose renderer fields
+- Renderer diagnostics-state split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu drains_pending_render_target_perf_counters_into_frame_perf`
+  - `cargo nextest run -p fret-render-wgpu scene_encoding_cache_is_busted_by_text_quality_changes`
+  - `cargo nextest run -p fret-render-wgpu perf_snapshot_counts_path_material_paint_degradation`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

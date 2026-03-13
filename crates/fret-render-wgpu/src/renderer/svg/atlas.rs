@@ -183,7 +183,7 @@ impl Renderer {
                 keys_to_remove.push(*k);
             }
         }
-        if self.perf_enabled {
+        if self.diagnostics_state.perf_enabled() {
             self.svg_raster_state.frame_perf.mask_atlas_page_evictions = self
                 .svg_raster_state
                 .frame_perf

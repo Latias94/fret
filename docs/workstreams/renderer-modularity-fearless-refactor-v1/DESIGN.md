@@ -222,6 +222,9 @@ For `Renderer` state-shell tightening, the same principle applies:
 - registry-style shells are another good early target when they combine ID ownership, refcounting,
   hash-based deduplication, and one service-local backend helper; separating SVG registry ownership
   from SVG raster budget/atlas state keeps service paths from punching through one broad owner.
+- diagnostics/perf state is the next high-cohesion pattern after caches and registries: runtime
+  enablement flags, pending per-frame counters, accumulated snapshots, and render-plan history
+  belong behind one owner shell so config/resources/render-scene code stop sharing loose fields.
 
 ### 5. Tighten public exports after evidence exists
 

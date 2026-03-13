@@ -39,7 +39,7 @@ impl Renderer {
             };
 
             if let Some(entry) = self.svg_raster_state.rasters.remove(&victim_key) {
-                if self.perf_enabled {
+                if self.diagnostics_state.perf_enabled() {
                     self.svg_raster_state.frame_perf.raster_budget_evictions = self
                         .svg_raster_state
                         .frame_perf

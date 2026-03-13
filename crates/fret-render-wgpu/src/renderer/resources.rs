@@ -578,17 +578,7 @@ impl Renderer {
             svg_registry_state: svg::SvgRegistryState::new(),
             svg_raster_state: svg::SvgRasterState::default(),
             clip_path_mask_cache: ClipPathMaskCache::new((256 * 1024 * 1024) / 8),
-            perf_enabled: false,
-            perf_pending_render_target_updates_requested_by_ingest: [0;
-                fret_render_core::RenderTargetIngestStrategy::COUNT],
-            perf_pending_render_target_updates_by_ingest: [0;
-                fret_render_core::RenderTargetIngestStrategy::COUNT],
-            perf_pending_render_target_updates_ingest_fallbacks: 0,
-            perf_pending_render_target_metadata_degradations_color_encoding_dropped: 0,
-            perf: RenderPerfStats::default(),
-            last_frame_perf: None,
-            last_render_plan_segment_report: None,
-            render_scene_frame_index: 0,
+            diagnostics_state: DiagnosticsState::default(),
             path_msaa_samples: 4,
             debug_offscreen_blit_enabled: false,
             debug_pixelate_scale: 0,
@@ -655,30 +645,13 @@ impl Renderer {
             desc.metadata.color_encoding,
         ) {
             desc.metadata.color_encoding = fret_render_core::RenderTargetColorEncoding::default();
-            if self.perf_enabled {
-                self.perf_pending_render_target_metadata_degradations_color_encoding_dropped = self
-                    .perf_pending_render_target_metadata_degradations_color_encoding_dropped
-                    .saturating_add(1);
-            }
+            self.diagnostics_state
+                .note_render_target_metadata_degradation_color_encoding_dropped();
         }
-        if self.perf_enabled {
-            let effective_ix =
-                render_target_ingest_strategy_perf_index(desc.metadata.ingest_strategy);
-            self.perf_pending_render_target_updates_by_ingest[effective_ix] =
-                self.perf_pending_render_target_updates_by_ingest[effective_ix].saturating_add(1);
-
-            let requested_ix =
-                render_target_ingest_strategy_perf_index(desc.metadata.requested_ingest_strategy);
-            self.perf_pending_render_target_updates_requested_by_ingest[requested_ix] = self
-                .perf_pending_render_target_updates_requested_by_ingest[requested_ix]
-                .saturating_add(1);
-
-            if desc.metadata.requested_ingest_strategy != desc.metadata.ingest_strategy {
-                self.perf_pending_render_target_updates_ingest_fallbacks = self
-                    .perf_pending_render_target_updates_ingest_fallbacks
-                    .saturating_add(1);
-            }
-        }
+        self.diagnostics_state.note_render_target_update(
+            desc.metadata.requested_ingest_strategy,
+            desc.metadata.ingest_strategy,
+        );
         self.gpu_resources.register_render_target(desc)
     }
 
@@ -705,30 +678,13 @@ impl Renderer {
             desc.metadata.color_encoding,
         ) {
             desc.metadata.color_encoding = fret_render_core::RenderTargetColorEncoding::default();
-            if self.perf_enabled {
-                self.perf_pending_render_target_metadata_degradations_color_encoding_dropped = self
-                    .perf_pending_render_target_metadata_degradations_color_encoding_dropped
-                    .saturating_add(1);
-            }
+            self.diagnostics_state
+                .note_render_target_metadata_degradation_color_encoding_dropped();
         }
-        if self.perf_enabled {
-            let effective_ix =
-                render_target_ingest_strategy_perf_index(desc.metadata.ingest_strategy);
-            self.perf_pending_render_target_updates_by_ingest[effective_ix] =
-                self.perf_pending_render_target_updates_by_ingest[effective_ix].saturating_add(1);
-
-            let requested_ix =
-                render_target_ingest_strategy_perf_index(desc.metadata.requested_ingest_strategy);
-            self.perf_pending_render_target_updates_requested_by_ingest[requested_ix] = self
-                .perf_pending_render_target_updates_requested_by_ingest[requested_ix]
-                .saturating_add(1);
-
-            if desc.metadata.requested_ingest_strategy != desc.metadata.ingest_strategy {
-                self.perf_pending_render_target_updates_ingest_fallbacks = self
-                    .perf_pending_render_target_updates_ingest_fallbacks
-                    .saturating_add(1);
-            }
-        }
+        self.diagnostics_state.note_render_target_update(
+            desc.metadata.requested_ingest_strategy,
+            desc.metadata.ingest_strategy,
+        );
         self.gpu_resources.update_render_target(id, desc)
     }
 

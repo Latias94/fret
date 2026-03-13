@@ -18,7 +18,7 @@ impl Renderer {
     ) -> Option<(fret_core::ImageId, fret_core::UvRect, (u32, u32))> {
         let key = Self::svg_raster_key(svg, rect, scale_factor, kind, fit);
         if self.svg_raster_state.rasters.contains_key(&key) {
-            if self.perf_enabled {
+            if self.diagnostics_state.perf_enabled() {
                 self.svg_raster_state.frame_perf.raster_cache_hits = self
                     .svg_raster_state
                     .frame_perf
@@ -45,7 +45,7 @@ impl Renderer {
             }
             return Some((image, uv, size_px));
         }
-        if self.perf_enabled {
+        if self.diagnostics_state.perf_enabled() {
             self.svg_raster_state.frame_perf.raster_cache_misses = self
                 .svg_raster_state
                 .frame_perf

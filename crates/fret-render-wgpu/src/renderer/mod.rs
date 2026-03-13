@@ -4,7 +4,6 @@ pub(super) use fret_core::{
     geometry::{Point, Px, Rect, Size, Transform2D},
     scene::{Color, Scene, SceneOp, UvRect},
 };
-use fret_render_core::RenderTargetIngestStrategy;
 use slotmap::SlotMap;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -28,6 +27,7 @@ mod util;
 
 mod buffers;
 mod config;
+mod diagnostics;
 mod frame_targets;
 mod fullscreen;
 mod intermediate_pool;
@@ -49,6 +49,7 @@ mod tests;
 mod v3_pyramid;
 
 use clip_path_mask_cache::*;
+use diagnostics::*;
 use fullscreen::*;
 use gpu_effect_params::GpuEffectParams;
 use gpu_globals::GpuGlobals;
@@ -130,16 +131,7 @@ pub struct Renderer {
 
     clip_path_mask_cache: ClipPathMaskCache,
 
-    perf_enabled: bool,
-    perf_pending_render_target_updates_requested_by_ingest:
-        [u64; RenderTargetIngestStrategy::COUNT],
-    perf_pending_render_target_updates_by_ingest: [u64; RenderTargetIngestStrategy::COUNT],
-    perf_pending_render_target_updates_ingest_fallbacks: u64,
-    perf_pending_render_target_metadata_degradations_color_encoding_dropped: u64,
-    perf: RenderPerfStats,
-    last_frame_perf: Option<RenderPerfSnapshot>,
-    last_render_plan_segment_report: Option<Vec<RenderPlanSegmentReport>>,
-    render_scene_frame_index: u64,
+    diagnostics_state: DiagnosticsState,
 
     path_msaa_samples: u32,
     debug_offscreen_blit_enabled: bool,

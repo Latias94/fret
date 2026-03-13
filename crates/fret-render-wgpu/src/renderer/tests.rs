@@ -700,9 +700,18 @@ fn scene_encoding_cache_is_busted_by_text_quality_changes() {
         .scene_encoding_cache
         .cache_key()
         .expect("scene encoding key");
-    assert_eq!(renderer.perf.scene_encoding_cache_hits, 0);
-    assert_eq!(renderer.perf.scene_encoding_cache_misses, 1);
-    assert_eq!(renderer.perf.scene_encoding_cache_last_miss_reasons, 1 << 0);
+    assert_eq!(renderer.diagnostics_state.perf.scene_encoding_cache_hits, 0);
+    assert_eq!(
+        renderer.diagnostics_state.perf.scene_encoding_cache_misses,
+        1
+    );
+    assert_eq!(
+        renderer
+            .diagnostics_state
+            .perf
+            .scene_encoding_cache_last_miss_reasons,
+        1 << 0
+    );
 
     let _ = renderer.render_scene(&ctx.device, &ctx.queue, make_params());
     let key1 = renderer
@@ -710,7 +719,7 @@ fn scene_encoding_cache_is_busted_by_text_quality_changes() {
         .cache_key()
         .expect("scene encoding key");
     assert_eq!(key1, key0);
-    assert_eq!(renderer.perf.scene_encoding_cache_hits, 1);
+    assert_eq!(renderer.diagnostics_state.perf.scene_encoding_cache_hits, 1);
 
     let changed = renderer.set_text_quality_settings(crate::text::TextQualitySettings {
         gamma: 1.7,
@@ -724,11 +733,30 @@ fn scene_encoding_cache_is_busted_by_text_quality_changes() {
         .cache_key()
         .expect("scene encoding key");
     assert_ne!(key2, key0);
-    assert_eq!(renderer.perf.scene_encoding_cache_misses, 2);
-    assert_ne!(renderer.perf.scene_encoding_cache_last_miss_reasons, 0);
-    assert_ne!(renderer.perf.scene_encoding_cache_last_miss_reasons, 1 << 0);
+    assert_eq!(
+        renderer.diagnostics_state.perf.scene_encoding_cache_misses,
+        2
+    );
     assert_ne!(
-        renderer.perf.scene_encoding_cache_last_miss_reasons & (1 << 9),
+        renderer
+            .diagnostics_state
+            .perf
+            .scene_encoding_cache_last_miss_reasons,
+        0
+    );
+    assert_ne!(
+        renderer
+            .diagnostics_state
+            .perf
+            .scene_encoding_cache_last_miss_reasons,
+        1 << 0
+    );
+    assert_ne!(
+        renderer
+            .diagnostics_state
+            .perf
+            .scene_encoding_cache_last_miss_reasons
+            & (1 << 9),
         0
     );
 }
