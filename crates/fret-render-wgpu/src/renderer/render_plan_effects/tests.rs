@@ -294,6 +294,65 @@ fn custom_v2_masked_step_preserves_image_input_and_clip_coverage() {
 }
 
 #[test]
+fn custom_chain_budget_records_optional_mask_bytes() {
+    let ctx = EffectCompileCtx {
+        viewport_size: (64, 64),
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        intermediate_budget_bytes: 1u64 << 60,
+        clear: wgpu::Color::TRANSPARENT,
+        scale_factor: 1.0,
+    };
+    let scissor = ScissorRect {
+        x: 6,
+        y: 8,
+        w: 22,
+        h: 20,
+    };
+
+    let mut passes = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
+    let evidence = apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        fret_core::EffectMode::FilterContent,
+        fret_core::EffectChain::from_steps(&[fret_core::EffectStep::CustomV1 {
+            id: fret_core::EffectId::default(),
+            params: fret_core::scene::EffectParamsV1 {
+                vec4s: [[0.0; 4]; 4],
+            },
+            max_sample_offset_px: fret_core::Px(0.0),
+        }]),
+        fret_core::EffectQuality::Medium,
+        scissor,
+        Some(9),
+        &[],
+        &mut degradations,
+        &mut blur_quality,
+        ctx,
+        None,
+    )
+    .expect("custom effect chains should report budget evidence");
+
+    assert!(
+        passes
+            .iter()
+            .any(|pass| matches!(pass, RenderPlanPass::ClipMask(_))),
+        "masked custom chain should allocate a clip-mask pass when budget allows"
+    );
+    assert!(
+        evidence.optional_mask_bytes > 0,
+        "budget evidence should record clip-mask bytes for masked custom chains"
+    );
+    assert_eq!(
+        evidence.optional_required_bytes(),
+        evidence.optional_mask_bytes,
+        "custom-v1 mask-only chains should report optional bytes entirely through the clip mask"
+    );
+}
+
+#[test]
 fn custom_v3_pyramid_budget_pressure_degrades_to_one_and_records_counters() {
     let viewport_size = (64, 64);
     let format = wgpu::TextureFormat::Rgba8Unorm;

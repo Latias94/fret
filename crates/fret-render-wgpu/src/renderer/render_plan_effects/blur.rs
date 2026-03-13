@@ -1,3 +1,4 @@
+use super::builtin::effect_blur_desired_downsample;
 use super::*;
 
 pub(super) fn padded_chain_step_scissors(

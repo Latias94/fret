@@ -101,9 +101,9 @@ use self::builtin::{
     apply_backdrop_warp_v2_step_masked, apply_color_adjust_step, apply_color_adjust_step_masked,
     apply_color_matrix_step, apply_color_matrix_step_masked, apply_dither_step,
     apply_dither_step_masked, apply_noise_step, apply_noise_step_masked, apply_pixelate_step,
-    apply_pixelate_step_masked, choose_clip_mask_target_capped, effect_blur_desired_downsample,
+    apply_pixelate_step_masked,
 };
-use self::chain::{ChainCoverage, try_apply_padded_chain_in_place};
+use self::chain::{prepare_chain_start, try_apply_padded_chain_in_place};
 use self::custom::{
     apply_custom_v1_step, apply_custom_v1_step_masked, apply_custom_v2_step,
     apply_custom_v2_step_masked, apply_custom_v3_step, apply_custom_v3_step_masked,
@@ -290,84 +290,17 @@ pub(super) fn apply_chain_in_place(
 
     let (group_raw, _, _) = backdrop_source_group_parts(backdrop_source_group);
 
-    let mut budget_bytes = ctx.intermediate_budget_bytes;
-    let srcdst_bytes = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
-    let chain_has_custom_effect = steps.iter().any(is_custom_effect_step);
-    let full_target_bytes = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
-    let mut custom_chain_budget =
-        chain_has_custom_effect.then_some(CustomEffectChainBudgetEvidence {
-            effective_budget_bytes: ctx.intermediate_budget_bytes,
-            base_required_bytes: base_required_bytes_for_srcdst_and_single_scratch(
-                full_target_bytes,
-            ),
-            base_required_full_targets: 2,
-            optional_mask_bytes: 0,
-            optional_pyramid_bytes: 0,
-        });
-
-    let scratch_targets = available_scratch_targets(in_use_targets, srcdst);
-    let forced_quarter_blur = scratch_targets.len() >= 2
-        && steps.iter().any(|step| match *step {
-            fret_core::EffectStep::GaussianBlur {
-                radius_px,
-                downsample,
-            } => {
-                if !radius_px.0.is_finite() || radius_px.0 <= 0.0 {
-                    return false;
-                }
-                let requested_downsample = if downsample >= 4 { 4 } else { 2 };
-                let desired_downsample =
-                    effect_blur_desired_downsample(requested_downsample, quality);
-                if desired_downsample != 2 {
-                    return false;
-                }
-                let Some(chosen) = choose_effect_blur_downsample_scale(
-                    ctx.viewport_size,
-                    ctx.format,
-                    budget_bytes,
-                    requested_downsample,
-                    quality,
-                ) else {
-                    return false;
-                };
-                chosen == 4
-            }
-            _ => false,
-        });
-    let mask_tier_cap = forced_quarter_blur.then_some(PlanTarget::Mask2);
-
-    let mut chosen_mask_bytes: u64 = 0;
-    let mask = if let Some(uniform_index) = mask_uniform_index
-        && let Some((mask_target, mask_size, mask_bytes)) = choose_clip_mask_target_capped(
-            ctx.viewport_size,
-            scissor,
-            budget_bytes,
-            srcdst_bytes,
-            quality,
-            mask_tier_cap,
-            unavailable_mask_targets,
-        ) {
-        passes.push(RenderPlanPass::ClipMask(ClipMaskPass {
-            dst: mask_target,
-            dst_size: mask_size,
-            dst_scissor: None,
-            uniform_index,
-            load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-        }));
-        chosen_mask_bytes = mask_bytes;
-        budget_bytes = budget_bytes.saturating_sub(mask_bytes);
-        Some(MaskRef {
-            target: mask_target,
-            size: mask_size,
-            viewport_rect: scissor,
-        })
-    } else {
-        None
-    };
-
-    if let Some(e) = custom_chain_budget.as_mut() {
-        e.optional_mask_bytes = chosen_mask_bytes;
-    }
+    let mut chain_start = prepare_chain_start(
+        passes,
+        in_use_targets,
+        srcdst,
+        &steps,
+        scissor,
+        mask_uniform_index,
+        unavailable_mask_targets,
+        quality,
+        ctx,
+    );
 
     // Padded effect chains:
     //
@@ -383,23 +316,20 @@ pub(super) fn apply_chain_in_place(
     if try_apply_padded_chain_in_place(
         passes,
         &steps,
-        scratch_targets.as_slice(),
+        chain_start.scratch_targets.as_slice(),
         srcdst,
         mode,
         quality,
         scissor,
-        budget_bytes,
-        ChainCoverage {
-            mask_uniform_index,
-            mask,
-        },
+        chain_start.budget_bytes,
+        chain_start.coverage,
         effect_degradations,
         effect_blur_quality,
         ctx,
         backdrop_source_group,
-        &mut custom_chain_budget,
+        &mut chain_start.custom_chain_budget,
     ) {
-        return custom_chain_budget;
+        return chain_start.custom_chain_budget;
     }
 
     let chain_wants_raw =
@@ -407,10 +337,10 @@ pub(super) fn apply_chain_in_place(
 
     let full = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
     let (chain_raw, scratch_targets): (Option<PlanTarget>, &[PlanTarget]) = if chain_wants_raw
-        && scratch_targets.len() >= 2
-        && budget_bytes >= base_required_bytes_for_srcdst_and_single_scratch(full)
+        && chain_start.scratch_targets.len() >= 2
+        && chain_start.budget_bytes >= base_required_bytes_for_srcdst_and_single_scratch(full)
     {
-        let chain_raw = scratch_targets[0];
+        let chain_raw = chain_start.scratch_targets[0];
         passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
             src: srcdst,
             dst: chain_raw,
@@ -420,14 +350,15 @@ pub(super) fn apply_chain_in_place(
             encode_output_srgb: false,
             load: wgpu::LoadOp::Clear(ctx.clear),
         }));
-        budget_bytes = budget_excluding_full_size_targets(budget_bytes, full, 1);
-        if let Some(e) = custom_chain_budget.as_mut() {
+        chain_start.budget_bytes =
+            budget_excluding_full_size_targets(chain_start.budget_bytes, full, 1);
+        if let Some(e) = chain_start.custom_chain_budget.as_mut() {
             e.base_required_full_targets = e.base_required_full_targets.max(3);
             e.base_required_bytes = required_bytes_for_full_size_targets(full, 3);
         }
-        (Some(chain_raw), &scratch_targets[1..])
+        (Some(chain_raw), &chain_start.scratch_targets[1..])
     } else {
-        (None, scratch_targets.as_slice())
+        (None, chain_start.scratch_targets.as_slice())
     };
 
     // Clip/shape masks are coverage (alpha) multipliers. If we apply them at every effect step in a
@@ -436,8 +367,8 @@ pub(super) fn apply_chain_in_place(
     //
     // To avoid this, we apply clip/mask only on the final step of the chain and keep intermediate
     // steps unmasked.
-    let chain_mask_uniform_index = mask_uniform_index;
-    let chain_mask = mask;
+    let chain_mask_uniform_index = chain_start.coverage.mask_uniform_index;
+    let chain_mask = chain_start.coverage.mask;
     let step_count = steps.len();
 
     for (step_index, step) in steps.into_iter().enumerate() {
@@ -464,7 +395,7 @@ pub(super) fn apply_chain_in_place(
                     downsample,
                     radius_px,
                     ctx,
-                    &mut budget_bytes,
+                    &mut chain_start.budget_bytes,
                     effect_degradations,
                     effect_blur_quality,
                     mask_uniform_index,
@@ -480,7 +411,7 @@ pub(super) fn apply_chain_in_place(
                     scissor,
                     w,
                     ctx,
-                    &mut budget_bytes,
+                    &mut chain_start.budget_bytes,
                     effect_degradations,
                     mask_uniform_index,
                     mask,
@@ -495,7 +426,7 @@ pub(super) fn apply_chain_in_place(
                     scissor,
                     w,
                     ctx,
-                    &mut budget_bytes,
+                    &mut chain_start.budget_bytes,
                     effect_degradations,
                     mask_uniform_index,
                     mask,
@@ -511,7 +442,7 @@ pub(super) fn apply_chain_in_place(
                     scissor,
                     s,
                     ctx,
-                    &mut budget_bytes,
+                    &mut chain_start.budget_bytes,
                     effect_degradations,
                     effect_blur_quality,
                     mask_uniform_index,
@@ -532,7 +463,7 @@ pub(super) fn apply_chain_in_place(
                     brightness,
                     contrast,
                     ctx,
-                    &mut budget_bytes,
+                    &mut chain_start.budget_bytes,
                     effect_degradations,
                     mask_uniform_index,
                     mask,
@@ -546,7 +477,7 @@ pub(super) fn apply_chain_in_place(
                     scissor,
                     m,
                     ctx,
-                    &mut budget_bytes,
+                    &mut chain_start.budget_bytes,
                     effect_degradations,
                     mask_uniform_index,
                     mask,
@@ -561,7 +492,7 @@ pub(super) fn apply_chain_in_place(
                     cutoff,
                     soft,
                     ctx,
-                    &mut budget_bytes,
+                    &mut chain_start.budget_bytes,
                     effect_degradations,
                     mask_uniform_index,
                     mask,
@@ -578,7 +509,7 @@ pub(super) fn apply_chain_in_place(
                     scissor,
                     scale,
                     ctx,
-                    &mut budget_bytes,
+                    &mut chain_start.budget_bytes,
                     effect_degradations,
                     mask_uniform_index,
                     mask,
@@ -592,7 +523,7 @@ pub(super) fn apply_chain_in_place(
                     scissor,
                     mode,
                     ctx,
-                    &mut budget_bytes,
+                    &mut chain_start.budget_bytes,
                     effect_degradations,
                     mask_uniform_index,
                     mask,
@@ -610,7 +541,7 @@ pub(super) fn apply_chain_in_place(
                     scissor,
                     n,
                     ctx,
-                    &mut budget_bytes,
+                    &mut chain_start.budget_bytes,
                     effect_degradations,
                     mask_uniform_index,
                     mask,
@@ -629,7 +560,7 @@ pub(super) fn apply_chain_in_place(
                     id,
                     params,
                     ctx,
-                    &mut budget_bytes,
+                    &mut chain_start.budget_bytes,
                     effect_degradations,
                     mask_uniform_index,
                     mask,
@@ -650,7 +581,7 @@ pub(super) fn apply_chain_in_place(
                     params,
                     input_image,
                     ctx,
-                    &mut budget_bytes,
+                    &mut chain_start.budget_bytes,
                     effect_degradations,
                     mask_uniform_index,
                     mask,
@@ -675,11 +606,11 @@ pub(super) fn apply_chain_in_place(
                     user1,
                     sources,
                     ctx,
-                    &mut budget_bytes,
+                    &mut chain_start.budget_bytes,
                     effect_degradations,
                     chain_raw,
                     backdrop_source_group,
-                    &mut custom_chain_budget,
+                    &mut chain_start.custom_chain_budget,
                     mask_uniform_index,
                     mask,
                 );
@@ -687,7 +618,7 @@ pub(super) fn apply_chain_in_place(
         }
     }
 
-    custom_chain_budget
+    chain_start.custom_chain_budget
 }
 
 #[allow(clippy::too_many_arguments)]

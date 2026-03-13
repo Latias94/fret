@@ -221,6 +221,23 @@ Current snapshot (2026-03-13):
   - `cargo nextest run -p fret-render-wgpu custom_v2_masked_step_preserves_image_input_and_clip_coverage`
   - `cargo nextest run -p fret-render-wgpu custom_v3_pyramid_budget_pressure_degrades_to_one_and_records_counters`
   - `cargo nextest run -p fret-render-wgpu custom_v3_sources_plan_honors_group_pyramid_choice_and_group_roi`
+- The eleventh renderer effect-planning split has landed:
+  - chain-start preparation flow now lives under
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`
+  - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns custom-chain
+    budget initialization, scratch-target inventory, forced quarter-blur mask-tier choice, or
+    clip-mask budget charging directly
+  - `crates/fret-render-wgpu/src/renderer/render_plan_effects/blur.rs` now imports
+    `effect_blur_desired_downsample(...)` explicitly instead of depending on a parent-module import
+- Renderer chain-start preparation split verification remains green:
+  - `cargo check -p fret-render-wgpu --tests`
+  - `cargo nextest run -p fret-render-wgpu chain_applies_clip_only_on_final_step`
+  - `cargo nextest run -p fret-render-wgpu padded_blur_then_custom_uses_work_buffer`
+  - `cargo nextest run -p fret-render-wgpu padded_color_adjust_then_blur_uses_masked_commit_pass`
+  - `cargo nextest run -p fret-render-wgpu custom_v2_masked_step_preserves_image_input_and_clip_coverage`
+  - `cargo nextest run -p fret-render-wgpu custom_chain_budget_records_optional_mask_bytes`
+  - `cargo nextest run -p fret-render-wgpu custom_v3_pyramid_budget_pressure_degrades_to_one_and_records_counters`
+  - `cargo nextest run -p fret-render-wgpu gaussian_blur_masked_single_scratch_blur_applies_clip_coverage`
 - The first internal `text/mod.rs` split has landed:
   - glyph atlas bookkeeping moved into `crates/fret-render-wgpu/src/text/atlas.rs`
   - `text/mod.rs` now depends on atlas accessors instead of atlas internals

@@ -181,6 +181,11 @@ As of 2026-03-13:
 - Renderer padded-chain final Custom commit helpers now also live under
   `crates/fret-render-wgpu/src/renderer/render_plan_effects/custom.rs`, keeping effect-specific
   final-step wiring out of the orchestration module.
+- Renderer chain-start preparation flow now also lives under
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`, and
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns custom-chain budget
+  initialization, scratch-target inventory, forced quarter-blur mask-tier choice, or clip-mask
+  budget charging directly.
 - Some convenience/diagnostics surfaces still privilege `WgpuContext`, so ergonomic closure is not
   fully finished yet.
 - The first code slice has landed:

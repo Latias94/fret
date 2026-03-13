@@ -502,8 +502,13 @@ ID format:
       `apply_chain_in_place(...)` directly
     - padded-chain final Custom commit helpers now also live under
       `crates/fret-render-wgpu/src/renderer/render_plan_effects/custom.rs`
+    - chain-start preparation flow moved into
+      `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns custom-chain
+      budget initialization, scratch-target inventory, forced quarter-blur mask-tier choice, or
+      clip-mask budget charging directly
   - Current next hotspot:
-    - remaining clip-mask target choice + budget charging near the front of
+    - remaining unpadded chain raw-target reservation + scratch-slice choice in
       `apply_chain_in_place(...)`
     - remaining unpadded chain dispatch / final-step mask handoff in
       `apply_chain_in_place(...)`
@@ -670,11 +675,11 @@ ID format:
 - [x] RMFR-docs-080 Create this workstream doc set.
 - [x] RMFR-docs-085 Capture first-pass surface inventory and consumer buckets.
 - [~] RMFR-docs-081 Update this tracker as refactor stages land.
-  - Latest landed slice: padded-chain orchestration flow now lives under
+  - Latest landed slice: chain-start preparation flow now lives under
     `crates/fret-render-wgpu/src/renderer/render_plan_effects/chain.rs`, and
-    `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns the padded
-    work-buffer / optional raw-target / final-commit orchestration inside
-    `apply_chain_in_place(...)` directly.
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` no longer owns custom-chain
+    budget initialization, scratch-target inventory, forced quarter-blur mask-tier choice, or
+    clip-mask budget charging directly.
 - [ ] RMFR-docs-082 Add or update an ADR if the stable renderer facade contract changes.
 - [ ] RMFR-docs-083 If an ADR is added, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 - [ ] RMFR-docs-084 Decide whether this workstream also needs:

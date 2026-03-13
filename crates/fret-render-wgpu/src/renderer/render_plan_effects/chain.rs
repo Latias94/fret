@@ -1,4 +1,5 @@
 use super::blur::padded_chain_step_scissors;
+use super::builtin::{choose_clip_mask_target_capped, effect_blur_desired_downsample};
 use super::custom::append_padded_chain_final_custom_step;
 use super::*;
 
@@ -6,6 +7,163 @@ use super::*;
 pub(super) struct ChainCoverage {
     pub(super) mask_uniform_index: Option<u32>,
     pub(super) mask: Option<MaskRef>,
+}
+
+#[derive(Debug)]
+pub(super) struct PreparedChainStart {
+    pub(super) budget_bytes: u64,
+    pub(super) scratch_targets: Vec<PlanTarget>,
+    pub(super) coverage: ChainCoverage,
+    pub(super) custom_chain_budget: Option<CustomEffectChainBudgetEvidence>,
+}
+
+fn initial_custom_chain_budget(
+    steps: &[fret_core::EffectStep],
+    ctx: EffectCompileCtx,
+) -> Option<CustomEffectChainBudgetEvidence> {
+    let full_target_bytes = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
+    steps
+        .iter()
+        .any(super::is_custom_effect_step)
+        .then_some(CustomEffectChainBudgetEvidence {
+            effective_budget_bytes: ctx.intermediate_budget_bytes,
+            base_required_bytes: base_required_bytes_for_srcdst_and_single_scratch(
+                full_target_bytes,
+            ),
+            base_required_full_targets: 2,
+            optional_mask_bytes: 0,
+            optional_pyramid_bytes: 0,
+        })
+}
+
+fn chain_forces_quarter_blur(
+    steps: &[fret_core::EffectStep],
+    scratch_targets: &[PlanTarget],
+    quality: fret_core::EffectQuality,
+    budget_bytes: u64,
+    ctx: EffectCompileCtx,
+) -> bool {
+    scratch_targets.len() >= 2
+        && steps.iter().any(|step| match *step {
+            fret_core::EffectStep::GaussianBlur {
+                radius_px,
+                downsample,
+            } => {
+                if !radius_px.0.is_finite() || radius_px.0 <= 0.0 {
+                    return false;
+                }
+                let requested_downsample = if downsample >= 4 { 4 } else { 2 };
+                let desired_downsample =
+                    effect_blur_desired_downsample(requested_downsample, quality);
+                if desired_downsample != 2 {
+                    return false;
+                }
+                let Some(chosen) = choose_effect_blur_downsample_scale(
+                    ctx.viewport_size,
+                    ctx.format,
+                    budget_bytes,
+                    requested_downsample,
+                    quality,
+                ) else {
+                    return false;
+                };
+                chosen == 4
+            }
+            _ => false,
+        })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn prepare_chain_coverage(
+    passes: &mut Vec<RenderPlanPass>,
+    steps: &[fret_core::EffectStep],
+    scissor: ScissorRect,
+    mask_uniform_index: Option<u32>,
+    unavailable_mask_targets: &[PlanTarget],
+    scratch_targets: &[PlanTarget],
+    quality: fret_core::EffectQuality,
+    budget_bytes: &mut u64,
+    custom_chain_budget: &mut Option<CustomEffectChainBudgetEvidence>,
+    ctx: EffectCompileCtx,
+) -> ChainCoverage {
+    let srcdst_bytes = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
+    let mask_tier_cap =
+        chain_forces_quarter_blur(steps, scratch_targets, quality, *budget_bytes, ctx)
+            .then_some(PlanTarget::Mask2);
+
+    let mut chosen_mask_bytes = 0;
+    let mask = if let Some(uniform_index) = mask_uniform_index
+        && let Some((mask_target, mask_size, mask_bytes)) = choose_clip_mask_target_capped(
+            ctx.viewport_size,
+            scissor,
+            *budget_bytes,
+            srcdst_bytes,
+            quality,
+            mask_tier_cap,
+            unavailable_mask_targets,
+        ) {
+        passes.push(RenderPlanPass::ClipMask(ClipMaskPass {
+            dst: mask_target,
+            dst_size: mask_size,
+            dst_scissor: None,
+            uniform_index,
+            load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+        }));
+        chosen_mask_bytes = mask_bytes;
+        *budget_bytes = (*budget_bytes).saturating_sub(mask_bytes);
+        Some(MaskRef {
+            target: mask_target,
+            size: mask_size,
+            viewport_rect: scissor,
+        })
+    } else {
+        None
+    };
+
+    if let Some(evidence) = custom_chain_budget.as_mut() {
+        evidence.optional_mask_bytes = chosen_mask_bytes;
+    }
+
+    ChainCoverage {
+        mask_uniform_index,
+        mask,
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(super) fn prepare_chain_start(
+    passes: &mut Vec<RenderPlanPass>,
+    in_use_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    steps: &[fret_core::EffectStep],
+    scissor: ScissorRect,
+    mask_uniform_index: Option<u32>,
+    unavailable_mask_targets: &[PlanTarget],
+    quality: fret_core::EffectQuality,
+    ctx: EffectCompileCtx,
+) -> PreparedChainStart {
+    let mut budget_bytes = ctx.intermediate_budget_bytes;
+    let scratch_targets = super::available_scratch_targets(in_use_targets, srcdst);
+    let mut custom_chain_budget = initial_custom_chain_budget(steps, ctx);
+    let coverage = prepare_chain_coverage(
+        passes,
+        steps,
+        scissor,
+        mask_uniform_index,
+        unavailable_mask_targets,
+        scratch_targets.as_slice(),
+        quality,
+        &mut budget_bytes,
+        &mut custom_chain_budget,
+        ctx,
+    );
+
+    PreparedChainStart {
+        budget_bytes,
+        scratch_targets,
+        coverage,
+        custom_chain_budget,
+    }
 }
 
 fn push_padded_chain_commit_pass(
