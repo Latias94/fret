@@ -56,15 +56,6 @@ enum ImUiEditorProofLayout {
     EditorReview,
 }
 
-impl ImUiEditorProofLayout {
-    const fn key(self) -> &'static str {
-        match self {
-            Self::Full => "full",
-            Self::EditorReview => "editor_review",
-        }
-    }
-}
-
 fn diag_enabled() -> bool {
     std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty() && v != "0")
 }
@@ -167,6 +158,23 @@ fn transform_edit_axis_outcome_label(outcome: TransformEditAxisOutcome) -> Strin
         transform_edit_section_label(outcome.section),
         vec_edit_axis_label(outcome.axis),
         edit_session_outcome_label(outcome.outcome)
+    )
+}
+
+fn proof_optional_outcome_readout<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    outcome: String,
+    test_id: Arc<str>,
+) -> Option<fret_ui::element::AnyElement> {
+    let outcome = outcome.trim().to_string();
+    if outcome.is_empty() {
+        return None;
+    }
+
+    Some(
+        cx.text(outcome.clone())
+            .test_id(test_id)
+            .a11y_label(outcome),
     )
 }
 
@@ -423,26 +431,9 @@ impl View for ImUiEditorProofView {
 
 fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
     let window = cx.window;
-    let last_input: Arc<str> = embedded::models(&*cx.app, window)
-        .and_then(|models| cx.watch_model(&models.last_input).paint().cloned())
-        .unwrap_or_else(|| Arc::from("<embedded viewport models missing>"));
-
-    let caps = cx
-        .app
-        .global::<PlatformCapabilities>()
-        .cloned()
-        .unwrap_or_default();
-    let window_size = cx
-        .app
-        .global::<fret_core::WindowMetricsService>()
-        .and_then(|svc| svc.inner_size(window));
     let single = single_window_mode_enabled();
-    let editor_preset = selected_editor_theme_preset();
     let proof_layout = selected_proof_layout();
     let editor_review_layout = proof_layout == ImUiEditorProofLayout::EditorReview;
-    let editor_preset_env = std::env::var_os(ENV_EDITOR_PRESET)
-        .filter(|v| !v.is_empty())
-        .map(|v| v.to_string_lossy().into_owned());
     let logical_window_id = cx
         .app
         .global::<WindowBootstrapService>()
@@ -528,35 +519,6 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                         ui.add_ui(hint);
                     }
 
-                    let preset_line = match editor_preset_env.as_deref() {
-                        Some(raw) => fret_ui_kit::ui::text(format!(
-                            "editor preset: {} ({ENV_EDITOR_PRESET}={raw})",
-                            editor_preset.key()
-                        ))
-                        .text_xs(),
-                        None => fret_ui_kit::ui::text(format!(
-                            "editor preset: {} ({ENV_EDITOR_PRESET} unset)",
-                            editor_preset.key()
-                        ))
-                        .text_xs(),
-                    };
-                    ui.add_ui(preset_line);
-
-                    let layout_line = fret_ui_kit::ui::text(format!(
-                        "proof layout: {} ({ENV_PROOF_LAYOUT})",
-                        proof_layout.key()
-                    ))
-                    .text_xs();
-                    ui.add_ui(layout_line);
-
-                    let caps_line = fret_ui_kit::ui::text(format!(
-                            "caps: multi_window={} window_tear_off={} window_hover_detection={:?} window_inner_size={window_size:?}",
-                            caps.ui.multi_window, caps.ui.window_tear_off, caps.ui.window_hover_detection,
-                        ),
-                    )
-                    .text_xs();
-                    ui.add_ui(caps_line);
-
                     let controls = fret_ui_kit::ui::h_flex_build(move |cx, out| {
                         fret_imui::imui_build(cx, out, |ui| {
                             if <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<KernelApp>>::button(
@@ -581,22 +543,13 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                     .gap(fret_ui_kit::Space::N2);
                     ui.add_ui(controls);
 
-                    let last_input_line =
-                        fret_ui_kit::ui::text(format!("last_input: {last_input}")).text_xs();
-                    ui.add_ui(last_input_line);
                     ui.separator();
 
-                    let parity_label = fret_ui_kit::ui::text(
-                        "authoring parity proof: shared models, left declarative, right imui adapters",
+                    let parity_intro = fret_ui_kit::ui::text(
+                        "authoring parity proof: shared models, left declarative, right imui adapters; edit either column and verify the paired control stays in sync under the same preset",
                     )
                     .text_xs();
-                    ui.add_ui(parity_label);
-
-                    let parity_hint = fret_ui_kit::ui::text(
-                        "edit either column and verify the paired control stays in sync under the same preset",
-                    )
-                    .text_xs();
-                    ui.add_ui(parity_hint);
+                    ui.add_ui(parity_intro);
 
                     let parity_name_model_for_surface = parity_name_model.clone();
                     let parity_drag_value_model_for_surface = parity_drag_value_model.clone();
@@ -615,10 +568,9 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                         .into_element(cx)]
                     });
 
-                    let parity_state_hint = fret_ui_kit::ui::text(
-                        "shared state readout: use this to verify both columns mutate the same models",
-                    )
-                    .text_xs();
+                    let parity_state_hint =
+                        fret_ui_kit::ui::text("shared state readout: both columns should mutate the same models")
+                            .text_xs();
                     ui.add_ui(parity_state_hint);
 
                     let parity_name_model_for_state = parity_name_model.clone();
@@ -639,10 +591,9 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                     });
                     ui.separator();
 
-                    let editor_label = fret_ui_kit::ui::text(
-                        "fret-ui-editor (M2): PropertyGroup + PropertyGrid + inspector search assist",
-                    )
-                    .text_xs();
+                    let editor_label =
+                        fret_ui_kit::ui::text("fret-ui-editor (M2): PropertyGroup + PropertyGrid + search assist")
+                            .text_xs();
                     ui.add_ui(editor_label);
                 }
                 ui.mount(|cx| {
@@ -908,28 +859,32 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
-                                                    rows.push(row_cx.row_with(
-                                                        cx,
-                                                        PropertyRow::new().options(
-                                                            row_cx.row_options.clone(),
-                                                        ),
-                                                        |cx| cx.text("Password outcome"),
-                                                        |cx| {
-                                                            let outcome = cx
-                                                                .watch_model(
-                                                                    &editor_password_outcome_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
-                                                            cx.text(outcome.clone())
-                                                                .test_id(
-                                                                    "imui-editor-proof.editor.object.password.outcome",
-                                                                )
-                                                                .a11y_label(outcome)
-                                                        },
-                                                        |_cx| None,
-                                                    ));
+                                                    let password_outcome = cx
+                                                        .watch_model(
+                                                            &editor_password_outcome_model,
+                                                        )
+                                                        .paint()
+                                                        .cloned()
+                                                        .unwrap_or_default();
+                                                    if !password_outcome.trim().is_empty() {
+                                                        rows.push(row_cx.row_with(
+                                                            cx,
+                                                            PropertyRow::new().options(
+                                                                row_cx.row_options.clone(),
+                                                            ),
+                                                            |cx| cx.text("Password outcome"),
+                                                            move |cx| {
+                                                                let outcome =
+                                                                    password_outcome.clone();
+                                                                cx.text(outcome.clone())
+                                                                    .test_id(
+                                                                        "imui-editor-proof.editor.object.password.outcome",
+                                                                    )
+                                                                    .a11y_label(outcome)
+                                                            },
+                                                            |_cx| None,
+                                                        ));
+                                                    }
 
                                                     rows.push(row_cx.row_with(
                                                         cx,
@@ -1188,28 +1143,30 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
-                                                    rows.push(row_cx.row_with(
-                                                        cx,
-                                                        PropertyRow::new().options(
-                                                            row_cx.row_options.clone(),
-                                                        ),
-                                                        |cx| cx.text("Notes outcome"),
-                                                        |cx| {
-                                                            let outcome = cx
-                                                                .watch_model(
-                                                                    &editor_notes_outcome_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
-                                                            cx.text(outcome.clone())
-                                                                .test_id(
-                                                                    "imui-editor-proof.editor.object.notes.outcome",
-                                                                )
-                                                                .a11y_label(outcome)
-                                                        },
-                                                        |_cx| None,
-                                                    ));
+                                                    let notes_outcome = cx
+                                                        .watch_model(&editor_notes_outcome_model)
+                                                        .paint()
+                                                        .cloned()
+                                                        .unwrap_or_default();
+                                                    if !notes_outcome.trim().is_empty() {
+                                                        rows.push(row_cx.row_with(
+                                                            cx,
+                                                            PropertyRow::new().options(
+                                                                row_cx.row_options.clone(),
+                                                            ),
+                                                            |cx| cx.text("Notes outcome"),
+                                                            move |cx| {
+                                                                let outcome =
+                                                                    notes_outcome.clone();
+                                                                cx.text(outcome.clone())
+                                                                    .test_id(
+                                                                        "imui-editor-proof.editor.object.notes.outcome",
+                                                                    )
+                                                                    .a11y_label(outcome)
+                                                            },
+                                                            |_cx| None,
+                                                        ));
+                                                    }
 
                                                     rows
                                                 },
@@ -1328,15 +1285,13 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                         &editor_drag_value_outcome_model,
                                                                         Invalidation::Paint,
                                                                     )
-                                                                    .unwrap_or_else(|| {
-                                                                        "Idle".to_string()
-                                                                    });
-                                                                Some(
-                                                                    cx.text(outcome.clone())
-                                                                        .test_id(Arc::from(
-                                                                            "imui-editor-proof.editor.drag-value-demo.outcome",
-                                                                        ))
-                                                                        .a11y_label(outcome),
+                                                                    .unwrap_or_default();
+                                                                proof_optional_outcome_readout(
+                                                                    cx,
+                                                                    outcome,
+                                                                    Arc::from(
+                                                                        "imui-editor-proof.editor.drag-value-demo.outcome",
+                                                                    ),
                                                                 )
                                                             },
                                                         ));
@@ -1814,15 +1769,13 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                         &editor_position_outcome_model,
                                                                         Invalidation::Paint,
                                                                     )
-                                                                    .unwrap_or_else(|| {
-                                                                        "Idle".to_string()
-                                                                    });
-                                                                Some(
-                                                                    cx.text(outcome.clone())
-                                                                        .test_id(Arc::from(
-                                                                            "imui-editor-proof.editor.advanced.position.outcome",
-                                                                        ))
-                                                                        .a11y_label(outcome),
+                                                                    .unwrap_or_default();
+                                                                proof_optional_outcome_readout(
+                                                                    cx,
+                                                                    outcome,
+                                                                    Arc::from(
+                                                                        "imui-editor-proof.editor.advanced.position.outcome",
+                                                                    ),
                                                                 )
                                                             },
                                                         ));
@@ -1943,15 +1896,13 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                         &editor_transform_outcome_model,
                                                                         Invalidation::Paint,
                                                                     )
-                                                                    .unwrap_or_else(|| {
-                                                                        "Idle".to_string()
-                                                                    });
-                                                                Some(
-                                                                    cx.text(outcome.clone())
-                                                                        .test_id(Arc::from(
-                                                                            "imui-editor-proof.editor.advanced.transform.outcome",
-                                                                        ))
-                                                                        .a11y_label(outcome),
+                                                                    .unwrap_or_default();
+                                                                proof_optional_outcome_readout(
+                                                                    cx,
+                                                                    outcome,
+                                                                    Arc::from(
+                                                                        "imui-editor-proof.editor.advanced.transform.outcome",
+                                                                    ),
                                                                 )
                                                             },
                                                         ));
@@ -2211,25 +2162,40 @@ fn render_authoring_parity_shared_state(
     };
 
     fret_ui_kit::ui::v_flex_build(move |cx, out| {
+        let name_line_row = name_line.clone();
+        let value_line_row = value_line.clone();
+        let blend_line_row = blend_line.clone();
         out.push(
-            cx.text(name_line)
-                .test_id("imui-editor-proof.authoring.shared.name"),
+            fret_ui_kit::ui::h_flex_build(move |cx, out| {
+                out.push(
+                    cx.text(name_line_row)
+                        .test_id("imui-editor-proof.authoring.shared.name"),
+                );
+                out.push(
+                    cx.text(value_line_row)
+                        .test_id("imui-editor-proof.authoring.shared.value"),
+                );
+                out.push(
+                    cx.text(blend_line_row)
+                        .test_id("imui-editor-proof.authoring.shared.blend"),
+                );
+            })
+            .gap(fret_ui_kit::Space::N3)
+            .into_element(cx),
         );
         out.push(
-            cx.text(value_line)
-                .test_id("imui-editor-proof.authoring.shared.value"),
-        );
-        out.push(
-            cx.text(blend_line)
-                .test_id("imui-editor-proof.authoring.shared.blend"),
-        );
-        out.push(
-            cx.text(enabled_line)
-                .test_id("imui-editor-proof.authoring.shared.enabled"),
-        );
-        out.push(
-            cx.text(shading_line)
-                .test_id("imui-editor-proof.authoring.shared.mode"),
+            fret_ui_kit::ui::h_flex_build(move |cx, out| {
+                out.push(
+                    cx.text(enabled_line)
+                        .test_id("imui-editor-proof.authoring.shared.enabled"),
+                );
+                out.push(
+                    cx.text(shading_line)
+                        .test_id("imui-editor-proof.authoring.shared.mode"),
+                );
+            })
+            .gap(fret_ui_kit::Space::N3)
+            .into_element(cx),
         );
     })
     .gap(fret_ui_kit::Space::N1)
@@ -2853,13 +2819,13 @@ fn editor_demo_drag_value_outcome_model<H: UiHost>(
     named_demo_state(
         cx,
         "imui_editor_proof_demo.model.drag_value_outcome",
-        |cx| cx.app.models_mut().insert("Idle".to_string()),
+        |cx| cx.app.models_mut().insert(String::new()),
     )
 }
 
 fn editor_demo_password_outcome_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
     named_demo_state(cx, "imui_editor_proof_demo.model.password_outcome", |cx| {
-        cx.app.models_mut().insert("Idle".to_string())
+        cx.app.models_mut().insert(String::new())
     })
 }
 
@@ -2873,19 +2839,19 @@ fn editor_demo_notes_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<S
 
 fn editor_demo_notes_outcome_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
     named_demo_state(cx, "imui_editor_proof_demo.model.notes_outcome", |cx| {
-        cx.app.models_mut().insert("Idle".to_string())
+        cx.app.models_mut().insert(String::new())
     })
 }
 
 fn editor_demo_position_outcome_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
     named_demo_state(cx, "imui_editor_proof_demo.model.position_outcome", |cx| {
-        cx.app.models_mut().insert("Idle".to_string())
+        cx.app.models_mut().insert(String::new())
     })
 }
 
 fn editor_demo_transform_outcome_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
     named_demo_state(cx, "imui_editor_proof_demo.model.transform_outcome", |cx| {
-        cx.app.models_mut().insert("Idle".to_string())
+        cx.app.models_mut().insert(String::new())
     })
 }
 
