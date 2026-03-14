@@ -98,6 +98,15 @@ fn seed_web_startup_font_config(config: TextFontFamilyConfig) -> TextFontFamilyC
     config
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[doc(hidden)]
+pub enum StartupFontEnvironmentMode {
+    DesktopSync,
+    DesktopAsync,
+    #[cfg_attr(not(any(target_arch = "wasm32", test)), allow(dead_code))]
+    WebBundledSync,
+}
+
 #[doc(hidden)]
 pub fn publish_renderer_text_stack_key_if_changed(
     app: &mut impl GlobalsHost,
@@ -187,25 +196,20 @@ pub fn apply_renderer_font_catalog_update(
 }
 
 #[doc(hidden)]
-#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
-pub fn initialize_web_startup_font_environment(
+pub fn initialize_startup_font_environment(
     app: &mut impl GlobalsHost,
     renderer: &mut impl RendererFontEnvironmentHost,
     config: TextFontFamilyConfig,
+    mode: StartupFontEnvironmentMode,
 ) -> FontCatalogUpdate {
-    app.set_global::<TextFontFamilyConfig>(seed_web_startup_font_config(config));
-    apply_renderer_font_catalog_update(app, renderer, FontFamilyDefaultsPolicy::None)
-}
-
-#[doc(hidden)]
-pub fn initialize_desktop_startup_font_environment(
-    app: &mut impl GlobalsHost,
-    renderer: &mut impl RendererFontEnvironmentHost,
-    config: TextFontFamilyConfig,
-    startup_async: bool,
-) -> FontCatalogUpdate {
+    let config = match mode {
+        StartupFontEnvironmentMode::WebBundledSync => seed_web_startup_font_config(config),
+        StartupFontEnvironmentMode::DesktopSync | StartupFontEnvironmentMode::DesktopAsync => {
+            config
+        }
+    };
     app.set_global::<TextFontFamilyConfig>(config);
-    if startup_async {
+    if matches!(mode, StartupFontEnvironmentMode::DesktopAsync) {
         publish_renderer_font_environment(app, renderer, Vec::new(), FontFamilyDefaultsPolicy::None)
     } else {
         apply_renderer_font_catalog_update(app, renderer, FontFamilyDefaultsPolicy::None)
@@ -360,10 +364,11 @@ mod tests {
         let locale = LocaleId::parse("zh-CN").expect("locale must parse");
         app.set_global::<I18nService>(I18nService::new(vec![locale]));
 
-        let _ = initialize_web_startup_font_environment(
+        let _ = initialize_startup_font_environment(
             &mut app,
             &mut renderer,
             TextFontFamilyConfig::default(),
+            StartupFontEnvironmentMode::WebBundledSync,
         );
 
         assert_eq!(renderer.steps, vec!["entries", "families", "locale"]);
@@ -419,11 +424,11 @@ mod tests {
         let locale = LocaleId::parse("en-US").expect("locale must parse");
         app.set_global::<I18nService>(I18nService::new(vec![locale]));
 
-        let update = initialize_desktop_startup_font_environment(
+        let update = initialize_startup_font_environment(
             &mut app,
             &mut renderer,
             existing.clone(),
-            true,
+            StartupFontEnvironmentMode::DesktopAsync,
         );
 
         assert_eq!(update.config, existing);

@@ -255,32 +255,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         continue;
                     }
 
-                    let entries = gfx
-                        .renderer
-                        .all_font_catalog_entries()
-                        .into_iter()
-                        .map(|e| fret_runtime::FontCatalogEntry {
-                            family: e.family,
-                            has_variable_axes: e.has_variable_axes,
-                            known_variable_axes: e.known_variable_axes,
-                            variable_axes: e
-                                .variable_axes
-                                .into_iter()
-                                .map(|a| fret_runtime::FontVariableAxisInfo {
-                                    tag: a.tag,
-                                    min_bits: a.min_bits,
-                                    max_bits: a.max_bits,
-                                    default_bits: a.default_bits,
-                                })
-                                .collect(),
-                            is_monospace_candidate: e.is_monospace_candidate,
-                        })
-                        .collect::<Vec<_>>();
                     // Font catalog refresh trigger (ADR 0258): `Effect::TextAddFonts`.
-                    let _update = super::super::font_catalog::publish_renderer_font_environment(
+                    let _update = super::super::font_catalog::apply_renderer_font_catalog_update(
                         &mut self.app,
                         &mut gfx.renderer,
-                        entries,
                         fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
                     );
                     self.request_sink_redraw(window);

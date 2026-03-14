@@ -25,17 +25,17 @@ Status: Active
       dedicated ownership seam.
 - [x] FR-RENDER-TEXT-011 Reduce `src/lib.rs` to an explicit facade and shrink accidental `pub mod`
       surface.
-- [ ] FR-RENDER-TEXT-012 Split `wrapper.rs` by responsibility (`metrics`, `hit_test`, `wrapping`,
+- [x] FR-RENDER-TEXT-012 Split `wrapper.rs` by responsibility (`metrics`, `hit_test`, `wrapping`,
       selection/layout helpers).
 - [x] FR-RENDER-TEXT-013 Add crate-local tests for fallback-policy key transitions on locale,
       injection mode, and system-font availability changes.
-- [ ] FR-RENDER-TEXT-014 Add a bounded catalog-enumeration regression harness or perf check.
+- [x] FR-RENDER-TEXT-014 Add a bounded catalog-enumeration regression harness or perf check.
 
 ## `fret-launch`
 
-- [ ] FR-LAUNCH-020 Keep `runner/font_catalog.rs` as the only font-environment publication facade
+- [x] FR-LAUNCH-020 Keep `runner/font_catalog.rs` as the only font-environment publication facade
       and remove duplicated seeding/policy helpers from runner-specific modules where possible.
-- [ ] FR-LAUNCH-021 Make desktop and web startup paths go through the same narrow publication story
+- [x] FR-LAUNCH-021 Make desktop and web startup paths go through the same narrow publication story
       (`publish_renderer_font_environment` / startup initializer), differing only in runner
       orchestration.
 - [ ] FR-LAUNCH-022 Re-audit whether bundled-profile seeding belongs in `fret-launch` or should move

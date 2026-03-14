@@ -53,6 +53,8 @@ Evidence anchors:
 
 - Runner facade + shared helpers
   - Files: `crates/fret-launch/src/runner/mod.rs`, `crates/fret-launch/src/runner/common/*`
+- Font environment publication facade
+  - Files: `crates/fret-launch/src/runner/font_catalog.rs`
 - Desktop runner integration (winit + wgpu host loop + OS menus + diagnostics)
   - Files: `crates/fret-launch/src/runner/desktop/mod.rs`, `crates/fret-launch/src/runner/desktop/app_handler.rs`, `crates/fret-launch/src/runner/desktop/dispatcher.rs`, `crates/fret-launch/src/runner/desktop/*_menu.rs`, `crates/fret-launch/src/runner/desktop/diag_screenshots.rs`
 - Web runner integration (wasm host loop + effects)
@@ -68,8 +70,19 @@ Evidence anchors:
   - Missing gate to add: a minimal “runner frame loop invariants” test harness for `fret-launch` (or a `fretboard diag` suite) that asserts redraw scheduling invariants.
 - Cross-platform compilation drift (cfg explosion)
   - Failure mode: native-only code accidentally used under wasm32 (or vice versa); CI-only failures.
-  - Existing gates: none specific in this crate.
+  - Existing gates: native `cargo check -p fret-launch`; wasm verification is still blocked by an
+    existing `fret-render-wgpu` wasm cfg issue outside the font-catalog facade change.
   - Missing gate to add: `cargo check -p fret-launch --target wasm32-unknown-unknown` + at least one native target in CI.
+- Font-environment publication drift across runners
+  - Failure mode: web/desktop runner code reintroduces direct renderer-to-runtime font catalog
+    translation, bypassing `runner/font_catalog.rs` and making startup/update policy drift harder to
+    audit.
+  - Existing gates: `cargo nextest run -p fret-launch`; direct duplicate publication in
+    `runner/web/effects.rs` has been removed in favor of
+    `font_catalog::apply_renderer_font_catalog_update`; desktop and web startup paths now share
+    `font_catalog::initialize_startup_font_environment`.
+  - Remaining follow-up: re-audit whether bundled-profile seeding stays in `fret-launch` or moves
+    into `fret-runtime` (`FR-LAUNCH-022`).
 - Public surface drift via broad `pub use`
   - Failure mode: downstream code starts depending on internal wiring helpers, blocking refactors.
   - Existing gates: none.
@@ -82,10 +95,14 @@ Evidence anchors:
 ## 6) Code quality findings (Rust best practices)
 
 - The dominant maintainability risk is *module size* and “god module” drift in `src/runner/desktop/mod.rs` (5k+ LOC).
+- Positive: font-environment publication now routes through `runner/font_catalog.rs` instead of
+  duplicating renderer-to-runtime catalog translation in web runner effects.
 - Recommend making the facade file small and moving subsystems into explicit modules, with one “ownership map” section in `README.md`.
 
 Evidence anchors:
 
+- `crates/fret-launch/src/runner/font_catalog.rs`
+- `crates/fret-launch/src/runner/web/effects.rs`
 - `crates/fret-launch/src/runner/desktop/mod.rs`
 - `crates/fret-launch/README.md`
 
