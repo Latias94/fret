@@ -1,5 +1,6 @@
 use super::*;
 use crate::widget::{CommandAvailability, CommandAvailabilityCx};
+use fret_runtime::{CommandMeta, CommandScope, WindowMenuBarFocusService};
 
 #[derive(Debug)]
 struct AvailabilityWidget {
@@ -179,4 +180,39 @@ fn dispatch_command_falls_back_to_default_root_when_focus_in_other_layer() {
 
     assert!(ui.dispatch_command(&mut app, &mut services, &cmd));
     assert_eq!(calls.load(Ordering::SeqCst), 1);
+}
+
+#[test]
+fn focus_menu_bar_command_availability_tracks_menu_bar_focus_service() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let cmd = CommandId::from("focus.menu_bar");
+    app.register_command(
+        cmd.clone(),
+        CommandMeta::new("Focus Menu Bar").with_scope(CommandScope::Widget),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    ui.set_root(root);
+
+    assert_eq!(
+        ui.command_availability(&mut app, &cmd),
+        CommandAvailability::NotHandled
+    );
+    assert!(!ui.is_command_available(&mut app, &cmd));
+
+    let mut focus_svc = WindowMenuBarFocusService::default();
+    focus_svc.set_present(window, true);
+    app.set_global(focus_svc);
+
+    assert_eq!(
+        ui.command_availability(&mut app, &cmd),
+        CommandAvailability::Available
+    );
+    assert!(ui.is_command_available(&mut app, &cmd));
 }
