@@ -80,9 +80,11 @@ Evidence anchors:
   - Existing gates: `cargo nextest run -p fret-launch`; direct duplicate publication in
     `runner/web/effects.rs` has been removed in favor of
     `font_catalog::apply_renderer_font_catalog_update`; desktop and web startup paths now share
-    `font_catalog::initialize_startup_font_environment`.
-  - Remaining follow-up: re-audit whether bundled-profile seeding stays in `fret-launch` or moves
-    into `fret-runtime` (`FR-LAUNCH-022`).
+    `font_catalog::initialize_startup_font_environment`; bundled-profile startup defaults now route
+    through `fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates` instead of
+    launch-local profile seeding.
+  - Remaining follow-up: none for the launch-side startup/defaults split; keep policy ownership in
+    `fret-runtime`.
 - Public surface drift via broad `pub use`
   - Failure mode: downstream code starts depending on internal wiring helpers, blocking refactors.
   - Existing gates: none.

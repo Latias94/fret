@@ -38,7 +38,7 @@ Status: Active
 - [x] FR-LAUNCH-021 Make desktop and web startup paths go through the same narrow publication story
       (`publish_renderer_font_environment` / startup initializer), differing only in runner
       orchestration.
-- [ ] FR-LAUNCH-022 Re-audit whether bundled-profile seeding belongs in `fret-launch` or should move
+- [x] FR-LAUNCH-022 Re-audit whether bundled-profile seeding belongs in `fret-launch` or should move
       to `fret-runtime`.
 
 ## Cross-crate closure

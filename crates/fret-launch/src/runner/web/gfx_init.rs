@@ -23,7 +23,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         self.renderer_caps = Some(renderer_caps);
 
         // Web/WASM cannot access system fonts. Load our bundled defaults as soon as the renderer
-        // becomes available, then seed `TextFontFamilyConfig` deterministically.
+        // becomes available, then let the runtime font bootstrap policy fill missing UI families.
         let default_fonts = fret_fonts::default_fonts()
             .iter()
             .map(|bytes| bytes.to_vec())
