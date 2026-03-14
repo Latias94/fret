@@ -9,10 +9,7 @@ use fret_ui_kit::{ColorRef, WidgetStateProperty};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(
-    cx: &mut UiCx<'_>,
-    last_action: Model<Arc<str>>,
-) -> impl UiChild + use<> {
+pub fn render(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> impl UiChild + use<> {
     let dropdown = material3::DropdownMenu::uncontrolled(cx)
         .a11y_label("Material 3 Menu")
         .test_id("ui-gallery-material3-menu");

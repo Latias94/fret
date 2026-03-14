@@ -13,10 +13,7 @@ use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn render_chips(
-    cx: &mut UiCx<'_>,
-    last_action: Model<Arc<str>>,
-) -> Vec<AnyElement> {
+fn render_chips(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> Vec<AnyElement> {
     let filter_selected = cx.local_model_keyed("filter_selected", || true);
     let filter_unselected = cx.local_model_keyed("filter_unselected", || false);
     let input_selected = cx.local_model_keyed("input_selected", || true);
@@ -301,10 +298,7 @@ fn render_chips(
     ]
 }
 
-fn render_cards(
-    cx: &mut UiCx<'_>,
-    last_action: Model<Arc<str>>,
-) -> Vec<AnyElement> {
+fn render_cards(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> Vec<AnyElement> {
     let activate: OnActivate = Arc::new(move |host, _acx, _reason| {
         let _ = host.models_mut().update(&last_action, |v| {
             *v = Arc::<str>::from("material3.card.activated");
@@ -416,10 +410,7 @@ fn render_cards(
     ]
 }
 
-fn render_fab(
-    cx: &mut UiCx<'_>,
-    last_action: Model<Arc<str>>,
-) -> Vec<AnyElement> {
+fn render_fab(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> Vec<AnyElement> {
     fn on_activate(id: &'static str, last_action: Model<Arc<str>>) -> OnActivate {
         Arc::new(move |host, _acx, _reason| {
             let _ = host.models_mut().update(&last_action, |v| {
@@ -430,9 +421,7 @@ fn render_fab(
 
     let row = {
         let last_action = last_action.clone();
-        move |cx: &mut UiCx<'_>,
-              variant: material3::FabVariant,
-              label: &'static str| {
+        move |cx: &mut UiCx<'_>, variant: material3::FabVariant, label: &'static str| {
             let last_action = last_action.clone();
             ui::h_row(move |cx| {
                 vec![
@@ -560,10 +549,7 @@ fn render_search_view(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     vec![view]
 }
 
-fn render_menu(
-    cx: &mut UiCx<'_>,
-    last_action: Model<Arc<str>>,
-) -> Vec<AnyElement> {
+fn render_menu(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> Vec<AnyElement> {
     let dropdown_root = material3::DropdownMenu::uncontrolled(cx).a11y_label("Material 3 Menu");
     let open = dropdown_root.open_model();
 
@@ -615,10 +601,7 @@ fn render_menu(
     vec![dropdown]
 }
 
-pub fn render(
-    cx: &mut UiCx<'_>,
-    last_action: Model<Arc<str>>,
-) -> impl UiChild + use<> {
+pub fn render(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> impl UiChild + use<> {
     let checkbox_root = material3::Checkbox::uncontrolled(cx, false);
     let material3_checkbox = checkbox_root.checked_model();
     let switch_root = material3::Switch::uncontrolled(cx, false);
