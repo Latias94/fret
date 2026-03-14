@@ -896,7 +896,11 @@ fn emoji_sequences_use_color_quads_when_color_font_is_available() {
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
-        .chain(fret_fonts::emoji_fonts().iter())
+        .copied()
+        .chain(
+            fret_fonts::default_profile()
+                .font_bytes_for_role(fret_fonts::BundledFontRole::EmojiFallback),
+        )
         .map(|b| b.to_vec())
         .collect();
     let added = text.add_fonts(fonts);
@@ -964,7 +968,11 @@ fn cjk_glyphs_populate_mask_or_subpixel_atlas_when_cjk_lite_font_is_available() 
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
-        .chain(fret_fonts::cjk_lite_fonts().iter())
+        .copied()
+        .chain(
+            fret_fonts::default_profile()
+                .font_bytes_for_role(fret_fonts::BundledFontRole::CjkFallback),
+        )
         .map(|b| b.to_vec())
         .collect();
     let added = text.add_fonts(fonts);
@@ -1050,7 +1058,11 @@ fn cjk_fallback_uses_cjk_lite_font_without_explicit_family_when_system_fonts_are
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
-        .chain(fret_fonts::cjk_lite_fonts().iter())
+        .copied()
+        .chain(
+            fret_fonts::default_profile()
+                .font_bytes_for_role(fret_fonts::BundledFontRole::CjkFallback),
+        )
         .map(|b| b.to_vec())
         .collect();
     let added = text.add_fonts(fonts);
@@ -1231,7 +1243,11 @@ fn cjk_fallback_uses_common_fallback_for_named_family_when_system_fonts_are_abse
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
-        .chain(fret_fonts::cjk_lite_fonts().iter())
+        .copied()
+        .chain(
+            fret_fonts::default_profile()
+                .font_bytes_for_role(fret_fonts::BundledFontRole::CjkFallback),
+        )
         .map(|b| b.to_vec())
         .collect();
     let added = text.add_fonts(fonts);
@@ -1328,7 +1344,11 @@ fn emoji_fallback_uses_bundled_color_font_without_explicit_family_when_system_fo
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
-        .chain(fret_fonts::emoji_fonts().iter())
+        .copied()
+        .chain(
+            fret_fonts::default_profile()
+                .font_bytes_for_role(fret_fonts::BundledFontRole::EmojiFallback),
+        )
         .map(|b| b.to_vec())
         .collect();
     let added = text.add_fonts(fonts);
@@ -2479,8 +2499,8 @@ fn synthesis_skew_participates_in_face_key_and_raster_output() {
     text.font_runtime.font_db_revision = 0;
     text.font_runtime.font_stack_key = 0;
 
-    let fonts: Vec<Vec<u8>> = fret_fonts::cjk_lite_fonts()
-        .iter()
+    let fonts: Vec<Vec<u8>> = fret_fonts::default_profile()
+        .font_bytes_for_role(fret_fonts::BundledFontRole::CjkFallback)
         .map(|b| b.to_vec())
         .collect();
     let added = text.add_fonts(fonts);
@@ -3023,8 +3043,15 @@ fn mixed_script_fallback_uses_bundled_faces_when_system_fonts_are_absent() {
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
-        .chain(fret_fonts::cjk_lite_fonts().iter())
-        .chain(fret_fonts::emoji_fonts().iter())
+        .copied()
+        .chain(
+            fret_fonts::default_profile()
+                .font_bytes_for_role(fret_fonts::BundledFontRole::CjkFallback),
+        )
+        .chain(
+            fret_fonts::default_profile()
+                .font_bytes_for_role(fret_fonts::BundledFontRole::EmojiFallback),
+        )
         .map(|b| b.to_vec())
         .collect();
     let added = text.add_fonts(fonts);
@@ -3172,8 +3199,15 @@ fn mixed_script_fallback_uses_bundled_faces_for_named_family_when_system_fonts_a
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
-        .chain(fret_fonts::cjk_lite_fonts().iter())
-        .chain(fret_fonts::emoji_fonts().iter())
+        .copied()
+        .chain(
+            fret_fonts::default_profile()
+                .font_bytes_for_role(fret_fonts::BundledFontRole::CjkFallback),
+        )
+        .chain(
+            fret_fonts::default_profile()
+                .font_bytes_for_role(fret_fonts::BundledFontRole::EmojiFallback),
+        )
         .map(|b| b.to_vec())
         .collect();
     let added = text.add_fonts(fonts);

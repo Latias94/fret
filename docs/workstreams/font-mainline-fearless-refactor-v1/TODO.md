@@ -16,7 +16,7 @@ Status: Active
       (`assets`, `profiles`, `tests`).
 - [ ] FR-FONTS-002 Add a representative feature-matrix gate:
       `default`, `--no-default-features`, `--features bootstrap-full,emoji,cjk-lite`.
-- [ ] FR-FONTS-003 Decide whether `emoji_fonts()` and `cjk_lite_fonts()` remain public or become
+- [x] FR-FONTS-003 Decide whether `emoji_fonts()` and `cjk_lite_fonts()` remain public or become
       implementation helpers behind profile-first APIs.
 
 ## `fret-render-text`

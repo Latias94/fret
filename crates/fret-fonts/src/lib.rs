@@ -11,10 +11,6 @@ mod profiles;
 #[cfg(test)]
 mod tests;
 
-#[cfg(feature = "cjk-lite")]
-pub use profiles::cjk_lite_fonts;
-#[cfg(feature = "emoji")]
-pub use profiles::emoji_fonts;
 pub use profiles::{bootstrap_fonts, bootstrap_profile, default_fonts, default_profile};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -56,6 +52,16 @@ pub struct BundledFontProfile {
 impl BundledFontProfile {
     pub fn font_bytes(&self) -> impl ExactSizeIterator<Item = &'static [u8]> + '_ {
         self.faces.iter().map(|face| face.bytes)
+    }
+
+    pub fn font_bytes_for_role(
+        &self,
+        role: BundledFontRole,
+    ) -> impl Iterator<Item = &'static [u8]> + '_ {
+        self.faces
+            .iter()
+            .filter(move |face| face.roles.contains(&role))
+            .map(|face| face.bytes)
     }
 
     pub fn supports_role(&self, role: BundledFontRole) -> bool {

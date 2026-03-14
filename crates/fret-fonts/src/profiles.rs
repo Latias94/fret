@@ -207,19 +207,6 @@ fn collect_font_bytes(faces: &'static [BundledFontFaceSpec]) -> Box<[&'static [u
         .into_boxed_slice()
 }
 
-#[cfg(any(feature = "emoji", feature = "cjk-lite"))]
-fn collect_font_bytes_for_role(
-    faces: &'static [BundledFontFaceSpec],
-    role: BundledFontRole,
-) -> Box<[&'static [u8]]> {
-    faces
-        .iter()
-        .filter(|face| face.roles.contains(&role))
-        .map(|face| face.bytes)
-        .collect::<Vec<_>>()
-        .into_boxed_slice()
-}
-
 /// Returns the default font bytes (TTF/OTF/TTC) that can be fed to `Effect::TextAddFonts`.
 pub fn default_fonts() -> &'static [&'static [u8]] {
     static BYTES: OnceLock<Box<[&'static [u8]]>> = OnceLock::new();
@@ -229,20 +216,4 @@ pub fn default_fonts() -> &'static [&'static [u8]] {
 pub fn bootstrap_fonts() -> &'static [&'static [u8]] {
     static BYTES: OnceLock<Box<[&'static [u8]]>> = OnceLock::new();
     BYTES.get_or_init(|| collect_font_bytes(bootstrap_profile().faces))
-}
-
-#[cfg(feature = "emoji")]
-pub fn emoji_fonts() -> &'static [&'static [u8]] {
-    static BYTES: OnceLock<Box<[&'static [u8]]>> = OnceLock::new();
-    BYTES.get_or_init(|| {
-        collect_font_bytes_for_role(default_profile().faces, BundledFontRole::EmojiFallback)
-    })
-}
-
-#[cfg(feature = "cjk-lite")]
-pub fn cjk_lite_fonts() -> &'static [&'static [u8]] {
-    static BYTES: OnceLock<Box<[&'static [u8]]>> = OnceLock::new();
-    BYTES.get_or_init(|| {
-        collect_font_bytes_for_role(default_profile().faces, BundledFontRole::CjkFallback)
-    })
 }

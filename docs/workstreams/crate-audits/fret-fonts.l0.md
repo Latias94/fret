@@ -29,9 +29,10 @@ Evidence anchors:
   - `BundledFontFaceSpec`
   - `BundledFontProfile`
   - `bootstrap_profile`, `default_profile`, `bootstrap_fonts`, `default_fonts`
-- "Accidental" exports to consider removing:
-  - role-specific byte helpers (`emoji_fonts`, `cjk_lite_fonts`) are convenient, but they also
-    invite downstream code to reason about bundle composition at too low a level.
+- Narrowed contract guidance:
+  - role-scoped byte access should go through `BundledFontProfile::font_bytes_for_role(...)`, so
+    downstream code stays anchored on the manifest/profile contract instead of top-level helper
+    slices.
 - Feature flags and intent:
   - default = `bootstrap-subset + cjk-lite`
   - optional expansion flags: `bootstrap-full`, `emoji`, `cjk-lite`
@@ -70,7 +71,7 @@ Evidence anchors:
     `BOOTSTRAP_PROFILE`, `DEFAULT_PROFILE`)
 - Byte collection helpers
   - Files: `crates/fret-fonts/src/profiles.rs` (`collect_font_bytes`, `default_fonts`,
-    `bootstrap_fonts`, `emoji_fonts`, `cjk_lite_fonts`)
+    `bootstrap_fonts`), `crates/fret-fonts/src/lib.rs` (`BundledFontProfile::font_bytes_for_role`)
 - Manifest / asset conformance tests
   - Files: `crates/fret-fonts/src/tests.rs` (`bundled_profiles_are_manifest_consistent`,
     `bundled_face_family_names_match_name_tables`, `default_fonts_total_size_is_reasonable`)
@@ -127,13 +128,13 @@ Evidence anchors:
 2. Add representative feature-matrix gates for the crate — outcome: bundled profile drift is caught
    before integration — gate: `cargo check -p fret-fonts --no-default-features`, `cargo nextest
    run -p fret-fonts`, `cargo nextest run -p fret-fonts --features bootstrap-full,emoji,cjk-lite`.
-3. Decide whether role-specific byte helper functions remain public — outcome: a narrower contract
-   boundary that exposes profiles first and raw role slices only if justified — gate: docs-only in
-   the first pass.
+3. (Done) Narrow role-scoped byte access behind `BundledFontProfile::font_bytes_for_role(...)` —
+   outcome: profiles remain the primary public contract, and raw role slices no longer define the
+   crate surface — gate: `cargo nextest run -p fret-fonts`, dependent text-test crates compile
+   against the profile-based accessor.
 
 ## 8) Open questions / decisions needed
 
 - Should the bundled profile matrix stay handwritten Rust constants, or should it become a generated
   manifest derived from the subsetting scripts under `crates/fret-fonts/scripts/`?
-- Do we want downstream crates to consume raw role-based byte helpers directly, or should
-  `BundledFontProfile` become the only supported entrypoint?
+- `BundledFontProfile` is now the supported entrypoint for role-scoped bundled byte access.

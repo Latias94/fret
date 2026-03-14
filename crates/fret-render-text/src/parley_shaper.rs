@@ -1262,8 +1262,15 @@ mod tests {
         let added = shaper.add_fonts(
             fret_fonts::bootstrap_fonts()
                 .iter()
-                .chain(fret_fonts::emoji_fonts().iter())
-                .chain(fret_fonts::cjk_lite_fonts().iter())
+                .copied()
+                .chain(
+                    fret_fonts::default_profile()
+                        .font_bytes_for_role(fret_fonts::BundledFontRole::EmojiFallback),
+                )
+                .chain(
+                    fret_fonts::default_profile()
+                        .font_bytes_for_role(fret_fonts::BundledFontRole::CjkFallback),
+                )
                 .map(|b| b.to_vec()),
         );
         assert!(added > 0, "expected bundled fonts to load");

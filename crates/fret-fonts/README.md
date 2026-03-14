@@ -14,10 +14,10 @@ The canonical API is:
 
 - `fret_fonts::default_fonts()` — bootstrap + CJK-lite (by default) + optional emoji (if enabled).
 - `fret_fonts::bootstrap_fonts()` — bootstrap fonts only (never includes emoji).
-- `fret_fonts::emoji_fonts()` — emoji fonts only (requires `emoji` feature).
-- `fret_fonts::cjk_lite_fonts()` — CJK fallback fonts only (requires `cjk-lite` feature).
 - `fret_fonts::default_profile()` / `fret_fonts::bootstrap_profile()` — manifest-backed bundled
   profile metadata (roles, expected family names, generic guarantees, fallback families).
+- `fret_fonts::default_profile().font_bytes_for_role(...)` — role-scoped bytes derived from the
+  manifest contract when a caller specifically needs emoji or CJK fallback faces.
 
 The byte-returning functions are intended to be fed into `Effect::TextAddFonts`. The profile
 surfaces are the contract source for bundled roles and guarantees.

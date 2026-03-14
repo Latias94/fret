@@ -346,32 +346,44 @@ fn bundled_profile_matrix_explicitly_omits_cjk_fallback_when_disabled() {
 #[cfg(all(feature = "emoji", not(feature = "cjk-lite")))]
 #[test]
 fn bundles_add_up_when_emoji_is_enabled() {
+    let emoji_count = crate::default_profile()
+        .font_bytes_for_role(crate::BundledFontRole::EmojiFallback)
+        .count();
     assert_eq!(
         crate::default_fonts().len(),
-        crate::bootstrap_fonts().len() + crate::emoji_fonts().len()
+        crate::bootstrap_fonts().len() + emoji_count
     );
-    assert_eq!(crate::emoji_fonts().len(), 1);
+    assert_eq!(emoji_count, 1);
 }
 
 #[cfg(all(feature = "cjk-lite", not(feature = "emoji")))]
 #[test]
 fn bundles_add_up_when_cjk_lite_is_enabled() {
+    let cjk_count = crate::default_profile()
+        .font_bytes_for_role(crate::BundledFontRole::CjkFallback)
+        .count();
     assert_eq!(
         crate::default_fonts().len(),
-        crate::bootstrap_fonts().len() + crate::cjk_lite_fonts().len()
+        crate::bootstrap_fonts().len() + cjk_count
     );
-    assert_eq!(crate::cjk_lite_fonts().len(), 1);
+    assert_eq!(cjk_count, 1);
 }
 
 #[cfg(all(feature = "emoji", feature = "cjk-lite"))]
 #[test]
 fn bundles_add_up_when_emoji_and_cjk_lite_are_enabled() {
+    let emoji_count = crate::default_profile()
+        .font_bytes_for_role(crate::BundledFontRole::EmojiFallback)
+        .count();
+    let cjk_count = crate::default_profile()
+        .font_bytes_for_role(crate::BundledFontRole::CjkFallback)
+        .count();
     assert_eq!(
         crate::default_fonts().len(),
-        crate::bootstrap_fonts().len() + crate::emoji_fonts().len() + crate::cjk_lite_fonts().len()
+        crate::bootstrap_fonts().len() + emoji_count + cjk_count
     );
-    assert_eq!(crate::emoji_fonts().len(), 1);
-    assert_eq!(crate::cjk_lite_fonts().len(), 1);
+    assert_eq!(emoji_count, 1);
+    assert_eq!(cjk_count, 1);
 }
 
 #[test]
