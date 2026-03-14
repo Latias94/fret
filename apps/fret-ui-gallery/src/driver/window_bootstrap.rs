@@ -73,6 +73,7 @@ fn register_harness_model_ids(app: &mut App, window: AppWindowId, state: &UiGall
                 workspace_tabs: state.workspace_tabs.clone(),
                 workspace_dirty_tabs: state.workspace_dirty_tabs.clone(),
                 nav_query: state.nav_query.clone(),
+                settings_open: state.settings_open.clone(),
                 settings_menu_bar_os: state.settings_menu_bar_os.clone(),
                 settings_menu_bar_in_window: state.settings_menu_bar_in_window.clone(),
                 settings_text_common_fallback_injection: state

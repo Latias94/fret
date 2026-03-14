@@ -12,30 +12,33 @@
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "exists",
+        "kind": "visible_in_window",
         "target": { "kind": "test_id", "id": "ui-gallery-settings-in-window-menubar" }
       },
       "timeout_frames": 120
     },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-settings-in-window-menubar" }
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-settings-in-window-menubar" },
+      "timeout_frames": 300
     },
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "exists",
+        "kind": "visible_in_window",
         "target": { "kind": "test_id", "id": "ui-gallery-settings-in-window-menubar-on" }
       },
       "timeout_frames": 120
     },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-settings-in-window-menubar-on" }
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-settings-in-window-menubar-on" },
+      "timeout_frames": 300
     },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-settings-apply" }
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-settings-apply" },
+      "timeout_frames": 300
     },
     { "type": "wait_frames", "n": 10 },
     {
@@ -58,4 +61,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-menubar-alt-activation" }
   ]
 }
-

@@ -14,18 +14,20 @@
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-settings-open" }
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-settings-open" },
+      "timeout_frames": 300
     },
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "exists",
+        "kind": "visible_in_window",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-settings-text-common-fallback-injection"
+          "id": "ui-gallery-settings-apply"
         }
-      }
+      },
+      "timeout_frames": 300
     },
     { "type": "wait_frames", "n": 2 },
     {
@@ -33,34 +35,38 @@
       "label": "ui-gallery-text-fallback-policy-before"
     },
     {
-      "type": "click",
+      "type": "click_stable",
       "target": {
         "kind": "test_id",
         "id": "ui-gallery-settings-text-common-fallback-injection"
-      }
+      },
+      "timeout_frames": 300
     },
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "exists",
+        "kind": "visible_in_window",
         "target": {
           "kind": "test_id",
           "id": "ui-gallery-settings-text-common-fallback-injection-common-fallback"
         }
-      }
+      },
+      "timeout_frames": 300
     },
     { "type": "wait_frames", "n": 2 },
     {
-      "type": "click",
+      "type": "click_stable",
       "target": {
         "kind": "test_id",
         "id": "ui-gallery-settings-text-common-fallback-injection-common-fallback"
-      }
+      },
+      "timeout_frames": 300
     },
     { "type": "wait_frames", "n": 4 },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-settings-apply" }
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-settings-apply" },
+      "timeout_frames": 300
     },
     { "type": "wait_frames", "n": 12 },
     {

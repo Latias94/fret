@@ -37,11 +37,15 @@ Evidence anchors:
   - default = `bootstrap-subset + cjk-lite`
   - optional expansion flags: `bootstrap-full`, `emoji`, `cjk-lite`
   - the feature matrix is effectively part of the asset contract and needs explicit gating.
+  - first-party diagnostics/app harnesses that claim bundled-only mixed-script + emoji coverage
+    should opt into `fret-fonts/emoji` explicitly at the app feature boundary, rather than
+    widening the default bundled profile for every consumer.
 
 Evidence anchors:
 
 - `crates/fret-fonts/src/lib.rs`
 - `crates/fret-fonts/Cargo.toml`
+- `apps/fret-ui-gallery/Cargo.toml`
 
 ## 3) Dependency posture
 

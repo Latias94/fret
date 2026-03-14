@@ -181,6 +181,7 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                 let workspace_tabs = app.models().get_cloned(&ids.workspace_tabs)?;
                 let workspace_dirty_tabs = app.models().get_cloned(&ids.workspace_dirty_tabs)?;
                 let nav_query = app.models().get_cloned(&ids.nav_query)?;
+                let settings_open = app.models().get_cloned(&ids.settings_open)?;
                 let settings_menu_bar_os = app.models().get_cloned(&ids.settings_menu_bar_os)?;
                 let settings_menu_bar_in_window = app.models().get_cloned(&ids.settings_menu_bar_in_window)?;
                 let settings_text_common_fallback_injection = app
@@ -457,9 +458,11 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                 shell.insert("nav_visible_string_bytes_estimate_total".to_string(), serde_json::json!(nav_visibility.visible_string_bytes_estimate_total));
                 shell.insert("cmdk_query_len_bytes".to_string(), serde_json::json!(cmdk_query.len() as u64));
                 shell.insert("last_action_len_bytes".to_string(), serde_json::json!(last_action.len() as u64));
+                shell.insert("last_action".to_string(), serde_json::json!(last_action.to_string()));
                 shell.insert("text_input_len_bytes".to_string(), serde_json::json!(text_input.len() as u64));
                 shell.insert("text_area_len_bytes".to_string(), serde_json::json!(text_area.len() as u64));
                 shell.insert("input_file_value_len_bytes".to_string(), serde_json::json!(input_file_value.len() as u64));
+                shell.insert("settings_open".to_string(), serde_json::json!(settings_open));
                 shell.insert("settings_menu_bar_os_len_bytes".to_string(), serde_json::json!(opt_arc_str_len(settings_menu_bar_os.as_ref())));
                 shell.insert("settings_menu_bar_in_window_len_bytes".to_string(), serde_json::json!(opt_arc_str_len(settings_menu_bar_in_window.as_ref())));
                 shell.insert(

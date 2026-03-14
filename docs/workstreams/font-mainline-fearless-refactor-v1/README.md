@@ -77,6 +77,18 @@ Does not own:
 3. `fret-launch` already has a usable font boundary in `runner/font_catalog.rs`, but startup seeding
    and platform-specific orchestration still need a stricter "wiring only" posture.
 
+## Latest verification
+
+- 2026-03-14: the promoted diagnostics 3-pack was rerun after the `fret-fonts` / `fret-diag` /
+  `fret-ui-gallery` slices and all three checks passed again:
+  - settings-change fallback-policy key bump
+  - locale-change fallback-policy key bump
+  - bundled-only mixed-script fallback conformance
+- The lightweight `gallery-web-ime-harness` surface now carries `fret-fonts/emoji`, so the bundled
+  mixed-script probe remains truthful without widening the default gallery payload.
+- The bundled-only mixed-script gate is now sample-aware: it looks for the latest trace snapshot
+  containing `m`, `你`, `😀`, and `m你😀`, instead of trusting the last idle frame in the bundle.
+
 ## Refactor rules
 
 1. Do not move locale or platform fallback policy into `fret-fonts`.

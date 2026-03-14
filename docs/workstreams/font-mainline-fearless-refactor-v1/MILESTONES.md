@@ -74,3 +74,9 @@ Suggested gates:
 
 - `target\\debug\\fretboard.exe diag run ...` for the promoted font scripts
 - `python .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols`
+
+Current evidence (2026-03-14):
+
+- `target\\fret-diag\\font-mainline-cross\\settings-change-rerun\\sessions\\1773461210337-28588`
+- `target\\fret-diag\\font-mainline-cross\\locale-change-rerun\\sessions\\1773461249654-14316`
+- `target\\fret-diag\\font-mainline-cross\\mixed-script-bundled-rerun\\sessions\\1773461233281-106832`

@@ -149,6 +149,7 @@ struct UiGalleryHarnessModelIds {
     workspace_tabs: Model<Vec<Arc<str>>>,
     workspace_dirty_tabs: Model<Vec<Arc<str>>>,
     nav_query: Model<String>,
+    settings_open: Model<bool>,
     settings_menu_bar_os: Model<Option<Arc<str>>>,
     settings_menu_bar_in_window: Model<Option<Arc<str>>>,
     settings_text_common_fallback_injection: Model<Option<Arc<str>>>,

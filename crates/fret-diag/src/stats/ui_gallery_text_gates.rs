@@ -26,7 +26,16 @@ struct MixedScriptBundledFallbackEvidence {
     font_trace_entry_count: usize,
     font_trace_families: Vec<String>,
     font_trace_common_fallback_families: Vec<String>,
-    missing_glyphs: u64,
+    sample_trace_frame_id: Option<u64>,
+    sample_trace_frame_missing_glyphs: Option<u64>,
+    latin_families: Vec<String>,
+    latin_classes: Vec<String>,
+    cjk_families: Vec<String>,
+    cjk_classes: Vec<String>,
+    emoji_families: Vec<String>,
+    emoji_classes: Vec<String>,
+    mixed_families: Vec<String>,
+    mixed_classes: Vec<String>,
     registered_font_blobs_count: u64,
     registered_font_blobs_total_bytes: u64,
 }
@@ -149,6 +158,12 @@ fn bundle_last_text_mixed_script_evidence(
     bundle: &serde_json::Value,
 ) -> Option<MixedScriptBundledFallbackEvidence> {
     let best = bundle_last_snapshot_by_frame_id(bundle)?;
+    let snapshots = bundle
+        .get("windows")?
+        .as_array()?
+        .first()?
+        .get("snapshots")?
+        .as_array()?;
 
     let resource_caches = best.get("resource_caches")?.as_object()?;
     let render_text = resource_caches.get("render_text")?.as_object()?;
@@ -157,33 +172,102 @@ fn bundle_last_text_mixed_script_evidence(
         .as_object()?;
     let bundled_profile = policy.get("bundled_profile_contract")?.as_object()?;
 
-    let mut font_trace_families = Vec::new();
-    let mut font_trace_common_fallback_families = Vec::new();
-    let font_trace_entry_count = resource_caches
-        .get("render_text_font_trace")
-        .and_then(|v| v.get("entries"))
-        .and_then(|v| v.as_array())
-        .map(|entries| {
-            for entry in entries {
-                let Some(families) = entry.get("families").and_then(|v| v.as_array()) else {
-                    continue;
-                };
-                for family in families {
-                    let Some(name) = family.get("family").and_then(|v| v.as_str()) else {
-                        continue;
-                    };
-                    push_unique_case_insensitive(&mut font_trace_families, name);
-                    if family.get("class").and_then(|v| v.as_str()) == Some("common_fallback") {
+    let latest_sample_trace = snapshots
+        .iter()
+        .filter_map(|snapshot| {
+            let frame_id = snapshot.get("frame_id")?.as_u64()?;
+            let render_text = snapshot
+                .get("resource_caches")?
+                .get("render_text")?
+                .as_object()?;
+            let entries = snapshot
+                .get("resource_caches")?
+                .get("render_text_font_trace")?
+                .get("entries")?
+                .as_array()?;
+
+            let latin = entries.iter().find(|entry| {
+                entry.get("text_preview").and_then(|v| v.as_str())
+                    == Some(LOCALE_CHANGE_TRACE_SAMPLE_LATIN)
+            })?;
+            let cjk = entries.iter().find(|entry| {
+                entry.get("text_preview").and_then(|v| v.as_str())
+                    == Some(LOCALE_CHANGE_TRACE_SAMPLE_CJK)
+            })?;
+            let emoji = entries.iter().find(|entry| {
+                entry.get("text_preview").and_then(|v| v.as_str())
+                    == Some(LOCALE_CHANGE_TRACE_SAMPLE_EMOJI)
+            })?;
+            let mixed = entries.iter().find(|entry| {
+                entry.get("text_preview").and_then(|v| v.as_str())
+                    == Some(LOCALE_CHANGE_TRACE_SAMPLE_MIXED)
+            })?;
+
+            let entry_families_and_classes = |entry: &serde_json::Value| {
+                entry
+                    .get("families")
+                    .and_then(|v| v.as_array())
+                    .map(|families| {
+                        let mut family_names = Vec::new();
+                        let mut classes = Vec::new();
+                        for family in families {
+                            if let Some(name) = family.get("family").and_then(|v| v.as_str()) {
+                                family_names.push(name.to_string());
+                                classes.push(
+                                    family
+                                        .get("class")
+                                        .and_then(|v| v.as_str())
+                                        .unwrap_or("unknown")
+                                        .to_string(),
+                                );
+                            }
+                        }
+                        (family_names, classes)
+                    })
+                    .unwrap_or_default()
+            };
+
+            let (latin_families, latin_classes) = entry_families_and_classes(latin);
+            let (cjk_families, cjk_classes) = entry_families_and_classes(cjk);
+            let (emoji_families, emoji_classes) = entry_families_and_classes(emoji);
+            let (mixed_families, mixed_classes) = entry_families_and_classes(mixed);
+
+            let mut font_trace_families = Vec::new();
+            let mut font_trace_common_fallback_families = Vec::new();
+            for (families, classes) in [
+                (&latin_families, &latin_classes),
+                (&cjk_families, &cjk_classes),
+                (&emoji_families, &emoji_classes),
+                (&mixed_families, &mixed_classes),
+            ] {
+                for (family, class) in families.iter().zip(classes.iter()) {
+                    push_unique_case_insensitive(&mut font_trace_families, family);
+                    if class == "common_fallback" {
                         push_unique_case_insensitive(
                             &mut font_trace_common_fallback_families,
-                            name,
+                            family,
                         );
                     }
                 }
             }
-            entries.len()
+
+            Some((
+                frame_id,
+                render_text.get("frame_missing_glyphs")?.as_u64()?,
+                entries.len(),
+                font_trace_families,
+                font_trace_common_fallback_families,
+                latin_families,
+                latin_classes,
+                cjk_families,
+                cjk_classes,
+                emoji_families,
+                emoji_classes,
+                mixed_families,
+                mixed_classes,
+            ))
         })
-        .unwrap_or_default();
+        .max_by_key(|(frame_id, _, _, _, _, _, _, _, _, _, _, _, _)| *frame_id);
 
     Some(MixedScriptBundledFallbackEvidence {
         system_fonts_enabled: policy.get("system_fonts_enabled")?.as_bool()?,
@@ -212,10 +296,56 @@ fn bundle_last_text_mixed_script_evidence(
                 bundled_profile.get("common_fallback_families"),
             ),
         },
-        font_trace_entry_count,
-        font_trace_families,
-        font_trace_common_fallback_families,
-        missing_glyphs: render_text.get("frame_missing_glyphs")?.as_u64()?,
+        font_trace_entry_count: latest_sample_trace
+            .as_ref()
+            .map(|(_, _, entry_count, _, _, _, _, _, _, _, _, _, _)| *entry_count)
+            .unwrap_or_default(),
+        font_trace_families: latest_sample_trace
+            .as_ref()
+            .map(|(_, _, _, families, _, _, _, _, _, _, _, _, _)| families.clone())
+            .unwrap_or_default(),
+        font_trace_common_fallback_families: latest_sample_trace
+            .as_ref()
+            .map(|(_, _, _, _, families, _, _, _, _, _, _, _, _)| families.clone())
+            .unwrap_or_default(),
+        sample_trace_frame_id: latest_sample_trace
+            .as_ref()
+            .map(|(frame_id, _, _, _, _, _, _, _, _, _, _, _, _)| *frame_id),
+        sample_trace_frame_missing_glyphs: latest_sample_trace
+            .as_ref()
+            .map(|(_, missing_glyphs, _, _, _, _, _, _, _, _, _, _, _)| *missing_glyphs),
+        latin_families: latest_sample_trace
+            .as_ref()
+            .map(|(_, _, _, _, _, families, _, _, _, _, _, _, _)| families.clone())
+            .unwrap_or_default(),
+        latin_classes: latest_sample_trace
+            .as_ref()
+            .map(|(_, _, _, _, _, _, classes, _, _, _, _, _, _)| classes.clone())
+            .unwrap_or_default(),
+        cjk_families: latest_sample_trace
+            .as_ref()
+            .map(|(_, _, _, _, _, _, _, families, _, _, _, _, _)| families.clone())
+            .unwrap_or_default(),
+        cjk_classes: latest_sample_trace
+            .as_ref()
+            .map(|(_, _, _, _, _, _, _, _, classes, _, _, _, _)| classes.clone())
+            .unwrap_or_default(),
+        emoji_families: latest_sample_trace
+            .as_ref()
+            .map(|(_, _, _, _, _, _, _, _, _, families, _, _, _)| families.clone())
+            .unwrap_or_default(),
+        emoji_classes: latest_sample_trace
+            .as_ref()
+            .map(|(_, _, _, _, _, _, _, _, _, _, classes, _, _)| classes.clone())
+            .unwrap_or_default(),
+        mixed_families: latest_sample_trace
+            .as_ref()
+            .map(|(_, _, _, _, _, _, _, _, _, _, _, families, _)| families.clone())
+            .unwrap_or_default(),
+        mixed_classes: latest_sample_trace
+            .as_ref()
+            .map(|(_, _, _, _, _, _, _, _, _, _, _, _, classes)| classes.clone())
+            .unwrap_or_default(),
         registered_font_blobs_count: render_text.get("registered_font_blobs_count")?.as_u64()?,
         registered_font_blobs_total_bytes: render_text
             .get("registered_font_blobs_total_bytes")?
@@ -701,9 +831,18 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_co
             "entry_count": evidence.font_trace_entry_count,
             "families": evidence.font_trace_families,
             "common_fallback_families": evidence.font_trace_common_fallback_families,
+            "sample_trace_frame_id": evidence.sample_trace_frame_id,
+            "sample_trace_frame_missing_glyphs": evidence.sample_trace_frame_missing_glyphs,
+            "latin_families": evidence.latin_families,
+            "latin_classes": evidence.latin_classes,
+            "cjk_families": evidence.cjk_families,
+            "cjk_classes": evidence.cjk_classes,
+            "emoji_families": evidence.emoji_families,
+            "emoji_classes": evidence.emoji_classes,
+            "mixed_families": evidence.mixed_families,
+            "mixed_classes": evidence.mixed_classes,
         },
         "render_text": {
-            "frame_missing_glyphs": evidence.missing_glyphs,
             "registered_font_blobs_count": evidence.registered_font_blobs_count,
             "registered_font_blobs_total_bytes": evidence.registered_font_blobs_total_bytes,
         },
@@ -829,6 +968,12 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_co
             evidence_path.display()
         ));
     }
+    if evidence.sample_trace_frame_id.is_none() {
+        return Err(format!(
+            "ui-gallery text mixed-script bundled fallback gate failed: expected sample-aware font trace evidence for `m`, `你`, `😀`, and `m你😀`\n  evidence: {}",
+            evidence_path.display()
+        ));
+    }
     if evidence.font_trace_families.is_empty() {
         return Err(format!(
             "ui-gallery text mixed-script bundled fallback gate failed: expected font trace to record at least one resolved family for the scripted mixed-script sample\n  evidence: {}",
@@ -872,10 +1017,27 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_co
         ));
     }
 
-    if evidence.missing_glyphs != 0 {
+    if evidence.sample_trace_frame_missing_glyphs != Some(0) {
         return Err(format!(
-            "ui-gallery text mixed-script bundled fallback gate failed: expected frame_missing_glyphs=0 under bundled fonts\n  observed: {}\n  evidence: {}",
-            evidence.missing_glyphs,
+            "ui-gallery text mixed-script bundled fallback gate failed: expected the mixed-script sample frame to stay tofu-free under bundled fonts\n  sample_trace_frame_id: {:?}\n  observed_frame_missing_glyphs: {:?}\n  evidence: {}",
+            evidence.sample_trace_frame_id,
+            evidence.sample_trace_frame_missing_glyphs,
+            evidence_path.display()
+        ));
+    }
+
+    let latin_class = evidence.latin_classes.first().map(String::as_str);
+    let cjk_class = evidence.cjk_classes.first().map(String::as_str);
+    let emoji_class = evidence.emoji_classes.first().map(String::as_str);
+    if latin_class != Some("requested")
+        || cjk_class != Some("common_fallback")
+        || emoji_class != Some("common_fallback")
+    {
+        return Err(format!(
+            "ui-gallery text mixed-script bundled fallback gate failed: expected sample trace classes to stay on the requested/common_fallback lanes under bundled-only mode\n  latin_classes: {:?}\n  cjk_classes: {:?}\n  emoji_classes: {:?}\n  evidence: {}",
+            evidence.latin_classes,
+            evidence.cjk_classes,
+            evidence.emoji_classes,
             evidence_path.display()
         ));
     }
@@ -917,79 +1079,179 @@ mod tests {
     fn bundled_mixed_script_bundle() -> serde_json::Value {
         serde_json::json!({
             "windows": [{
-                "snapshots": [{
-                    "frame_id": 7,
-                    "resource_caches": {
-                        "render_text": {
-                            "frame_missing_glyphs": 0,
-                            "registered_font_blobs_count": 4,
-                            "registered_font_blobs_total_bytes": 65536
-                        },
-                        "render_text_fallback_policy": {
-                            "system_fonts_enabled": false,
-                            "prefer_common_fallback": true,
-                            "configured_common_fallback_families": [],
-                            "common_fallback_candidates": [
-                                "Inter",
-                                "Noto Sans CJK SC",
-                                "Noto Sans Arabic",
-                                "Noto Color Emoji"
-                            ],
-                            "default_ui_sans_candidates": ["Inter"],
-                            "default_ui_serif_candidates": ["Source Serif 4"],
-                            "default_ui_mono_candidates": ["JetBrains Mono"],
-                            "default_common_fallback_families": [
-                                "Inter",
-                                "Noto Sans CJK SC",
-                                "Noto Sans Arabic",
-                                "Noto Color Emoji"
-                            ],
-                            "bundled_profile_contract": {
-                                "name": "default",
-                                "expected_family_names": [
+                "snapshots": [
+                    {
+                        "frame_id": 7,
+                        "resource_caches": {
+                            "render_text": {
+                                "frame_missing_glyphs": 0,
+                                "registered_font_blobs_count": 4,
+                                "registered_font_blobs_total_bytes": 65536
+                            },
+                            "render_text_fallback_policy": {
+                                "system_fonts_enabled": false,
+                                "prefer_common_fallback": true,
+                                "configured_common_fallback_families": [],
+                                "common_fallback_candidates": [
                                     "Inter",
-                                    "Source Serif 4",
-                                    "JetBrains Mono",
                                     "Noto Sans CJK SC",
                                     "Noto Sans Arabic",
                                     "Noto Color Emoji"
                                 ],
-                                "ui_sans_families": ["Inter"],
-                                "ui_serif_families": ["Source Serif 4"],
-                                "ui_mono_families": ["JetBrains Mono"],
-                                "common_fallback_families": [
+                                "default_ui_sans_candidates": ["Inter"],
+                                "default_ui_serif_candidates": ["Source Serif 4"],
+                                "default_ui_mono_candidates": ["JetBrains Mono"],
+                                "default_common_fallback_families": [
+                                    "Inter",
                                     "Noto Sans CJK SC",
                                     "Noto Sans Arabic",
                                     "Noto Color Emoji"
-                                ]
-                            }
-                        },
-                        "render_text_font_trace": {
-                            "entries": [{
-                                "families": [
+                                ],
+                                "bundled_profile_contract": {
+                                    "name": "default",
+                                    "expected_family_names": [
+                                        "Inter",
+                                        "Source Serif 4",
+                                        "JetBrains Mono",
+                                        "Noto Sans CJK SC",
+                                        "Noto Sans Arabic",
+                                        "Noto Color Emoji"
+                                    ],
+                                    "ui_sans_families": ["Inter"],
+                                    "ui_serif_families": ["Source Serif 4"],
+                                    "ui_mono_families": ["JetBrains Mono"],
+                                    "common_fallback_families": [
+                                        "Noto Sans CJK SC",
+                                        "Noto Sans Arabic",
+                                        "Noto Color Emoji"
+                                    ]
+                                }
+                            },
+                            "render_text_font_trace": {
+                                "entries": [
                                     {
-                                        "family": "Inter",
-                                        "class": "requested",
-                                        "glyphs": 1,
-                                        "missing_glyphs": 0
+                                        "text_preview": "m",
+                                        "families": [
+                                            {
+                                                "family": "Inter",
+                                                "class": "requested",
+                                                "glyphs": 1,
+                                                "missing_glyphs": 0
+                                            }
+                                        ]
                                     },
                                     {
-                                        "family": "Noto Sans CJK SC",
-                                        "class": "common_fallback",
-                                        "glyphs": 1,
-                                        "missing_glyphs": 0
+                                        "text_preview": "你",
+                                        "families": [
+                                            {
+                                                "family": "Noto Sans CJK SC",
+                                                "class": "common_fallback",
+                                                "glyphs": 1,
+                                                "missing_glyphs": 0
+                                            }
+                                        ]
                                     },
                                     {
-                                        "family": "Noto Color Emoji",
-                                        "class": "common_fallback",
-                                        "glyphs": 1,
-                                        "missing_glyphs": 0
+                                        "text_preview": "😀",
+                                        "families": [
+                                            {
+                                                "family": "Noto Color Emoji",
+                                                "class": "common_fallback",
+                                                "glyphs": 1,
+                                                "missing_glyphs": 0
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "text_preview": "m你😀",
+                                        "families": [
+                                            {
+                                                "family": "Inter",
+                                                "class": "requested",
+                                                "glyphs": 1,
+                                                "missing_glyphs": 0
+                                            },
+                                            {
+                                                "family": "Noto Sans CJK SC",
+                                                "class": "common_fallback",
+                                                "glyphs": 1,
+                                                "missing_glyphs": 0
+                                            },
+                                            {
+                                                "family": "Noto Color Emoji",
+                                                "class": "common_fallback",
+                                                "glyphs": 1,
+                                                "missing_glyphs": 0
+                                            }
+                                        ]
                                     }
                                 ]
-                            }]
+                            }
+                        }
+                    },
+                    {
+                        "frame_id": 8,
+                        "resource_caches": {
+                            "render_text": {
+                                "frame_missing_glyphs": 0,
+                                "registered_font_blobs_count": 4,
+                                "registered_font_blobs_total_bytes": 65536
+                            },
+                            "render_text_fallback_policy": {
+                                "system_fonts_enabled": false,
+                                "prefer_common_fallback": true,
+                                "configured_common_fallback_families": [],
+                                "common_fallback_candidates": [
+                                    "Inter",
+                                    "Noto Sans CJK SC",
+                                    "Noto Sans Arabic",
+                                    "Noto Color Emoji"
+                                ],
+                                "default_ui_sans_candidates": ["Inter"],
+                                "default_ui_serif_candidates": ["Source Serif 4"],
+                                "default_ui_mono_candidates": ["JetBrains Mono"],
+                                "default_common_fallback_families": [
+                                    "Inter",
+                                    "Noto Sans CJK SC",
+                                    "Noto Sans Arabic",
+                                    "Noto Color Emoji"
+                                ],
+                                "bundled_profile_contract": {
+                                    "name": "default",
+                                    "expected_family_names": [
+                                        "Inter",
+                                        "Source Serif 4",
+                                        "JetBrains Mono",
+                                        "Noto Sans CJK SC",
+                                        "Noto Sans Arabic",
+                                        "Noto Color Emoji"
+                                    ],
+                                    "ui_sans_families": ["Inter"],
+                                    "ui_serif_families": ["Source Serif 4"],
+                                    "ui_mono_families": ["JetBrains Mono"],
+                                    "common_fallback_families": [
+                                        "Noto Sans CJK SC",
+                                        "Noto Sans Arabic",
+                                        "Noto Color Emoji"
+                                    ]
+                                }
+                            },
+                            "render_text_font_trace": {
+                                "entries": [{
+                                    "text_preview": "theme=zinc/light view_cache=0 layout_us=1593 paint_us=128",
+                                    "families": [
+                                        {
+                                            "family": "Inter",
+                                            "class": "requested",
+                                            "glyphs": 8,
+                                            "missing_glyphs": 0
+                                        }
+                                    ]
+                                }]
+                            }
                         }
                     }
-                }]
+                ]
             }]
         })
     }
@@ -1016,13 +1278,18 @@ mod tests {
     fn mixed_script_bundled_fallback_gate_rejects_profile_drift_in_default_common_fallback() {
         let out_dir = unique_tmp_dir("fail_profile_drift");
         let mut bundle = bundled_mixed_script_bundle();
-        let defaults =
-            bundle["windows"][0]["snapshots"][0]["resource_caches"]["render_text_fallback_policy"]
-                ["default_common_fallback_families"]
-                .as_array_mut()
-                .expect("default_common_fallback_families array");
-        defaults.clear();
-        defaults.push(serde_json::json!("Noto Sans CJK SC"));
+        for snapshot in bundle["windows"][0]["snapshots"]
+            .as_array_mut()
+            .expect("snapshots array")
+        {
+            let defaults =
+                snapshot["resource_caches"]["render_text_fallback_policy"]
+                    ["default_common_fallback_families"]
+                    .as_array_mut()
+                    .expect("default_common_fallback_families array");
+            defaults.clear();
+            defaults.push(serde_json::json!("Noto Sans CJK SC"));
+        }
 
         write_labeled_bundle(
             &out_dir,
@@ -1043,17 +1310,22 @@ mod tests {
     fn mixed_script_bundled_fallback_gate_accepts_curated_common_fallback_overrides() {
         let out_dir = unique_tmp_dir("pass_curated_overrides");
         let mut bundle = bundled_mixed_script_bundle();
-        bundle["windows"][0]["snapshots"][0]["resource_caches"]["render_text_fallback_policy"]["configured_common_fallback_families"] =
-            serde_json::json!(["Noto Sans CJK SC", "Segoe UI Emoji", "Segoe UI Symbol"]);
-        bundle["windows"][0]["snapshots"][0]["resource_caches"]["render_text_fallback_policy"]["common_fallback_candidates"] =
-            serde_json::json!([
-                "Noto Sans CJK SC",
-                "Segoe UI Emoji",
-                "Segoe UI Symbol",
-                "Inter",
-                "Noto Sans Arabic",
-                "Noto Color Emoji"
-            ]);
+        for snapshot in bundle["windows"][0]["snapshots"]
+            .as_array_mut()
+            .expect("snapshots array")
+        {
+            snapshot["resource_caches"]["render_text_fallback_policy"]["configured_common_fallback_families"] =
+                serde_json::json!(["Noto Sans CJK SC", "Segoe UI Emoji", "Segoe UI Symbol"]);
+            snapshot["resource_caches"]["render_text_fallback_policy"]["common_fallback_candidates"] =
+                serde_json::json!([
+                    "Noto Sans CJK SC",
+                    "Segoe UI Emoji",
+                    "Segoe UI Symbol",
+                    "Inter",
+                    "Noto Sans Arabic",
+                    "Noto Color Emoji"
+                ]);
+        }
 
         write_labeled_bundle(
             &out_dir,
@@ -1069,18 +1341,45 @@ mod tests {
     fn mixed_script_bundled_fallback_gate_accepts_trace_common_fallback_from_default_ui_family() {
         let out_dir = unique_tmp_dir("pass_default_ui_trace");
         let mut bundle = bundled_mixed_script_bundle();
-        bundle["windows"][0]["snapshots"][0]["resource_caches"]["render_text_font_trace"] = serde_json::json!({
-            "entries": [{
-                "families": [
+        let entries = bundle["windows"][0]["snapshots"][0]["resource_caches"]["render_text_font_trace"]
+            ["entries"]
+            .as_array_mut()
+            .expect("entries array");
+        for entry in entries {
+            let text = entry["text_preview"].as_str().expect("text_preview");
+            entry["families"] = match text {
+                "m" => serde_json::json!([
+                    {
+                        "family": "Inter",
+                        "class": "requested",
+                        "glyphs": 1,
+                        "missing_glyphs": 0
+                    }
+                ]),
+                "m你😀" => serde_json::json!([
+                    {
+                        "family": "Inter",
+                        "class": "requested",
+                        "glyphs": 1,
+                        "missing_glyphs": 0
+                    },
                     {
                         "family": "Inter",
                         "class": "common_fallback",
-                        "glyphs": 8,
+                        "glyphs": 2,
                         "missing_glyphs": 0
                     }
-                ]
-            }]
-        });
+                ]),
+                _ => serde_json::json!([
+                    {
+                        "family": "Inter",
+                        "class": "common_fallback",
+                        "glyphs": 1,
+                        "missing_glyphs": 0
+                    }
+                ]),
+            };
+        }
 
         write_labeled_bundle(
             &out_dir,
@@ -1096,18 +1395,45 @@ mod tests {
     fn mixed_script_bundled_fallback_gate_rejects_trace_family_outside_profile_contract() {
         let out_dir = unique_tmp_dir("fail_trace_family_outside_profile");
         let mut bundle = bundled_mixed_script_bundle();
-        bundle["windows"][0]["snapshots"][0]["resource_caches"]["render_text_font_trace"] = serde_json::json!({
-            "entries": [{
-                "families": [
+        let entries = bundle["windows"][0]["snapshots"][0]["resource_caches"]["render_text_font_trace"]
+            ["entries"]
+            .as_array_mut()
+            .expect("entries array");
+        for entry in entries {
+            let text = entry["text_preview"].as_str().expect("text_preview");
+            entry["families"] = match text {
+                "m" => serde_json::json!([
+                    {
+                        "family": "Inter",
+                        "class": "requested",
+                        "glyphs": 1,
+                        "missing_glyphs": 0
+                    }
+                ]),
+                "m你😀" => serde_json::json!([
+                    {
+                        "family": "Inter",
+                        "class": "requested",
+                        "glyphs": 1,
+                        "missing_glyphs": 0
+                    },
                     {
                         "family": "System UI",
                         "class": "common_fallback",
                         "glyphs": 2,
                         "missing_glyphs": 0
                     }
-                ]
-            }]
-        });
+                ]),
+                _ => serde_json::json!([
+                    {
+                        "family": "System UI",
+                        "class": "common_fallback",
+                        "glyphs": 1,
+                        "missing_glyphs": 0
+                    }
+                ]),
+            };
+        }
 
         write_labeled_bundle(
             &out_dir,

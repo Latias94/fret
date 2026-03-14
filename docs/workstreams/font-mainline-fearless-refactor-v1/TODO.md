@@ -44,7 +44,7 @@ Status: Active
 
 ## Cross-crate closure
 
-- [ ] FR-CROSS-030 Keep the diagnostics 3-pack green after every ownership move:
+- [x] FR-CROSS-030 Keep the diagnostics 3-pack green after every ownership move:
       settings-change, locale-change, mixed-script bundled fallback.
-- [ ] FR-CROSS-031 Update crate audits and ADR alignment after each landed slice so the new owner map
+- [x] FR-CROSS-031 Update crate audits and ADR alignment after each landed slice so the new owner map
       stays explicit.
