@@ -454,6 +454,30 @@ semantics wrapper, or focus-scope wrapper boundary, but their child closures now
 `collect_children(...)` helper instead of publishing raw `IntoIterator<Item = AnyElement>` child
 items on the public surface.
 
+The same wrapper rule also applies to scroll and roving-focus policy helpers:
+
+- `ecosystem/fret-ui-kit/src/declarative/scroll.rs`
+- `ecosystem/fret-ui-kit/src/primitives/roving_focus_group.rs`
+- `ecosystem/fret-ui-kit/src/primitives/toolbar.rs`
+- `ecosystem/fret-ui-kit/src/primitives/dismissable_layer.rs`
+
+Those helpers still return `AnyElement` or `NodeId` because they own the final scroll, roving
+container, toolbar, or dismissable-root wrapper boundary, but their child closures now accept
+iterable `IntoUiElement<H>` values directly. Direct wrappers land them behind
+`collect_children(...)`, while delegate wrappers forward only to already-typed helper seams rather
+than publishing raw `IntoIterator<Item = AnyElement>` child items on the public surface.
+
+The same wrapper rule also applies to layout/effect query wrappers in `fret-ui-kit`:
+
+- `ecosystem/fret-ui-kit/src/declarative/chrome.rs`
+- `ecosystem/fret-ui-kit/src/declarative/glass.rs`
+- `ecosystem/fret-ui-kit/src/declarative/container_queries.rs`
+
+Those helpers still return `AnyElement` because they own the final control chrome, effect layer, or
+layout-query wrapper boundary, but their child closures now accept iterable `IntoUiElement<H>`
+values directly and land them behind `collect_children(...)` instead of publishing raw
+`IntoIterator<Item = AnyElement>` child items on the public surface.
+
 The same wrapper rule also applies to internal gallery scaffolds:
 
 - `src/ui/doc_layout.rs::demo_shell<B>(...)`

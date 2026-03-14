@@ -19,6 +19,7 @@ use fret_ui::{ElementContext, UiHost};
 use crate::headless::{roving_focus, typeahead};
 use crate::primitives::direction as direction_prim;
 use crate::primitives::direction::LayoutDirection;
+use crate::{IntoUiElement, collect_children};
 
 pub use fret_ui::element::{RovingFlexProps, RovingFocusProps};
 
@@ -77,21 +78,22 @@ pub enum TypeaheadPolicy {
 /// Render a `RovingFlex` container with an APG-aligned default navigation policy, plus an optional
 /// typeahead policy.
 #[track_caller]
-pub fn roving_focus_group_apg<H: UiHost, I>(
+pub fn roving_focus_group_apg<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     props: RovingFlexProps,
     typeahead: TypeaheadPolicy,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     roving_focus_group_apg_with_direction(cx, props, typeahead, LayoutDirection::default(), f)
 }
 
 /// Like `roving_focus_group_apg`, but respects Radix `dir` behavior for horizontal navigation.
 #[track_caller]
-pub fn roving_focus_group_apg_with_direction<H: UiHost, I>(
+pub fn roving_focus_group_apg_with_direction<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     props: RovingFlexProps,
     typeahead: TypeaheadPolicy,
@@ -99,7 +101,8 @@ pub fn roving_focus_group_apg_with_direction<H: UiHost, I>(
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     cx.roving_flex(props, |cx| {
         nav_apg_with_direction(cx, dir);
@@ -115,7 +118,8 @@ where
                 timeout_ticks,
             } => typeahead_prefix_arc_str_always_wrap(cx, labels, timeout_ticks),
         }
-        f(cx)
+        let items = f(cx);
+        collect_children(cx, items)
     })
 }
 
@@ -123,14 +127,15 @@ where
 /// common "entry" behavior used by menus: when no item is currently active, Arrow/PageUp/PageDown
 /// jump to first/last enabled item.
 #[track_caller]
-pub fn roving_focus_group_apg_entry_fallback<H: UiHost, I>(
+pub fn roving_focus_group_apg_entry_fallback<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     props: RovingFlexProps,
     typeahead: TypeaheadPolicy,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     roving_focus_group_apg_entry_fallback_with_direction(
         cx,
@@ -143,7 +148,7 @@ where
 
 /// Like `roving_focus_group_apg_entry_fallback`, but respects Radix `dir` behavior for horizontal navigation.
 #[track_caller]
-pub fn roving_focus_group_apg_entry_fallback_with_direction<H: UiHost, I>(
+pub fn roving_focus_group_apg_entry_fallback_with_direction<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     props: RovingFlexProps,
     typeahead: TypeaheadPolicy,
@@ -151,7 +156,8 @@ pub fn roving_focus_group_apg_entry_fallback_with_direction<H: UiHost, I>(
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     cx.roving_flex(props, |cx| {
         nav_apg_entry_fallback_with_direction(cx, dir);
@@ -167,7 +173,8 @@ where
                 timeout_ticks,
             } => typeahead_prefix_arc_str_always_wrap(cx, labels, timeout_ticks),
         }
-        f(cx)
+        let items = f(cx);
+        collect_children(cx, items)
     })
 }
 

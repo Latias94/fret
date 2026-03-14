@@ -4,6 +4,8 @@ use fret_core::{Px, Rect};
 use fret_ui::element::{AnyElement, LayoutQueryRegionProps};
 use fret_ui::{ElementContext, GlobalElementId, Invalidation, UiHost};
 
+use crate::{IntoUiElement, collect_children};
+
 /// Tailwind-compatible width breakpoints.
 ///
 /// These are provided as a convenience for shadcn-aligned recipes. Consumers are free to define
@@ -115,7 +117,7 @@ fn container_width_at_least_apply_hysteresis(
 /// This is a mechanism-only wrapper: it is paint- and input-transparent, but records committed
 /// bounds that can be read via [`ElementContext::layout_query_bounds`] (ADR 0231).
 #[track_caller]
-pub fn container_query_region_with_id<H, I>(
+pub fn container_query_region_with_id<H, I, T>(
     cx: &mut ElementContext<'_, H>,
     name: impl Into<Arc<str>>,
     mut props: LayoutQueryRegionProps,
@@ -123,14 +125,18 @@ pub fn container_query_region_with_id<H, I>(
 ) -> AnyElement
 where
     H: UiHost,
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     props.name = Some(name.into());
-    cx.layout_query_region_with_id(props, f)
+    cx.layout_query_region_with_id(props, move |cx, id| {
+        let items = f(cx, id);
+        collect_children(cx, items)
+    })
 }
 
 #[track_caller]
-pub fn container_query_region<H, I>(
+pub fn container_query_region<H, I, T>(
     cx: &mut ElementContext<'_, H>,
     name: impl Into<Arc<str>>,
     props: LayoutQueryRegionProps,
@@ -138,7 +144,8 @@ pub fn container_query_region<H, I>(
 ) -> AnyElement
 where
     H: UiHost,
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     container_query_region_with_id(cx, name, props, |cx, _id| f(cx))
 }

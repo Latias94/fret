@@ -5,12 +5,12 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
-use crate::ChromeRefinement;
 use crate::declarative::reduced_transparency_queries;
 use crate::recipes::glass::{
     GlassEffectRefinement, GlassEffectTokenKeys, GlassTokenKeys, resolve_glass_chrome,
     resolve_glass_effect, resolve_glass_effect_chain_for_environment,
 };
+use crate::{ChromeRefinement, IntoUiElement, collect_children};
 
 #[derive(Debug, Clone)]
 pub struct GlassPanelProps {
@@ -40,13 +40,14 @@ impl Default for GlassPanelProps {
     }
 }
 
-pub fn glass_panel<H: UiHost, I>(
+pub fn glass_panel<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     props: GlassPanelProps,
     children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     let prefers_reduced_transparency =
         reduced_transparency_queries::prefers_reduced_transparency(cx, Invalidation::Paint, false);
@@ -84,7 +85,7 @@ where
                 chain: chain.value,
                 quality: props.quality,
             },
-            |cx| {
+            move |cx| {
                 let mut inner_layout = LayoutStyle::default();
                 inner_layout.size.width = Length::Fill;
                 inner_layout.size.height = Length::Fill;
@@ -98,7 +99,10 @@ where
                     ..Default::default()
                 };
 
-                vec![cx.container(inner, children)]
+                let items = children(cx);
+                let inner_children = collect_children(cx, items);
+
+                vec![cx.container(inner, move |_cx| inner_children)]
             },
         );
 

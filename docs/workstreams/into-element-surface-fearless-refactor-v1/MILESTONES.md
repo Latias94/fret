@@ -424,12 +424,32 @@ Exit criteria:
   `AnyElement`/`NodeId` only as the final dismissible-root or focus/a11y wrapper seam, while their
   child closures accept iterable `IntoUiElement<H>` values directly. The same shared
   `collect_children(...)` helper and the expanded source-policy gate now lock that posture.
+- the same wrapper cleanup now also reaches the scroll / roving policy batch in `fret-ui-kit`:
+  `ecosystem/fret-ui-kit/src/declarative/scroll.rs`,
+  `ecosystem/fret-ui-kit/src/primitives/roving_focus_group.rs`,
+  `ecosystem/fret-ui-kit/src/primitives/toolbar.rs`, and
+  `ecosystem/fret-ui-kit/src/primitives/dismissable_layer.rs` now keep `AnyElement`/`NodeId` only
+  as the final scroll, roving-container, toolbar, or dismissable-root seam, while their child
+  closures accept iterable `IntoUiElement<H>` values directly. Direct wrappers land through the
+  shared `collect_children(...)` helper, and delegate wrappers now forward only to already-typed
+  helper seams. The expanded source-policy gate and `cargo check -p fret-ui-kit --lib` lock that
+  posture.
+- the same wrapper cleanup now also reaches the layout/effect query batch in `fret-ui-kit`:
+  `ecosystem/fret-ui-kit/src/declarative/chrome.rs`,
+  `ecosystem/fret-ui-kit/src/declarative/glass.rs`, and
+  `ecosystem/fret-ui-kit/src/declarative/container_queries.rs` now keep `AnyElement` only as the
+  final control-chrome, effect-layer, or layout-query wrapper seam, while their child closures
+  accept iterable `IntoUiElement<H>` values directly and land through the shared
+  `collect_children(...)` helper. The same expanded source-policy gate and
+  `cargo check -p fret-ui-kit --lib` lock that posture.
 - validation addendum on 2026-03-14:
   `CARGO_TARGET_DIR=target/codex-fret-cookbook cargo test -p fret-cookbook --lib --message-format=short`
 - validation addendum on 2026-03-14:
   `CARGO_TARGET_DIR=target/codex-fret-cookbook cargo check -p fret-cookbook --examples --message-format=short`
 - validation addendum on 2026-03-14:
   `CARGO_TARGET_DIR=target/codex-fret-ui-kit cargo test -p fret-ui-kit source_policy_tests::wrapper_helpers_prefer_typed_child_inputs --lib --message-format=short`
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-fret-ui-kit cargo check -p fret-ui-kit --lib --message-format=short`
 - the same app-facing cleanup now also starts closing the UI Gallery top-level snippet lane:
   `apps/fret-ui-gallery/src/ui/snippets/accordion/{basic,borders,card,demo,disabled,extras,multiple,rtl,usage}.rs`
   now expose `impl UiChild + use<>` on their top-level `render(...)` surface, and

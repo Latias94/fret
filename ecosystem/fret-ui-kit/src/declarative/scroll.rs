@@ -6,7 +6,9 @@ use fret_ui::element::{
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 
+use crate::IntoUiElement;
 use crate::LayoutRefinement;
+use crate::collect_children;
 use crate::declarative::style;
 
 /// Component-layer scroll helper (typed, declarative).
@@ -14,14 +16,15 @@ use crate::declarative::style;
 /// Fret treats scrolling as an explicit element (not a boolean overflow flag). This wrapper exists
 /// to match gpui/tailwind ergonomics while keeping the runtime contract explicit.
 #[track_caller]
-pub fn overflow_scroll<H: UiHost, I>(
+pub fn overflow_scroll<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutRefinement,
     show_scrollbar: bool,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     let (layout, scrollbar_w, thumb, thumb_hover) = {
         let theme = Theme::global(&*cx.app);
@@ -48,7 +51,10 @@ where
                 scroll_handle: Some(handle.clone()),
                 ..Default::default()
             },
-            f,
+            move |cx| {
+                let items = f(cx);
+                collect_children(cx, items)
+            },
         );
 
         let scroll_id = scroll.id;
@@ -86,7 +92,7 @@ where
     })
 }
 
-pub fn overflow_scroll_with_handle<H: UiHost, I>(
+pub fn overflow_scroll_with_handle<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutRefinement,
     show_scrollbar: bool,
@@ -94,7 +100,8 @@ pub fn overflow_scroll_with_handle<H: UiHost, I>(
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     let (layout, scrollbar_w, thumb, thumb_hover) = {
         let theme = Theme::global(&*cx.app);
@@ -120,7 +127,10 @@ where
                 scroll_handle: Some(handle.clone()),
                 ..Default::default()
             },
-            f,
+            move |cx| {
+                let items = f(cx);
+                collect_children(cx, items)
+            },
         );
 
         let scroll_id = scroll.id;
@@ -158,7 +168,7 @@ where
     })
 }
 
-pub fn overflow_scroll_with_handle_xy<H: UiHost, I>(
+pub fn overflow_scroll_with_handle_xy<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutRefinement,
     show_scrollbar_x: bool,
@@ -167,7 +177,8 @@ pub fn overflow_scroll_with_handle_xy<H: UiHost, I>(
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     let (layout, scrollbar_w, thumb, thumb_hover, corner_bg) = {
         let theme = Theme::global(&*cx.app);
@@ -199,7 +210,10 @@ where
                 scroll_handle: Some(handle.clone()),
                 ..Default::default()
             },
-            f,
+            move |cx| {
+                let items = f(cx);
+                collect_children(cx, items)
+            },
         );
 
         let scroll_id = scroll.id;
@@ -304,13 +318,14 @@ where
 }
 
 #[track_caller]
-pub fn overflow_scrollbar<H: UiHost, I>(
+pub fn overflow_scrollbar<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutRefinement,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     overflow_scroll(cx, layout, true, f)
 }
@@ -320,23 +335,31 @@ where
 /// Note: `Scroll` does not lay out multiple children; if you pass a `Vec` of siblings they will
 /// overlap. Prefer this helper (or `*_vstack`) to make the intended structure explicit.
 #[track_caller]
-pub fn overflow_scroll_content<H: UiHost>(
+pub fn overflow_scroll_content<H: UiHost, T>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutRefinement,
     show_scrollbar: bool,
-    content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
-) -> AnyElement {
-    overflow_scroll(cx, layout, show_scrollbar, |cx| vec![content(cx)])
+    content: impl FnOnce(&mut ElementContext<'_, H>) -> T,
+) -> AnyElement
+where
+    T: IntoUiElement<H>,
+{
+    overflow_scroll(cx, layout, show_scrollbar, |cx| {
+        std::iter::once(content(cx))
+    })
 }
 
 /// Horizontal scrolling with a single content root.
 #[track_caller]
-pub fn overflow_scroll_x_content<H: UiHost>(
+pub fn overflow_scroll_x_content<H: UiHost, T>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutRefinement,
     show_scrollbar_x: bool,
-    content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
-) -> AnyElement {
+    content: impl FnOnce(&mut ElementContext<'_, H>) -> T,
+) -> AnyElement
+where
+    T: IntoUiElement<H>,
+{
     let (layout, scrollbar_w, thumb, thumb_hover) = {
         let theme = Theme::global(&*cx.app);
         let layout = style::layout_style(theme, layout);
@@ -365,7 +388,10 @@ pub fn overflow_scroll_x_content<H: UiHost>(
                 scroll_handle: Some(handle.clone()),
                 ..Default::default()
             },
-            |cx| vec![content(cx)],
+            move |cx| {
+                let child = content(cx);
+                vec![IntoUiElement::into_element(child, cx)]
+            },
         );
 
         let scroll_id = scroll.id;
@@ -411,20 +437,23 @@ pub fn overflow_scroll_x_content<H: UiHost>(
 // with an explicit content root (e.g. `ui::v_flex(|cx| ...)`).
 
 /// Like `overflow_scroll_with_handle_xy`, but enforces a single content root.
-pub fn overflow_scroll_with_handle_xy_content<H: UiHost>(
+pub fn overflow_scroll_with_handle_xy_content<H: UiHost, T>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutRefinement,
     show_scrollbar_x: bool,
     show_scrollbar_y: bool,
     handle: ScrollHandle,
-    content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
-) -> AnyElement {
+    content: impl FnOnce(&mut ElementContext<'_, H>) -> T,
+) -> AnyElement
+where
+    T: IntoUiElement<H>,
+{
     overflow_scroll_with_handle_xy(
         cx,
         layout,
         show_scrollbar_x,
         show_scrollbar_y,
         handle,
-        |cx| vec![content(cx)],
+        |cx| std::iter::once(content(cx)),
     )
 }

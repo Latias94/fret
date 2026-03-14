@@ -8,6 +8,8 @@ use fret_ui::element::{
 use fret_ui::elements::GlobalElementId;
 use std::sync::Arc;
 
+use crate::{IntoUiElement, collect_children};
+
 fn normalize_control_chrome_sizing(
     pressable_props: &PressableProps,
     chrome_props: &mut ContainerProps,
@@ -74,7 +76,7 @@ fn normalize_control_chrome_sizing(
 /// This matches the common shadcn/Radix mental model of:
 /// `Pressable (focus ring) -> SurfaceChrome (overflow-hidden) -> content`.
 #[track_caller]
-pub fn control_chrome_pressable_with_id_props<'a, H, F, C, I>(
+pub fn control_chrome_pressable_with_id_props<'a, H, F, C, I, T>(
     cx: &mut ElementContext<'a, H>,
     f: F,
 ) -> AnyElement
@@ -86,7 +88,8 @@ where
         GlobalElementId,
     ) -> (PressableProps, ContainerProps, C),
     C: for<'b> FnOnce(&'b mut ElementContext<'a, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     cx.pressable_with_id_props(|cx, st, id| {
         let (mut pressable_props, mut chrome_props, children) = f(cx, st, id);
@@ -101,7 +104,10 @@ where
             .as_ref()
             .map(|id| Arc::<str>::from(format!("{id}.chrome")));
 
-        let mut content = cx.container(chrome_props, children);
+        let mut content = cx.container(chrome_props, move |cx| {
+            let items = children(cx);
+            collect_children(cx, items)
+        });
         if let Some(test_id) = chrome_test_id {
             content = content.test_id(test_id);
         }
@@ -118,7 +124,7 @@ where
 /// This is useful when the interactive hit box may stretch (flex/grid/min touch target), but the
 /// visual chrome should remain token-sized and centered (Material-style).
 #[track_caller]
-pub fn centered_fixed_chrome_pressable_with_id_props<'a, H, F, C, I>(
+pub fn centered_fixed_chrome_pressable_with_id_props<'a, H, F, C, I, T>(
     cx: &mut ElementContext<'a, H>,
     f: F,
 ) -> AnyElement
@@ -130,7 +136,8 @@ where
         GlobalElementId,
     ) -> (PressableProps, ContainerProps, C),
     C: for<'b> FnOnce(&'b mut ElementContext<'a, H>) -> I,
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     cx.pressable_with_id_props(|cx, st, id| {
         let (mut pressable_props, mut chrome_props, children) = f(cx, st, id);
@@ -144,7 +151,10 @@ where
             .as_ref()
             .map(|id| Arc::<str>::from(format!("{id}.chrome")));
 
-        let mut chrome = cx.container(chrome_props, children);
+        let mut chrome = cx.container(chrome_props, move |cx| {
+            let items = children(cx);
+            collect_children(cx, items)
+        });
         if let Some(test_id) = chrome_test_id {
             chrome = chrome.test_id(test_id);
         }

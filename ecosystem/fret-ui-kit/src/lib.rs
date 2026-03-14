@@ -407,14 +407,21 @@ mod default_semantics_tests {
 mod source_policy_tests {
     const LIB_RS: &str = include_str!("lib.rs");
     const DECLARATIVE_BLOOM_RS: &str = include_str!("declarative/bloom.rs");
+    const DECLARATIVE_CHROME_RS: &str = include_str!("declarative/chrome.rs");
+    const DECLARATIVE_CONTAINER_QUERIES_RS: &str = include_str!("declarative/container_queries.rs");
     const DECLARATIVE_DISMISSIBLE_RS: &str = include_str!("declarative/dismissible.rs");
+    const DECLARATIVE_GLASS_RS: &str = include_str!("declarative/glass.rs");
     const DECLARATIVE_MOD_RS: &str = include_str!("declarative/mod.rs");
     const DECLARATIVE_PRELUDE_RS: &str = include_str!("declarative/prelude.rs");
+    const DECLARATIVE_SCROLL_RS: &str = include_str!("declarative/scroll.rs");
     const DECLARATIVE_SEMANTICS_RS: &str = include_str!("declarative/semantics.rs");
     const DECLARATIVE_VISUALLY_HIDDEN_RS: &str = include_str!("declarative/visually_hidden.rs");
     const DECLARATIVE_PIXELATE_RS: &str = include_str!("declarative/pixelate.rs");
     const IMUI_RS: &str = include_str!("imui.rs");
+    const PRIMITIVES_DISMISSABLE_LAYER_RS: &str = include_str!("primitives/dismissable_layer.rs");
     const PRIMITIVES_FOCUS_SCOPE_RS: &str = include_str!("primitives/focus_scope.rs");
+    const PRIMITIVES_ROVING_FOCUS_GROUP_RS: &str = include_str!("primitives/roving_focus_group.rs");
+    const PRIMITIVES_TOOLBAR_RS: &str = include_str!("primitives/toolbar.rs");
     const UI_RS: &str = include_str!("ui.rs");
     const UI_BUILDER_RS: &str = include_str!("ui_builder.rs");
 
@@ -541,15 +548,67 @@ mod source_policy_tests {
 
     #[test]
     fn wrapper_helpers_prefer_typed_child_inputs() {
-        for (label, source) in [
-            ("declarative/bloom.rs", DECLARATIVE_BLOOM_RS),
-            ("declarative/dismissible.rs", DECLARATIVE_DISMISSIBLE_RS),
-            ("declarative/pixelate.rs", DECLARATIVE_PIXELATE_RS),
+        for (label, source, landing_snippet) in [
+            (
+                "declarative/bloom.rs",
+                DECLARATIVE_BLOOM_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "declarative/chrome.rs",
+                DECLARATIVE_CHROME_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "declarative/container_queries.rs",
+                DECLARATIVE_CONTAINER_QUERIES_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "declarative/dismissible.rs",
+                DECLARATIVE_DISMISSIBLE_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "declarative/glass.rs",
+                DECLARATIVE_GLASS_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "declarative/pixelate.rs",
+                DECLARATIVE_PIXELATE_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "declarative/scroll.rs",
+                DECLARATIVE_SCROLL_RS,
+                "collect_children(cx,",
+            ),
             (
                 "declarative/visually_hidden.rs",
                 DECLARATIVE_VISUALLY_HIDDEN_RS,
+                "collect_children(cx,",
             ),
-            ("primitives/focus_scope.rs", PRIMITIVES_FOCUS_SCOPE_RS),
+            (
+                "primitives/dismissable_layer.rs",
+                PRIMITIVES_DISMISSABLE_LAYER_RS,
+                "render_dismissible_root_with_hooks(",
+            ),
+            (
+                "primitives/focus_scope.rs",
+                PRIMITIVES_FOCUS_SCOPE_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "primitives/roving_focus_group.rs",
+                PRIMITIVES_ROVING_FOCUS_GROUP_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "primitives/toolbar.rs",
+                PRIMITIVES_TOOLBAR_RS,
+                "roving_focus_group::roving_focus_group_apg(",
+            ),
         ] {
             assert!(
                 source.contains("T: IntoUiElement<H>"),
@@ -560,8 +619,8 @@ mod source_policy_tests {
                 "{label} reintroduced raw AnyElement child items on the public surface"
             );
             assert!(
-                source.contains("collect_children(cx,"),
-                "{label} should land typed child values only behind the wrapper seam"
+                source.contains(landing_snippet),
+                "{label} should only land typed child values behind a typed wrapper seam"
             );
         }
     }

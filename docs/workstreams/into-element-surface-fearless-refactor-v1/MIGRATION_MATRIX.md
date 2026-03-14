@@ -249,6 +249,23 @@ Execution note on 2026-03-13:
   accept iterable `IntoUiElement<H>` children directly instead of publishing
   `IntoIterator<Item = AnyElement>`, with concrete `Vec<AnyElement>` assembly moved behind the
   shared crate-local `collect_children(...)` landing helper and the expanded source-policy gate.
+- the same helper inventory now also records the scroll / roving policy batch in `fret-ui-kit`:
+  `ecosystem/fret-ui-kit/src/declarative/scroll.rs`,
+  `ecosystem/fret-ui-kit/src/primitives/roving_focus_group.rs`,
+  `ecosystem/fret-ui-kit/src/primitives/toolbar.rs`, and
+  `ecosystem/fret-ui-kit/src/primitives/dismissable_layer.rs` now accept iterable
+  `IntoUiElement<H>` children directly instead of publishing `IntoIterator<Item = AnyElement>`.
+  Direct wrappers land through the shared crate-local `collect_children(...)` helper, and delegate
+  wrappers forward only to already-typed helper seams. The expanded source-policy gate and
+  `cargo check -p fret-ui-kit --lib` cover this batch.
+- the same helper inventory now also records the layout/effect query batch in `fret-ui-kit`:
+  `ecosystem/fret-ui-kit/src/declarative/chrome.rs`,
+  `ecosystem/fret-ui-kit/src/declarative/glass.rs`, and
+  `ecosystem/fret-ui-kit/src/declarative/container_queries.rs` now accept iterable
+  `IntoUiElement<H>` children directly instead of publishing `IntoIterator<Item = AnyElement>`,
+  with concrete `Vec<AnyElement>` assembly moved behind the shared crate-local
+  `collect_children(...)` landing helper. The expanded source-policy gate and
+  `cargo check -p fret-ui-kit --lib` cover this batch.
 - the internal declarative semantics surface now also records
   `ecosystem/fret-ui-kit/src/declarative/semantics.rs`,
   where `UiElementTestIdExt`, `UiElementA11yExt`, and `UiElementKeyContextExt` wrappers now land

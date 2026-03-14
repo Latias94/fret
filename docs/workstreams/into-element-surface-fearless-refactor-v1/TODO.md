@@ -889,6 +889,26 @@ Implementation note on 2026-03-13:
   `AnyElement`/`NodeId` only as the final dismissible-root or focus/a11y wrapper seam, while their
   child closures accept iterable `IntoUiElement<H>` values directly. The same shared
   `collect_children(...)` helper plus the expanded source-policy gate now lock that posture.
+- the same wrapper-helper inventory now also covers the scroll / roving policy batch in
+  `fret-ui-kit`:
+  `ecosystem/fret-ui-kit/src/declarative/scroll.rs`,
+  `ecosystem/fret-ui-kit/src/primitives/roving_focus_group.rs`,
+  `ecosystem/fret-ui-kit/src/primitives/toolbar.rs`, and
+  `ecosystem/fret-ui-kit/src/primitives/dismissable_layer.rs` now keep `AnyElement`/`NodeId` only
+  as the final scroll, roving-container, toolbar, or dismissable-root seam, while their child
+  closures accept iterable `IntoUiElement<H>` values directly. Direct wrappers land through the
+  shared `collect_children(...)` helper, and delegate wrappers now forward only to already-typed
+  helper seams; the expanded source-policy gate plus `cargo check -p fret-ui-kit --lib` lock that
+  posture.
+- the same wrapper-helper inventory now also covers the layout/effect query batch in
+  `fret-ui-kit`:
+  `ecosystem/fret-ui-kit/src/declarative/chrome.rs`,
+  `ecosystem/fret-ui-kit/src/declarative/glass.rs`, and
+  `ecosystem/fret-ui-kit/src/declarative/container_queries.rs` now keep `AnyElement` only as the
+  final control-chrome, effect-layer, or layout-query wrapper seam, while their child closures
+  accept iterable `IntoUiElement<H>` values directly. The same shared `collect_children(...)`
+  helper plus the expanded source-policy gate and `cargo check -p fret-ui-kit --lib` lock that
+  posture.
 - the next cookbook app-authoring batch now follows the same surface:
   `apps/fret-cookbook/examples/toggle_basics.rs`,
   `apps/fret-cookbook/examples/payload_actions_basics.rs`,
