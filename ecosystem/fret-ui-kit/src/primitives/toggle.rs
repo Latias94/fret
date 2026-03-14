@@ -17,6 +17,7 @@ use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
 use crate::declarative::action_hooks::ActionHooksExt as _;
+use crate::{IntoUiElement, collect_children};
 
 /// A11y metadata for a toggle-like pressable.
 ///
@@ -125,14 +126,15 @@ impl ToggleRoot {
     /// - Activation toggles the boolean model (disabled guards apply).
     /// - This does not apply any visual skin. Pass the desired `PressableProps`.
     #[track_caller]
-    pub fn into_element<H: UiHost, I>(
+    pub fn into_element<H: UiHost, I, T>(
         self,
         cx: &mut ElementContext<'_, H>,
         mut props: PressableProps,
         f: impl FnOnce(&mut ElementContext<'_, H>, PressableState, bool) -> I,
     ) -> AnyElement
     where
-        I: IntoIterator<Item = AnyElement>,
+        I: IntoIterator<Item = T>,
+        T: IntoUiElement<H>,
     {
         let model = self.pressed_model(cx);
         let disabled = self.disabled;
@@ -147,7 +149,8 @@ impl ToggleRoot {
             props.enabled = props.enabled && !disabled;
             props.a11y = toggle_a11y(label.clone(), pressed);
 
-            (props, f(cx, st, pressed))
+            let items = f(cx, st, pressed);
+            (props, collect_children(cx, items))
         })
     }
 }

@@ -21,6 +21,7 @@ use crate::declarative::ModelWatchExt;
 use crate::declarative::action_hooks::ActionHooksExt as _;
 use crate::primitives::trigger_a11y;
 use crate::primitives::{direction as direction_prim, direction::LayoutDirection};
+use crate::{IntoUiElement, collect_children};
 
 /// Matches Radix Accordion `type` outcome.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -395,7 +396,9 @@ mod tests {
             let values: Arc<[Arc<str>]> = Arc::from(vec![Arc::from("a")].into_boxed_slice());
             let disabled: Arc<[bool]> = Arc::from(vec![false].into_boxed_slice());
             let list = root.list(values, disabled);
-            let el = list.into_element(cx, RovingFlexProps::default(), |_cx| Vec::new());
+            let el = list.into_element(cx, RovingFlexProps::default(), |_cx| {
+                Vec::<AnyElement>::new()
+            });
 
             let ElementKind::Semantics(_) = &el.kind else {
                 panic!("expected semantics wrapper");
@@ -421,7 +424,9 @@ mod tests {
             let values: Arc<[Arc<str>]> = Arc::from(vec![Arc::from("a")].into_boxed_slice());
             let disabled: Arc<[bool]> = Arc::from(vec![false].into_boxed_slice());
             let list = root.list(values, disabled);
-            let el = list.into_element(cx, RovingFlexProps::default(), |_cx| Vec::new());
+            let el = list.into_element(cx, RovingFlexProps::default(), |_cx| {
+                Vec::<AnyElement>::new()
+            });
 
             let ElementKind::Semantics(_) = &el.kind else {
                 panic!("expected semantics wrapper");
@@ -496,14 +501,15 @@ impl AccordionList {
     /// - This does not apply any visual skin. Pass `flex` / `layout` via `RovingFlexProps`.
     /// - Accordion selection is activation-driven: focus movement does not toggle open state.
     #[track_caller]
-    pub fn into_element<H: UiHost, I>(
+    pub fn into_element<H: UiHost, I, T>(
         self,
         cx: &mut ElementContext<'_, H>,
         mut props: RovingFlexProps,
         f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
     ) -> AnyElement
     where
-        I: IntoIterator<Item = AnyElement>,
+        I: IntoIterator<Item = T>,
+        T: IntoUiElement<H>,
     {
         props.flex.direction = match self.root.orientation {
             AccordionOrientation::Vertical => fret_core::Axis::Vertical,
@@ -529,7 +535,8 @@ impl AccordionList {
                     move |cx| {
                         vec![cx.roving_flex(props, move |cx| {
                             cx.roving_nav_apg();
-                            f(cx)
+                            let items = f(cx);
+                            collect_children(cx, items)
                         })]
                     },
                 )
@@ -544,7 +551,8 @@ impl AccordionList {
                 move |cx| {
                     vec![cx.roving_flex(props, move |cx| {
                         cx.roving_nav_apg();
-                        f(cx)
+                        let items = f(cx);
+                        collect_children(cx, items)
                     })]
                 },
             )
@@ -603,7 +611,7 @@ impl AccordionTrigger {
     }
 
     #[track_caller]
-    pub fn into_element<H: UiHost, I>(
+    pub fn into_element<H: UiHost, I, T>(
         self,
         cx: &mut ElementContext<'_, H>,
         root: &AccordionRoot,
@@ -611,7 +619,8 @@ impl AccordionTrigger {
         f: impl FnOnce(&mut ElementContext<'_, H>, bool) -> I,
     ) -> AnyElement
     where
-        I: IntoIterator<Item = AnyElement>,
+        I: IntoIterator<Item = T>,
+        T: IntoUiElement<H>,
     {
         self.into_element_with_id_props(cx, root, props, move |cx, open, _st, _id, props| {
             (props, f(cx, open))
@@ -619,7 +628,7 @@ impl AccordionTrigger {
     }
 
     #[track_caller]
-    pub fn into_element_with_id_props<H: UiHost, I>(
+    pub fn into_element_with_id_props<H: UiHost, I, T>(
         self,
         cx: &mut ElementContext<'_, H>,
         root: &AccordionRoot,
@@ -633,7 +642,8 @@ impl AccordionTrigger {
         ) -> (PressableProps, I),
     ) -> AnyElement
     where
-        I: IntoIterator<Item = AnyElement>,
+        I: IntoIterator<Item = T>,
+        T: IntoUiElement<H>,
     {
         let value = self.value.clone();
         let label = self.label.clone().unwrap_or_else(|| value.clone());
@@ -680,7 +690,8 @@ impl AccordionTrigger {
             props.focusable = (!disabled) && (tab_stop || st.focused);
             props.a11y = accordion_trigger_a11y(label.clone(), open);
 
-            f(cx, open, st, id, props)
+            let (props, items) = f(cx, open, st, id, props);
+            (props, collect_children(cx, items))
         })
     }
 }
@@ -705,14 +716,15 @@ impl AccordionContent {
     }
 
     #[track_caller]
-    pub fn into_element<H: UiHost, I>(
+    pub fn into_element<H: UiHost, I, T>(
         self,
         cx: &mut ElementContext<'_, H>,
         root: &AccordionRoot,
         f: impl FnOnce(&mut ElementContext<'_, H>, bool) -> I,
     ) -> Option<AnyElement>
     where
-        I: IntoIterator<Item = AnyElement>,
+        I: IntoIterator<Item = T>,
+        T: IntoUiElement<H>,
     {
         let open = root.is_item_open(cx, self.value.as_ref());
         if !open && !self.force_mount {
@@ -722,7 +734,10 @@ impl AccordionContent {
             StackProps {
                 layout: LayoutStyle::default(),
             },
-            move |cx| f(cx, open),
+            move |cx| {
+                let items = f(cx, open);
+                collect_children(cx, items)
+            },
         ))
     }
 }

@@ -266,6 +266,27 @@ Execution note on 2026-03-13:
   with concrete `Vec<AnyElement>` assembly moved behind the shared crate-local
   `collect_children(...)` landing helper. The expanded source-policy gate and
   `cargo check -p fret-ui-kit --lib` cover this batch.
+- the same helper inventory now also records the menu/popup skeleton batch in `fret-ui-kit`:
+  `ecosystem/fret-ui-kit/src/primitives/menu/{content,content_panel,sub_content}.rs` and
+  `ecosystem/fret-ui-kit/src/primitives/popper_content.rs` now accept iterable
+  `IntoUiElement<H>` children directly instead of publishing `IntoIterator<Item = AnyElement>`.
+  Direct wrappers land through the shared crate-local `collect_children(...)` helper, and delegate
+  wrappers forward only to already-typed helper seams. The expanded source-policy gate and
+  `cargo check -p fret-ui-kit --lib` cover this batch.
+- the same helper inventory now also records the cache/list batch in `fret-ui-kit`:
+  `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs` and
+  `ecosystem/fret-ui-kit/src/declarative/list.rs` now accept iterable `IntoUiElement<...>`
+  children directly instead of publishing `IntoIterator<Item = AnyElement>`. `cached_subtree`
+  lands through the shared crate-local `collect_children(...)` helper behind the `ViewCache`
+  wrapper, and the retained list path now lands cached row payloads through the same helper. The
+  expanded source-policy gate and `cargo check -p fret-ui-kit --lib` cover this batch.
+- the same helper inventory now also records the tab/toggle/accordion primitives in
+  `fret-ui-kit`:
+  `ecosystem/fret-ui-kit/src/primitives/{tabs,toggle,accordion}.rs` now accept iterable
+  `IntoUiElement<H>` children directly instead of publishing `IntoIterator<Item = AnyElement>`.
+  Their roving-list, pressable, and content wrappers now land those typed values behind the shared
+  crate-local `collect_children(...)` helper. The expanded source-policy gate and
+  `cargo check -p fret-ui-kit --lib` cover this batch.
 - the internal declarative semantics surface now also records
   `ecosystem/fret-ui-kit/src/declarative/semantics.rs`,
   where `UiElementTestIdExt`, `UiElementA11yExt`, and `UiElementKeyContextExt` wrappers now land

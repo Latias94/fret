@@ -909,6 +909,30 @@ Implementation note on 2026-03-13:
   accept iterable `IntoUiElement<H>` values directly. The same shared `collect_children(...)`
   helper plus the expanded source-policy gate and `cargo check -p fret-ui-kit --lib` lock that
   posture.
+- the same wrapper-helper inventory now also covers the menu/popup skeleton batch in
+  `fret-ui-kit`:
+  `ecosystem/fret-ui-kit/src/primitives/menu/{content,content_panel,sub_content}.rs` and
+  `ecosystem/fret-ui-kit/src/primitives/popper_content.rs` now keep `AnyElement` only as the final
+  menu semantics/panel or popper wrapper seam, while their child closures accept iterable
+  `IntoUiElement<H>` values directly. Direct wrappers land through `collect_children(...)`, and
+  delegate wrappers now forward only to already-typed helper seams; the expanded source-policy gate
+  plus `cargo check -p fret-ui-kit --lib` lock that posture.
+- the same wrapper-helper inventory now also covers the cache/list batch in `fret-ui-kit`:
+  `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs` and
+  `ecosystem/fret-ui-kit/src/declarative/list.rs` now keep `AnyElement` only as the final
+  cache-root or list-row wrapper seam, while their child closures accept iterable
+  `IntoUiElement<...>` values directly. `cached_subtree` lands through `collect_children(...)`
+  behind the `ViewCache` wrapper, the retained list path lands cached row payloads through the same
+  helper, and the expanded source-policy gate plus `cargo check -p fret-ui-kit --lib` lock that
+  posture.
+- the same wrapper-helper inventory now also covers the tab/toggle/accordion primitives in
+  `fret-ui-kit`:
+  `ecosystem/fret-ui-kit/src/primitives/{tabs,toggle,accordion}.rs` now keep `AnyElement` only as
+  the final semantics/pressable/content wrapper seam, while their public child closures accept
+  iterable `IntoUiElement<H>` values directly. The tabs/accordion roving-list wrappers, toggle and
+  accordion pressable wrappers, and tab/accordion content wrappers now land those typed values
+  behind `collect_children(...)`; the expanded source-policy gate plus
+  `cargo check -p fret-ui-kit --lib` lock that posture.
 - the next cookbook app-authoring batch now follows the same surface:
   `apps/fret-cookbook/examples/toggle_basics.rs`,
   `apps/fret-cookbook/examples/payload_actions_basics.rs`,

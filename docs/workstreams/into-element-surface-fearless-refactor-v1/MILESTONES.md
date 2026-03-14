@@ -442,6 +442,28 @@ Exit criteria:
   accept iterable `IntoUiElement<H>` values directly and land through the shared
   `collect_children(...)` helper. The same expanded source-policy gate and
   `cargo check -p fret-ui-kit --lib` lock that posture.
+- the same wrapper cleanup now also reaches the menu/popup skeleton batch in `fret-ui-kit`:
+  `ecosystem/fret-ui-kit/src/primitives/menu/{content,content_panel,sub_content}.rs` and
+  `ecosystem/fret-ui-kit/src/primitives/popper_content.rs` now keep `AnyElement` only as the final
+  menu semantics/panel or popper wrapper seam, while their child closures accept iterable
+  `IntoUiElement<H>` values directly. Direct wrappers land through `collect_children(...)`, and
+  delegate wrappers now forward only to already-typed helper seams. The expanded source-policy gate
+  and `cargo check -p fret-ui-kit --lib` lock that posture.
+- the same wrapper cleanup now also reaches the cache/list batch in `fret-ui-kit`:
+  `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs` and
+  `ecosystem/fret-ui-kit/src/declarative/list.rs` now keep `AnyElement` only as the final
+  cache-root or list-row wrapper seam, while their child closures accept iterable
+  `IntoUiElement<...>` values directly. `cached_subtree` lands through `collect_children(...)`
+  behind the `ViewCache` wrapper, and the retained list path now lands cached row payloads through
+  the same helper. The expanded source-policy gate and `cargo check -p fret-ui-kit --lib` lock
+  that posture.
+- the same wrapper cleanup now also reaches the tab/toggle/accordion primitives in `fret-ui-kit`:
+  `ecosystem/fret-ui-kit/src/primitives/{tabs,toggle,accordion}.rs` now keep `AnyElement` only as
+  the final semantics/pressable/content wrapper seam, while their public child closures accept
+  iterable `IntoUiElement<H>` values directly. The tabs/accordion roving-list wrappers, toggle and
+  accordion pressable wrappers, and tab/accordion content wrappers now land those typed values
+  behind `collect_children(...)`. The expanded source-policy gate and
+  `cargo check -p fret-ui-kit --lib` lock that posture.
 - validation addendum on 2026-03-14:
   `CARGO_TARGET_DIR=target/codex-fret-cookbook cargo test -p fret-cookbook --lib --message-format=short`
 - validation addendum on 2026-03-14:

@@ -2,27 +2,33 @@ use fret_core::{Corners, Rect, TextStyle};
 use fret_ui::element::{AnyElement, LayoutStyle, ViewCacheProps};
 use fret_ui::{ElementContext, UiHost};
 
+use crate::{IntoUiElement, collect_children};
+
 /// Component-layer helper for authoring explicit cached subtree boundaries.
 ///
 /// This intentionally lives in the ecosystem layer (ADR 0066): it is sugar on top of the
 /// mechanism-only `ElementContext::view_cache(...)` API in `fret-ui`.
 pub trait CachedSubtreeExt {
+    type Host: UiHost;
+
     /// Build an explicit cached subtree boundary using default cache-root behavior.
-    fn cached_subtree<I>(&mut self, f: impl FnOnce(&mut Self) -> I) -> AnyElement
+    fn cached_subtree<I, T>(&mut self, f: impl FnOnce(&mut Self) -> I) -> AnyElement
     where
-        I: IntoIterator<Item = AnyElement>,
+        I: IntoIterator<Item = T>,
+        T: IntoUiElement<Self::Host>,
     {
         self.cached_subtree_with(CachedSubtreeProps::default(), f)
     }
 
     /// Build an explicit cached subtree boundary with additional cache-root hints.
-    fn cached_subtree_with<I>(
+    fn cached_subtree_with<I, T>(
         &mut self,
         props: CachedSubtreeProps,
         f: impl FnOnce(&mut Self) -> I,
     ) -> AnyElement
     where
-        I: IntoIterator<Item = AnyElement>;
+        I: IntoIterator<Item = T>,
+        T: IntoUiElement<Self::Host>;
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -70,19 +76,25 @@ impl CachedSubtreeProps {
 }
 
 impl<'a, H: UiHost> CachedSubtreeExt for ElementContext<'a, H> {
-    fn cached_subtree_with<I>(
+    type Host = H;
+
+    fn cached_subtree_with<I, T>(
         &mut self,
         props: CachedSubtreeProps,
         f: impl FnOnce(&mut Self) -> I,
     ) -> AnyElement
     where
-        I: IntoIterator<Item = AnyElement>,
+        I: IntoIterator<Item = T>,
+        T: IntoUiElement<Self::Host>,
     {
         let view_cache = ViewCacheProps {
             layout: props.layout,
             contained_layout: props.contained_layout,
             cache_key: props.cache_key,
         };
-        self.view_cache(view_cache, f)
+        self.view_cache(view_cache, move |cx| {
+            let items = f(cx);
+            collect_children(cx, items)
+        })
     }
 }

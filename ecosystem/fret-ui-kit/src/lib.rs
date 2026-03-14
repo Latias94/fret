@@ -407,10 +407,12 @@ mod default_semantics_tests {
 mod source_policy_tests {
     const LIB_RS: &str = include_str!("lib.rs");
     const DECLARATIVE_BLOOM_RS: &str = include_str!("declarative/bloom.rs");
+    const DECLARATIVE_CACHED_SUBTREE_RS: &str = include_str!("declarative/cached_subtree.rs");
     const DECLARATIVE_CHROME_RS: &str = include_str!("declarative/chrome.rs");
     const DECLARATIVE_CONTAINER_QUERIES_RS: &str = include_str!("declarative/container_queries.rs");
     const DECLARATIVE_DISMISSIBLE_RS: &str = include_str!("declarative/dismissible.rs");
     const DECLARATIVE_GLASS_RS: &str = include_str!("declarative/glass.rs");
+    const DECLARATIVE_LIST_RS: &str = include_str!("declarative/list.rs");
     const DECLARATIVE_MOD_RS: &str = include_str!("declarative/mod.rs");
     const DECLARATIVE_PRELUDE_RS: &str = include_str!("declarative/prelude.rs");
     const DECLARATIVE_SCROLL_RS: &str = include_str!("declarative/scroll.rs");
@@ -420,7 +422,14 @@ mod source_policy_tests {
     const IMUI_RS: &str = include_str!("imui.rs");
     const PRIMITIVES_DISMISSABLE_LAYER_RS: &str = include_str!("primitives/dismissable_layer.rs");
     const PRIMITIVES_FOCUS_SCOPE_RS: &str = include_str!("primitives/focus_scope.rs");
+    const PRIMITIVES_ACCORDION_RS: &str = include_str!("primitives/accordion.rs");
+    const PRIMITIVES_MENU_CONTENT_PANEL_RS: &str = include_str!("primitives/menu/content_panel.rs");
+    const PRIMITIVES_MENU_CONTENT_RS: &str = include_str!("primitives/menu/content.rs");
+    const PRIMITIVES_MENU_SUB_CONTENT_RS: &str = include_str!("primitives/menu/sub_content.rs");
+    const PRIMITIVES_POPPER_CONTENT_RS: &str = include_str!("primitives/popper_content.rs");
     const PRIMITIVES_ROVING_FOCUS_GROUP_RS: &str = include_str!("primitives/roving_focus_group.rs");
+    const PRIMITIVES_TABS_RS: &str = include_str!("primitives/tabs.rs");
+    const PRIMITIVES_TOGGLE_RS: &str = include_str!("primitives/toggle.rs");
     const PRIMITIVES_TOOLBAR_RS: &str = include_str!("primitives/toolbar.rs");
     const UI_RS: &str = include_str!("ui.rs");
     const UI_BUILDER_RS: &str = include_str!("ui_builder.rs");
@@ -555,6 +564,11 @@ mod source_policy_tests {
                 "collect_children(cx,",
             ),
             (
+                "declarative/cached_subtree.rs",
+                DECLARATIVE_CACHED_SUBTREE_RS,
+                "collect_children(cx,",
+            ),
+            (
                 "declarative/chrome.rs",
                 DECLARATIVE_CHROME_RS,
                 "collect_children(cx,",
@@ -575,6 +589,11 @@ mod source_policy_tests {
                 "collect_children(cx,",
             ),
             (
+                "declarative/list.rs",
+                DECLARATIVE_LIST_RS,
+                "collect_children(cx,",
+            ),
+            (
                 "declarative/pixelate.rs",
                 DECLARATIVE_PIXELATE_RS,
                 "collect_children(cx,",
@@ -590,6 +609,11 @@ mod source_policy_tests {
                 "collect_children(cx,",
             ),
             (
+                "primitives/accordion.rs",
+                PRIMITIVES_ACCORDION_RS,
+                "collect_children(cx, items)",
+            ),
+            (
                 "primitives/dismissable_layer.rs",
                 PRIMITIVES_DISMISSABLE_LAYER_RS,
                 "render_dismissible_root_with_hooks(",
@@ -600,9 +624,39 @@ mod source_policy_tests {
                 "collect_children(cx,",
             ),
             (
+                "primitives/menu/content.rs",
+                PRIMITIVES_MENU_CONTENT_RS,
+                "roving_focus_group::roving_focus_group_apg_entry_fallback(",
+            ),
+            (
+                "primitives/menu/content_panel.rs",
+                PRIMITIVES_MENU_CONTENT_PANEL_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "primitives/menu/sub_content.rs",
+                PRIMITIVES_MENU_SUB_CONTENT_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "primitives/popper_content.rs",
+                PRIMITIVES_POPPER_CONTENT_RS,
+                "collect_children(cx,",
+            ),
+            (
                 "primitives/roving_focus_group.rs",
                 PRIMITIVES_ROVING_FOCUS_GROUP_RS,
                 "collect_children(cx,",
+            ),
+            (
+                "primitives/tabs.rs",
+                PRIMITIVES_TABS_RS,
+                "collect_children(cx, items)",
+            ),
+            (
+                "primitives/toggle.rs",
+                PRIMITIVES_TOGGLE_RS,
+                "collect_children(cx, items)",
             ),
             (
                 "primitives/toolbar.rs",
@@ -611,7 +665,7 @@ mod source_policy_tests {
             ),
         ] {
             assert!(
-                source.contains("T: IntoUiElement<H>"),
+                source.contains("IntoUiElement<"),
                 "{label} should accept typed child values on the public wrapper surface"
             );
             assert!(

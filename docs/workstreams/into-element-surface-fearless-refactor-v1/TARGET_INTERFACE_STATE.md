@@ -478,6 +478,41 @@ layout-query wrapper boundary, but their child closures now accept iterable `Int
 values directly and land them behind `collect_children(...)` instead of publishing raw
 `IntoIterator<Item = AnyElement>` child items on the public surface.
 
+The same wrapper rule also applies to menu/popup skeleton helpers in `fret-ui-kit`:
+
+- `ecosystem/fret-ui-kit/src/primitives/menu/{content,content_panel,sub_content}.rs`
+- `ecosystem/fret-ui-kit/src/primitives/popper_content.rs`
+
+Those helpers still return `AnyElement` or `(GlobalElementId, AnyElement)` because they own the
+final menu semantics wrapper, menu panel, submenu skeleton, or popper wrapper/panel boundary, but
+their child closures now accept iterable `IntoUiElement<H>` values directly. Direct wrappers land
+them behind `collect_children(...)`, while delegate wrappers forward only to already-typed helper
+seams instead of publishing raw `IntoIterator<Item = AnyElement>` child items on the public
+surface.
+
+The same wrapper rule also applies to cache/list helpers in `fret-ui-kit`:
+
+- `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs`
+- `ecosystem/fret-ui-kit/src/declarative/list.rs`
+
+Those helpers still return `AnyElement` because they own the final cache-root or list-row wrapper
+boundary, but their child closures now accept iterable `IntoUiElement<...>` values directly.
+`cached_subtree` lands through `collect_children(...)` behind its `ViewCache` wrapper, and the
+retained `list` path now lands the explicit cached row payload through the same helper instead of
+publishing raw `IntoIterator<Item = AnyElement>` child items on the public surface.
+
+The same wrapper rule also applies to the tab/toggle/accordion primitives in `fret-ui-kit`:
+
+- `ecosystem/fret-ui-kit/src/primitives/tabs.rs`
+- `ecosystem/fret-ui-kit/src/primitives/toggle.rs`
+- `ecosystem/fret-ui-kit/src/primitives/accordion.rs`
+
+Those primitives still return `AnyElement` or `Option<AnyElement>` because they own the final
+tabs/accordion semantics wrapper, pressable wrapper, or content mount gate boundary, but their
+public child closures now accept iterable `IntoUiElement<H>` values directly. The roving-list,
+pressable, and content wrappers land those typed values behind `collect_children(...)` instead of
+publishing raw `IntoIterator<Item = AnyElement>` child items on the public surface.
+
 The same wrapper rule also applies to internal gallery scaffolds:
 
 - `src/ui/doc_layout.rs::demo_shell<B>(...)`
