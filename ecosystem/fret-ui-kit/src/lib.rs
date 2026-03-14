@@ -421,12 +421,15 @@ mod source_policy_tests {
     const DECLARATIVE_PIXELATE_RS: &str = include_str!("declarative/pixelate.rs");
     const IMUI_RS: &str = include_str!("imui.rs");
     const PRIMITIVES_DISMISSABLE_LAYER_RS: &str = include_str!("primitives/dismissable_layer.rs");
+    const PRIMITIVES_ALERT_DIALOG_RS: &str = include_str!("primitives/alert_dialog.rs");
+    const PRIMITIVES_DIALOG_RS: &str = include_str!("primitives/dialog.rs");
     const PRIMITIVES_FOCUS_SCOPE_RS: &str = include_str!("primitives/focus_scope.rs");
     const PRIMITIVES_ACCORDION_RS: &str = include_str!("primitives/accordion.rs");
     const PRIMITIVES_MENU_CONTENT_PANEL_RS: &str = include_str!("primitives/menu/content_panel.rs");
     const PRIMITIVES_MENU_CONTENT_RS: &str = include_str!("primitives/menu/content.rs");
     const PRIMITIVES_MENU_SUB_CONTENT_RS: &str = include_str!("primitives/menu/sub_content.rs");
     const PRIMITIVES_POPPER_CONTENT_RS: &str = include_str!("primitives/popper_content.rs");
+    const PRIMITIVES_POPOVER_RS: &str = include_str!("primitives/popover.rs");
     const PRIMITIVES_ROVING_FOCUS_GROUP_RS: &str = include_str!("primitives/roving_focus_group.rs");
     const PRIMITIVES_TABS_RS: &str = include_str!("primitives/tabs.rs");
     const PRIMITIVES_TOGGLE_RS: &str = include_str!("primitives/toggle.rs");
@@ -675,6 +678,50 @@ mod source_policy_tests {
             assert!(
                 source.contains(landing_snippet),
                 "{label} should only land typed child values behind a typed wrapper seam"
+            );
+        }
+    }
+
+    #[test]
+    fn overlay_wrapper_helpers_land_typed_children_before_request_seams() {
+        for (label, source, typed_signature, landing_snippet, raw_request_snippet) in [
+            (
+                "primitives/alert_dialog.rs",
+                PRIMITIVES_ALERT_DIALOG_RS,
+                "pub fn alert_dialog_modal_barrier<H: UiHost, I, T>(",
+                "collect_children(cx, children)",
+                "children: impl IntoIterator<Item = AnyElement>",
+            ),
+            (
+                "primitives/dialog.rs",
+                PRIMITIVES_DIALOG_RS,
+                "pub fn modal_barrier<H: UiHost, I, T>(",
+                "let children = collect_children(cx, children);",
+                "children: impl IntoIterator<Item = AnyElement>",
+            ),
+            (
+                "primitives/popover.rs",
+                PRIMITIVES_POPOVER_RS,
+                "pub fn popover_dialog_wrapper<H: UiHost, I, T>(",
+                "collect_children(cx, items)",
+                "children: impl IntoIterator<Item = AnyElement>",
+            ),
+        ] {
+            assert!(
+                source.contains(typed_signature),
+                "{label} should expose typed child wrappers where an ElementContext is available"
+            );
+            assert!(
+                source.contains("IntoUiElement<H>"),
+                "{label} should accept typed child values on wrapper helpers"
+            );
+            assert!(
+                source.contains(landing_snippet),
+                "{label} should land typed child values behind collect_children(...)"
+            );
+            assert!(
+                source.contains(raw_request_snippet),
+                "{label} should still document the raw AnyElement overlay-request landing seam"
             );
         }
     }

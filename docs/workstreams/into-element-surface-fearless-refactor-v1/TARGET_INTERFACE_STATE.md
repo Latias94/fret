@@ -513,6 +513,18 @@ public child closures now accept iterable `IntoUiElement<H>` values directly. Th
 pressable, and content wrappers land those typed values behind `collect_children(...)` instead of
 publishing raw `IntoIterator<Item = AnyElement>` child items on the public surface.
 
+The same split now also applies to dialog/popover/alert-dialog overlay helpers in `fret-ui-kit`:
+
+- `ecosystem/fret-ui-kit/src/primitives/alert_dialog.rs`
+- `ecosystem/fret-ui-kit/src/primitives/dialog.rs`
+- `ecosystem/fret-ui-kit/src/primitives/popover.rs`
+
+Wrapper helpers that still receive an `ElementContext` now accept iterable `IntoUiElement<H>`
+values directly and land them behind `collect_children(...)` before assembling barriers, semantics
+wrappers, and layer element vectors. The final overlay-request constructors still accept
+`IntoIterator<Item = AnyElement>` because they are the explicit landing seam that no longer has a
+live `ElementContext` available for typed conversion.
+
 The same wrapper rule also applies to internal gallery scaffolds:
 
 - `src/ui/doc_layout.rs::demo_shell<B>(...)`
