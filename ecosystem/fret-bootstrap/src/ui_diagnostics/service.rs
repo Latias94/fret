@@ -804,6 +804,16 @@ impl UiDiagnosticsService {
         self.app_snapshot_provider = provider;
     }
 
+    pub(super) fn app_snapshot_for_window(
+        &self,
+        app: &App,
+        window: AppWindowId,
+    ) -> Option<serde_json::Value> {
+        self.app_snapshot_provider
+            .as_ref()
+            .and_then(|provider| provider(app, window))
+    }
+
     /// Returns `true` if the current diagnostics state would benefit from (or requires) a fresh
     /// semantics snapshot for `window` on this frame.
     ///

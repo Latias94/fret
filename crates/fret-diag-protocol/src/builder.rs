@@ -90,6 +90,16 @@ pub fn runner_accessibility_activated() -> UiPredicateV1 {
     UiPredicateV1::RunnerAccessibilityActivated
 }
 
+pub fn app_snapshot_field_equals(
+    pointer: impl Into<String>,
+    value: serde_json::Value,
+) -> UiPredicateV1 {
+    UiPredicateV1::AppSnapshotFieldEquals {
+        pointer: pointer.into(),
+        value,
+    }
+}
+
 pub fn value_equals(target: UiSelectorV1, text: impl Into<String>) -> UiPredicateV1 {
     UiPredicateV1::ValueEquals {
         target,

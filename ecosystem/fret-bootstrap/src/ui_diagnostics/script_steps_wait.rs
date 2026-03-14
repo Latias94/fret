@@ -855,6 +855,7 @@ pub(super) fn handle_wait_until_step(
                     let platform_caps = app.global::<fret_runtime::PlatformCapabilities>();
                     let open_window_count =
                         UiDiagnosticsService::open_window_count_for_predicates(app);
+                    let app_snapshot = svc.app_snapshot_for_window(app, predicate_window);
 
                     if predicate_window == window {
                         if let Some(snapshot) = semantics_snapshot {
@@ -876,6 +877,7 @@ pub(super) fn handle_wait_until_step(
                                 text_input_snapshot,
                                 app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
                                 app.global::<fret_core::RendererTextFontTraceSnapshot>(),
+                                app_snapshot.as_ref(),
                                 svc.known_windows.as_slice(),
                                 open_window_count,
                                 platform_caps,
@@ -894,6 +896,7 @@ pub(super) fn handle_wait_until_step(
                                 predicate_window,
                                 svc.known_windows.as_slice(),
                                 open_window_count,
+                                app_snapshot.as_ref(),
                                 platform_caps,
                                 app.global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>(),
                                 app.global::<fret_runtime::RunnerPlatformWindowReceiverDiagnosticsStore>(),
@@ -913,6 +916,7 @@ pub(super) fn handle_wait_until_step(
                             predicate_window,
                             svc.known_windows.as_slice(),
                             open_window_count,
+                            app_snapshot.as_ref(),
                             platform_caps,
                             app.global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>(),
                             app.global::<fret_runtime::RunnerPlatformWindowReceiverDiagnosticsStore>(),

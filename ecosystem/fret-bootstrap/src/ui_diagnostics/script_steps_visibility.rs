@@ -112,6 +112,7 @@ pub(super) fn handle_ensure_visible_step(
         .and_then(|svc| svc.snapshot(window));
     let dock_drag_runtime = dock_drag_runtime_state(app, svc.known_windows.as_slice());
     let open_window_count = UiDiagnosticsService::open_window_count_for_predicates(app);
+    let app_snapshot = svc.app_snapshot_for_window(app, window);
     if eval_predicate(
         snapshot,
         window_bounds,
@@ -123,6 +124,7 @@ pub(super) fn handle_ensure_visible_step(
             .and_then(|svc| svc.snapshot(window)),
         app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
         app.global::<fret_core::RendererTextFontTraceSnapshot>(),
+        app_snapshot.as_ref(),
         svc.known_windows.as_slice(),
         open_window_count,
         app.global::<fret_runtime::PlatformCapabilities>(),

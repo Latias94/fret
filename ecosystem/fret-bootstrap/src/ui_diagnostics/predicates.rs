@@ -58,10 +58,20 @@ fn semantics_scroll_field_value(
     }
 }
 
+fn app_snapshot_field_equals(
+    app_snapshot: Option<&serde_json::Value>,
+    pointer: &str,
+    want: &serde_json::Value,
+) -> Option<bool> {
+    let app_snapshot = app_snapshot?;
+    Some(app_snapshot.pointer(pointer) == Some(want))
+}
+
 fn eval_predicate_without_semantics(
     window: AppWindowId,
     known_windows: &[AppWindowId],
     open_window_count: u32,
+    app_snapshot: Option<&serde_json::Value>,
     platform_caps: Option<&fret_runtime::PlatformCapabilities>,
     window_style: Option<&fret_runtime::RunnerWindowStyleDiagnosticsStore>,
     platform_window_receiver: Option<&fret_runtime::RunnerPlatformWindowReceiverDiagnosticsStore>,
@@ -71,6 +81,9 @@ fn eval_predicate_without_semantics(
     pred: &UiPredicateV1,
 ) -> Option<bool> {
     match pred {
+        UiPredicateV1::AppSnapshotFieldEquals { pointer, value } => {
+            app_snapshot_field_equals(app_snapshot, pointer, value)
+        }
         UiPredicateV1::KnownWindowCountGe { n } => Some(open_window_count >= *n),
         UiPredicateV1::KnownWindowCountIs { n } => Some(open_window_count == *n),
         UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => Some(
@@ -508,6 +521,7 @@ fn eval_predicate(
     text_input_snapshot: Option<&fret_runtime::WindowTextInputSnapshot>,
     render_text: Option<fret_core::RendererTextPerfSnapshot>,
     render_text_font_trace: Option<&fret_core::RendererTextFontTraceSnapshot>,
+    app_snapshot: Option<&serde_json::Value>,
     known_windows: &[AppWindowId],
     open_window_count: u32,
     platform_caps: Option<&fret_runtime::PlatformCapabilities>,
@@ -526,6 +540,9 @@ fn eval_predicate(
     };
 
     match pred {
+        UiPredicateV1::AppSnapshotFieldEquals { pointer, value } => {
+            app_snapshot_field_equals(app_snapshot, pointer, value).unwrap_or(false)
+        }
         UiPredicateV1::Exists { target } => select_node(target).is_some(),
         UiPredicateV1::NotExists { target } => select_node(target).is_none(),
         UiPredicateV1::ExistsUnder { scope, target } => {
@@ -1480,5 +1497,72 @@ fn eval_predicate(
             .and_then(|d| d.dock_graph_signature.as_ref())
             .is_some_and(|s| s.fingerprint64 == *fingerprint64),
         UiPredicateV1::EventKindSeen { event_kind: _ } => false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use slotmap::KeyData;
+
+    fn window_id(id: u64) -> AppWindowId {
+        AppWindowId::from(KeyData::from_ffi(id))
+    }
+
+    #[test]
+    fn app_snapshot_field_equals_matches_json_pointer_value() {
+        let app_snapshot = serde_json::json!({
+            "shell": {
+                "settings_open": true,
+                "last_action": "cmd.settings"
+            }
+        });
+
+        let ok = eval_predicate_without_semantics(
+            window_id(1),
+            &[],
+            1,
+            Some(&app_snapshot),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &UiPredicateV1::AppSnapshotFieldEquals {
+                pointer: "/shell/settings_open".to_string(),
+                value: serde_json::json!(true),
+            },
+        );
+
+        assert_eq!(ok, Some(true));
+    }
+
+    #[test]
+    fn app_snapshot_field_equals_returns_false_for_missing_field() {
+        let app_snapshot = serde_json::json!({
+            "shell": {
+                "settings_open": false
+            }
+        });
+
+        let ok = eval_predicate_without_semantics(
+            window_id(1),
+            &[],
+            1,
+            Some(&app_snapshot),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &UiPredicateV1::AppSnapshotFieldEquals {
+                pointer: "/shell/last_action".to_string(),
+                value: serde_json::json!("cmd.settings"),
+            },
+        );
+
+        assert_eq!(ok, Some(false));
     }
 }

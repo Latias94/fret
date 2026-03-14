@@ -21,6 +21,24 @@
     {
       "type": "wait_until",
       "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/last_action",
+        "value": "cmd.settings"
+      },
+      "timeout_frames": 300
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/settings_open",
+        "value": true
+      },
+      "timeout_frames": 300
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
         "kind": "visible_in_window",
         "target": {
           "kind": "test_id",
@@ -68,7 +86,25 @@
       "target": { "kind": "test_id", "id": "ui-gallery-settings-apply" },
       "timeout_frames": 300
     },
-    { "type": "wait_frames", "n": 12 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/last_action",
+        "value": "settings.apply"
+      },
+      "timeout_frames": 300
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/settings_open",
+        "value": false
+      },
+      "timeout_frames": 300
+    },
+    { "type": "wait_frames", "n": 2 },
     {
       "type": "capture_bundle",
       "label": "ui-gallery-text-fallback-policy-after"
