@@ -82,9 +82,10 @@ Evidence anchors:
   - Failure mode: profile names, provided roles, or expected family lists silently diverge from
     the bytes behind the manifest.
   - Existing gates: `bundled_profiles_are_manifest_consistent`,
-    `bundled_face_family_names_match_name_tables`.
-  - Missing gate to add: run a representative feature matrix in CI (`default`,
-    `--no-default-features`, `--features bootstrap-full,emoji,cjk-lite`).
+    `bundled_face_family_names_match_name_tables`,
+    `python tools/check_fret_fonts_feature_matrix.py`.
+  - Remaining follow-up: wire the feature-matrix script into CI once the broader font-mainline
+    workstream is ready for promotion.
 - Asset budget drift across feature combinations
   - Failure mode: WASM/bootstrap payload grows without an intentional contract update.
   - Existing gates: `default_fonts_total_size_is_reasonable`.
@@ -94,7 +95,7 @@ Evidence anchors:
   - Failure mode: future bundle additions still require touching multiple handwritten constant sets
     across `assets.rs` and `profiles.rs`, making omissions possible even after the module split.
   - Existing gates: manifest consistency tests catch some ordering and role drift.
-  - Missing gate to add: a generated manifest or a stronger feature-matrix test harness.
+  - Remaining follow-up: a generated manifest would still reduce future hand-maintained cfg drift.
 - Policy leakage into the asset crate
   - Failure mode: platform fallback defaults or startup policy get added here because the profile
     data is nearby.
@@ -125,9 +126,8 @@ Evidence anchors:
    changes become reviewable — status: landed — gate: `cargo nextest run -p fret-fonts`,
    `cargo check -p fret-fonts --no-default-features`,
    `cargo check -p fret-fonts --features bootstrap-full,emoji,cjk-lite`.
-2. Add representative feature-matrix gates for the crate — outcome: bundled profile drift is caught
-   before integration — gate: `cargo check -p fret-fonts --no-default-features`, `cargo nextest
-   run -p fret-fonts`, `cargo nextest run -p fret-fonts --features bootstrap-full,emoji,cjk-lite`.
+2. (Done) Add a representative feature-matrix gate for the crate — outcome: bundled profile drift
+   is caught before integration — gate: `python tools/check_fret_fonts_feature_matrix.py`.
 3. (Done) Narrow role-scoped byte access behind `BundledFontProfile::font_bytes_for_role(...)` —
    outcome: profiles remain the primary public contract, and raw role slices no longer define the
    crate surface — gate: `cargo nextest run -p fret-fonts`, dependent text-test crates compile

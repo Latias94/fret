@@ -70,7 +70,8 @@ Does not own:
 
 ## Current audit summary
 
-1. `fret-fonts` is structurally clean but packs too much feature-matrix bookkeeping into one file.
+1. `fret-fonts` is structurally clean; the main remaining risk is feature-matrix drift rather than
+   module ownership, so the workstream now relies on an explicit feature-matrix gate.
 2. `fret-render-text` is the real refactor hotspot: it has the right ownership direction, but too
    many responsibilities are concentrated in `parley_shaper.rs` and `wrapper.rs`.
 3. `fret-launch` already has a usable font boundary in `runner/font_catalog.rs`, but startup seeding

@@ -31,7 +31,7 @@ Exit criteria:
 Suggested gates:
 
 - `cargo nextest run -p fret-fonts`
-- representative feature-matrix `cargo check` / `cargo nextest` runs
+- `python tools/check_fret_fonts_feature_matrix.py`
 
 ## M2: `fret-render-text` gets explicit ownership seams
 

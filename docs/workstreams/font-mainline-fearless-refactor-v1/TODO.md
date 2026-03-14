@@ -14,8 +14,9 @@ Status: Active
 
 - [x] FR-FONTS-001 Split `crates/fret-fonts/src/lib.rs` into explicit ownership modules
       (`assets`, `profiles`, `tests`).
-- [ ] FR-FONTS-002 Add a representative feature-matrix gate:
-      `default`, `--no-default-features`, `--features bootstrap-full,emoji,cjk-lite`.
+- [x] FR-FONTS-002 Add a representative feature-matrix gate:
+      `python tools/check_fret_fonts_feature_matrix.py`
+      (`default`, `--no-default-features`, `--features bootstrap-full,emoji,cjk-lite`).
 - [x] FR-FONTS-003 Decide whether `emoji_fonts()` and `cjk_lite_fonts()` remain public or become
       implementation helpers behind profile-first APIs.
 
