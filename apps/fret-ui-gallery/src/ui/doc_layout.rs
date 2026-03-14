@@ -279,12 +279,15 @@ where
 }
 
 #[allow(dead_code)]
-pub(in crate::ui) fn text_table<const N: usize>(
+pub(in crate::ui) fn text_table<const N: usize, I>(
     cx: &mut UiCx<'_>,
     headers: [&'static str; N],
-    rows: impl IntoIterator<Item = [&'static str; N]>,
+    rows: I,
     border_bottom: bool,
-) -> AnyElement {
+) -> impl UiChild + use<N, I>
+where
+    I: IntoIterator<Item = [&'static str; N]>,
+{
     let rows = rows.into_iter().collect::<Vec<_>>();
 
     shadcn::table(move |cx| {

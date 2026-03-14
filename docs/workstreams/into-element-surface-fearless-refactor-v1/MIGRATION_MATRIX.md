@@ -83,7 +83,7 @@ Execution note on 2026-03-13:
   inputs and reserve `.into_element(cx)` for the shell/panel child-landing seams instead of
   forcing callers to pre-land `AnyElement`.
 - the same gallery helper inventory now also records the internal docs prose/layout helpers:
-  `apps/fret-ui-gallery/src/ui/doc_layout.rs::{wrap_row,wrap_controls_row,muted_full_width,muted_inline}` and the local
+  `apps/fret-ui-gallery/src/ui/doc_layout.rs::{wrap_row,wrap_controls_row,text_table,muted_full_width,muted_inline}` and the local
   `notes_block(... )::muted_flex_1_min_w_0(...)` now use the default-app
   `UiCx -> impl UiChild` posture instead of host-generic `ElementContext<'_, H> -> AnyElement`.
 - the shadcn surface gate now also records

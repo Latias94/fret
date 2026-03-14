@@ -7707,6 +7707,7 @@ fn gallery_doc_layout_app_helpers_prefer_ui_child_over_anyelement() {
         &[
             "fn wrap_row<F>(cx: &mut UiCx<'_>, theme: &Theme, gap: Space, align: fret_ui::element::CrossAlign, children: F,) -> impl UiChild + use<F> where F: FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>",
             "fn wrap_controls_row<F>(cx: &mut UiCx<'_>, theme: &Theme, gap: Space, children: F,) -> impl UiChild + use<F> where F: FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>",
+            "fn text_table<const N: usize, I>(cx: &mut UiCx<'_>, headers: [&'static str; N], rows: I, border_bottom: bool,) -> impl UiChild + use<N, I> where I: IntoIterator<Item = [&'static str; N]>",
             "fn muted_full_width<T>(cx: &mut UiCx<'_>, text: T) -> impl UiChild + use<T> where T: Into<Arc<str>>",
             "fn muted_inline<T>(cx: &mut UiCx<'_>, text: T) -> impl UiChild + use<T> where T: Into<Arc<str>>",
             "fn muted_flex_1_min_w_0<T>(cx: &mut UiCx<'_>, text: T) -> impl UiChild + use<T> where T: Into<Arc<str>>",
@@ -7714,6 +7715,7 @@ fn gallery_doc_layout_app_helpers_prefer_ui_child_over_anyelement() {
         &[
             "fn wrap_row(cx: &mut UiCx<'_>, theme: &Theme, gap: Space, align: fret_ui::element::CrossAlign, children: impl FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,) -> AnyElement",
             "fn wrap_controls_row(cx: &mut UiCx<'_>, theme: &Theme, gap: Space, children: impl FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,) -> AnyElement",
+            "fn text_table<const N: usize>(cx: &mut UiCx<'_>, headers: [&'static str; N], rows: impl IntoIterator<Item = [&'static str; N]>, border_bottom: bool,) -> AnyElement",
             "fn muted_full_width<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
             "fn muted_inline<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
             "fn muted_flex_1_min_w_0<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",

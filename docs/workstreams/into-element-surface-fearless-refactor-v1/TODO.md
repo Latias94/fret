@@ -1170,7 +1170,7 @@ Update on 2026-03-13 (page/docs teaching drift cleanup):
   now uses `gate_panel<B>(...) -> impl IntoUiElement<fret_app::App> + use<B>` and lands the
   editor child only at the preview-panel boundary.
 - the internal docs prose/layout lane is now also on the default app-facing helper surface:
-  `src/ui/doc_layout.rs::{wrap_row,wrap_controls_row,muted_full_width,muted_inline}` and the local
+  `src/ui/doc_layout.rs::{wrap_row,wrap_controls_row,text_table,muted_full_width,muted_inline}` and the local
   `notes_block(... )::muted_flex_1_min_w_0(...)` helper now use
   `UiCx -> impl UiChild` instead of `ElementContext<'_, H> -> AnyElement`, and the corresponding
   source gate now records those gallery-only text helpers as non-generic app helpers.

@@ -35,7 +35,7 @@ Execution addendum on 2026-03-14:
 
 - `apps/fret-ui-gallery/src/ui/snippets/ai/speech_input_demo.rs::{body_text,clear_action}` now use
   the default-app `UiCx -> impl UiChild` helper posture instead of host-generic helper spellings.
-- `apps/fret-ui-gallery/src/ui/doc_layout.rs::{wrap_row,wrap_controls_row,muted_full_width,muted_inline}` and the local
+- `apps/fret-ui-gallery/src/ui/doc_layout.rs::{wrap_row,wrap_controls_row,text_table,muted_full_width,muted_inline}` and the local
   `notes_block(... )::muted_flex_1_min_w_0(...)` helper now also use `UiCx -> impl UiChild`,
   while `demo_shell<B>(...)` remains the explicit typed wrapper seam for late landing.
 
