@@ -38,6 +38,68 @@ Execution addendum on 2026-03-14:
 - `apps/fret-ui-gallery/src/ui/doc_layout.rs::{wrap_row,wrap_controls_row,text_table,muted_full_width,muted_inline}` and the local
   `notes_block(... )::muted_flex_1_min_w_0(...)` helper now also use `UiCx -> impl UiChild`,
   while `demo_shell<B>(...)` remains the explicit typed wrapper seam for late landing.
+- the remaining raw doc-layout seams are now explicitly classified and gated:
+  `render_doc_page(...)`, `wrap_preview_page(...)`, `icon(...)`, `render_section(...)`,
+  `preview_code_tabs(...)`, `code_block_shell(...)`, and `section_title(...)` now all return typed
+  helpers instead of exposing raw `AnyElement` signatures. The remaining intentional raw storage on
+  this lane is the landed `DocSection.preview` field plus the tuple-return `gap_card(...)`
+  placeholder seam. `gallery_doc_layout_retains_only_intentional_raw_boundaries` now prevents
+  doc-layout drift on the default app-facing lane,
+  `render_doc_page_callers_land_the_typed_doc_page_explicitly` locks explicit landing on the page
+  lane, and `wrap_preview_page_callers_land_the_typed_preview_shell_explicitly` plus
+  `render_doc_page_callers_land_the_typed_doc_page_explicitly` lock the explicit landing seams on
+  the internal preview lane.
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app gallery_doc_layout_app_helpers_prefer_ui_child_over_anyelement -- --exact --nocapture`
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app gallery_doc_layout_retains_only_intentional_raw_boundaries -- --exact --nocapture`
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app render_doc_page_callers_land_the_typed_doc_page_explicitly -- --exact --nocapture`
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_internal_previews wrap_preview_page_callers_land_the_typed_preview_shell_explicitly -- --exact --nocapture`
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_internal_previews render_doc_page_callers_land_the_typed_doc_page_explicitly -- --exact --nocapture`
+- the AI page surface now also closes its remaining section-registration tail:
+  `apps/fret-ui-gallery/src/ui/pages/ai_*.rs` now use `DocSection::build(cx, ...)` instead of
+  `DocSection::new(...)` for first-party demo sections, and
+  `curated_ai_doc_pages_use_typed_doc_sections` now locks that default-app docs posture.
+- the internal overlay preview lane now also has an audited retained-seam inventory:
+  `src/ui/previews/gallery/overlays/overlay.rs`,
+  `overlay/layout.rs`,
+  `overlay/widgets.rs`, and
+  `overlay/flags.rs` now split between typed helper shells and intentional retained seams:
+  `layout.rs::{row,row_end,compose_body}` plus `flags.rs::last_action_status(...)` now expose
+  `UiCx -> impl UiChild + use<>`, while `preview_overlay(...)`, `OverlayWidgets`, and
+  `status_flags(...)` remain raw only as the current diagnostics composition boundary, and
+  `gallery_overlay_preview_retains_intentional_raw_boundaries` now prevents accidental drift
+  until that preview is reworked as a batch.
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_overlay_preview_retains_intentional_raw_boundaries -- --exact --nocapture`
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_overlay_preview_modules_prefer_ui_cx_on_the_internal_gallery_surface -- --exact --nocapture`
+- the notification teaching lane now also aligns with the typed helper posture:
+  `src/ui/snippets/toast/deprecated.rs` now returns `impl UiChild + use<>`,
+  `src/ui/pages/toast.rs` now uses `DocSection::build(cx, ...)`, and
+  `src/ui/snippets/sonner/mod.rs::local_toaster(...)` now stays on `UiChild` with the explicit
+  `.into_element(cx)` step living only at `pages/sonner.rs`.
+- the internal code-editor MVP preview lane now also closes a helper-level raw tail:
+  `src/ui/previews/pages/editors/code_editor/mvp/{header,word_boundary,gates}.rs` now keep
+  `build_header(...)`, `word_boundary_controls(...)`, `word_boundary_debug_view(...)`,
+  `gate_panel(...)`, and the `*_gate(...)` helpers on `impl UiChild + use<>`, with the explicit
+  landing step moved back to
+  `src/ui/previews/pages/editors/code_editor/mvp.rs`.
+- a few lower-traffic internal preview helpers now follow the same posture:
+  `src/ui/previews/pages/editors/text/outline_stroke.rs::toggle_button(...)`,
+  `src/ui/previews/pages/editors/text/mixed_script_fallback.rs::sample_row(...)`,
+  `src/ui/previews/pages/editors/text/feature_toggles.rs::{toggle_button,sample_text}(...)`, and
+  `src/ui/previews/pages/harness/intro.rs::{card(...),preview_intro(...)}` now avoid eager
+  `AnyElement` teaching where no real landing seam is intended.
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_internal_previews code_editor_mvp_internal_helpers_prefer_ui_child_over_anyelement -- --exact --nocapture`
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_internal_previews selected_internal_preview_helpers_prefer_typed_outputs -- --exact --nocapture`
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_internal_previews editor_preview_modules_prefer_ui_cx_on_the_internal_gallery_surface -- --exact --nocapture`
 
 Verification snapshot on 2026-03-13:
 
@@ -373,7 +435,11 @@ Exit criteria:
   `pub fn render(...) -> AnyElement` teaching pattern is now forbidden for the app-facing family by
   `ui_authoring_surface_default_app::{scroll_area_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface,scroll_area_page_uses_typed_doc_sections_for_app_facing_snippets}`, while
   `selected_scroll_area_snippet_helpers_prefer_into_ui_element_over_anyelement` now also locks the
-  helper-family preference for `shadcn::scroll_area(...)`.
+  helper-family preference for `shadcn::scroll_area(...)`, and
+  `scroll_area_diagnostics_snippets_remain_intentional_raw_boundaries` prevents the two
+  diagnostics harnesses from regressing into accidental app-facing teaching examples.
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app scroll_area_diagnostics_snippets_remain_intentional_raw_boundaries -- --exact --nocapture`
 - the same UI Gallery default-app top-level snippet cleanup now also records the
   `progress` family:
   `apps/fret-ui-gallery/src/ui/snippets/progress/{demo,usage,label,controlled,rtl}.rs`

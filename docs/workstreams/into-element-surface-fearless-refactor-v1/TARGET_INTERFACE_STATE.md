@@ -1,7 +1,7 @@
 # Into-Element Surface — Target Interface State
 
 Status: target state for the pre-release conversion-surface reset
-Last updated: 2026-03-13
+Last updated: 2026-03-14
 
 This document records the intended end state for the authoring conversion surface.
 
@@ -344,6 +344,59 @@ The same wrapper rule also applies to internal gallery scaffolds:
 
 - `src/ui/doc_layout.rs::demo_shell<B>(...)`
 - `src/ui/previews/pages/editors/code_editor/mvp/gates.rs::gate_panel<B>(...)`
+
+Current intentional raw doc-layout exceptions:
+
+- `src/ui/doc_layout.rs::DocSection.preview` remains a landed `AnyElement` field because the docs
+  scaffold still decorates preview roots, shells, and tab panels after section assembly.
+- `src/ui/doc_layout.rs::gap_card(...)` remains a tuple-return raw seam because placeholder
+  sections still register a concrete landed preview value alongside the section title.
+
+The rest of the doc-layout helper family now stays on the typed lane:
+
+- `src/ui/doc_layout.rs::{render_doc_page,wrap_preview_page,icon,render_section,preview_code_tabs,code_block_shell,section_title}`
+  now return `impl UiChild` while still landing concrete child vectors internally where needed
+  (page aggregation, preview harness vectors, decorated tab panels, code-block chrome, and title
+  decoration).
+- internal preview pages now keep the final landing explicit when consuming
+  `wrap_preview_page(...)`; see
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs::wrap_preview_page_callers_land_the_typed_preview_shell_explicitly`.
+- both default-app pages and internal previews now keep the final `render_doc_page(...)` landing
+  explicit at the caller side; see
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs::render_doc_page_callers_land_the_typed_doc_page_explicitly`
+  and
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs::render_doc_page_callers_land_the_typed_doc_page_explicitly`.
+
+Current intentional raw internal-overlay-preview exceptions:
+
+- `src/ui/previews/gallery/overlays/overlay.rs::preview_overlay(...)` remains
+  `-> Vec<AnyElement>` because the preview still assembles cached overlay roots plus status labels
+  as a concrete diagnostics result vector.
+- `src/ui/previews/gallery/overlays/overlay/layout.rs::{row,row_end,compose_body}` are now back
+  on `UiCx -> impl UiChild + use<>`; they still consume landed widget roots from
+  `OverlayWidgets`, but the explicit landing now lives at the cached-preview seam in
+  `overlay.rs`.
+- `src/ui/previews/gallery/overlays/overlay/widgets.rs::{OverlayWidgets,overlay_reset,dropdown,context_menu,context_menu_edge,underlay,tooltip,hover_card,popover,dialog,dialog_glass,alert_dialog,sheet,portal_geometry}`
+  remain raw because each helper owns an overlay/provider root or a concretely decorated preview
+  node before row composition.
+- `src/ui/previews/gallery/overlays/overlay/flags.rs::last_action_status(...)` is now back on a
+  typed helper signature, with the explicit landing moved to `overlay.rs`.
+- `src/ui/previews/gallery/overlays/overlay/flags.rs::status_flags(...)` remains
+  `-> Vec<AnyElement>` because the conditional status labels are still appended directly onto the
+  diagnostics result vector after model reads and `test_id` decoration.
+
+Current intentional raw scroll-area diagnostics exceptions:
+
+- `src/ui/snippets/scroll_area/drag_baseline.rs::render(...)` remains `-> AnyElement` because the
+  harness owns timer-driven content growth, a retained `ScrollHandle`, explicit scrollbar
+  semantics, and the final landed diagnostics root consumed by `pages/scroll_area.rs` through
+  `DocSection::new(...)`.
+- `src/ui/snippets/scroll_area/expand_at_bottom.rs::render(...)` remains `-> AnyElement` because
+  the harness owns the pinned-extents regression probe, wrapper-budget stress tree, and the final
+  landed diagnostics root consumed by `pages/scroll_area.rs` through `DocSection::new(...)`.
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs::scroll_area_diagnostics_snippets_remain_intentional_raw_boundaries`
+  is the source gate that keeps those two raw seams explicit while the ordinary scroll-area docs
+  surface stays on `UiCx -> impl UiChild`.
 
 The same input rule also applies to internal shadcn menu-slot wrappers:
 

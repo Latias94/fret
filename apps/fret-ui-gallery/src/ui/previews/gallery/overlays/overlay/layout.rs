@@ -1,49 +1,34 @@
 use super::super::super::super::super::*;
+use fret::UiChild;
 use fret::UiCx;
 
 use super::widgets::OverlayWidgets;
 
-fn row(cx: &mut UiCx<'_>, gap: Px, children: Vec<AnyElement>) -> AnyElement {
-    let layout = cx.with_theme(|theme| {
-        decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0())
-    });
-    cx.flex(
-        fret_ui::element::FlexProps {
-            layout,
-            direction: fret_core::Axis::Horizontal,
-            gap: gap.into(),
-            padding: Edges::all(Px(0.0)).into(),
-            justify: fret_ui::element::MainAlign::Start,
-            align: fret_ui::element::CrossAlign::Center,
-            wrap: true,
-        },
-        |_cx| children,
-    )
+// Typed row helpers: the diagnostics layout still consumes landed overlay/widget roots from
+// `OverlayWidgets`, but callers now keep the final landing explicit at the cached preview seam.
+fn row(_cx: &mut UiCx<'_>, gap: Px, children: Vec<AnyElement>) -> impl UiChild + use<> {
+    ui::h_flex(move |_cx| children)
+        .gap_px(gap)
+        .justify_start()
+        .items_center()
+        .wrap()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
 }
 
-fn row_end(cx: &mut UiCx<'_>, gap: Px, children: Vec<AnyElement>) -> AnyElement {
-    let layout = cx.with_theme(|theme| {
-        decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0())
-    });
-    cx.flex(
-        fret_ui::element::FlexProps {
-            layout,
-            direction: fret_core::Axis::Horizontal,
-            gap: gap.into(),
-            padding: Edges::all(Px(0.0)).into(),
-            justify: fret_ui::element::MainAlign::End,
-            align: fret_ui::element::CrossAlign::Center,
-            wrap: false,
-        },
-        |_cx| children,
-    )
+fn row_end(_cx: &mut UiCx<'_>, gap: Px, children: Vec<AnyElement>) -> impl UiChild + use<> {
+    ui::h_flex(move |_cx| children)
+        .gap_px(gap)
+        .justify_end()
+        .items_center()
+        .no_wrap()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
 }
 
-pub(super) fn compose_body(cx: &mut UiCx<'_>, widgets: OverlayWidgets) -> AnyElement {
-    ui::v_flex(|cx| {
+pub(super) fn compose_body(cx: &mut UiCx<'_>, widgets: OverlayWidgets) -> impl UiChild + use<> {
+    ui::v_flex(move |cx| {
         let gap = cx.with_theme(|theme| fret_ui_kit::MetricRef::space(Space::N2).resolve(theme));
 
-        vec![
+        ui::children![cx;
             row_end(cx, gap, vec![widgets.underlay]),
             row(
                 cx,
@@ -72,5 +57,4 @@ pub(super) fn compose_body(cx: &mut UiCx<'_>, widgets: OverlayWidgets) -> AnyEle
     })
     .gap(Space::N2)
     .layout(LayoutRefinement::default().w_full())
-    .into_element(cx)
 }

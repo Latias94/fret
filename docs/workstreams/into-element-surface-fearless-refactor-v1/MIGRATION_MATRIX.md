@@ -86,6 +86,61 @@ Execution note on 2026-03-13:
   `apps/fret-ui-gallery/src/ui/doc_layout.rs::{wrap_row,wrap_controls_row,text_table,muted_full_width,muted_inline}` and the local
   `notes_block(... )::muted_flex_1_min_w_0(...)` now use the default-app
   `UiCx -> impl UiChild` posture instead of host-generic `ElementContext<'_, H> -> AnyElement`.
+- the same gallery helper inventory now also records the intentionally retained raw doc-layout
+  boundaries:
+  `apps/fret-ui-gallery/src/ui/doc_layout.rs::render_doc_page(...)` now also stays on a typed
+  helper signature, with final landing moved back to each page/preview return site.
+  The remaining intentional raw storage on this lane is now the landed `DocSection.preview` field
+  plus the tuple-return `gap_card(...)` placeholder seam. `wrap_preview_page(...)`, `icon(...)`,
+  `render_section(...)`, `preview_code_tabs(...)`, `code_block_shell(...)`, and
+  `section_title(...)` also stay on typed helper signatures, with explicit landing moved either
+  into the surrounding scaffold or back to the preview-page call sites;
+  `ui_authoring_surface_default_app::gallery_doc_layout_retains_only_intentional_raw_boundaries`,
+  `ui_authoring_surface_default_app::render_doc_page_callers_land_the_typed_doc_page_explicitly`, and
+  `ui_authoring_surface_internal_previews::wrap_preview_page_callers_land_the_typed_preview_shell_explicitly`
+  plus
+  `ui_authoring_surface_internal_previews::render_doc_page_callers_land_the_typed_doc_page_explicitly`
+  now lock that audited split.
+- the same AI teaching lane now also records the page-level section cleanup:
+  `apps/fret-ui-gallery/src/ui/pages/ai_*.rs` now use `DocSection::build(cx, ...)` instead of
+  `DocSection::new(...)` for first-party demo sections, and
+  `ui_authoring_surface_default_app::curated_ai_doc_pages_use_typed_doc_sections` now locks that
+  typed docs posture across the full AI page surface.
+- the same gallery helper inventory now also records the intentionally retained internal overlay
+  preview seams:
+  `apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay.rs`,
+  `overlay/layout.rs`,
+  `overlay/widgets.rs`, and
+  `overlay/flags.rs` no longer stay fully raw: `layout.rs::{row,row_end,compose_body}` plus
+  `flags.rs::last_action_status(...)` now expose typed helper outputs, while
+  `preview_overlay(...)`, `OverlayWidgets`, and `status_flags(...)` remain raw because this
+  diagnostics surface still stores landed overlay roots and returns a concrete result vector;
+  `ui_authoring_surface_internal_previews::gallery_overlay_preview_retains_intentional_raw_boundaries`
+  now locks that audited inventory.
+- the same default-app helper inventory now also records the low-traffic notification cleanup:
+  `apps/fret-ui-gallery/src/ui/snippets/toast/deprecated.rs` now exposes the typed
+  `UiCx -> impl UiChild` render surface,
+  `apps/fret-ui-gallery/src/ui/pages/toast.rs` now uses `DocSection::build(cx, ...)`, and
+  `apps/fret-ui-gallery/src/ui/snippets/sonner/mod.rs::local_toaster(...)` now keeps the local
+  toaster helper on `UiChild` with the explicit landing seam living only at
+  `apps/fret-ui-gallery/src/ui/pages/sonner.rs`.
+- the same internal preview helper inventory now also records the code-editor MVP cleanup:
+  `apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/mvp/{header,word_boundary,gates}.rs`
+  now keep `build_header(...)`, `word_boundary_controls(...)`,
+  `word_boundary_debug_view(...)`, `gate_panel(...)`, and the `*_gate(...)` helpers on the typed
+  `UiChild` lane, while
+  `apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/mvp.rs` performs the explicit
+  `.into_element(cx)` only when feeding those helpers into the final preview page raw boundary.
+- the same internal preview helper inventory now also records a few lower-traffic cleanups:
+  `apps/fret-ui-gallery/src/ui/previews/pages/editors/text/outline_stroke.rs::toggle_button(...)`
+  and
+  `apps/fret-ui-gallery/src/ui/previews/pages/editors/text/mixed_script_fallback.rs::sample_row(...)`
+  plus
+  `apps/fret-ui-gallery/src/ui/previews/pages/editors/text/feature_toggles.rs::{toggle_button,sample_text}(...)`
+  now keep those local preview helpers on `UiChild`, and
+  `apps/fret-ui-gallery/src/ui/previews/pages/harness/intro.rs::{card(...),preview_intro(...)}`
+  now use the same typed-helper posture while keeping `DocSection::build(cx, ...)` for overview
+  registration instead of the eager `DocSection::new(...)` path.
 - the shadcn surface gate now also records
   `ecosystem/fret-ui-shadcn/src/{context_menu,dropdown_menu,menubar}.rs`,
   where the internal `menu_icon_slot(...)` wrappers now accept `IntoUiElement<H>` inputs instead
@@ -219,7 +274,9 @@ Execution note on 2026-03-13:
   `DocSection::build(cx, ...)` and intentionally keeps
   `drag_baseline` / `expand_at_bottom` on diagnostics-owned `DocSection::new(...)`; the old
   `pub fn render(...) -> AnyElement` teaching pattern is now forbidden for that family by
-  `ui_authoring_surface_default_app::{scroll_area_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface,scroll_area_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+  `ui_authoring_surface_default_app::{scroll_area_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface,scroll_area_page_uses_typed_doc_sections_for_app_facing_snippets,scroll_area_diagnostics_snippets_remain_intentional_raw_boundaries}`, while
+  `selected_scroll_area_snippet_helpers_prefer_into_ui_element_over_anyelement` keeps the
+  non-diagnostics helper family on the typed `shadcn::scroll_area(...)` lane.
 - the same UI Gallery default-app source gate now also records the next top-level snippet-family
   move on the progress lane:
   `apps/fret-ui-gallery/src/ui/snippets/progress/{demo,usage,label,controlled,rtl}.rs`

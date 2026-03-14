@@ -78,6 +78,11 @@ Execution note on 2026-03-14:
   now expose the same typed `UiCx -> impl UiChild` default-app posture, and the same AI source
   gate now covers those exemplars too.
   That reduces the remaining old-signature top-level `ai` snippet renders from 87 to 0.
+- the corresponding AI docs pages are now also aligned on typed section registration:
+  `apps/fret-ui-gallery/src/ui/pages/ai_*.rs` no longer use `DocSection::new(...)` for first-party
+  demo sections, and the new
+  `ui_authoring_surface_default_app::curated_ai_doc_pages_use_typed_doc_sections` gate prevents
+  the AI docs surface from drifting back to eager `AnyElement` section registration.
 - after these tracked landings, the current tracked default-app teaching-surface lane is
   effectively closed; remaining follow-up work now lives on the specialized `ai` lane plus any
   optional dead-field/runtime cleanup.
@@ -310,7 +315,10 @@ Implementation note on 2026-03-13:
   now consistently teach `shadcn::scroll_area(cx, |_cx| [...])`, and
   `apps/fret-ui-gallery/src/ui/pages/scroll_area.rs` routes those previews through
   `DocSection::build(cx, ...)` while intentionally keeping `drag_baseline` /
-  `expand_at_bottom` on diagnostics-owned `DocSection::new(...)` seams.
+  `expand_at_bottom` on diagnostics-owned `DocSection::new(...)` seams; the dedicated
+  diagnostics harness snippets now also carry explicit raw-boundary comments, and
+  `ui_authoring_surface_default_app::scroll_area_diagnostics_snippets_remain_intentional_raw_boundaries`
+  locks their host-generic `-> AnyElement` render roots.
 - the same UI Gallery top-level snippet cleanup now also covers the progress family:
   `apps/fret-ui-gallery/src/ui/snippets/progress/{demo,usage,label,controlled,rtl}.rs`
   now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and
@@ -1174,6 +1182,55 @@ Update on 2026-03-13 (page/docs teaching drift cleanup):
   `notes_block(... )::muted_flex_1_min_w_0(...)` helper now use
   `UiCx -> impl UiChild` instead of `ElementContext<'_, H> -> AnyElement`, and the corresponding
   source gate now records those gallery-only text helpers as non-generic app helpers.
+- the remaining raw seams in `src/ui/doc_layout.rs` are now explicitly audited instead of being
+  "accidental leftovers":
+  landed `DocSection.preview` storage still exists because the scaffold decorates preview roots
+  after section assembly, and `gap_card(...)` stays a tuple-return raw seam because placeholder
+  sections still register landed preview values. `render_doc_page(...)`, `wrap_preview_page(...)`,
+  `icon(...)`, `render_section(...)`, `preview_code_tabs(...)`, `code_block_shell(...)`, and
+  `section_title(...)` are now all back on typed helper signatures, with explicit landing either
+  inside the scaffold or at the page/preview call sites. The
+  `gallery_doc_layout_retains_only_intentional_raw_boundaries`,
+  `render_doc_page_callers_land_the_typed_doc_page_explicitly`, and
+  `wrap_preview_page_callers_land_the_typed_preview_shell_explicitly` source gates now lock that
+  split until the page-collection lane migrates as a batch.
+- the internal overlay preview lane is now also explicitly audited:
+  `src/ui/previews/gallery/overlays/overlay.rs`,
+  `src/ui/previews/gallery/overlays/overlay/layout.rs`,
+  `src/ui/previews/gallery/overlays/overlay/widgets.rs`, and
+  `src/ui/previews/gallery/overlays/overlay/flags.rs` now split more cleanly:
+  `layout.rs::{row,row_end,compose_body}` and `flags.rs::last_action_status(...)` are back on
+  typed helper signatures, while `overlay.rs::preview_overlay(...)`, `widgets.rs`, and
+  `flags.rs::status_flags(...)` remain intentional raw seams because the diagnostics surface still
+  stores landed overlay/provider roots and returns a concrete result vector; the
+  `ui_authoring_surface_internal_previews::gallery_overlay_preview_retains_intentional_raw_boundaries`
+  gate now locks that narrower inventory until the widget-root storage model is redesigned.
+- the low-traffic notification teaching lane is now also aligned:
+  `src/ui/snippets/toast/deprecated.rs` now exposes
+  `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`,
+  `src/ui/pages/toast.rs` now uses `DocSection::build(cx, ...)`, and
+  `src/ui/snippets/sonner/mod.rs::local_toaster(...)` now stays on the app-owned `UiChild`
+  surface with the explicit landing seam moved back to `pages/sonner.rs`; the
+  `toast_*` and `sonner_local_toaster_prefers_ui_child_over_anyelement` gates now lock that
+  posture.
+- the internal code-editor MVP preview lane now also sheds a small raw-helper tail:
+  `src/ui/previews/pages/editors/code_editor/mvp/{header,word_boundary,gates}.rs`
+  now keep `build_header(...)`, `word_boundary_controls(...)`,
+  `word_boundary_debug_view(...)`, `gate_panel(...)`, and the
+  `*_gate(...)` helpers on `UiCx -> impl UiChild`, while
+  `src/ui/previews/pages/editors/code_editor/mvp.rs` performs the explicit landing only at the
+  final typed `wrap_preview_page(...)` call site; the
+  `ui_authoring_surface_internal_previews::code_editor_mvp_internal_helpers_prefer_ui_child_over_anyelement`
+  gate now locks that posture.
+- a few lower-traffic internal preview helpers are now also aligned on the same rule:
+  `src/ui/previews/pages/editors/text/outline_stroke.rs::toggle_button(...)` and
+  `src/ui/previews/pages/editors/text/mixed_script_fallback.rs::sample_row(...)` plus
+  `src/ui/previews/pages/editors/text/feature_toggles.rs::{toggle_button,sample_text}(...)`
+  now use `UiCx -> impl UiChild`, and
+  `src/ui/previews/pages/harness/intro.rs::{card(...),preview_intro(...)}` now keep the local
+  card helper typed while registering the overview block through `DocSection::build(cx, ...)`; the
+  `ui_authoring_surface_internal_previews::selected_internal_preview_helpers_prefer_typed_outputs`
+  gate now locks those smaller internal-preview teaching surfaces too.
 - selected UI Gallery avatar snippets now also keep row wrappers, avatar builders, and group/icon
   helpers off raw landed returns by default:
   `src/ui/snippets/avatar/{demo,group,with_badge,fallback_only,sizes,group_count,group_count_icon,badge_icon,dropdown}.rs`

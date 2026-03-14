@@ -1,5 +1,6 @@
 use super::super::super::super::super::*;
 use crate::ui::doc_layout;
+use fret::UiChild;
 use fret::UiCx;
 use fret_core::scene::TextOutlineV1;
 
@@ -62,13 +63,12 @@ pub(in crate::ui) fn preview_text_outline_stroke(
         value: bool,
         test_id: &'static str,
         on_activate: fret_ui::action::OnActivate,
-    ) -> AnyElement {
+    ) -> impl UiChild + use<> {
         let txt = format!("{label}: {}", if value { "on" } else { "off" });
         shadcn::Button::new(txt)
             .variant(shadcn::ButtonVariant::Outline)
             .size(shadcn::ButtonSize::Sm)
             .on_activate(on_activate)
-            .into_element(cx)
             .test_id(test_id)
     }
 
@@ -94,7 +94,8 @@ pub(in crate::ui) fn preview_text_outline_stroke(
             st.outline_enabled,
             "ui-gallery-text-outline-stroke-outline",
             on_outline,
-        );
+        )
+        .into_element(cx);
 
         let width_label = format!("width: {:.0}px", OUTLINE_WIDTHS[st.outline_width_idx].0);
         let width_btn = shadcn::Button::new(width_label)
@@ -322,5 +323,5 @@ pub(in crate::ui) fn preview_text_outline_stroke(
         vec![header, toolbar, panel],
     );
 
-    vec![page]
+    vec![page.into_element(cx)]
 }
