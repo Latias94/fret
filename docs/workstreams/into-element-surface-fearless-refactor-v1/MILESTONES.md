@@ -872,6 +872,14 @@ Exit criteria:
   removal of host-bound helper parameter spellings in the affected exemplar helpers.
 - validation addendum on 2026-03-14:
   `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app material3_ -- --nocapture`
+- the specialized `material3` lane has now also advanced through its `overlays` sub-batch:
+  `apps/fret-ui-gallery/src/ui/snippets/material3/{bottom_sheet,dialog,menu,snackbar,tooltip}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>` (or the same typed
+  signature with the existing `last_action` model parameter), and the overlay source gates now
+  lock both the typed top-level teaching surface and the local uncontrolled/copyable-root posture
+  for the dialog/menu/bottom-sheet exemplars.
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app material3_ -- --nocapture`
 - after these tracked landings, the tracked default-app workstream-local teaching-surface lane is
   now effectively closed; remaining work continues on the specialized `ai` and `material3` lanes
   plus any optional post-cleanup of now-nonessential gallery runtime fields.

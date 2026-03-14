@@ -57,6 +57,11 @@ Execution note on 2026-03-14:
   now expose `UiCx -> impl UiChild`, and the navigation/value-root source gates now lock both the
   typed top-level teaching surface and the removal of host-bound helper parameter spellings from
   the affected exemplar snippets.
+- the specialized `material3` lane has now also advanced through its `overlays` sub-batch:
+  `apps/fret-ui-gallery/src/ui/snippets/material3/{bottom_sheet,dialog,menu,snackbar,tooltip}.rs`
+  now expose `UiCx -> impl UiChild`, and the overlay source gates now lock both the typed
+  top-level teaching surface and the local uncontrolled/copyable-root ownership story for the
+  dialog/menu/bottom-sheet exemplars.
 - after these tracked landings, the current tracked default-app teaching-surface lane is
   effectively closed; remaining follow-up work now lives on the specialized `ai` and
   `material3` lanes plus any optional dead-field/runtime cleanup.

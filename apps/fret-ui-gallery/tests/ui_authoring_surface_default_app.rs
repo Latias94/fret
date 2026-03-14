@@ -6898,11 +6898,45 @@ fn material3_navigation_snippets_prefer_ui_cx_on_the_default_app_surface() {
 }
 
 #[test]
+fn material3_overlay_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/material3/bottom_sheet.rs",
+            "src/ui/snippets/material3/dialog.rs",
+            "src/ui/snippets/material3/menu.rs",
+            "src/ui/snippets/material3/snackbar.rs",
+            "src/ui/snippets/material3/tooltip.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(",
+            "cx: &mut UiCx<'_>",
+            "-> impl UiChild + use<>",
+        ],
+        "app-facing Material 3 overlay snippet surface",
+    );
+
+    for relative_path in [
+        "src/ui/snippets/material3/bottom_sheet.rs",
+        "src/ui/snippets/material3/dialog.rs",
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+        assert!(
+            !normalized.contains("ElementContext<'_,H>"),
+            "{} reintroduced legacy host-bound helper parameters",
+            path.display()
+        );
+    }
+}
+
+#[test]
 fn material3_overlay_snippets_prefer_uncontrolled_copyable_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/menu.rs",
         &[
-            "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, last_action: Model<Arc<str>>, ) -> AnyElement {",
+            "pub fn render( cx: &mut UiCx<'_>, last_action: Model<Arc<str>>, ) -> impl UiChild + use<> {",
             "material3::DropdownMenu::uncontrolled(cx)",
             "let open = dropdown.open_model();",
         ],
@@ -6915,7 +6949,7 @@ fn material3_overlay_snippets_prefer_uncontrolled_copyable_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/dialog.rs",
         &[
-            "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, last_action: Model<Arc<str>>, ) -> AnyElement {",
+            "pub fn render( cx: &mut UiCx<'_>, last_action: Model<Arc<str>>, ) -> impl UiChild + use<> {",
             "let default_dialog = material3::Dialog::uncontrolled(cx);",
             "let open = default_dialog.open_model();",
             "material3::Select::uncontrolled(cx)",
@@ -6930,7 +6964,7 @@ fn material3_overlay_snippets_prefer_uncontrolled_copyable_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/bottom_sheet.rs",
         &[
-            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
             "material3::ModalBottomSheet::uncontrolled(cx)",
             "let open = sheet.open_model();",
         ],

@@ -3,15 +3,16 @@ pub const SOURCE: &str = include_str!("menu.rs");
 // region: example
 use std::sync::Arc;
 
+use fret::{UiChild, UiCx};
 use fret_ui::action::OnActivate;
 use fret_ui_kit::{ColorRef, WidgetStateProperty};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+pub fn render(
+    cx: &mut UiCx<'_>,
     last_action: Model<Arc<str>>,
-) -> AnyElement {
+) -> impl UiChild + use<> {
     let dropdown = material3::DropdownMenu::uncontrolled(cx)
         .a11y_label("Material 3 Menu")
         .test_id("ui-gallery-material3-menu");

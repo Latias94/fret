@@ -3,16 +3,17 @@ pub const SOURCE: &str = include_str!("dialog.rs");
 // region: example
 use std::sync::Arc;
 
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::action::OnActivate;
 use fret_ui_kit::{ColorRef, WidgetStateProperty};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+pub fn render(
+    cx: &mut UiCx<'_>,
     last_action: Model<Arc<str>>,
-) -> AnyElement {
+) -> impl UiChild + use<> {
     let default_dialog = material3::Dialog::uncontrolled(cx);
     let open = default_dialog.open_model();
     let override_open = cx.local_model_keyed("override_open", || false);
@@ -102,7 +103,7 @@ pub fn render<H: UiHost>(
         })
     };
 
-    let build_dialog = |cx: &mut ElementContext<'_, H>,
+    let build_dialog = |cx: &mut UiCx<'_>,
                         mut dialog: material3::Dialog,
                         style: Option<material3::DialogStyle>,
                         id_prefix: &'static str,
@@ -217,7 +218,7 @@ pub fn render<H: UiHost>(
         .get_cloned(&last_action)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
-    let build_container = |cx: &mut ElementContext<'_, H>, dialog: AnyElement| -> AnyElement {
+    let build_container = |cx: &mut UiCx<'_>, dialog: AnyElement| -> AnyElement {
         let mut layout = fret_ui::element::LayoutStyle::default();
         layout.size.width = fret_ui::element::Length::Fill;
         layout.size.height = fret_ui::element::Length::Px(Px(360.0));

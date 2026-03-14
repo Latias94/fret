@@ -393,6 +393,12 @@ Execution note on 2026-03-13:
   now expose `UiCx -> impl UiChild`, and the corresponding navigation/value-root gates now lock
   both the typed top-level teaching surface and the removal of host-bound helper spellings from
   the affected exemplar helpers.
+- the specialized `material3` lane has now also converged further through the `overlays`
+  sub-batch:
+  `apps/fret-ui-gallery/src/ui/snippets/material3/{bottom_sheet,dialog,menu,snackbar,tooltip}.rs`
+  now expose `UiCx -> impl UiChild`, and the corresponding overlay gates now lock both the typed
+  top-level teaching surface and the local uncontrolled/copyable-root posture for the
+  dialog/menu/bottom-sheet exemplars.
 - the same UI Gallery default-app source gate now also records the `input_group` family:
   `apps/fret-ui-gallery/src/ui/snippets/input_group/{align_block_end,align_block_start,align_inline_end,align_inline_start,button,button_group,custom_input,demo,dropdown,icon,kbd,label,rtl,spinner,text,textarea,tooltip}.rs`
   now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
