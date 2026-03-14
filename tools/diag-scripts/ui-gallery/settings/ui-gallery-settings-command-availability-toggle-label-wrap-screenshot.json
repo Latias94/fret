@@ -50,6 +50,24 @@
     {
       "type": "wait_until",
       "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/last_action",
+        "value": "cmd.settings"
+      },
+      "timeout_frames": 300
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/settings_open",
+        "value": true
+      },
+      "timeout_frames": 300
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
         "kind": "visible_in_window",
         "target": { "kind": "test_id", "id": "ui-gallery-settings-apply" }
       },

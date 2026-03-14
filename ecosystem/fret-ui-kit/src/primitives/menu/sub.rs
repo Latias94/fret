@@ -309,6 +309,7 @@ pub struct MenuSubmenuModels {
     pub pointer_grace_timer: Model<Option<TimerToken>>,
     pub focus_target: Model<Option<GlobalElementId>>,
     pub focus_timer: Model<Option<TimerToken>>,
+    pub focus_retry_attempts: Model<u32>,
     pub pending_open_value: Model<Option<Arc<str>>>,
     pub pending_open_trigger: Model<Option<GlobalElementId>>,
     pub open_timer: Model<Option<TimerToken>>,
@@ -326,6 +327,7 @@ struct MenuSubmenuState {
     pointer_grace_timer: Option<Model<Option<TimerToken>>>,
     focus_target: Option<Model<Option<GlobalElementId>>>,
     focus_timer: Option<Model<Option<TimerToken>>>,
+    focus_retry_attempts: Option<Model<u32>>,
     pending_open_value: Option<Model<Option<Arc<str>>>>,
     pending_open_trigger: Option<Model<Option<GlobalElementId>>>,
     open_timer: Option<Model<Option<TimerToken>>>,
@@ -667,6 +669,20 @@ pub fn ensure_models_for<H: UiHost>(
         focus_timer
     };
 
+    let focus_retry_attempts =
+        cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+            st.focus_retry_attempts.clone()
+        });
+    let focus_retry_attempts = if let Some(focus_retry_attempts) = focus_retry_attempts {
+        focus_retry_attempts
+    } else {
+        let focus_retry_attempts = cx.app.models_mut().insert(0);
+        cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
+            st.focus_retry_attempts = Some(focus_retry_attempts.clone());
+        });
+        focus_retry_attempts
+    };
+
     let pending_open_value = cx.state_for(timer_handler_element, MenuSubmenuState::default, |st| {
         st.pending_open_value.clone()
     });
@@ -718,6 +734,7 @@ pub fn ensure_models_for<H: UiHost>(
         pointer_grace_timer,
         focus_target,
         focus_timer,
+        focus_retry_attempts,
         pending_open_value,
         pending_open_trigger,
         open_timer,
@@ -879,6 +896,8 @@ pub fn on_timer_handler(
         }
 
         if focus_armed == Some(token) {
+            const MAX_FOCUS_RETRY_ATTEMPTS: u32 = 4;
+
             let target = host
                 .models_mut()
                 .read(&models.focus_target, |v| *v)
@@ -886,8 +905,48 @@ pub fn on_timer_handler(
                 .flatten();
             if let Some(target) = target {
                 host.request_focus(target);
+                cancel_timer_if_matches(host, &models.focus_timer, token);
+                let _ = host
+                    .models_mut()
+                    .update(&models.focus_retry_attempts, |v| *v = 0);
+                host.request_redraw(acx.window);
+                return true;
             }
-            cancel_timer_if_matches(host, &models.focus_timer, token);
+
+            let attempts = host
+                .models_mut()
+                .read(&models.focus_retry_attempts, |v| *v)
+                .ok()
+                .unwrap_or(0);
+            if attempts >= MAX_FOCUS_RETRY_ATTEMPTS {
+                cancel_timer_if_matches(host, &models.focus_timer, token);
+                let _ = host
+                    .models_mut()
+                    .update(&models.focus_retry_attempts, |v| *v = 0);
+                host.request_redraw(acx.window);
+                return true;
+            }
+
+            let retry_token = host.next_timer_token();
+            let retry_after = if attempts == 0 {
+                Duration::from_millis(0)
+            } else {
+                Duration::from_millis(16)
+            };
+            let _ = host.models_mut().update(&models.focus_timer, |v| {
+                if *v == Some(token) {
+                    *v = Some(retry_token);
+                }
+            });
+            let _ = host.models_mut().update(&models.focus_retry_attempts, |v| {
+                *v = attempts.saturating_add(1);
+            });
+            host.push_effect(Effect::SetTimer {
+                window: Some(acx.window),
+                token: retry_token,
+                after: retry_after,
+                repeat: None,
+            });
             host.request_redraw(acx.window);
             return true;
         }
@@ -1384,6 +1443,12 @@ pub fn open_on_activate(
         .update(&models.pending_open_trigger, |v| *v = None);
     let _ = host
         .models_mut()
+        .update(&models.focus_target, |v| *v = None);
+    let _ = host
+        .models_mut()
+        .update(&models.focus_retry_attempts, |v| *v = 0);
+    let _ = host
+        .models_mut()
         .update(&models.open_value, |v| *v = Some(value));
     let _ = host
         .models_mut()
@@ -1412,6 +1477,12 @@ pub fn open_on_arrow_right(
     let _ = host
         .models_mut()
         .update(&models.pending_open_trigger, |v| *v = None);
+    let _ = host
+        .models_mut()
+        .update(&models.focus_target, |v| *v = None);
+    let _ = host
+        .models_mut()
+        .update(&models.focus_retry_attempts, |v| *v = 0);
 
     let _ = host
         .models_mut()
@@ -1511,6 +1582,7 @@ pub fn focus_first_available_on_open<H: UiHost>(
 mod tests {
     use super::*;
 
+    use std::cell::Cell;
     use std::sync::Arc;
 
     use fret_app::App;
@@ -1568,6 +1640,7 @@ mod tests {
 
     struct Host<'a> {
         app: &'a mut App,
+        last_focus_requested: Cell<Option<GlobalElementId>>,
     }
 
     impl UiActionHost for Host<'_> {
@@ -1597,7 +1670,9 @@ mod tests {
     }
 
     impl UiFocusActionHost for Host<'_> {
-        fn request_focus(&mut self, _target: GlobalElementId) {}
+        fn request_focus(&mut self, target: GlobalElementId) {
+            self.last_focus_requested.set(Some(target));
+        }
     }
 
     fn new_models(app: &mut App) -> MenuSubmenuModels {
@@ -1612,6 +1687,7 @@ mod tests {
             pointer_grace_timer: app.models_mut().insert(None),
             focus_target: app.models_mut().insert(None),
             focus_timer: app.models_mut().insert(None),
+            focus_retry_attempts: app.models_mut().insert(0),
             pending_open_value: app.models_mut().insert(None),
             pending_open_trigger: app.models_mut().insert(None),
             open_timer: app.models_mut().insert(None),
@@ -1636,7 +1712,10 @@ mod tests {
     fn submenu_trigger_hover_does_not_switch_while_pointer_in_grace_polygon() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        let mut host = Host { app: &mut app };
+        let mut host = Host {
+            app: &mut app,
+            last_focus_requested: Cell::new(None),
+        };
 
         let models = new_models(host.app);
         let cfg = MenuSubmenuConfig::default();
@@ -1692,7 +1771,10 @@ mod tests {
     fn submenu_open_timer_defers_switch_while_pointer_in_grace_polygon() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        let mut host = Host { app: &mut app };
+        let mut host = Host {
+            app: &mut app,
+            last_focus_requested: Cell::new(None),
+        };
 
         let models = new_models(host.app);
         let cfg = MenuSubmenuConfig::default();
@@ -1744,10 +1826,85 @@ mod tests {
     }
 
     #[test]
+    fn focus_timer_retries_until_submenu_focus_target_is_ready() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut host = Host {
+            app: &mut app,
+            last_focus_requested: Cell::new(None),
+        };
+
+        let models = new_models(host.app);
+        let cfg = MenuSubmenuConfig::default();
+
+        let token = host.next_timer_token();
+        let _ = host
+            .models_mut()
+            .update(&models.focus_timer, |v| *v = Some(token));
+
+        let on_timer = on_timer_handler(models.clone(), cfg);
+        assert!(on_timer(
+            &mut host,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
+            token,
+        ));
+
+        let retry_token = host
+            .models_mut()
+            .read(&models.focus_timer, |v| *v)
+            .ok()
+            .flatten()
+            .expect("retry timer should be armed");
+        assert_ne!(retry_token, token);
+        assert_eq!(
+            host.models_mut()
+                .read(&models.focus_retry_attempts, |v| *v)
+                .ok(),
+            Some(1)
+        );
+        assert_eq!(host.last_focus_requested.get(), None);
+
+        let target = GlobalElementId(99);
+        let _ = host
+            .models_mut()
+            .update(&models.focus_target, |v| *v = Some(target));
+        assert!(on_timer(
+            &mut host,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
+            retry_token,
+        ));
+
+        assert_eq!(host.last_focus_requested.get(), Some(target));
+        assert!(
+            host.models_mut()
+                .read(&models.focus_timer, |v| *v)
+                .ok()
+                .flatten()
+                .is_none(),
+            "focus timer should clear after successful focus"
+        );
+        assert_eq!(
+            host.models_mut()
+                .read(&models.focus_retry_attempts, |v| *v)
+                .ok(),
+            Some(0)
+        );
+    }
+
+    #[test]
     fn pointer_grace_timer_clears_grace_intent() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        let mut host = Host { app: &mut app };
+        let mut host = Host {
+            app: &mut app,
+            last_focus_requested: Cell::new(None),
+        };
 
         let models = new_models(host.app);
         let cfg = MenuSubmenuConfig::default();

@@ -48,6 +48,24 @@
     {
       "type": "wait_until",
       "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/last_action",
+        "value": "cmd.settings"
+      },
+      "timeout_frames": 300
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/settings_open",
+        "value": true
+      },
+      "timeout_frames": 300
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
         "kind": "visible_in_window",
         "target": { "kind": "test_id", "id": "ui-gallery-settings-os-menubar" }
       },
@@ -55,6 +73,7 @@
     },
     { "type": "wait_frames", "n": 4 },
 
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-settings-os-menubar" } },
     {
       "type": "wait_until",
       "predicate": {
@@ -63,7 +82,6 @@
       },
       "timeout_frames": 600
     },
-    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-settings-os-menubar" } },
     { "type": "wait_frames", "n": 4 },
     { "type": "capture_bundle", "label": "ui-gallery-settings-menubar-surfaces-os-menubar-select-open-zinc-light" },
     { "type": "capture_screenshot", "label": "ui-gallery-settings-menubar-surfaces-os-menubar-select-open-zinc-light" },

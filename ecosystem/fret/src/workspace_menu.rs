@@ -5,12 +5,12 @@ use fret_core::{
     SemanticsRole, Size, TextOverflow, TextSpan, TextStyle, TextWrap, UnderlineStyle,
 };
 use fret_runtime::{
-    CommandId, CommandScope, InputContext, InputDispatchPhase, KeymapService, MenuBar, MenuItem,
-    MenuItemToggle, MenuItemToggleKind, Platform, PlatformCapabilities, WhenExpr,
-    WindowCommandGatingSnapshot, best_effort_snapshot_for_window_with_input_ctx_fallback,
+    CommandId, CommandScope, Effect, InputContext, InputDispatchPhase, KeymapService, MenuBar,
+    MenuItem, MenuItemToggle, MenuItemToggleKind, Platform, PlatformCapabilities, TimerToken,
+    WhenExpr, WindowCommandGatingSnapshot, best_effort_snapshot_for_window_with_input_ctx_fallback,
     format_sequence,
 };
-use fret_ui::action::{ActionCx, OnDismissRequest, UiActionHost};
+use fret_ui::action::{ActionCx, OnCommand, OnDismissRequest, OnTimer, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
     PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis, ScrollProps,
@@ -168,6 +168,7 @@ enum InWindowMenuEntry {
 
 #[derive(Debug, Clone)]
 struct InWindowMenu {
+    key: Arc<str>,
     title: Arc<str>,
     enabled: bool,
     mnemonic: Option<char>,
@@ -180,12 +181,21 @@ pub struct InWindowMenubarFocusHandle {
     pub trigger_registry: fret_runtime::Model<Vec<menubar_trigger_row::MenubarTriggerRowEntry>>,
     pub last_focus_before_menubar: fret_runtime::Model<Option<GlobalElementId>>,
     pub focus_is_trigger: fret_runtime::Model<bool>,
+    pub pending_focus: fret_runtime::Model<Option<PendingMenubarTriggerFocus>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PendingMenubarTriggerFocus {
+    pub token: TimerToken,
+    pub target: GlobalElementId,
+    pub attempts: u32,
 }
 
 #[derive(Default)]
 struct InWindowMenubarBridgeState {
     last_focus_before_menubar: Option<fret_runtime::Model<Option<GlobalElementId>>>,
     focus_is_trigger: Option<fret_runtime::Model<bool>>,
+    pending_focus: Option<fret_runtime::Model<Option<PendingMenubarTriggerFocus>>>,
 }
 
 #[track_caller]
@@ -224,6 +234,234 @@ fn ensure_menubar_focus_is_trigger_model<H: UiHost>(
         st.focus_is_trigger = Some(model.clone());
     });
     model
+}
+
+#[track_caller]
+fn ensure_pending_menubar_focus_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    group: GlobalElementId,
+) -> fret_runtime::Model<Option<PendingMenubarTriggerFocus>> {
+    let existing = cx.state_for(group, InWindowMenubarBridgeState::default, |st| {
+        st.pending_focus.clone()
+    });
+    if let Some(existing) = existing {
+        return existing;
+    }
+
+    let model = cx.app.models_mut().insert(None);
+    cx.state_for(group, InWindowMenubarBridgeState::default, |st| {
+        st.pending_focus = Some(model.clone());
+    });
+    model
+}
+
+fn cancel_pending_menubar_focus(
+    host: &mut dyn UiActionHost,
+    pending_focus: &fret_runtime::Model<Option<PendingMenubarTriggerFocus>>,
+) {
+    let pending = host.models_mut().read(pending_focus, |v| *v).ok().flatten();
+    let Some(pending) = pending else {
+        return;
+    };
+
+    host.push_effect(Effect::CancelTimer {
+        token: pending.token,
+    });
+    let _ = host.models_mut().update(pending_focus, |v| *v = None);
+}
+
+fn arm_pending_menubar_focus(
+    host: &mut dyn UiActionHost,
+    window: fret_core::AppWindowId,
+    pending_focus: &fret_runtime::Model<Option<PendingMenubarTriggerFocus>>,
+    target: GlobalElementId,
+) {
+    cancel_pending_menubar_focus(host, pending_focus);
+
+    let token = host.next_timer_token();
+    let _ = host.models_mut().update(pending_focus, |v| {
+        *v = Some(PendingMenubarTriggerFocus {
+            token,
+            target,
+            attempts: 0,
+        });
+    });
+    host.push_effect(Effect::SetTimer {
+        window: Some(window),
+        token,
+        after: std::time::Duration::ZERO,
+        repeat: None,
+    });
+}
+
+fn focus_menu_bar_command_handler(
+    group_active: fret_runtime::Model<Option<menubar_trigger_row::MenubarActiveTrigger>>,
+    trigger_registry: fret_runtime::Model<Vec<menubar_trigger_row::MenubarTriggerRowEntry>>,
+    last_focus_before_menubar: fret_runtime::Model<Option<GlobalElementId>>,
+    pending_focus: fret_runtime::Model<Option<PendingMenubarTriggerFocus>>,
+) -> OnCommand {
+    Arc::new(move |host, acx, command| {
+        if command.as_str() != fret_app::core_commands::FOCUS_MENU_BAR {
+            return false;
+        }
+
+        cancel_pending_menubar_focus(host, &pending_focus);
+
+        let active = host.models_mut().get_cloned(&group_active).flatten();
+        if let Some(active) = active {
+            let _ = host.models_mut().update(&active.open, |v| *v = false);
+            let _ = host.models_mut().update(&group_active, |v| *v = None);
+            let restore = host
+                .models_mut()
+                .get_cloned(&last_focus_before_menubar)
+                .flatten();
+            host.request_focus(restore.unwrap_or(active.trigger));
+            host.request_redraw(acx.window);
+            return true;
+        }
+
+        let entries = host
+            .models_mut()
+            .get_cloned(&trigger_registry)
+            .unwrap_or_default();
+        let target = entries.iter().find(|e| e.enabled).cloned();
+        let Some(target) = target else {
+            return false;
+        };
+
+        let open_for_state = target.open.clone();
+        let _ = host.models_mut().update(&group_active, |v| {
+            *v = Some(menubar_trigger_row::MenubarActiveTrigger {
+                trigger: target.trigger,
+                open: open_for_state,
+            });
+        });
+
+        host.request_focus(target.trigger);
+        arm_pending_menubar_focus(host, acx.window, &pending_focus, target.trigger);
+        host.request_redraw(acx.window);
+        true
+    })
+}
+
+fn pending_menubar_focus_timer_handler(
+    group_active: fret_runtime::Model<Option<menubar_trigger_row::MenubarActiveTrigger>>,
+    focus_is_trigger: fret_runtime::Model<bool>,
+    pending_focus: fret_runtime::Model<Option<PendingMenubarTriggerFocus>>,
+) -> OnTimer {
+    Arc::new(move |host, acx, token| {
+        const MAX_ATTEMPTS: u32 = 4;
+
+        let pending = host
+            .models_mut()
+            .read(&pending_focus, |v| *v)
+            .ok()
+            .flatten();
+        let Some(pending) = pending else {
+            return false;
+        };
+        if pending.token != token {
+            return false;
+        }
+
+        let active = host.models_mut().get_cloned(&group_active).flatten();
+        let Some(active) = active else {
+            let _ = host.models_mut().update(&pending_focus, |v| *v = None);
+            return true;
+        };
+        if active.trigger != pending.target {
+            let _ = host.models_mut().update(&pending_focus, |v| *v = None);
+            return true;
+        }
+
+        let trigger_focused = host
+            .models_mut()
+            .read(&focus_is_trigger, |v| *v)
+            .ok()
+            .unwrap_or(false);
+        if trigger_focused {
+            let _ = host.models_mut().update(&pending_focus, |v| *v = None);
+            return true;
+        }
+
+        host.request_focus(pending.target);
+        host.request_redraw(acx.window);
+        if pending.attempts >= MAX_ATTEMPTS {
+            let _ = host.models_mut().update(&pending_focus, |v| *v = None);
+            return true;
+        }
+
+        let retry_token = host.next_timer_token();
+        let retry_after = if pending.attempts == 0 {
+            std::time::Duration::ZERO
+        } else {
+            std::time::Duration::from_millis(16)
+        };
+        let _ = host.models_mut().update(&pending_focus, |v| {
+            if v.is_some_and(|current| current.token == token) {
+                *v = Some(PendingMenubarTriggerFocus {
+                    token: retry_token,
+                    target: pending.target,
+                    attempts: pending.attempts.saturating_add(1),
+                });
+            }
+        });
+        host.push_effect(Effect::SetTimer {
+            window: Some(acx.window),
+            token: retry_token,
+            after: retry_after,
+            repeat: None,
+        });
+        true
+    })
+}
+
+pub fn install_in_window_menubar_focus_bridge<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    element: GlobalElementId,
+    handle: &InWindowMenubarFocusHandle,
+) {
+    let group_active = handle.group_active.clone();
+    let trigger_registry = handle.trigger_registry.clone();
+    let last_focus_before_menubar = handle.last_focus_before_menubar.clone();
+    let focus_is_trigger = handle.focus_is_trigger.clone();
+    let pending_focus = handle.pending_focus.clone();
+    let on_alt =
+        menubar_trigger_row::open_on_alt_mnemonic(group_active.clone(), trigger_registry.clone());
+    let on_mnemonic = menubar_trigger_row::open_on_mnemonic_when_active(
+        group_active.clone(),
+        trigger_registry.clone(),
+        focus_is_trigger.clone(),
+    );
+    let on_escape = menubar_trigger_row::exit_active_on_escape_when_closed(
+        group_active.clone(),
+        last_focus_before_menubar.clone(),
+        focus_is_trigger.clone(),
+    );
+
+    cx.command_on_command_for(
+        element,
+        focus_menu_bar_command_handler(
+            group_active.clone(),
+            trigger_registry.clone(),
+            last_focus_before_menubar.clone(),
+            pending_focus.clone(),
+        ),
+    );
+    cx.timer_on_timer_for(
+        element,
+        pending_menubar_focus_timer_handler(
+            group_active.clone(),
+            focus_is_trigger.clone(),
+            pending_focus,
+        ),
+    );
+    cx.key_on_key_down_for(
+        element,
+        Arc::new(move |host, acx, down| {
+            on_alt(host, acx, down) || on_mnemonic(host, acx, down) || on_escape(host, acx, down)
+        }),
+    );
 }
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -539,6 +777,7 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
     let trigger_registry = menubar_trigger_row::ensure_group_registry_model(cx, group);
     let last_focus_before_menubar = ensure_last_focus_before_menubar_model(cx, group);
     let focus_is_trigger = ensure_menubar_focus_is_trigger_model(cx, group);
+    let pending_focus = ensure_pending_menubar_focus_model(cx, group);
 
     let fallback_ctx = menu_fallback_input_context(cx, opts.platform);
     let gating =
@@ -561,6 +800,7 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
                 .iter()
                 .any(|e| !matches!(e, InWindowMenuEntry::Separator));
             InWindowMenu {
+                key: Arc::from(menu_key),
                 title: menu.title.clone(),
                 enabled,
                 mnemonic: menu.mnemonic,
@@ -576,6 +816,13 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
             .collect::<Vec<_>>()
             .into_boxed_slice(),
     );
+    let trigger_keys: Arc<[Arc<str>]> = Arc::from(
+        menus
+            .iter()
+            .map(|m| m.key.clone())
+            .collect::<Vec<_>>()
+            .into_boxed_slice(),
+    );
     let trigger_disabled: Arc<[bool]> = Arc::from(
         menus
             .iter()
@@ -588,6 +835,8 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
     let trigger_registry_for_render = trigger_registry.clone();
     let last_focus_for_render = last_focus_before_menubar.clone();
     let focus_is_trigger_for_render = focus_is_trigger.clone();
+    let pending_focus_for_render = pending_focus.clone();
+    let trigger_keys_for_render = trigger_keys.clone();
 
     let element = cx.semantics(
         SemanticsProps {
@@ -601,6 +850,12 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
             let trigger_registry = trigger_registry_for_render.clone();
             let last_focus_before_menubar = last_focus_for_render.clone();
             let focus_is_trigger = focus_is_trigger_for_render.clone();
+            let pending_focus = pending_focus_for_render.clone();
+            menubar_trigger_row::clear_registry_if_keys_changed(
+                cx,
+                trigger_registry.clone(),
+                trigger_keys_for_render.as_ref(),
+            );
 
             let focused = cx.focused_element();
             let focused_is_trigger = focused.is_some_and(|id| {
@@ -635,7 +890,14 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
                     .read(&active.open, |v| *v)
                     .ok()
                     .unwrap_or(false);
-                if !is_open && !focused_is_trigger {
+                let waiting_for_active_focus = cx
+                    .app
+                    .models()
+                    .read(&pending_focus, |v| *v)
+                    .ok()
+                    .flatten()
+                    .is_some_and(|pending| pending.target == active.trigger);
+                if !is_open && !focused_is_trigger && !waiting_for_active_focus {
                     let _ = cx.app.models_mut().update(&group_active, |v| *v = None);
                 }
             } else if let Some(focused) = focused {
@@ -718,6 +980,7 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
             trigger_registry,
             last_focus_before_menubar,
             focus_is_trigger,
+            pending_focus,
         },
     )
 }
@@ -774,6 +1037,7 @@ fn render_menu_from_runtime<H: UiHost>(
             menubar_trigger_row::register_trigger_in_registry(
                 cx,
                 trigger_registry.clone(),
+                menu.key.clone(),
                 trigger_id,
                 open.clone(),
                 enabled,
@@ -1625,9 +1889,49 @@ impl Default for MenubarFromRuntimeOptions {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_app::App;
     use fret_core::{Point, Px, Rect, Size};
-    use fret_runtime::{CommandId, Menu, MenuBar, MenuItem};
+    use fret_runtime::{CommandId, Effect, Menu, MenuBar, MenuItem};
+    use fret_ui::action::{ActionCx, UiActionHost, UiFocusActionHost};
     use fret_ui::tree::UiTree;
+    use std::cell::Cell;
+
+    struct Host<'a> {
+        app: &'a mut App,
+        last_focus_requested: Cell<Option<GlobalElementId>>,
+    }
+
+    impl UiActionHost for Host<'_> {
+        fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+            self.app.models_mut()
+        }
+
+        fn push_effect(&mut self, effect: Effect) {
+            self.app.push_effect(effect);
+        }
+
+        fn request_redraw(&mut self, window: fret_core::AppWindowId) {
+            self.app.request_redraw(window);
+        }
+
+        fn next_timer_token(&mut self) -> TimerToken {
+            self.app.next_timer_token()
+        }
+
+        fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
+            self.app.next_clipboard_token()
+        }
+
+        fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+            self.app.next_share_sheet_token()
+        }
+    }
+
+    impl UiFocusActionHost for Host<'_> {
+        fn request_focus(&mut self, target: GlobalElementId) {
+            self.last_focus_requested.set(Some(target));
+        }
+    }
 
     fn plain_item(label: &str) -> InWindowMenuItem {
         InWindowMenuItem {
@@ -1723,6 +2027,212 @@ mod tests {
         assert!(
             miss.is_none(),
             "expected no underline when mnemonic not present"
+        );
+    }
+
+    #[test]
+    fn focus_menu_bar_command_arms_zero_delay_focus_retry_for_first_enabled_trigger() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+        let mut host = Host {
+            app: &mut app,
+            last_focus_requested: Cell::new(None),
+        };
+
+        let target = GlobalElementId(7);
+        let prior_focus = GlobalElementId(9);
+        let open = host.models_mut().insert(false);
+        let disabled_open = host.models_mut().insert(false);
+        let group_active: fret_runtime::Model<Option<menubar_trigger_row::MenubarActiveTrigger>> =
+            host.models_mut().insert(None);
+        let focus_is_trigger = host.models_mut().insert(false);
+        let trigger_registry = host.models_mut().insert(vec![
+            menubar_trigger_row::MenubarTriggerRowEntry {
+                logical_key: Arc::from("disabled"),
+                trigger: GlobalElementId(3),
+                open: disabled_open,
+                enabled: false,
+                mnemonic: Some('d'),
+            },
+            menubar_trigger_row::MenubarTriggerRowEntry {
+                logical_key: Arc::from("file"),
+                trigger: target,
+                open: open.clone(),
+                enabled: true,
+                mnemonic: Some('f'),
+            },
+        ]);
+        let last_focus_before_menubar = host.models_mut().insert(Some(prior_focus));
+        let pending_focus = host.models_mut().insert(None);
+
+        let on_command = focus_menu_bar_command_handler(
+            group_active.clone(),
+            trigger_registry,
+            last_focus_before_menubar,
+            pending_focus.clone(),
+        );
+        assert!(on_command(
+            &mut host,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
+            CommandId::from(fret_app::core_commands::FOCUS_MENU_BAR),
+        ));
+        assert_eq!(host.last_focus_requested.get(), Some(target));
+
+        let active = host
+            .models_mut()
+            .read(&group_active, |v| v.clone())
+            .ok()
+            .flatten();
+        assert_eq!(active.as_ref().map(|v| v.trigger), Some(target));
+
+        let pending = host
+            .models_mut()
+            .read(&pending_focus, |v| *v)
+            .ok()
+            .flatten();
+        let pending = pending.expect("pending menubar focus");
+        assert_eq!(pending.target, target);
+        assert_eq!(pending.attempts, 0);
+
+        let effects = host.app.flush_effects();
+        assert!(
+            effects.iter().any(|effect| matches!(
+                effect,
+                Effect::SetTimer { token, after, .. }
+                    if *token == pending.token && after.is_zero()
+            )),
+            "expected a zero-delay focus retry timer"
+        );
+
+        host.last_focus_requested.set(None);
+        let on_timer = pending_menubar_focus_timer_handler(
+            group_active,
+            focus_is_trigger.clone(),
+            pending_focus.clone(),
+        );
+        assert!(on_timer(
+            &mut host,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
+            pending.token,
+        ));
+        assert_eq!(host.last_focus_requested.get(), Some(target));
+        let pending_retry = host
+            .models_mut()
+            .read(&pending_focus, |v| *v)
+            .ok()
+            .flatten()
+            .expect("pending retry after initial timer");
+        assert_eq!(pending_retry.target, target);
+        assert_eq!(pending_retry.attempts, 1);
+
+        let retry_effects = host.app.flush_effects();
+        assert!(
+            retry_effects.iter().any(|effect| matches!(
+                effect,
+                Effect::SetTimer { token, after, .. }
+                    if *token == pending_retry.token && after.is_zero()
+            )),
+            "expected first retry to stay on the next tick"
+        );
+
+        let _ = host.models_mut().update(&focus_is_trigger, |v| *v = true);
+        host.last_focus_requested.set(None);
+        assert!(on_timer(
+            &mut host,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
+            pending_retry.token,
+        ));
+        assert_eq!(host.last_focus_requested.get(), None);
+        assert!(
+            host.models_mut()
+                .read(&pending_focus, |v| *v)
+                .ok()
+                .flatten()
+                .is_none(),
+            "expected pending focus to clear after timer fires"
+        );
+    }
+
+    #[test]
+    fn focus_menu_bar_command_cancels_pending_retry_when_toggling_off() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+        let mut host = Host {
+            app: &mut app,
+            last_focus_requested: Cell::new(None),
+        };
+
+        let active_trigger = GlobalElementId(11);
+        let restore_focus = GlobalElementId(42);
+        let open = host.models_mut().insert(true);
+        let group_active: fret_runtime::Model<Option<menubar_trigger_row::MenubarActiveTrigger>> =
+            host.models_mut()
+                .insert(Some(menubar_trigger_row::MenubarActiveTrigger {
+                    trigger: active_trigger,
+                    open: open.clone(),
+                }));
+        let trigger_registry = host.models_mut().insert(Vec::new());
+        let last_focus_before_menubar = host.models_mut().insert(Some(restore_focus));
+        let token = host.next_timer_token();
+        let pending_focus = host.models_mut().insert(Some(PendingMenubarTriggerFocus {
+            token,
+            target: active_trigger,
+            attempts: 2,
+        }));
+
+        let on_command = focus_menu_bar_command_handler(
+            group_active.clone(),
+            trigger_registry,
+            last_focus_before_menubar,
+            pending_focus.clone(),
+        );
+        assert!(on_command(
+            &mut host,
+            ActionCx {
+                window,
+                target: GlobalElementId(2),
+            },
+            CommandId::from(fret_app::core_commands::FOCUS_MENU_BAR),
+        ));
+
+        assert_eq!(host.last_focus_requested.get(), Some(restore_focus));
+        assert!(
+            host.models_mut()
+                .read(&group_active, |v| v.clone())
+                .ok()
+                .flatten()
+                .is_none(),
+            "expected menubar active state to clear"
+        );
+        assert!(
+            host.models_mut()
+                .read(&pending_focus, |v| *v)
+                .ok()
+                .flatten()
+                .is_none(),
+            "expected pending retry timer to clear"
+        );
+        assert!(
+            !host.models_mut().read(&open, |v| *v).ok().unwrap_or(true),
+            "expected active menu to close"
+        );
+
+        let effects = host.app.flush_effects();
+        assert!(
+            effects.iter().any(|effect| matches!(
+                effect,
+                Effect::CancelTimer { token: seen } if *seen == token
+            )),
+            "expected pending retry timer to be cancelled"
         );
     }
 

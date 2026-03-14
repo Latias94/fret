@@ -1813,6 +1813,7 @@ impl MenubarMenuEntries {
             on_close_auto_focus,
         } = self;
         let key = menu.label.clone();
+        let registry_key = key.clone();
         cx.keyed(key, move |cx| {
             let group_active = menubar_trigger_row::ensure_group_active_model(cx, group);
             let trigger_registry = menubar_trigger_row::ensure_group_registry_model(cx, group);
@@ -1897,6 +1898,7 @@ impl MenubarMenuEntries {
                 menubar_trigger_row::register_trigger_in_registry(
                     cx,
                     trigger_registry.clone(),
+                    registry_key.clone(),
                     trigger_id,
                     open.clone(),
                     enabled,
