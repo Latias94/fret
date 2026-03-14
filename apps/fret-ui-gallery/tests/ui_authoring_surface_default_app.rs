@@ -6216,6 +6216,62 @@ fn typography_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn shadcn_extras_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/shadcn_extras/announcement.rs",
+            "src/ui/snippets/shadcn_extras/avatar_stack.rs",
+            "src/ui/snippets/shadcn_extras/banner.rs",
+            "src/ui/snippets/shadcn_extras/kanban.rs",
+            "src/ui/snippets/shadcn_extras/marquee.rs",
+            "src/ui/snippets/shadcn_extras/rating.rs",
+            "src/ui/snippets/shadcn_extras/relative_time.rs",
+            "src/ui/snippets/shadcn_extras/tags.rs",
+            "src/ui/snippets/shadcn_extras/ticker.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/shadcn_extras",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn shadcn_extras_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/shadcn_extras.rs",
+        &[
+            "DocSection::build(cx, \"Announcement\", announcement)",
+            "DocSection::build(cx, \"Banner (dismissible)\", banner)",
+            "DocSection::build(cx, \"Tags\", tags)",
+            "DocSection::build(cx, \"Marquee (pause on hover)\", marquee)",
+            "DocSection::build(cx, \"Kanban (drag & drop)\", kanban)",
+            "DocSection::build(cx, \"Ticker\", ticker)",
+            "DocSection::build(cx, \"Relative time\", relative_time)",
+            "DocSection::build(cx, \"Rating\", rating)",
+            "DocSection::build(cx, \"Avatar stack\", avatar_stack)",
+        ],
+        &[
+            "DocSection::new(\"Announcement\", announcement)",
+            "DocSection::new(\"Banner (dismissible)\", banner)",
+            "DocSection::new(\"Tags\", tags)",
+            "DocSection::new(\"Marquee (pause on hover)\", marquee)",
+            "DocSection::new(\"Kanban (drag & drop)\", kanban)",
+            "DocSection::new(\"Ticker\", ticker)",
+            "DocSection::new(\"Relative time\", relative_time)",
+            "DocSection::new(\"Rating\", rating)",
+            "DocSection::new(\"Avatar stack\", avatar_stack)",
+        ],
+    );
+}
+
+#[test]
 fn selected_sidebar_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     for relative_path in [
         "src/ui/snippets/sidebar/demo.rs",

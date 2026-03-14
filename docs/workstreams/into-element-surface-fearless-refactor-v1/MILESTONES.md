@@ -844,7 +844,13 @@ Exit criteria:
   `gallery-dev` only in the gallery runtime state/model path.
 - validation addendum on 2026-03-14:
   `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app typography_ -- --nocapture`
-- after these three batches, the tracked default-app workstream-local teaching-surface lane is now
-  effectively closed; remaining work continues on the specialized `ai`, `material3`, and
-  `shadcn_extras` lanes plus any optional post-cleanup of now-nonessential gallery runtime
-  fields.
+- the specialized `shadcn_extras` teaching lane now closes its remaining first-party drift too:
+  `apps/fret-ui-gallery/src/ui/snippets/shadcn_extras/*.rs` now expose
+  `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/shadcn_extras.rs` now consumes those previews through
+  `DocSection::build(cx, ...)`.
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app shadcn_extras_ -- --nocapture`
+- after these four landings, the tracked default-app workstream-local teaching-surface lane is now
+  effectively closed; remaining work continues on the specialized `ai` and `material3` lanes plus
+  any optional post-cleanup of now-nonessential gallery runtime fields.

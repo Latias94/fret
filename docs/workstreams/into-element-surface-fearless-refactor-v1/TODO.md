@@ -39,9 +39,14 @@ Execution note on 2026-03-14:
   UI Gallery typography snippets now expose `UiCx -> impl UiChild`, the page uses
   `DocSection::build(cx, ...)`, and the stale non-dev `dialog_open` relay is now gated back to
   `gallery-dev` only.
-- after these three batches, the current tracked default-app teaching-surface lane is effectively
-  closed; remaining follow-up work now lives on the specialized `ai`, `material3`, and
-  `shadcn_extras` lanes plus any optional dead-field/runtime cleanup.
+- the specialized `shadcn_extras` teaching lane is now aligned too:
+  `apps/fret-ui-gallery/src/ui/snippets/shadcn_extras/*.rs` now expose
+  `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and
+  `apps/fret-ui-gallery/src/ui/pages/shadcn_extras.rs` now consumes those previews through
+  `DocSection::build(cx, ...)`.
+- after these four landings, the current tracked default-app teaching-surface lane is effectively
+  closed; remaining follow-up work now lives on the specialized `ai` and `material3` lanes plus
+  any optional dead-field/runtime cleanup.
 
 ## M0 — Lock the target vocabulary
 

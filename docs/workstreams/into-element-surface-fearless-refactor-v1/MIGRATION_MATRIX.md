@@ -374,6 +374,10 @@ Execution note on 2026-03-13:
   `apps/fret-ui-gallery/src/ui/snippets/typography/*.rs` now expose `UiCx -> impl UiChild`,
   `apps/fret-ui-gallery/src/ui/pages/typography.rs` now uses `DocSection::build(cx, ...)`, and
   the stale non-dev `dialog_open` relay is now gated back to `gallery-dev` only.
+- the specialized `shadcn_extras` teaching lane now also matches that typed first-party posture:
+  `apps/fret-ui-gallery/src/ui/snippets/shadcn_extras/*.rs` now expose `UiCx -> impl UiChild`,
+  and `apps/fret-ui-gallery/src/ui/pages/shadcn_extras.rs` now uses
+  `DocSection::build(cx, ...)`.
 - the same UI Gallery default-app source gate now also records the `input_group` family:
   `apps/fret-ui-gallery/src/ui/snippets/input_group/{align_block_end,align_block_start,align_inline_end,align_inline_start,button,button_group,custom_input,demo,dropdown,icon,kbd,label,rtl,spinner,text,textarea,tooltip}.rs`
   now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
@@ -556,8 +560,8 @@ Execution note on 2026-03-13:
 - for the default-app authoring lane, the next queue should now continue on the remaining
   long-tail stateful families after `command` / `card` / `image_object_fit`, with `data_table`
   and `motion_presets` now carrying most of the remaining tracked backlog, while `ai`,
-  `material3`, and `shadcn_extras` continue as separate specialized follow-up lanes now that the
-  dedicated `typography` teaching lane has been aligned too.
+  and `material3` continue as separate specialized follow-up lanes now that the dedicated
+  `typography` and `shadcn_extras` teaching lanes have been aligned too.
 - the cookbook advanced-example source gate now also records
   `apps/fret-cookbook/examples/customv1_basics.rs`,
   where `panel_shell(...)` and `preview_content(...)` now use `IntoUiElement<KernelApp>`-based
