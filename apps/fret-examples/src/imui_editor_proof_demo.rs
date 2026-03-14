@@ -322,22 +322,6 @@ fn render_editor_name_assist_surface(
     .into_element(cx)
 }
 
-fn replay_editor_theme_preset_on_global_changes(
-    app: &mut KernelApp,
-    window: AppWindowId,
-    _ui: &mut fret_ui::UiTree<KernelApp>,
-    _st: &mut ViewWindowState<ImUiEditorProofView>,
-    changed: &[std::any::TypeId],
-) {
-    let _ = crate::sync_shadcn_host_theme_then_reapply_editor_preset_on_window_metrics_change(
-        app,
-        window,
-        changed,
-        EDITOR_HOST_BASE_COLOR,
-        EDITOR_HOST_DEFAULT_SCHEME,
-    );
-}
-
 fn configure_imui_editor_proof_driver(
     driver: fret::UiAppDriver<ViewWindowState<ImUiEditorProofView>>,
 ) -> fret::UiAppDriver<ViewWindowState<ImUiEditorProofView>> {
@@ -347,7 +331,6 @@ fn configure_imui_editor_proof_driver(
         .window_create_spec(window_create_spec)
         .window_created(window_created)
         .before_close_window(before_close_window)
-        .on_global_changes(replay_editor_theme_preset_on_global_changes)
 }
 
 struct ImUiEditorProofView {

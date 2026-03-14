@@ -145,18 +145,17 @@ Interaction contract:
       inspector surface. The script is rerun-safe inside one session, and the launched
       `fretboard diag run --session-auto --launch --pack --ai-packet --include-screenshots`
       workflow now exits cleanly after success instead of waiting for a redundant post-pass dump.
-- [~] `EER-BASE-119` Make editor-owned baseline theming resilient to host/theme resets:
+- [x] `EER-BASE-119` Make editor-owned baseline theming resilient to host/theme resets:
       `fret-ui-editor::theme` now exposes a shared "host sync first, editor preset replay second"
       helper for `WindowMetricsService`-driven theme resets, and `imui_editor_proof_demo` now uses
-      that path instead of hand-rolling a local replay hook. The same ordering now also has a
-      shared `fret-examples` integration helper for shadcn-hosted editor surfaces, so the proof
-      demo no longer composes `sync_theme_from_environment` with editor preset replay inline. A
-      second adjacent consumer path now exists too: `workspace_shell_demo` can opt into the same
-      shadcn-hosted editor preset install/replay flow via
-      `FRET_WORKSPACE_SHELL_EDITOR_PRESET`, which keeps the generic workspace demo stable by
-      default while proving the helper is no longer single-surface glue. Remaining work: decide
-      whether the next always-on consumer should live in a broader app/workspace integration layer
-      instead of staying examples-only.
+      that path instead of hand-rolling a local replay hook. The helper now only replays when the
+      host sync actually mutated the theme, so repeated `WindowMetricsService` notifications do not
+      churn editor theme revisions. The same ordering now also has a shared `fret-examples`
+      integration helper for shadcn-hosted manual surfaces, and `workspace_shell_demo` can opt
+      into that path via `FRET_WORKSPACE_SHELL_EDITOR_PRESET`. The broader always-on consumer now
+      lives in the right app-facing layer too: `fret`'s optional `editor` feature teaches the
+      default `FretApp` shadcn auto-theme middleware to replay any installed editor preset after a
+      host theme reset, so shadcn-hosted editor apps no longer need demo-local replay glue.
 - [x] `EER-BASE-116` Decide whether `imgui_like_dense` should get matching screenshot proof coverage
       now or only after the default baseline is acceptable.
       Decision: yes. The dense preset now has matching overview / typing / validation screenshot

@@ -124,6 +124,7 @@ fn main() -> fret::Result<()> {
 - `state`: enable selector/query helpers on `AppUi` (`cx.data().selector(...)`, `cx.data().query(...)`) for the default app surface.
 - `router`: enable the explicit app-level router surface (`fret::router::{app::install, RouterUiStore, RouterOutlet, ...}`).
 - `docking`: enable the explicit advanced docking surface (`fret::docking::{core::*, DockManager, handle_dock_op, ...}`).
+- `editor`: keep installed `fret-ui-editor` presets resilient to `FretApp` shadcn theme resets.
 - `batteries`: “works out of the box” opt-in bundle (config files + UI assets + icons + preloading + diagnostics).
 - `config-files`: load layered config files from `.fret/` (settings/keymap/menubar).
 - `diagnostics`: enable default diagnostics wiring (tracing + panic hook; plus extra dev tooling).
@@ -192,7 +193,9 @@ reusable or crate-facing API. Because Rust does not let a trait-bound-only `fn(&
 implementation accept plain function items without explicit casts, `InstallIntoApp` stays broad in
 implementation. Treat that as an internal accommodation: keep `.setup(...)` on named installer
 functions, tuples, or named bundles, and reserve `.setup_with(...)` for one-off inline closures or
-runtime-captured values.
+runtime-captured values. Editor-themed apps can also opt into `fret`'s `editor` feature to make
+installed `fret-ui-editor` presets survive the default `FretApp` shadcn auto-theme replay; the
+actual editor widgets and presets still live in `fret-ui-editor`.
 
 That makes `fret` suitable for both general-purpose desktop apps and many editor-style customizations
 before you need to depend on `fret-bootstrap` or `fret-launch` directly.

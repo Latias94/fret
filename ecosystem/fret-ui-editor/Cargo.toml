@@ -36,4 +36,5 @@ fret-undo = { path = "../fret-undo", optional = true }
 
 [dev-dependencies]
 fret-app = { path = "../../crates/fret-app" }
-fret-ui-shadcn = { path = "../fret-ui-shadcn" }
+fret-ui-shadcn = { path = "../fret-ui-shadcn", features = ["app-integration"] }
+slotmap.workspace = true

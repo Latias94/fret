@@ -154,6 +154,7 @@ teaching the legacy split conversion trait names.
 | Add derived + async state helpers | `["state"]` | Enables `AppUi` data helpers (`cx.data().selector(...)`, `cx.data().query(...)`). |
 | Add routing integration | `["router"]` | Exposes the explicit app-level router extension surface (`fret::router::*`). |
 | Add docking integration | `["docking"]` | Exposes the explicit docking surface (`fret::docking::{core::*, ...}`). |
+| Add editor theming integration | `["editor"]` | Keeps installed `fret-ui-editor` presets resilient to `FretApp` shadcn auto-theme resets; widgets still come from `fret-ui-editor`. |
 | Add icons | `["icons"]` | Installs default icon packs (Lucide) via bootstrap wiring. |
 | Add image/SVG caches | `["ui-assets"]` | Wires UI asset caches + budgets (compile/runtime cost). |
 | Enable layered `.fret/*` config | `["config-files"]` | Filesystem side effects; opt-in for embed/minimal builds. |
@@ -192,6 +193,9 @@ Notes:
 - `config-files` is opt-in because it reads layered `.fret/*` files (settings/keymap/menubar).
 - `ui-assets` is opt-in because it wires caches/budgets and can increase compile + runtime cost.
 - `icons` / `preload-icon-svgs` are opt-in (GPU-time tradeoff; apps can install custom packs).
+- `editor` is an app-integration feature only: it teaches `FretApp`'s shadcn auto-theme middleware
+  to replay any installed `fret-ui-editor` preset after host theme resets. Reusable editor
+  controls, layout primitives, and presets still live in `fret-ui-editor`.
 
 ### `fret-framework`
 

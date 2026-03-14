@@ -87,7 +87,8 @@ pub fn reapply_installed_editor_theme_preset_v1<H: UiHost>(
 /// host app to rebuild its base theme.
 ///
 /// This is the common "host changed first, editor patch second" ordering used by apps that keep a
-/// host-owned theme in sync with environment light/dark preferences.
+/// host-owned theme in sync with environment light/dark preferences. If the host sync turns out to
+/// be a no-op, the installed editor preset is not replayed again.
 pub fn sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metrics_change<
     H: UiHost,
 >(
@@ -99,7 +100,11 @@ pub fn sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metr
         return None;
     }
 
+    let theme_revision_before = Theme::global(&*app).revision();
     sync_host_theme(app);
+    if Theme::global(&*app).revision() == theme_revision_before {
+        return None;
+    }
     reapply_installed_editor_theme_preset_v1(app)
 }
 
@@ -327,7 +332,7 @@ fn color(cfg: &mut ThemeConfig, key: &str, value: &str) {
 #[cfg(test)]
 mod tests {
     use fret_app::App;
-    use fret_core::{Color, Px};
+    use fret_core::{AppWindowId, Color, Px};
     use fret_ui::Theme;
     use fret_ui_shadcn::shadcn_themes::{
         ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york,
@@ -642,6 +647,47 @@ mod tests {
             );
 
         assert_eq!(replayed, Some(EditorThemePresetV1::Default));
+        assert_eq!(
+            Theme::global(&app).color_by_key("component.text_field.bg"),
+            expected_field_bg
+        );
+    }
+
+    #[test]
+    fn window_metrics_helper_skips_replay_when_host_theme_sync_is_noop() {
+        let mut app = App::new();
+        let window = AppWindowId::from(slotmap::KeyData::from_ffi(1));
+        app.with_global_mut(fret_core::WindowMetricsService::default, |svc, _app| {
+            svc.set_color_scheme(window, Some(fret_core::ColorScheme::Dark));
+        });
+        let _ = fret_ui_shadcn::advanced::sync_theme_from_environment(
+            &mut app,
+            window,
+            ShadcnBaseColor::Slate,
+            ShadcnColorScheme::Dark,
+        );
+        install_editor_theme_preset_v1(&mut app, EditorThemePresetV1::Default);
+
+        let expected_field_bg = Theme::global(&app).color_by_key("component.text_field.bg");
+        let before_rev = Theme::global(&app).revision();
+        let changed = [TypeId::of::<fret_core::WindowMetricsService>()];
+
+        let replayed =
+            sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metrics_change(
+                &mut app,
+                &changed,
+                |app| {
+                    let _ = fret_ui_shadcn::advanced::sync_theme_from_environment(
+                        app,
+                        window,
+                        ShadcnBaseColor::Slate,
+                        ShadcnColorScheme::Dark,
+                    );
+                },
+            );
+
+        assert_eq!(replayed, None);
+        assert_eq!(Theme::global(&app).revision(), before_rev);
         assert_eq!(
             Theme::global(&app).color_by_key("component.text_field.bg"),
             expected_field_bg

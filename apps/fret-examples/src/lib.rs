@@ -58,10 +58,11 @@ pub(crate) fn editor_theme_preset_from_env(
     parse_editor_theme_preset_key(&raw.to_string_lossy())
 }
 
-/// Shared examples-layer helper for editor surfaces hosted on a shadcn base theme.
+/// Shared lower-level examples helper for editor surfaces hosted on a shadcn base theme.
 ///
-/// This keeps the ordering explicit when `WindowMetricsService` changes can trigger a host-theme
-/// reset: sync the host theme first, then replay the installed editor preset.
+/// Use this on manual/non-`FretApp` surfaces that do not ride the `fret` facade's optional editor
+/// integration middleware. The ordering stays explicit when `WindowMetricsService` changes can
+/// trigger a host-theme reset: sync the host theme first, then replay the installed editor preset.
 pub(crate) fn sync_shadcn_host_theme_then_reapply_editor_preset_on_window_metrics_change(
     app: &mut fret_app::App,
     window: fret_core::AppWindowId,

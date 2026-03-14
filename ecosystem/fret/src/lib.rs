@@ -57,6 +57,8 @@
 //! - enable `router` for `fret::router::{app::install, RouterUiStore, RouterOutlet, router_link, ...}`
 //!   plus `RouterUiStore::{back_on_action, forward_on_action}` history bindings
 //! - enable `docking` for `fret::docking::{core::*, DockManager, handle_dock_op, ...}`
+//! - enable `editor` for opt-in app-level replay of installed `fret-ui-editor` presets after the
+//!   `FretApp` shadcn auto-theme middleware resets the host theme
 //! - use `fret::shadcn::{..., app::install, themes::apply_shadcn_new_york, raw::*}` for the
 //!   curated default design-system surface; advanced environment / `UiServices` hooks stay on
 //!   `fret::shadcn::raw::advanced::*`
@@ -1049,12 +1051,30 @@ fn shadcn_sync_theme_from_environment_on_global_changes<S>(
         .global::<fret_ui_shadcn::app::InstallConfig>()
         .copied()
         .unwrap_or_default();
-    let _ = fret_ui_shadcn::advanced::sync_theme_from_environment(
-        app,
-        window,
-        config.base_color,
-        config.scheme,
-    );
+    #[cfg(feature = "editor")]
+    {
+        let _ = fret_ui_editor::theme::sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metrics_change(
+            app,
+            changed,
+            |app| {
+                let _ = fret_ui_shadcn::advanced::sync_theme_from_environment(
+                    app,
+                    window,
+                    config.base_color,
+                    config.scheme,
+                );
+            },
+        );
+    }
+    #[cfg(not(feature = "editor"))]
+    {
+        let _ = fret_ui_shadcn::advanced::sync_theme_from_environment(
+            app,
+            window,
+            config.base_color,
+            config.scheme,
+        );
+    }
 }
 
 #[cfg(all(test, not(target_arch = "wasm32"), feature = "desktop"))]
@@ -1369,6 +1389,59 @@ mod tests {
 
         assert_eq!(Theme::global(&app).revision(), rev_after);
     }
+
+    #[cfg(feature = "editor")]
+    #[test]
+    fn shadcn_auto_theme_middleware_reapplies_installed_editor_preset_once() {
+        let mut app = KernelApp::new();
+        fret_ui_shadcn::app::install_with_theme(
+            &mut app,
+            fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Slate,
+            fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        );
+        fret_ui_editor::theme::install_editor_theme_preset_v1(
+            &mut app,
+            fret_ui_editor::theme::EditorThemePresetV1::Default,
+        );
+
+        let window = AppWindowId::from(slotmap::KeyData::from_ffi(1));
+        app.with_global_mut(WindowMetricsService::default, |svc, _app| {
+            svc.set_color_scheme(window, Some(ColorScheme::Light));
+        });
+
+        let mut ui = UiTree::<KernelApp>::default();
+        let mut state = ();
+        let editor_field_bg = Theme::global(&app).color_by_key("component.text_field.bg");
+        let host_bg_before = Theme::global(&app).colors.surface_background;
+
+        super::shadcn_sync_theme_from_environment_on_global_changes::<()>(
+            &mut app,
+            window,
+            &mut ui,
+            &mut state,
+            &[TypeId::of::<WindowMetricsService>()],
+        );
+
+        assert_ne!(
+            Theme::global(&app).colors.surface_background,
+            host_bg_before
+        );
+        assert_eq!(
+            Theme::global(&app).color_by_key("component.text_field.bg"),
+            editor_field_bg
+        );
+
+        let rev_after = Theme::global(&app).revision();
+        super::shadcn_sync_theme_from_environment_on_global_changes::<()>(
+            &mut app,
+            window,
+            &mut ui,
+            &mut state,
+            &[TypeId::of::<WindowMetricsService>()],
+        );
+
+        assert_eq!(Theme::global(&app).revision(), rev_after);
+    }
 }
 
 #[cfg(test)]
@@ -1645,6 +1718,18 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn readme_and_rustdoc_expose_editor_as_opt_in_integration_feature() {
+        assert!(CRATE_README.contains(
+            "- `editor`: keep installed `fret-ui-editor` presets resilient to `FretApp` shadcn theme resets."
+        ));
+
+        let rustdoc = crate_rustdoc();
+        assert!(rustdoc.contains(
+            "//! - enable `editor` for opt-in app-level replay of installed `fret-ui-editor` presets"
+        ));
+    }
+
+    #[test]
     fn readme_and_rustdoc_expose_curated_shadcn_surface() {
         assert!(CRATE_README.contains("`fret::shadcn`"));
         assert!(CRATE_README.contains("`shadcn::app::install(...)`"));
@@ -1790,6 +1875,13 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("enable `fret`'s `docking` feature"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::docking::*`"));
         assert!(CRATE_USAGE_GUIDE.contains("part of `fret::app::prelude::*`"));
+    }
+
+    #[test]
+    fn usage_docs_expose_editor_as_opt_in_app_integration() {
+        assert!(CRATE_USAGE_GUIDE.contains("| Add editor theming integration | `[\"editor\"]` |"));
+        assert!(CRATE_USAGE_GUIDE.contains("installed `fret-ui-editor` presets"));
+        assert!(CRATE_USAGE_GUIDE.contains("widgets still come from `fret-ui-editor`"));
     }
 
     #[test]
