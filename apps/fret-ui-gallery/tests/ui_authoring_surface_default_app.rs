@@ -3078,16 +3078,37 @@ fn data_table_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
             "src/ui/snippets/data_table/basic_demo.rs",
+            "src/ui/snippets/data_table/code_outline.rs",
             "src/ui/snippets/data_table/default_demo.rs",
             "src/ui/snippets/data_table/guide_demo.rs",
             "src/ui/snippets/data_table/rtl_demo.rs",
         ],
         &[
-            "pub fn render(cx: &mut UiCx<'_>) -> AnyElement",
-            "pub fn render(cx: &mut UiCx<'_>,",
-            "pub fn render(\n    cx: &mut UiCx<'_>,",
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
+    );
+}
+
+#[test]
+fn data_table_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/data_table.rs",
+        &[
+            "DocSection::build(cx, \"Default Recipe\", default_demo)",
+            "DocSection::build(cx, \"Advanced Reference\", basic_demo)",
+            "DocSection::build(cx, \"Advanced Guide\", guide_demo)",
+            "DocSection::build(cx, \"Advanced RTL\", rtl_demo)",
+            "DocSection::build(cx, \"Reference Outline\", code_preview)",
+        ],
+        &[
+            "DocSection::new(\"Default Recipe\", default_demo)",
+            "DocSection::new(\"Advanced Reference\", basic_demo)",
+            "DocSection::new(\"Advanced Guide\", guide_demo)",
+            "DocSection::new(\"Advanced RTL\", rtl_demo)",
+            "DocSection::new(\"Reference Outline\", code_preview)",
+        ],
     );
 }
 

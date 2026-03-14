@@ -22,6 +22,19 @@ Execution note on 2026-03-13:
   remaining app/helper migration rather than reopening `kbd_icon(...)` or `text_edit_context_menu*`
   unless the underlying storage/builder model changes.
 
+Execution note on 2026-03-14:
+
+- the UI Gallery `data_table` family is now on the default app-facing surface:
+  top-level snippets return `impl UiChild + use<>`, the page uses `DocSection::build(cx, ...)`,
+  and the `guide_demo` state now lives inside the snippet instead of relaying through gallery
+  window state.
+- the obsolete gallery-wide relay fields `data_table_state` and
+  `image_fit_demo_streaming_image` are now deleted from the UI gallery model/bootstrap/runtime
+  path.
+- the remaining tracked default-app tail for this lane is now the `motion_presets` family only:
+  `preset_selector`, `fluid_tabs_demo`, `overlay_demo`, `stack_shift_list_demo`,
+  `stagger_demo`, and `token_snapshot`.
+
 ## M0 — Lock the target vocabulary
 
 - [x] Finalize `TARGET_INTERFACE_STATE.md` as the single source of truth for conversion vocabulary.

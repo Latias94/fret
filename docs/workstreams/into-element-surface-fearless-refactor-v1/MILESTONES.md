@@ -812,11 +812,23 @@ Exit criteria:
   module now generates its own fit/sampling demo `ImageSource`s. The old teaching pattern is now
   forbidden there by
   `ui_authoring_surface_default_app::{image_object_fit_*}`.
-- after that batch, the tracked default-app workstream-local backlog falls from 66 to 9
-  top-level snippet renders still teaching `ElementContext<'_, H> -> AnyElement` on that lane
-  (down from 95 before the recent high-yield family batches, 136 before the broader family
-  sweeps, and 184 before the default-app migration run started).
-- for the default-app lane, the next family queue should now continue on the remaining
-  long-tail stateful pages after `command` / `card` / `image_object_fit`, with `data_table` and
-  `motion_presets` now carrying most of the remaining tracked backlog; `ai`, `material3`,
-  `typography`, and `shadcn_extras` continue on their own specialized follow-up lanes.
+- the same UI Gallery default-app source gate now also records the `data_table` family:
+  `apps/fret-ui-gallery/src/ui/snippets/data_table/{basic_demo,code_outline,default_demo,guide_demo,rtl_demo}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/data_table.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; `guide_demo` now owns its `TableState` locally instead of
+  relaying a gallery-wide model through `ui/content.rs`, and the obsolete gallery relay fields
+  `data_table_state` plus `image_fit_demo_streaming_image` are now deleted from
+  `ui/models.rs`, `driver/window_bootstrap.rs`, and `driver/runtime_driver.rs`. The old teaching
+  pattern is now forbidden there by
+  `ui_authoring_surface_default_app::{data_table_*,selected_data_table_*}`.
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app data_table_ -- --nocapture`
+- after that batch, the tracked default-app workstream-local backlog on this lane narrows to the
+  `motion_presets` family only:
+  `preset_selector`, `fluid_tabs_demo`, `overlay_demo`, `stack_shift_list_demo`,
+  `stagger_demo`, and `token_snapshot`.
+- for the default-app lane, the next family queue is now simply `motion_presets`; after that
+  lands, the current tracked default-app teaching-surface cleanup can be treated as effectively
+  closed, while `ai`, `material3`, `typography`, and `shadcn_extras` continue on their own
+  specialized follow-up lanes.

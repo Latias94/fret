@@ -41,7 +41,6 @@ pub(crate) struct UiGalleryModels {
     pub(crate) date_picker_month: Model<fret_ui_headless::calendar::CalendarMonth>,
     pub(crate) date_picker_selected: Model<Option<Date>>,
 
-    pub(crate) data_table_state: Model<fret_ui_headless::table::TableState>,
     #[cfg(feature = "gallery-dev")]
     pub(crate) data_grid_selected_row: Model<Option<u64>>,
 
@@ -51,8 +50,6 @@ pub(crate) struct UiGalleryModels {
     pub(crate) avatar_demo_image: Model<Option<ImageId>>,
     pub(crate) image_fit_demo_wide_image: Model<Option<ImageId>>,
     pub(crate) image_fit_demo_tall_image: Model<Option<ImageId>>,
-    pub(crate) image_fit_demo_streaming_image: Model<Option<ImageId>>,
-
     pub(crate) progress: Model<f32>,
     #[cfg(feature = "gallery-dev")]
     pub(crate) checkbox: Model<bool>,

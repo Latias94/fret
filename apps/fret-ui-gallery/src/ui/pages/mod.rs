@@ -739,11 +739,8 @@ pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     context_menu::preview_context_menu(cx)
 }
 
-pub(super) fn preview_data_table(
-    cx: &mut UiCx<'_>,
-    state: Model<fret_ui_headless::table::TableState>,
-) -> Vec<AnyElement> {
-    data_table::preview_data_table(cx, state)
+pub(super) fn preview_data_table(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    data_table::preview_data_table(cx)
 }
 pub(super) fn preview_date_picker(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     date_picker::preview_date_picker(cx)

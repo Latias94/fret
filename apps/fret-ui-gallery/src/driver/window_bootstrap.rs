@@ -238,9 +238,6 @@ impl UiGalleryDriver {
             .insert(fret_ui_headless::calendar::CalendarMonth::from_date(today));
         let date_picker_selected = app.models_mut().insert(None::<Date>);
 
-        let mut data_table_state_value = fret_ui_headless::table::TableState::default();
-        data_table_state_value.pagination.page_size = 25;
-        let data_table_state = app.models_mut().insert(data_table_state_value);
         #[cfg(feature = "gallery-dev")]
         let data_grid_selected_row = app.models_mut().insert(None::<u64>);
         let tabs_value = app
@@ -272,16 +269,6 @@ impl UiGalleryDriver {
             image_fit_demo_tall_token,
             Self::IMAGE_FIT_DEMO_TALL_SIZE,
             (255, 160, 120),
-        );
-
-        let image_fit_demo_streaming_image = app.models_mut().insert(None::<ImageId>);
-        let image_fit_demo_streaming_token = app.next_image_upload_token();
-        Self::enqueue_image_fit_demo_image_register(
-            app,
-            window,
-            image_fit_demo_streaming_token,
-            Self::IMAGE_FIT_DEMO_STREAMING_SIZE,
-            (140, 230, 170),
         );
 
         let progress = app.models_mut().insert(35.0f32);
@@ -440,7 +427,6 @@ impl UiGalleryDriver {
             date_picker_open,
             date_picker_month,
             date_picker_selected,
-            data_table_state,
             #[cfg(feature = "gallery-dev")]
             data_grid_selected_row,
             tabs_value,
@@ -452,10 +438,6 @@ impl UiGalleryDriver {
             image_fit_demo_wide_token: Some(image_fit_demo_wide_token),
             image_fit_demo_tall_image,
             image_fit_demo_tall_token: Some(image_fit_demo_tall_token),
-            image_fit_demo_streaming_image,
-            image_fit_demo_streaming_token: Some(image_fit_demo_streaming_token),
-            image_fit_demo_streaming_frame: 0,
-            image_fit_demo_streaming_size: Self::IMAGE_FIT_DEMO_STREAMING_SIZE,
             progress,
             #[cfg(feature = "gallery-dev")]
             checkbox,

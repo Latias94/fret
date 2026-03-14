@@ -7,7 +7,6 @@ impl UiGalleryDriver {
 
     pub(crate) const IMAGE_FIT_DEMO_WIDE_SIZE: (u32, u32) = (320, 180);
     pub(crate) const IMAGE_FIT_DEMO_TALL_SIZE: (u32, u32) = (180, 320);
-    pub(crate) const IMAGE_FIT_DEMO_STREAMING_SIZE: (u32, u32) = (320, 200);
 
     pub(crate) fn enqueue_avatar_demo_image_register(
         app: &mut App,

@@ -303,7 +303,6 @@ fn page_preview(
     let _date_picker_open = models.date_picker_open.clone();
     let date_picker_month = models.date_picker_month.clone();
     let date_picker_selected = models.date_picker_selected.clone();
-    let data_table_state = models.data_table_state.clone();
     #[cfg(feature = "gallery-dev")]
     let data_grid_selected_row = models.data_grid_selected_row.clone();
     let _tabs_value = models.tabs_value.clone();
@@ -456,7 +455,7 @@ fn page_preview(
             preview_windowed_rows_surface_interactive_torture(cx, theme)
         }
         #[cfg(feature = "gallery-dev")]
-        PAGE_DATA_TABLE_TORTURE => preview_data_table_torture(cx, theme, data_table_state),
+        PAGE_DATA_TABLE_TORTURE => preview_data_table_torture(cx, theme),
         #[cfg(feature = "gallery-dev")]
         PAGE_TREE_TORTURE => preview_tree_torture(cx, theme),
         #[cfg(feature = "gallery-dev")]
@@ -517,7 +516,7 @@ fn page_preview(
         PAGE_COMBOBOX => pages::preview_combobox(cx, combobox_value, combobox_open, combobox_query),
         PAGE_DATE_PICKER => pages::preview_date_picker(cx),
         PAGE_RESIZABLE => pages::preview_resizable(cx),
-        PAGE_DATA_TABLE => pages::preview_data_table(cx, data_table_state),
+        PAGE_DATA_TABLE => pages::preview_data_table(cx),
         #[cfg(feature = "gallery-dev")]
         PAGE_DATA_GRID => preview_data_grid(cx, data_grid_selected_row),
         PAGE_TABS => pages::preview_tabs(cx),

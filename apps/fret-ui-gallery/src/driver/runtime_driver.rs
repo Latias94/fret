@@ -8,7 +8,7 @@ use fret_app::{
 };
 use fret_core::{
     AlphaMode, AppWindowId, Event, ExternalDropReadLimits, FileDialogFilter, FileDialogOptions,
-    ImageColorInfo, ImageId, ImageUploadToken, RectPx, TimerToken, UiServices,
+    ImageColorInfo, ImageId, ImageUploadToken, TimerToken, UiServices,
 };
 use fret_icons::IconRegistry;
 use fret_launch::{
@@ -16,8 +16,8 @@ use fret_launch::{
     WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::{
-    ImageUpdateToken, MenuItemToggle, MenuItemToggleKind, PlatformCapabilities,
-    WindowCommandAvailabilityService, WindowCommandEnabledService,
+    MenuItemToggle, MenuItemToggleKind, PlatformCapabilities, WindowCommandAvailabilityService,
+    WindowCommandEnabledService,
 };
 use fret_ui::UiTree;
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
@@ -252,7 +252,6 @@ struct UiGalleryWindowState {
     date_picker_open: Model<bool>,
     date_picker_month: Model<fret_ui_headless::calendar::CalendarMonth>,
     date_picker_selected: Model<Option<Date>>,
-    data_table_state: Model<fret_ui_headless::table::TableState>,
     #[cfg(feature = "gallery-dev")]
     data_grid_selected_row: Model<Option<u64>>,
     tabs_value: Model<Option<Arc<str>>>,
@@ -264,10 +263,6 @@ struct UiGalleryWindowState {
     image_fit_demo_wide_token: Option<ImageUploadToken>,
     image_fit_demo_tall_image: Model<Option<ImageId>>,
     image_fit_demo_tall_token: Option<ImageUploadToken>,
-    image_fit_demo_streaming_image: Model<Option<ImageId>>,
-    image_fit_demo_streaming_token: Option<ImageUploadToken>,
-    image_fit_demo_streaming_frame: u64,
-    image_fit_demo_streaming_size: (u32, u32),
     progress: Model<f32>,
     #[cfg(feature = "gallery-dev")]
     checkbox: Model<bool>,
@@ -343,7 +338,6 @@ impl UiGalleryWindowState {
             date_picker_open: self.date_picker_open.clone(),
             date_picker_month: self.date_picker_month.clone(),
             date_picker_selected: self.date_picker_selected.clone(),
-            data_table_state: self.data_table_state.clone(),
             #[cfg(feature = "gallery-dev")]
             data_grid_selected_row: self.data_grid_selected_row.clone(),
             tabs_value: self.tabs_value.clone(),
@@ -351,7 +345,6 @@ impl UiGalleryWindowState {
             avatar_demo_image: self.avatar_demo_image.clone(),
             image_fit_demo_wide_image: self.image_fit_demo_wide_image.clone(),
             image_fit_demo_tall_image: self.image_fit_demo_tall_image.clone(),
-            image_fit_demo_streaming_image: self.image_fit_demo_streaming_image.clone(),
             progress: self.progress.clone(),
             #[cfg(feature = "gallery-dev")]
             checkbox: self.checkbox.clone(),
@@ -1839,19 +1832,6 @@ impl WinitAppDriver for UiGalleryDriver {
                     });
                     app.request_redraw(window);
                 }
-
-                if state.image_fit_demo_streaming_token == Some(*token) {
-                    state.image_fit_demo_streaming_token = None;
-                    let _ = app
-                        .models_mut()
-                        .update(&state.image_fit_demo_streaming_image, |v| {
-                            *v = Some(*image);
-                        });
-                    fret_ui_kit::with_image_metadata_store_mut(app, |store| {
-                        store.set_intrinsic_size_px(*image, Self::IMAGE_FIT_DEMO_STREAMING_SIZE);
-                    });
-                    app.request_redraw(window);
-                }
             }
             Event::ImageRegisterFailed { token, message } => {
                 if state.avatar_demo_image_token == Some(*token) {
@@ -1878,14 +1858,6 @@ impl WinitAppDriver for UiGalleryDriver {
                 if state.image_fit_demo_tall_token == Some(*token) {
                     state.image_fit_demo_tall_token = None;
                     tracing::error!(message, "ui-gallery image fit tall image register failed");
-                    app.request_redraw(window);
-                }
-                if state.image_fit_demo_streaming_token == Some(*token) {
-                    state.image_fit_demo_streaming_token = None;
-                    tracing::error!(
-                        message,
-                        "ui-gallery image fit streaming image register failed"
-                    );
                     app.request_redraw(window);
                 }
             }
@@ -2051,48 +2023,6 @@ impl WinitAppDriver for UiGalleryDriver {
         let mut frame =
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.paint_all(scene);
-
-        if app
-            .models()
-            .get_cloned(&state.selected_page)
-            .is_some_and(|page| page.as_ref() == PAGE_IMAGE_OBJECT_FIT)
-            && let Some(image) = app
-                .models()
-                .get_cloned(&state.image_fit_demo_streaming_image)
-                .flatten()
-        {
-            let (width, height) = state.image_fit_demo_streaming_size;
-
-            let bar_w = 24u32;
-            let max_x = width.saturating_sub(bar_w).max(1);
-            let bar_x = (state.image_fit_demo_streaming_frame as u32) % max_x;
-
-            let mut bytes = vec![0u8; (bar_w as usize) * (height as usize) * 4];
-            for px in bytes.chunks_exact_mut(4) {
-                px[0] = 240;
-                px[1] = 90;
-                px[2] = 80;
-                px[3] = 255;
-            }
-
-            app.push_effect(Effect::ImageUpdateRgba8 {
-                window: Some(window),
-                token: ImageUpdateToken(state.image_fit_demo_streaming_frame),
-                image,
-                stream_generation: 0,
-                width,
-                height,
-                update_rect_px: Some(RectPx::new(bar_x, 0, bar_w, height)),
-                bytes_per_row: bar_w * 4,
-                bytes,
-                color_info: ImageColorInfo::srgb_rgba(),
-                alpha_mode: AlphaMode::Opaque,
-            });
-
-            state.image_fit_demo_streaming_frame =
-                state.image_fit_demo_streaming_frame.saturating_add(1);
-            app.push_effect(Effect::RequestAnimationFrame(window));
-        }
 
         // Drive scripted input after `paint_all()` so virtualization-heavy trees (e.g.
         // VirtualList) have their realized item subtrees available for hit-testing.

@@ -350,6 +350,19 @@ Execution note on 2026-03-13:
   `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
   now forbidden there by
   `ui_authoring_surface_default_app::{button_group_snippets_prefer_ui_cx_on_the_default_app_surface,button_group_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the `data_table` family:
+  `apps/fret-ui-gallery/src/ui/snippets/data_table/{basic_demo,code_outline,default_demo,guide_demo,rtl_demo}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/data_table.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; `guide_demo` now keeps its `TableState` inside the snippet, and
+  the obsolete gallery relay fields `data_table_state` plus `image_fit_demo_streaming_image` are
+  now deleted from `ui/models.rs`, `ui/content.rs`, `driver/window_bootstrap.rs`, and
+  `driver/runtime_driver.rs`. The old teaching pattern is now forbidden there by
+  `ui_authoring_surface_default_app::{data_table_*,selected_data_table_*}`.
+- after that landing, the tracked default-app tail on this lane is now the `motion_presets`
+  family only:
+  `preset_selector`, `fluid_tabs_demo`, `overlay_demo`, `stack_shift_list_demo`,
+  `stagger_demo`, and `token_snapshot`.
 - the same UI Gallery default-app source gate now also records the `input_group` family:
   `apps/fret-ui-gallery/src/ui/snippets/input_group/{align_block_end,align_block_start,align_inline_end,align_inline_start,button,button_group,custom_input,demo,dropdown,icon,kbd,label,rtl,spinner,text,textarea,tooltip}.rs`
   now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
