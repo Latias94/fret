@@ -2638,11 +2638,36 @@ fn motion_preset_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/motion_presets/token_snapshot.rs",
         ],
         &[
-            "pub fn render(cx: &mut UiCx<'_>) -> AnyElement",
-            "pub fn render(cx: &mut UiCx<'_>,",
-            "pub fn render(\n    cx: &mut UiCx<'_>,",
+            "use fret::{UiChild, UiCx};",
+            "pub fn render",
+            "-> impl UiChild + use<",
         ],
         "app-facing snippet surface",
+    );
+
+    assert_sources_absent("src/ui/snippets/motion_presets", &["-> AnyElement"]);
+}
+
+#[test]
+fn motion_presets_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/motion_presets.rs",
+        &[
+            "DocSection::build(cx, \"Preset selector\", preset_selector)",
+            "DocSection::build(cx, \"Token snapshot\", token_snapshot)",
+            "DocSection::build(cx, \"Overlay demo\", overlay_demo)",
+            "DocSection::build(cx, \"Fluid tabs demo\", fluid_tabs_demo)",
+            "DocSection::build(cx, \"Stagger / sequence demo\", stagger_demo)",
+            "DocSection::build(cx, \"Stack shift list demo\", stack_shift_list_demo)",
+        ],
+        &[
+            "DocSection::new(\"Preset selector\", preset_selector)",
+            "DocSection::new(\"Token snapshot\", token_snapshot)",
+            "DocSection::new(\"Overlay demo\", overlay_demo)",
+            "DocSection::new(\"Fluid tabs demo\", fluid_tabs_demo)",
+            "DocSection::new(\"Stagger / sequence demo\", stagger_demo)",
+            "DocSection::new(\"Stack shift list demo\", stack_shift_list_demo)",
+        ],
     );
 }
 

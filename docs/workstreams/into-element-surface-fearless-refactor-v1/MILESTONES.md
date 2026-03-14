@@ -824,11 +824,19 @@ Exit criteria:
   `ui_authoring_surface_default_app::{data_table_*,selected_data_table_*}`.
 - validation addendum on 2026-03-14:
   `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app data_table_ -- --nocapture`
-- after that batch, the tracked default-app workstream-local backlog on this lane narrows to the
-  `motion_presets` family only:
-  `preset_selector`, `fluid_tabs_demo`, `overlay_demo`, `stack_shift_list_demo`,
-  `stagger_demo`, and `token_snapshot`.
-- for the default-app lane, the next family queue is now simply `motion_presets`; after that
-  lands, the current tracked default-app teaching-surface cleanup can be treated as effectively
-  closed, while `ai`, `material3`, `typography`, and `shadcn_extras` continue on their own
-  specialized follow-up lanes.
+- the same UI Gallery default-app source gate now also records the `motion_presets` family:
+  `apps/fret-ui-gallery/src/ui/snippets/motion_presets/{preset_selector,fluid_tabs_demo,overlay_demo,stack_shift_list_demo,stagger_demo,token_snapshot}.rs`
+  now expose typed top-level `render(...)` surfaces returning `impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/motion_presets.rs` now consumes those previews through
+  `DocSection::build(cx, ...)`; `preset_selector` intentionally keeps the global
+  `motion_preset` / `motion_preset_open` model seam because it drives the page-wide theme patch,
+  while `overlay_demo`, `stagger_demo`, `stack_shift_list_demo`, and `token_snapshot` now keep
+  their local dialog/theme access inside the snippet itself. The old teaching pattern is now
+  forbidden there by
+  `ui_authoring_surface_default_app::{motion_preset_snippets_prefer_ui_cx_on_the_default_app_surface,motion_presets_page_uses_typed_doc_sections_for_app_facing_snippets,selected_motion_presets_snippet_helpers_prefer_into_ui_element_over_anyelement}`.
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app motion_preset -- --nocapture`
+- after these two batches, the tracked default-app workstream-local teaching-surface lane is now
+  effectively closed; remaining work continues on the specialized `ai`, `material3`,
+  `typography`, and `shadcn_extras` lanes plus any optional post-cleanup of now-nonessential
+  gallery runtime fields.

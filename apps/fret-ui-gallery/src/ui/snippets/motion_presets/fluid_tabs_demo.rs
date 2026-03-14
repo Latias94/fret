@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("fluid_tabs_demo.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -20,7 +20,7 @@ fn panel(
     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let tabs = shadcn::Tabs::uncontrolled(Some("accounts"))
         .refine_layout(LayoutRefinement::default().w_full().min_w_0())
         .shared_indicator_motion(true)

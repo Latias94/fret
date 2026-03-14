@@ -31,9 +31,13 @@ Execution note on 2026-03-14:
 - the obsolete gallery-wide relay fields `data_table_state` and
   `image_fit_demo_streaming_image` are now deleted from the UI gallery model/bootstrap/runtime
   path.
-- the remaining tracked default-app tail for this lane is now the `motion_presets` family only:
-  `preset_selector`, `fluid_tabs_demo`, `overlay_demo`, `stack_shift_list_demo`,
-  `stagger_demo`, and `token_snapshot`.
+- the UI Gallery `motion_presets` family is now also on the default app-facing surface:
+  top-level snippets return typed `UiChild` surfaces, the page uses `DocSection::build(cx, ...)`,
+  `preset_selector` remains the explicit global motion-preset seam, and the remaining demos now
+  keep their dialog/theme access inside the snippet.
+- after these two batches, the current tracked default-app teaching-surface lane is effectively
+  closed; remaining follow-up work now lives on the specialized `ai`, `material3`, `typography`,
+  and `shadcn_extras` lanes plus any optional dead-field/runtime cleanup.
 
 ## M0 — Lock the target vocabulary
 

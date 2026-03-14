@@ -288,6 +288,7 @@ fn page_preview(
     let view_cache_counter = models.view_cache_counter.clone();
     #[cfg(feature = "gallery-dev")]
     let popover_open = models.popover_open.clone();
+    #[cfg(feature = "gallery-dev")]
     let dialog_open = models.dialog_open.clone();
     #[cfg(feature = "gallery-dev")]
     let dialog_glass_open = models.dialog_glass_open.clone();
@@ -351,9 +352,7 @@ fn page_preview(
 
     let body: Vec<AnyElement> = match selected {
         PAGE_LAYOUT => preview_layout(cx, theme),
-        PAGE_MOTION_PRESETS => {
-            preview_motion_presets(cx, theme, motion_preset, motion_preset_open, dialog_open)
-        }
+        PAGE_MOTION_PRESETS => preview_motion_presets(cx, motion_preset, motion_preset_open),
         PAGE_VIEW_CACHE => preview_view_cache(
             cx,
             theme,

@@ -359,10 +359,17 @@ Execution note on 2026-03-13:
   now deleted from `ui/models.rs`, `ui/content.rs`, `driver/window_bootstrap.rs`, and
   `driver/runtime_driver.rs`. The old teaching pattern is now forbidden there by
   `ui_authoring_surface_default_app::{data_table_*,selected_data_table_*}`.
-- after that landing, the tracked default-app tail on this lane is now the `motion_presets`
-  family only:
-  `preset_selector`, `fluid_tabs_demo`, `overlay_demo`, `stack_shift_list_demo`,
-  `stagger_demo`, and `token_snapshot`.
+- the same UI Gallery default-app source gate now also records the `motion_presets` family:
+  `apps/fret-ui-gallery/src/ui/snippets/motion_presets/{preset_selector,fluid_tabs_demo,overlay_demo,stack_shift_list_demo,stagger_demo,token_snapshot}.rs`
+  now expose typed top-level `render(...)` surfaces returning `impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/motion_presets.rs` now consumes those previews through
+  `DocSection::build(cx, ...)`; `preset_selector` intentionally remains the explicit global
+  motion-preset seam, while the remaining demos now keep their dialog/theme access inside the
+  snippet itself. The old teaching pattern is now forbidden there by
+  `ui_authoring_surface_default_app::{motion_preset_snippets_prefer_ui_cx_on_the_default_app_surface,motion_presets_page_uses_typed_doc_sections_for_app_facing_snippets,selected_motion_presets_snippet_helpers_prefer_into_ui_element_over_anyelement}`.
+- after the `data_table` + `motion_presets` landings, the tracked default-app tail on this lane is
+  effectively closed; remaining follow-up work is now specialized-lane work rather than baseline
+  app-surface teaching drift.
 - the same UI Gallery default-app source gate now also records the `input_group` family:
   `apps/fret-ui-gallery/src/ui/snippets/input_group/{align_block_end,align_block_start,align_inline_end,align_inline_start,button,button_group,custom_input,demo,dropdown,icon,kbd,label,rtl,spinner,text,textarea,tooltip}.rs`
   now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while

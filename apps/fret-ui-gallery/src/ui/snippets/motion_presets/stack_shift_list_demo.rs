@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("stack_shift_list_demo.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_ui::Theme;
 use fret_ui::element::LayoutStyle;
 use fret_ui_kit::declarative::ModelWatchExt;
@@ -27,7 +27,7 @@ struct StackShiftListItem {
     exit_slot: usize,
 }
 
-pub fn render(cx: &mut UiCx<'_>, theme: &Theme) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let shell_layout = LayoutRefinement::default()
         .w_full()
         .max_w(Px(760.0))
@@ -59,10 +59,12 @@ pub fn render(cx: &mut UiCx<'_>, theme: &Theme) -> AnyElement {
     });
     let stack_shift_next_id = cx.local_model_keyed("stack_shift_next_id", || 5u64);
 
-    let shift_duration_ms = theme.duration_ms_token("duration.motion.stack.shift");
-    let shift_duration = Duration::from_millis(shift_duration_ms as u64);
-    let shift_each_delay_ms = theme.duration_ms_token("duration.motion.stack.shift.stagger");
-    let shift_each_delay = Duration::from_millis(shift_each_delay_ms as u64);
+    let theme = Theme::global(&*cx.app).clone();
+    let shift_duration =
+        Duration::from_millis(theme.duration_ms_token("duration.motion.stack.shift") as u64);
+    let shift_each_delay = Duration::from_millis(
+        theme.duration_ms_token("duration.motion.stack.shift.stagger") as u64,
+    );
     let shift_easing = theme.easing_token("easing.motion.stack.shift");
     let shift_easing_headless = fret_ui_headless::easing::CubicBezier::new(
         shift_easing.x1,
@@ -266,7 +268,7 @@ pub fn render(cx: &mut UiCx<'_>, theme: &Theme) -> AnyElement {
         };
 
         let container_props = decl_style::container_props(
-            theme,
+            &theme,
             ChromeRefinement::default()
                 .border_1()
                 .rounded(Radius::Md)
@@ -315,6 +317,7 @@ pub fn render(cx: &mut UiCx<'_>, theme: &Theme) -> AnyElement {
                         Px(0.0),
                         y,
                     ));
+                    let row_theme = theme.clone();
 
                     let row = cx.opacity_props(
                         fret_ui::element::OpacityProps {
@@ -323,7 +326,7 @@ pub fn render(cx: &mut UiCx<'_>, theme: &Theme) -> AnyElement {
                         },
                         move |cx| {
                             let props = decl_style::container_props(
-                                theme,
+                                &row_theme,
                                 ChromeRefinement::default()
                                     .border_1()
                                     .rounded(Radius::Sm)

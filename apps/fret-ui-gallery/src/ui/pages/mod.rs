@@ -843,18 +843,10 @@ pub(super) fn preview_sidebar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
 pub(super) fn preview_motion_presets(
     cx: &mut UiCx<'_>,
-    theme: &Theme,
     motion_preset: Model<Option<Arc<str>>>,
     motion_preset_open: Model<bool>,
-    dialog_open: Model<bool>,
 ) -> Vec<AnyElement> {
-    motion_presets::preview_motion_presets(
-        cx,
-        theme,
-        motion_preset,
-        motion_preset_open,
-        dialog_open,
-    )
+    motion_presets::preview_motion_presets(cx, motion_preset, motion_preset_open)
 }
 
 #[cfg(feature = "gallery-dev")]
