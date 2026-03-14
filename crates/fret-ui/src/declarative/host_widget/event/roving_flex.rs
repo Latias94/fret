@@ -67,30 +67,6 @@ pub(super) fn handle_roving_flex<H: UiHost>(
         }
     }
 
-    fn node_contains_in_window_frame<H: UiHost>(
-        app: &mut H,
-        window: AppWindowId,
-        root: NodeId,
-        needle: NodeId,
-    ) -> bool {
-        if root == needle {
-            return true;
-        }
-
-        let mut stack = vec![root];
-        while let Some(node) = stack.pop() {
-            let children =
-                crate::declarative::mount::children_for_node_in_window_frame(app, window, node);
-            for child in children {
-                if child == needle {
-                    return true;
-                }
-                stack.push(child);
-            }
-        }
-        false
-    }
-
     struct RovingHookHost<'a, H: UiHost> {
         app: &'a mut H,
         window: AppWindowId,
@@ -257,9 +233,11 @@ pub(super) fn handle_roving_flex<H: UiHost>(
 
     let current = cx.focus.and_then(|focus| {
         roving_items.iter().position(|n| *n == focus).or_else(|| {
-            roving_items
-                .iter()
-                .position(|&root| node_contains_in_window_frame(cx.app, window, root, focus))
+            roving_items.iter().position(|&root| {
+                crate::declarative::mount::node_contains_in_window_frame(
+                    cx.app, window, root, focus,
+                )
+            })
         })
     });
 

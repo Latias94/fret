@@ -900,15 +900,6 @@ pub fn sync_trigger_row_state<H: UiHost>(
         clear_patient_click_sticky_for_ui_host(cx.app, &patient_click_sticky, &patient_click_timer);
     }
 
-    if active_value
-        .as_ref()
-        .is_some_and(|active_value| active_value.trigger == trigger_id)
-        && !is_open
-    {
-        let _ = cx.app.models_mut().update(&group_active, |v| *v = None);
-        clear_patient_click_sticky_for_ui_host(cx.app, &patient_click_sticky, &patient_click_timer);
-    }
-
     if active_value.is_none() && is_open {
         let open_for_state = open.clone();
         let _ = cx.app.models_mut().update(&group_active, |v| {

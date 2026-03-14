@@ -44,7 +44,6 @@ where
         });
 
     cx.keyed("workspace_shell.command_scope", |cx| {
-        let shell_root = cx.root_id();
         let menubar_handle: std::cell::RefCell<Option<InWindowMenubarFocusHandle>> =
             std::cell::RefCell::new(None);
 
@@ -59,10 +58,6 @@ where
                 menu
             })
         });
-
-        if let Some(handle) = menubar_handle.borrow().clone() {
-            install_in_window_menubar_focus_bridge(cx, shell_root, &handle);
-        }
 
         let mut topbar_anchor_id: Option<GlobalElementId> = None;
 
@@ -144,16 +139,20 @@ where
             &pending_sequence,
             &pending_continuations,
         );
-        if let Some(overlay) = overlay {
-            return cx.stack_props(
+        let shell = if let Some(overlay) = overlay {
+            cx.stack_props(
                 StackProps {
                     layout: fill_layout(),
                 },
                 |_cx| vec![frame, overlay],
-            );
+            )
+        } else {
+            frame
+        };
+        if let Some(handle) = menubar_handle.borrow().clone() {
+            install_in_window_menubar_focus_bridge(cx, shell.id, &handle);
         }
-
-        frame
+        shell
     })
 }
 

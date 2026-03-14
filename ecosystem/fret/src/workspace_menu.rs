@@ -778,6 +778,20 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
     let last_focus_before_menubar = ensure_last_focus_before_menubar_model(cx, group);
     let focus_is_trigger = ensure_menubar_focus_is_trigger_model(cx, group);
     let pending_focus = ensure_pending_menubar_focus_model(cx, group);
+    let on_mnemonic = menubar_trigger_row::open_on_mnemonic_when_active(
+        group_active.clone(),
+        trigger_registry.clone(),
+        focus_is_trigger.clone(),
+    );
+    let on_escape = menubar_trigger_row::exit_active_on_escape_when_closed(
+        group_active.clone(),
+        last_focus_before_menubar.clone(),
+        focus_is_trigger.clone(),
+    );
+    cx.key_on_key_down_for(
+        group,
+        Arc::new(move |host, acx, down| on_mnemonic(host, acx, down) || on_escape(host, acx, down)),
+    );
 
     let fallback_ctx = menu_fallback_input_context(cx, opts.platform);
     let gating =
@@ -858,13 +872,17 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
             );
 
             let focused = cx.focused_element();
-            let focused_is_trigger = focused.is_some_and(|id| {
-                cx.app
-                    .models()
-                    .read(&trigger_registry, |v| v.iter().any(|e| e.trigger == id))
-                    .ok()
-                    .unwrap_or(false)
-            });
+            let registered_triggers = cx
+                .app
+                .models()
+                .read(&trigger_registry, |v| {
+                    v.iter().map(|entry| entry.trigger).collect::<Vec<_>>()
+                })
+                .ok()
+                .unwrap_or_default();
+            let focused_is_trigger = registered_triggers
+                .into_iter()
+                .any(|trigger| cx.is_focus_within_element(trigger));
             let cur_focused_is_trigger = cx
                 .app
                 .models()
@@ -960,6 +978,9 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
                                         cx,
                                         group_active.clone(),
                                         trigger_registry.clone(),
+                                        last_focus_before_menubar.clone(),
+                                        focus_is_trigger.clone(),
+                                        pending_focus.clone(),
                                         menu,
                                         pad,
                                         &opts,
@@ -990,6 +1011,9 @@ fn render_menu_from_runtime<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     group_active: fret_runtime::Model<Option<menubar_trigger_row::MenubarActiveTrigger>>,
     trigger_registry: fret_runtime::Model<Vec<menubar_trigger_row::MenubarTriggerRowEntry>>,
+    last_focus_before_menubar: fret_runtime::Model<Option<GlobalElementId>>,
+    focus_is_trigger: fret_runtime::Model<bool>,
+    pending_focus: fret_runtime::Model<Option<PendingMenubarTriggerFocus>>,
     menu: InWindowMenu,
     pad: Px,
     opts: &MenubarFromRuntimeOptions,
@@ -1070,6 +1094,22 @@ fn render_menu_from_runtime<H: UiHost>(
                 }
                 fret_ui::action::PressablePointerDownResult::Continue
             }));
+            cx.key_add_on_key_down_for(
+                trigger_id,
+                menubar_trigger_row::open_on_mnemonic_when_active(
+                    group_active.clone(),
+                    trigger_registry.clone(),
+                    focus_is_trigger.clone(),
+                ),
+            );
+            cx.key_add_on_key_down_for(
+                trigger_id,
+                menubar_trigger_row::exit_active_on_escape_when_closed(
+                    group_active.clone(),
+                    last_focus_before_menubar.clone(),
+                    focus_is_trigger.clone(),
+                ),
+            );
             menu::wire_menubar_open_on_arrow_keys(cx, trigger_id, open.clone());
 
             let overlay_root_name = menu::menubar_root_name(trigger_id);
@@ -1114,6 +1154,7 @@ fn render_menu_from_runtime<H: UiHost>(
                     &menu.entries,
                     group_active.clone(),
                     trigger_registry.clone(),
+                    pending_focus.clone(),
                     opts,
                 );
             }
@@ -1182,6 +1223,7 @@ fn request_menu_overlay<H: UiHost>(
     entries: &[InWindowMenuEntry],
     group_active: fret_runtime::Model<Option<menubar_trigger_row::MenubarActiveTrigger>>,
     trigger_registry: fret_runtime::Model<Vec<menubar_trigger_row::MenubarTriggerRowEntry>>,
+    pending_focus: fret_runtime::Model<Option<PendingMenubarTriggerFocus>>,
     opts: &MenubarFromRuntimeOptions,
 ) {
     let window_margin = Px(8.0);
@@ -1443,11 +1485,15 @@ fn request_menu_overlay<H: UiHost>(
             (children, Some(dismissible_on_pointer_move))
         });
 
-    let on_dismiss_request: Option<OnDismissRequest> = Some(Arc::new(move |host, acx, _req| {
+    let on_dismiss_request: Option<OnDismissRequest> = Some(Arc::new(move |host, acx, req| {
         let _ = host.models_mut().update(&open_for_dismiss, |v| *v = false);
-        let _ = host
-            .models_mut()
-            .update(&group_active_for_dismiss, |v| *v = None);
+        if matches!(req.reason, fret_ui::action::DismissReason::Escape) {
+            arm_pending_menubar_focus(host, acx.window, &pending_focus, trigger_id);
+        } else {
+            let _ = host
+                .models_mut()
+                .update(&group_active_for_dismiss, |v| *v = None);
+        }
         host.request_redraw(acx.window);
     }));
 
@@ -2490,6 +2536,11 @@ mod tests {
         let window = fret_core::AppWindowId::default();
         let mut app = App::new();
         app.set_global(fret_runtime::PlatformCapabilities::default());
+        app.commands_mut().register(
+            CommandId::from("test.noop"),
+            fret_runtime::CommandMeta::new("Test Noop")
+                .with_scope(fret_runtime::CommandScope::Widget),
+        );
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -2573,5 +2624,589 @@ mod tests {
 
         // Avoid unused warnings if the effect buffer changes across versions.
         let _ = app.flush_effects();
+    }
+
+    #[cfg(feature = "shadcn")]
+    #[test]
+    fn focus_menu_bar_active_mnemonic_works_when_trigger_child_has_focus() {
+        use crate::shadcn::themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
+        use fret_app::App;
+        use fret_ui_kit::OverlayController;
+        use std::cell::{Cell, RefCell};
+        use std::rc::Rc;
+        use std::sync::Arc;
+
+        if !matches!(Platform::current(), Platform::Windows | Platform::Linux) {
+            return;
+        }
+
+        #[derive(Default)]
+        struct FakeServices;
+
+        impl fret_core::TextService for FakeServices {
+            fn prepare(
+                &mut self,
+                _input: &fret_core::TextInput,
+                _constraints: fret_core::TextConstraints,
+            ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+                (
+                    fret_core::TextBlobId::default(),
+                    fret_core::TextMetrics {
+                        size: Size::new(Px(10.0), Px(10.0)),
+                        baseline: Px(8.0),
+                    },
+                )
+            }
+
+            fn release(&mut self, _blob: fret_core::TextBlobId) {}
+        }
+
+        impl fret_core::PathService for FakeServices {
+            fn prepare(
+                &mut self,
+                _commands: &[fret_core::PathCommand],
+                _style: fret_core::PathStyle,
+                _constraints: fret_core::PathConstraints,
+            ) -> (fret_core::PathId, fret_core::PathMetrics) {
+                (
+                    fret_core::PathId::default(),
+                    fret_core::PathMetrics::default(),
+                )
+            }
+
+            fn release(&mut self, _path: fret_core::PathId) {}
+        }
+
+        impl fret_core::SvgService for FakeServices {
+            fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+                fret_core::SvgId::default()
+            }
+
+            fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+                true
+            }
+        }
+
+        impl fret_core::MaterialService for FakeServices {
+            fn register_material(
+                &mut self,
+                _desc: fret_core::MaterialDescriptor,
+            ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+                Err(fret_core::MaterialRegistrationError::Unsupported)
+            }
+
+            fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+                true
+            }
+        }
+
+        fn bounds() -> Rect {
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(800.0), Px(600.0)),
+            )
+        }
+
+        fn menu_bar() -> MenuBar {
+            MenuBar {
+                menus: vec![Menu {
+                    title: Arc::from("File"),
+                    role: None,
+                    mnemonic: Some('f'),
+                    items: vec![
+                        MenuItem::Submenu {
+                            title: Arc::from("Recent"),
+                            when: None,
+                            items: vec![MenuItem::Command {
+                                command: CommandId::from("workspace.pane.split.right"),
+                                when: None,
+                                toggle: None,
+                            }],
+                        },
+                        MenuItem::Command {
+                            command: CommandId::from("workspace.pane.split.right"),
+                            when: None,
+                            toggle: None,
+                        },
+                    ],
+                }],
+            }
+        }
+
+        fn node_by_test_id<'a>(
+            snap: &'a fret_core::SemanticsSnapshot,
+            id: &str,
+        ) -> &'a fret_core::SemanticsNode {
+            snap.nodes
+                .iter()
+                .find(|n| n.test_id.as_deref() == Some(id))
+                .unwrap_or_else(|| {
+                    let available: Vec<&str> = snap
+                        .nodes
+                        .iter()
+                        .filter_map(|n| n.test_id.as_deref())
+                        .collect();
+                    panic!(
+                        "expected semantics node with test_id={id:?}; available_test_ids={available:?}"
+                    )
+                })
+        }
+
+        fn assert_focus_test_id(snap: &fret_core::SemanticsSnapshot, id: &str) {
+            let node_id = node_by_test_id(snap, id).id;
+            assert_eq!(snap.focus, Some(node_id), "expected focus to be {id:?}");
+        }
+
+        fn assert_trigger_expanded(
+            snap: &fret_core::SemanticsSnapshot,
+            id: &str,
+            expected: bool,
+            stage: &str,
+        ) {
+            let actual = node_by_test_id(snap, id).flags.expanded;
+            assert_eq!(
+                actual, expected,
+                "expected trigger {id:?} expanded={expected} at stage={stage}"
+            );
+        }
+
+        fn press_key(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            key: fret_core::KeyCode,
+        ) {
+            ui.dispatch_event(
+                app,
+                services,
+                &fret_core::Event::KeyDown {
+                    key,
+                    modifiers: fret_core::Modifiers::default(),
+                    repeat: false,
+                },
+            );
+            ui.dispatch_event(
+                app,
+                services,
+                &fret_core::Event::KeyUp {
+                    key,
+                    modifiers: fret_core::Modifiers::default(),
+                },
+            );
+        }
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: fret_core::AppWindowId,
+            bounds: Rect,
+            bar: &MenuBar,
+            before_focus_id: Rc<Cell<Option<GlobalElementId>>>,
+            handle_out: Rc<RefCell<Option<InWindowMenubarFocusHandle>>>,
+            panel_key_capture_count: fret_runtime::Model<u32>,
+            panel_key_tail_count: fret_runtime::Model<u32>,
+        ) -> fret_core::SemanticsSnapshot {
+            let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+            app.set_frame_id(next_frame);
+
+            apply_shadcn_new_york(app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+            OverlayController::begin_frame(app, window);
+
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "menu-active-mnemonic-escape",
+                |cx| {
+                    let before_focus_id = before_focus_id.clone();
+                    let handle_out = handle_out.clone();
+                    let panel_key_capture_count = panel_key_capture_count.clone();
+                    let panel_key_tail_count = panel_key_tail_count.clone();
+                    vec![cx.keyed("menu-active-mnemonic-escape.command-scope", |cx| {
+                        let content = cx.column(Default::default(), |cx| {
+                            let menubar = cx.keyed("menu-active-mnemonic-escape.menubar", |cx| {
+                                let (menu, handle) = menubar_from_runtime_with_focus_handle(
+                                    cx,
+                                    bar,
+                                    MenubarFromRuntimeOptions::default(),
+                                );
+                                handle_out.borrow_mut().replace(handle);
+                                menu
+                            });
+                            vec![
+                                cx.pressable_with_id(
+                                    PressableProps {
+                                        layout: LayoutStyle::default(),
+                                        enabled: true,
+                                        focusable: true,
+                                        key_activation: Default::default(),
+                                        focus_ring: None,
+                                        focus_ring_always_paint: false,
+                                        focus_ring_bounds: None,
+                                        a11y: PressableA11y {
+                                            role: Some(SemanticsRole::Button),
+                                            label: Some(Arc::from("Before Menubar")),
+                                            test_id: Some(Arc::from("before-menubar")),
+                                            ..Default::default()
+                                        },
+                                    },
+                                    move |cx, _st, id| {
+                                        before_focus_id.set(Some(id));
+                                        vec![cx.text("Before Menubar")]
+                                    },
+                                ),
+                                menubar,
+                            ]
+                        });
+                        cx.key_add_on_key_down_capture_for(
+                            content.id,
+                            Arc::new(move |host, _acx, down| {
+                                if down.key == fret_core::KeyCode::KeyF {
+                                    let _ = host
+                                        .models_mut()
+                                        .update(&panel_key_capture_count, |v| *v += 1);
+                                }
+                                false
+                            }),
+                        );
+                        if let Some(handle) = handle_out.borrow().clone() {
+                            install_in_window_menubar_focus_bridge(cx, content.id, &handle);
+                            cx.key_add_on_key_down_for(
+                                content.id,
+                                Arc::new(move |host, _acx, down| {
+                                    if down.key == fret_core::KeyCode::KeyF {
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&panel_key_tail_count, |v| *v += 1);
+                                    }
+                                    false
+                                }),
+                            );
+                        }
+                        content
+                    })]
+                },
+            );
+            ui.set_root(root);
+
+            OverlayController::render(ui, app, services, window, bounds);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+
+            ui.semantics_snapshot().expect("semantics snapshot").clone()
+        }
+
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+        app.set_global(fret_runtime::PlatformCapabilities::default());
+
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices::default();
+        let bounds = bounds();
+        let bar = menu_bar();
+        let before_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let handle_out: Rc<RefCell<Option<InWindowMenubarFocusHandle>>> =
+            Rc::new(RefCell::new(None));
+        let panel_key_capture_count = app.models_mut().insert(0u32);
+        let panel_key_tail_count = app.models_mut().insert(0u32);
+
+        let _snap = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            &bar,
+            before_focus_id.clone(),
+            handle_out.clone(),
+            panel_key_capture_count.clone(),
+            panel_key_tail_count.clone(),
+        );
+
+        let before_focus = before_focus_id.get().expect("before-menubar element id");
+        let before_focus_node = fret_ui::elements::node_for_element(&mut app, window, before_focus)
+            .expect("before-menubar node");
+        ui.set_focus(Some(before_focus_node));
+
+        let snap = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            &bar,
+            before_focus_id.clone(),
+            handle_out.clone(),
+            panel_key_capture_count.clone(),
+            panel_key_tail_count.clone(),
+        );
+        assert_focus_test_id(&snap, "before-menubar");
+
+        let activate_menubar = |ui: &mut UiTree<App>,
+                                app: &mut App,
+                                services: &mut dyn fret_core::UiServices|
+         -> fret_core::SemanticsSnapshot {
+            let handle = handle_out
+                .borrow()
+                .clone()
+                .expect("menubar focus handle after render");
+            let initial_group_active_id = handle.group_active.id();
+            let initial_focus_is_trigger_id = handle.focus_is_trigger.id();
+            let initial_pending_focus_id = handle.pending_focus.id();
+            let on_command = focus_menu_bar_command_handler(
+                handle.group_active.clone(),
+                handle.trigger_registry.clone(),
+                handle.last_focus_before_menubar.clone(),
+                handle.pending_focus.clone(),
+            );
+            let requested = {
+                let mut host = Host {
+                    app,
+                    last_focus_requested: Cell::new(None),
+                };
+                assert!(on_command(
+                    &mut host,
+                    ActionCx {
+                        window,
+                        target: GlobalElementId(1),
+                    },
+                    CommandId::from(fret_app::core_commands::FOCUS_MENU_BAR),
+                ));
+                host.last_focus_requested.get()
+            };
+            let requested = requested.expect("focus.menu_bar should request a trigger focus");
+            let requested_node = fret_ui::elements::node_for_element(app, window, requested)
+                .expect("menubar trigger node");
+            ui.set_focus(Some(requested_node));
+
+            let _ = render_frame(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                &bar,
+                before_focus_id.clone(),
+                handle_out.clone(),
+                panel_key_capture_count.clone(),
+                panel_key_tail_count.clone(),
+            );
+            let active_after_first_render = app
+                .models_mut()
+                .read(&handle.group_active, |v| v.clone())
+                .ok()
+                .flatten();
+
+            let pending = app
+                .models_mut()
+                .read(&handle.pending_focus, |v| *v)
+                .ok()
+                .flatten()
+                .expect("pending menubar focus after activation");
+            let on_timer = pending_menubar_focus_timer_handler(
+                handle.group_active.clone(),
+                handle.focus_is_trigger.clone(),
+                handle.pending_focus.clone(),
+            );
+            let requested = {
+                let mut host = Host {
+                    app,
+                    last_focus_requested: Cell::new(None),
+                };
+                assert!(on_timer(
+                    &mut host,
+                    ActionCx {
+                        window,
+                        target: GlobalElementId(1),
+                    },
+                    pending.token,
+                ));
+                host.last_focus_requested.get()
+            };
+            if let Some(requested) = requested {
+                let requested_node = fret_ui::elements::node_for_element(app, window, requested)
+                    .expect("timer requested trigger node");
+                ui.set_focus(Some(requested_node));
+            }
+
+            let snap = render_frame(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                &bar,
+                before_focus_id.clone(),
+                handle_out.clone(),
+                panel_key_capture_count.clone(),
+                panel_key_tail_count.clone(),
+            );
+            let active_after_timer_render = app
+                .models_mut()
+                .read(&handle.group_active, |v| v.clone())
+                .ok()
+                .flatten();
+            assert!(
+                active_after_first_render.is_some(),
+                "menubar should stay active on the first render after focus.menu_bar"
+            );
+            assert!(
+                active_after_timer_render.is_some(),
+                "menubar should stay active after the pending-focus timer render"
+            );
+            let refreshed = handle_out
+                .borrow()
+                .clone()
+                .expect("refreshed menubar focus handle after activation");
+            assert_eq!(
+                refreshed.group_active.id(),
+                initial_group_active_id,
+                "group_active model should remain stable across activation renders"
+            );
+            assert_eq!(
+                refreshed.focus_is_trigger.id(),
+                initial_focus_is_trigger_id,
+                "focus_is_trigger model should remain stable across activation renders"
+            );
+            assert_eq!(
+                refreshed.pending_focus.id(),
+                initial_pending_focus_id,
+                "pending_focus model should remain stable across activation renders"
+            );
+            snap
+        };
+
+        let _snap = activate_menubar(&mut ui, &mut app, &mut services);
+        let handle = handle_out.borrow().clone().expect("menubar focus handle");
+        let focus_is_trigger = app
+            .models_mut()
+            .read(&handle.focus_is_trigger, |v| *v)
+            .ok()
+            .unwrap_or(false);
+        assert!(
+            focus_is_trigger,
+            "expected menubar activation to treat focused trigger chrome as within the trigger"
+        );
+        assert!(
+            app.models_mut()
+                .read(&handle.group_active, |v| v.clone())
+                .ok()
+                .flatten()
+                .is_some(),
+            "expected menubar to remain active after focus.menu_bar activation"
+        );
+        let direct_mnemonic = menubar_trigger_row::open_on_mnemonic_when_active(
+            handle.group_active.clone(),
+            handle.trigger_registry.clone(),
+            handle.focus_is_trigger.clone(),
+        );
+        let direct_handled = {
+            let mut host = Host {
+                app: &mut app,
+                last_focus_requested: Cell::new(None),
+            };
+            direct_mnemonic(
+                &mut host,
+                ActionCx {
+                    window,
+                    target: GlobalElementId(1),
+                },
+                fret_ui::action::KeyDownCx {
+                    key: fret_core::KeyCode::KeyF,
+                    modifiers: fret_core::Modifiers::default(),
+                    repeat: false,
+                    ime_composing: false,
+                },
+            )
+        };
+        assert!(
+            direct_handled,
+            "expected direct active-mnemonic handler to open the active trigger"
+        );
+        let active_open = app
+            .models_mut()
+            .read(&handle.group_active, |v| v.clone())
+            .ok()
+            .flatten()
+            .expect("active trigger after direct mnemonic")
+            .open;
+        let _ = app.models_mut().update(&active_open, |v| *v = false);
+
+        press_key(&mut ui, &mut app, &mut services, fret_core::KeyCode::KeyF);
+        let active_before_render = app.models_mut().get_cloned(&handle.group_active).flatten();
+        let active_open_before_render = active_before_render
+            .as_ref()
+            .and_then(|active| app.models().get_copied(&active.open))
+            .unwrap_or(false);
+        let registry_open_id_before_render = app
+            .models_mut()
+            .read(&handle.trigger_registry, |v| v.first().map(|entry| entry.open.id()))
+            .ok()
+            .flatten();
+        let panel_key_capture_hits = app
+            .models_mut()
+            .read(&panel_key_capture_count, |v| *v)
+            .ok()
+            .unwrap_or(0);
+        let panel_key_tail_hits = app
+            .models_mut()
+            .read(&panel_key_tail_count, |v| *v)
+            .ok()
+            .unwrap_or(0);
+        let snap = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            &bar,
+            before_focus_id.clone(),
+            handle_out.clone(),
+            panel_key_capture_count.clone(),
+            panel_key_tail_count.clone(),
+        );
+        let refreshed_handle = handle_out
+            .borrow()
+            .clone()
+            .expect("menubar focus handle after active mnemonic render");
+        let active_after_render = app
+            .models_mut()
+            .get_cloned(&refreshed_handle.group_active)
+            .flatten();
+        let active_open_after_render = active_after_render
+            .as_ref()
+            .and_then(|active| app.models().get_copied(&active.open))
+            .unwrap_or(false);
+        let registry_open_id_after_render = app
+            .models_mut()
+            .read(&refreshed_handle.trigger_registry, |v| v.first().map(|entry| entry.open.id()))
+            .ok()
+            .flatten();
+        assert!(
+            panel_key_capture_hits > 0,
+            "expected KeyF to reach the workspace panel capture chain"
+        );
+        assert_eq!(
+            panel_key_tail_hits, 0,
+            "expected workspace panel bridge to handle KeyF before tail observers"
+        );
+        assert!(
+            active_open_before_render,
+            "expected active mnemonic bridge to set open=true before the next render"
+        );
+        assert_eq!(
+            registry_open_id_before_render, registry_open_id_after_render,
+            "expected menubar trigger open model identity to stay stable across renders"
+        );
+        assert!(
+            active_open_after_render,
+            "expected render to preserve open=true after active mnemonic handling"
+        );
+        assert_trigger_expanded(&snap, "menubar-trigger-file", true, "after-active-mnemonic");
     }
 }

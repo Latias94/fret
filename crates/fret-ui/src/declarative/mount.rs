@@ -231,6 +231,30 @@ pub(crate) fn children_for_node_in_window_frame<H: UiHost>(
     })
 }
 
+pub(crate) fn node_contains_in_window_frame<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    root: NodeId,
+    needle: NodeId,
+) -> bool {
+    if root == needle {
+        return true;
+    }
+
+    let mut stack = vec![root];
+    while let Some(node) = stack.pop() {
+        let children = children_for_node_in_window_frame(app, window, node);
+        for child in children {
+            if child == needle {
+                return true;
+            }
+            stack.push(child);
+        }
+    }
+
+    false
+}
+
 /// Render a declarative element tree into an existing `UiTree` root.
 ///
 /// Call this once per frame *before* `layout_all`/`paint_all`, for the relevant window.

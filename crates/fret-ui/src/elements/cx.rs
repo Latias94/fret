@@ -261,6 +261,31 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.window_state.focused_element == Some(element)
     }
 
+    /// Returns `true` when the currently focused element is `element` itself or any descendant in
+    /// the declarative element tree for this window.
+    pub fn is_focus_within_element(&mut self, element: GlobalElementId) -> bool {
+        let Some(focused) = self.focused_element() else {
+            return false;
+        };
+        if focused == element {
+            return true;
+        }
+
+        let Some(root_node) = self.window_state.node_entry(element).map(|e| e.node) else {
+            return false;
+        };
+        let Some(focused_node) = self.window_state.node_entry(focused).map(|e| e.node) else {
+            return false;
+        };
+
+        crate::declarative::node_contains_in_window_frame(
+            &mut *self.app,
+            self.window,
+            root_node,
+            focused_node,
+        )
+    }
+
     pub fn has_active_text_selection(&self) -> bool {
         self.window_state.active_text_selection().is_some()
     }
