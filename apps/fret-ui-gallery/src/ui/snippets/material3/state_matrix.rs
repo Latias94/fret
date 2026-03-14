@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("state_matrix.rs");
 // region: example
 use std::sync::Arc;
 
+use fret::{UiChild, UiCx};
 use fret_core::{Edges, Px};
 use fret_icons::ids;
 use fret_ui::action::OnActivate;
@@ -12,8 +13,8 @@ use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn render_chips<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+fn render_chips(
+    cx: &mut UiCx<'_>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     let filter_selected = cx.local_model_keyed("filter_selected", || true);
@@ -300,8 +301,8 @@ fn render_chips<H: UiHost>(
     ]
 }
 
-fn render_cards<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+fn render_cards(
+    cx: &mut UiCx<'_>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     let activate: OnActivate = Arc::new(move |host, _acx, _reason| {
@@ -333,7 +334,7 @@ fn render_cards<H: UiHost>(
     let card_content_row1 = {
         let body_style = body_style.clone();
         let body_color = body_color;
-        move |cx: &mut ElementContext<'_, H>, label: &'static str| {
+        move |cx: &mut UiCx<'_>, label: &'static str| {
             let mut container = ContainerProps::default();
             container.layout.size.width = Length::Px(Px(280.0));
             container.layout.size.height = Length::Px(Px(72.0));
@@ -349,7 +350,7 @@ fn render_cards<H: UiHost>(
     let card_content_row2 = {
         let body_style = body_style.clone();
         let body_color = body_color;
-        move |cx: &mut ElementContext<'_, H>, label: &'static str| {
+        move |cx: &mut UiCx<'_>, label: &'static str| {
             let mut container = ContainerProps::default();
             container.layout.size.width = Length::Px(Px(280.0));
             container.layout.size.height = Length::Px(Px(72.0));
@@ -415,8 +416,8 @@ fn render_cards<H: UiHost>(
     ]
 }
 
-fn render_fab<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+fn render_fab(
+    cx: &mut UiCx<'_>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     fn on_activate(id: &'static str, last_action: Model<Arc<str>>) -> OnActivate {
@@ -429,7 +430,7 @@ fn render_fab<H: UiHost>(
 
     let row = {
         let last_action = last_action.clone();
-        move |cx: &mut ElementContext<'_, H>,
+        move |cx: &mut UiCx<'_>,
               variant: material3::FabVariant,
               label: &'static str| {
             let last_action = last_action.clone();
@@ -528,7 +529,7 @@ fn render_fab<H: UiHost>(
     ]
 }
 
-fn render_search_view<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Vec<AnyElement> {
+fn render_search_view(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let selected = cx.local_model_keyed("selected", || Arc::<str>::from("alpha"));
 
     let suggestions = material3::List::new(selected)
@@ -559,8 +560,8 @@ fn render_search_view<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Vec<AnyEleme
     vec![view]
 }
 
-fn render_menu<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+fn render_menu(
+    cx: &mut UiCx<'_>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     let dropdown_root = material3::DropdownMenu::uncontrolled(cx).a11y_label("Material 3 Menu");
@@ -614,10 +615,10 @@ fn render_menu<H: UiHost>(
     vec![dropdown]
 }
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+pub fn render(
+    cx: &mut UiCx<'_>,
     last_action: Model<Arc<str>>,
-) -> AnyElement {
+) -> impl UiChild + use<> {
     let checkbox_root = material3::Checkbox::uncontrolled(cx, false);
     let material3_checkbox = checkbox_root.checked_model();
     let switch_root = material3::Switch::uncontrolled(cx, false);

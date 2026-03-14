@@ -6932,6 +6932,37 @@ fn material3_overlay_snippets_prefer_ui_cx_on_the_default_app_surface() {
 }
 
 #[test]
+fn material3_composite_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/material3/gallery.rs",
+            "src/ui/snippets/material3/state_matrix.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(",
+            "cx: &mut UiCx<'_>",
+            "-> impl UiChild + use<>",
+        ],
+        "app-facing Material 3 composite snippet surface",
+    );
+
+    for relative_path in [
+        "src/ui/snippets/material3/gallery.rs",
+        "src/ui/snippets/material3/state_matrix.rs",
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+        assert!(
+            !normalized.contains("ElementContext<'_,H>"),
+            "{} reintroduced legacy host-bound helper parameters",
+            path.display()
+        );
+    }
+}
+
+#[test]
 fn material3_overlay_snippets_prefer_uncontrolled_copyable_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/menu.rs",
@@ -6977,7 +7008,7 @@ fn material3_overlay_snippets_prefer_uncontrolled_copyable_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/state_matrix.rs",
         &[
-            "fn render_search_view<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Vec<AnyElement> {",
+            "fn render_search_view(cx: &mut UiCx<'_>) -> Vec<AnyElement> {",
             "material3::SearchView::uncontrolled(cx)",
         ],
         &[

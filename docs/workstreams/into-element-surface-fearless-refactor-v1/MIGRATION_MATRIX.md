@@ -399,6 +399,12 @@ Execution note on 2026-03-13:
   now expose `UiCx -> impl UiChild`, and the corresponding overlay gates now lock both the typed
   top-level teaching surface and the local uncontrolled/copyable-root posture for the
   dialog/menu/bottom-sheet exemplars.
+- the specialized `material3` lane is now fully aligned on the first-party default teaching
+  surface:
+  `apps/fret-ui-gallery/src/ui/snippets/material3/{gallery,state_matrix}.rs` now also expose the
+  typed `UiCx -> impl UiChild` posture, their remaining helper signatures no longer spell
+  `ElementContext<'_, H>`, and the composite source gates now close the last Material 3 teaching
+  drift on this lane.
 - the same UI Gallery default-app source gate now also records the `input_group` family:
   `apps/fret-ui-gallery/src/ui/snippets/input_group/{align_block_end,align_block_start,align_inline_end,align_inline_start,button,button_group,custom_input,demo,dropdown,icon,kbd,label,rtl,spinner,text,textarea,tooltip}.rs`
   now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
@@ -580,9 +586,9 @@ Execution note on 2026-03-13:
   top-level snippet renders still teaching `ElementContext<'_, H> -> AnyElement` on that lane.
 - for the default-app authoring lane, the next queue should now continue on the remaining
   long-tail stateful families after `command` / `card` / `image_object_fit`, with `data_table`
-  and `motion_presets` now carrying most of the remaining tracked backlog, while `ai`,
-  and `material3` continue as separate specialized follow-up lanes now that the dedicated
-  `typography` and `shadcn_extras` teaching lanes have been aligned too.
+  and `motion_presets` now carrying most of the remaining tracked backlog, while `ai` continues
+  as the remaining specialized follow-up lane now that the dedicated `material3`, `typography`,
+  and `shadcn_extras` teaching lanes have been aligned too.
 - the cookbook advanced-example source gate now also records
   `apps/fret-cookbook/examples/customv1_basics.rs`,
   where `panel_shell(...)` and `preview_content(...)` now use `IntoUiElement<KernelApp>`-based

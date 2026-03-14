@@ -62,9 +62,15 @@ Execution note on 2026-03-14:
   now expose `UiCx -> impl UiChild`, and the overlay source gates now lock both the typed
   top-level teaching surface and the local uncontrolled/copyable-root ownership story for the
   dialog/menu/bottom-sheet exemplars.
+- the specialized `material3` lane is now fully aligned on the first-party default teaching
+  surface:
+  `apps/fret-ui-gallery/src/ui/snippets/material3/{gallery,state_matrix}.rs` now also expose the
+  typed `UiCx -> impl UiChild` posture, their remaining helper signatures no longer spell
+  `ElementContext<'_, H>`, and the composite source gates now close the last Material 3 teaching
+  drift on this lane.
 - after these tracked landings, the current tracked default-app teaching-surface lane is
-  effectively closed; remaining follow-up work now lives on the specialized `ai` and
-  `material3` lanes plus any optional dead-field/runtime cleanup.
+  effectively closed; remaining follow-up work now lives on the specialized `ai` lane plus any
+  optional dead-field/runtime cleanup.
 
 ## M0 — Lock the target vocabulary
 
@@ -575,8 +581,9 @@ Implementation note on 2026-03-13:
   migration run started).
 - for the default-app lane specifically, the next queue should now continue on the remaining
   long-tail stateful families after `command` / `card` / `image_object_fit`, with `data_table`
-  and `motion_presets` now carrying most of the remaining tracked backlog; `ai`, `material3`, `typography`, and
-  `shadcn_extras` continue on their own specialized alignment lanes.
+  and `motion_presets` now carrying most of the remaining tracked backlog; `ai` continues on its
+  remaining specialized alignment lane now that `material3`, `typography`, and
+  `shadcn_extras` have been aligned.
 - `apps/fret-cookbook/examples/customv1_basics.rs` now keeps both advanced reusable helpers
   `panel_shell(...)` and `preview_content(...)` on `IntoUiElement<KernelApp>`-based signatures
   instead of returning raw `AnyElement` for non-raw composition.

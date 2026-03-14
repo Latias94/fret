@@ -880,6 +880,14 @@ Exit criteria:
   for the dialog/menu/bottom-sheet exemplars.
 - validation addendum on 2026-03-14:
   `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app material3_ -- --nocapture`
+- the specialized `material3` lane is now fully aligned on the first-party default teaching
+  surface:
+  `apps/fret-ui-gallery/src/ui/snippets/material3/{gallery,state_matrix}.rs` now also expose the
+  typed `UiCx -> impl UiChild` posture, their remaining helper signatures no longer spell
+  `ElementContext<'_, H>`, and the composite source gates now close the last Material 3 teaching
+  drift on this lane.
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app material3_ -- --nocapture`
 - after these tracked landings, the tracked default-app workstream-local teaching-surface lane is
-  now effectively closed; remaining work continues on the specialized `ai` and `material3` lanes
-  plus any optional post-cleanup of now-nonessential gallery runtime fields.
+  now effectively closed; remaining work continues on the specialized `ai` lane plus any optional
+  post-cleanup of now-nonessential gallery runtime fields.
