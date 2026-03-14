@@ -1,16 +1,17 @@
 pub const SOURCE: &str = include_str!("attachments_list.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::{ImageColorSpace, ImageId, Px};
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
 use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
-use fret_ui_kit::{IntoUiElement, LayoutRefinement, MetricRef, Space, ui};
+use fret_ui_kit::{LayoutRefinement, MetricRef, Space, ui};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 use std::sync::OnceLock;
 
-fn landscape_image_id<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Option<ImageId> {
+fn landscape_image_id(cx: &mut UiCx<'_>) -> Option<ImageId> {
     static SOURCE: OnceLock<ImageSource> = OnceLock::new();
     let source = SOURCE.get_or_init(|| {
         // Keep the snippet self-contained instead of depending on repo-relative demo assets.
@@ -67,7 +68,7 @@ fn demo_preview_rgba8(width: u32, height: u32, accent: (u8, u8, u8)) -> Vec<u8> 
     out
 }
 
-fn demo_items<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> Vec<ui_ai::AttachmentData> {
+fn demo_items(cx: &mut UiCx<'_>) -> Vec<ui_ai::AttachmentData> {
     let mut image = ui_ai::AttachmentFileData::new("att-image")
         .filename("mountain-landscape.jpg")
         .media_type("image/jpeg");
@@ -98,12 +99,12 @@ fn demo_items<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> Vec<ui_ai:
     ]
 }
 
-fn render_list_attachment<H: UiHost + 'static>(
-    cx: &mut ElementContext<'_, H>,
+fn render_list_attachment(
+    cx: &mut UiCx<'_>,
     data: ui_ai::AttachmentData,
     on_remove: ui_ai::OnAttachmentRemove,
     test_id: Option<&'static str>,
-) -> impl IntoUiElement<H> + use<H> {
+) -> impl UiChild + use<> {
     let mut attachment = ui_ai::Attachment::new(data)
         .variant(ui_ai::AttachmentVariant::List)
         .show_media_type(true)
@@ -128,7 +129,7 @@ fn render_list_attachment<H: UiHost + 'static>(
     })
 }
 
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let removed_ids = cx.local_model_keyed("removed_ids", Vec::<Arc<str>>::new);
 
     let hidden = cx

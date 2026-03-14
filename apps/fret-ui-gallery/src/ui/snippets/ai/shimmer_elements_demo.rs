@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("shimmer_elements_demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::{FontId, FontWeight, Px, SemanticsRole, TextStyle};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::typography;
@@ -9,7 +10,7 @@ use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let theme = fret_ui::Theme::global(&*cx.app).snapshot();
     let heading_style = TextStyle {
         font: FontId::ui(),
@@ -58,7 +59,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         typography::muted_foreground_color(&theme),
     );
 
-    let item = |cx: &mut ElementContext<'_, H>, label: &'static str, el: AnyElement| {
+    let item = |cx: &mut UiCx<'_>, label: &'static str, el: AnyElement| {
         ui::v_stack(move |cx| {
             vec![
                 shadcn::Badge::new(label)

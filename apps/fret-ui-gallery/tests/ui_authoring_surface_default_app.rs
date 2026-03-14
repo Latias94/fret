@@ -5342,10 +5342,9 @@ fn selected_ai_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
+            &["fn centered<B>(cx: &mut UiCx<'_>, body: B) -> impl UiChild + use<B> where B: UiChild"],
             &[
                 "fn centered<H: UiHost, B>(body: B) -> impl IntoUiElement<H> + use<H, B> where B: IntoUiElement<H>",
-            ],
-            &[
                 "fn centered<H: UiHost>(cx: &mut ElementContext<'_, H>, body: AnyElement) -> AnyElement",
             ],
         );
@@ -5377,10 +5376,9 @@ fn selected_ai_snippet_helpers_prefer_into_ui_element_over_anyelement() {
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/ai/attachments_usage.rs",
+        &["fn render_grid_attachment(cx: &mut UiCx<'_>, data: ui_ai::AttachmentData,) -> impl UiChild + use<>"],
         &[
             "fn render_grid_attachment<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>, data: ui_ai::AttachmentData,) -> impl IntoUiElement<H> + use<H>",
-        ],
-        &[
             "fn render_grid_attachment<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>, data: ui_ai::AttachmentData,) -> AnyElement",
         ],
     );
@@ -5420,9 +5418,9 @@ fn selected_ai_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         "src/ui/snippets/ai/attachments_list.rs",
     ] {
         let helper = if relative_path.ends_with("attachments_grid.rs") {
-            "fn render_grid_attachment<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>, data: ui_ai::AttachmentData, on_remove: ui_ai::OnAttachmentRemove, test_id: Option<&'static str>, remove_test_id: Option<&'static str>,) -> impl IntoUiElement<H> + use<H>"
+            "fn render_grid_attachment(cx: &mut UiCx<'_>, data: ui_ai::AttachmentData, on_remove: ui_ai::OnAttachmentRemove, test_id: Option<&'static str>, remove_test_id: Option<&'static str>,) -> impl UiChild + use<>"
         } else {
-            "fn render_list_attachment<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>, data: ui_ai::AttachmentData, on_remove: ui_ai::OnAttachmentRemove, test_id: Option<&'static str>,) -> impl IntoUiElement<H> + use<H>"
+            "fn render_list_attachment(cx: &mut UiCx<'_>, data: ui_ai::AttachmentData, on_remove: ui_ai::OnAttachmentRemove, test_id: Option<&'static str>,) -> impl UiChild + use<>"
         };
 
         let old_helper = if relative_path.ends_with("attachments_grid.rs") {
@@ -5434,7 +5432,14 @@ fn selected_ai_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
             &[helper],
-            &[old_helper],
+            &[
+                old_helper,
+                if relative_path.ends_with("attachments_grid.rs") {
+                    "fn render_grid_attachment<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>, data: ui_ai::AttachmentData, on_remove: ui_ai::OnAttachmentRemove, test_id: Option<&'static str>, remove_test_id: Option<&'static str>,) -> impl IntoUiElement<H> + use<H>"
+                } else {
+                    "fn render_list_attachment<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>, data: ui_ai::AttachmentData, on_remove: ui_ai::OnAttachmentRemove, test_id: Option<&'static str>,) -> impl IntoUiElement<H> + use<H>"
+                },
+            ],
         );
     }
 }
@@ -6969,8 +6974,16 @@ fn ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/ai/agent_demo.rs",
             "src/ui/snippets/ai/artifact_demo.rs",
             "src/ui/snippets/ai/artifact_code_display.rs",
+            "src/ui/snippets/ai/attachments_empty.rs",
+            "src/ui/snippets/ai/attachments_grid.rs",
+            "src/ui/snippets/ai/attachments_inline.rs",
+            "src/ui/snippets/ai/attachments_list.rs",
+            "src/ui/snippets/ai/attachments_usage.rs",
             "src/ui/snippets/ai/audio_player_demo.rs",
             "src/ui/snippets/ai/chat_demo.rs",
+            "src/ui/snippets/ai/chain_of_thought_composable.rs",
+            "src/ui/snippets/ai/chain_of_thought_demo.rs",
+            "src/ui/snippets/ai/checkpoint_demo.rs",
             "src/ui/snippets/ai/code_block_demo.rs",
             "src/ui/snippets/ai/commit_custom_children.rs",
             "src/ui/snippets/ai/commit_demo.rs",
@@ -6979,18 +6992,35 @@ fn ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/ai/confirmation_demo.rs",
             "src/ui/snippets/ai/confirmation_rejected.rs",
             "src/ui/snippets/ai/confirmation_request.rs",
+            "src/ui/snippets/ai/context_default.rs",
+            "src/ui/snippets/ai/context_demo.rs",
             "src/ui/snippets/ai/file_tree_basic.rs",
             "src/ui/snippets/ai/file_tree_demo.rs",
             "src/ui/snippets/ai/file_tree_expanded.rs",
             "src/ui/snippets/ai/file_tree_large.rs",
             "src/ui/snippets/ai/inline_citation_demo.rs",
             "src/ui/snippets/ai/message_demo.rs",
+            "src/ui/snippets/ai/mic_selector_demo.rs",
+            "src/ui/snippets/ai/model_selector_demo.rs",
             "src/ui/snippets/ai/open_in_chat_demo.rs",
             "src/ui/snippets/ai/package_info_demo.rs",
             "src/ui/snippets/ai/tool_demo.rs",
             "src/ui/snippets/ai/plan_demo.rs",
+            "src/ui/snippets/ai/persona_basic.rs",
+            "src/ui/snippets/ai/persona_custom_styling.rs",
+            "src/ui/snippets/ai/persona_custom_visual.rs",
+            "src/ui/snippets/ai/persona_demo.rs",
+            "src/ui/snippets/ai/persona_state_management.rs",
+            "src/ui/snippets/ai/persona_variants.rs",
+            "src/ui/snippets/ai/prompt_input_action_menu_demo.rs",
+            "src/ui/snippets/ai/prompt_input_docs_demo.rs",
+            "src/ui/snippets/ai/prompt_input_provider_demo.rs",
+            "src/ui/snippets/ai/prompt_input_referenced_sources_demo.rs",
             "src/ui/snippets/ai/reasoning_demo.rs",
             "src/ui/snippets/ai/schema_display_demo.rs",
+            "src/ui/snippets/ai/shimmer_demo.rs",
+            "src/ui/snippets/ai/shimmer_duration_demo.rs",
+            "src/ui/snippets/ai/shimmer_elements_demo.rs",
             "src/ui/snippets/ai/snippet_demo.rs",
             "src/ui/snippets/ai/snippet_plain.rs",
             "src/ui/snippets/ai/sources_demo.rs",
@@ -7005,6 +7035,7 @@ fn ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/ai/test_results_errors.rs",
             "src/ui/snippets/ai/test_results_large_demo.rs",
             "src/ui/snippets/ai/test_results_suites.rs",
+            "src/ui/snippets/ai/voice_selector_demo.rs",
             "src/ui/snippets/ai/web_preview_demo.rs",
         ],
         &[
@@ -7018,8 +7049,16 @@ fn ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface() {
         "src/ui/snippets/ai/agent_demo.rs",
         "src/ui/snippets/ai/artifact_demo.rs",
         "src/ui/snippets/ai/artifact_code_display.rs",
+        "src/ui/snippets/ai/attachments_empty.rs",
+        "src/ui/snippets/ai/attachments_grid.rs",
+        "src/ui/snippets/ai/attachments_inline.rs",
+        "src/ui/snippets/ai/attachments_list.rs",
+        "src/ui/snippets/ai/attachments_usage.rs",
         "src/ui/snippets/ai/audio_player_demo.rs",
         "src/ui/snippets/ai/chat_demo.rs",
+        "src/ui/snippets/ai/chain_of_thought_composable.rs",
+        "src/ui/snippets/ai/chain_of_thought_demo.rs",
+        "src/ui/snippets/ai/checkpoint_demo.rs",
         "src/ui/snippets/ai/code_block_demo.rs",
         "src/ui/snippets/ai/commit_custom_children.rs",
         "src/ui/snippets/ai/commit_demo.rs",
@@ -7028,18 +7067,35 @@ fn ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface() {
         "src/ui/snippets/ai/confirmation_demo.rs",
         "src/ui/snippets/ai/confirmation_rejected.rs",
         "src/ui/snippets/ai/confirmation_request.rs",
+        "src/ui/snippets/ai/context_default.rs",
+        "src/ui/snippets/ai/context_demo.rs",
         "src/ui/snippets/ai/file_tree_basic.rs",
         "src/ui/snippets/ai/file_tree_demo.rs",
         "src/ui/snippets/ai/file_tree_expanded.rs",
         "src/ui/snippets/ai/file_tree_large.rs",
         "src/ui/snippets/ai/inline_citation_demo.rs",
         "src/ui/snippets/ai/message_demo.rs",
+        "src/ui/snippets/ai/mic_selector_demo.rs",
+        "src/ui/snippets/ai/model_selector_demo.rs",
         "src/ui/snippets/ai/open_in_chat_demo.rs",
         "src/ui/snippets/ai/package_info_demo.rs",
         "src/ui/snippets/ai/tool_demo.rs",
         "src/ui/snippets/ai/plan_demo.rs",
+        "src/ui/snippets/ai/persona_basic.rs",
+        "src/ui/snippets/ai/persona_custom_styling.rs",
+        "src/ui/snippets/ai/persona_custom_visual.rs",
+        "src/ui/snippets/ai/persona_demo.rs",
+        "src/ui/snippets/ai/persona_state_management.rs",
+        "src/ui/snippets/ai/persona_variants.rs",
+        "src/ui/snippets/ai/prompt_input_action_menu_demo.rs",
+        "src/ui/snippets/ai/prompt_input_docs_demo.rs",
+        "src/ui/snippets/ai/prompt_input_provider_demo.rs",
+        "src/ui/snippets/ai/prompt_input_referenced_sources_demo.rs",
         "src/ui/snippets/ai/reasoning_demo.rs",
         "src/ui/snippets/ai/schema_display_demo.rs",
+        "src/ui/snippets/ai/shimmer_demo.rs",
+        "src/ui/snippets/ai/shimmer_duration_demo.rs",
+        "src/ui/snippets/ai/shimmer_elements_demo.rs",
         "src/ui/snippets/ai/snippet_demo.rs",
         "src/ui/snippets/ai/snippet_plain.rs",
         "src/ui/snippets/ai/sources_demo.rs",
@@ -7054,6 +7110,7 @@ fn ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface() {
         "src/ui/snippets/ai/test_results_errors.rs",
         "src/ui/snippets/ai/test_results_large_demo.rs",
         "src/ui/snippets/ai/test_results_suites.rs",
+        "src/ui/snippets/ai/voice_selector_demo.rs",
         "src/ui/snippets/ai/web_preview_demo.rs",
     ] {
         let path = manifest_path(relative_path);

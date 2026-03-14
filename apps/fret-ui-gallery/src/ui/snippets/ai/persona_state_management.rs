@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("persona_state_management.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_runtime::Model;
 use fret_ui::Invalidation;
@@ -31,7 +32,7 @@ fn state_button(
         }))
 }
 
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let state_model = cx.local_model_keyed("state", || ui_ai::PersonaState::Idle);
 
     let current_state = cx

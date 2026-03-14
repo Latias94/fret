@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("prompt_input_docs_demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_icons::IconId;
 use fret_ui_ai as ui_ai;
@@ -12,7 +13,7 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let text = cx.local_model_keyed("text", String::new);
     let attachments = cx.local_model_keyed("attachments", Vec::<ui_ai::AttachmentData>::new);
     let use_web_search = cx.local_model_keyed("use_web_search", || false);
