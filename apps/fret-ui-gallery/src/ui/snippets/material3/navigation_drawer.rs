@@ -3,13 +3,14 @@ pub const SOURCE: &str = include_str!("navigation_drawer.rs");
 // region: example
 use std::sync::Arc;
 
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_icons::ids;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let drawer = material3::NavigationDrawer::uncontrolled(cx, "search");
     let value = drawer.value_model();
     let current = cx

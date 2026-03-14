@@ -52,9 +52,14 @@ Execution note on 2026-03-14:
   `apps/fret-ui-gallery/src/ui/snippets/material3/{autocomplete,date_picker,select,text_field,time_picker}.rs`
   now expose `UiCx -> impl UiChild`, and the field-family source gates now lock both copyable root
   ownership and the typed default-app authoring surface for those snippets.
-- after these four landings, the current tracked default-app teaching-surface lane is effectively
-  closed; remaining follow-up work now lives on the specialized `ai` and `material3` lanes plus
-  any optional dead-field/runtime cleanup.
+- the specialized `material3` lane has now also advanced through its `navigation` sub-batch:
+  `apps/fret-ui-gallery/src/ui/snippets/material3/{list,modal_navigation_drawer,navigation_bar,navigation_drawer,navigation_rail,tabs,top_app_bar}.rs`
+  now expose `UiCx -> impl UiChild`, and the navigation/value-root source gates now lock both the
+  typed top-level teaching surface and the removal of host-bound helper parameter spellings from
+  the affected exemplar snippets.
+- after these tracked landings, the current tracked default-app teaching-surface lane is
+  effectively closed; remaining follow-up work now lives on the specialized `ai` and
+  `material3` lanes plus any optional dead-field/runtime cleanup.
 
 ## M0 — Lock the target vocabulary
 

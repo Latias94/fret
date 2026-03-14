@@ -865,6 +865,13 @@ Exit criteria:
   default-app teaching surface for those snippets.
 - validation addendum on 2026-03-14:
   `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app material3_ -- --nocapture`
-- after these four landings, the tracked default-app workstream-local teaching-surface lane is now
-  effectively closed; remaining work continues on the specialized `ai` and `material3` lanes plus
-  any optional post-cleanup of now-nonessential gallery runtime fields.
+- the specialized `material3` lane has now also advanced through its `navigation` sub-batch:
+  `apps/fret-ui-gallery/src/ui/snippets/material3/{list,modal_navigation_drawer,navigation_bar,navigation_drawer,navigation_rail,tabs,top_app_bar}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and the corresponding
+  navigation/value-root source gates now lock both the typed top-level teaching surface and the
+  removal of host-bound helper parameter spellings in the affected exemplar helpers.
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app material3_ -- --nocapture`
+- after these tracked landings, the tracked default-app workstream-local teaching-surface lane is
+  now effectively closed; remaining work continues on the specialized `ai` and `material3` lanes
+  plus any optional post-cleanup of now-nonessential gallery runtime fields.

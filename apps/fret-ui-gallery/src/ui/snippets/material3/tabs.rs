@@ -3,11 +3,12 @@ pub const SOURCE: &str = include_str!("tabs.rs");
 // region: example
 use std::sync::Arc;
 
+use fret::{UiChild, UiCx};
 use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let tabs = material3::Tabs::uncontrolled(cx, "overview");
     let value = tabs.value_model();
     let current = cx

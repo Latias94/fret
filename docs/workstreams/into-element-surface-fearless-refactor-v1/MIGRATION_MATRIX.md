@@ -387,6 +387,12 @@ Execution note on 2026-03-13:
   `apps/fret-ui-gallery/src/ui/snippets/material3/{autocomplete,date_picker,select,text_field,time_picker}.rs`
   now expose `UiCx -> impl UiChild`, and the corresponding field-family gates now lock both the
   typed top-level teaching surface and the local uncontrolled/copyable-root ownership story.
+- the specialized `material3` lane has now also converged further through the `navigation`
+  sub-batch:
+  `apps/fret-ui-gallery/src/ui/snippets/material3/{list,modal_navigation_drawer,navigation_bar,navigation_drawer,navigation_rail,tabs,top_app_bar}.rs`
+  now expose `UiCx -> impl UiChild`, and the corresponding navigation/value-root gates now lock
+  both the typed top-level teaching surface and the removal of host-bound helper spellings from
+  the affected exemplar helpers.
 - the same UI Gallery default-app source gate now also records the `input_group` family:
   `apps/fret-ui-gallery/src/ui/snippets/input_group/{align_block_end,align_block_start,align_inline_end,align_inline_start,button,button_group,custom_input,demo,dropdown,icon,kbd,label,rtl,spinner,text,textarea,tooltip}.rs`
   now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while

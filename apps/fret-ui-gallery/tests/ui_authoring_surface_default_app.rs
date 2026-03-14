@@ -6864,6 +6864,40 @@ fn material3_inputs_snippets_prefer_ui_cx_on_the_default_app_surface() {
 }
 
 #[test]
+fn material3_navigation_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/material3/list.rs",
+            "src/ui/snippets/material3/modal_navigation_drawer.rs",
+            "src/ui/snippets/material3/navigation_bar.rs",
+            "src/ui/snippets/material3/navigation_drawer.rs",
+            "src/ui/snippets/material3/navigation_rail.rs",
+            "src/ui/snippets/material3/tabs.rs",
+            "src/ui/snippets/material3/top_app_bar.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing Material 3 navigation snippet surface",
+    );
+
+    for relative_path in [
+        "src/ui/snippets/material3/list.rs",
+        "src/ui/snippets/material3/top_app_bar.rs",
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+        assert!(
+            !normalized.contains("ElementContext<'_,H>"),
+            "{} reintroduced legacy host-bound helper parameters",
+            path.display()
+        );
+    }
+}
+
+#[test]
 fn material3_overlay_snippets_prefer_uncontrolled_copyable_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/menu.rs",
@@ -7078,7 +7112,7 @@ fn material3_selection_and_field_snippets_prefer_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/tabs.rs",
         &[
-            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
             "let tabs = material3::Tabs::uncontrolled(cx, \"overview\");",
             "let value = tabs.value_model();",
         ],
@@ -7090,7 +7124,7 @@ fn material3_selection_and_field_snippets_prefer_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/list.rs",
         &[
-            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
             "let list = material3::List::uncontrolled(cx, \"alpha\");",
             "let value = list.value_model();",
         ],
@@ -7102,7 +7136,7 @@ fn material3_selection_and_field_snippets_prefer_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/navigation_bar.rs",
         &[
-            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
             "let bar = material3::NavigationBar::uncontrolled(cx, \"search\");",
             "let value = bar.value_model();",
         ],
@@ -7114,7 +7148,7 @@ fn material3_selection_and_field_snippets_prefer_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/navigation_rail.rs",
         &[
-            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
             "let rail = material3::NavigationRail::uncontrolled(cx, \"search\");",
             "let value = rail.value_model();",
         ],
@@ -7126,7 +7160,7 @@ fn material3_selection_and_field_snippets_prefer_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/navigation_drawer.rs",
         &[
-            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
             "let drawer = material3::NavigationDrawer::uncontrolled(cx, \"search\");",
             "let value = drawer.value_model();",
         ],
