@@ -153,7 +153,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .items_center()
         .into_element(cx);
 
-    let carousel = shadcn::Carousel::default()
+    let carousel = shadcn::Carousel::new(items)
         .plugins([shadcn::CarouselPlugin::Autoplay(
             shadcn::CarouselAutoplayConfig::new(Duration::from_millis(2000))
                 .pause_on_hover(false)
@@ -167,12 +167,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .mx_auto(),
         )
         .test_id("ui-gallery-carousel-plugin-autoplay-controlled")
-        .into_element_parts(
-            cx,
-            |_cx| shadcn::CarouselContent::new(items),
-            shadcn::CarouselPrevious::new(),
-            shadcn::CarouselNext::new(),
-        );
+        .into_element(cx);
 
     ui::v_flex(|_cx| vec![controls, carousel])
         .gap(Space::N2)

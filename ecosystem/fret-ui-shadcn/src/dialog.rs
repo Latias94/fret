@@ -848,6 +848,16 @@ impl<H: UiHost, TTrigger> DialogComposition<H, TTrigger> {
     }
 }
 
+impl<H: UiHost, TTrigger> IntoUiElement<H> for DialogComposition<H, TTrigger>
+where
+    TTrigger: DialogCompositionTriggerArg<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DialogComposition::into_element(self, cx)
+    }
+}
+
 fn collect_built_dialog_children<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     build: impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),

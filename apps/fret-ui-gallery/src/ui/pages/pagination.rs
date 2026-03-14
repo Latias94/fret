@@ -15,6 +15,7 @@ pub(super) fn preview_pagination(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "API reference: `ecosystem/fret-ui-shadcn/src/pagination.rs`.",
         "Gallery sections mirror shadcn Pagination docs first: Demo, Usage, Simple, Icons Only, RTL.",
         "Prefer the typed wrapper family for first-party authoring: `pagination(...)`, `pagination_content(...)`, `pagination_item(...)`, and `pagination_link(...)` keep the upstream parts model while avoiding pre-landed child assembly at the call site.",
+        "`Pagination`, `PaginationContent`, `PaginationItem`, and `PaginationLink` remain the upstream-shaped lane on the same family rather than an advanced-only escape hatch.",
         "Fret keeps navigation wiring in the app layer: `PaginationLink` exposes command/action hooks instead of a DOM-specific `href`, while preserving link semantics and active-page state.",
         "The Next.js and changelog sections in upstream docs map to app-layer routing guidance plus the existing `text(...)` parity on `PaginationPrevious` / `PaginationNext`, so they stay documented here as notes rather than separate demos.",
         "The root approximates upstream `<nav aria-label=\"pagination\">` with `Region + label`, and the content/items emit `List` / `ListItem` semantics to mirror the upstream `ul/li` structure.",
@@ -49,5 +50,5 @@ pub(super) fn preview_pagination(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         vec![demo, usage, simple, icons_only, rtl, notes],
     );
 
-    vec![body.test_id("ui-gallery-pagination")]
+    vec![body.test_id("ui-gallery-pagination").into_element(cx)]
 }

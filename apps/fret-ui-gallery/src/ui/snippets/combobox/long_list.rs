@@ -73,14 +73,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-long-list")
         .items(items)
-        .into_element_parts(cx, |_cx| {
-            vec![
-                shadcn::ComboboxPart::from(shadcn::ComboboxTrigger::new().width_px(Px(320.0))),
-                shadcn::ComboboxPart::from(
-                    shadcn::ComboboxInput::new().placeholder("Pick an item"),
-                ),
-            ]
-        });
+        .trigger(shadcn::ComboboxTrigger::new().width_px(Px(320.0)))
+        .input(shadcn::ComboboxInput::new().placeholder("Pick an item"))
+        .into_element(cx);
 
     ui::v_flex(move |cx| {
         vec![

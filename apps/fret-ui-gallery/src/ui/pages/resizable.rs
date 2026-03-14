@@ -44,5 +44,5 @@ pub(super) fn preview_resizable(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         vec![demo, usage, handle, vertical, rtl, notes],
     );
 
-    vec![body.test_id("ui-gallery-resizable")]
+    vec![body.test_id("ui-gallery-resizable").into_element(cx)]
 }

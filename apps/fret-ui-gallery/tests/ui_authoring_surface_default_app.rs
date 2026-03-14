@@ -1,5 +1,7 @@
 mod support;
 
+use std::collections::BTreeSet;
+
 use support::{assert_default_app_surface, manifest_path, read, read_path, rust_sources};
 
 fn assert_curated_default_app_paths(
@@ -78,6 +80,24 @@ fn assert_selected_generic_helpers_prefer_into_ui_element(
             marker
         );
     }
+}
+
+fn assert_normalized_markers_present(relative_path: &str, required_markers: &[&str]) -> String {
+    let path = manifest_path(relative_path);
+    let source = read_path(&path);
+    let normalized = source.split_whitespace().collect::<String>();
+
+    for marker in required_markers {
+        let marker = marker.split_whitespace().collect::<String>();
+        assert!(
+            normalized.contains(&marker),
+            "{} is missing marker `{}`",
+            path.display(),
+            marker
+        );
+    }
+
+    normalized
 }
 
 fn assert_material3_snippet_prefers_copyable_root(
@@ -382,6 +402,252 @@ fn dropdown_menu_snippets_prefer_ui_cx_on_the_default_app_surface() {
 }
 
 #[test]
+fn menu_snippets_keep_build_parts_only_for_the_intentional_parts_example() {
+    let dropdown_parts = manifest_path("src/ui/snippets/dropdown_menu/parts.rs");
+    let dropdown_parts_source = read_path(&dropdown_parts);
+    assert!(
+        dropdown_parts_source.contains(".build_parts("),
+        "{} should remain the explicit lower-level adapter example",
+        dropdown_parts.display()
+    );
+
+    for path in rust_sources("src/ui/snippets/dropdown_menu") {
+        if path == dropdown_parts {
+            continue;
+        }
+
+        let source = read_path(&path);
+        assert!(
+            !source.contains(".build_parts("),
+            "{} should prefer the typed `compose()` root on the default snippet surface",
+            path.display()
+        );
+    }
+
+    for path in rust_sources("src/ui/snippets/context_menu") {
+        let source = read_path(&path);
+        assert!(
+            !source.contains(".build_parts("),
+            "{} should prefer the typed `compose()` root on the default snippet surface",
+            path.display()
+        );
+    }
+}
+
+#[test]
+fn menu_pages_mark_adapter_surfaces_as_advanced_not_default() {
+    let dropdown_page = read("src/ui/pages/dropdown_menu.rs");
+    assert!(
+        dropdown_page
+            .contains("advanced adapter surface for already-landed or closure-driven seams"),
+        "src/ui/pages/dropdown_menu.rs should explain why `Parts` stays outside the default compose() teaching path"
+    );
+    assert!(
+        dropdown_page.contains(
+            "Advanced Trigger/Content adapter surface kept outside the default copyable docs path."
+        ),
+        "src/ui/pages/dropdown_menu.rs should label the Parts section as an advanced adapter surface"
+    );
+
+    let context_page = read("src/ui/pages/context_menu.rs");
+    assert!(
+        context_page.contains(
+            "Those lower-level adapter seams are still advanced API, not the default copyable teaching lane."
+        ),
+        "src/ui/pages/context_menu.rs should keep the lower-level adapter seams marked as advanced-only guidance"
+    );
+}
+
+#[test]
+fn selected_parts_pages_mark_adapter_surfaces_as_advanced_not_default() {
+    let dialog_page = read("src/ui/pages/dialog.rs");
+    assert!(
+        dialog_page.contains(
+            "`Usage` is the default copyable path; `Parts` stays as the advanced adapter section for explicit `DialogTrigger` / `DialogPortal` / `DialogOverlay` ownership."
+        ),
+        "src/ui/pages/dialog.rs should distinguish the default compose() lane from the advanced Parts lane"
+    );
+    assert!(
+        dialog_page.contains(
+            "Advanced part surface adapters for explicit Trigger/Portal/Overlay ownership."
+        ),
+        "src/ui/pages/dialog.rs should label the Parts section as an advanced adapter surface"
+    );
+
+    let sheet_page = read("src/ui/pages/sheet.rs");
+    assert!(
+        sheet_page.contains(
+            "`Usage` is the default copyable path; `Parts` stays after `API Reference` as a focused advanced follow-up for explicit part adapters (`SheetTrigger` / `SheetPortal` / `SheetOverlay`)."
+        ),
+        "src/ui/pages/sheet.rs should distinguish the default compose() lane from the advanced Parts lane"
+    );
+    assert!(
+        sheet_page.contains(
+            "Advanced part surface adapters for explicit Trigger/Portal/Overlay ownership."
+        ),
+        "src/ui/pages/sheet.rs should label the Parts section as an advanced adapter surface"
+    );
+
+    let alert_dialog_page = read("src/ui/pages/alert_dialog.rs");
+    assert!(
+        alert_dialog_page.contains(
+            "`Usage` is the default copyable path; `Parts` remains an advanced adapter lane for explicit root-part ownership."
+        ),
+        "src/ui/pages/alert_dialog.rs should distinguish the default compose() lane from the advanced Parts lane"
+    );
+    assert!(
+        alert_dialog_page.contains(
+            "Advanced part surface adapters for explicit shadcn-style root-part ownership."
+        ),
+        "src/ui/pages/alert_dialog.rs should label the Parts section as an advanced adapter surface"
+    );
+}
+
+#[test]
+fn menubar_page_distinguishes_compact_and_copyable_parts_lanes() {
+    let menubar_page = read("src/ui/pages/menubar.rs");
+    assert!(
+        menubar_page.contains(
+            "Compact Fret-first root authoring uses `Menubar::new([MenubarMenu::new(...).entries([...])])`."
+        ),
+        "src/ui/pages/menubar.rs should document the compact typed root lane"
+    );
+    assert!(
+        menubar_page.contains(
+            "`MenubarTrigger::new(...).into_menu().entries_parts(...)` remains the upstream-shaped copyable lane; the `Parts` section is a focused adapter example on that same lane rather than an advanced escape hatch."
+        ),
+        "src/ui/pages/menubar.rs should distinguish the compact typed lane from the upstream-shaped parts lane"
+    );
+    assert!(
+        menubar_page
+            .contains("Focused Trigger/Content adapter example on the same copyable parts lane."),
+        "src/ui/pages/menubar.rs should keep the Parts section on the copyable parts lane rather than marking it as advanced"
+    );
+}
+
+#[test]
+fn carousel_page_distinguishes_compact_builder_and_upstream_parts_lanes() {
+    let carousel_page = read("src/ui/pages/carousel.rs");
+    assert!(
+        carousel_page.contains(
+            "`Usage` is the default compact builder path for common Fret call sites, while `Parts` remains the upstream-shaped copyable lane rather than an advanced escape hatch."
+        ),
+        "src/ui/pages/carousel.rs should distinguish the compact default builder lane from the upstream-shaped parts lane"
+    );
+    assert!(
+        carousel_page.contains("Default compact builder path for common Fret carousel call sites."),
+        "src/ui/pages/carousel.rs should label Usage as the compact default builder path"
+    );
+    assert!(
+        carousel_page
+            .contains("Upstream-shaped copyable parts surface aligned with shadcn/ui v4 exports."),
+        "src/ui/pages/carousel.rs should keep Parts as a copyable upstream-shaped lane rather than marking it as advanced"
+    );
+}
+
+#[test]
+fn direct_recipe_root_pages_mark_their_default_lane_without_inventing_compose() {
+    let select_page = read("src/ui/pages/select.rs");
+    assert!(
+        select_page.contains(
+            "`Select::new(...)` / `new_controllable(...)` plus the direct builder chain (`.trigger(...).value(...).content(...).entries(...)`) are now the default copyable root story; `into_element_parts(...)` remains the focused upstream-shaped adapter on the same lane rather than a separate `compose()` story."
+        ),
+        "src/ui/pages/select.rs should keep Select on the direct recipe root lane"
+    );
+
+    let combobox_page = read("src/ui/pages/combobox.rs");
+    assert!(
+        combobox_page.contains(
+            "`Combobox::new(value, open)` plus the direct builder chain (`.trigger(...).input(...).clear(...).content(...)`) is the default recipe root lane, while `into_element_parts(...)` stays the focused upstream-shaped patch seam on that same lane rather than a separate `compose()` story."
+        ),
+        "src/ui/pages/combobox.rs should keep Combobox on the direct recipe root lane"
+    );
+
+    let command_page = read("src/ui/pages/command.rs");
+    assert!(
+        command_page.contains(
+            "`command(...)` / `CommandPalette` remain the default recipe root story; split `CommandInput` / `CommandList` / `CommandItem` authoring stays out of the default surface until a shared context contract is explicitly introduced."
+        ),
+        "src/ui/pages/command.rs should keep Command on the direct recipe root lane"
+    );
+}
+
+#[test]
+fn selected_select_snippets_prefer_direct_builder_chain_for_default_recipe_root() {
+    assert_sources_absent("src/ui/snippets/select", &[".into_element_parts("]);
+}
+
+#[test]
+fn selected_combobox_snippets_prefer_direct_builder_chain_for_default_recipe_root() {
+    for relative_path in [
+        "src/ui/snippets/combobox/basic.rs",
+        "src/ui/snippets/combobox/usage.rs",
+        "src/ui/snippets/combobox/trigger_button.rs",
+        "src/ui/snippets/combobox/label.rs",
+        "src/ui/snippets/combobox/clear_button.rs",
+        "src/ui/snippets/combobox/groups.rs",
+        "src/ui/snippets/combobox/groups_with_separator.rs",
+        "src/ui/snippets/combobox/auto_highlight.rs",
+        "src/ui/snippets/combobox/disabled.rs",
+        "src/ui/snippets/combobox/invalid.rs",
+        "src/ui/snippets/combobox/custom_items.rs",
+        "src/ui/snippets/combobox/long_list.rs",
+        "src/ui/snippets/combobox/input_group.rs",
+        "src/ui/snippets/combobox/rtl.rs",
+        "src/ui/snippets/combobox/conformance_demo.rs",
+        "src/ui/snippets/combobox/multiple_selection.rs",
+    ] {
+        let normalized = assert_normalized_markers_present(
+            relative_path,
+            &[".trigger(", ".input(", ".into_element(cx)"],
+        );
+        assert!(
+            normalized.contains("shadcn::Combobox::new(")
+                || normalized.contains("shadcn::ComboboxChips::new("),
+            "{} should stay on the compact combobox-family root lane",
+            manifest_path(relative_path).display()
+        );
+        assert!(
+            !normalized.contains(".into_element_parts("),
+            "{} should prefer the direct builder chain over `into_element_parts(...)` on the default root lane",
+            manifest_path(relative_path).display()
+        );
+    }
+    assert_sources_absent("src/ui/snippets/combobox", &[".into_element_parts("]);
+}
+
+#[test]
+fn navigation_menu_and_pagination_pages_keep_their_dual_lane_story() {
+    let navigation_menu_page = read("src/ui/pages/navigation_menu.rs");
+    assert!(
+        navigation_menu_page.contains(
+            "`navigation_menu(cx, model, |cx| ..)` is now the default first-party root helper, while `NavigationMenu::new(model)` remains available when callers want the explicit root builder seam."
+        ),
+        "src/ui/pages/navigation_menu.rs should keep the compact default lane explicit"
+    );
+    assert!(
+        navigation_menu_page.contains(
+            "`NavigationMenuRoot/List/Item/Trigger/Content/Link/Viewport/Indicator` remain the upstream-shaped lane on the same family rather than an advanced escape hatch."
+        ),
+        "src/ui/pages/navigation_menu.rs should keep the upstream-shaped lane explicit"
+    );
+
+    let pagination_page = read("src/ui/pages/pagination.rs");
+    assert!(
+        pagination_page.contains(
+            "Prefer the typed wrapper family for first-party authoring: `pagination(...)`, `pagination_content(...)`, `pagination_item(...)`, and `pagination_link(...)` keep the upstream parts model while avoiding pre-landed child assembly at the call site."
+        ),
+        "src/ui/pages/pagination.rs should keep the compact wrapper lane explicit"
+    );
+    assert!(
+        pagination_page.contains(
+            "`Pagination`, `PaginationContent`, `PaginationItem`, and `PaginationLink` remain the upstream-shaped lane on the same family rather than an advanced-only escape hatch."
+        ),
+        "src/ui/pages/pagination.rs should keep the upstream-shaped parts lane explicit"
+    );
+}
+
+#[test]
 fn dropdown_menu_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/dropdown_menu.rs",
@@ -663,7 +929,10 @@ fn input_group_snippets_prefer_ui_cx_on_the_default_app_surface() {
 
     assert_sources_absent(
         "src/ui/snippets/input_group",
-        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+        &[
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement",
+            ".into_element_parts(",
+        ],
     );
 }
 
@@ -711,6 +980,36 @@ fn input_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Label Association\", label)",
             "DocSection::new(\"Button Group\", button_group)",
         ],
+    );
+}
+
+#[test]
+fn selected_input_group_snippets_prefer_compact_slot_shorthand() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/input_group/dropdown.rs",
+        &[
+            "shadcn::InputGroup::new(value)",
+            ".placeholder(\"Enter file name\")",
+            ".control_test_id(\"ui-gallery-input-group-dropdown-control\")",
+            ".trailing([dropdown])",
+            ".trailing_has_button(true)",
+            ".into_element(cx)",
+        ],
+        &[".into_element_parts("],
+    );
+
+    let page = read("src/ui/pages/input_group.rs");
+    assert!(
+        page.contains(
+            "Prefer the high-level `InputGroup::new(model)` shorthand for first-party app code; keep the part-based surface for direct shadcn docs parity when you explicitly want addon/control parts."
+        ),
+        "src/ui/pages/input_group.rs should keep the compact shorthand as the first-party usage lane"
+    );
+    assert!(
+        page.contains(
+            "Both public surfaces stay intentional: the compact `InputGroup::new(model)` slot shorthand is the first-party ergonomic lane, while the part-based primitives remain the direct docs-parity lane."
+        ),
+        "src/ui/pages/input_group.rs should keep the dual-lane narrative explicit"
     );
 }
 
@@ -943,7 +1242,10 @@ fn input_otp_snippets_prefer_ui_cx_on_the_default_app_surface() {
 
     assert_sources_absent(
         "src/ui/snippets/input_otp",
-        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+        &[
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement",
+            ".into_element_parts(",
+        ],
     );
 }
 
@@ -977,6 +1279,62 @@ fn input_otp_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Form\", form)",
             "DocSection::new(\"RTL\", rtl)",
         ],
+    );
+}
+
+#[test]
+fn selected_input_otp_snippets_prefer_compact_root_builder() {
+    for relative_path in [
+        "src/ui/snippets/input_otp/alphanumeric.rs",
+        "src/ui/snippets/input_otp/controlled.rs",
+        "src/ui/snippets/input_otp/demo.rs",
+        "src/ui/snippets/input_otp/disabled.rs",
+        "src/ui/snippets/input_otp/form.rs",
+        "src/ui/snippets/input_otp/four_digits.rs",
+        "src/ui/snippets/input_otp/invalid.rs",
+        "src/ui/snippets/input_otp/pattern.rs",
+        "src/ui/snippets/input_otp/rtl.rs",
+        "src/ui/snippets/input_otp/separator.rs",
+        "src/ui/snippets/input_otp/usage.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["shadcn::InputOTP::new(", ".into_element(cx)"],
+            &[".into_element_parts("],
+        );
+    }
+
+    for relative_path in [
+        "src/ui/snippets/input_otp/alphanumeric.rs",
+        "src/ui/snippets/input_otp/demo.rs",
+        "src/ui/snippets/input_otp/disabled.rs",
+        "src/ui/snippets/input_otp/form.rs",
+        "src/ui/snippets/input_otp/usage.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[".group_size(Some(3))"],
+            &[],
+        );
+    }
+
+    for relative_path in [
+        "src/ui/snippets/input_otp/invalid.rs",
+        "src/ui/snippets/input_otp/separator.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[".group_size(Some(2))"],
+            &[],
+        );
+    }
+
+    let page = read("src/ui/pages/input_otp.rs");
+    assert!(
+        page.contains(
+            "First-party examples now prefer the compact `InputOTP::new(model)` root builder with `length(...)` and `group_size(...)`; `InputOTPGroup` / `InputOTPSlot` / `InputOTPSeparator` plus `into_element_parts(...)` remain the upstream-shaped bridge when callers explicitly want that shape."
+        ),
+        "src/ui/pages/input_otp.rs should keep the compact root story explicit"
     );
 }
 
@@ -1274,6 +1632,46 @@ fn drawer_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Responsive Dialog\", responsive_dialog)",
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"Snap Points\", snap_points)",
+        ],
+    );
+}
+
+#[test]
+fn drawer_page_marks_usage_as_default_and_snap_points_as_follow_up() {
+    let drawer_page = read("src/ui/pages/drawer.rs");
+    assert!(
+        drawer_page.contains(
+            "`Usage` is the default copyable `compose()` path, while `Snap Points` stays a Vaul/Fret policy follow-up rather than a separate root-authoring lane."
+        ),
+        "src/ui/pages/drawer.rs should distinguish the default compose() lane from the Vaul/Fret follow-up lane"
+    );
+    assert!(
+        drawer_page.contains("Default copyable `compose()` path for common Drawer call sites."),
+        "src/ui/pages/drawer.rs should label Usage as the default copyable compose() path"
+    );
+    assert!(
+        drawer_page.contains(
+            "Vaul/Fret policy follow-up built on the same Drawer root while drag settles to the nearest snap point."
+        ),
+        "src/ui/pages/drawer.rs should keep Snap Points documented as a follow-up on the same root lane"
+    );
+}
+
+#[test]
+fn drawer_snap_points_snippet_prefers_compose_root_path() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/drawer/snap_points.rs",
+        &[
+            "shadcn::Drawer::new_controllable(cx, None, false)",
+            ".snap_points(vec![",
+            ".compose()",
+            ".trigger(shadcn::DrawerTrigger::build(",
+            "shadcn::DrawerClose::from_scope().build(",
+        ],
+        &[
+            "let open = cx.local_model(|| false);",
+            "shadcn::Drawer::new(open)",
+            ".toggle_model(",
         ],
     );
 }
@@ -1960,7 +2358,7 @@ fn sonner_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Position\", position)",
             "DocSection::build(cx, \"Extras\", extras)",
             "DocSection::build(cx, \"Notes\", notes)",
-            "let toaster = snippets::local_toaster(cx);",
+            "let toaster = snippets::local_toaster(cx).into_element(cx);",
         ],
         &[
             "DocSection::new(\"Setup\", setup)",
@@ -1970,6 +2368,15 @@ fn sonner_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Extras\", extras)",
             "preview_sonner(cx, last_action, sonner_position)",
         ],
+    );
+}
+
+#[test]
+fn sonner_local_toaster_prefers_ui_child_over_anyelement() {
+    assert_selected_page_helpers_prefer_ui_child(
+        "src/ui/snippets/sonner/mod.rs",
+        &["pub(crate) fn local_toaster(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
+        &["pub(crate) fn local_toaster(cx: &mut UiCx<'_>) -> AnyElement"],
     );
 }
 
@@ -2126,6 +2533,10 @@ fn command_snippets_prefer_ui_cx_on_the_default_app_surface() {
     );
 
     assert_sources_absent("src/ui/snippets/command", &["pub fn render<H: UiHost>("]);
+    assert_sources_absent(
+        "src/ui/snippets/command",
+        &["CommandInput::new(", "CommandList::new("],
+    );
 }
 
 #[test]
@@ -2408,8 +2819,25 @@ fn combobox_page_uses_typed_doc_sections_for_app_facing_snippets() {
 fn toast_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &["src/ui/snippets/toast/deprecated.rs"],
-        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
         "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/toast",
+        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn toast_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/toast.rs",
+        &["DocSection::build(cx, \"Deprecated\", deprecated)"],
+        &["DocSection::new(\"Deprecated\", deprecated)"],
     );
 }
 
@@ -2561,8 +2989,8 @@ fn scroll_area_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Horizontal\", horizontal)",
             "DocSection::build(cx, \"Nested scroll routing\", nested_scroll_routing)",
             "DocSection::build(cx, \"RTL\", rtl)",
-            "DocSection::new(\"Scrollbar drag baseline\", drag_baseline)",
-            "DocSection::new(\"Expand at bottom\", expand_at_bottom)",
+            "DocSection::build(cx, \"Scrollbar drag baseline\", drag_baseline)",
+            "DocSection::build(cx, \"Expand at bottom\", expand_at_bottom)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
@@ -2570,9 +2998,44 @@ fn scroll_area_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Horizontal\", horizontal)",
             "DocSection::new(\"Nested scroll routing\", nested_scroll_routing)",
             "DocSection::new(\"RTL\", rtl)",
-            "DocSection::build(cx, \"Scrollbar drag baseline\", drag_baseline)",
-            "DocSection::build(cx, \"Expand at bottom\", expand_at_bottom)",
+            "DocSection::new(\"Scrollbar drag baseline\", drag_baseline)",
+            "DocSection::new(\"Expand at bottom\", expand_at_bottom)",
         ],
+    );
+}
+
+#[test]
+fn scroll_area_diagnostics_snippets_remain_intentional_raw_boundaries() {
+    let expected_raw_roots = BTreeSet::from([
+        manifest_path("src/ui/snippets/scroll_area/drag_baseline.rs")
+            .display()
+            .to_string(),
+        manifest_path("src/ui/snippets/scroll_area/expand_at_bottom.rs")
+            .display()
+            .to_string(),
+    ]);
+    let mut actual_raw_roots = BTreeSet::new();
+
+    for path in rust_sources("src/ui/snippets/scroll_area") {
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+        let is_raw_render_root = normalized
+            .contains("pubfnrender<H:UiHost+'static>(cx:&mutElementContext<'_,H>)->AnyElement");
+        if !is_raw_render_root {
+            continue;
+        }
+
+        actual_raw_roots.insert(path.display().to_string());
+        assert!(
+            source.contains("Intentional diagnostics raw boundary:"),
+            "{} should explain why the diagnostics harness stays raw",
+            path.display()
+        );
+    }
+
+    assert_eq!(
+        actual_raw_roots, expected_raw_roots,
+        "src/ui/snippets/scroll_area should keep exactly the two audited diagnostics harness raw roots",
     );
 }
 
@@ -3255,6 +3718,30 @@ fn curated_ai_doc_pages_prefer_ui_cx_on_the_default_app_surface() {
             &source,
             &["cx: &mut UiCx<'_>"],
             "app-facing page surface",
+        );
+    }
+}
+
+#[test]
+fn curated_ai_doc_pages_use_typed_doc_sections() {
+    for path in rust_sources("src/ui/pages") {
+        let Some(file_name) = path.file_name().and_then(|name| name.to_str()) else {
+            continue;
+        };
+        if !file_name.starts_with("ai_") {
+            continue;
+        }
+
+        let source = read_path(&path);
+        assert!(
+            !source.contains("DocSection::new("),
+            "{} should keep using DocSection::build(cx, ...) on the first-party AI docs surface",
+            path.display()
+        );
+        assert!(
+            source.contains("DocSection::build(cx, "),
+            "{} should keep an explicit typed DocSection builder on the first-party AI docs surface",
+            path.display()
         );
     }
 }
@@ -4897,6 +5384,159 @@ fn selected_carousel_snippet_helpers_prefer_into_ui_element_over_anyelement() {
             "fn slide_card(cx: &mut UiCx<'_>, idx: usize) -> AnyElement",
             "fn slide(cx: &mut UiCx<'_>, idx: usize) -> AnyElement",
         ],
+    );
+}
+
+#[test]
+fn selected_carousel_usage_and_parts_snippets_keep_their_dual_lane_story() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/carousel/usage.rs",
+        &[
+            "shadcn::Carousel::new(items)",
+            ".test_id(\"ui-gallery-carousel-usage\")",
+            ".into_element(cx)",
+        ],
+        &[".into_element_parts("],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/carousel/parts.rs",
+        &[
+            "shadcn::Carousel::default()",
+            ".test_id(\"ui-gallery-carousel-parts\")",
+            ".into_element_parts(",
+        ],
+        &[],
+    );
+}
+
+#[test]
+fn selected_carousel_docs_examples_follow_the_compact_builder_lane() {
+    for relative_path in [
+        "src/ui/snippets/carousel/basic.rs",
+        "src/ui/snippets/carousel/sizes_thirds.rs",
+        "src/ui/snippets/carousel/sizes.rs",
+        "src/ui/snippets/carousel/spacing.rs",
+        "src/ui/snippets/carousel/spacing_responsive.rs",
+        "src/ui/snippets/carousel/orientation_vertical.rs",
+        "src/ui/snippets/carousel/options.rs",
+        "src/ui/snippets/carousel/loop_carousel.rs",
+    ] {
+        let normalized = assert_normalized_markers_present(
+            relative_path,
+            &["shadcn::Carousel::new(items)", ".into_element(cx)"],
+        );
+        assert!(
+            !normalized.contains(".into_element_parts("),
+            "{} should keep docs-first carousel examples on the compact builder lane",
+            manifest_path(relative_path).display()
+        );
+    }
+
+    let carousel_page = read("src/ui/pages/carousel.rs");
+    assert!(
+        carousel_page.contains(
+            "The docs-first examples below (`Basic`, `Sizes`, `Spacing`, `Orientation`, `Options`, `Loop`) and the ordinary diagnostics demos (`Demo`, `API`, `Focus`, `Duration`, autoplay/wheel examples) stay on that compact builder lane unless a snippet explicitly needs control-level parts for diagnostics or custom test IDs."
+        ),
+        "src/ui/pages/carousel.rs should explain why docs-first examples stay on the compact builder lane"
+    );
+}
+
+#[test]
+fn carousel_parts_lane_is_limited_to_explicit_parts_and_diagnostics_snippets() {
+    let expected = BTreeSet::from([
+        "src/ui/snippets/carousel/events.rs".to_string(),
+        "src/ui/snippets/carousel/parts.rs".to_string(),
+        "src/ui/snippets/carousel/rtl.rs".to_string(),
+    ]);
+
+    let actual = rust_sources("src/ui/snippets/carousel")
+        .into_iter()
+        .filter_map(|path| {
+            let source = read_path(&path);
+            source.contains(".into_element_parts(").then(|| {
+                path.strip_prefix(manifest_path(""))
+                    .unwrap()
+                    .display()
+                    .to_string()
+            })
+        })
+        .collect::<BTreeSet<_>>();
+
+    assert_eq!(
+        actual, expected,
+        "carousel parts-lane usage drifted; docs-first examples should stay on the compact builder lane unless a snippet explicitly needs parts or diagnostics wiring"
+    );
+}
+
+#[test]
+fn selected_carousel_diagnostics_snippets_prefer_compact_builder_when_parts_are_unnecessary() {
+    for relative_path in [
+        "src/ui/snippets/carousel/api.rs",
+        "src/ui/snippets/carousel/demo.rs",
+        "src/ui/snippets/carousel/expandable.rs",
+        "src/ui/snippets/carousel/focus_watch.rs",
+        "src/ui/snippets/carousel/loop_downgrade_cannot_loop.rs",
+        "src/ui/snippets/carousel/plugin_autoplay.rs",
+        "src/ui/snippets/carousel/plugin_autoplay_controlled.rs",
+        "src/ui/snippets/carousel/plugin_autoplay_delays.rs",
+        "src/ui/snippets/carousel/plugin_autoplay_stop_on_focus.rs",
+        "src/ui/snippets/carousel/plugin_autoplay_stop_on_last_snap.rs",
+        "src/ui/snippets/carousel/plugin_wheel_gestures.rs",
+    ] {
+        let normalized = assert_normalized_markers_present(relative_path, &[".into_element(cx)"]);
+        assert!(
+            normalized.contains("shadcn::Carousel::new("),
+            "{} should build the compact builder lane from `Carousel::new(...)`",
+            manifest_path(relative_path).display()
+        );
+        assert!(
+            !normalized.contains(".into_element_parts("),
+            "{} should stay on the compact builder lane because it does not need explicit control parts",
+            manifest_path(relative_path).display()
+        );
+    }
+
+    let duration_normalized = assert_normalized_markers_present(
+        "src/ui/snippets/carousel/duration_embla.rs",
+        &[
+            "shadcn::Carousel::new(duration_items_fast)",
+            "shadcn::Carousel::new(duration_items_slow)",
+            ".into_element(cx)",
+        ],
+    );
+    assert!(
+        !duration_normalized.contains(".into_element_parts("),
+        "{} should stay on the compact builder lane because it does not need explicit control parts",
+        manifest_path("src/ui/snippets/carousel/duration_embla.rs").display()
+    );
+}
+
+#[test]
+fn selected_button_group_composition_snippets_follow_child_family_default_lanes() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/button_group/input_group.rs",
+        &[
+            "shadcn::InputGroup::new(message_value)",
+            ".control_test_id(\"ui-gallery-button-group-input-group-control\")",
+            ".trailing([voice_tooltip])",
+            ".trailing_has_button(true)",
+            ".into_element(cx)",
+        ],
+        &[".into_element_parts("],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/button_group/button_group_select.rs",
+        &[
+            "shadcn::Select::new(currency_value.clone(), currency_open.clone())",
+            ".trigger(",
+            ".value(shadcn::SelectValue::new())",
+            ".content(",
+            ".entries(entries)",
+            ".into_element(cx)",
+        ],
+        &[".into_element_parts("],
     );
 }
 
@@ -7147,6 +7787,27 @@ fn ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface() {
 }
 
 #[test]
+fn selected_ai_snippets_follow_selects_direct_recipe_root_lane() {
+    for relative_path in [
+        "src/ui/snippets/ai/code_block_demo.rs",
+        "src/ui/snippets/ai/prompt_input_docs_demo.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "shadcn::Select::new(",
+                ".trigger(",
+                ".value(",
+                ".content(",
+                ".entries(",
+                ".into_element(cx)",
+            ],
+            &[".into_element_parts("],
+        );
+    }
+}
+
+#[test]
 fn material3_overlay_snippets_prefer_uncontrolled_copyable_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/menu.rs",
@@ -7705,22 +8366,105 @@ fn gallery_doc_layout_app_helpers_prefer_ui_child_over_anyelement() {
     assert_selected_page_helpers_prefer_ui_child(
         "src/ui/doc_layout.rs",
         &[
+            "fn render_doc_page(cx: &mut UiCx<'_>, intro: Option<&'static str>, sections: Vec<DocSection>,) -> impl UiChild + use<>",
+            "fn wrap_preview_page(cx: &mut UiCx<'_>, intro: Option<&'static str>, section_title: &'static str, elements: Vec<AnyElement>,) -> impl UiChild + use<>",
             "fn wrap_row<F>(cx: &mut UiCx<'_>, theme: &Theme, gap: Space, align: fret_ui::element::CrossAlign, children: F,) -> impl UiChild + use<F> where F: FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>",
             "fn wrap_controls_row<F>(cx: &mut UiCx<'_>, theme: &Theme, gap: Space, children: F,) -> impl UiChild + use<F> where F: FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>",
             "fn text_table<const N: usize, I>(cx: &mut UiCx<'_>, headers: [&'static str; N], rows: I, border_bottom: bool,) -> impl UiChild + use<N, I> where I: IntoIterator<Item = [&'static str; N]>",
             "fn muted_full_width<T>(cx: &mut UiCx<'_>, text: T) -> impl UiChild + use<T> where T: Into<Arc<str>>",
             "fn muted_inline<T>(cx: &mut UiCx<'_>, text: T) -> impl UiChild + use<T> where T: Into<Arc<str>>",
             "fn muted_flex_1_min_w_0<T>(cx: &mut UiCx<'_>, text: T) -> impl UiChild + use<T> where T: Into<Arc<str>>",
+            "fn icon(cx: &mut UiCx<'_>, id: &'static str) -> impl UiChild + use<>",
+            "fn render_section(cx: &mut UiCx<'_>, section: DocSection) -> impl UiChild + use<>",
+            "fn preview_code_tabs(cx: &mut UiCx<'_>, test_id_prefix: Option<&str>, preview: AnyElement, max_w: Px, code: DocCodeBlock, #[cfg(feature = \"gallery-ai\")] tabs_sizing: DocTabsSizing, #[cfg(not(feature = \"gallery-ai\"))] _tabs_sizing: DocTabsSizing, shell: bool,) -> impl UiChild + use<>",
+            "fn code_block_shell(cx: &mut UiCx<'_>, test_id_prefix: Option<&str>, max_w: Px, block: DocCodeBlock, shell: bool,) -> impl UiChild + use<>",
+            "fn section_title(cx: &mut UiCx<'_>, title: &'static str) -> impl UiChild + use<>",
         ],
         &[
+            "fn render_doc_page(cx: &mut UiCx<'_>, intro: Option<&'static str>, sections: Vec<DocSection>,) -> AnyElement",
+            "fn wrap_preview_page(cx: &mut UiCx<'_>, intro: Option<&'static str>, section_title: &'static str, elements: Vec<AnyElement>,) -> AnyElement",
             "fn wrap_row(cx: &mut UiCx<'_>, theme: &Theme, gap: Space, align: fret_ui::element::CrossAlign, children: impl FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,) -> AnyElement",
             "fn wrap_controls_row(cx: &mut UiCx<'_>, theme: &Theme, gap: Space, children: impl FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,) -> AnyElement",
             "fn text_table<const N: usize>(cx: &mut UiCx<'_>, headers: [&'static str; N], rows: impl IntoIterator<Item = [&'static str; N]>, border_bottom: bool,) -> AnyElement",
             "fn muted_full_width<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
             "fn muted_inline<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
             "fn muted_flex_1_min_w_0<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
+            "fn icon(cx: &mut UiCx<'_>, id: &'static str) -> AnyElement",
+            "fn render_section(cx: &mut UiCx<'_>, section: DocSection) -> AnyElement",
+            "fn preview_code_tabs(cx: &mut UiCx<'_>, test_id_prefix: Option<&str>, preview: AnyElement, max_w: Px, code: DocCodeBlock, #[cfg(feature = \"gallery-ai\")] tabs_sizing: DocTabsSizing, #[cfg(not(feature = \"gallery-ai\"))] _tabs_sizing: DocTabsSizing, shell: bool,) -> AnyElement",
+            "fn code_block_shell(cx: &mut UiCx<'_>, test_id_prefix: Option<&str>, max_w: Px, block: DocCodeBlock, shell: bool,) -> AnyElement",
+            "fn section_title(cx: &mut UiCx<'_>, title: &'static str) -> AnyElement",
         ],
     );
+}
+
+#[test]
+fn gallery_doc_layout_retains_only_intentional_raw_boundaries() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/doc_layout.rs",
+        &[
+            "pub preview: AnyElement,",
+            "pub(in crate::ui) fn new(title: &'static str, preview: AnyElement) -> Self",
+            "pub(in crate::ui) fn gap_card(",
+            ")-> (&'static str, AnyElement) {",
+        ],
+    );
+
+    assert_eq!(
+        normalized.matches("->AnyElement").count(),
+        0,
+        "src/ui/doc_layout.rs should keep exactly the audited raw-return boundaries until the page-collection lane migrates",
+    );
+
+    let source = read("src/ui/doc_layout.rs");
+    assert_eq!(
+        source.matches("Intentional raw boundary:").count(),
+        1,
+        "src/ui/doc_layout.rs should document every retained raw-return boundary with an explicit rationale",
+    );
+    assert!(source.contains(
+        "Intentionally stored as a landed value because the doc scaffold still decorates preview"
+    ));
+}
+
+#[test]
+fn render_doc_page_callers_land_the_typed_doc_page_explicitly() {
+    for path in rust_sources("src/ui/pages") {
+        let source = read_path(&path);
+        if !source.contains("render_doc_page(") {
+            continue;
+        }
+
+        let mut saw_final_return_line = false;
+        for line in source.lines() {
+            let trimmed = line.trim();
+            assert_ne!(
+                trimmed,
+                "vec![body]",
+                "{} should not keep the legacy raw render_doc_page landing",
+                path.display()
+            );
+            assert_ne!(
+                trimmed,
+                "vec![page]",
+                "{} should not keep the legacy raw render_doc_page landing",
+                path.display()
+            );
+            if trimmed.starts_with("vec![body") || trimmed.starts_with("vec![page") {
+                saw_final_return_line = true;
+                assert!(
+                    trimmed.contains(".into_element(cx)"),
+                    "{} should keep the final render_doc_page landing explicit at the page surface",
+                    path.display()
+                );
+            }
+        }
+        assert!(
+            saw_final_return_line,
+            "{} should expose a final page return line for render_doc_page output",
+            path.display()
+        );
+    }
 }
 
 #[test]

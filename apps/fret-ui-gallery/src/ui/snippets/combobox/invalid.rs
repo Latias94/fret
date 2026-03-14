@@ -74,16 +74,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-invalid")
         .items(base_items())
-        .into_element_parts(cx, |_cx| {
-            vec![
-                shadcn::ComboboxPart::from(shadcn::ComboboxTrigger::new().width_px(Px(260.0))),
-                shadcn::ComboboxPart::from(
-                    shadcn::ComboboxInput::new()
-                        .placeholder("Select required option")
-                        .aria_invalid(true),
-                ),
-            ]
-        });
+        .trigger(shadcn::ComboboxTrigger::new().width_px(Px(260.0)))
+        .input(
+            shadcn::ComboboxInput::new()
+                .placeholder("Select required option")
+                .aria_invalid(true),
+        )
+        .into_element(cx);
 
     ui::v_flex(move |cx| {
         vec![

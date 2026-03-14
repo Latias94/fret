@@ -70,17 +70,19 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .into_element(cx);
 
         vec![
-            shadcn::DropdownMenu::from_open(open).build_parts(
-                cx,
+            shadcn::DropdownMenu::from_open(open)
+                .compose()
                 // shadcn/Radix parity: the authored child button is the actual trigger surface.
                 // The nested Avatar is presentational content inside that pressable child.
-                shadcn::DropdownMenuTrigger::new(trigger),
-                shadcn::DropdownMenuContent::new()
-                    .align(shadcn::DropdownMenuAlign::End)
-                    .side_offset(Px(4.0))
-                    .min_width(Px(224.0)),
-                entries,
-            ),
+                .trigger(shadcn::DropdownMenuTrigger::new(trigger))
+                .content(
+                    shadcn::DropdownMenuContent::new()
+                        .align(shadcn::DropdownMenuAlign::End)
+                        .side_offset(Px(4.0))
+                        .min_width(Px(224.0)),
+                )
+                .entries(entries(cx))
+                .into_element(cx),
         ]
     })
     .into_element(cx)

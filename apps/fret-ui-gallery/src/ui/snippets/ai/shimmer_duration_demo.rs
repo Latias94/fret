@@ -10,19 +10,19 @@ use std::sync::Arc;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let item = |cx: &mut UiCx<'_>, label: &'static str, secs: f32, text: &'static str| {
-            ui::v_stack(move |cx| {
-                vec![
-                    shadcn::Badge::new(label)
-                        .variant(shadcn::BadgeVariant::Secondary)
-                        .into_element(cx),
-                    ui_ai::Shimmer::new(Arc::<str>::from(text))
-                        .duration_secs(secs)
-                        .into_element(cx),
-                ]
-            })
-            .gap(Space::N2)
-            .items_center()
-            .into_element(cx)
+        ui::v_stack(move |cx| {
+            vec![
+                shadcn::Badge::new(label)
+                    .variant(shadcn::BadgeVariant::Secondary)
+                    .into_element(cx),
+                ui_ai::Shimmer::new(Arc::<str>::from(text))
+                    .duration_secs(secs)
+                    .into_element(cx),
+            ]
+        })
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx)
     };
 
     ui::v_flex(move |cx| {

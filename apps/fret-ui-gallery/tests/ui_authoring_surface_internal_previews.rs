@@ -61,6 +61,48 @@ fn assert_normalized_markers_present(relative_path: &str, required_markers: &[&s
     normalized
 }
 
+fn assert_preview_registry_entries_keep_vec_anyelement(relative_dir: &str) {
+    for path in rust_sources(relative_dir) {
+        let source = read_path(&path);
+        if !source.contains("pub(in crate::ui) fn preview_") {
+            continue;
+        }
+
+        let normalized = source.split_whitespace().collect::<String>();
+        let mut remainder = normalized.as_str();
+        let mut saw_preview_entry = false;
+
+        while let Some(idx) = remainder.find("pub(incrate::ui)fnpreview_") {
+            saw_preview_entry = true;
+            let after_start = &remainder[idx..];
+            let Some(open_brace_idx) = after_start.find('{') else {
+                panic!(
+                    "{} should expose an opening brace for its preview registry signature",
+                    path.display()
+                );
+            };
+            let signature = &after_start[..open_brace_idx];
+            assert!(
+                signature.contains("->Vec<AnyElement>"),
+                "{} should keep preview registry entries on the explicit `Vec<AnyElement>` seam",
+                path.display()
+            );
+            assert!(
+                !signature.contains("->AnyElement"),
+                "{} should not regress preview registry entries to a single landed `AnyElement` boundary",
+                path.display()
+            );
+            remainder = &after_start[open_brace_idx + 1..];
+        }
+
+        assert!(
+            saw_preview_entry,
+            "{} should contain at least one preview registry entry once scanned",
+            path.display()
+        );
+    }
+}
+
 #[test]
 fn magic_preview_prefers_ui_cx_on_the_internal_gallery_surface() {
     let path = manifest_path("src/ui/previews/magic.rs");
@@ -89,6 +131,32 @@ fn component_preview_modules_prefer_ui_cx_on_the_internal_gallery_surface() {
         ],
         &[],
         "internal component preview surface",
+    );
+}
+
+#[test]
+fn internal_preview_registry_entries_remain_explicit_vec_anyelement_boundaries() {
+    assert_preview_registry_entries_keep_vec_anyelement("src/ui/previews/pages");
+    assert_preview_registry_entries_keep_vec_anyelement("src/ui/previews/gallery");
+
+    let magic = manifest_path("src/ui/previews/magic.rs");
+    let magic_source = read_path(&magic);
+    assert!(
+        magic_source.contains("pub(in crate::ui) fn preview_magic_"),
+        "{} should keep preview registry entries visible to the test",
+        magic.display()
+    );
+    let normalized = magic_source.split_whitespace().collect::<String>();
+    assert!(
+        normalized
+            .contains("pub(incrate::ui)fnpreview_magic_lens(cx:&mutUiCx<'_>)->Vec<AnyElement>{"),
+        "{} should keep magic preview registry entries on the explicit `Vec<AnyElement>` seam",
+        magic.display()
+    );
+    assert!(
+        !normalized.contains("pub(incrate::ui)fnpreview_magic_lens(cx:&mutUiCx<'_>)->AnyElement{"),
+        "{} should not regress magic preview registry entries to `AnyElement`",
+        magic.display()
     );
 }
 
@@ -206,6 +274,71 @@ fn render_doc_page_callers_land_the_typed_doc_page_explicitly() {
 }
 
 #[test]
+fn internal_preview_scaffold_retains_only_the_audited_vec_anyelement_seams() {
+    let path = manifest_path("src/ui/doc_layout.rs");
+    let source = read_path(&path);
+    let normalized = source.split_whitespace().collect::<String>();
+
+    for marker in [
+        "pub(incrate::ui)fnrender_doc_page(cx:&mutUiCx<'_>,intro:Option<&'staticstr>,sections:Vec<DocSection>,)->implUiChild+use<>",
+        "letmutout:Vec<AnyElement>=Vec::with_capacity(sections.len()+1);",
+        "pub(incrate::ui)fnwrap_preview_page(cx:&mutUiCx<'_>,intro:Option<&'staticstr>,section_title:&'staticstr,elements:Vec<AnyElement>,)->implUiChild+use<>",
+        "FnOnce(&mutUiCx<'_>)->Vec<AnyElement>",
+    ] {
+        assert!(
+            normalized.contains(marker),
+            "{} is missing intentional scaffold seam marker `{marker}`",
+            path.display()
+        );
+    }
+
+    assert_eq!(
+        normalized
+            .matches("FnOnce(&mutUiCx<'_>)->Vec<AnyElement>")
+            .count(),
+        2,
+        "{} should keep exactly the audited wrap-row closure seams on Vec<AnyElement>",
+        path.display()
+    );
+    assert!(
+        source.contains("Typed page scaffold:"),
+        "{} should explain the typed page scaffold vs internal vector seam split",
+        path.display()
+    );
+    assert!(
+        source.contains("Typed preview-harness wrapper:"),
+        "{} should explain the typed preview wrapper vs explicit preview vector seam split",
+        path.display()
+    );
+    assert!(
+        source.contains("Intentionally stored as a landed value because the doc scaffold still decorates preview"),
+        "{} should keep the landed DocSection preview-field comment visible",
+        path.display()
+    );
+    assert!(
+        source.contains(
+            "Intentional raw boundary: gap placeholders are assembled as concrete alert content"
+        ),
+        "{} should keep the gap-card raw-boundary rationale visible",
+        path.display()
+    );
+    assert!(
+        !normalized.contains(
+            "pub(incrate::ui)fnrender_doc_page(cx:&mutUiCx<'_>,intro:Option<&'staticstr>,sections:Vec<DocSection>,)->AnyElement"
+        ),
+        "{} should not regress render_doc_page back to AnyElement",
+        path.display()
+    );
+    assert!(
+        !normalized.contains(
+            "pub(incrate::ui)fnwrap_preview_page(cx:&mutUiCx<'_>,intro:Option<&'staticstr>,section_title:&'staticstr,elements:Vec<AnyElement>,)->AnyElement"
+        ),
+        "{} should not regress wrap_preview_page back to AnyElement",
+        path.display()
+    );
+}
+
+#[test]
 fn gallery_atom_preview_modules_prefer_ui_cx_on_the_internal_gallery_surface() {
     assert_internal_preview_dir(
         "src/ui/previews/gallery/atoms",
@@ -280,7 +413,8 @@ fn gallery_overlay_preview_retains_intentional_raw_boundaries() {
         ],
     );
     assert!(
-        overlay_normalized.contains("vec![layout::compose_body(cx,widgets).into_element(cx)]"),
+        overlay_normalized
+            .contains("vec![layout::compose_body(cx,models.clone()).into_element(cx)]"),
         "src/ui/previews/gallery/overlays/overlay.rs should keep the cached overlay body as a landed preview root",
     );
     assert!(
@@ -295,7 +429,7 @@ fn gallery_overlay_preview_retains_intentional_raw_boundaries() {
         &[
             "fn row(_cx: &mut UiCx<'_>, gap: Px, children: Vec<AnyElement>) -> impl UiChild + use<>",
             "fn row_end(_cx: &mut UiCx<'_>, gap: Px, children: Vec<AnyElement>) -> impl UiChild + use<>",
-            "pub(super) fn compose_body(cx: &mut UiCx<'_>, widgets: OverlayWidgets) -> impl UiChild + use<>",
+            "pub(super) fn compose_body(cx: &mut UiCx<'_>, models: OverlayModels) -> impl UiChild + use<>",
         ],
     );
     assert_eq!(
@@ -311,31 +445,37 @@ fn gallery_overlay_preview_retains_intentional_raw_boundaries() {
     let widgets_normalized = assert_normalized_markers_present(
         "src/ui/previews/gallery/overlays/overlay/widgets.rs",
         &[
-            "pub(super) struct OverlayWidgets {",
-            "fn overlay_reset(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement",
-            "fn popover(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement",
-            "fn dialog(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement",
-            "fn sheet(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement",
-            "fn portal_geometry(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement",
+            "pub(super) fn overlay_reset(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
+            "pub(super) fn dropdown(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
+            "pub(super) fn context_menu(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
+            "pub(super) fn context_menu_edge(_cx: &mut UiCx<'_>, models: &OverlayModels,) -> impl UiChild + use<>",
+            "pub(super) fn underlay(_cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "pub(super) fn tooltip(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "pub(super) fn hover_card(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "pub(super) fn popover(cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
+            "pub(super) fn dialog(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
+            "pub(super) fn dialog_glass(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
+            "pub(super) fn alert_dialog(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
+            "pub(super) fn sheet(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
+            "pub(super) fn portal_geometry(cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
         ],
     );
     assert_eq!(
-        widgets_normalized.matches(":AnyElement,").count(),
+        widgets_normalized.matches("->implUiChild+use<>").count(),
         13,
-        "src/ui/previews/gallery/overlays/overlay/widgets.rs should keep the audited landed widget inventory",
+        "src/ui/previews/gallery/overlays/overlay/widgets.rs should keep the typed widget-helper inventory",
     );
     assert_eq!(
         widgets_normalized.matches("->AnyElement").count(),
-        13,
-        "src/ui/previews/gallery/overlays/overlay/widgets.rs should keep the audited raw widget-root inventory",
+        0,
+        "src/ui/previews/gallery/overlays/overlay/widgets.rs should not regress widget helpers back to AnyElement",
     );
     let widgets_source = read_path(&manifest_path(
         "src/ui/previews/gallery/overlays/overlay/widgets.rs",
     ));
     assert!(widgets_source.contains(
-        "Intentionally stored as landed values because the overlay preview arranges already-built roots"
+        "Typed helper shells: these helpers may still lower to overlay/provider roots internally"
     ));
-    assert!(widgets_source.contains("Intentional raw boundary:"));
 
     let flags_normalized = assert_normalized_markers_present(
         "src/ui/previews/gallery/overlays/overlay/flags.rs",
@@ -530,6 +670,75 @@ fn selected_internal_preview_helpers_prefer_typed_outputs() {
         !feature_toggles_normalized.contains("fnsample_text(cx:&mutUiCx<'_>,theme:&Theme,label:&'staticstr,text:&'staticstr,features:Option<fret_core::TextShapingStyle>,test_id:&'staticstr,)->AnyElement"),
         "src/ui/previews/pages/editors/text/feature_toggles.rs should not regress sample_text back to AnyElement",
     );
+}
+
+#[test]
+fn selected_internal_preview_pages_use_typed_doc_sections() {
+    for (relative_path, required_marker, forbidden_marker) in [
+        (
+            "src/ui/previews/pages/harness/layout.rs",
+            "DocSection::build(cx, \"Demo\", row)",
+            "DocSection::new(\"Demo\", row)",
+        ),
+        (
+            "src/ui/previews/pages/harness/ui_kit_list_torture.rs",
+            "DocSection::build(cx, \"Harness\", root)",
+            "DocSection::new(\"Harness\", root)",
+        ),
+        (
+            "src/ui/previews/pages/harness/hit_test_only_paint_cache_probe.rs",
+            "DocSection::build(cx, \"Probe region\", panel)",
+            "DocSection::new(\"Probe region\", panel)",
+        ),
+        (
+            "src/ui/previews/pages/harness/view_cache.rs",
+            "DocSection::build(cx, \"Harness\", root)",
+            "DocSection::new(\"Harness\", root)",
+        ),
+        (
+            "src/ui/previews/pages/harness/virtual_list_torture.rs",
+            "DocSection::build(cx, \"Harness\", root)",
+            "DocSection::new(\"Harness\", root)",
+        ),
+        (
+            "src/ui/previews/pages/torture/chart_torture.rs",
+            "DocSection::build(cx, \"Chart\", chart)",
+            "DocSection::new(\"Chart\", chart)",
+        ),
+        (
+            "src/ui/previews/pages/torture/canvas_cull_torture.rs",
+            "DocSection::build(cx, \"Canvas\", canvas)",
+            "DocSection::new(\"Canvas\", canvas)",
+        ),
+        (
+            "src/ui/previews/pages/torture/chrome_torture.rs",
+            "DocSection::build(cx, \"Harness\", content)",
+            "DocSection::new(\"Harness\", content)",
+        ),
+        (
+            "src/ui/previews/pages/torture/windowed_rows_surface_interactive_torture.rs",
+            "DocSection::build(cx, \"Surface\", surface)",
+            "DocSection::new(\"Surface\", surface)",
+        ),
+        (
+            "src/ui/previews/pages/torture/windowed_rows_surface_torture.rs",
+            "DocSection::build(cx, \"Surface\", surface)",
+            "DocSection::new(\"Surface\", surface)",
+        ),
+        (
+            "src/ui/previews/pages/torture/node_graph_cull_torture.rs",
+            "DocSection::build(cx, \"Canvas\", surface)",
+            "DocSection::new(\"Canvas\", surface)",
+        ),
+    ] {
+        let normalized = assert_normalized_markers_present(relative_path, &[required_marker]);
+        let forbidden_marker = forbidden_marker.split_whitespace().collect::<String>();
+        assert!(
+            !normalized.contains(&forbidden_marker),
+            "{} should not regress to legacy `DocSection::new(...)` registration",
+            manifest_path(relative_path).display()
+        );
+    }
 }
 
 #[test]

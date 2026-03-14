@@ -62,7 +62,7 @@ pub(in crate::ui) fn preview_code_view_torture(
 
     let page = doc_layout::wrap_preview_page(cx, None, "Code view", vec![header, block]);
 
-    vec![page]
+    vec![page.into_element(cx)]
 }
 
 pub(in crate::ui) fn code_editor_mvp_source() -> String {

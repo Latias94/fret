@@ -128,13 +128,13 @@ pub(super) fn preview_ai_commit_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<A
             "The Commit component displays commit details including hash, message, author, timestamp, and changed files.",
         ),
         vec![
-            DocSection::new("Overview", demo)
+            DocSection::build(cx, "Overview", demo)
                 .description("Rust/Fret analogue of the official AI Elements preview.")
                 .test_id_prefix("ui-gallery-ai-commit-demo")
                 .code_rust_from_file_region(snippets::commit_demo::SOURCE, "example"),
             DocSection::build(cx, "Features", features).no_shell(),
             DocSection::build(cx, "File Status", file_status).no_shell(),
-            DocSection::new("Custom Children", custom_children)
+            DocSection::build(cx, "Custom Children", custom_children)
                 .description(
                     "Covers the three upstream custom-content slots: `CommitSeparator`, `CommitTimestamp`, and `CommitFileStatus`.",
                 )
@@ -146,5 +146,5 @@ pub(super) fn preview_ai_commit_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<A
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

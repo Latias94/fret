@@ -76,5 +76,5 @@ pub(super) fn preview_skeleton(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-skeleton")]
+    vec![body.test_id("ui-gallery-skeleton").into_element(cx)]
 }

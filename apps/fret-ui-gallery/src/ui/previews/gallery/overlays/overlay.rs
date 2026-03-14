@@ -52,10 +52,7 @@ pub(in crate::ui) fn preview_overlay(
 
     let overlays = cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), {
         let models = models.clone();
-        move |cx| {
-            let widgets = widgets::build(cx, &models);
-            vec![layout::compose_body(cx, widgets).into_element(cx)]
-        }
+        move |cx| vec![layout::compose_body(cx, models.clone()).into_element(cx)]
     });
 
     let mut out: Vec<AnyElement> = vec![overlays, last_action_status];

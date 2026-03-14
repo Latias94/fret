@@ -41,5 +41,5 @@ pub(super) fn preview_label(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         vec![demo, usage, label_in_field, rtl, api_reference],
     );
 
-    vec![body.test_id("ui-gallery-label")]
+    vec![body.test_id("ui-gallery-label").into_element(cx)]
 }

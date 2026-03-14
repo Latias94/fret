@@ -11,11 +11,11 @@ pub(super) fn preview_ai_terminal_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec
         cx,
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
-            DocSection::new("Terminal", demo)
+            DocSection::build(cx, "Terminal", demo)
                 .test_id_prefix("ui-gallery-ai-terminal-demo")
                 .code_rust_from_file_region(snippets::terminal_demo::SOURCE, "example"),
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

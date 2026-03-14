@@ -55,6 +55,6 @@ pub(super) fn preview_motion_presets(
             ],
         );
 
-        vec![body.test_id("ui-gallery-motion-presets-component")]
+        vec![body.test_id("ui-gallery-motion-presets-component").into_element(cx)]
     })
 }

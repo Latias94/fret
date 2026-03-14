@@ -37,12 +37,12 @@ pub(super) fn preview_scroll_area(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = DocSection::build(cx, "RTL", rtl)
         .description("ScrollArea behavior under an RTL direction provider.")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
-    let drag_baseline = DocSection::new("Scrollbar drag baseline", drag_baseline)
+    let drag_baseline = DocSection::build(cx, "Scrollbar drag baseline", drag_baseline)
         .description(
             "Diagnostics harness (Fret-only): drag the thumb, then arm content growth. The thumb should not jump when extents change mid-drag.",
         )
         .code_rust_from_file_region(snippets::drag_baseline::SOURCE, "example");
-    let expand_at_bottom = DocSection::new("Expand at bottom", expand_at_bottom)
+    let expand_at_bottom = DocSection::build(cx, "Expand at bottom", expand_at_bottom)
         .description(
             "Diagnostics harness: content expands while already at the scroll extent edge (pinned extents regression).",
         )
@@ -65,5 +65,5 @@ pub(super) fn preview_scroll_area(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-scroll-area")]
+    vec![body.test_id("ui-gallery-scroll-area").into_element(cx)]
 }

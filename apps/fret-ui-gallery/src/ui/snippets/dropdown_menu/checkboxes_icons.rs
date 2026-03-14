@@ -27,56 +27,54 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .unwrap_or_default();
 
     super::preview_frame_with(cx, |cx| {
-        shadcn::DropdownMenu::uncontrolled(cx).build_parts(
-            cx,
-            shadcn::DropdownMenuTrigger::build(
+        shadcn::DropdownMenu::uncontrolled(cx)
+            .compose()
+            .trigger(
                 shadcn::Button::new("Open")
                     .variant(shadcn::ButtonVariant::Outline)
                     .test_id("ui-gallery-dropdown-menu-checkboxes-icons-trigger"),
-            ),
-            shadcn::DropdownMenuContent::new()
-                .align(shadcn::DropdownMenuAlign::Start)
-                .side_offset(Px(4.0))
-                // Keep the icon-augmented variant aligned with the upstream checkbox example width.
-                .min_width(Px(224.0)),
-            |_cx| {
-                [shadcn::DropdownMenuGroup::new([
-                    shadcn::DropdownMenuLabel::new("Appearance").into(),
-                    shadcn::DropdownMenuCheckboxItem::from_checked(
-                        appearance_now.show_status_bar,
-                        "Status Bar",
-                    )
-                    .on_checked_change({
-                        let appearance = appearance.clone();
-                        move |host, _action_cx, checked| {
-                            let _ = host
-                                .models_mut()
-                                .update(&appearance, |state| state.show_status_bar = checked);
-                        }
-                    })
-                    .leading_icon(IconId::new_static("lucide.panel-top"))
-                    .test_id("ui-gallery-dropdown-menu-checkboxes-icons-status-bar")
-                    .into(),
-                    shadcn::DropdownMenuCheckboxItem::from_checked(
-                        appearance_now.show_activity_bar,
-                        "Activity Bar",
-                    )
-                    .on_checked_change({
-                        let appearance = appearance.clone();
-                        move |host, _action_cx, checked| {
-                            let _ = host
-                                .models_mut()
-                                .update(&appearance, |state| state.show_activity_bar = checked);
-                        }
-                    })
-                    .leading_icon(IconId::new_static("lucide.layout-dashboard"))
-                    .disabled(true)
-                    .test_id("ui-gallery-dropdown-menu-checkboxes-icons-activity-bar")
-                    .into(),
-                    shadcn::DropdownMenuCheckboxItem::from_checked(
-                        appearance_now.show_panel,
-                        "Panel",
-                    )
+            )
+            .content(
+                shadcn::DropdownMenuContent::new()
+                    .align(shadcn::DropdownMenuAlign::Start)
+                    .side_offset(Px(4.0))
+                    // Keep the icon-augmented variant aligned with the upstream checkbox example width.
+                    .min_width(Px(224.0)),
+            )
+            .entries([shadcn::DropdownMenuGroup::new([
+                shadcn::DropdownMenuLabel::new("Appearance").into(),
+                shadcn::DropdownMenuCheckboxItem::from_checked(
+                    appearance_now.show_status_bar,
+                    "Status Bar",
+                )
+                .on_checked_change({
+                    let appearance = appearance.clone();
+                    move |host, _action_cx, checked| {
+                        let _ = host
+                            .models_mut()
+                            .update(&appearance, |state| state.show_status_bar = checked);
+                    }
+                })
+                .leading_icon(IconId::new_static("lucide.panel-top"))
+                .test_id("ui-gallery-dropdown-menu-checkboxes-icons-status-bar")
+                .into(),
+                shadcn::DropdownMenuCheckboxItem::from_checked(
+                    appearance_now.show_activity_bar,
+                    "Activity Bar",
+                )
+                .on_checked_change({
+                    let appearance = appearance.clone();
+                    move |host, _action_cx, checked| {
+                        let _ = host
+                            .models_mut()
+                            .update(&appearance, |state| state.show_activity_bar = checked);
+                    }
+                })
+                .leading_icon(IconId::new_static("lucide.layout-dashboard"))
+                .disabled(true)
+                .test_id("ui-gallery-dropdown-menu-checkboxes-icons-activity-bar")
+                .into(),
+                shadcn::DropdownMenuCheckboxItem::from_checked(appearance_now.show_panel, "Panel")
                     .on_checked_change({
                         let appearance = appearance.clone();
                         move |host, _action_cx, checked| {
@@ -87,10 +85,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     })
                     .leading_icon(IconId::new_static("lucide.panel-right"))
                     .into(),
-                ])
-                .into()]
-            },
-        )
+            ])
+            .into()])
     })
     .into_element(cx)
 }

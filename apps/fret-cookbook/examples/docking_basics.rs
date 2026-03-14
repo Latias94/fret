@@ -447,7 +447,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut DockingBasicsWindowStat
     .h_full()
     .max_w(Px(1100.0));
 
-    let root = fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card);
+    let root = fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card);
 
     vec![cx.semantics(
         SemanticsProps {

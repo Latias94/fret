@@ -91,5 +91,5 @@ pub(super) fn preview_switch(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-switch")]
+    vec![body.test_id("ui-gallery-switch").into_element(cx)]
 }

@@ -49,5 +49,5 @@ pub(super) fn preview_separator(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         vec![demo, usage, vertical, menu, list, rtl, api_reference],
     );
 
-    vec![body.test_id("ui-gallery-separator")]
+    vec![body.test_id("ui-gallery-separator").into_element(cx)]
 }

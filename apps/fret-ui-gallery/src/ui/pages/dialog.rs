@@ -17,6 +17,7 @@ pub(super) fn preview_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let notes = doc_layout::notes_block([
         "Preview follows upstream shadcn Dialog docs order first: Demo, Usage, Custom Close Button, No Close Button, Sticky Footer, Scrollable Content, RTL; the `Parts` adapter section follows afterwards.",
         "`Dialog::compose()` is a recipe-level bridge for shadcn-style part composition without pushing children API concerns into the mechanism layer.",
+        "`Usage` is the default copyable path; `Parts` stays as the advanced adapter section for explicit `DialogTrigger` / `DialogPortal` / `DialogOverlay` ownership.",
         "Part surface adapters exist for shadcn-style call sites (DialogTrigger/DialogPortal/DialogOverlay).",
         "Default close affordance now lives in `DialogContent`, matching upstream; disable it with `show_close_button(false)`.",
         "`DialogClose::from_scope()` remains available when a page wants an additional or fully custom close affordance inside dialog content.",
@@ -51,13 +52,15 @@ pub(super) fn preview_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Dialog layout should work under an RTL direction provider.")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let parts = DocSection::build(cx, "Parts", parts)
-        .description("Fret-specific part surface adapters (Trigger/Portal/Overlay).")
+        .description(
+            "Advanced part surface adapters for explicit Trigger/Portal/Overlay ownership.",
+        )
         .code_rust_from_file_region(snippets::parts::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Dialog docs order first, with the Fret-specific `Parts` adapter section appended afterwards.",
+            "Preview follows shadcn Dialog docs order first, with the advanced Fret-specific `Parts` adapter section appended afterwards.",
         ),
         vec![
             demo,
@@ -72,5 +75,5 @@ pub(super) fn preview_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-dialog")]
+    vec![body.test_id("ui-gallery-dialog").into_element(cx)]
 }

@@ -32,12 +32,16 @@ pub(in crate::ui) fn preview_layout(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<Any
     .items_stretch()
     .into_element(cx);
 
+    let demo = DocSection::build(cx, "Demo", row)
+        .description("In a horizontal flex row, prefer `flex-1 + min-w-0` (equal columns) over percent widths (`w-full`).");
+
     let page = doc_layout::render_doc_page(
         cx,
-        Some("Layout mental model: LayoutRefinement (constraints) + stack (composition) + Theme tokens (color/spacing)."),
-        vec![DocSection::new("Demo", row)
-            .description("In a horizontal flex row, prefer `flex-1 + min-w-0` (equal columns) over percent widths (`w-full`).")],
+        Some(
+            "Layout mental model: LayoutRefinement (constraints) + stack (composition) + Theme tokens (color/spacing).",
+        ),
+        vec![demo],
     );
 
-    vec![page]
+    vec![page.into_element(cx)]
 }

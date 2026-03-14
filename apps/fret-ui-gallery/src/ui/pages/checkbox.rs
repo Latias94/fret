@@ -92,5 +92,5 @@ pub(super) fn preview_checkbox(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-checkbox")]
+    vec![body.test_id("ui-gallery-checkbox").into_element(cx)]
 }

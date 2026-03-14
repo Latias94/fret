@@ -67,5 +67,8 @@ pub(super) fn preview_data_table(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-data-table-component")]
+    vec![
+        body.test_id("ui-gallery-data-table-component")
+            .into_element(cx),
+    ]
 }

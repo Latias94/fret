@@ -84,5 +84,5 @@ pub(super) fn preview_tabs(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-tabs")]
+    vec![body.test_id("ui-gallery-tabs").into_element(cx)]
 }

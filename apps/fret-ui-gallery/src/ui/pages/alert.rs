@@ -75,5 +75,5 @@ pub(super) fn preview_alert(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-alert-component")]
+    vec![body.test_id("ui-gallery-alert-component").into_element(cx)]
 }

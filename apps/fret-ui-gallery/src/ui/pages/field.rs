@@ -194,5 +194,5 @@ shadcn::field_set(|cx| {
         ],
     );
 
-    vec![body.test_id("ui-gallery-field")]
+    vec![body.test_id("ui-gallery-field").into_element(cx)]
 }

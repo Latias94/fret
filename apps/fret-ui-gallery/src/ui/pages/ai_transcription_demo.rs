@@ -11,11 +11,11 @@ pub(super) fn preview_ai_transcription_demo(cx: &mut UiCx<'_>, _theme: &Theme) -
         cx,
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
-            DocSection::new("Transcription", demo)
+            DocSection::build(cx, "Transcription", demo)
                 .test_id_prefix("ui-gallery-ai-transcription-demo")
                 .code_rust_from_file_region(snippets::transcription_demo::SOURCE, "example"),
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

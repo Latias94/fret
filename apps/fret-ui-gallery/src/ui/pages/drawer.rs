@@ -17,13 +17,14 @@ pub(super) fn preview_drawer(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`Drawer::direction(...)` is the upstream-aligned placement setter and accepts the documented `top`, `right`, `bottom`, and `left` directions.",
         "`Drawer::new_controllable(cx, None, false).compose()` is the preferred Fret equivalent of upstream nested children composition, with `DrawerTrigger::build(...)` covering `asChild`-style trigger ownership.",
         "`DrawerClose::from_scope().build(cx, child)` is the closest Fret equivalent to upstream `DrawerClose asChild` for caller-owned close buttons.",
+        "`Usage` is the default copyable `compose()` path, while `Snap Points` stays a Vaul/Fret policy follow-up rather than a separate root-authoring lane.",
         "`snap_points(...)` and `default_snap_point(...)` are Vaul-oriented extensions that stay outside the core shadcn docs path even though they are first-class Drawer policy in Fret.",
     ]);
 
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/drawer.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/radix/drawer.mdx` and Vaul docs.",
         "Preview mirrors the shadcn Drawer docs path after the prose-only `About` and `Installation` sections: `Demo`, `Usage`, `Scrollable Content`, `Sides`, `Responsive Dialog`, `RTL`, and `API Reference`.",
-        "`Snap Points` stays after `API Reference` as an explicit Vaul/Fret follow-up instead of being mixed into the docs path.",
+        "`Usage` is the default copyable path; `Snap Points` stays after `API Reference` as an explicit Vaul/Fret follow-up instead of being mixed into the docs path.",
         "`Drawer::compose()` is the recipe-level composable children bridge for shadcn-style part authoring without pushing children API concerns into the mechanism layer.",
         "`Demo` and `Responsive Dialog` keep the official inner content structure (centered max-width body, profile form layout) so gallery visuals stay close to shadcn docs instead of only proving the raw mechanism works.",
         "Responsive dialog recipe is represented as explicit desktop/mobile branches for deterministic gallery validation.",
@@ -45,7 +46,7 @@ pub(super) fn preview_drawer(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
         .title_test_id("ui-gallery-section-usage-title")
-        .description("Copyable shadcn-style composition reference for Drawer.")
+        .description("Default copyable `compose()` path for common Drawer call sites.")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let scrollable_content = DocSection::build(cx, "Scrollable Content", scrollable_content)
         .description("Keep actions visible while the content area scrolls.")
@@ -63,7 +64,7 @@ pub(super) fn preview_drawer(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Drawer layout should follow right-to-left direction context.")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let snap_points = DocSection::build(cx, "Snap Points", snap_points)
-        .description("Drag settles to the nearest snap point (Vaul-style).")
+        .description("Vaul/Fret policy follow-up built on the same Drawer root while drag settles to the nearest snap point.")
         .code_rust_from_file_region(snippets::snap_points::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
@@ -84,5 +85,5 @@ pub(super) fn preview_drawer(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

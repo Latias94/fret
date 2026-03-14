@@ -168,5 +168,5 @@ pub(super) fn preview_calendar(
         ],
     );
 
-    vec![body.test_id("ui-gallery-calendar")]
+    vec![body.test_id("ui-gallery-calendar").into_element(cx)]
 }

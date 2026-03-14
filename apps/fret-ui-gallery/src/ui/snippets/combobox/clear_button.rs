@@ -71,16 +71,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             shadcn::ComboboxItem::new("remix", "Remix"),
             shadcn::ComboboxItem::new("astro", "Astro"),
         ])
-        .into_element_parts(cx, |_cx| {
-            vec![
-                shadcn::ComboboxPart::from(shadcn::ComboboxTrigger::new().width_px(Px(260.0))),
-                shadcn::ComboboxPart::from(
-                    shadcn::ComboboxInput::new()
-                        .placeholder("Select a framework")
-                        .show_clear(true),
-                ),
-            ]
-        });
+        .trigger(shadcn::ComboboxTrigger::new().width_px(Px(260.0)))
+        .input(shadcn::ComboboxInput::new().placeholder("Select a framework"))
+        .clear(shadcn::ComboboxClear::new())
+        .into_element(cx);
 
     ui::v_flex(move |cx| {
         vec![

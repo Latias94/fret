@@ -96,18 +96,14 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         let _ = host.models_mut().update(&model_value, |v| *v = Some(value));
                     }
                 })
-                .into_element_parts(
-                    cx,
-                    |_cx| shadcn::SelectTrigger::new().size(shadcn::SelectTriggerSize::Sm),
-                    |_cx| shadcn::SelectValue::new().placeholder("Model"),
-                    |_cx| {
-                        shadcn::SelectContent::new().with_entries([
-                            shadcn::SelectItem::new("gpt-4o", "GPT-4o").into(),
-                            shadcn::SelectItem::new("claude-opus-4-20250514", "Claude 4 Opus")
-                                .into(),
-                        ])
-                    },
-                );
+                .trigger(shadcn::SelectTrigger::new().size(shadcn::SelectTriggerSize::Sm))
+                .value(shadcn::SelectValue::new().placeholder("Model"))
+                .content(shadcn::SelectContent::new())
+                .entries([
+                    shadcn::SelectItem::new("gpt-4o", "GPT-4o").into(),
+                    shadcn::SelectItem::new("claude-opus-4-20250514", "Claude 4 Opus").into(),
+                ])
+                .into_element(cx);
 
             let tools = ui_ai::PromptInputTools::new([menu, search_btn, select]).into_element(cx);
             let submit = ui_ai::PromptInputSubmit::new()

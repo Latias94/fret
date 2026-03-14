@@ -27,5 +27,5 @@ pub(super) fn preview_icons(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         vec![grid, spinner_row, notes],
     );
 
-    vec![body.test_id("ui-gallery-icons")]
+    vec![body.test_id("ui-gallery-icons").into_element(cx)]
 }

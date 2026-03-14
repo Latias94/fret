@@ -41,6 +41,8 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         let api_reference = doc_layout::notes_block([
                 "API reference: `ecosystem/fret-ui-shadcn/src/carousel.rs`.",
                 "`Carousel::new/items` is the compact builder path, while `CarouselContent`, `CarouselItem`, `CarouselPrevious`, and `CarouselNext` are exposed through `Carousel::into_element_parts(...)` for upstream-shaped copyable examples.",
+                "`Usage` is the default compact builder path for common Fret call sites, while `Parts` remains the upstream-shaped copyable lane rather than an advanced escape hatch.",
+                "The docs-first examples below (`Basic`, `Sizes`, `Spacing`, `Orientation`, `Options`, `Loop`) and the ordinary diagnostics demos (`Demo`, `API`, `Focus`, `Duration`, autoplay/wheel examples) stay on that compact builder lane unless a snippet explicitly needs control-level parts for diagnostics or custom test IDs.",
                 "Carousel chrome, buttons, and the Embla-style headless behaviors stay recipe-owned; surrounding width/height negotiation and breakpoint choices remain caller-owned.",
                 "No extra generic `compose()` / children surface is needed here because the parts authoring surface already maps to the upstream exports.",
             ]);
@@ -57,63 +59,63 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             .test_id_prefix("ui-gallery-carousel-demo")
             .code_rust_from_file_region(snippets::demo::SOURCE, "example");
         let usage = DocSection::build(cx, "Usage", usage)
-            .description("Copyable minimal usage for the builder + parts authoring surface.")
+            .description("Default compact builder path for common Fret carousel call sites.")
             .test_id_prefix("ui-gallery-carousel-usage")
             .code_rust_from_file_region(snippets::usage::SOURCE, "example");
         let parts = DocSection::build(cx, "Parts", parts)
-            .description("Part-based authoring surface aligned with shadcn/ui v4 exports.")
+            .description("Upstream-shaped copyable parts surface aligned with shadcn/ui v4 exports.")
             .test_id_prefix("ui-gallery-carousel-parts")
             .code_rust_from_file_region(snippets::parts::SOURCE, "example");
         let basic = DocSection::build(cx, "Basic", basic)
-            .description("A minimal baseline (basis-full) used by docs parity screenshots.")
+            .description("A minimal baseline (basis-full) on the compact builder lane.")
             .test_id_prefix("ui-gallery-carousel-basic")
             .code_rust_from_file_region(snippets::basic::SOURCE, "example");
         let sizes_thirds = DocSection::build(cx, "Sizes (1/3)", sizes_thirds)
-            .description("Fixed slide width (shadcn `basis-1/3`).")
+            .description("Fixed slide width (shadcn `basis-1/3`) on the compact builder lane.")
             .test_id_prefix("ui-gallery-carousel-sizes-thirds")
             .code_rust_from_file_region(snippets::sizes_thirds::SOURCE, "example");
         let sizes = DocSection::build(cx, "Sizes", sizes)
-            .description("Three active items (`basis-1/3`) to mirror the docs layout.")
+            .description("Three active items (`basis-1/3`) to mirror the docs layout on the compact builder lane.")
             .test_id_prefix("ui-gallery-carousel-sizes")
             .code_rust_from_file_region(snippets::sizes::SOURCE, "example");
         let spacing = DocSection::build(cx, "Spacing", spacing)
             .description(
-                "Tighter track negative margin + item start padding (shadcn `-ml-1` / `pl-1`).",
+                "Tighter track negative margin + item start padding (shadcn `-ml-1` / `pl-1`) on the compact builder lane.",
             )
             .test_id_prefix("ui-gallery-carousel-spacing")
             .code_rust_from_file_region(snippets::spacing::SOURCE, "example");
         let spacing_responsive =
             DocSection::build(cx, "Spacing (Responsive)", spacing_responsive)
                 .description(
-                    "Viewport breakpoints for spacing (shadcn `-ml-2 md:-ml-4` / `pl-2 md:pl-4`).",
+                    "Viewport breakpoints for spacing (shadcn `-ml-2 md:-ml-4` / `pl-2 md:pl-4`) on the compact builder lane.",
                 )
                 .test_id_prefix("ui-gallery-carousel-spacing-responsive")
                 .code_rust_from_file_region(snippets::spacing_responsive::SOURCE, "example");
         let orientation_vertical =
             DocSection::build(cx, "Orientation (Vertical)", orientation_vertical)
-                .description("A vertical carousel (orientation=\"vertical\").")
+                .description("A vertical carousel (orientation=\"vertical\") on the compact builder lane.")
                 .test_id_prefix("ui-gallery-carousel-orientation-vertical")
                 .code_rust_from_file_region(snippets::orientation_vertical::SOURCE, "example");
         let options = DocSection::build(cx, "Options", options)
-            .description("Pass options via `opts` (Embla-style): `align=start`, `loop=true`.")
+            .description("Pass options via `opts` (Embla-style): `align=start`, `loop=true`, still on the compact builder lane.")
             .test_id_prefix("ui-gallery-carousel-options")
             .code_rust_from_file_region(snippets::options::SOURCE, "example");
         let api = DocSection::build(cx, "API", api)
-            .description("A carousel with a slide counter (shadcn `setApi`-style outcome).")
+            .description("A carousel with a slide counter (shadcn `setApi`-style outcome) on the compact builder lane.")
             .test_id_prefix("ui-gallery-carousel-api")
             .code_rust_from_file_region(snippets::api::SOURCE, "example");
         let events = DocSection::build(cx, "Events", events)
-            .description("Listen to select/reInit events (shadcn `api.on(...)`-style outcomes).")
+            .description("Listen to select/reInit events (shadcn `api.on(...)`-style outcomes); this one keeps explicit parts because the diagnostics need control-level test IDs.")
             .test_id_prefix("ui-gallery-carousel-events")
             .code_rust_from_file_region(snippets::events::SOURCE, "example");
         let plugin = DocSection::build(cx, "Plugin (Autoplay)", plugin)
-            .description("Autoplay: 2000ms delay; hover pauses; interaction stops.")
+            .description("Autoplay: 2000ms delay; hover pauses; interaction stops, still on the compact builder lane.")
             .test_id_prefix("ui-gallery-carousel-plugin")
             .code_rust_from_file_region(snippets::plugin_autoplay::SOURCE, "example");
         let plugin_controlled =
             DocSection::build(cx, "Plugin (Autoplay, Controlled)", plugin_controlled)
                 .description(
-                    "Autoplay with external stop/reset/play controls (Embla plugin-style outcomes).",
+                    "Autoplay with external stop/reset/play controls (Embla plugin-style outcomes) on the compact builder lane.",
                 )
                 .test_id_prefix("ui-gallery-carousel-plugin-controlled")
                 .code_rust_from_file_region(
@@ -123,7 +125,7 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         let plugin_stop_on_focus =
             DocSection::build(cx, "Plugin (Autoplay, stopOnInteraction via focus)", plugin_stop_on_focus)
                 .description(
-                    "Autoplay stops when focus enters a slide (`stop_on_interaction=true`, Embla `slidefocus`-style outcome).",
+                    "Autoplay stops when focus enters a slide (`stop_on_interaction=true`, Embla `slidefocus`-style outcome) on the compact builder lane.",
                 )
                 .test_id_prefix("ui-gallery-carousel-plugin-stop-on-interaction-focus")
                 .code_rust_from_file_region(
@@ -133,7 +135,7 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         let plugin_stop_on_last_snap =
             DocSection::build(cx, "Plugin (Autoplay, stopOnLastSnap)", plugin_stop_on_last_snap)
                 .description(
-                    "Autoplay stops after reaching the last snap (`stop_on_last_snap=true`).",
+                    "Autoplay stops after reaching the last snap (`stop_on_last_snap=true`) on the compact builder lane.",
                 )
                 .test_id_prefix("ui-gallery-carousel-plugin-stop-on-last-snap")
                 .code_rust_from_file_region(
@@ -142,7 +144,7 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 );
         let plugin_delays =
             DocSection::build(cx, "Plugin (Autoplay, per-snap delays)", plugin_delays)
-                .description("Autoplay delay can be varied per snap (`set_delays`).")
+                .description("Autoplay delay can be varied per snap (`set_delays`) on the compact builder lane.")
                 .test_id_prefix("ui-gallery-carousel-plugin-delays")
                 .code_rust_from_file_region(
                     snippets::plugin_autoplay_delays::SOURCE,
@@ -150,18 +152,18 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 );
         let plugin_wheel = DocSection::build(cx, "Plugin (Wheel gestures)", plugin_wheel)
             .description(
-                "Wheel/trackpad gestures: horizontal scroll steps between snaps (Shift swaps axes).",
+                "Wheel/trackpad gestures: horizontal scroll steps between snaps (Shift swaps axes) on the compact builder lane.",
             )
             .test_id_prefix("ui-gallery-carousel-plugin-wheel")
             .code_rust_from_file_region(snippets::plugin_wheel_gestures::SOURCE, "example");
         let rtl = DocSection::build(cx, "RTL", rtl)
             .description(
-                "RTL carousel: set `DirectionProvider` and `CarouselOptions::direction(Rtl)` (shadcn `dir` + `opts.direction`). Prev/Next remain physically left/right (shadcn docs), while arrow direction adapts to RTL.",
+                "RTL carousel: set `DirectionProvider` and `CarouselOptions::direction(Rtl)` (shadcn `dir` + `opts.direction`). Prev/Next remain physically left/right (shadcn docs), while arrow direction adapts to RTL. This snippet keeps explicit parts because diagnostics need named RTL controls.",
             )
             .test_id_prefix("ui-gallery-carousel-rtl")
             .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
         let loop_carousel = DocSection::build(cx, "Loop", loop_carousel)
-            .description("Seamless looping (`loop=true`) using the Embla-style headless engine.")
+            .description("Seamless looping (`loop=true`) using the Embla-style headless engine on the compact builder lane.")
             .test_id_prefix("ui-gallery-carousel-loop")
             .code_rust_from_file_region(snippets::loop_carousel::SOURCE, "example");
         let loop_downgrade_cannot_loop =
@@ -176,18 +178,18 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 );
         let focus = DocSection::build(cx, "Focus", focus)
             .description(
-                "`watch_focus=true`: Tab into an offscreen slide and scroll it into view (Embla engine enabled).",
+                "`watch_focus=true`: Tab into an offscreen slide and scroll it into view (Embla engine enabled) on the compact builder lane.",
             )
             .test_id_prefix("ui-gallery-carousel-focus")
             .code_rust_from_file_region(snippets::focus_watch::SOURCE, "example");
         let duration = DocSection::build(cx, "Duration (Embla)", duration)
             .description(
-                "Embla `duration` (integrator parameter) affects settle speed for button navigation (this demo ignores prefers-reduced-motion).",
+                "Embla `duration` (integrator parameter) affects settle speed for button navigation (this demo ignores prefers-reduced-motion) on the compact builder lane.",
             )
             .test_id_prefix("ui-gallery-carousel-duration")
             .code_rust_from_file_region(snippets::duration_embla::SOURCE, "example");
         let expandable = DocSection::build(cx, "Expandable", expandable)
-            .description("Content-driven height changes (used by the motion pilot suite).")
+            .description("Content-driven height changes (used by the motion pilot suite) on the compact builder lane.")
             .test_id_prefix("ui-gallery-carousel-expandable")
             .code_rust_from_file_region(snippets::expandable::SOURCE, "example");
 
@@ -226,6 +228,6 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             ],
         );
 
-        vec![body.test_id("ui-gallery-carousel-component")]
+        vec![body.test_id("ui-gallery-carousel-component").into_element(cx)]
     })
 }

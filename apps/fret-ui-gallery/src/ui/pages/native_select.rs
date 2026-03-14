@@ -92,5 +92,5 @@ pub(super) fn preview_native_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-native-select")]
+    vec![body.test_id("ui-gallery-native-select").into_element(cx)]
 }

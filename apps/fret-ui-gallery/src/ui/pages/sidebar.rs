@@ -67,5 +67,5 @@ pub(super) fn preview_sidebar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         vec![usage, controlled, demo, use_sidebar, mobile, rtl, notes],
     );
 
-    vec![body.test_id("ui-gallery-sidebar")]
+    vec![body.test_id("ui-gallery-sidebar").into_element(cx)]
 }

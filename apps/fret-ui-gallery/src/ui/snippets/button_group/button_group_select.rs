@@ -32,21 +32,19 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
         shadcn::Select::new(currency_value.clone(), currency_open.clone())
             .trigger_test_id("ui-gallery-button-group-select-currency-trigger")
-            .into_element_parts(
-                cx,
-                |_cx| {
-                    shadcn::SelectTrigger::new()
-                        .font(FontId::monospace())
-                        .label_policy(shadcn::SelectTriggerLabelPolicy::Value)
-                },
-                |_cx| shadcn::SelectValue::new(),
-                move |_cx| {
-                    shadcn::SelectContent::new()
-                        .position(fret_ui_shadcn::select::SelectPosition::Popper)
-                        .align(shadcn::SelectAlign::Start)
-                        .with_entries(entries)
-                },
+            .trigger(
+                shadcn::SelectTrigger::new()
+                    .font(FontId::monospace())
+                    .label_policy(shadcn::SelectTriggerLabelPolicy::Value),
             )
+            .value(shadcn::SelectValue::new())
+            .content(
+                shadcn::SelectContent::new()
+                    .position(fret_ui_shadcn::select::SelectPosition::Popper)
+                    .align(shadcn::SelectAlign::Start),
+            )
+            .entries(entries)
+            .into_element(cx)
     };
 
     let amount = shadcn::Input::new(amount_value)

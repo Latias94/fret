@@ -11,11 +11,11 @@ pub(super) fn preview_ai_sandbox_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
         cx,
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
-            DocSection::new("Sandbox", demo)
+            DocSection::build(cx, "Sandbox", demo)
                 .test_id_prefix("ui-gallery-ai-sandbox-demo")
                 .code_rust_from_file_region(snippets::sandbox_demo::SOURCE, "example"),
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

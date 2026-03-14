@@ -47,22 +47,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     let group = shadcn::InputGroup::new(message_value)
         .refine_layout(LayoutRefinement::default().w_full().min_w_0())
-        .into_element_parts(cx, |_cx| {
-            vec![
-                shadcn::InputGroupPart::input(
-                    shadcn::InputGroupInput::new()
-                        .a11y_label("Message")
-                        .placeholder(placeholder)
-                        .test_id("ui-gallery-button-group-input-group-control")
-                        .disabled(voice_enabled_now),
-                ),
-                shadcn::InputGroupPart::addon(
-                    shadcn::InputGroupAddon::new([voice_tooltip])
-                        .align(shadcn::InputGroupAddonAlign::InlineEnd)
-                        .has_button(true),
-                ),
-            ]
-        });
+        .a11y_label("Message")
+        .placeholder(placeholder)
+        .control_test_id("ui-gallery-button-group-input-group-control")
+        .disabled(voice_enabled_now)
+        .trailing([voice_tooltip])
+        .trailing_has_button(true)
+        .into_element(cx);
 
     let plus = shadcn::ButtonGroup::new([shadcn::Button::new("")
         .a11y_label("Add")

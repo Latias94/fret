@@ -30,6 +30,7 @@ pub(super) fn preview_combobox(
 
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/combobox.rs`.",
+        "`Combobox::new(value, open)` plus the direct builder chain (`.trigger(...).input(...).clear(...).content(...)`) is the default recipe root lane, while `into_element_parts(...)` stays the focused upstream-shaped patch seam on that same lane rather than a separate `compose()` story.",
         "Combobox is intentionally a Popover + Command recipe surface; it already supports upstream-shaped authoring through `Combobox::into_element_parts(...)` with trigger/input/content patches, so the main parity gap here was usage clarity rather than missing mechanism work.",
         "Multi-select chips is a recipe-level surface (`ComboboxChips`) built on top of Command + Popover primitives.",
         "For invalid visuals today, apply style overrides on trigger and pair with field-level error copy.",
@@ -48,7 +49,7 @@ pub(super) fn preview_combobox(
         .description("Upstream shadcn demo: basic framework combobox with search.")
         .code_rust_from_file_region(snippets::basic::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
-        .description("Copyable minimal usage for the recipe + parts patch API.")
+        .description("Copyable minimal direct builder chain for the recipe root lane.")
         .test_id_prefix("ui-gallery-combobox-usage")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let label = DocSection::build(cx, "Label Association", label)
@@ -132,5 +133,5 @@ pub(super) fn preview_combobox(
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

@@ -35,6 +35,12 @@ Base UI combobox lifecycle semantics.
   value/open models.
 - Pass: `query_model(...)`, `items(...)`, `groups(...)`, `group_separators(...)`, `show_clear(...)`,
   and `auto_highlight(...)` cover the important recipe-level authoring outcomes.
+- Pass: root-lane builder steps now exist for `trigger(...)`, `input(...)`, `clear(...)`, and
+  `content(...)`, so first-party examples do not need to default to closure-based patch assembly
+  just to customize the common recipe root surface.
+- Pass: `ComboboxChips` now also exposes matching compact builder steps (`trigger(...)`,
+  `input(...)`, `value(...)`, `content(...)`) so the multi-select chips recipe no longer needs a
+  separate closure-based default story.
 - Pass: `Combobox::into_element_parts(...)` plus `ComboboxTrigger` / `ComboboxInput` expose the
   upstream-shaped recipe patch surface for copyable examples without forcing raw Popover/Command assembly.
 - Note: Because this component is intentionally a recipe over `Popover` + `Command`, Fret does not add
@@ -76,9 +82,19 @@ Base UI combobox lifecycle semantics.
 ## Conclusion
 
 - Result: This component does not currently point to a missing mechanism-layer issue.
-- Result: The main missing piece for shadcn docs parity was a concise gallery `Usage` example.
-- Result: Composable authoring is already supported through the recipe + parts-patch surface, so follow-up
-  work should focus on concrete behavior regressions or richer recipes rather than adding another generic builder.
+- Result: The previous parity gap on the first-party authoring surface was compact default
+  storytelling rather than missing mechanism.
+- Result: Common recipe customization now lands through the direct root builder chain, while the
+  closure-based parts surface remains available for upstream-shaped patch stories.
+- Result: That same compact-root posture now also covers the chips variant, so first-party
+  `Combobox` examples no longer split into two default authoring stories.
+- Result: Follow-up work should focus on concrete behavior regressions or richer recipes rather
+  than adding another generic builder family.
+- Authoring-lane classification: keep `Combobox` on the direct recipe root/bridge lane.
+  `Combobox::new(value, open)` plus the compact direct chain
+  `.trigger(...).input(...).clear(...).content(...)` is the default root story and
+  `into_element_parts(...)` is the focused upstream-shaped patch seam for trigger/input/content
+  customization; do not add a parallel `compose()` lane.
 
 ## Validation
 
@@ -90,5 +106,7 @@ Base UI combobox lifecycle semantics.
 - `cargo nextest run -p fret-ui-shadcn combobox_open_change_events_emit_change_and_complete_after_settle`
 - `cargo nextest run -p fret-ui-shadcn combobox_open_change_events_complete_without_animation`
 - `cargo nextest run -p fret-ui-shadcn combobox_open_change_reason_maps_dismiss_reasons`
+- `cargo test -p fret-ui-shadcn --lib combobox_builder_steps_apply_the_same_patch_surface -- --exact --nocapture`
+- `cargo test -p fret-ui-shadcn --lib combobox_chips_builder_steps_apply_the_same_patch_surface -- --exact --nocapture`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-combobox-custom-items-detail-filter-react.json --launch -- cargo run -p fret-ui-gallery`
 - `cargo check -p fret-ui-gallery --message-format short`

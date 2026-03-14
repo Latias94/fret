@@ -11,12 +11,12 @@ pub(super) fn preview_ai_transcript_torture(cx: &mut UiCx<'_>, _theme: &Theme) -
         cx,
         Some("AI transcript torture is a harness surface for long virtualized transcripts."),
         vec![
-            DocSection::new("Transcript Torture", demo)
+            DocSection::build(cx, "Transcript Torture", demo)
                 .max_w(Px(1000.0))
                 .test_id_prefix("ui-gallery-ai-transcript-torture")
                 .code_rust_from_file_region(snippets::transcript_torture::SOURCE, "example"),
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

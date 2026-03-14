@@ -527,5 +527,5 @@ pub(in crate::ui) fn preview_text_bidi_rtl_conformance(
     let page =
         doc_layout::wrap_preview_page(cx, None, "Bidi / RTL conformance", vec![header, panel]);
 
-    vec![page]
+    vec![page.into_element(cx)]
 }

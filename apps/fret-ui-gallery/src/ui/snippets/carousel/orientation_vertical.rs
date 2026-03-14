@@ -50,7 +50,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         })
         .collect::<Vec<_>>();
 
-    shadcn::Carousel::default()
+    shadcn::Carousel::new(items)
         .orientation(shadcn::CarouselOrientation::Vertical)
         .opts(shadcn::CarouselOptions::new().align(shadcn::CarouselAlign::Start))
         .refine_viewport_layout(LayoutRefinement::default().h_px(Px(196.0)))
@@ -64,11 +64,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .mx_auto(),
         )
         .test_id("ui-gallery-carousel-orientation-vertical")
-        .into_element_parts(
-            cx,
-            |_cx| shadcn::CarouselContent::new(items),
-            shadcn::CarouselPrevious::new(),
-            shadcn::CarouselNext::new(),
-        )
+        .into_element(cx)
 }
 // endregion: example

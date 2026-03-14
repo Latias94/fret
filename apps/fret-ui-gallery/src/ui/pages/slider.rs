@@ -42,5 +42,5 @@ pub(super) fn preview_slider(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         vec![demo, usage, label, extras, notes],
     );
 
-    vec![body.test_id("ui-gallery-slider")]
+    vec![body.test_id("ui-gallery-slider").into_element(cx)]
 }

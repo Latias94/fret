@@ -66,5 +66,5 @@ shadcn::KbdGroup::new([
     )
     .test_id("ui-gallery-kbd-component");
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

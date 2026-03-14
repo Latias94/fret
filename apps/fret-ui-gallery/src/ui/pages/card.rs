@@ -285,5 +285,5 @@ pub(super) fn preview_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let body = doc_layout::render_doc_page(cx, show_intro.then_some(CARD_PAGE_INTRO), sections);
 
-    vec![body.test_id("ui-gallery-card")]
+    vec![body.test_id("ui-gallery-card").into_element(cx)]
 }

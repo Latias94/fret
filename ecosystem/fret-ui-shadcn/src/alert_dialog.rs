@@ -707,6 +707,16 @@ impl<H: UiHost, TTrigger> AlertDialogComposition<H, TTrigger> {
     }
 }
 
+impl<H: UiHost, TTrigger> IntoUiElement<H> for AlertDialogComposition<H, TTrigger>
+where
+    TTrigger: AlertDialogCompositionTriggerArg<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        AlertDialogComposition::into_element(self, cx)
+    }
+}
+
 /// shadcn/ui `AlertDialogTrigger` (v4).
 #[derive(Debug)]
 pub struct AlertDialogTrigger {

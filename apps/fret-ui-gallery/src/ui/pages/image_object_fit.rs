@@ -28,5 +28,5 @@ pub(super) fn preview_image_object_fit(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         vec![mapping, sampling, notes],
     );
 
-    vec![body.test_id("ui-gallery-image-object-fit")]
+    vec![body.test_id("ui-gallery-image-object-fit").into_element(cx)]
 }

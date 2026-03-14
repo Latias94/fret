@@ -327,5 +327,5 @@ pub(in crate::ui) fn preview_text_selection_perf(
 
     let page = doc_layout::wrap_preview_page(cx, None, "Text selection perf", vec![header, panel]);
 
-    vec![page]
+    vec![page.into_element(cx)]
 }

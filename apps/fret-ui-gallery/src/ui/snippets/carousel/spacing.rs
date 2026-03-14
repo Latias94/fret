@@ -66,11 +66,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     };
     let items = (1..=5)
         .map(|idx| shadcn::CarouselItem::new(slide(cx, idx, visual).into_element(cx)))
-        .map(|item| item.padding_start(Space::N1))
         .collect::<Vec<_>>();
 
-    shadcn::Carousel::default()
+    shadcn::Carousel::new(items)
         .item_basis_main_px(Px(129.328))
+        .track_start_neg_margin(Space::N1)
+        .item_padding_start(Space::N1)
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()
@@ -78,11 +79,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .mx_auto(),
         )
         .test_id("ui-gallery-carousel-spacing")
-        .into_element_parts(
-            cx,
-            |_cx| shadcn::CarouselContent::new(items).track_start_neg_margin(Space::N1),
-            shadcn::CarouselPrevious::new(),
-            shadcn::CarouselNext::new(),
-        )
+        .into_element(cx)
 }
 // endregion: example

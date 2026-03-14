@@ -25,7 +25,7 @@ pub(super) fn preview_alert_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     ]);
 
     let extras = doc_layout::notes_block([
-        "`Parts` documents the explicit part adapters (`Trigger` / `Portal` / `Overlay`) used by `compose()` call sites.",
+        "`Parts` documents the advanced part adapters (`Trigger` / `Portal` / `Overlay`) used by explicit `compose()` call sites.",
         "`Detached Trigger` shows `AlertDialogHandle`, the supported path when the opener and the dialog content live in different subtrees and still need correct focus restore.",
         "`Rich Content` demonstrates the currently supported children-style extensions for title, description, and footer content.",
     ]);
@@ -35,6 +35,7 @@ pub(super) fn preview_alert_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Preview mirrors the shadcn docs path after skipping `Installation`: `Demo`, `Usage`, `Basic`, `Small`, `Media`, `Small with Media`, `Destructive`, `RTL`, and `API Reference`.",
         "Alert Dialog is modal by default and should be reserved for destructive or irreversible decisions.",
         "Modal semantics follow Radix/Base UI outcomes: outside press does not dismiss, `role=alertdialog` is preserved, and initial focus prefers `AlertDialogCancel` when present.",
+        "`Usage` is the default copyable path; `Parts` remains an advanced adapter lane for explicit root-part ownership.",
         "Current remaining differences are mostly authoring-surface follow-ups, not layout or dismissal-policy drift.",
     ]);
 
@@ -80,7 +81,9 @@ pub(super) fn preview_alert_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("All shadcn components should work under an RTL direction provider.")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let parts = DocSection::build(cx, "Parts", parts)
-        .description("Fret-specific part surface adapters for shadcn-style call sites.")
+        .description(
+            "Advanced part surface adapters for explicit shadcn-style root-part ownership.",
+        )
         .test_id_prefix("ui-gallery-alert-dialog-parts-docsec")
         .code_rust_from_file_region(snippets::parts::SOURCE, "example");
     let detached_trigger = DocSection::build(cx, "Detached Trigger", detached_trigger)
@@ -115,5 +118,5 @@ pub(super) fn preview_alert_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

@@ -60,5 +60,5 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-chart-component")]
+    vec![body.test_id("ui-gallery-chart-component").into_element(cx)]
 }

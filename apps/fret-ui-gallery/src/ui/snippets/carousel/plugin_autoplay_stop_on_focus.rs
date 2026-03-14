@@ -87,7 +87,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .map(|idx| shadcn::CarouselItem::new(slide(cx, idx, visual).into_element(cx)))
         .collect::<Vec<_>>();
 
-    let carousel = shadcn::Carousel::default()
+    let carousel = shadcn::Carousel::new(items)
         .controls(false)
         .plugins([shadcn::CarouselPlugin::Autoplay(
             shadcn::CarouselAutoplayConfig::new(Duration::from_millis(2000))
@@ -96,7 +96,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .stop_on_interaction(true),
         )])
         .autoplay_api_handle_model(autoplay_api.clone())
-        .items(items)
         .refine_layout(LayoutRefinement::default().w_full())
         .test_id("ui-gallery-carousel-plugin-stop-on-interaction-focus")
         .into_element(cx);

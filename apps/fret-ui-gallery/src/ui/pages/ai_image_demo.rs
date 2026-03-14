@@ -11,11 +11,11 @@ pub(super) fn preview_ai_image_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<An
         cx,
         Some("AI Image is a presentation surface; apps own image generation pipelines."),
         vec![
-            DocSection::new("Image", demo)
+            DocSection::build(cx, "Image", demo)
                 .test_id_prefix("ui-gallery-ai-image-demo")
                 .code_rust_from_file_region(snippets::image_demo::SOURCE, "example"),
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

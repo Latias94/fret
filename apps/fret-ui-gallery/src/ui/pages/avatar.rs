@@ -113,5 +113,5 @@ pub(super) fn preview_avatar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-avatar")]
+    vec![body.test_id("ui-gallery-avatar").into_element(cx)]
 }

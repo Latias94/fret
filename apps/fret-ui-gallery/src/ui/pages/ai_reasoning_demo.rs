@@ -11,11 +11,11 @@ pub(super) fn preview_ai_reasoning_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Ve
         cx,
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
-            DocSection::new("Reasoning", demo)
+            DocSection::build(cx, "Reasoning", demo)
                 .test_id_prefix("ui-gallery-ai-reasoning-demo")
                 .code_rust_from_file_region(snippets::reasoning_demo::SOURCE, "example"),
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

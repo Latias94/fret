@@ -71,5 +71,8 @@ pub(super) fn preview_collapsible(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-collapsible-component")]
+    vec![
+        body.test_id("ui-gallery-collapsible-component")
+            .into_element(cx),
+    ]
 }

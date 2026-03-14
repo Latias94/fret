@@ -69,14 +69,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             shadcn::ComboboxItem::new("open-file", "Open File"),
             shadcn::ComboboxItem::new("save-all", "Save All"),
         ])
-        .into_element_parts(cx, |_cx| {
-            vec![
-                shadcn::ComboboxPart::from(shadcn::ComboboxTrigger::new().width_px(Px(220.0))),
-                shadcn::ComboboxPart::from(
-                    shadcn::ComboboxInput::new().placeholder("Search command"),
-                ),
-            ]
-        });
+        .trigger(shadcn::ComboboxTrigger::new().width_px(Px(220.0)))
+        .input(shadcn::ComboboxInput::new().placeholder("Search command"))
+        .into_element(cx);
 
     ui::v_flex(move |cx| {
         vec![

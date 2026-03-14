@@ -8,6 +8,8 @@ pub(in crate::ui) struct DocSection {
     pub title_test_id: Option<&'static str>,
     pub root_test_id: Option<Arc<str>>,
     pub description: Vec<&'static str>,
+    // Intentionally stored as a landed value because the doc scaffold still decorates preview
+    // roots, shells, and tab panels after section assembly.
     pub preview: AnyElement,
     pub code: Option<DocCodeBlock>,
     pub tabs_sizing: DocTabsSizing,
@@ -137,11 +139,14 @@ impl DocSection {
     }
 }
 
+// Typed page scaffold: the doc page still aggregates fully landed section bodies in
+// `Vec<AnyElement>` internally before centering the final shell, but callers now keep the final
+// landing explicit at the page surface.
 pub(in crate::ui) fn render_doc_page(
     cx: &mut UiCx<'_>,
     intro: Option<&'static str>,
     sections: Vec<DocSection>,
-) -> AnyElement {
+) -> impl UiChild + use<> {
     let max_section_w = sections
         .iter()
         .map(|s| s.max_w)
@@ -156,7 +161,7 @@ pub(in crate::ui) fn render_doc_page(
         out.extend(
             sections
                 .into_iter()
-                .map(|section| render_section(cx, section)),
+                .map(|section| render_section(cx, section).into_element(cx)),
         );
         out
     })
@@ -177,12 +182,15 @@ pub(in crate::ui) fn render_doc_page(
 }
 
 #[cfg(any(feature = "gallery-dev", feature = "gallery-web-ime-harness"))]
+// Typed preview-harness wrapper: preview harness pages still bridge pre-landed preview vectors
+// into the shared doc page scaffold, but the explicit landing now lives at the preview-page call
+// site rather than on this helper signature.
 pub(in crate::ui) fn wrap_preview_page(
     cx: &mut UiCx<'_>,
     intro: Option<&'static str>,
     section_title: &'static str,
     elements: Vec<AnyElement>,
-) -> AnyElement {
+) -> impl UiChild + use<> {
     let preview = ui::v_flex(move |_cx| elements)
         .layout(LayoutRefinement::default().w_full().min_w_0())
         .gap(Space::N4)
@@ -423,11 +431,15 @@ where
     .layout(LayoutRefinement::default().w_full().min_w_0())
 }
 
-pub(in crate::ui) fn icon(cx: &mut UiCx<'_>, id: &'static str) -> AnyElement {
+// Typed icon relay: the shared icon facade still lands a concrete icon leaf internally, but
+// doc-layout callers no longer need to spell that raw detail on their own helper signatures.
+pub(in crate::ui) fn icon(cx: &mut UiCx<'_>, id: &'static str) -> impl UiChild + use<> {
     fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
 }
 
 #[allow(dead_code)]
+// Intentional raw boundary: gap placeholders are assembled as concrete alert content because the
+// helper returns a title/content pair for doc-page section registration.
 pub(in crate::ui) fn gap_card(
     cx: &mut UiCx<'_>,
     title: &'static str,
@@ -435,7 +447,7 @@ pub(in crate::ui) fn gap_card(
     test_id: &'static str,
 ) -> (&'static str, AnyElement) {
     let alert_content = shadcn::Alert::new([
-        icon(cx, "lucide.info"),
+        icon(cx, "lucide.info").into_element(cx),
         shadcn::AlertTitle::new("Guide-aligned placeholder").into_element(cx),
         shadcn::AlertDescription::new(details).into_element(cx),
     ])
@@ -446,7 +458,9 @@ pub(in crate::ui) fn gap_card(
     (title, alert_content)
 }
 
-fn render_section(cx: &mut UiCx<'_>, section: DocSection) -> AnyElement {
+// Typed section wrapper: section assembly still adds test ids, shells, and optional semantics
+// after the preview/code content lands, but callers now keep the final landing explicit.
+fn render_section(cx: &mut UiCx<'_>, section: DocSection) -> impl UiChild + use<> {
     let DocSection {
         title,
         title_test_id,
@@ -483,14 +497,15 @@ fn render_section(cx: &mut UiCx<'_>, section: DocSection) -> AnyElement {
             code,
             tabs_sizing,
             shell,
-        ),
+        )
+        .into_element(cx),
         None => preview,
     };
 
     let section_max_w = max_w;
     let section_body = ui::v_flex(move |cx| {
         let mut out: Vec<AnyElement> = Vec::with_capacity(3);
-        let title_el = section_title(cx, title);
+        let title_el = section_title(cx, title).into_element(cx);
         out.push(match (title_test_id, test_id_prefix.as_deref()) {
             (Some(test_id), _) => title_el.test_id(test_id),
             (None, Some(prefix)) => title_el.test_id(format!("{prefix}-title")),
@@ -617,6 +632,8 @@ fn slugify_for_test_id(input: &str) -> String {
     }
 }
 
+// Typed tabs wrapper: `TabsItem` still stores concrete landed panel content after the preview/code
+// surfaces receive test-id decoration, but callers no longer need to see a raw return type.
 fn preview_code_tabs(
     cx: &mut UiCx<'_>,
     test_id_prefix: Option<&str>,
@@ -626,9 +643,8 @@ fn preview_code_tabs(
     #[cfg(feature = "gallery-ai")] tabs_sizing: DocTabsSizing,
     #[cfg(not(feature = "gallery-ai"))] _tabs_sizing: DocTabsSizing,
     shell: bool,
-) -> AnyElement {
-    let code_shell = code_block_shell(cx, test_id_prefix, max_w, code, shell);
-    let code_el = code_shell;
+) -> impl UiChild + use<> {
+    let code_el = code_block_shell(cx, test_id_prefix, max_w, code, shell).into_element(cx);
     #[cfg(feature = "gallery-ai")]
     let fill_remaining = matches!(tabs_sizing, DocTabsSizing::FillRemaining);
     #[cfg(not(feature = "gallery-ai"))]
@@ -656,13 +672,15 @@ fn preview_code_tabs(
     tabs.into_element(cx)
 }
 
+// Typed code-block wrapper: the code-block shell still owns concrete child vectors for the copy
+// affordance, optional header, and scroll area before the card wrapper lands.
 fn code_block_shell(
     cx: &mut UiCx<'_>,
     test_id_prefix: Option<&str>,
     max_w: Px,
     block: DocCodeBlock,
     shell: bool,
-) -> AnyElement {
+) -> impl UiChild + use<> {
     let code: Arc<str> = block.code;
 
     let copy_on_activate: fret_ui::action::OnActivate = {
@@ -785,7 +803,9 @@ fn slice_code_region(code: &str, region: &str) -> Option<String> {
     Some(joined)
 }
 
-fn section_title(cx: &mut UiCx<'_>, title: &'static str) -> AnyElement {
+// Typed title helper: section titles may still receive decoration after landing, but the helper
+// itself stays on the typed lane.
+fn section_title(cx: &mut UiCx<'_>, title: &'static str) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app);
     let style = fret_core::TextStyle {
         font: fret_core::FontId::default(),

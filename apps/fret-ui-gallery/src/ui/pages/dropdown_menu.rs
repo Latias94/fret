@@ -23,18 +23,18 @@ pub(super) fn preview_dropdown_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let api_reference = doc_layout::notes_block([
         "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/base/dropdown-menu.mdx`.",
-        "`DropdownMenu::uncontrolled(cx).build_parts(...)` is the default copyable root path, while `into_element_parts(...)` remains the source-aligned adapter for late-landed `Trigger` / `Content`; both keep typed `DropdownMenuEntry` values explicit instead of introducing a generic slot/asChild surface.",
+        "`DropdownMenu::uncontrolled(cx).compose().trigger(...).content(...).entries(...)` is now the default copyable root path, while `build_parts(...)` / `into_element_parts(...)` remain lower-level adapters for closure-driven or already-landed seams.",
         "`DropdownMenu::from_open(open)` stays as the explicit advanced seam when the caller already owns the open model; `new_controllable(cx, open, default_open)` still covers the broader controlled/uncontrolled contract.",
         "`DropdownMenuItem::shortcut(...)`, `DropdownMenuCheckboxItem::shortcut(...)`, and radio-item shortcut helpers are now the preferred copyable API for keyboard hints; `DropdownMenuShortcut` remains the explicit trailing escape hatch.",
         "`DropdownMenuCheckboxItem::from_checked(...)` / `.on_checked_change(...)` and `DropdownMenuRadioGroup::from_value(...)` / `.on_value_change(...)` now cover the upstream snapshot + callback path without forcing per-item `Model<_>` state.",
-        "A separate generic `compose()` / nested children API is still not the next recommended step here; the parts bridge already covers `Trigger` / `Content`, and typed entries remain the more important contract.",
+        "The new `compose()` builder keeps typed entries explicit while removing the root closure cliff, so extracted helpers can stay on the same typed authoring lane as the rest of the app surface.",
     ]);
 
     let notes = doc_layout::notes_block([
         "Preview follows the upstream shadcn Dropdown Menu docs (v4 Base UI) order first, then appends Fret-only follow-ups.",
         "Mechanism parity is largely covered already: existing web-vs-fret chrome/placement gates and dropdown diag scripts cover placement, dismissal, focus restore, submenu routing, and safe-corridor behavior.",
         "The checkable examples now demonstrate snapshot + callback authoring, so simple menus do not need one `Model<bool>` per checkbox row.",
-        "The `Parts` section is intentionally outside the upstream docs path: it documents the Fret adapter surface rather than a missing shadcn feature.",
+        "The `Parts` section is intentionally outside the upstream docs path: treat it as the advanced adapter surface for already-landed or closure-driven seams, while `Usage` now shows the default typed `compose()` root.",
         "Examples are snippet-backed, so preview and code stay in sync.",
         "Keep `ui-gallery-dropdown-menu-*` test IDs stable; multiple diag scripts depend on them.",
     ]);
@@ -106,7 +106,7 @@ pub(super) fn preview_dropdown_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let parts = DocSection::build(cx, "Parts", parts)
         .description(
-            "Fret-only Trigger/Content adapter surface kept outside the upstream docs path.",
+            "Advanced Trigger/Content adapter surface kept outside the default copyable docs path.",
         )
         .test_id_prefix("ui-gallery-dropdown-menu-parts")
         .code_rust_from_file_region(snippets::parts::SOURCE, "example");
@@ -137,5 +137,5 @@ pub(super) fn preview_dropdown_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-dropdown-menu")]
+    vec![body.test_id("ui-gallery-dropdown-menu").into_element(cx)]
 }

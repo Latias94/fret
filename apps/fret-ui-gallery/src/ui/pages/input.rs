@@ -125,5 +125,5 @@ shadcn::Input::new(value)
         ],
     );
 
-    vec![body.test_id("ui-gallery-input")]
+    vec![body.test_id("ui-gallery-input").into_element(cx)]
 }

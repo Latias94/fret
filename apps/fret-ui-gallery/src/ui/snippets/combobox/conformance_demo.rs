@@ -26,13 +26,8 @@ pub fn render(
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-demo")
         .items(base_items())
-        .into_element_parts(cx, |_cx| {
-            vec![
-                shadcn::ComboboxPart::from(shadcn::ComboboxTrigger::new().width_px(Px(260.0))),
-                shadcn::ComboboxPart::from(
-                    shadcn::ComboboxInput::new().placeholder("Select a fruit"),
-                ),
-            ]
-        })
+        .trigger(shadcn::ComboboxTrigger::new().width_px(Px(260.0)))
+        .input(shadcn::ComboboxInput::new().placeholder("Select a fruit"))
+        .into_element(cx)
 }
 // endregion: example

@@ -110,5 +110,5 @@ pub(super) fn preview_date_picker(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

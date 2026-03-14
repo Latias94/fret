@@ -11,11 +11,11 @@ pub(super) fn preview_ai_open_in_chat_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
         cx,
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
-            DocSection::new("OpenIn", demo)
+            DocSection::build(cx, "OpenIn", demo)
                 .test_id_prefix("ui-gallery-ai-open-in-chat-demo")
                 .code_rust_from_file_region(snippets::open_in_chat_demo::SOURCE, "example"),
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

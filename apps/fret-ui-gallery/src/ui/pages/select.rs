@@ -27,6 +27,7 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let notes = doc_layout::notes_block([
         "Select is a Popover + Listbox recipe. Use it for rich overlays and custom interactions.",
+        "`Select::new(...)` / `new_controllable(...)` plus the direct builder chain (`.trigger(...).value(...).content(...).entries(...)`) are now the default copyable root story; `into_element_parts(...)` remains the focused upstream-shaped adapter on the same lane rather than a separate `compose()` story.",
         "This page keeps stable `test_id`s for `tools/diag-scripts/ui-gallery/select/*`.",
         "Use `SelectTriggerSize::Sm` to match compact shadcn control heights.",
     ]);
@@ -88,5 +89,5 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-select")]
+    vec![body.test_id("ui-gallery-select").into_element(cx)]
 }

@@ -79,28 +79,28 @@ pub(super) fn preview_ai_persona_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
             "Docs-aligned AI Elements Persona demo: interactive state controls, variant showcase, states/props reference, and a Fret-specific custom visual slot.",
         ),
         vec![
-            DocSection::new("Interactive Demo", interactive)
+            DocSection::build(cx, "Interactive Demo", interactive)
                 .description("Mirrors the official docs preview shape more closely: one current persona with state controls plus variant switching.")
                 .test_id_prefix("ui-gallery-ai-persona-demo")
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::persona_demo::SOURCE, "example"),
-            DocSection::new("Variants", variants)
+            DocSection::build(cx, "Variants", variants)
                 .description("Six variant shells with the same idle state so visual drift is easy to compare at a glance.")
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::persona_variants::SOURCE, "example"),
-            DocSection::new("Basic Usage", basic)
+            DocSection::build(cx, "Basic Usage", basic)
                 .description("Minimal surface aligned to the upstream basic example: a single Persona with explicit state + variant.")
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::persona_basic::SOURCE, "example"),
-            DocSection::new("With State Management", state_management)
+            DocSection::build(cx, "With State Management", state_management)
                 .description("Copyable state-driven example matching the official docs intent without relying on DOM buttons.")
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::persona_state_management::SOURCE, "example"),
-            DocSection::new("Custom Styling", custom_styling)
+            DocSection::build(cx, "Custom Styling", custom_styling)
                 .description("Equivalent to upstream `className`-driven styling, expressed as typed Fret chrome/layout refinements.")
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::persona_custom_styling::SOURCE, "example"),
-            DocSection::new("Custom Visual Slot", custom_visual)
+            DocSection::build(cx, "Custom Visual Slot", custom_visual)
                 .description("Fret-specific extension: replace the center visual without forking the shell or losing stable selectors.")
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::persona_custom_visual::SOURCE, "example"),
@@ -119,5 +119,8 @@ pub(super) fn preview_ai_persona_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-persona-demo")]
+    vec![
+        body.test_id("ui-gallery-page-ai-persona-demo")
+            .into_element(cx),
+    ]
 }

@@ -26,14 +26,14 @@ pub(super) fn preview_ai_shimmer_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
             "The Shimmer component provides an animated shimmer effect that sweeps across text, useful for loading states and streaming indicators.",
         ),
         vec![
-            DocSection::new("Shimmer", demo)
+            DocSection::build(cx, "Shimmer", demo)
                 .test_id_prefix("ui-gallery-ai-shimmer-demo")
                 .code_rust_from_file_region(snippets::shimmer_demo::SOURCE, "example"),
             DocSection::build(cx, "Features", features).description("Key behavior and API notes."),
-            DocSection::new("Different Durations", durations)
+            DocSection::build(cx, "Different Durations", durations)
                 .test_id_prefix("ui-gallery-ai-shimmer-duration")
                 .code_rust_from_file_region(snippets::shimmer_duration_demo::SOURCE, "example"),
-            DocSection::new("Custom Elements", elements)
+            DocSection::build(cx, "Custom Elements", elements)
                 .description(
                     "Default, explicit, inline, and inherited subtree-typography compositions.",
                 )
@@ -44,7 +44,7 @@ pub(super) fn preview_ai_shimmer_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }
 
 fn shimmer_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {

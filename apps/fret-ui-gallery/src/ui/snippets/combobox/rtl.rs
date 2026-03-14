@@ -21,17 +21,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
                     shadcn::ComboboxItem::new("svelte", "SvelteKit"),
                 ])
-                .into_element_parts(cx, |_cx| {
-                    vec![
-                        shadcn::ComboboxPart::from(
-                            shadcn::ComboboxTrigger::new().width_px(Px(260.0)),
-                        ),
-                        shadcn::ComboboxPart::from(
-                            shadcn::ComboboxInput::new()
-                                .placeholder("丕亘丨孬 毓賳 廿胤丕乇 毓賲賱"),
-                        ),
-                    ]
-                })
+                .trigger(shadcn::ComboboxTrigger::new().width_px(Px(260.0)))
+                .input(shadcn::ComboboxInput::new().placeholder("丕亘丨孬 毓賳 廿胤丕乇 毓賲賱"))
+                .into_element(cx)
         })]
     })
     .gap(Space::N2)

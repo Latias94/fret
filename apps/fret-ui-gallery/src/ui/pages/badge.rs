@@ -74,5 +74,5 @@ pub(super) fn preview_badge(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-badge")]
+    vec![body.test_id("ui-gallery-badge").into_element(cx)]
 }

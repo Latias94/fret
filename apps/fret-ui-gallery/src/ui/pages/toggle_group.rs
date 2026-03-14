@@ -119,5 +119,5 @@ pub(super) fn preview_toggle_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-toggle-group")]
+    vec![body.test_id("ui-gallery-toggle-group").into_element(cx)]
 }

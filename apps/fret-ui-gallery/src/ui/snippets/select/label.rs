@@ -12,20 +12,17 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let select = shadcn::Select::new_controllable(cx, None, Some("apple"), None, false)
         .control_id(control_id.clone())
         .test_id_prefix("ui-gallery-select-label")
-        .into_element_parts(
-            cx,
-            |_cx| shadcn::SelectTrigger::new(),
-            |_cx| shadcn::SelectValue::new(),
-            |_cx| {
-                shadcn::SelectContent::new().with_entries([
-                    shadcn::SelectItem::new("apple", "Apple").into(),
-                    shadcn::SelectItem::new("banana", "Banana").into(),
-                    shadcn::SelectItem::new("blueberry", "Blueberry").into(),
-                    shadcn::SelectItem::new("grapes", "Grapes").into(),
-                    shadcn::SelectItem::new("pineapple", "Pineapple").into(),
-                ])
-            },
-        );
+        .trigger(shadcn::SelectTrigger::new())
+        .value(shadcn::SelectValue::new())
+        .content(shadcn::SelectContent::new())
+        .entries([
+            shadcn::SelectItem::new("apple", "Apple").into(),
+            shadcn::SelectItem::new("banana", "Banana").into(),
+            shadcn::SelectItem::new("blueberry", "Blueberry").into(),
+            shadcn::SelectItem::new("grapes", "Grapes").into(),
+            shadcn::SelectItem::new("pineapple", "Pineapple").into(),
+        ])
+        .into_element(cx);
 
     shadcn::field_group(|cx| {
         ui::children![

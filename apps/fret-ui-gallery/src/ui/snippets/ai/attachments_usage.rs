@@ -69,10 +69,7 @@ fn demo_preview_rgba8(width: u32, height: u32, accent: (u8, u8, u8)) -> Vec<u8> 
     out
 }
 
-fn render_grid_attachment(
-    cx: &mut UiCx<'_>,
-    data: ui_ai::AttachmentData,
-) -> impl UiChild + use<> {
+fn render_grid_attachment(cx: &mut UiCx<'_>, data: ui_ai::AttachmentData) -> impl UiChild + use<> {
     ui_ai::Attachment::new(data)
         .variant(ui_ai::AttachmentVariant::Grid)
         .into_element_with_children(cx, move |cx, _parts| {

@@ -70,14 +70,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             shadcn::ComboboxItem::new("svelte", "SvelteKit").detail("Svelte"),
             shadcn::ComboboxItem::new("astro", "Astro").detail("Hybrid"),
         ])
-        .into_element_parts(cx, |_cx| {
-            vec![
-                shadcn::ComboboxPart::from(shadcn::ComboboxTrigger::new().width_px(Px(280.0))),
-                shadcn::ComboboxPart::from(
-                    shadcn::ComboboxInput::new().placeholder("Select framework"),
-                ),
-            ]
-        });
+        .trigger(shadcn::ComboboxTrigger::new().width_px(Px(280.0)))
+        .input(shadcn::ComboboxInput::new().placeholder("Select framework"))
+        .into_element(cx);
 
     ui::v_flex(move |cx| {
         vec![

@@ -25,6 +25,10 @@ against shadcn/ui v4 `input-otp` composition and docs in `repo-ref/ui`.
     `slot_text_px(...)`, and related builder surfaces.
 - Pass: Upstream composition model is already available in Fret through `InputOTP`,
   `InputOTPGroup`, `InputOTPSlot`, `InputOTPSeparator`, and `InputOtp::into_element_parts(...)`.
+- Pass: first-party gallery snippets now keep `InputOTP::new(model)` plus `length(...)` and
+  optional `group_size(...)` as the default ergonomic lane, while `InputOTPGroup` /
+  `InputOTPSlot` / `InputOTPSeparator` plus `into_element_parts(...)` remain the upstream-shaped
+  bridge for explicit slot/group composition.
 - Fixed: `InputOTPSeparator` now emits `SemanticsRole::Separator`, matching upstream
   `role="separator"` instead of remaining a purely visual icon.
 - Fixed: `InputOtp` now supports form association parity via `control_id(...)`,
@@ -47,6 +51,8 @@ against shadcn/ui v4 `input-otp` composition and docs in `repo-ref/ui`.
 
 - Result: `InputOtp` did not need a default-style ownership rewrite.
 - Result: The real parity gaps were form association and separator semantics, not slot chrome.
+- Result: first-party authoring can stay compact without inventing a second recipe wrapper, because
+  the existing root builder already covers the gallery's grouped/separated OTP layouts.
 - Result: Gallery docs parity improves materially once the upstream verification-form example is
   present, because it exercises the now-supported `control_id(...)` path instead of only isolated
   OTP demos.

@@ -100,5 +100,5 @@ pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-typography")]
+    vec![body.test_id("ui-gallery-typography").into_element(cx)]
 }

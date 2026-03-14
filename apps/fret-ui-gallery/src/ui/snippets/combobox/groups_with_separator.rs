@@ -88,14 +88,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     shadcn::ComboboxItem::new("asia-singapore", "(GMT+8) Singapore"),
                 ]),
         ])
-        .into_element_parts(cx, |_cx| {
-            vec![
-                shadcn::ComboboxPart::from(shadcn::ComboboxTrigger::new().width_px(Px(300.0))),
-                shadcn::ComboboxPart::from(
-                    shadcn::ComboboxInput::new().placeholder("Select a timezone"),
-                ),
-            ]
-        });
+        .trigger(shadcn::ComboboxTrigger::new().width_px(Px(300.0)))
+        .input(shadcn::ComboboxInput::new().placeholder("Select a timezone"))
+        .into_element(cx);
 
     ui::v_flex(move |cx| {
         vec![

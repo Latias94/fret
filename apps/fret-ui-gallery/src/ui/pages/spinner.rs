@@ -90,5 +90,5 @@ pub(super) fn preview_spinner(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-spinner")]
+    vec![body.test_id("ui-gallery-spinner").into_element(cx)]
 }

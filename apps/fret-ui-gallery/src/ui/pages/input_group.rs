@@ -25,7 +25,7 @@ pub(super) fn preview_input_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let usage = doc_layout::muted_full_width(
         cx,
-        "Use the part-based InputGroup surface for direct shadcn docs parity, or the high-level `InputGroup::new(model)` shorthand when you want a compact Fret builder.",
+        "Prefer the high-level `InputGroup::new(model)` shorthand for first-party app code; keep the part-based surface for direct shadcn docs parity when you explicitly want addon/control parts.",
     );
     let align = doc_layout::notes_block([
         "Use `InputGroupAddon::align(...)` to map the upstream `inline-start`, `inline-end`, `block-start`, and `block-end` positions.",
@@ -42,7 +42,7 @@ pub(super) fn preview_input_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/input_group.rs` (InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput, InputGroupTextarea, InputGroupText).",
         "The current parity work here is page/public-surface alignment, not a mechanism bug.",
-        "Both public surfaces stay intentional: part-based primitives for direct docs parity, and the compact `InputGroup::new(model)` shorthand for ergonomic app code.",
+        "Both public surfaces stay intentional: the compact `InputGroup::new(model)` slot shorthand is the first-party ergonomic lane, while the part-based primitives remain the direct docs-parity lane.",
         "`Custom Input` is expressed as composition via slots / parts (no dedicated \"custom control\" type).",
         "Keep `ui-gallery-input-group-text-*` test IDs stable for non-overlap regression scripts.",
     ]);
@@ -64,26 +64,19 @@ pub(super) fn preview_input_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-input-group-demo")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
-        .description("Copyable imports plus a minimal docs-aligned part-based example.")
+        .description("Copyable minimal usage for the compact shorthand; part-based docs parity remains documented in Notes/API Reference.")
         .code_rust(
             r#"use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 let query = cx.local_model_keyed("query", String::new);
 
-shadcn::InputGroup::new(query).into_element_parts(cx, |cx| {
-    vec![
-        shadcn::InputGroupPart::input(
-            shadcn::InputGroupInput::new().placeholder("Search..."),
-        ),
-        shadcn::InputGroupPart::addon(
-            shadcn::InputGroupAddon::new([fret_ui_shadcn::icon::icon(
-                cx,
-                fret_icons::IconId::new_static("lucide.search"),
-            )])
-            .align(shadcn::InputGroupAddonAlign::InlineEnd),
-        ),
-    ]
-});"#,
+shadcn::InputGroup::new(query)
+    .placeholder("Search...")
+    .trailing([fret_ui_shadcn::icon::icon(
+        cx,
+        fret_icons::IconId::new_static("lucide.search"),
+    )])
+    .into_element(cx);"#,
         );
     let align_inline_start = DocSection::build(cx, "Align / inline-start", align_inline_start)
         .description("Inline-start addon (leading slot).")
@@ -182,5 +175,5 @@ shadcn::InputGroup::new(query).into_element_parts(cx, |cx| {
         ],
     );
 
-    vec![body.test_id("ui-gallery-input-group")]
+    vec![body.test_id("ui-gallery-input-group").into_element(cx)]
 }

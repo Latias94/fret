@@ -44,21 +44,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     shadcn::InputGroup::new(value)
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
+        .placeholder("Enter file name")
+        .a11y_label("File name")
+        .control_test_id("ui-gallery-input-group-dropdown-control")
+        .trailing([dropdown])
+        .trailing_has_button(true)
         .test_id("ui-gallery-input-group-dropdown")
-        .into_element_parts(cx, |_cx| {
-            vec![
-                shadcn::InputGroupPart::input(
-                    shadcn::InputGroupInput::new()
-                        .a11y_label("File name")
-                        .placeholder("Enter file name")
-                        .test_id("ui-gallery-input-group-dropdown-control"),
-                ),
-                shadcn::InputGroupPart::addon(
-                    shadcn::InputGroupAddon::new([dropdown])
-                        .align(shadcn::InputGroupAddonAlign::InlineEnd)
-                        .has_button(true),
-                ),
-            ]
-        })
+        .into_element(cx)
 }
 // endregion: example

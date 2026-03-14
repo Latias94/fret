@@ -20,9 +20,10 @@ pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let notes = doc_layout::notes_block([
         "Preview follows the upstream shadcn Context Menu docs (v4 Base UI).",
-        "Default copyable root path is `ContextMenu::uncontrolled(cx).build_parts(...)`, while `ContextMenu::from_open(...)` and `new_controllable(...)` stay as the explicit managed-open seams.",
-        "Context Menu already exposes shadcn-style parts plus `ContextMenuSub*` helpers, so the remaining gap is mostly docs/page parity rather than missing menu infrastructure.",
-        "A separate generic children API is not required here yet: typed menu entries stay explicit, while `build_parts(...)` keeps docs-style authoring ergonomic.",
+        "Default copyable root path is now `ContextMenu::uncontrolled(cx).compose().trigger(...).content(...).entries(...)`, while `build_parts(...)` / `into_element_parts(...)` remain the lower-level adapter seams.",
+        "Those lower-level adapter seams are still advanced API, not the default copyable teaching lane.",
+        "Context Menu already exposes shadcn-style parts plus `ContextMenuSub*` helpers, and the new typed root builder removes the remaining root-authoring cliff without changing the underlying menu infrastructure.",
+        "Typed menu entries remain explicit; `compose()` just moves the final landing seam out of extracted helpers and back to the true root call site.",
         "Examples are snippet-backed: preview and code stay in sync.",
         "Keep `ui-gallery-context-menu-*` test IDs stable; multiple diag scripts depend on them.",
     ]);
@@ -100,5 +101,5 @@ pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-context-menu")]
+    vec![body.test_id("ui-gallery-context-menu").into_element(cx)]
 }

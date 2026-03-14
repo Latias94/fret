@@ -53,5 +53,5 @@ pub(super) fn preview_table(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     )
     .test_id("ui-gallery-table-root");
 
-    vec![page]
+    vec![page.into_element(cx)]
 }

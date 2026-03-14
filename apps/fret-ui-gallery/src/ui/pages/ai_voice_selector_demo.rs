@@ -60,7 +60,7 @@ pub(super) fn preview_ai_voice_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) 
             "Docs-aligned preview keeps the official compound taxonomy while intentionally leaving voice inventory and preview transport in app code.",
         ),
         vec![
-            DocSection::new("Compound API", demo)
+            DocSection::build(cx, "Compound API", demo)
                 .descriptions([
                     "Uses the same high-level trigger / content / input / list / item taxonomy as the official AI Elements `voice-selector` docs, now expressed with the same root-level `into_element_with_children(...)` pattern used by `MicSelector`.",
                     "Selector-specific metadata parts remain visible so this page demonstrates where policy ends, shared selector composition begins, and shared command semantics take over.",
@@ -79,5 +79,8 @@ pub(super) fn preview_ai_voice_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) 
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-voice-selector-demo")]
+    vec![
+        body.test_id("ui-gallery-page-ai-voice-selector-demo")
+            .into_element(cx),
+    ]
 }

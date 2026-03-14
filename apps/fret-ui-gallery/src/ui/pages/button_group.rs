@@ -128,5 +128,5 @@ pub(super) fn preview_button_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-button-group")]
+    vec![body.test_id("ui-gallery-button-group").into_element(cx)]
 }

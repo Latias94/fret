@@ -108,5 +108,10 @@ examples in `repo-ref/ui`.
 
 ## Follow-ups (recommended)
 
+- Authoring-lane classification: keep `Select` on the direct recipe root/bridge lane.
+  The default copyable path should now be `Select::new(...)` / `new_controllable(...)` plus the
+  compact direct chain `.trigger(...).value(...).content(...).entries(...)`;
+  `into_element_parts(...)` should remain the focused upstream-shaped adapter seam on that same
+  lane, and Fret should not add a generic `compose()` root just for taxonomy symmetry.
 - Consider exposing a Radix-named `SelectContent`-style wrapper that defaults to item-aligned but
   still allows opting into popper mode for arrow-based skins.

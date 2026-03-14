@@ -11,11 +11,11 @@ pub(super) fn preview_ai_schema_display_demo(cx: &mut UiCx<'_>, _theme: &Theme) 
         cx,
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
-            DocSection::new("SchemaDisplay", demo)
+            DocSection::build(cx, "SchemaDisplay", demo)
                 .test_id_prefix("ui-gallery-ai-schema-display-demo")
                 .code_rust_from_file_region(snippets::schema_display_demo::SOURCE, "example"),
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

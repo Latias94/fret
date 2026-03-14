@@ -38,266 +38,251 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .unwrap_or_default();
 
     super::preview_frame_with(cx, |cx| {
-        shadcn::DropdownMenu::uncontrolled(cx).build_parts(
-            cx,
-            shadcn::DropdownMenuTrigger::build(
+        shadcn::DropdownMenu::uncontrolled(cx)
+            .compose()
+            .trigger(
                 shadcn::Button::new("Complex Menu")
                     .variant(shadcn::ButtonVariant::Outline)
                     .test_id("ui-gallery-dropdown-menu-complex-trigger"),
-            ),
-            shadcn::DropdownMenuContent::new()
-                .align(shadcn::DropdownMenuAlign::Start)
-                .side_offset(Px(4.0))
-                // shadcn/ui docs: `DropdownMenuContent className="w-44"`.
-                .min_width(Px(176.0)),
-            |_cx| {
-                [
-                    shadcn::DropdownMenuGroup::new([
-                        shadcn::DropdownMenuLabel::new("File").into(),
-                        shadcn::DropdownMenuItem::new("New File")
-                            .leading_icon(IconId::new_static("lucide.file"))
-                            .shortcut("⌘N")
-                            .into(),
-                        shadcn::DropdownMenuItem::new("New Folder")
-                            .leading_icon(IconId::new_static("lucide.folder"))
-                            .shortcut("⇧⌘N")
-                            .into(),
-                        shadcn::DropdownMenuSub::new(
-                            shadcn::DropdownMenuSubTrigger::new("Open Recent").refine(|item| {
-                                item.leading_icon(IconId::new_static("lucide.folder-open"))
-                            }),
-                            shadcn::DropdownMenuSubContent::new([
-                                shadcn::DropdownMenuGroup::new([
-                                    shadcn::DropdownMenuLabel::new("Recent Projects").into(),
-                                    shadcn::DropdownMenuItem::new("Project Alpha")
-                                        .leading_icon(IconId::new_static("lucide.file-code"))
-                                        .into(),
-                                    shadcn::DropdownMenuItem::new("Project Beta")
-                                        .leading_icon(IconId::new_static("lucide.file-code"))
-                                        .into(),
-                                    shadcn::DropdownMenuSub::new(
-                                        shadcn::DropdownMenuSubTrigger::new("More Projects")
-                                            .refine(|item| {
-                                                item.leading_icon(IconId::new_static(
-                                                    "lucide.more-horizontal",
-                                                ))
-                                            }),
-                                        shadcn::DropdownMenuSubContent::new([
-                                            shadcn::DropdownMenuItem::new("Project Gamma")
-                                                .leading_icon(IconId::new_static(
-                                                    "lucide.file-code",
-                                                ))
-                                                .into(),
-                                            shadcn::DropdownMenuItem::new("Project Delta")
-                                                .leading_icon(IconId::new_static(
-                                                    "lucide.file-code",
-                                                ))
-                                                .into(),
-                                        ]),
-                                    )
+            )
+            .content(
+                shadcn::DropdownMenuContent::new()
+                    .align(shadcn::DropdownMenuAlign::Start)
+                    .side_offset(Px(4.0))
+                    // shadcn/ui docs: `DropdownMenuContent className="w-44"`.
+                    .min_width(Px(176.0)),
+            )
+            .entries([
+                shadcn::DropdownMenuGroup::new([
+                    shadcn::DropdownMenuLabel::new("File").into(),
+                    shadcn::DropdownMenuItem::new("New File")
+                        .leading_icon(IconId::new_static("lucide.file"))
+                        .shortcut("⌘N")
+                        .into(),
+                    shadcn::DropdownMenuItem::new("New Folder")
+                        .leading_icon(IconId::new_static("lucide.folder"))
+                        .shortcut("⇧⌘N")
+                        .into(),
+                    shadcn::DropdownMenuSub::new(
+                        shadcn::DropdownMenuSubTrigger::new("Open Recent").refine(|item| {
+                            item.leading_icon(IconId::new_static("lucide.folder-open"))
+                        }),
+                        shadcn::DropdownMenuSubContent::new([
+                            shadcn::DropdownMenuGroup::new([
+                                shadcn::DropdownMenuLabel::new("Recent Projects").into(),
+                                shadcn::DropdownMenuItem::new("Project Alpha")
+                                    .leading_icon(IconId::new_static("lucide.file-code"))
                                     .into(),
-                                ])
-                                .into(),
-                                shadcn::DropdownMenuSeparator::new().into(),
-                                shadcn::DropdownMenuGroup::new([shadcn::DropdownMenuItem::new(
-                                    "Browse...",
-                                )
-                                .leading_icon(IconId::new_static("lucide.folder-search"))
-                                .into()])
-                                .into(),
-                            ]),
-                        )
-                        .into(),
-                        shadcn::DropdownMenuSeparator::new().into(),
-                        shadcn::DropdownMenuItem::new("Save")
-                            .leading_icon(IconId::new_static("lucide.save"))
-                            .shortcut("⌘S")
-                            .into(),
-                        shadcn::DropdownMenuItem::new("Export")
-                            .leading_icon(IconId::new_static("lucide.download"))
-                            .shortcut("⇧⌘E")
-                            .into(),
-                    ])
-                    .into(),
-                    shadcn::DropdownMenuSeparator::new().into(),
-                    shadcn::DropdownMenuGroup::new([
-                        shadcn::DropdownMenuLabel::new("View").into(),
-                        shadcn::DropdownMenuCheckboxItem::from_checked(
-                            menu_state_now.show_sidebar,
-                            "Show Sidebar",
-                        )
-                        .on_checked_change({
-                            let menu_state = menu_state.clone();
-                            move |host, _action_cx, checked| {
-                                let _ = host
-                                    .models_mut()
-                                    .update(&menu_state, |state| state.show_sidebar = checked);
-                            }
-                        })
-                        .leading_icon(IconId::new_static("lucide.eye"))
-                        .into(),
-                        shadcn::DropdownMenuCheckboxItem::from_checked(
-                            menu_state_now.show_status_bar,
-                            "Show Status Bar",
-                        )
-                        .on_checked_change({
-                            let menu_state = menu_state.clone();
-                            move |host, _action_cx, checked| {
-                                let _ = host
-                                    .models_mut()
-                                    .update(&menu_state, |state| state.show_status_bar = checked);
-                            }
-                        })
-                        .leading_icon(IconId::new_static("lucide.layout"))
-                        .into(),
-                        shadcn::DropdownMenuSub::new(
-                            shadcn::DropdownMenuSubTrigger::new("Theme").refine(|item| {
-                                item.leading_icon(IconId::new_static("lucide.palette"))
-                            }),
-                            shadcn::DropdownMenuSubContent::new([shadcn::DropdownMenuGroup::new(
-                                [
-                                    shadcn::DropdownMenuLabel::new("Appearance").into(),
-                                    shadcn::DropdownMenuRadioGroup::from_value(
-                                        menu_state_now.theme.clone(),
-                                    )
-                                    .on_value_change({
-                                        let menu_state = menu_state.clone();
-                                        move |host, _action_cx, value| {
-                                            let _ =
-                                                host.models_mut().update(&menu_state, |state| {
-                                                    state.theme = Some(value)
-                                                });
-                                        }
-                                    })
-                                    .item(
-                                        shadcn::DropdownMenuRadioItemSpec::new("light", "Light")
-                                            .leading_icon(IconId::new_static("lucide.sun")),
-                                    )
-                                    .item(
-                                        shadcn::DropdownMenuRadioItemSpec::new("dark", "Dark")
-                                            .leading_icon(IconId::new_static("lucide.moon")),
-                                    )
-                                    .item(
-                                        shadcn::DropdownMenuRadioItemSpec::new("system", "System")
-                                            .leading_icon(IconId::new_static("lucide.monitor")),
-                                    )
+                                shadcn::DropdownMenuItem::new("Project Beta")
+                                    .leading_icon(IconId::new_static("lucide.file-code"))
                                     .into(),
-                                ],
-                            )
-                            .into()]),
-                        )
-                        .into(),
-                    ])
-                    .into(),
-                    shadcn::DropdownMenuSeparator::new().into(),
-                    shadcn::DropdownMenuGroup::new([
-                        shadcn::DropdownMenuLabel::new("Account").into(),
-                        shadcn::DropdownMenuItem::new("Profile")
-                            .leading_icon(IconId::new_static("lucide.user"))
-                            .shortcut("⇧⌘P")
-                            .into(),
-                        shadcn::DropdownMenuItem::new("Billing")
-                            .leading_icon(IconId::new_static("lucide.credit-card"))
-                            .into(),
-                        shadcn::DropdownMenuSub::new(
-                            shadcn::DropdownMenuSubTrigger::new("Settings").refine(|item| {
-                                item.leading_icon(IconId::new_static("lucide.settings"))
-                            }),
-                            shadcn::DropdownMenuSubContent::new([
-                                shadcn::DropdownMenuGroup::new([
-                                    shadcn::DropdownMenuLabel::new("Preferences").into(),
-                                    shadcn::DropdownMenuItem::new("Keyboard Shortcuts")
-                                        .leading_icon(IconId::new_static("lucide.keyboard"))
-                                        .into(),
-                                    shadcn::DropdownMenuItem::new("Language")
-                                        .leading_icon(IconId::new_static("lucide.languages"))
-                                        .into(),
-                                    shadcn::DropdownMenuSub::new(
-                                        shadcn::DropdownMenuSubTrigger::new("Notifications")
-                                            .refine(|item| {
-                                                item.leading_icon(IconId::new_static("lucide.bell"))
-                                            }),
-                                        shadcn::DropdownMenuSubContent::new([
-                                            shadcn::DropdownMenuGroup::new([
-                                                shadcn::DropdownMenuLabel::new(
-                                                    "Notification Types",
-                                                )
-                                                .into(),
-                                                shadcn::DropdownMenuCheckboxItem::from_checked(
-                                                    menu_state_now.push_notifications,
-                                                    "Push Notifications",
-                                                )
-                                                .on_checked_change({
-                                                    let menu_state = menu_state.clone();
-                                                    move |host, _action_cx, checked| {
-                                                        let _ = host.models_mut().update(
-                                                            &menu_state,
-                                                            |state| {
-                                                                state.push_notifications = checked
-                                                            },
-                                                        );
-                                                    }
-                                                })
-                                                .leading_icon(IconId::new_static("lucide.bell"))
-                                                .into(),
-                                                shadcn::DropdownMenuCheckboxItem::from_checked(
-                                                    menu_state_now.email_notifications,
-                                                    "Email Notifications",
-                                                )
-                                                .on_checked_change({
-                                                    let menu_state = menu_state.clone();
-                                                    move |host, _action_cx, checked| {
-                                                        let _ = host.models_mut().update(
-                                                            &menu_state,
-                                                            |state| {
-                                                                state.email_notifications = checked
-                                                            },
-                                                        );
-                                                    }
-                                                })
-                                                .leading_icon(IconId::new_static("lucide.mail"))
-                                                .into(),
-                                            ])
+                                shadcn::DropdownMenuSub::new(
+                                    shadcn::DropdownMenuSubTrigger::new("More Projects").refine(
+                                        |item| {
+                                            item.leading_icon(IconId::new_static(
+                                                "lucide.more-horizontal",
+                                            ))
+                                        },
+                                    ),
+                                    shadcn::DropdownMenuSubContent::new([
+                                        shadcn::DropdownMenuItem::new("Project Gamma")
+                                            .leading_icon(IconId::new_static("lucide.file-code"))
                                             .into(),
-                                        ]),
-                                    )
-                                    .into(),
-                                ])
-                                .into(),
-                                shadcn::DropdownMenuSeparator::new().into(),
-                                shadcn::DropdownMenuGroup::new([shadcn::DropdownMenuItem::new(
-                                    "Privacy & Security",
+                                        shadcn::DropdownMenuItem::new("Project Delta")
+                                            .leading_icon(IconId::new_static("lucide.file-code"))
+                                            .into(),
+                                    ]),
                                 )
-                                .leading_icon(IconId::new_static("lucide.shield"))
-                                .into()])
                                 .into(),
-                            ]),
-                        )
+                            ])
+                            .into(),
+                            shadcn::DropdownMenuSeparator::new().into(),
+                            shadcn::DropdownMenuGroup::new([shadcn::DropdownMenuItem::new(
+                                "Browse...",
+                            )
+                            .leading_icon(IconId::new_static("lucide.folder-search"))
+                            .into()])
+                            .into(),
+                        ]),
+                    )
+                    .into(),
+                    shadcn::DropdownMenuSeparator::new().into(),
+                    shadcn::DropdownMenuItem::new("Save")
+                        .leading_icon(IconId::new_static("lucide.save"))
+                        .shortcut("⌘S")
                         .into(),
-                    ])
+                    shadcn::DropdownMenuItem::new("Export")
+                        .leading_icon(IconId::new_static("lucide.download"))
+                        .shortcut("⇧⌘E")
+                        .into(),
+                ])
+                .into(),
+                shadcn::DropdownMenuSeparator::new().into(),
+                shadcn::DropdownMenuGroup::new([
+                    shadcn::DropdownMenuLabel::new("View").into(),
+                    shadcn::DropdownMenuCheckboxItem::from_checked(
+                        menu_state_now.show_sidebar,
+                        "Show Sidebar",
+                    )
+                    .on_checked_change({
+                        let menu_state = menu_state.clone();
+                        move |host, _action_cx, checked| {
+                            let _ = host
+                                .models_mut()
+                                .update(&menu_state, |state| state.show_sidebar = checked);
+                        }
+                    })
+                    .leading_icon(IconId::new_static("lucide.eye"))
                     .into(),
-                    shadcn::DropdownMenuSeparator::new().into(),
-                    shadcn::DropdownMenuGroup::new([
-                        shadcn::DropdownMenuItem::new("Help & Support")
-                            .leading_icon(IconId::new_static("lucide.help-circle"))
+                    shadcn::DropdownMenuCheckboxItem::from_checked(
+                        menu_state_now.show_status_bar,
+                        "Show Status Bar",
+                    )
+                    .on_checked_change({
+                        let menu_state = menu_state.clone();
+                        move |host, _action_cx, checked| {
+                            let _ = host
+                                .models_mut()
+                                .update(&menu_state, |state| state.show_status_bar = checked);
+                        }
+                    })
+                    .leading_icon(IconId::new_static("lucide.layout"))
+                    .into(),
+                    shadcn::DropdownMenuSub::new(
+                        shadcn::DropdownMenuSubTrigger::new("Theme")
+                            .refine(|item| item.leading_icon(IconId::new_static("lucide.palette"))),
+                        shadcn::DropdownMenuSubContent::new([shadcn::DropdownMenuGroup::new([
+                            shadcn::DropdownMenuLabel::new("Appearance").into(),
+                            shadcn::DropdownMenuRadioGroup::from_value(
+                                menu_state_now.theme.clone(),
+                            )
+                            .on_value_change({
+                                let menu_state = menu_state.clone();
+                                move |host, _action_cx, value| {
+                                    let _ = host
+                                        .models_mut()
+                                        .update(&menu_state, |state| state.theme = Some(value));
+                                }
+                            })
+                            .item(
+                                shadcn::DropdownMenuRadioItemSpec::new("light", "Light")
+                                    .leading_icon(IconId::new_static("lucide.sun")),
+                            )
+                            .item(
+                                shadcn::DropdownMenuRadioItemSpec::new("dark", "Dark")
+                                    .leading_icon(IconId::new_static("lucide.moon")),
+                            )
+                            .item(
+                                shadcn::DropdownMenuRadioItemSpec::new("system", "System")
+                                    .leading_icon(IconId::new_static("lucide.monitor")),
+                            )
                             .into(),
-                        shadcn::DropdownMenuItem::new("Documentation")
-                            .leading_icon(IconId::new_static("lucide.file-text"))
+                        ])
+                        .into()]),
+                    )
+                    .into(),
+                ])
+                .into(),
+                shadcn::DropdownMenuSeparator::new().into(),
+                shadcn::DropdownMenuGroup::new([
+                    shadcn::DropdownMenuLabel::new("Account").into(),
+                    shadcn::DropdownMenuItem::new("Profile")
+                        .leading_icon(IconId::new_static("lucide.user"))
+                        .shortcut("⇧⌘P")
+                        .into(),
+                    shadcn::DropdownMenuItem::new("Billing")
+                        .leading_icon(IconId::new_static("lucide.credit-card"))
+                        .into(),
+                    shadcn::DropdownMenuSub::new(
+                        shadcn::DropdownMenuSubTrigger::new("Settings").refine(|item| {
+                            item.leading_icon(IconId::new_static("lucide.settings"))
+                        }),
+                        shadcn::DropdownMenuSubContent::new([
+                            shadcn::DropdownMenuGroup::new([
+                                shadcn::DropdownMenuLabel::new("Preferences").into(),
+                                shadcn::DropdownMenuItem::new("Keyboard Shortcuts")
+                                    .leading_icon(IconId::new_static("lucide.keyboard"))
+                                    .into(),
+                                shadcn::DropdownMenuItem::new("Language")
+                                    .leading_icon(IconId::new_static("lucide.languages"))
+                                    .into(),
+                                shadcn::DropdownMenuSub::new(
+                                    shadcn::DropdownMenuSubTrigger::new("Notifications").refine(
+                                        |item| item.leading_icon(IconId::new_static("lucide.bell")),
+                                    ),
+                                    shadcn::DropdownMenuSubContent::new([
+                                        shadcn::DropdownMenuGroup::new([
+                                            shadcn::DropdownMenuLabel::new("Notification Types")
+                                                .into(),
+                                            shadcn::DropdownMenuCheckboxItem::from_checked(
+                                                menu_state_now.push_notifications,
+                                                "Push Notifications",
+                                            )
+                                            .on_checked_change({
+                                                let menu_state = menu_state.clone();
+                                                move |host, _action_cx, checked| {
+                                                    let _ = host
+                                                        .models_mut()
+                                                        .update(&menu_state, |state| {
+                                                            state.push_notifications = checked
+                                                        });
+                                                }
+                                            })
+                                            .leading_icon(IconId::new_static("lucide.bell"))
+                                            .into(),
+                                            shadcn::DropdownMenuCheckboxItem::from_checked(
+                                                menu_state_now.email_notifications,
+                                                "Email Notifications",
+                                            )
+                                            .on_checked_change({
+                                                let menu_state = menu_state.clone();
+                                                move |host, _action_cx, checked| {
+                                                    let _ = host
+                                                        .models_mut()
+                                                        .update(&menu_state, |state| {
+                                                            state.email_notifications = checked
+                                                        });
+                                                }
+                                            })
+                                            .leading_icon(IconId::new_static("lucide.mail"))
+                                            .into(),
+                                        ])
+                                        .into(),
+                                    ]),
+                                )
+                                .into(),
+                            ])
                             .into(),
-                    ])
+                            shadcn::DropdownMenuSeparator::new().into(),
+                            shadcn::DropdownMenuGroup::new([shadcn::DropdownMenuItem::new(
+                                "Privacy & Security",
+                            )
+                            .leading_icon(IconId::new_static("lucide.shield"))
+                            .into()])
+                            .into(),
+                        ]),
+                    )
                     .into(),
-                    shadcn::DropdownMenuSeparator::new().into(),
-                    shadcn::DropdownMenuGroup::new([shadcn::DropdownMenuItem::new("Sign Out")
-                        .leading_icon(IconId::new_static("lucide.log-out"))
-                        .shortcut("⇧⌘Q")
-                        .variant(
-                            fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
-                        )
-                        .into()])
-                    .into(),
-                ]
-            },
-        )
+                ])
+                .into(),
+                shadcn::DropdownMenuSeparator::new().into(),
+                shadcn::DropdownMenuGroup::new([
+                    shadcn::DropdownMenuItem::new("Help & Support")
+                        .leading_icon(IconId::new_static("lucide.help-circle"))
+                        .into(),
+                    shadcn::DropdownMenuItem::new("Documentation")
+                        .leading_icon(IconId::new_static("lucide.file-text"))
+                        .into(),
+                ])
+                .into(),
+                shadcn::DropdownMenuSeparator::new().into(),
+                shadcn::DropdownMenuGroup::new([shadcn::DropdownMenuItem::new("Sign Out")
+                    .leading_icon(IconId::new_static("lucide.log-out"))
+                    .shortcut("⇧⌘Q")
+                    .variant(fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive)
+                    .into()])
+                .into(),
+            ])
     })
     .into_element(cx)
 }

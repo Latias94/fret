@@ -23,7 +23,7 @@ pub(super) fn preview_sheet(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Preview mirrors the shadcn Sheet docs path after `Installation`: `Demo`, `Usage`, `Side`, `No Close Button`, `RTL`, and `API Reference`.",
         "`Sheet::compose()` is a recipe-level bridge for shadcn-style part composition without pushing children API concerns into the mechanism layer.",
         "Default close affordance lives in `SheetContent`, matching upstream; disable it with `show_close_button(false)`.",
-        "`Parts` stays after `API Reference` as a focused Fret follow-up for explicit part adapters (`SheetTrigger` / `SheetPortal` / `SheetOverlay`).",
+        "`Usage` is the default copyable path; `Parts` stays after `API Reference` as a focused advanced follow-up for explicit part adapters (`SheetTrigger` / `SheetPortal` / `SheetOverlay`).",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .max_w(Px(980.0))
@@ -58,13 +58,15 @@ pub(super) fn preview_sheet(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let parts = DocSection::build(cx, "Parts", parts)
         .max_w(Px(980.0))
         .test_id_prefix("ui-gallery-sheet-parts")
-        .description("Fret-specific part surface adapters (Trigger/Portal/Overlay).")
+        .description(
+            "Advanced part surface adapters for explicit Trigger/Portal/Overlay ownership.",
+        )
         .code_rust_from_file_region(snippets::parts::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Sheet docs path after `Installation`, then keeps the Fret-only `Parts` adapter section explicit.",
+            "Preview mirrors the shadcn Sheet docs path after `Installation`, then keeps the advanced Fret-only `Parts` adapter section explicit.",
         ),
         vec![
             demo,
@@ -78,5 +80,5 @@ pub(super) fn preview_sheet(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-sheet")]
+    vec![body.test_id("ui-gallery-sheet").into_element(cx)]
 }

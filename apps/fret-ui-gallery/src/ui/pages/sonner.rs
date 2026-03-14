@@ -41,7 +41,7 @@ pub(super) fn preview_sonner(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ),
         vec![setup, usage, demo, position, extras, notes],
     );
-    let toaster = snippets::local_toaster(cx);
+    let toaster = snippets::local_toaster(cx).into_element(cx);
 
-    vec![body.test_id("ui-gallery-sonner"), toaster]
+    vec![body.test_id("ui-gallery-sonner").into_element(cx), toaster]
 }

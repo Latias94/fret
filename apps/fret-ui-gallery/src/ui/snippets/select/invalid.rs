@@ -30,25 +30,22 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         shadcn::Select::new_controllable(cx, Some(value), None::<Arc<str>>, Some(open), false)
             .aria_invalid(invalid)
             .trigger_test_id("ui-gallery-select-invalid-trigger")
-            .into_element_parts(
-                cx,
-                |_cx| shadcn::SelectTrigger::new(),
-                |_cx| shadcn::SelectValue::new().placeholder("Select a fruit"),
-                |_cx| {
-                    shadcn::SelectContent::new().with_entries([shadcn::SelectGroup::new([
-                        shadcn::SelectItem::new("apple", "Apple")
-                            .test_id("ui-gallery-select-invalid-item-apple")
-                            .into(),
-                        shadcn::SelectItem::new("banana", "Banana")
-                            .test_id("ui-gallery-select-invalid-item-banana")
-                            .into(),
-                        shadcn::SelectItem::new("blueberry", "Blueberry")
-                            .test_id("ui-gallery-select-invalid-item-blueberry")
-                            .into(),
-                    ])
-                    .into()])
-                },
-            );
+            .trigger(shadcn::SelectTrigger::new())
+            .value(shadcn::SelectValue::new().placeholder("Select a fruit"))
+            .content(shadcn::SelectContent::new())
+            .entries([shadcn::SelectGroup::new([
+                shadcn::SelectItem::new("apple", "Apple")
+                    .test_id("ui-gallery-select-invalid-item-apple")
+                    .into(),
+                shadcn::SelectItem::new("banana", "Banana")
+                    .test_id("ui-gallery-select-invalid-item-banana")
+                    .into(),
+                shadcn::SelectItem::new("blueberry", "Blueberry")
+                    .test_id("ui-gallery-select-invalid-item-blueberry")
+                    .into(),
+            ])
+            .into()])
+            .into_element(cx);
 
     let mut children = vec![label, select];
     if invalid {

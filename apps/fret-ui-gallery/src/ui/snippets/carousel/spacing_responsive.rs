@@ -66,15 +66,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         line_height_px: Px(32.0),
     };
     let items = (1..=5)
-        .map(|idx| {
-            shadcn::CarouselItem::new(slide(cx, idx, visual).into_element(cx))
-                .padding_start(Space::N2)
-                .viewport_padding_start_breakpoint(tailwind::MD, Space::N4)
-        })
+        .map(|idx| shadcn::CarouselItem::new(slide(cx, idx, visual).into_element(cx)))
         .collect::<Vec<_>>();
 
-    shadcn::Carousel::default()
+    shadcn::Carousel::new(items)
         .item_basis_main_px(Px(129.328))
+        .track_start_neg_margin(Space::N2)
+        .viewport_track_start_neg_margin_breakpoint(tailwind::MD, Space::N4)
+        .item_padding_start(Space::N2)
+        .viewport_item_padding_start_breakpoint(tailwind::MD, Space::N4)
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()
@@ -82,15 +82,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .mx_auto(),
         )
         .test_id("ui-gallery-carousel-spacing-responsive")
-        .into_element_parts(
-            cx,
-            |_cx| {
-                shadcn::CarouselContent::new(items)
-                    .track_start_neg_margin(Space::N2)
-                    .viewport_track_start_neg_margin_breakpoint(tailwind::MD, Space::N4)
-            },
-            shadcn::CarouselPrevious::new(),
-            shadcn::CarouselNext::new(),
-        )
+        .into_element(cx)
 }
 // endregion: example

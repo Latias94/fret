@@ -14,7 +14,7 @@ pub(super) fn preview_ai_prompt_input_action_menu_demo(
         cx,
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
-            DocSection::new("Prompt Input Action Menu", demo)
+            DocSection::build(cx, "Prompt Input Action Menu", demo)
                 .test_id_prefix("ui-gallery-ai-prompt-input-action-menu-demo")
                 .code_rust_from_file_region(
                     snippets::prompt_input_action_menu_demo::SOURCE,
@@ -23,5 +23,5 @@ pub(super) fn preview_ai_prompt_input_action_menu_demo(
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

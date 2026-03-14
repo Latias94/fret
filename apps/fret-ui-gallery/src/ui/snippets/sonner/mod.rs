@@ -1,7 +1,7 @@
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_runtime::Model;
 use fret_ui::Invalidation;
-use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 pub(crate) const LOCAL_TOASTER_ID: &str = "ui-gallery-sonner-local";
@@ -51,7 +51,7 @@ pub(crate) fn message_request(
     request
 }
 
-pub(crate) fn local_toaster(cx: &mut UiCx<'_>) -> AnyElement {
+pub(crate) fn local_toaster(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let position = position_model(cx);
     let position = cx
         .get_model_copied(&position, Invalidation::Layout)
@@ -61,7 +61,6 @@ pub(crate) fn local_toaster(cx: &mut UiCx<'_>) -> AnyElement {
         .id(LOCAL_TOASTER_ID)
         .position(position)
         .shadcn_lucide_icons()
-        .into_element(cx)
 }
 
 pub mod demo;

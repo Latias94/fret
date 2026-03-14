@@ -478,7 +478,7 @@ fn view(
     .w_full()
     .max_w(Px(1100.0));
 
-    let root = fret_cookbook::scaffold::centered_page_background_ui(cx, TEST_ID_ROOT, card);
+    let root = fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card);
 
     vec![root].into()
 }

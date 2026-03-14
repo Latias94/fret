@@ -58,5 +58,5 @@ pub(super) fn preview_empty(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     )
     .test_id("ui-gallery-empty-component");
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

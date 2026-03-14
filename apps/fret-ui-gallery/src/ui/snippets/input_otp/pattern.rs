@@ -14,16 +14,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .pattern(shadcn::InputOtpPattern::DigitsAndChars)
         .test_id_prefix("ui-gallery-input-otp-pattern")
         .refine_layout(max_w_xs)
-        .into_element_parts(cx, |_cx| {
-            vec![shadcn::InputOtpPart::group(shadcn::InputOTPGroup::new([
-                shadcn::InputOTPSlot::new(0),
-                shadcn::InputOTPSlot::new(1),
-                shadcn::InputOTPSlot::new(2),
-                shadcn::InputOTPSlot::new(3),
-                shadcn::InputOTPSlot::new(4),
-                shadcn::InputOTPSlot::new(5),
-            ]))]
-        })
+        .into_element(cx)
         .test_id("ui-gallery-input-otp-pattern")
 }
 // endregion: example

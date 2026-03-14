@@ -59,37 +59,34 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 host.notify(action_cx);
             }
         })
-        .into_element_parts(
-            cx,
-            |_cx| {
-                shadcn::SelectTrigger::new()
-                    .size(shadcn::SelectTriggerSize::Sm)
-                    .refine_style(
-                        ChromeRefinement::default()
-                            .border_width(Px(0.0))
-                            .bg(ColorRef::Color(fret_core::Color::TRANSPARENT))
-                            .px(Space::N2)
-                            .py(Space::N0p5),
-                    )
-            },
-            |_cx| shadcn::SelectValue::new().placeholder("Language"),
-            |_cx| {
-                shadcn::SelectContent::new().with_entries([
-                    shadcn::SelectItem::new("typescript", "TypeScript")
-                        .test_id("ui-ai-code-block-language-item-typescript")
-                        .into(),
-                    shadcn::SelectItem::new("python", "Python")
-                        .test_id("ui-ai-code-block-language-item-python")
-                        .into(),
-                    shadcn::SelectItem::new("rust", "Rust")
-                        .test_id("ui-ai-code-block-language-item-rust")
-                        .into(),
-                    shadcn::SelectItem::new("go", "Go")
-                        .test_id("ui-ai-code-block-language-item-go")
-                        .into(),
-                ])
-            },
-        );
+        .trigger(
+            shadcn::SelectTrigger::new()
+                .size(shadcn::SelectTriggerSize::Sm)
+                .refine_style(
+                    ChromeRefinement::default()
+                        .border_width(Px(0.0))
+                        .bg(ColorRef::Color(fret_core::Color::TRANSPARENT))
+                        .px(Space::N2)
+                        .py(Space::N0p5),
+                ),
+        )
+        .value(shadcn::SelectValue::new().placeholder("Language"))
+        .content(shadcn::SelectContent::new())
+        .entries([
+            shadcn::SelectItem::new("typescript", "TypeScript")
+                .test_id("ui-ai-code-block-language-item-typescript")
+                .into(),
+            shadcn::SelectItem::new("python", "Python")
+                .test_id("ui-ai-code-block-language-item-python")
+                .into(),
+            shadcn::SelectItem::new("rust", "Rust")
+                .test_id("ui-ai-code-block-language-item-rust")
+                .into(),
+            shadcn::SelectItem::new("go", "Go")
+                .test_id("ui-ai-code-block-language-item-go")
+                .into(),
+        ])
+        .into_element(cx);
 
     let code_block = ui_ai::CodeBlock::new(code.clone())
         .language(language_value.clone())

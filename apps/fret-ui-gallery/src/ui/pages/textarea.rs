@@ -84,5 +84,5 @@ pub(super) fn preview_textarea(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-textarea")]
+    vec![body.test_id("ui-gallery-textarea").into_element(cx)]
 }

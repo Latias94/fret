@@ -17,6 +17,7 @@ pub(super) fn preview_command_palette(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let notes_stack = doc_layout::notes_block([
         "Use `CommandDialog` for global discovery (Ctrl/Cmd+P), and keep `CommandPalette` embedded for local filtering surfaces.",
+        "`command(...)` / `CommandPalette` remain the default recipe root story; split `CommandInput` / `CommandList` / `CommandItem` authoring stays out of the default surface until a shared context contract is explicitly introduced.",
         "Attach either `on_select`, `on_select_action`, or `on_select_value_action` for every interactive item; otherwise entries are treated as disabled.",
         "Mirror docs order even when APIs differ so parity gaps stay explicit and testable. For Command, root chrome is recipe-owned while width caps such as `max-w-sm` remain caller-owned.",
         "For long command catalogs, constrain list height via `refine_scroll_layout` to keep dialog geometry stable.",
@@ -86,5 +87,8 @@ pub(super) fn preview_command_palette(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-command-component")]
+    vec![
+        body.test_id("ui-gallery-command-component")
+            .into_element(cx),
+    ]
 }

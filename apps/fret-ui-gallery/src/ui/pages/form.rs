@@ -63,5 +63,5 @@ pub(super) fn preview_forms(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-form")]
+    vec![body.test_id("ui-gallery-form").into_element(cx)]
 }

@@ -43,5 +43,5 @@ pub(super) fn preview_progress(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         vec![demo, usage, label, controlled, rtl, notes],
     );
 
-    vec![body.test_id("ui-gallery-progress")]
+    vec![body.test_id("ui-gallery-progress").into_element(cx)]
 }

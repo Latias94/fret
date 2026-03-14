@@ -13,11 +13,11 @@ pub(super) fn preview_ai_chat_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<Any
             "Interactive chat harness: PromptInput + transcript streaming + tool calls + sources.",
         ),
         vec![
-            DocSection::new("Chat Demo", demo)
+            DocSection::build(cx, "Chat Demo", demo)
                 .test_id_prefix("ui-gallery-ai-chat-demo")
                 .code_rust_from_file_region(snippets::chat_demo::SOURCE, "example"),
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

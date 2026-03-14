@@ -58,27 +58,23 @@ fn side_menu<H: UiHost>(
 
     shadcn::ContextMenu::uncontrolled(cx)
         .content_test_id(content_test_id)
-        .build_parts(
-            cx,
-            trigger,
-            shadcn::ContextMenuContent::new().side(side),
-            |_cx| {
-                vec![
-                    shadcn::ContextMenuGroup::new(vec![
-                        shadcn::ContextMenuItem::new("Back")
-                            .action(CommandId::new("ui_gallery.context_menu.sides.back"))
-                            .into(),
-                        shadcn::ContextMenuItem::new("Forward")
-                            .action(CommandId::new("ui_gallery.context_menu.sides.forward"))
-                            .into(),
-                        shadcn::ContextMenuItem::new("Reload")
-                            .action(CommandId::new("ui_gallery.context_menu.sides.reload"))
-                            .into(),
-                    ])
+        .compose()
+        .trigger(trigger)
+        .content(shadcn::ContextMenuContent::new().side(side))
+        .entries(vec![
+            shadcn::ContextMenuGroup::new(vec![
+                shadcn::ContextMenuItem::new("Back")
+                    .action(CommandId::new("ui_gallery.context_menu.sides.back"))
                     .into(),
-                ]
-            },
-        )
+                shadcn::ContextMenuItem::new("Forward")
+                    .action(CommandId::new("ui_gallery.context_menu.sides.forward"))
+                    .into(),
+                shadcn::ContextMenuItem::new("Reload")
+                    .action(CommandId::new("ui_gallery.context_menu.sides.reload"))
+                    .into(),
+            ])
+            .into(),
+        ])
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {

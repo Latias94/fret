@@ -73,5 +73,5 @@ pub(super) fn preview_tooltip(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     )
     .test_id("ui-gallery-tooltip-component");
 
-    vec![page]
+    vec![page.into_element(cx)]
 }

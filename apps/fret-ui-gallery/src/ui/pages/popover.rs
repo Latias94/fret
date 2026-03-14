@@ -69,5 +69,5 @@ pub(super) fn preview_popover(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-popover")]
+    vec![body.test_id("ui-gallery-popover").into_element(cx)]
 }

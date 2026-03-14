@@ -12,27 +12,22 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .get_model_cloned(&align_item_with_trigger, Invalidation::Paint)
         .unwrap_or(true);
     let select = shadcn::Select::new_controllable(cx, None, Some("banana"), None, false)
-        .into_element_parts(
-            cx,
-            |_cx| shadcn::SelectTrigger::new(),
-            |_cx| shadcn::SelectValue::new(),
-            |_cx| {
-                shadcn::SelectContent::new()
-                    .position(if align {
-                        fret_ui_shadcn::select::SelectPosition::ItemAligned
-                    } else {
-                        fret_ui_shadcn::select::SelectPosition::Popper
-                    })
-                    .with_entries([shadcn::SelectGroup::new([
-                        shadcn::SelectItem::new("apple", "Apple").into(),
-                        shadcn::SelectItem::new("banana", "Banana").into(),
-                        shadcn::SelectItem::new("blueberry", "Blueberry").into(),
-                        shadcn::SelectItem::new("grapes", "Grapes").into(),
-                        shadcn::SelectItem::new("pineapple", "Pineapple").into(),
-                    ])
-                    .into()])
-            },
-        );
+        .trigger(shadcn::SelectTrigger::new())
+        .value(shadcn::SelectValue::new())
+        .content(shadcn::SelectContent::new().position(if align {
+            fret_ui_shadcn::select::SelectPosition::ItemAligned
+        } else {
+            fret_ui_shadcn::select::SelectPosition::Popper
+        }))
+        .entries([shadcn::SelectGroup::new([
+            shadcn::SelectItem::new("apple", "Apple").into(),
+            shadcn::SelectItem::new("banana", "Banana").into(),
+            shadcn::SelectItem::new("blueberry", "Blueberry").into(),
+            shadcn::SelectItem::new("grapes", "Grapes").into(),
+            shadcn::SelectItem::new("pineapple", "Pineapple").into(),
+        ])
+        .into()])
+        .into_element(cx);
 
     shadcn::field_group(|cx| {
         ui::children![

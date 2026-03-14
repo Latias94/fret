@@ -11,6 +11,9 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 use std::time::Duration;
 
+// Intentional diagnostics raw boundary: this harness owns timers, scroll handles, and explicit
+// scrollbar semantics as one landed root, while the page registers that landed root through
+// `DocSection::build(cx, ...)`.
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     cx.named("ui-gallery.scroll_area.drag_baseline", |cx| {
         let scroll_handle = cx.slot_state(ScrollHandle::default, |h| h.clone());

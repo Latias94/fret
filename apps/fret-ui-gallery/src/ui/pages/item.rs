@@ -117,5 +117,5 @@ pub(super) fn preview_item(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-item")]
+    vec![body.test_id("ui-gallery-item").into_element(cx)]
 }

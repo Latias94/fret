@@ -94,7 +94,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .map(|idx| shadcn::CarouselItem::new(slide_card(cx, idx, visual).into_element(cx)))
         .collect::<Vec<_>>();
 
-    let carousel = shadcn::Carousel::default()
+    let carousel = shadcn::Carousel::new(items)
         .plugins([shadcn::CarouselPlugin::Autoplay(
             shadcn::CarouselAutoplayConfig::new(Duration::from_millis(200))
                 .pause_on_hover(false)
@@ -105,12 +105,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .autoplay_api_handle_model(autoplay_api.clone())
         .refine_layout(LayoutRefinement::default().w_full().max_w(max_w_xs))
         .test_id("ui-gallery-carousel-plugin-stop-on-last-snap")
-        .into_element_parts(
-            cx,
-            |_cx| shadcn::CarouselContent::new(items),
-            shadcn::CarouselPrevious::new(),
-            shadcn::CarouselNext::new(),
-        );
+        .into_element(cx);
 
     let slide_counter = {
         let text = format!(

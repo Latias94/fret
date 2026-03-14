@@ -142,18 +142,20 @@ pub(in crate::ui) fn preview_chart_torture(cx: &mut UiCx<'_>, _theme: &Theme) ->
             )]
         });
 
+    let chart = DocSection::build(cx, "Chart", chart)
+        .description(
+            "Use scripted drag+wheel steps to validate correctness and collect perf bundles.",
+        )
+        .no_shell()
+        .max_w(Px(980.0));
+
     let page = doc_layout::render_doc_page(
         cx,
         Some(
             "Goal: stress canvas charts with pan/zoom (candidate for prepaint-windowed sampling).",
         ),
-        vec![DocSection::new("Chart", chart)
-            .description(
-                "Use scripted drag+wheel steps to validate correctness and collect perf bundles.",
-            )
-            .no_shell()
-            .max_w(Px(980.0))],
+        vec![chart],
     );
 
-    vec![page]
+    vec![page.into_element(cx)]
 }

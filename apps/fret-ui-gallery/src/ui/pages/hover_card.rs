@@ -85,5 +85,5 @@ pub(super) fn preview_hover_card(
         ],
     );
 
-    vec![body.test_id("ui-gallery-hover-card")]
+    vec![body.test_id("ui-gallery-hover-card").into_element(cx)]
 }
