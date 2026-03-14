@@ -858,6 +858,13 @@ Exit criteria:
   `ElementContext<'_, H>` helper parameters in the affected helper closures.
 - validation addendum on 2026-03-14:
   `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app material3_controls_snippets_prefer_ui_cx_on_the_default_app_surface -- --nocapture`
+- the specialized `material3` lane has now also advanced through its `inputs` sub-batch:
+  `apps/fret-ui-gallery/src/ui/snippets/material3/{autocomplete,date_picker,select,text_field,time_picker}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and the field-family
+  source gates now lock both the local uncontrolled/copyable-root posture and the typed
+  default-app teaching surface for those snippets.
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app material3_ -- --nocapture`
 - after these four landings, the tracked default-app workstream-local teaching-surface lane is now
   effectively closed; remaining work continues on the specialized `ai` and `material3` lanes plus
   any optional post-cleanup of now-nonessential gallery runtime fields.

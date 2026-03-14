@@ -3,11 +3,12 @@ pub const SOURCE: &str = include_str!("time_picker.rs");
 // region: example
 use std::sync::Arc;
 
+use fret::{UiChild, UiCx};
 use fret_ui::action::OnActivate;
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let dialog = material3::TimePickerDialog::uncontrolled(cx);
     let open = dialog.open_model();
     let selected = dialog.selected_model();

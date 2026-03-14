@@ -383,6 +383,10 @@ Execution note on 2026-03-13:
   `apps/fret-ui-gallery/src/ui/snippets/material3/{badge,button,checkbox,icon_button,radio,segmented_button,slider,switch,touch_targets}.rs`
   now expose `UiCx -> impl UiChild`, and the corresponding source gate now forbids
   `ElementContext<'_, H>` helper parameters in the affected copyable controls snippets.
+- the specialized `material3` lane has now also converged further through the `inputs` sub-batch:
+  `apps/fret-ui-gallery/src/ui/snippets/material3/{autocomplete,date_picker,select,text_field,time_picker}.rs`
+  now expose `UiCx -> impl UiChild`, and the corresponding field-family gates now lock both the
+  typed top-level teaching surface and the local uncontrolled/copyable-root ownership story.
 - the same UI Gallery default-app source gate now also records the `input_group` family:
   `apps/fret-ui-gallery/src/ui/snippets/input_group/{align_block_end,align_block_start,align_inline_end,align_inline_start,button,button_group,custom_input,demo,dropdown,icon,kbd,label,rtl,spinner,text,textarea,tooltip}.rs`
   now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while

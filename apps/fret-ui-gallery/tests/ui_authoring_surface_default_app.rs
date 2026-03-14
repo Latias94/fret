@@ -6837,6 +6837,33 @@ fn material3_controls_snippets_prefer_ui_cx_on_the_default_app_surface() {
 }
 
 #[test]
+fn material3_inputs_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/material3/autocomplete.rs",
+            "src/ui/snippets/material3/date_picker.rs",
+            "src/ui/snippets/material3/select.rs",
+            "src/ui/snippets/material3/text_field.rs",
+            "src/ui/snippets/material3/time_picker.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing Material 3 inputs snippet surface",
+    );
+
+    let select_path = manifest_path("src/ui/snippets/material3/select.rs");
+    let select_source = read_path(&select_path);
+    let select_normalized = select_source.split_whitespace().collect::<String>();
+    assert!(
+        !select_normalized.contains("ElementContext<'_,H>"),
+        "{} reintroduced legacy host-bound helper parameters",
+        select_path.display()
+    );
+}
+
+#[test]
 fn material3_overlay_snippets_prefer_uncontrolled_copyable_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/menu.rs",
@@ -6910,7 +6937,7 @@ fn material3_autocomplete_snippet_prefers_uncontrolled_query_and_dialog_roots() 
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/autocomplete.rs",
         &[
-            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
             "let outlined_autocomplete = material3::Autocomplete::uncontrolled(cx);",
             "let value = outlined_autocomplete.query_model();",
             "let dialog = material3::Dialog::uncontrolled(cx);",
@@ -6938,7 +6965,7 @@ fn material3_select_snippet_prefers_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/select.rs",
         &[
-            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
             "let default_select = material3::Select::uncontrolled(cx);",
             "let selected = default_select.value_model();",
             "let overridden = material3::Select::new(selected.clone())",
@@ -6962,7 +6989,7 @@ fn material3_date_and_time_picker_snippets_prefer_uncontrolled_dialog_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/date_picker.rs",
         &[
-            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
             "let dialog = material3::DatePickerDialog::uncontrolled(cx);",
             "let open = dialog.open_model();",
             "let month = dialog.month_model();",
@@ -6977,7 +7004,7 @@ fn material3_date_and_time_picker_snippets_prefer_uncontrolled_dialog_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/time_picker.rs",
         &[
-            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
             "let dialog = material3::TimePickerDialog::uncontrolled(cx);",
             "let open = dialog.open_model();",
             "let selected = dialog.selected_model();",
@@ -6994,7 +7021,7 @@ fn material3_selection_and_field_snippets_prefer_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/checkbox.rs",
         &[
-            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
             "let checkbox = material3::Checkbox::uncontrolled(cx, false);",
             "let checked = checkbox.checked_model();",
             "let tristate = material3::Checkbox::uncontrolled_optional(cx, None);",
@@ -7009,7 +7036,7 @@ fn material3_selection_and_field_snippets_prefer_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/switch.rs",
         &[
-            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
             "let default_switch = material3::Switch::uncontrolled(cx, false);",
             "let selected = default_switch.selected_model();",
             "let icons_both_root = material3::Switch::uncontrolled(cx, false);",
@@ -7039,7 +7066,7 @@ fn material3_selection_and_field_snippets_prefer_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/slider.rs",
         &[
-            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
             "let slider = material3::Slider::uncontrolled(cx, 0.3);",
             "let value = slider.value_model();",
         ],
@@ -7111,7 +7138,7 @@ fn material3_selection_and_field_snippets_prefer_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/text_field.rs",
         &[
-            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
             "let demo_field = material3::TextField::uncontrolled(cx);",
             "let value = demo_field.value_model();",
             "let disabled_toggle = material3::Switch::uncontrolled(cx, false);",

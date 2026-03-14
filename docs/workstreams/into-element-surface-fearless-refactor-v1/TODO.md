@@ -48,6 +48,10 @@ Execution note on 2026-03-14:
   `apps/fret-ui-gallery/src/ui/snippets/material3/{badge,button,checkbox,icon_button,radio,segmented_button,slider,switch,touch_targets}.rs`
   now expose `UiCx -> impl UiChild`, and the new source gate locks those controls to the typed
   default-app teaching surface.
+- the specialized `material3` lane has now also advanced through its `inputs` sub-batch:
+  `apps/fret-ui-gallery/src/ui/snippets/material3/{autocomplete,date_picker,select,text_field,time_picker}.rs`
+  now expose `UiCx -> impl UiChild`, and the field-family source gates now lock both copyable root
+  ownership and the typed default-app authoring surface for those snippets.
 - after these four landings, the current tracked default-app teaching-surface lane is effectively
   closed; remaining follow-up work now lives on the specialized `ai` and `material3` lanes plus
   any optional dead-field/runtime cleanup.
