@@ -45,7 +45,7 @@ use crate::primitives::popper;
 use crate::primitives::popper_arrow;
 use crate::primitives::portal_inherited;
 use crate::primitives::trigger_a11y;
-use crate::{OverlayController, OverlayPresence, OverlayRequest};
+use crate::{IntoUiElement, OverlayController, OverlayPresence, OverlayRequest, collect_children};
 
 /// Stable per-overlay root naming convention for select overlays.
 pub fn select_root_name(id: GlobalElementId) -> String {
@@ -128,15 +128,25 @@ impl SelectRoot {
             .unwrap_or(false)
     }
 
-    pub fn modal_request<H: UiHost>(
+    pub fn modal_request<H: UiHost, I, T>(
         &self,
         cx: &mut ElementContext<'_, H>,
         id: GlobalElementId,
         trigger: GlobalElementId,
         presence: OverlayPresence,
-        children: Vec<AnyElement>,
-    ) -> OverlayRequest {
-        modal_select_request(id, trigger, self.open_model(cx), presence, children)
+        children: I,
+    ) -> OverlayRequest
+    where
+        I: IntoIterator<Item = T>,
+        T: IntoUiElement<H>,
+    {
+        modal_select_request(
+            id,
+            trigger,
+            self.open_model(cx),
+            presence,
+            collect_children(cx, children),
+        )
     }
 }
 
@@ -177,7 +187,7 @@ pub fn select_trigger_a11y(
 fn select_listbox_semantics_id_in_scope<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> GlobalElementId {
-    select_listbox_pressable_with_id_props::<H>(cx, |_cx, _st, _id| {
+    select_listbox_pressable_with_id_props::<H, _, _>(cx, |_cx, _st, _id| {
         (
             PressableProps {
                 layout: LayoutStyle::default(),
@@ -185,7 +195,7 @@ fn select_listbox_semantics_id_in_scope<H: UiHost>(
                 focusable: false,
                 ..Default::default()
             },
-            Vec::new(),
+            Vec::<AnyElement>::new(),
         )
     })
     .id
@@ -252,15 +262,18 @@ impl SelectInitialFocusTargets {
 ///
 /// Use this instead of calling `ElementContext::pressable_with_id_props` directly when you need to
 /// derive a stable listbox element id (e.g. for trigger `aria-controls` relationships).
-pub fn select_listbox_pressable_with_id_props<H: UiHost>(
+pub fn select_listbox_pressable_with_id_props<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(
-        &mut ElementContext<'_, H>,
-        PressableState,
-        GlobalElementId,
-    ) -> (PressableProps, Vec<AnyElement>),
-) -> AnyElement {
-    cx.pressable_with_id_props(f)
+    f: impl FnOnce(&mut ElementContext<'_, H>, PressableState, GlobalElementId) -> (PressableProps, I),
+) -> AnyElement
+where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    cx.pressable_with_id_props(move |cx, st, id| {
+        let (props, items) = f(cx, st, id);
+        (props, collect_children(cx, items))
+    })
 }
 
 /// Radix Select trigger "open keys" (`OPEN_KEYS`).
@@ -1408,12 +1421,16 @@ pub fn select_modal_barrier_layout() -> LayoutStyle {
 ///
 /// This is a thin wrapper over `primitives::dialog::modal_barrier` so non-shadcn users can reuse
 /// the same "disable outside pointer events" outcome without depending on dialog primitives.
-pub fn select_modal_barrier<H: UiHost>(
+pub fn select_modal_barrier<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     dismiss_on_press: bool,
-    children: impl IntoIterator<Item = AnyElement>,
-) -> AnyElement {
+    children: I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
     select_modal_barrier_with_dismiss_handler(cx, open, dismiss_on_press, None, children)
 }
 
@@ -1422,13 +1439,17 @@ pub fn select_modal_barrier<H: UiHost>(
 ///
 /// When `on_dismiss_request` is provided and `dismiss_on_press` is enabled, barrier presses invoke
 /// the handler with `DismissReason::OutsidePress` and do not close `open` automatically.
-pub fn select_modal_barrier_with_dismiss_handler<H: UiHost>(
+pub fn select_modal_barrier_with_dismiss_handler<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     dismiss_on_press: bool,
     on_dismiss_request: Option<OnDismissRequest>,
-    children: impl IntoIterator<Item = AnyElement>,
-) -> AnyElement {
+    children: I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
     dialog::modal_barrier_with_dismiss_handler(
         cx,
         open,
@@ -1440,13 +1461,17 @@ pub fn select_modal_barrier_with_dismiss_handler<H: UiHost>(
 
 /// Convenience helper to assemble select modal overlay children in a Radix-like order: barrier then
 /// content.
-pub fn select_modal_layer_elements<H: UiHost>(
+pub fn select_modal_layer_elements<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     dismiss_on_press: bool,
-    barrier_children: impl IntoIterator<Item = AnyElement>,
+    barrier_children: I,
     content: AnyElement,
-) -> Elements {
+) -> Elements
+where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
     Elements::from([
         select_modal_barrier(cx, open, dismiss_on_press, barrier_children),
         content,
@@ -1455,14 +1480,18 @@ pub fn select_modal_layer_elements<H: UiHost>(
 
 /// Convenience helper to assemble select modal overlay children in a Radix-like order (barrier then
 /// content), while routing barrier presses through an optional dismiss handler.
-pub fn select_modal_layer_elements_with_dismiss_handler<H: UiHost>(
+pub fn select_modal_layer_elements_with_dismiss_handler<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     dismiss_on_press: bool,
     on_dismiss_request: Option<OnDismissRequest>,
-    barrier_children: impl IntoIterator<Item = AnyElement>,
+    barrier_children: I,
     content: AnyElement,
-) -> Elements {
+) -> Elements
+where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
     Elements::from([
         select_modal_barrier_with_dismiss_handler(
             cx,
@@ -1537,14 +1566,18 @@ pub fn select_modal_barrier_pointer_up_guard<H: UiHost>(
 
 /// Convenience helper to assemble select modal overlay children with a pointer-up guard installed
 /// inside the barrier (Radix-like behavior when opening on mouse `pointerdown`).
-pub fn select_modal_layer_elements_with_pointer_up_guard<H: UiHost>(
+pub fn select_modal_layer_elements_with_pointer_up_guard<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     dismiss_on_press: bool,
     guard: SelectMouseOpenGuard,
-    barrier_children: impl IntoIterator<Item = AnyElement>,
+    barrier_children: I,
     content: AnyElement,
-) -> Elements {
+) -> Elements
+where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
     let guard_el = select_modal_barrier_pointer_up_guard(cx, open.clone(), guard);
     Elements::from([
         select_modal_barrier(cx, open, dismiss_on_press, barrier_children),
@@ -1556,17 +1589,21 @@ pub fn select_modal_layer_elements_with_pointer_up_guard<H: UiHost>(
 /// Convenience helper to assemble select modal overlay children with a pointer-up guard installed
 /// inside the barrier (Radix behavior when opening on mouse `pointerdown`), while routing barrier
 /// presses through an optional dismiss handler.
-pub fn select_modal_layer_elements_with_pointer_up_guard_and_dismiss_handler<H: UiHost>(
+pub fn select_modal_layer_elements_with_pointer_up_guard_and_dismiss_handler<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     dismiss_on_press: bool,
     on_dismiss_request: Option<OnDismissRequest>,
     guard: SelectMouseOpenGuard,
-    barrier_children: impl IntoIterator<Item = AnyElement>,
+    barrier_children: I,
     content: AnyElement,
-) -> Elements {
+) -> Elements
+where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
     let guard_el = select_modal_barrier_pointer_up_guard(cx, open.clone(), guard.clone());
-    let barrier_children: Vec<AnyElement> = barrier_children.into_iter().collect();
+    let barrier_children = collect_children(cx, barrier_children);
     let barrier = if dismiss_on_press {
         let open_for_pressable = open.clone();
         let guard_for_pressable = guard;
@@ -2390,7 +2427,7 @@ mod tests {
                 overlay_root_name,
                 inherited,
                 |cx| {
-                    select_listbox_pressable_with_id_props::<App>(cx, |_cx, _st, _id| {
+                    select_listbox_pressable_with_id_props::<App, _, _>(cx, |_cx, _st, _id| {
                         (
                             PressableProps {
                                 layout: LayoutStyle::default(),
@@ -2398,7 +2435,7 @@ mod tests {
                                 focusable: false,
                                 ..Default::default()
                             },
-                            Vec::new(),
+                            Vec::<AnyElement>::new(),
                         )
                     })
                     .id

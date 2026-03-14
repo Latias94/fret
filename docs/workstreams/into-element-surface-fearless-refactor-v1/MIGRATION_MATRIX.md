@@ -287,14 +287,20 @@ Execution note on 2026-03-13:
   Their roving-list, pressable, and content wrappers now land those typed values behind the shared
   crate-local `collect_children(...)` helper. The expanded source-policy gate and
   `cargo check -p fret-ui-kit --lib` cover this batch.
-- the same helper inventory now also records the dialog/popover/alert-dialog overlay helpers in
+- the same helper inventory now also records the dialog/popover/alert-dialog/select overlay helpers in
   `fret-ui-kit`:
-  `ecosystem/fret-ui-kit/src/primitives/{alert_dialog,dialog,popover}.rs` now accept iterable
+  `ecosystem/fret-ui-kit/src/primitives/{alert_dialog,dialog,popover,select}.rs` now accept iterable
   `IntoUiElement<H>` children directly on wrapper helpers that still have an `ElementContext`
   available, landing them through the shared crate-local `collect_children(...)` helper before
   assembling barriers, semantics wrappers, and modal layer vectors. The no-`cx`
   `OverlayRequest` constructors intentionally remain the explicit raw `AnyElement` landing seam.
   The dedicated source-policy test and `cargo check -p fret-ui-kit --lib` cover this batch.
+- the same helper inventory now also records the sortable DnD recipe helper in `fret-ui-kit`:
+  `ecosystem/fret-ui-kit/src/recipes/sortable_dnd.rs` now accepts iterable `IntoUiElement<H>`
+  row-content closures directly instead of publishing `IntoIterator<Item = AnyElement>`. The row
+  container wrapper lands those typed values behind the shared crate-local `collect_children(...)`
+  helper. The expanded source-policy gate and `cargo check -p fret-ui-kit --lib` cover this
+  batch.
 - the internal declarative semantics surface now also records
   `ecosystem/fret-ui-kit/src/declarative/semantics.rs`,
   where `UiElementTestIdExt`, `UiElementA11yExt`, and `UiElementKeyContextExt` wrappers now land

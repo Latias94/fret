@@ -431,9 +431,11 @@ mod source_policy_tests {
     const PRIMITIVES_POPPER_CONTENT_RS: &str = include_str!("primitives/popper_content.rs");
     const PRIMITIVES_POPOVER_RS: &str = include_str!("primitives/popover.rs");
     const PRIMITIVES_ROVING_FOCUS_GROUP_RS: &str = include_str!("primitives/roving_focus_group.rs");
+    const PRIMITIVES_SELECT_RS: &str = include_str!("primitives/select.rs");
     const PRIMITIVES_TABS_RS: &str = include_str!("primitives/tabs.rs");
     const PRIMITIVES_TOGGLE_RS: &str = include_str!("primitives/toggle.rs");
     const PRIMITIVES_TOOLBAR_RS: &str = include_str!("primitives/toolbar.rs");
+    const RECIPES_SORTABLE_DND_RS: &str = include_str!("recipes/sortable_dnd.rs");
     const UI_RS: &str = include_str!("ui.rs");
     const UI_BUILDER_RS: &str = include_str!("ui_builder.rs");
 
@@ -666,6 +668,11 @@ mod source_policy_tests {
                 PRIMITIVES_TOOLBAR_RS,
                 "roving_focus_group::roving_focus_group_apg(",
             ),
+            (
+                "recipes/sortable_dnd.rs",
+                RECIPES_SORTABLE_DND_RS,
+                "collect_children(cx, items)",
+            ),
         ] {
             assert!(
                 source.contains("IntoUiElement<"),
@@ -704,6 +711,13 @@ mod source_policy_tests {
                 PRIMITIVES_POPOVER_RS,
                 "pub fn popover_dialog_wrapper<H: UiHost, I, T>(",
                 "collect_children(cx, items)",
+                "children: impl IntoIterator<Item = AnyElement>",
+            ),
+            (
+                "primitives/select.rs",
+                PRIMITIVES_SELECT_RS,
+                "pub fn select_modal_barrier<H: UiHost, I, T>(",
+                "collect_children(cx, barrier_children)",
                 "children: impl IntoIterator<Item = AnyElement>",
             ),
         ] {

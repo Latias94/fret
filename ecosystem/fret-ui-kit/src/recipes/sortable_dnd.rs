@@ -15,7 +15,6 @@ use fret_ui::action::{
 use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, PointerRegionProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 
-use crate::Space;
 use crate::declarative::model_watch::ModelWatchExt as _;
 use crate::dnd;
 use crate::dnd::{
@@ -24,6 +23,7 @@ use crate::dnd::{
     insertion_side_for_pointer,
 };
 use crate::ui;
+use crate::{IntoUiElement, Space, collect_children};
 
 const DRAG_KIND_SORTABLE_REORDER: DragKindId = DragKindId(100);
 
@@ -70,14 +70,15 @@ fn get_state_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<SortableD
 /// - Geometry is sourced from `last_bounds_for_element` (prev-bounds snapshot), so the first frame may not have
 ///   droppable rects yet. Most use-sites will naturally render continuously during interactions.
 #[allow(clippy::too_many_arguments)]
-pub fn sortable_reorder_list<H: UiHost, I>(
+pub fn sortable_reorder_list<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     items: Model<Vec<DndItemId>>,
     props: SortableReorderListProps,
     mut row_contents: impl FnMut(&mut ElementContext<'_, H>, DndItemId) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     let SortableReorderListProps {
         row_height,
@@ -380,7 +381,8 @@ where
                                 false,
                             );
                         }
-                        row_contents(cx, id)
+                        let items = row_contents(cx, id);
+                        collect_children(cx, items)
                     },
                 )]
             })

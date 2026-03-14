@@ -933,15 +933,21 @@ Implementation note on 2026-03-13:
   accordion pressable wrappers, and tab/accordion content wrappers now land those typed values
   behind `collect_children(...)`; the expanded source-policy gate plus
   `cargo check -p fret-ui-kit --lib` lock that posture.
-- the same wrapper-helper inventory now also covers the dialog/popover/alert-dialog overlay helpers in
+- the same wrapper-helper inventory now also covers the dialog/popover/alert-dialog/select overlay helpers in
   `fret-ui-kit`:
-  `ecosystem/fret-ui-kit/src/primitives/{alert_dialog,dialog,popover}.rs` now accept iterable
+  `ecosystem/fret-ui-kit/src/primitives/{alert_dialog,dialog,popover,select}.rs` now accept iterable
   `IntoUiElement<H>` values on wrapper helpers that still have an `ElementContext` available
   (`DialogRoot`/`PopoverRoot` request adapters, barrier helpers, semantics wrappers, and modal
   layer assemblers). Those wrappers land typed values through `collect_children(...)`, while the
   final overlay-request constructors intentionally remain `IntoIterator<Item = AnyElement>` because
   they are the no-`cx` landing seam. The dedicated source-policy test plus
   `cargo check -p fret-ui-kit --lib` lock that posture.
+- the same wrapper-helper inventory now also covers the sortable DnD recipe helper in
+  `fret-ui-kit`:
+  `ecosystem/fret-ui-kit/src/recipes/sortable_dnd.rs` now accepts iterable `IntoUiElement<H>`
+  values for row-content closures and lands them through `collect_children(...)` inside the row
+  container wrapper. The expanded source-policy gate plus `cargo check -p fret-ui-kit --lib` lock
+  that posture.
 - the next cookbook app-authoring batch now follows the same surface:
   `apps/fret-cookbook/examples/toggle_basics.rs`,
   `apps/fret-cookbook/examples/payload_actions_basics.rs`,
