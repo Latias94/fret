@@ -851,6 +851,13 @@ Exit criteria:
   `DocSection::build(cx, ...)`.
 - validation addendum on 2026-03-14:
   `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app shadcn_extras_ -- --nocapture`
+- the specialized `material3` lane has now advanced through its `controls` sub-batch:
+  `apps/fret-ui-gallery/src/ui/snippets/material3/{badge,button,checkbox,icon_button,radio,segmented_button,slider,switch,touch_targets}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and the new source gate
+  locks those controls to the typed default-app teaching surface without reintroducing
+  `ElementContext<'_, H>` helper parameters in the affected helper closures.
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app material3_controls_snippets_prefer_ui_cx_on_the_default_app_surface -- --nocapture`
 - after these four landings, the tracked default-app workstream-local teaching-surface lane is now
   effectively closed; remaining work continues on the specialized `ai` and `material3` lanes plus
   any optional post-cleanup of now-nonessential gallery runtime fields.

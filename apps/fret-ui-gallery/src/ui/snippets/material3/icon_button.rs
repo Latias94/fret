@@ -1,15 +1,16 @@
 pub const SOURCE: &str = include_str!("icon_button.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_icons::ids;
 use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let toggle_checked = cx.local_model_keyed("toggle_checked", || false);
 
-    let row = |cx: &mut ElementContext<'_, H>,
+    let row = |cx: &mut UiCx<'_>,
                variant: material3::IconButtonVariant,
                label: &'static str| {
         ui::h_row(move |cx| {

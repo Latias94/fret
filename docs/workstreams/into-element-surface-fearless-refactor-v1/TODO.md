@@ -44,6 +44,10 @@ Execution note on 2026-03-14:
   `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and
   `apps/fret-ui-gallery/src/ui/pages/shadcn_extras.rs` now consumes those previews through
   `DocSection::build(cx, ...)`.
+- the specialized `material3` lane has now advanced through its `controls` sub-batch:
+  `apps/fret-ui-gallery/src/ui/snippets/material3/{badge,button,checkbox,icon_button,radio,segmented_button,slider,switch,touch_targets}.rs`
+  now expose `UiCx -> impl UiChild`, and the new source gate locks those controls to the typed
+  default-app teaching surface.
 - after these four landings, the current tracked default-app teaching-surface lane is effectively
   closed; remaining follow-up work now lives on the specialized `ai` and `material3` lanes plus
   any optional dead-field/runtime cleanup.

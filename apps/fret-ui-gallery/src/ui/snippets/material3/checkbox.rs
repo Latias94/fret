@@ -1,11 +1,12 @@
 pub const SOURCE: &str = include_str!("checkbox.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let checkbox = material3::Checkbox::uncontrolled(cx, false);
     let checked = checkbox.checked_model();
     let tristate = material3::Checkbox::uncontrolled_optional(cx, None);

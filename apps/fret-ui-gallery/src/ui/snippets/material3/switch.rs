@@ -1,11 +1,12 @@
 pub const SOURCE: &str = include_str!("switch.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let default_switch = material3::Switch::uncontrolled(cx, false);
     let selected = default_switch.selected_model();
     let icons_both_root = material3::Switch::uncontrolled(cx, false);

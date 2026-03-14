@@ -3,13 +3,14 @@ pub const SOURCE: &str = include_str!("touch_targets.rs");
 // region: example
 use std::sync::Arc;
 
+use fret::{UiChild, UiCx};
 use fret_core::{Color, Corners, DrawOrder, Edges, Paint, Point, Px, Rect, SceneOp, Size};
 use fret_ui::element::{AnyElement, CanvasProps, FlexProps, StackProps};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     use fret_icons::ids;
 
     let checkbox_root = material3::Checkbox::uncontrolled(cx, false);
@@ -27,7 +28,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .unwrap_or(Px(48.0))
     });
 
-    let target_overlay = |cx: &mut ElementContext<'_, H>,
+    let target_overlay = |cx: &mut UiCx<'_>,
                           label: &'static str,
                           chrome: Option<Size>,
                           child: AnyElement| {

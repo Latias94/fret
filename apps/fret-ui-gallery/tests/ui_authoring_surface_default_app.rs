@@ -6799,6 +6799,44 @@ fn material3_doc_pages_prefer_ui_cx_on_the_default_app_surface() {
 }
 
 #[test]
+fn material3_controls_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/material3/badge.rs",
+            "src/ui/snippets/material3/button.rs",
+            "src/ui/snippets/material3/checkbox.rs",
+            "src/ui/snippets/material3/icon_button.rs",
+            "src/ui/snippets/material3/radio.rs",
+            "src/ui/snippets/material3/segmented_button.rs",
+            "src/ui/snippets/material3/slider.rs",
+            "src/ui/snippets/material3/switch.rs",
+            "src/ui/snippets/material3/touch_targets.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing Material 3 controls snippet surface",
+    );
+
+    for relative_path in [
+        "src/ui/snippets/material3/badge.rs",
+        "src/ui/snippets/material3/button.rs",
+        "src/ui/snippets/material3/icon_button.rs",
+        "src/ui/snippets/material3/touch_targets.rs",
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+        assert!(
+            !normalized.contains("ElementContext<'_,H>"),
+            "{} reintroduced legacy host-bound helper parameters",
+            path.display()
+        );
+    }
+}
+
+#[test]
 fn material3_overlay_snippets_prefer_uncontrolled_copyable_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/menu.rs",

@@ -1,10 +1,11 @@
 pub const SOURCE: &str = include_str!("slider.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let slider = material3::Slider::uncontrolled(cx, 0.3);
     let value = slider.value_model();
     let value_now = cx
