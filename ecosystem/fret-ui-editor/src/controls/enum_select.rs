@@ -25,11 +25,13 @@ use fret_ui_kit::typography;
 use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 
 use crate::controls::MiniSearchBox;
-use crate::primitives::chrome::sanitize_editor_surface_bg;
 use crate::primitives::icons::editor_icon_with;
 use crate::primitives::input_group::{
     editor_input_group_divider, editor_input_group_frame, editor_input_group_inset,
     editor_input_group_row,
+};
+use crate::primitives::popup_surface::{
+    EditorPopupSurfaceChrome, resolve_editor_popup_surface_chrome,
 };
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
@@ -162,24 +164,16 @@ impl EnumSelect {
             .get_model_cloned(&self.model, Invalidation::Paint)
             .unwrap_or(None);
 
-        let (density, frame_chrome, ring, bg, border) = {
+        let (density, frame_chrome, ring, popup_chrome) = {
             let theme = Theme::global(&*cx.app);
             let style = EditorStyle::resolve(theme);
             let density = style.density;
             let frame_chrome = style.frame_chrome_small();
-            let bg = theme
-                .color_by_key("popover")
-                .or_else(|| theme.color_by_key("component.input.bg"))
-                .unwrap_or_else(|| theme.color_token("background"));
-            let bg = sanitize_editor_surface_bg(theme, bg);
-            let border = theme
-                .color_by_key("border")
-                .or_else(|| theme.color_by_key("component.input.border"))
-                .unwrap_or_else(|| theme.color_token("foreground"));
             let ring = theme
                 .color_by_key("ring")
                 .unwrap_or_else(|| theme.color_token("primary"));
-            (density, frame_chrome, ring, bg, border)
+            let popup_chrome = resolve_editor_popup_surface_chrome(theme, true);
+            (density, frame_chrome, ring, popup_chrome)
         };
 
         let selected_label = selected_value
@@ -400,8 +394,7 @@ impl EnumSelect {
                 focus_restore_target,
                 options_for_overlay,
                 density,
-                bg,
-                border,
+                popup_chrome,
             );
             trigger
         } else {
@@ -416,8 +409,7 @@ impl EnumSelect {
                 focus_restore_target,
                 options_for_overlay,
                 density,
-                bg,
-                border,
+                popup_chrome,
             );
             trigger
         }
@@ -435,8 +427,7 @@ fn request_overlay<H: UiHost>(
     focus_restore_target: Arc<Mutex<Option<GlobalElementId>>>,
     options: EnumSelectOptions,
     density: EditorDensity,
-    bg: fret_core::Color,
-    border: fret_core::Color,
+    popup_chrome: EditorPopupSurfaceChrome,
 ) {
     let model_for_list = model.clone();
     let open_for_list = open.clone();
@@ -467,14 +458,12 @@ fn request_overlay<H: UiHost>(
         enum_select_close_auto_focus_policy(),
     );
 
-    let (max_h, shadow_color) = {
+    let max_h = {
         let theme = Theme::global(&*cx.app);
-        let max_h = options
+        options
             .max_list_height
             .or_else(|| theme.metric_by_key(EditorTokenKeys::ENUM_SELECT_MAX_LIST_HEIGHT))
-            .unwrap_or(Px(240.0));
-        let shadow_color = theme.color_token("muted");
-        (max_h, shadow_color)
+            .unwrap_or(Px(240.0))
     };
 
     let filter_text = cx
@@ -552,21 +541,11 @@ fn request_overlay<H: UiHost>(
                         ..Default::default()
                     },
                     padding: Edges::all(Px(8.0)).into(),
-                    background: Some(bg),
+                    background: Some(popup_chrome.bg),
                     border: Edges::all(Px(1.0)),
-                    border_color: Some(border),
-                    corner_radii: Corners::all(Px(8.0)),
-                    shadow: Some(fret_ui::element::ShadowStyle {
-                        primary: fret_ui::element::ShadowLayerStyle {
-                            color: shadow_color,
-                            offset_x: Px(0.0),
-                            offset_y: Px(6.0),
-                            blur: Px(16.0),
-                            spread: Px(-4.0),
-                        },
-                        secondary: None,
-                        corner_radii: Corners::all(Px(8.0)),
-                    }),
+                    border_color: Some(popup_chrome.border),
+                    corner_radii: Corners::all(popup_chrome.radius),
+                    shadow: popup_chrome.shadow.clone(),
                     ..Default::default()
                 },
                 move |cx| {

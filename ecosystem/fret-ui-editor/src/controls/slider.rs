@@ -24,21 +24,19 @@ use crate::primitives::numeric_text_entry::{
     sync_numeric_text_entry_focus_handoff,
 };
 use crate::primitives::numeric_value::NumericValueConstraints;
+use crate::primitives::readout::EditorCompactReadoutStyle;
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
-use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{
-    Axis, Corners, CursorIcon, Edges, MouseButton, PointerId, Px, TextAlign, TextStyle,
-};
+use fret_core::text::TextOverflow;
+use fret_core::{Axis, Corners, CursorIcon, Edges, MouseButton, PointerId, Px, TextAlign};
 use fret_runtime::Model;
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexItemStyle, FlexProps, InsetStyle, LayoutStyle,
     Length, MainAlign, Overflow, PositionStyle, PressableA11y, PressableProps, SizeStyle,
-    SpacingLength, TextProps,
+    SpacingLength,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::typography;
 
 fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a + (b - a) * t
@@ -577,10 +575,7 @@ where
 
                 let thumb_bg = alpha_mul(thumb_bg, disabled_alpha);
                 let thumb_border = alpha_mul(thumb_border, disabled_alpha);
-                let readout_fg = theme
-                    .color_by_key("muted-foreground")
-                    .or_else(|| theme.color_by_key("muted_foreground"))
-                    .unwrap_or(theme.color_token("foreground"));
+                let readout_style = EditorCompactReadoutStyle::resolve(theme, density.row_height);
 
                 let left_grow = t.clamp(0.0, 1.0);
                 let right_grow = (1.0 - left_grow).max(0.0);
@@ -708,9 +703,9 @@ where
                         );
 
                         let value_el = if show_value {
-                            let readout_text_px = Px((frame.text_px.0 - 1.0).max(11.0));
-                            let mut value_text_el = cx.text_props(TextProps {
-                                layout: LayoutStyle {
+                            let mut value_text_el = cx.text_props(readout_style.text_props(
+                                value_display_text.clone(),
+                                LayoutStyle {
                                     size: SizeStyle {
                                         width: Length::Fill,
                                         height: Length::Fill,
@@ -718,18 +713,9 @@ where
                                     },
                                     ..Default::default()
                                 },
-                                text: value_display_text.clone(),
-                                style: Some(typography::as_control_text(TextStyle {
-                                    size: readout_text_px,
-                                    line_height: Some(density.row_height),
-                                    ..Default::default()
-                                })),
-                                color: Some(readout_fg),
-                                wrap: TextWrap::None,
-                                overflow: TextOverflow::Clip,
-                                align: TextAlign::End,
-                                ink_overflow: Default::default(),
-                            });
+                                TextAlign::End,
+                                TextOverflow::Clip,
+                            ));
                             if let Some(test_id) = value_display_test_id.as_ref() {
                                 value_text_el = value_text_el
                                     .test_id(test_id.clone())

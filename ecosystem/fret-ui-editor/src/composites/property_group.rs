@@ -98,7 +98,7 @@ impl PropertyGroup {
                 header_bg,
                 header_border,
                 panel_bg,
-                panel_border,
+                group_border,
                 radius,
                 header_fg,
             ) = {
@@ -123,8 +123,9 @@ impl PropertyGroup {
                     .or_else(|| theme.color_by_key("card"))
                     .or_else(|| theme.color_by_key("component.card.bg"))
                     .unwrap_or_else(|| theme.color_token("background"));
-                let panel_border = theme
-                    .color_by_key(EditorTokenKeys::PROPERTY_PANEL_BORDER)
+                let group_border = theme
+                    .color_by_key(EditorTokenKeys::PROPERTY_GROUP_BORDER)
+                    .or_else(|| theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_BORDER))
                     .or_else(|| theme.color_by_key("border"))
                     .or_else(|| theme.color_by_key("component.card.border"))
                     .unwrap_or_else(|| theme.color_token("foreground"));
@@ -139,7 +140,7 @@ impl PropertyGroup {
                     header_bg,
                     header_border,
                     panel_bg,
-                    panel_border,
+                    group_border,
                     radius,
                     header_fg,
                 )
@@ -373,7 +374,7 @@ impl PropertyGroup {
                     padding: Edges::all(Px(0.0)).into(),
                     background: Some(panel_bg),
                     border: Edges::all(Px(1.0)),
-                    border_color: Some(panel_border),
+                    border_color: Some(group_border),
                     corner_radii: Corners::all(radius),
                     ..Default::default()
                 },

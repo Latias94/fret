@@ -43,20 +43,44 @@ Interaction contract:
       slot to `56px`. Default inspector hierarchy tokens now also give property groups taller
       headers, stronger header/body contrast, clearer section borders, and a bit more panel/content
       separation. `InspectorPanel` now renders its own header band/separator with stronger section
-      framing instead of letting search/toolbar chrome visually merge into the first section, and
+      framing instead of letting search/toolbar chrome visually merge into the first section,
       `PropertyGroup` content now has a little more vertical breathing room so section bodies stop
-      reading as one uninterrupted slab.
-      Remaining work: do one more screenshot-driven pass on separator weight and the final balance
-      between neutral default and editor-specific contrast.
+      reading as one uninterrupted slab, and the latest separator cleanup also splits outer panel
+      border tone from inner property-group border tone so the default preset no longer depends on
+      one shared frame weight for both levels of hierarchy. The follow-up pass now also separates
+      panel-header band tokens from property-group header tokens, so the inspector search/title
+      band can stay stronger than the repeated section bars below it. The latest screenshot-driven
+      calibration pass then pushed that split a bit further in both default and dense presets:
+      panel header background/border tokens are now slightly stronger while repeated group headers
+      are slightly quieter, so the top band reads more clearly as panel-owned chrome instead of one
+      more repeated section bar.
+      Remaining work: keep that hierarchy stable while adjacent proof surfaces evolve and only do a
+      further tonal pass if a new proof surface shows the panel/group boundary collapsing again.
 - [~] `EER-BASE-111` Finish `EditorWidgetVisuals` convergence for the existing starter-set controls
       before promoting more components.
       Shared field-state grammar now routes joined text fields/search boxes, numeric inputs,
       drag-value / slider typing paths, axis drag values, and enum-select triggers through the same
       editor-owned `EditorWidgetVisuals` baseline, and numeric typing now also uses the same
       row-height line box as the surrounding non-typing affordances so editor rows stop visibly
-      jumping when scrub/value displays switch into text-entry mode. Remaining work: extend that
-      convergence to the remaining secondary widgets and keep pruning residual per-control chrome
-      heuristics.
+      jumping when scrub/value displays switch into text-entry mode. The latest pass now also
+      removes one more widget-local chrome island: `ColorEdit` swatch buttons keep their true color
+      fill, but their border/open/focus treatment now reuses shared editor frame visuals instead of
+      hard-coded swatch border/radius tuning. Popup-shell chrome now also converges across the
+      existing assist/select/color consumers: `TextAssistField`, `InspectorPanel` search history,
+      `EnumSelect`, and `ColorEdit` all reuse one editor popup-surface resolver, and editor-owned
+      `editor.popup.*` tokens now keep those popups on the dark editor baseline instead of
+      inheriting a host theme's bright `popover` surface. Focused screenshot coverage now exists
+      for that seam via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-popup-screenshots.json`,
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-inspector-search-assist-popup-screenshots.json`,
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-enum-select-selected-row-reveal.json`,
+      and
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-color-popup-screenshots.json`.
+      The follow-up decision is now landed as well: popup radius and shadow geometry are editor-owned
+      metric tokens (`editor.popup.radius`, `editor.popup.shadow_*`), so the dense preset can keep a
+      tighter popup silhouette/elevation than the default preset without reopening per-control local
+      tuning. Remaining work: keep pruning residual per-control chrome heuristics and only widen the
+      popup token set again if a real second geometry family appears.
 - [~] `EER-BASE-112` Define and land inspector/property layout grammar:
       shared `InspectorLayoutMetrics` now feed `PropertyRow`, `PropertyGrid`,
       `PropertyGridVirtualized`, `PropertyGroup`, and `InspectorPanel`, and the row grammar is now
@@ -73,13 +97,16 @@ Interaction contract:
       non-empty readouts themselves: slider value displays now sit back as muted trailing readouts
       instead of reading like another editable text segment, and proof-only committed/outcome rows
       now reuse the same compact muted readout treatment so diagnostics labels stop visually
-      overpowering the editable controls they describe. The dense imgui-like preset now also has a
-      first dedicated calibration pass for that same tail grammar (`PROPERTY_TRAILING_GAP=3`,
-      `PROPERTY_STATUS_SLOT_WIDTH=48`) so dense overview rows stop keeping more right-lane slack
-      than the updated default baseline.
+      overpowering the editable controls they describe. That readout convergence now has one small
+      shared primitive too: compact non-edit readout text styling is editor-owned and shared by the
+      promoted slider/value surfaces plus proof committed/outcome readouts, while proof-local
+      layout/container geometry still stays local until a second real layout family appears. The
+      dense imgui-like preset now also has a first dedicated calibration pass for that same tail
+      grammar (`PROPERTY_TRAILING_GAP=3`, `PROPERTY_STATUS_SLOT_WIDTH=48`) so dense overview rows
+      stop keeping more right-lane slack than the updated default baseline.
       Remaining work: calibrate any dense-mode overrides from screenshot review rather than ad-hoc
-      per-demo tweaks, and decide whether more of that readout treatment should be lifted into a
-      reusable editor primitive rather than staying proof-local.
+      per-demo tweaks, and only lift more than that shared text-style seam into a reusable editor
+      primitive if a second real readout layout family appears.
 - [x] `EER-BASE-113` Make typed-edit, focus, active, and invalid states visually explicit across
       numeric, text, and select-like controls.
       `EditorWidgetVisuals` now owns a shared semantic layer for typed-edit and invalid field

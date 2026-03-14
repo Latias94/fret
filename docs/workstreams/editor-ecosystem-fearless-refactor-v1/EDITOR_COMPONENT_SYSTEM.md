@@ -219,9 +219,33 @@ Default direction:
 
 - prioritize alignment and scanability over decoration,
 - group hierarchy should be readable with spacing and headers, not heavy card nesting,
+- outer panel framing and inner group framing should use distinct token slots when they need
+  different visual weight; do not force both levels through one shared border tone,
+- likewise, the top inspector header band should not be forced to share the exact same header tone
+  as repeated property-group headers when those two levels serve different hierarchy roles,
 - reset/help/status affordances must align to a consistent slot model.
 
-#### 5) Shell chrome
+#### 5) Popup/list surfaces
+
+Examples:
+
+- `TextAssistField` inline / anchored panels
+- `InspectorPanel` search-history assist
+- `EnumSelect` popup/list surface
+- `ColorEdit` popover surface
+
+Default direction:
+
+- popup shells should resolve their surface tone from editor-owned popup tokens before falling back
+  to host semantic palettes,
+- overlay and inline variants may differ in elevation/shadow, but not in their basic background /
+  border grammar,
+- list/assist/select/color popovers should read as one editor family even when their row
+  interaction policies differ,
+- and screenshot proof surfaces should make popup geometry and chrome reviewable without a manual
+  launch.
+
+#### 6) Shell chrome
 
 Examples:
 
@@ -335,6 +359,9 @@ Implications:
 - proof-only outcome instrumentation should follow the same rule whether it lives in a trailing
   lane or a whole readout row: idle/empty state should not reserve right-lane width or idle row
   height, and only material commit/cancel/error states should claim that space,
+- compact non-edit readout text styling may be shared as an editor primitive when real reuse
+  appears, but proof-local readout layout/container geometry should stay local until a second
+  genuine layout family exists,
 - and wide inspectors should first let the shared value lane grow toward a readable cap before
   accepting large pools of empty panel slack.
 
@@ -356,7 +383,7 @@ Use `editor.density.*` to tune the visual system, but do not encode unsafe defau
 | Numeric edit session | Start, live update, commit, and cancel semantics must be consistent across scrub and typed-edit flows. | `fret-ui-editor` |
 | Keyboard defaults | Tab order, Enter/Escape, arrow adjustments, and popup navigation should be explicit editor defaults. | `fret-ui-editor` with `fret-ui-kit` |
 | Undo boundaries | Scrub sessions should coalesce into one logical edit when undo integration is enabled. | `fret-ui-editor` + optional integration |
-| Menus and popups | Use shared overlay/menu substrates; keep editor-specific recipes in policy crates. | `fret-ui-kit`, `fret-ui-editor` |
+| Menus and popups | Use shared overlay/menu substrates plus editor-owned popup-surface tokens/chrome; keep editor-specific recipes in policy crates. | `fret-ui-kit`, `fret-ui-editor` |
 
 ## Token and preset strategy
 
@@ -378,6 +405,7 @@ Good first choices:
 - `editor.density.*`
 - `editor.numeric.*`
 - `editor.property.*`
+- `editor.popup.*`
 - `editor.slider.*`
 - `editor.checkbox.*`
 - `editor.color.*`

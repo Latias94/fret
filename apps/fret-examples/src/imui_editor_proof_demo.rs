@@ -5,8 +5,8 @@ use fret::advanced::interop::embedded_viewport as embedded;
 use fret::view::ViewWindowState;
 use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
-use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Color, PanelKind, Px, TextAlign, TextStyle};
+use fret_core::text::TextOverflow;
+use fret_core::{Color, PanelKind, Px, TextAlign};
 use fret_docking::{
     DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx, DockPanelRegistryBuilder,
     DockPanelRegistryService, ViewportPanel, runtime as dock_runtime,
@@ -16,7 +16,7 @@ use fret_runtime::{
     ActivationPolicy, FrameId, Model, PlatformCapabilities, TickId, WindowHoverDetectionQuality,
     WindowRole, WindowStyleRequest,
 };
-use fret_ui::element::{LayoutStyle, Length, SizeStyle, TextProps};
+use fret_ui::element::{LayoutStyle, Length, SizeStyle};
 use fret_ui_editor::composites::{
     GradientEditor, GradientEditorOptions, GradientStopBinding, InspectorPanel,
     InspectorPanelOptions, InspectorPanelSearchAssistOptions, PropertyGrid, PropertyGroup,
@@ -33,13 +33,12 @@ use fret_ui_editor::controls::{
     VecEditOptions,
 };
 use fret_ui_editor::imui as editor_imui;
-use fret_ui_editor::primitives::{EditSessionOutcome, EditorTokenKeys};
+use fret_ui_editor::primitives::{EditSessionOutcome, EditorCompactReadoutStyle, EditorTokenKeys};
 use fret_ui_editor::theme::EditorThemePresetV1;
 use fret_ui_kit::headless::text_assist::{
     TextAssistItem, TextAssistMatch, TextAssistMatchMode, controller_with_active_item_id,
     input_owned_text_assist_expanded,
 };
-use fret_ui_kit::typography;
 
 const VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
 const AUX_LOGICAL_WINDOW_ID: &str = "aux";
@@ -185,14 +184,12 @@ fn proof_compact_readout<H: UiHost>(
     let row_height = theme
         .metric_by_key(EditorTokenKeys::DENSITY_ROW_HEIGHT)
         .unwrap_or(Px(24.0));
-    let fg = theme
-        .color_by_key("muted-foreground")
-        .or_else(|| theme.color_by_key("muted_foreground"))
-        .unwrap_or_else(|| theme.color_token("foreground"));
+    let readout_style = EditorCompactReadoutStyle::resolve(theme, row_height);
     let readout = Arc::<str>::from(readout);
 
-    let mut el = cx.text_props(TextProps {
-        layout: LayoutStyle {
+    let mut el = cx.text_props(readout_style.text_props(
+        readout.clone(),
+        LayoutStyle {
             size: SizeStyle {
                 width: Length::Fill,
                 height: Length::Auto,
@@ -200,18 +197,9 @@ fn proof_compact_readout<H: UiHost>(
             },
             ..Default::default()
         },
-        text: readout.clone(),
-        style: Some(typography::as_control_text(TextStyle {
-            size: Px(11.0),
-            line_height: Some(row_height),
-            ..Default::default()
-        })),
-        color: Some(fg),
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Ellipsis,
-        align: TextAlign::Start,
-        ink_overflow: Default::default(),
-    });
+        TextAlign::Start,
+        TextOverflow::Ellipsis,
+    ));
 
     if let Some(test_id) = test_id {
         el = el.test_id(test_id);

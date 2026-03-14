@@ -37,14 +37,13 @@ use fret_ui_kit::typography;
 use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 
 use super::{TextField, TextFieldAssistiveSemantics, TextFieldOptions};
-use crate::primitives::chrome::sanitize_editor_surface_bg;
+use crate::primitives::popup_surface::resolve_editor_popup_surface_chrome;
 use crate::primitives::style::EditorStyle;
 
 const TEXT_ASSIST_ROW_GAP: Px = Px(2.0);
 const TEXT_ASSIST_ROOT_GAP: Px = Px(6.0);
 const TEXT_ASSIST_SURFACE_PADDING: Px = Px(4.0);
 const TEXT_ASSIST_ROW_RADIUS: Px = Px(6.0);
-const TEXT_ASSIST_SURFACE_RADIUS: Px = Px(8.0);
 const TEXT_ASSIST_POPUP_SIDE_OFFSET: Px = Px(4.0);
 const TEXT_ASSIST_POPUP_WINDOW_MARGIN: Px = Px(8.0);
 const TEXT_ASSIST_POPUP_MAX_VISIBLE_ROWS: usize = 6;
@@ -372,35 +371,16 @@ fn render_text_assist_panel<H: UiHost>(
     }
 
     let is_overlay_surface = matches!(options.surface, TextAssistFieldSurface::AnchoredOverlay);
-    let (density, surface_bg, surface_border, active_bg, active_fg, row_fg, muted_fg, shadow) = {
+    let (density, popup_chrome, active_bg, active_fg, row_fg, muted_fg) = {
         let theme = Theme::global(&*cx.app);
         let style = EditorStyle::resolve(theme);
-        let surface_bg = theme
-            .color_by_key("popover")
-            .or_else(|| theme.color_by_key("card"))
-            .unwrap_or_else(|| theme.color_token("card"));
-        let shadow = is_overlay_surface.then(|| fret_ui::element::ShadowStyle {
-            primary: fret_ui::element::ShadowLayerStyle {
-                color: theme.color_token("muted"),
-                offset_x: Px(0.0),
-                offset_y: Px(6.0),
-                blur: Px(16.0),
-                spread: Px(-4.0),
-            },
-            secondary: None,
-            corner_radii: Corners::all(TEXT_ASSIST_SURFACE_RADIUS),
-        });
         (
             style.density,
-            sanitize_editor_surface_bg(theme, surface_bg),
-            theme
-                .color_by_key("border")
-                .unwrap_or_else(|| theme.color_token("border")),
+            resolve_editor_popup_surface_chrome(theme, is_overlay_surface),
             theme.color_token("accent"),
             theme.color_token("accent-foreground"),
             theme.color_token("foreground"),
             theme.color_token("muted-foreground"),
-            shadow,
         )
     };
 
@@ -614,11 +594,11 @@ fn render_text_assist_panel<H: UiHost>(
                     ContainerProps {
                         layout: panel_layout,
                         padding: Edges::all(TEXT_ASSIST_SURFACE_PADDING).into(),
-                        background: Some(surface_bg),
+                        background: Some(popup_chrome.bg),
                         border: Edges::all(Px(1.0)),
-                        border_color: Some(surface_border),
-                        corner_radii: Corners::all(TEXT_ASSIST_SURFACE_RADIUS),
-                        shadow,
+                        border_color: Some(popup_chrome.border),
+                        corner_radii: Corners::all(popup_chrome.radius),
+                        shadow: popup_chrome.shadow.clone(),
                         ..Default::default()
                     },
                     move |_cx| vec![body],

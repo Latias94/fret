@@ -64,18 +64,44 @@ Current checkpoint:
 - the follow-up readout pass now also keeps populated slider values and proof-only
   committed/outcome labels in a muted compact readout style, so non-empty diagnostics text stops
   competing with editable values,
+- that compact readout convergence now has a small shared editor primitive too: slider/value
+  readouts and proof committed/outcome labels reuse one editor-owned text-style baseline, while the
+  proof demo still keeps its layout/container geometry local instead of promoting a fake reusable
+  shell,
 - the imgui-like dense preset now has a first matching calibration pass for the same tail grammar:
   its trailing gap and status lane were tightened again after screenshot review, so dense rows keep
   the lower-noise readout treatment without reopening wide right-lane slack,
 - default inspector hierarchy tokens now bias a little more toward editor-style section structure:
   taller group headers, more content/panel spacing, stronger section borders, and clearer
   header/body contrast bands,
+- outer `InspectorPanel` framing and inner `PropertyGroup` framing no longer share one border tone:
+  `PropertyGroup` now has its own editor token so section hierarchy stays readable without pushing
+  the default baseline back toward heavy nested card chrome,
+- the same separation now also applies to header bands: `InspectorPanel` top chrome can keep a
+  stronger panel-owned band while `PropertyGroup` headers use a quieter section-owned header tone,
+- the latest screenshot-driven hierarchy pass now leans a bit harder into that split: the top
+  inspector search/title band is slightly stronger again while repeated property-group headers are
+  slightly quieter, which makes the panel-vs-section boundary read faster in both the default and
+  dense presets without reopening heavy nested-card chrome,
 - `InspectorPanel` now also renders a true header band with a bottom separator and stronger top
   section framing so search/toolbar chrome does not visually collapse into the first property
   group,
 - input-like editor controls now share one state grammar for focus, typed-edit, and invalid
   semantics through `EditorWidgetVisuals` and shared `editor.control.invalid.*` tokens instead of
   mixing per-widget error/focus overrides,
+- that convergence now also reaches one more secondary widget seam: `ColorEdit` swatch buttons keep
+  their actual color fill, but their border/open/focus chrome now follows the same editor-owned
+  frame-visual policy as the surrounding field family instead of hand-tuned local border/radius
+  values,
+- the same secondary-widget cleanup now also converges popup shell chrome across the three real
+  popup consumer classes already in the starter set: input-owned assist (`TextAssistField` and the
+  `InspectorPanel` search-history consumer), trigger-owned select lists (`EnumSelect`), and
+  color-edit popovers (`ColorEdit`). Those surfaces now share one editor popup-surface resolver,
+  and editor-owned `editor.popup.*` tokens keep them on the dark review baseline instead of
+  inheriting a host theme's bright `popover` card,
+- popup-shell geometry is now editor-owned too: `editor.popup.radius` plus
+  `editor.popup.shadow_*` let the dense preset keep a tighter popup silhouette/elevation without
+  reintroducing widget-local popup tuning in each control,
 - editor numeric text-entry now also has a shared baseline policy for "replace current value on
   initial typed edit", so affixed `NumericInput` / `DragValue` / `Slider` flows behave more like
   editor fields than generic app forms, `DragValue` / `Slider` double-click typing now routes
@@ -192,6 +218,12 @@ Current checkpoint:
   visibility helpers rather than keeping another editor-local "selected item reveal" path, and it
   now anchors that visibility/repro surface to an explicit popup viewport wrapper instead of
   relying on a scroll semantics node that can collapse to zero-height in diagnostics geometry,
+- popup-surface convergence is now also backed by focused screenshot evidence across those consumer
+  classes: `tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-popup-screenshots.json`,
+  `tools/diag-scripts/ui-editor/imui/imui-editor-proof-inspector-search-assist-popup-screenshots.json`,
+  `tools/diag-scripts/ui-editor/imui/imui-editor-proof-enum-select-selected-row-reveal.json`, and
+  `tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-color-popup-screenshots.json`
+  now keep popup geometry and chrome reviewable without reopening the full proof surface manually,
 - and the remaining foundation cleanup is now mostly about promoting the next layer above that
   baseline: only the popup/scroll/selection behaviors that gain real multi-consumer evidence should
   move further into shared kit policy, alongside richer password/history integrations, targeted

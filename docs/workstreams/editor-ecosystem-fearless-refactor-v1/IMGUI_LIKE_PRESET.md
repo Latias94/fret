@@ -82,7 +82,11 @@ It should seed or alias existing namespaces.
 | `editor.numeric.scrub_speed` | direct | Numeric drag should feel immediate, not soft. |
 | `editor.numeric.scrub_drag_threshold` | low | Start scrubbing quickly. |
 | `editor.property.column_gap` | compact | Inspector columns should feel dense. |
+| `editor.property.panel_header_bg` / `editor.property.panel_header_border` | slightly stronger than repeated section headers | Keep the top inspector band legible without making every section bar equally heavy. |
+| `editor.property.group_border` | subtler than the outer panel frame | Dense sections should stay readable without reintroducing heavy nested cards. |
 | `editor.property.group_header_height` | compact | Keep group headers tight. |
+| `editor.popup.bg` / `editor.popup.border` | dark, panel-like, slightly lifted above fields | Keep assist/select/color popups in the same dense editor family instead of inheriting a light host `popover`. |
+| `editor.popup.radius` / `editor.popup.shadow_*` | tighter than default | Keep the imgui-like preset popup silhouette and elevation compact without per-control chrome forks. |
 | `editor.checkbox.size` | compact | Visual checkbox square stays dense. |
 | `editor.checkbox.radius` | near-zero or small | Prefer squarer frames. |
 | `editor.slider.track_height` | compact | Thin but readable track. |
@@ -201,9 +205,29 @@ Current implementation note:
 - the current dense preset has already picked up the first screenshot-reviewed tail calibration
   from the default baseline follow-up work: denser trailing gap plus a tighter status lane keep
   populated percent/status readouts compact without forking the underlying widget implementations
+- the same pass now also inherits the shared compact readout text primitive used by the default
+  preset, so dense slider/value readouts and proof committed/outcome labels stay typographically
+  aligned without promoting proof-only layout shells into the reusable surface
+- the latest dense screenshot pass now also keeps `editor.property.group_border` distinct from the
+  outer panel frame, so dense section hierarchy stays legible without reverting to a brighter
+  card-within-card outline
+- the same dense pass now also gives the top inspector header band its own token pair apart from
+  repeated section headers, so the review surface keeps one clear outer band instead of many equal
+  separator stripes
+- the latest dense hierarchy rerun then strengthens that top band a little more while quieting the
+  repeated group headers beneath it, so the imgui-like preset keeps a clearer shell-vs-section
+  split without adding extra padding or a brighter nested-card look
+- the dense/default editor preset path now also seeds `editor.popup.*`, so assist/select/color
+  popups stay inside the same dark editor family instead of leaking the host theme's `popover`
+  surface into the proof
 - the current `imui` enum-select proof path uses per-item `test_id`s and `click_stable` with
   `stable_frames: 1`, because the popup item can stop being hit-testable after an extra
   stabilization frame in this proof surface
+- focused popup screenshot coverage now also exists for the main popup consumers:
+  `imui-editor-proof-name-assist-popup-screenshots.json`,
+  `imui-editor-proof-inspector-search-assist-popup-screenshots.json`,
+  `imui-editor-proof-enum-select-selected-row-reveal.json`, and
+  `imui-editor-proof-gradient-stop-color-popup-screenshots.json`
 - the current namespace inventory and v1 ownership plan now live in
   `docs/workstreams/editor-ecosystem-fearless-refactor-v1/TOKEN_INVENTORY.md`
 

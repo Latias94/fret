@@ -182,11 +182,28 @@ fn editor_theme_patch_v1() -> ThemeConfig {
     color(&mut cfg, "muted-foreground", "#9eabbc");
     color(&mut cfg, "accent", "#355a86");
     color(&mut cfg, "ring", "#7faee8");
+    color(&mut cfg, EditorTokenKeys::POPUP_BG, "#131b25");
+    color(&mut cfg, EditorTokenKeys::POPUP_BORDER, "#46596c");
+    metric(&mut cfg, EditorTokenKeys::POPUP_RADIUS, 8.0);
+    metric(&mut cfg, EditorTokenKeys::POPUP_SHADOW_OFFSET_Y, 6.0);
+    metric(&mut cfg, EditorTokenKeys::POPUP_SHADOW_BLUR, 16.0);
+    metric(&mut cfg, EditorTokenKeys::POPUP_SHADOW_SPREAD, -4.0);
 
     color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BG, "#0f151d");
     color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BORDER, "#3d4d5f");
-    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BG, "#202b38");
-    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BORDER, "#4a5c70");
+    color(
+        &mut cfg,
+        EditorTokenKeys::PROPERTY_PANEL_HEADER_BG,
+        "#243445",
+    );
+    color(
+        &mut cfg,
+        EditorTokenKeys::PROPERTY_PANEL_HEADER_BORDER,
+        "#5a7087",
+    );
+    color(&mut cfg, EditorTokenKeys::PROPERTY_GROUP_BORDER, "#33414f");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BG, "#19232e");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BORDER, "#384857");
     color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_FG, "#edf3fa");
 
     color(&mut cfg, EditorTokenKeys::CONTROL_INVALID_FG, "#ffd3d6");
@@ -265,11 +282,28 @@ fn imgui_like_dense_patch_v1() -> ThemeConfig {
     color(&mut cfg, "muted-foreground", "#acb4bf");
     color(&mut cfg, "accent", "#4c88c7");
     color(&mut cfg, "ring", "#6ea8e0");
+    color(&mut cfg, EditorTokenKeys::POPUP_BG, "#24292f");
+    color(&mut cfg, EditorTokenKeys::POPUP_BORDER, "#687686");
+    metric(&mut cfg, EditorTokenKeys::POPUP_RADIUS, 4.0);
+    metric(&mut cfg, EditorTokenKeys::POPUP_SHADOW_OFFSET_Y, 4.0);
+    metric(&mut cfg, EditorTokenKeys::POPUP_SHADOW_BLUR, 12.0);
+    metric(&mut cfg, EditorTokenKeys::POPUP_SHADOW_SPREAD, -3.0);
 
     color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BG, "#1d2127");
     color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BORDER, "#54606d");
-    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BG, "#303841");
-    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BORDER, "#6a7887");
+    color(
+        &mut cfg,
+        EditorTokenKeys::PROPERTY_PANEL_HEADER_BG,
+        "#36414c",
+    );
+    color(
+        &mut cfg,
+        EditorTokenKeys::PROPERTY_PANEL_HEADER_BORDER,
+        "#728294",
+    );
+    color(&mut cfg, EditorTokenKeys::PROPERTY_GROUP_BORDER, "#47515d");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BG, "#283039");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BORDER, "#56626f");
     color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_FG, "#e6e8eb");
 
     color(&mut cfg, EditorTokenKeys::CONTROL_INVALID_FG, "#ffcbc7");
@@ -371,12 +405,52 @@ mod tests {
             Some(Color::from_srgb_hex_rgb(0x0f_15_1d))
         );
         assert_eq!(
+            theme.color_by_key(EditorTokenKeys::POPUP_BG),
+            Some(Color::from_srgb_hex_rgb(0x13_1b_25))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::POPUP_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x46_59_6c))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::POPUP_RADIUS),
+            Some(Px(8.0))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::POPUP_SHADOW_OFFSET_Y),
+            Some(Px(6.0))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::POPUP_SHADOW_BLUR),
+            Some(Px(16.0))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::POPUP_SHADOW_SPREAD),
+            Some(Px(-4.0))
+        );
+        assert_eq!(
             theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_BORDER),
             Some(Color::from_srgb_hex_rgb(0x3d_4d_5f))
         );
         assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_BG),
+            Some(Color::from_srgb_hex_rgb(0x24_34_45))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x5a_70_87))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_GROUP_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x33_41_4f))
+        );
+        assert_eq!(
             theme.color_by_key(EditorTokenKeys::PROPERTY_HEADER_BG),
-            Some(Color::from_srgb_hex_rgb(0x20_2b_38))
+            Some(Color::from_srgb_hex_rgb(0x19_23_2e))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_HEADER_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x38_48_57))
         );
         assert_eq!(
             theme.color_by_key(EditorTokenKeys::CONTROL_INVALID_BORDER),
@@ -415,6 +489,46 @@ mod tests {
             Some(Px(22.0))
         );
         assert_eq!(
+            theme.color_by_key(EditorTokenKeys::POPUP_BG),
+            Some(Color::from_srgb_hex_rgb(0x24_29_2f))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::POPUP_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x68_76_86))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::POPUP_RADIUS),
+            Some(Px(4.0))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::POPUP_SHADOW_OFFSET_Y),
+            Some(Px(4.0))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::POPUP_SHADOW_BLUR),
+            Some(Px(12.0))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::POPUP_SHADOW_SPREAD),
+            Some(Px(-3.0))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_BG),
+            Some(Color::from_srgb_hex_rgb(0x36_41_4c))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x72_82_94))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_HEADER_BG),
+            Some(Color::from_srgb_hex_rgb(0x28_30_39))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_HEADER_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x56_62_6f))
+        );
+        assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_GROUP_CONTENT_GAP),
             Some(Px(6.0))
         );
@@ -447,8 +561,24 @@ mod tests {
             Some(Color::from_srgb_hex_rgb(0x1d_21_27))
         );
         assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_BG),
+            Some(Color::from_srgb_hex_rgb(0x36_41_4c))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x72_82_94))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_GROUP_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x47_51_5d))
+        );
+        assert_eq!(
             theme.color_by_key(EditorTokenKeys::PROPERTY_HEADER_BG),
-            Some(Color::from_srgb_hex_rgb(0x30_38_41))
+            Some(Color::from_srgb_hex_rgb(0x28_30_39))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_HEADER_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x56_62_6f))
         );
         assert_eq!(
             theme.color_by_key(EditorTokenKeys::CONTROL_INVALID_BG),
