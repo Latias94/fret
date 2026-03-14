@@ -63,6 +63,8 @@ Deliverables:
   lanes,
 - one editor-owned trailing affordance baseline so reset/clear/remove/icon actions stop drifting
   between narrow hit targets and row-height targets,
+- proof-local outcome/readout instrumentation that follows the same lane grammar, so idle states
+  collapse instead of reserving dead width or dead row height on review surfaces,
 - stronger typed-edit, focus, active, and invalid state clarity,
 - screenshot proof coverage for the neutral default baseline,
 - focused authoring-affordance screenshots that pin clear-button alignment and percent readout
@@ -107,6 +109,8 @@ Exit gates:
 - authoring-parity screenshots make clear-button alignment and percent slider composition reviewable
   without manual proof setup,
 - the screenshot proof can switch into a review-only composition without manual window/layout setup,
+- idle proof-local outcome placeholders no longer waste right-lane width or idle row height on the
+  promoted review surface while committed/canceled readouts remain diagnosable,
 - starter-set controls share one layout/state grammar instead of per-control heuristics,
 - repeated screenshot runs reset proof-local filter/search state instead of depending on a fresh
   launch,

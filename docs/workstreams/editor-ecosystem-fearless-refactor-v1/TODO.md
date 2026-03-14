@@ -58,9 +58,16 @@ Interaction contract:
       `PropertyGridVirtualized`, `PropertyGroup`, and `InspectorPanel`, and the row grammar is now
       explicit (`label -> value -> reset slot -> status/actions slot`). Trailing affordances now
       converge on a row-height-square baseline across property-row reset buttons, joined-input
-      clear/remove segments, and gradient-row icon actions.
-      Remaining work: tune wide-inspector slack, badge/status lane balance, and any dense-mode
-      overrides from screenshot review rather than ad-hoc per-demo tweaks.
+      clear/remove segments, and gradient-row icon actions. Empty reset/status lanes now collapse
+      when unused, and the shared default value-lane cap was widened in the screenshot-reviewed
+      baseline so default inspector rows stop pinning common controls to half-width on large review
+      surfaces. Proof-local trailing numeric outcome readouts now also start empty and collapse
+      their slot until a real commit/cancel outcome exists, and the same empty-state rule now also
+      removes the text-session full-row password/notes outcome rows until those surfaces emit a
+      real outcome, which keeps the promoted proof aligned with the shared lane grammar instead of
+      reserving dead width or dead row height for `Idle`.
+      Remaining work: finish non-empty badge/readout density and calibrate any dense-mode overrides
+      from screenshot review rather than ad-hoc per-demo tweaks.
 - [x] `EER-BASE-113` Make typed-edit, focus, active, and invalid states visually explicit across
       numeric, text, and select-like controls.
       `EditorWidgetVisuals` now owns a shared semantic layer for typed-edit and invalid field
@@ -77,9 +84,16 @@ Interaction contract:
       via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-authoring-affordances-screenshots-default.json`,
       which pins populated text-field clear buttons plus percent slider readouts on the proof
-      surface where the original visual regressions showed up.
-      Remaining work: keep these compositions stable while token/layout cleanup continues and
-      extend the same review discipline to adjacent proof surfaces.
+      surface where the original visual regressions showed up. The same full-layout proof now also
+      keeps its preface materially shorter: proof metadata was reduced, and the shared-state
+      readout was compressed so screenshot review centers the paired authoring columns instead of a
+      tall block of explanatory text. The default overview / typing / validation screenshot proof
+      was rerun after tightening both trailing and full-row proof-local outcomes, so the
+      review-only composition now also proves empty proof readouts do not reappear as right-lane
+      gaps or idle spacer rows.
+      Remaining work: keep these compositions stable while token/layout cleanup continues, extend
+      the same review discipline to adjacent proof surfaces, and do one more density pass on the
+      remaining non-empty proof readouts.
 - [x] `EER-BASE-115` Add screenshot/diag coverage for the neutral default editor baseline.
       The default screenshot proof now exists via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-default.json`,
@@ -309,8 +323,12 @@ Interaction contract:
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-authoring-affordances-screenshots-default.json`;
       the anchored-overlay assist path now also has a focused popup screenshot proof via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-popup-screenshots.json`.
-      Their next job is to drive token/layout cleanup, not just exist, and to stay aligned with the
-      new shared inspector lane grammar plus the authoring proof surfaces where clear-affordance,
+      The default baseline screenshot proof was rerun again after the proof-local outcome
+      tightening, confirming that empty numeric and text-session outcome states collapse instead of
+      leaving dead trailing width or idle spacer rows while typing / validation screenshots remain
+      stable. Their next job is to drive token/layout cleanup, not just exist, and to stay aligned
+      with the new shared inspector lane grammar plus the authoring proof surfaces where
+      clear-affordance,
       affix, and popup-geometry regressions tend to show up first.
 - [x] `EER-GATE-136` Close the screenshot-runner finalization gap for editor typed-edit proof.
       The default baseline script now resets the proof search field up front so repeated runs do

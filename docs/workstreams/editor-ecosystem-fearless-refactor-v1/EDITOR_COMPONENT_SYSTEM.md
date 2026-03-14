@@ -11,7 +11,7 @@ Related docs:
 
 Status: Active design note (workstream contract, not an ADR)
 
-Last updated: 2026-03-13
+Last updated: 2026-03-14
 
 ## Purpose
 
@@ -320,8 +320,8 @@ Reusable inspector/property surfaces should default to one shared lane model:
 
 - a scan-aligned label lane,
 - a value lane that can fill but stays capped to a readable maximum,
-- a reserved reset slot,
-- and a reserved status/actions slot.
+- an optional reset slot that preserves ordering but collapses when absent,
+- and an optional status/actions slot that preserves ordering but collapses when absent.
 
 Implications:
 
@@ -330,9 +330,13 @@ Implications:
   restating their own hardcoded spacing,
 - reset/clear/remove/icon affordances should default to a shared row-height-square target even when
   the visible chrome remains denser,
-- rows that genuinely do not want trailing affordances may explicitly collapse those slots,
-- and wide inspectors should keep alignment stable before trying to stretch every value field to
-  the full panel width.
+- rows that genuinely do not want trailing affordances should collapse those slots by default rather
+  than reserving dead width,
+- proof-only outcome instrumentation should follow the same rule whether it lives in a trailing
+  lane or a whole readout row: idle/empty state should not reserve right-lane width or idle row
+  height, and only material commit/cancel/error states should claim that space,
+- and wide inspectors should first let the shared value lane grow toward a readable cap before
+  accepting large pools of empty panel slack.
 
 ### Visual density vs usability
 

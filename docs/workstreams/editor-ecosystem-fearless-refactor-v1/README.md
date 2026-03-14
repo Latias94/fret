@@ -2,7 +2,7 @@
 
 Status: **in progress**
 
-Last updated: **2026-03-13**
+Last updated: **2026-03-14**
 
 Goal: turn Fret's editor-facing crates into one coherent product line without collapsing crate
 boundaries, creating a second widget library, or coupling reusable editor surfaces to one design
@@ -50,6 +50,9 @@ Current checkpoint:
 - shared inspector layout metrics now drive `PropertyRow`, `PropertyGrid`,
   `PropertyGridVirtualized`, `PropertyGroup`, and `InspectorPanel`,
 - the row grammar is now explicit (`label lane -> value lane -> reset slot -> status/actions slot`),
+- optional trailing lanes now collapse when a row has no reset/status affordance, while the shared
+  wide-inspector value cap was raised so review surfaces stop stranding common editor fields at
+  half-panel width,
 - editor trailing affordances now converge on a row-height-square baseline across property-row
   reset actions, joined-input clear/remove buttons, and gradient-row icon actions,
 - status badges and reset affordances now carry explicit idle chrome instead of relying on bare text
@@ -114,6 +117,13 @@ Current checkpoint:
   `imui-editor-proof.editor.advanced.transform.outcome` readouts, and the focused diagnostics gate
   `tools/diag-scripts/ui-editor/imui/imui-editor-proof-advanced-axis-outcomes.json` proves typed
   commit/cancel on those composite surfaces directly,
+- proof-local outcome readouts now follow the same optional-lane / optional-row contract as the
+  rest of the inspector grammar: default idle state renders neither trailing numeric outcome
+  elements nor the text-session full-row outcome readouts, while committed/canceled states still
+  materialize stable readouts for diagnostics. The drag-value, advanced-axis, buffered single-line,
+  and multiline text-session gates were rerun against that tighter empty-state baseline, and the
+  latest default screenshot proof confirms those proof-local `Idle` placeholders no longer strand
+  dead width or dead row height on the review surface,
 - editor preset replay is no longer proof-demo-local glue only: the editor theme helpers now expose
   a reusable "host theme sync, then editor preset replay" path for `WindowMetricsService`-driven
   resets, and the promoted proof demo uses that shared ordering,
@@ -121,6 +131,9 @@ Current checkpoint:
 - the full authoring proof surface now also has a focused affordance screenshot gate for populated
   text-field clear buttons and percent slider readouts so icon alignment and affix composition stay
   reviewable under proof-demo refactors,
+- that full authoring surface now also keeps its explanatory/meta text compressed into a shorter
+  preface plus two-line shared-state readout, so screenshot review stays focused on the paired
+  authoring columns instead of the proof chrome around them,
 - `imgui_like_dense` now has a matching screenshot proof so default-vs-dense baseline review does
   not depend on ad-hoc manual launches,
 - `imui_editor_proof_demo` now also exposes committed/outcome readouts plus focused diag coverage
@@ -171,8 +184,10 @@ Current checkpoint:
 - and the remaining foundation cleanup is now mostly about promoting the next layer above that
   baseline: only the popup/scroll/selection behaviors that gain real multi-consumer evidence should
   move further into shared kit policy, alongside richer password/history integrations, targeted
-  `BlurBehavior::Cancel` / `PreserveDraft` adoption on real editor surfaces, and follow-up tuning
-  for wide-inspector slack after the new lane grammar landed.
+  `BlurBehavior::Cancel` / `PreserveDraft` adoption on real editor surfaces, and final cleanup for
+  the remaining non-empty proof-local status/readout density plus dense-preset lane calibration now
+  that the worst wide-inspector slack, trailing idle-lane waste, and idle proof-row height have
+  all been pulled back.
 
 Until those are in better shape, new promoted reusable components should be treated as lower
 priority than baseline correction.
