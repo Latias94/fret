@@ -147,7 +147,7 @@ fn editor_theme_patch_v1() -> ThemeConfig {
     metric(&mut cfg, EditorTokenKeys::PROPERTY_TRAILING_GAP, 6.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_ROW_GAP, 5.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_VALUE_MAX_WIDTH, 1024.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_STATUS_SLOT_WIDTH, 60.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_STATUS_SLOT_WIDTH, 56.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_RESET_SLOT_WIDTH, 24.0);
     metric(
         &mut cfg,
@@ -224,10 +224,10 @@ fn imgui_like_dense_patch_v1() -> ThemeConfig {
     metric(&mut cfg, EditorTokenKeys::NUMERIC_SCRUB_DRAG_THRESHOLD, 2.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_LABEL_WIDTH, 120.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_COLUMN_GAP, 6.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_TRAILING_GAP, 4.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_TRAILING_GAP, 3.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_ROW_GAP, 4.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_VALUE_MAX_WIDTH, 840.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_STATUS_SLOT_WIDTH, 56.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_STATUS_SLOT_WIDTH, 48.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_RESET_SLOT_WIDTH, 22.0);
     metric(
         &mut cfg,
@@ -336,7 +336,7 @@ mod tests {
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_STATUS_SLOT_WIDTH),
-            Some(Px(60.0))
+            Some(Px(56.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_RESET_SLOT_WIDTH),
@@ -400,7 +400,7 @@ mod tests {
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_TRAILING_GAP),
-            Some(Px(4.0))
+            Some(Px(3.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_VALUE_MAX_WIDTH),
@@ -408,7 +408,7 @@ mod tests {
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_STATUS_SLOT_WIDTH),
-            Some(Px(56.0))
+            Some(Px(48.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_RESET_SLOT_WIDTH),

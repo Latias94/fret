@@ -5,7 +5,8 @@ use fret::advanced::interop::embedded_viewport as embedded;
 use fret::view::ViewWindowState;
 use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
-use fret_core::{Color, PanelKind, Px};
+use fret_core::text::{TextOverflow, TextWrap};
+use fret_core::{Color, PanelKind, Px, TextAlign, TextStyle};
 use fret_docking::{
     DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx, DockPanelRegistryBuilder,
     DockPanelRegistryService, ViewportPanel, runtime as dock_runtime,
@@ -15,7 +16,7 @@ use fret_runtime::{
     ActivationPolicy, FrameId, Model, PlatformCapabilities, TickId, WindowHoverDetectionQuality,
     WindowRole, WindowStyleRequest,
 };
-use fret_ui::element::{LayoutStyle, Length, SizeStyle};
+use fret_ui::element::{LayoutStyle, Length, SizeStyle, TextProps};
 use fret_ui_editor::composites::{
     GradientEditor, GradientEditorOptions, GradientStopBinding, InspectorPanel,
     InspectorPanelOptions, InspectorPanelSearchAssistOptions, PropertyGrid, PropertyGroup,
@@ -32,12 +33,13 @@ use fret_ui_editor::controls::{
     VecEditOptions,
 };
 use fret_ui_editor::imui as editor_imui;
-use fret_ui_editor::primitives::EditSessionOutcome;
+use fret_ui_editor::primitives::{EditSessionOutcome, EditorTokenKeys};
 use fret_ui_editor::theme::EditorThemePresetV1;
 use fret_ui_kit::headless::text_assist::{
     TextAssistItem, TextAssistMatch, TextAssistMatchMode, controller_with_active_item_id,
     input_owned_text_assist_expanded,
 };
+use fret_ui_kit::typography;
 
 const VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
 const AUX_LOGICAL_WINDOW_ID: &str = "aux";
@@ -171,11 +173,51 @@ fn proof_optional_outcome_readout<H: UiHost>(
         return None;
     }
 
-    Some(
-        cx.text(outcome.clone())
-            .test_id(test_id)
-            .a11y_label(outcome),
-    )
+    Some(proof_compact_readout(cx, outcome, Some(test_id)))
+}
+
+fn proof_compact_readout<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    readout: String,
+    test_id: Option<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    let theme = fret_ui::Theme::global(&*cx.app);
+    let row_height = theme
+        .metric_by_key(EditorTokenKeys::DENSITY_ROW_HEIGHT)
+        .unwrap_or(Px(24.0));
+    let fg = theme
+        .color_by_key("muted-foreground")
+        .or_else(|| theme.color_by_key("muted_foreground"))
+        .unwrap_or_else(|| theme.color_token("foreground"));
+    let readout = Arc::<str>::from(readout);
+
+    let mut el = cx.text_props(TextProps {
+        layout: LayoutStyle {
+            size: SizeStyle {
+                width: Length::Fill,
+                height: Length::Auto,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        text: readout.clone(),
+        style: Some(typography::as_control_text(TextStyle {
+            size: Px(11.0),
+            line_height: Some(row_height),
+            ..Default::default()
+        })),
+        color: Some(fg),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Ellipsis,
+        align: TextAlign::Start,
+        ink_overflow: Default::default(),
+    });
+
+    if let Some(test_id) = test_id {
+        el = el.test_id(test_id);
+    }
+
+    el.a11y_label(readout)
 }
 
 fn committed_line_count_label(text: &str) -> String {
@@ -850,11 +892,13 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                 .unwrap_or_default();
                                                             let readout =
                                                                 format!("{} chars committed", committed.chars().count());
-                                                            cx.text(readout.clone())
-                                                                .test_id(
+                                                            proof_compact_readout(
+                                                                cx,
+                                                                readout,
+                                                                Some(Arc::from(
                                                                     "imui-editor-proof.editor.object.password.committed-length",
-                                                                )
-                                                                .a11y_label(readout)
+                                                                )),
+                                                            )
                                                         },
                                                         |_cx| None,
                                                     ));
@@ -876,11 +920,13 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                             move |cx| {
                                                                 let outcome =
                                                                     password_outcome.clone();
-                                                                cx.text(outcome.clone())
-                                                                    .test_id(
+                                                                proof_compact_readout(
+                                                                    cx,
+                                                                    outcome,
+                                                                    Some(Arc::from(
                                                                         "imui-editor-proof.editor.object.password.outcome",
-                                                                    )
-                                                                    .a11y_label(outcome)
+                                                                    )),
+                                                                )
                                                             },
                                                             |_cx| None,
                                                         ));
@@ -900,11 +946,13 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                 .paint()
                                                                 .cloned()
                                                                 .unwrap_or_default();
-                                                            cx.text(committed.clone())
-                                                                .test_id(
+                                                            proof_compact_readout(
+                                                                cx,
+                                                                committed,
+                                                                Some(Arc::from(
                                                                     "imui-editor-proof.editor.object.buffered-name.committed",
-                                                                )
-                                                                .a11y_label(committed)
+                                                                )),
+                                                            )
                                                         },
                                                         |_cx| None,
                                                     ));
@@ -975,11 +1023,13 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                 &dismissed_query,
                                                                 visible_count,
                                                             );
-                                                            cx.text(state.clone())
-                                                                .test_id(
+                                                            proof_compact_readout(
+                                                                cx,
+                                                                state,
+                                                                Some(Arc::from(
                                                                     "imui-editor-proof.editor.object.name-assist.state",
-                                                                )
-                                                                .a11y_label(state)
+                                                                )),
+                                                            )
                                                         },
                                                         |_cx| None,
                                                     ));
@@ -1036,11 +1086,13 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                             } else {
                                                                 "None".to_string()
                                                             };
-                                                            cx.text(active_label.clone())
-                                                                .test_id(
+                                                            proof_compact_readout(
+                                                                cx,
+                                                                active_label,
+                                                                Some(Arc::from(
                                                                     "imui-editor-proof.editor.object.name-assist.active",
-                                                                )
-                                                                .a11y_label(active_label)
+                                                                )),
+                                                            )
                                                         },
                                                         |_cx| None,
                                                     ));
@@ -1064,11 +1116,13 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                             } else {
                                                                 accepted
                                                             };
-                                                            cx.text(readout.clone())
-                                                                .test_id(
+                                                            proof_compact_readout(
+                                                                cx,
+                                                                readout,
+                                                                Some(Arc::from(
                                                                     "imui-editor-proof.editor.object.name-assist.accepted",
-                                                                )
-                                                                .a11y_label(readout)
+                                                                )),
+                                                            )
                                                         },
                                                         |_cx| None,
                                                     ));
@@ -1134,11 +1188,13 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                 .unwrap_or_default();
                                                             let readout =
                                                                 committed_line_count_label(&committed);
-                                                            cx.text(readout.clone())
-                                                                .test_id(
+                                                            proof_compact_readout(
+                                                                cx,
+                                                                readout,
+                                                                Some(Arc::from(
                                                                     "imui-editor-proof.editor.object.notes.committed-lines",
-                                                                )
-                                                                .a11y_label(readout)
+                                                                )),
+                                                            )
                                                         },
                                                         |_cx| None,
                                                     ));
@@ -1158,11 +1214,13 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                             move |cx| {
                                                                 let outcome =
                                                                     notes_outcome.clone();
-                                                                cx.text(outcome.clone())
-                                                                    .test_id(
+                                                                proof_compact_readout(
+                                                                    cx,
+                                                                    outcome,
+                                                                    Some(Arc::from(
                                                                         "imui-editor-proof.editor.object.notes.outcome",
-                                                                    )
-                                                                    .a11y_label(outcome)
+                                                                    )),
+                                                                )
                                                             },
                                                             |_cx| None,
                                                         ));

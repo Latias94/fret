@@ -577,6 +577,10 @@ where
 
                 let thumb_bg = alpha_mul(thumb_bg, disabled_alpha);
                 let thumb_border = alpha_mul(thumb_border, disabled_alpha);
+                let readout_fg = theme
+                    .color_by_key("muted-foreground")
+                    .or_else(|| theme.color_by_key("muted_foreground"))
+                    .unwrap_or(theme.color_token("foreground"));
 
                 let left_grow = t.clamp(0.0, 1.0);
                 let right_grow = (1.0 - left_grow).max(0.0);
@@ -704,6 +708,7 @@ where
                         );
 
                         let value_el = if show_value {
+                            let readout_text_px = Px((frame.text_px.0 - 1.0).max(11.0));
                             let mut value_text_el = cx.text_props(TextProps {
                                 layout: LayoutStyle {
                                     size: SizeStyle {
@@ -715,11 +720,11 @@ where
                                 },
                                 text: value_display_text.clone(),
                                 style: Some(typography::as_control_text(TextStyle {
-                                    size: frame.text_px,
+                                    size: readout_text_px,
                                     line_height: Some(density.row_height),
                                     ..Default::default()
                                 })),
-                                color: Some(frame_visuals.fg),
+                                color: Some(readout_fg),
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
                                 align: TextAlign::End,

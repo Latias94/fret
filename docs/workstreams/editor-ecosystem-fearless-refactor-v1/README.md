@@ -58,6 +58,15 @@ Current checkpoint:
 - status badges and reset affordances now carry explicit idle chrome instead of relying on bare text
   or fully filled pills, which makes dirty/mixed/loading/error cues read more like inspector state
   markers than ad-hoc demo labels,
+- the latest default screenshot rerun now also compacts those status badges into darker
+  field-chrome-aligned micro-tags and trims the shared status lane, so populated Material rows stop
+  showing bright floating pills beside percent readouts,
+- the follow-up readout pass now also keeps populated slider values and proof-only
+  committed/outcome labels in a muted compact readout style, so non-empty diagnostics text stops
+  competing with editable values,
+- the imgui-like dense preset now has a first matching calibration pass for the same tail grammar:
+  its trailing gap and status lane were tightened again after screenshot review, so dense rows keep
+  the lower-noise readout treatment without reopening wide right-lane slack,
 - default inspector hierarchy tokens now bias a little more toward editor-style section structure:
   taller group headers, more content/panel spacing, stronger section borders, and clearer
   header/body contrast bands,

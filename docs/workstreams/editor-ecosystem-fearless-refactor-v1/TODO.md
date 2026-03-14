@@ -38,12 +38,14 @@ Interaction contract:
       field chrome, contrast bands, separators, label/readout clarity, and group hierarchy.
       Recent progress: trailing affordances now use a shared row-height-square baseline, property-row
       reset actions keep subtle idle chrome, and field-status badges now use short labels plus
-      border-defined semantic tones instead of raw filled pills. Default inspector hierarchy tokens
-      now also give property groups taller headers, stronger header/body contrast, clearer section
-      borders, and a bit more panel/content separation. `InspectorPanel` now renders its own header
-      band/separator with stronger section framing instead of letting search/toolbar chrome visually
-      merge into the first section, and `PropertyGroup` content now has a little more vertical
-      breathing room so section bodies stop reading as one uninterrupted slab.
+      border-defined semantic tones instead of raw filled pills, and the latest default rerun
+      further compacts them into darker field-chrome micro-tags while narrowing the shared status
+      slot to `56px`. Default inspector hierarchy tokens now also give property groups taller
+      headers, stronger header/body contrast, clearer section borders, and a bit more panel/content
+      separation. `InspectorPanel` now renders its own header band/separator with stronger section
+      framing instead of letting search/toolbar chrome visually merge into the first section, and
+      `PropertyGroup` content now has a little more vertical breathing room so section bodies stop
+      reading as one uninterrupted slab.
       Remaining work: do one more screenshot-driven pass on separator weight and the final balance
       between neutral default and editor-specific contrast.
 - [~] `EER-BASE-111` Finish `EditorWidgetVisuals` convergence for the existing starter-set controls
@@ -67,9 +69,17 @@ Interaction contract:
       their slot until a real commit/cancel outcome exists, and the same empty-state rule now also
       removes the text-session full-row password/notes outcome rows until those surfaces emit a
       real outcome, which keeps the promoted proof aligned with the shared lane grammar instead of
-      reserving dead width or dead row height for `Idle`.
-      Remaining work: finish non-empty badge/readout density and calibrate any dense-mode overrides
-      from screenshot review rather than ad-hoc per-demo tweaks.
+      reserving dead width or dead row height for `Idle`. The next density pass also softens
+      non-empty readouts themselves: slider value displays now sit back as muted trailing readouts
+      instead of reading like another editable text segment, and proof-only committed/outcome rows
+      now reuse the same compact muted readout treatment so diagnostics labels stop visually
+      overpowering the editable controls they describe. The dense imgui-like preset now also has a
+      first dedicated calibration pass for that same tail grammar (`PROPERTY_TRAILING_GAP=3`,
+      `PROPERTY_STATUS_SLOT_WIDTH=48`) so dense overview rows stop keeping more right-lane slack
+      than the updated default baseline.
+      Remaining work: calibrate any dense-mode overrides from screenshot review rather than ad-hoc
+      per-demo tweaks, and decide whether more of that readout treatment should be lifted into a
+      reusable editor primitive rather than staying proof-local.
 - [x] `EER-BASE-113` Make typed-edit, focus, active, and invalid states visually explicit across
       numeric, text, and select-like controls.
       `EditorWidgetVisuals` now owns a shared semantic layer for typed-edit and invalid field
@@ -90,9 +100,14 @@ Interaction contract:
       keeps its preface materially shorter: proof metadata was reduced, and the shared-state
       readout was compressed so screenshot review centers the paired authoring columns instead of a
       tall block of explanatory text. The default overview / typing / validation screenshot proof
-      was rerun after tightening both trailing and full-row proof-local outcomes, so the
-      review-only composition now also proves empty proof readouts do not reappear as right-lane
-      gaps or idle spacer rows.
+      was rerun after tightening both trailing and full-row proof-local outcomes and after
+      compacting populated status badges, so the review-only composition now also proves empty proof
+      readouts do not reappear as right-lane gaps or idle spacer rows while populated status cues
+      stay inside the same dark field-chrome family. The follow-up default and authoring screenshot
+      reruns now also keep non-empty slider/value/outcome readouts in a muted compact style, which
+      makes the proof surface materially easier to scan when diagnostics rows are populated. The
+      dense screenshot proof was rerun after a dense-only tail calibration pass and now confirms
+      the tighter right-lane treatment survives the compact preset as well.
       Remaining work: keep these compositions stable while token/layout cleanup continues, extend
       the same review discipline to adjacent proof surfaces, and do one more density pass on the
       remaining non-empty proof readouts.
@@ -326,11 +341,16 @@ Interaction contract:
       the anchored-overlay assist path now also has a focused popup screenshot proof via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-popup-screenshots.json`.
       The default baseline screenshot proof was rerun again after the proof-local outcome
-      tightening, confirming that empty numeric and text-session outcome states collapse instead of
-      leaving dead trailing width or idle spacer rows while typing / validation screenshots remain
-      stable. Their next job is to drive token/layout cleanup, not just exist, and to stay aligned
-      with the new shared inspector lane grammar plus the authoring proof surfaces where
-      clear-affordance,
+      tightening and the populated status-badge compaction pass, confirming that empty numeric and
+      text-session outcome states collapse instead of leaving dead trailing width or idle spacer
+      rows while populated `Mixed` / `Loading` cues no longer reintroduce bright floating pills on
+      the default overview surface. The follow-up reruns on both the default review surface and the
+      authoring-affordance surface also confirmed that populated `%` value readouts plus
+      committed/outcome proof labels can stay visible without reading like primary editable text.
+      The dense preset proof was rerun too, confirming the same muted readout treatment still fits
+      after pulling its trailing gap/status slot slightly tighter.
+      Their next job is to drive token/layout cleanup, not just exist, and to stay aligned with the
+      new shared inspector lane grammar plus the authoring proof surfaces where clear-affordance,
       affix, and popup-geometry regressions tend to show up first.
 - [x] `EER-GATE-136` Close the screenshot-runner finalization gap for editor typed-edit proof.
       The default baseline script now resets the proof search field up front so repeated runs do

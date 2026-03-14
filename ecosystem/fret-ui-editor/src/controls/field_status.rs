@@ -11,7 +11,7 @@ use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, SizeStyl
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::typography;
 
-use crate::primitives::EditorDensity;
+use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 #[derive(Debug, Clone)]
 pub enum FieldStatus {
@@ -24,7 +24,7 @@ pub enum FieldStatus {
 impl FieldStatus {
     pub fn label(&self) -> Arc<str> {
         match self {
-            Self::Loading => Arc::from("Loading…"),
+            Self::Loading => Arc::from("Loading"),
             Self::Dirty => Arc::from("Dirty"),
             Self::Mixed => Arc::from("Mixed"),
             Self::Error(_) => Arc::from("Error"),
@@ -78,10 +78,10 @@ impl FieldStatusBadge {
 
         let (bg, border, fg, label) = status_badge_palette(theme, &self.status);
 
-        let badge_h = Px((density.row_height.0 - 4.0).max(14.0));
+        let badge_h = Px((density.row_height.0 - 6.0).max(14.0));
         let text_style = typography::as_control_text(TextStyle {
-            size: Px(10.0),
-            weight: FontWeight::SEMIBOLD,
+            size: Px(9.0),
+            weight: FontWeight::MEDIUM,
             line_height: Some(badge_h),
             ..Default::default()
         });
@@ -89,11 +89,11 @@ impl FieldStatusBadge {
         cx.container(
             ContainerProps {
                 layout: self.options.layout,
-                padding: Edges::symmetric(Px(6.0), Px(0.0)).into(),
+                padding: Edges::symmetric(Px(5.0), Px(0.0)).into(),
                 background: Some(bg),
                 border: Edges::all(Px(1.0)),
                 border_color: Some(border),
-                corner_radii: Corners::all(Px(6.0)),
+                corner_radii: Corners::all(Px(4.0)),
                 ..Default::default()
             },
             move |cx| {
@@ -120,10 +120,14 @@ impl FieldStatusBadge {
 }
 
 fn status_badge_palette(theme: &Theme, status: &FieldStatus) -> (Color, Color, Color, Arc<str>) {
-    let surface = theme.color_token("background");
-    let border_base = theme
-        .color_by_key("border")
-        .or_else(|| theme.color_by_key("component.text_field.border"))
+    let field_bg = theme
+        .color_by_key("component.text_field.bg")
+        .or_else(|| theme.color_by_key("muted"))
+        .unwrap_or_else(|| theme.color_token("background"));
+    let field_border = theme
+        .color_by_key("component.text_field.border")
+        .or_else(|| theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_BORDER))
+        .or_else(|| theme.color_by_key("border"))
         .unwrap_or_else(|| theme.color_token("foreground"));
     let foreground = theme.color_token("foreground");
     let muted_foreground = theme
@@ -131,22 +135,24 @@ fn status_badge_palette(theme: &Theme, status: &FieldStatus) -> (Color, Color, C
         .or_else(|| theme.color_by_key("muted_foreground"))
         .unwrap_or(foreground);
     let accent = theme.color_token("accent");
-    let secondary = theme
-        .color_by_key("secondary")
-        .unwrap_or_else(|| theme.color_token("muted"));
+    let ring = theme.color_token("ring");
     let destructive = theme.color_token("destructive");
 
-    let (tint, bg_mix, border_mix, fg_mix) = match status {
-        FieldStatus::Loading => (muted_foreground, 0.05, 0.14, 0.20),
-        FieldStatus::Dirty => (accent, 0.10, 0.28, 0.10),
-        FieldStatus::Mixed => (secondary, 0.08, 0.18, 0.06),
-        FieldStatus::Error(_) => (destructive, 0.12, 0.34, 0.03),
+    let mixed_tint = theme
+        .color_by_key(EditorTokenKeys::PROPERTY_HEADER_BORDER)
+        .unwrap_or(ring);
+
+    let (tint, fg_base, bg_mix, border_mix, fg_mix) = match status {
+        FieldStatus::Loading => (muted_foreground, muted_foreground, 0.12, 0.16, 0.04),
+        FieldStatus::Dirty => (accent, foreground, 0.18, 0.30, 0.16),
+        FieldStatus::Mixed => (mixed_tint, muted_foreground, 0.16, 0.26, 0.12),
+        FieldStatus::Error(_) => (destructive, foreground, 0.18, 0.38, 0.08),
     };
 
     (
-        mix(surface, tint, bg_mix),
-        mix(border_base, tint, border_mix),
-        mix(foreground, tint, fg_mix),
+        mix(field_bg, tint, bg_mix),
+        mix(field_border, tint, border_mix),
+        mix(fg_base, tint, fg_mix),
         status.label(),
     )
 }
@@ -173,6 +179,7 @@ mod tests {
     use fret_ui::Theme;
 
     use super::{FieldStatus, status_badge_palette};
+    use crate::theme::{EditorThemePresetV1, apply_editor_theme_preset_v1};
 
     #[test]
     fn error_badge_palette_keeps_short_visible_label() {
@@ -182,5 +189,31 @@ mod tests {
         let (_, _, _, label) = status_badge_palette(theme, &FieldStatus::Error(Arc::from("stub")));
 
         assert_eq!(label.as_ref(), "Error");
+    }
+
+    #[test]
+    fn loading_badge_palette_uses_short_label() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+
+        let (_, _, _, label) = status_badge_palette(theme, &FieldStatus::Loading);
+
+        assert_eq!(label.as_ref(), "Loading");
+    }
+
+    #[test]
+    fn loading_badge_palette_stays_darker_than_editor_foreground() {
+        let mut app = App::new();
+        apply_editor_theme_preset_v1(&mut app, EditorThemePresetV1::Default);
+        let theme = Theme::global(&app);
+
+        let (bg, border, fg, _) = status_badge_palette(theme, &FieldStatus::Loading);
+
+        assert!(relative_luma(bg) < relative_luma(fg));
+        assert!(relative_luma(border) < relative_luma(theme.color_token("foreground")));
+    }
+
+    fn relative_luma(color: fret_core::Color) -> f32 {
+        0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b
     }
 }

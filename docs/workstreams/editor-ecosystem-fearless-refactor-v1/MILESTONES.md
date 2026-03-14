@@ -63,6 +63,12 @@ Deliverables:
   lanes,
 - one editor-owned trailing affordance baseline so reset/clear/remove/icon actions stop drifting
   between narrow hit targets and row-height targets,
+- a compact status-marker treatment that stays in the same chrome family as editor fields instead of
+  reintroducing bright floating pill tags on populated rows,
+- a compact non-edit readout treatment so populated percent/value/outcome labels stay visible
+  without reading like primary editable text,
+- a dense-preset tail calibration pass so the imgui-like preset inherits the same compact status
+  and readout grammar instead of widening its right lane again,
 - proof-local outcome/readout instrumentation that follows the same lane grammar, so idle states
   collapse instead of reserving dead width or dead row height on review surfaces,
 - stronger typed-edit, focus, active, and invalid state clarity,

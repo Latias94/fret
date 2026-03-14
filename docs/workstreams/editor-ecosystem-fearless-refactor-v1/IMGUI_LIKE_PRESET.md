@@ -5,7 +5,7 @@ Related matrix: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/PARITY_M
 Token inventory: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/TOKEN_INVENTORY.md`
 
 Status: Draft
-Last updated: 2026-03-09
+Last updated: 2026-03-14
 
 ## Purpose
 
@@ -198,6 +198,9 @@ Current implementation note:
   `FRET_IMUI_EDITOR_PRESET=imgui_like_dense` against `target/debug/imui_editor_proof_demo.exe`
 - matching dense screenshot proof coverage now exists via
   `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-imgui-like-dense.json`
+- the current dense preset has already picked up the first screenshot-reviewed tail calibration
+  from the default baseline follow-up work: denser trailing gap plus a tighter status lane keep
+  populated percent/status readouts compact without forking the underlying widget implementations
 - the current `imui` enum-select proof path uses per-item `test_id`s and `click_stable` with
   `stable_frames: 1`, because the popup item can stop being hit-testable after an extra
   stabilization frame in this proof surface
