@@ -21,7 +21,7 @@ Status: Active
 
 ## `fret-render-text`
 
-- [ ] FR-RENDER-TEXT-010 Extract font DB/catalog/rescan logic from `parley_shaper.rs` into a
+- [x] FR-RENDER-TEXT-010 Extract font DB/catalog/rescan logic from `parley_shaper.rs` into a
       dedicated ownership seam.
 - [ ] FR-RENDER-TEXT-011 Reduce `src/lib.rs` to an explicit facade and shrink accidental `pub mod`
       surface.

@@ -60,7 +60,9 @@ Evidence anchors:
 
 ## 4) Module ownership map (internal seams)
 
-- Font DB, catalog, rescan, injected-font retention, shaping entrypoints
+- Font DB, catalog extraction, rescan seed/apply, injected-font retention, baseline-metrics cache
+  - Files: `crates/fret-render-text/src/parley_font_db.rs`
+- Parley shaping entrypoints, style translation, line-metrics computation, layout hand-off
   - Files: `crates/fret-render-text/src/parley_shaper.rs`
 - Fallback policy composition and diagnostics snapshot
   - Files: `crates/fret-render-text/src/fallback_policy.rs`
@@ -82,12 +84,14 @@ Evidence anchors:
     or `parley_shaper`, making future module moves painful.
   - Existing gates: none focused on API surface.
   - Missing gate to add: a surface review or `public_api` snapshot before shrinking exports.
-- Mixed ownership inside `parley_shaper.rs`
-  - Failure mode: a refactor in shaping accidentally regresses catalog caches, rescan replay, or
-    injected-font retention because all concerns share one module.
-  - Existing gates: `rescan_apply_returns_false_when_environment_is_unchanged`.
-  - Missing gate to add: crate-local tests for cache invalidation boundaries after catalog refresh
-    and locale/fallback updates.
+- Residual ownership concentration around `ParleyShaper`
+  - Failure mode: a shaping refactor still regresses baseline-metrics caching or font-context
+    orchestration even after the font DB/catalog/rescan state moved into `parley_font_db.rs`.
+  - Existing gates: `registered_font_blobs_dedup_and_lru_eviction_by_count`,
+    `registered_font_blobs_eviction_by_bytes_budget`,
+    `rescan_apply_returns_false_when_environment_is_unchanged`.
+  - Missing gate to add: crate-local tests for baseline-metrics cache invalidation boundaries after
+    catalog refresh or injected-font changes.
 - Fallback policy / cache-key invalidation ordering
   - Failure mode: locale or injection-mode changes do not propagate into the effective fallback
     policy key, causing stale layout or glyph reuse.
@@ -110,11 +114,11 @@ Evidence anchors:
 
 ## 6) Code quality findings (Rust best practices)
 
-- Positive: the crate keeps backend dependencies out and already exposes useful diagnostics for font
-  DB cache state.
-- The main maintainability risk is responsibility concentration:
-  - `ParleyShaper` owns shaping, font DB state, catalog caches, blob retention, locale, and rescan
-    replay.
+- Positive: the crate keeps backend dependencies out and now has a clearer internal seam:
+  `ParleyFontDbState` isolates catalog caches, blob retention, and rescan replay from the shaping
+  entrypoints.
+- The main remaining maintainability risk is responsibility concentration:
+  - `ParleyShaper` still owns shaping, locale/fallback inputs, and baseline-metrics orchestration.
   - `wrapper.rs` owns too much post-shaping behavior.
 - No obvious `unsafe` usage was observed in the audited entry points.
 - The fallback-policy contract is strong, but much of its regression coverage currently lives in
@@ -122,24 +126,23 @@ Evidence anchors:
 
 Evidence anchors:
 
+- `crates/fret-render-text/src/parley_font_db.rs` (`ParleyFontDbState`,
+  `all_font_catalog_entries`, `apply_system_font_rescan_result`, `run_system_font_rescan`)
 - `crates/fret-render-text/src/parley_shaper.rs` (`font_db_diagnostics_snapshot`,
-  `record_registered_font_blob`, `all_font_catalog_entries`, `apply_system_font_rescan_result`)
+  `base_ascent_descent_px_for_style`)
 - `crates/fret-render-text/src/fallback_policy.rs` (`TextFallbackPolicyV1`,
   `diagnostics_snapshot`)
 - `crates/fret-render-wgpu/src/text/tests.rs`
 
 ## 7) Recommended refactor steps (small, gated)
 
-1. Extract a `font_db/` ownership seam from `parley_shaper.rs` (catalog, caches, rescan seed/apply,
-   injected-font retention) — outcome: shaping code stops sharing a god module with font DB state —
-   gate: `cargo nextest run -p fret-render-text`.
-2. Reduce `src/lib.rs` to an explicit facade and make internal modules crate-private where possible
+1. Reduce `src/lib.rs` to an explicit facade and make internal modules crate-private where possible
    — outcome: a smaller accidental API surface — gate: `cargo check -p fret-render-text` plus any
    caller fixes.
-3. Separate fallback-policy tests from renderer-backend tests by adding crate-local key/snapshot
+2. Separate fallback-policy tests from renderer-backend tests by adding crate-local key/snapshot
    coverage — outcome: portable refactors do not need `fret-render-wgpu` to validate policy logic —
    gate: `cargo nextest run -p fret-render-text`.
-4. Split `wrapper.rs` into smaller submodules (`line_breaking`, `hit_test`, `metrics`, `selection`)
+3. Split `wrapper.rs` into smaller submodules (`line_breaking`, `hit_test`, `metrics`, `selection`)
    — outcome: smaller diffs and clearer ownership — gate: `cargo nextest run -p fret-render-text`.
 
 ## 8) Open questions / decisions needed

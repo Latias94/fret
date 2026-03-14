@@ -9,6 +9,7 @@ pub mod font_trace;
 pub mod geometry;
 pub mod line_layout;
 pub mod measure;
+mod parley_font_db;
 pub mod parley_shaper;
 pub mod prepare_layout;
 pub mod spans;
