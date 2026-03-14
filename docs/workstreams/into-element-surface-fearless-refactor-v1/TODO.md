@@ -35,9 +35,13 @@ Execution note on 2026-03-14:
   top-level snippets return typed `UiChild` surfaces, the page uses `DocSection::build(cx, ...)`,
   `preset_selector` remains the explicit global motion-preset seam, and the remaining demos now
   keep their dialog/theme access inside the snippet.
-- after these two batches, the current tracked default-app teaching-surface lane is effectively
-  closed; remaining follow-up work now lives on the specialized `ai`, `material3`, `typography`,
-  and `shadcn_extras` lanes plus any optional dead-field/runtime cleanup.
+- the specialized `typography` teaching lane is now also aligned with that posture:
+  UI Gallery typography snippets now expose `UiCx -> impl UiChild`, the page uses
+  `DocSection::build(cx, ...)`, and the stale non-dev `dialog_open` relay is now gated back to
+  `gallery-dev` only.
+- after these three batches, the current tracked default-app teaching-surface lane is effectively
+  closed; remaining follow-up work now lives on the specialized `ai`, `material3`, and
+  `shadcn_extras` lanes plus any optional dead-field/runtime cleanup.
 
 ## M0 — Lock the target vocabulary
 

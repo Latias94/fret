@@ -23,6 +23,7 @@ pub(crate) struct UiGalleryModels {
 
     #[cfg(feature = "gallery-dev")]
     pub(crate) popover_open: Model<bool>,
+    #[cfg(feature = "gallery-dev")]
     pub(crate) dialog_open: Model<bool>,
     #[cfg(feature = "gallery-dev")]
     pub(crate) dialog_glass_open: Model<bool>,

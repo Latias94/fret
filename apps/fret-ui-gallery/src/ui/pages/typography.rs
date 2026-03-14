@@ -31,56 +31,71 @@ pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let notes = DocSection::build(cx, "Notes", notes)
         .test_id_prefix("ui-gallery-typography-notes")
         .description("API reference pointers and authoring notes.");
+    let demo = DocSection::build(cx, "Demo", demo)
+        .description("A long-form story sample combining headings, paragraphs, and lists.")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let h1 = DocSection::build(cx, "h1", h1)
+        .description("Top-level heading.")
+        .code_rust_from_file_region(snippets::h1::SOURCE, "example");
+    let h2 = DocSection::build(cx, "h2", h2)
+        .description("Section heading.")
+        .code_rust_from_file_region(snippets::h2::SOURCE, "example");
+    let h3 = DocSection::build(cx, "h3", h3)
+        .description("Sub-section heading.")
+        .code_rust_from_file_region(snippets::h3::SOURCE, "example");
+    let h4 = DocSection::build(cx, "h4", h4)
+        .description("Low-level heading for grouped content.")
+        .code_rust_from_file_region(snippets::h4::SOURCE, "example");
+    let p = DocSection::build(cx, "p", p)
+        .description("Body paragraph text.")
+        .code_rust_from_file_region(snippets::p::SOURCE, "example");
+    let blockquote = DocSection::build(cx, "blockquote", blockquote)
+        .description("Quoted callout text.")
+        .code_rust_from_file_region(snippets::blockquote::SOURCE, "example");
+    let table = DocSection::build(cx, "table", table)
+        .description("Tabular content using shadcn Table parts.")
+        .code_rust_from_file_region(snippets::table::SOURCE, "example");
+    let list = DocSection::build(cx, "list", list)
+        .description("Bulleted/ordered list content.")
+        .code_rust_from_file_region(snippets::list::SOURCE, "example");
+    let inline_code = DocSection::build(cx, "Inline Code", inline_code)
+        .description("Inline code styling for commands and identifiers.")
+        .code_rust_from_file_region(snippets::inline_code::SOURCE, "example");
+    let lead = DocSection::build(cx, "Lead", lead)
+        .description("Intro lead paragraph for sections.")
+        .code_rust_from_file_region(snippets::lead::SOURCE, "example");
+    let large = DocSection::build(cx, "Large", large)
+        .description("Emphasis text for short callouts.")
+        .code_rust_from_file_region(snippets::large::SOURCE, "example");
+    let small = DocSection::build(cx, "Small", small)
+        .description("Helper text and metadata.")
+        .code_rust_from_file_region(snippets::small::SOURCE, "example");
+    let muted = DocSection::build(cx, "Muted", muted)
+        .description("De-emphasized hint/explanation text.")
+        .code_rust_from_file_region(snippets::muted::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .description("Direction provider sample to validate RTL wrapping/alignment.")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
         Some("Typography page follows shadcn docs order and shows one focused sample per section."),
         vec![
-            DocSection::new("Demo", demo)
-                .description("A long-form story sample combining headings, paragraphs, and lists.")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("h1", h1)
-                .description("Top-level heading.")
-                .code_rust_from_file_region(snippets::h1::SOURCE, "example"),
-            DocSection::new("h2", h2)
-                .description("Section heading.")
-                .code_rust_from_file_region(snippets::h2::SOURCE, "example"),
-            DocSection::new("h3", h3)
-                .description("Sub-section heading.")
-                .code_rust_from_file_region(snippets::h3::SOURCE, "example"),
-            DocSection::new("h4", h4)
-                .description("Low-level heading for grouped content.")
-                .code_rust_from_file_region(snippets::h4::SOURCE, "example"),
-            DocSection::new("p", p)
-                .description("Body paragraph text.")
-                .code_rust_from_file_region(snippets::p::SOURCE, "example"),
-            DocSection::new("blockquote", blockquote)
-                .description("Quoted callout text.")
-                .code_rust_from_file_region(snippets::blockquote::SOURCE, "example"),
-            DocSection::new("table", table)
-                .description("Tabular content using shadcn Table parts.")
-                .code_rust_from_file_region(snippets::table::SOURCE, "example"),
-            DocSection::new("list", list)
-                .description("Bulleted/ordered list content.")
-                .code_rust_from_file_region(snippets::list::SOURCE, "example"),
-            DocSection::new("Inline Code", inline_code)
-                .description("Inline code styling for commands and identifiers.")
-                .code_rust_from_file_region(snippets::inline_code::SOURCE, "example"),
-            DocSection::new("Lead", lead)
-                .description("Intro lead paragraph for sections.")
-                .code_rust_from_file_region(snippets::lead::SOURCE, "example"),
-            DocSection::new("Large", large)
-                .description("Emphasis text for short callouts.")
-                .code_rust_from_file_region(snippets::large::SOURCE, "example"),
-            DocSection::new("Small", small)
-                .description("Helper text and metadata.")
-                .code_rust_from_file_region(snippets::small::SOURCE, "example"),
-            DocSection::new("Muted", muted)
-                .description("De-emphasized hint/explanation text.")
-                .code_rust_from_file_region(snippets::muted::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .description("Direction provider sample to validate RTL wrapping/alignment.")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            demo,
+            h1,
+            h2,
+            h3,
+            h4,
+            p,
+            blockquote,
+            table,
+            list,
+            inline_code,
+            lead,
+            large,
+            small,
+            muted,
+            rtl,
             notes,
         ],
     );

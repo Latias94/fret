@@ -6142,6 +6142,80 @@ fn separator_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn typography_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/typography/demo.rs",
+            "src/ui/snippets/typography/h1.rs",
+            "src/ui/snippets/typography/h2.rs",
+            "src/ui/snippets/typography/h3.rs",
+            "src/ui/snippets/typography/h4.rs",
+            "src/ui/snippets/typography/p.rs",
+            "src/ui/snippets/typography/blockquote.rs",
+            "src/ui/snippets/typography/table.rs",
+            "src/ui/snippets/typography/list.rs",
+            "src/ui/snippets/typography/inline_code.rs",
+            "src/ui/snippets/typography/lead.rs",
+            "src/ui/snippets/typography/large.rs",
+            "src/ui/snippets/typography/small.rs",
+            "src/ui/snippets/typography/muted.rs",
+            "src/ui/snippets/typography/rtl.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/typography",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn typography_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/typography.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"h1\", h1)",
+            "DocSection::build(cx, \"h2\", h2)",
+            "DocSection::build(cx, \"h3\", h3)",
+            "DocSection::build(cx, \"h4\", h4)",
+            "DocSection::build(cx, \"p\", p)",
+            "DocSection::build(cx, \"blockquote\", blockquote)",
+            "DocSection::build(cx, \"table\", table)",
+            "DocSection::build(cx, \"list\", list)",
+            "DocSection::build(cx, \"Inline Code\", inline_code)",
+            "DocSection::build(cx, \"Lead\", lead)",
+            "DocSection::build(cx, \"Large\", large)",
+            "DocSection::build(cx, \"Small\", small)",
+            "DocSection::build(cx, \"Muted\", muted)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"h1\", h1)",
+            "DocSection::new(\"h2\", h2)",
+            "DocSection::new(\"h3\", h3)",
+            "DocSection::new(\"h4\", h4)",
+            "DocSection::new(\"p\", p)",
+            "DocSection::new(\"blockquote\", blockquote)",
+            "DocSection::new(\"table\", table)",
+            "DocSection::new(\"list\", list)",
+            "DocSection::new(\"Inline Code\", inline_code)",
+            "DocSection::new(\"Lead\", lead)",
+            "DocSection::new(\"Large\", large)",
+            "DocSection::new(\"Small\", small)",
+            "DocSection::new(\"Muted\", muted)",
+            "DocSection::new(\"RTL\", rtl)",
+        ],
+    );
+}
+
+#[test]
 fn selected_sidebar_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     for relative_path in [
         "src/ui/snippets/sidebar/demo.rs",

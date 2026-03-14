@@ -226,6 +226,7 @@ struct UiGalleryWindowState {
     inspector_last_pointer: Model<Option<fret_core::Point>>,
     #[cfg(feature = "gallery-dev")]
     popover_open: Model<bool>,
+    #[cfg(feature = "gallery-dev")]
     dialog_open: Model<bool>,
     #[cfg(feature = "gallery-dev")]
     dialog_glass_open: Model<bool>,
@@ -323,6 +324,7 @@ impl UiGalleryWindowState {
             view_cache_counter: self.view_cache_counter.clone(),
             #[cfg(feature = "gallery-dev")]
             popover_open: self.popover_open.clone(),
+            #[cfg(feature = "gallery-dev")]
             dialog_open: self.dialog_open.clone(),
             #[cfg(feature = "gallery-dev")]
             dialog_glass_open: self.dialog_glass_open.clone(),

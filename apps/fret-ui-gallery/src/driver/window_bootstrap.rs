@@ -193,6 +193,7 @@ impl UiGalleryDriver {
         let motion_preset_open = app.models_mut().insert(false);
         #[cfg(feature = "gallery-dev")]
         let popover_open = app.models_mut().insert(false);
+        #[cfg(feature = "gallery-dev")]
         let dialog_open = app.models_mut().insert(false);
         #[cfg(feature = "gallery-dev")]
         let dialog_glass_open = app.models_mut().insert(false);
@@ -403,6 +404,7 @@ impl UiGalleryDriver {
             inspector_last_pointer,
             #[cfg(feature = "gallery-dev")]
             popover_open,
+            #[cfg(feature = "gallery-dev")]
             dialog_open,
             #[cfg(feature = "gallery-dev")]
             dialog_glass_open,
