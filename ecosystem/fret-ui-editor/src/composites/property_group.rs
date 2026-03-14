@@ -224,6 +224,12 @@ impl PropertyGroup {
                                 ..Default::default()
                             },
                             background: Some(header_bg),
+                            corner_radii: Corners {
+                                top_left: radius,
+                                top_right: radius,
+                                bottom_right: Px(0.0),
+                                bottom_left: Px(0.0),
+                            },
                             border: Edges {
                                 top: Px(0.0),
                                 right: Px(0.0),
@@ -247,10 +253,12 @@ impl PropertyGroup {
                                         },
                                         direction: Axis::Horizontal,
                                         gap: SpacingLength::Px(Px(6.0)),
-                                        padding: Edges::symmetric(
-                                            density.padding_x,
-                                            density.padding_y,
-                                        )
+                                        padding: Edges {
+                                            top: Px(density.padding_y.0 + 2.0),
+                                            right: density.padding_x,
+                                            bottom: Px(density.padding_y.0 + 2.0),
+                                            left: density.padding_x,
+                                        }
                                         .into(),
                                         justify: MainAlign::Start,
                                         align: CrossAlign::Center,
@@ -323,7 +331,13 @@ impl PropertyGroup {
                         },
                         direction: Axis::Vertical,
                         gap: SpacingLength::Px(gap),
-                        padding: Edges::symmetric(density.padding_x, density.padding_y).into(),
+                        padding: Edges {
+                            top: Px(density.padding_y.0 + 2.0),
+                            right: density.padding_x,
+                            bottom: Px(density.padding_y.0 + 4.0),
+                            left: density.padding_x,
+                        }
+                        .into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Stretch,
                         wrap: false,

@@ -290,8 +290,20 @@ impl InspectorPanel {
                             },
                             ..Default::default()
                         },
-                        padding: Edges::all(density.padding_x).into(),
+                        padding: Edges {
+                            top: Px(density.padding_y.0 + 3.0),
+                            right: density.padding_x,
+                            bottom: Px(density.padding_y.0 + 4.0),
+                            left: density.padding_x,
+                        }
+                        .into(),
                         background: Some(header_bg),
+                        corner_radii: Corners {
+                            top_left: radius,
+                            top_right: radius,
+                            bottom_right: Px(0.0),
+                            bottom_left: Px(0.0),
+                        },
                         border: Edges {
                             top: Px(0.0),
                             right: Px(0.0),

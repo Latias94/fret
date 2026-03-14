@@ -39,11 +39,13 @@ Interaction contract:
       Recent progress: trailing affordances now use a shared row-height-square baseline, property-row
       reset actions keep subtle idle chrome, and field-status badges now use short labels plus
       border-defined semantic tones instead of raw filled pills. Default inspector hierarchy tokens
-      now also give property groups taller headers, stronger header/body contrast, and a bit more
-      panel/content separation. `InspectorPanel` now renders its own header band/separator instead
-      of letting search/toolbar chrome visually merge into the first section.
-      Remaining work: separators, group hierarchy, and the final balance between neutral default and
-      editor-specific contrast still need another screenshot-driven pass.
+      now also give property groups taller headers, stronger header/body contrast, clearer section
+      borders, and a bit more panel/content separation. `InspectorPanel` now renders its own header
+      band/separator with stronger section framing instead of letting search/toolbar chrome visually
+      merge into the first section, and `PropertyGroup` content now has a little more vertical
+      breathing room so section bodies stop reading as one uninterrupted slab.
+      Remaining work: do one more screenshot-driven pass on separator weight and the final balance
+      between neutral default and editor-specific contrast.
 - [~] `EER-BASE-111` Finish `EditorWidgetVisuals` convergence for the existing starter-set controls
       before promoting more components.
       Shared field-state grammar now routes joined text fields/search boxes, numeric inputs,

@@ -152,12 +152,12 @@ fn editor_theme_patch_v1() -> ThemeConfig {
     metric(
         &mut cfg,
         EditorTokenKeys::PROPERTY_GROUP_HEADER_HEIGHT,
-        26.0,
+        28.0,
     );
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_GROUP_CONTENT_GAP, 8.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_GROUP_CONTENT_GAP, 10.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_AUTO_STACK_BELOW, 520.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_GAP, 12.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_HEADER_GAP, 10.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_GAP, 14.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_HEADER_GAP, 12.0);
 
     // Text-field-like metrics (used by MiniSearchBox / NumericInput / ColorEdit).
     metric(&mut cfg, "component.text_field.padding_x", 6.0);
@@ -184,9 +184,9 @@ fn editor_theme_patch_v1() -> ThemeConfig {
     color(&mut cfg, "ring", "#7faee8");
 
     color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BG, "#0f151d");
-    color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BORDER, "#364454");
-    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BG, "#1d2631");
-    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BORDER, "#3a495a");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BORDER, "#3d4d5f");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BG, "#202b38");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BORDER, "#4a5c70");
     color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_FG, "#edf3fa");
 
     color(&mut cfg, EditorTokenKeys::CONTROL_INVALID_FG, "#ffd3d6");
@@ -232,12 +232,12 @@ fn imgui_like_dense_patch_v1() -> ThemeConfig {
     metric(
         &mut cfg,
         EditorTokenKeys::PROPERTY_GROUP_HEADER_HEIGHT,
-        23.0,
+        24.0,
     );
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_GROUP_CONTENT_GAP, 5.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_GROUP_CONTENT_GAP, 6.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_AUTO_STACK_BELOW, 480.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_GAP, 9.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_HEADER_GAP, 7.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_GAP, 10.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_HEADER_GAP, 8.0);
     metric(&mut cfg, EditorTokenKeys::CHECKBOX_SIZE, 14.0);
     metric(&mut cfg, EditorTokenKeys::CHECKBOX_RADIUS, 2.0);
     metric(&mut cfg, EditorTokenKeys::VEC_AUTO_STACK_BELOW, 400.0);
@@ -267,9 +267,9 @@ fn imgui_like_dense_patch_v1() -> ThemeConfig {
     color(&mut cfg, "ring", "#6ea8e0");
 
     color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BG, "#1d2127");
-    color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BORDER, "#4a5562");
-    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BG, "#2b3138");
-    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BORDER, "#56616f");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BORDER, "#54606d");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BG, "#303841");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BORDER, "#6a7887");
     color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_FG, "#e6e8eb");
 
     color(&mut cfg, EditorTokenKeys::CONTROL_INVALID_FG, "#ffcbc7");
@@ -344,19 +344,19 @@ mod tests {
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_GROUP_CONTENT_GAP),
-            Some(Px(8.0))
-        );
-        assert_eq!(
-            theme.metric_by_key(EditorTokenKeys::PROPERTY_PANEL_GAP),
-            Some(Px(12.0))
-        );
-        assert_eq!(
-            theme.metric_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_GAP),
             Some(Px(10.0))
         );
         assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::PROPERTY_PANEL_GAP),
+            Some(Px(14.0))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_GAP),
+            Some(Px(12.0))
+        );
+        assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_GROUP_HEADER_HEIGHT),
-            Some(Px(26.0))
+            Some(Px(28.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::SLIDER_THUMB_DIAMETER),
@@ -369,6 +369,14 @@ mod tests {
         assert_eq!(
             theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_BG),
             Some(Color::from_srgb_hex_rgb(0x0f_15_1d))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x3d_4d_5f))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_HEADER_BG),
+            Some(Color::from_srgb_hex_rgb(0x20_2b_38))
         );
         assert_eq!(
             theme.color_by_key(EditorTokenKeys::CONTROL_INVALID_BORDER),
@@ -408,19 +416,19 @@ mod tests {
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_GROUP_CONTENT_GAP),
-            Some(Px(5.0))
+            Some(Px(6.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_PANEL_GAP),
-            Some(Px(9.0))
+            Some(Px(10.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_GAP),
-            Some(Px(7.0))
+            Some(Px(8.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_GROUP_HEADER_HEIGHT),
-            Some(Px(23.0))
+            Some(Px(24.0))
         );
         assert_eq!(
             theme.metric_by_key("component.text_field.radius"),
@@ -437,6 +445,10 @@ mod tests {
         assert_eq!(
             theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_BG),
             Some(Color::from_srgb_hex_rgb(0x1d_21_27))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_HEADER_BG),
+            Some(Color::from_srgb_hex_rgb(0x30_38_41))
         );
         assert_eq!(
             theme.color_by_key(EditorTokenKeys::CONTROL_INVALID_BG),
