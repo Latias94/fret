@@ -149,11 +149,8 @@ fn gallery_sources_do_not_depend_on_the_legacy_fret_prelude() {
     assert!(action_first_view_normalized.contains(
         "cx.actions().availability::<act::Ping>(|_host,_acx|CommandAvailability::Available);"
     ));
-    assert!(
-        action_first_view.contains(
-            "pub fn render(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> AnyElement"
-        )
-    );
+    assert!(action_first_view.contains("pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>"));
+    assert!(action_first_view.contains("let last_action = super::last_action_model(cx);"));
     assert!(!action_first_view.contains("KernelApp"));
     assert!(!action_first_view.contains("ElementContext<'_, App>"));
     assert!(!action_first_view.contains("cx.use_local"));
@@ -7700,6 +7697,27 @@ fn gallery_internal_wrapper_helpers_prefer_into_ui_element_over_anyelement() {
             "fn gate_panel<B>(cx: &mut UiCx<'_>, theme: &Theme, child: B,) -> impl IntoUiElement<fret_app::App> + use<B> where B: IntoUiElement<fret_app::App>",
         ],
         &["fn gate_panel(cx: &mut UiCx<'_>, theme: &Theme, child: AnyElement) -> AnyElement"],
+    );
+}
+
+#[test]
+fn gallery_doc_layout_app_helpers_prefer_ui_child_over_anyelement() {
+    assert_selected_page_helpers_prefer_ui_child(
+        "src/ui/doc_layout.rs",
+        &[
+            "fn wrap_row<F>(cx: &mut UiCx<'_>, theme: &Theme, gap: Space, align: fret_ui::element::CrossAlign, children: F,) -> impl UiChild + use<F> where F: FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>",
+            "fn wrap_controls_row<F>(cx: &mut UiCx<'_>, theme: &Theme, gap: Space, children: F,) -> impl UiChild + use<F> where F: FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>",
+            "fn muted_full_width<T>(cx: &mut UiCx<'_>, text: T) -> impl UiChild + use<T> where T: Into<Arc<str>>",
+            "fn muted_inline<T>(cx: &mut UiCx<'_>, text: T) -> impl UiChild + use<T> where T: Into<Arc<str>>",
+            "fn muted_flex_1_min_w_0<T>(cx: &mut UiCx<'_>, text: T) -> impl UiChild + use<T> where T: Into<Arc<str>>",
+        ],
+        &[
+            "fn wrap_row(cx: &mut UiCx<'_>, theme: &Theme, gap: Space, align: fret_ui::element::CrossAlign, children: impl FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,) -> AnyElement",
+            "fn wrap_controls_row(cx: &mut UiCx<'_>, theme: &Theme, gap: Space, children: impl FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,) -> AnyElement",
+            "fn muted_full_width<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
+            "fn muted_inline<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
+            "fn muted_flex_1_min_w_0<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
+        ],
     );
 }
 

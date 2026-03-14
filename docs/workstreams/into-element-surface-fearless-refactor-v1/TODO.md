@@ -1157,7 +1157,7 @@ Update on 2026-03-13 (page/docs teaching drift cleanup):
   `src/ui/snippets/ai/file_tree_demo.rs`
   now uses `invisible_marker(...) -> impl IntoUiElement<H> + use<H>`;
   `src/ui/snippets/ai/speech_input_demo.rs`
-  now uses `body_text(...)` and `clear_action(...) -> impl IntoUiElement<H> + use<H>`;
+  now uses `body_text(...)` and `clear_action(...) -> impl UiChild + use<>`;
   `src/ui/snippets/breadcrumb/dropdown.rs`
   now uses `dot_separator(...) -> impl IntoUiElement<H> + use<H>`,
   with explicit `.into_element(cx)` only at doc-section, child-array, and breadcrumb-list seams.
@@ -1169,6 +1169,11 @@ Update on 2026-03-13 (page/docs teaching drift cleanup):
   `src/ui/previews/pages/editors/code_editor/mvp/gates.rs`
   now uses `gate_panel<B>(...) -> impl IntoUiElement<fret_app::App> + use<B>` and lands the
   editor child only at the preview-panel boundary.
+- the internal docs prose/layout lane is now also on the default app-facing helper surface:
+  `src/ui/doc_layout.rs::{wrap_row,wrap_controls_row,muted_full_width,muted_inline}` and the local
+  `notes_block(... )::muted_flex_1_min_w_0(...)` helper now use
+  `UiCx -> impl UiChild` instead of `ElementContext<'_, H> -> AnyElement`, and the corresponding
+  source gate now records those gallery-only text helpers as non-generic app helpers.
 - selected UI Gallery avatar snippets now also keep row wrappers, avatar builders, and group/icon
   helpers off raw landed returns by default:
   `src/ui/snippets/avatar/{demo,group,with_badge,fallback_only,sizes,group_count,group_count_icon,badge_icon,dropdown}.rs`

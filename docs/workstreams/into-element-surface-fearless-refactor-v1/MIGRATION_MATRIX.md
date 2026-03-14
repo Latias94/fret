@@ -65,7 +65,8 @@ Execution note on 2026-03-13:
 - the focused `selected_*` source gate now also covers
   `apps/fret-ui-gallery/src/ui/snippets/ai/{attachments_usage,file_tree_demo,speech_input_demo}.rs`,
   where `render_grid_attachment(...)`, `invisible_marker(...)`, `body_text(...)`, and
-  `clear_action(...)` now prefer `IntoUiElement<H>`-based helper signatures while keeping
+  `clear_action(...)` now prefer typed helper signatures, with the speech-input pair now on the
+  default-app `UiCx -> impl UiChild` posture, while keeping
   explicit `.into_element(cx)` only at `Attachments::new(...)`, `Vec<AnyElement>` child arrays,
   and semantics-decoration seams.
 - the focused `selected_*` source gate now also covers
@@ -81,6 +82,10 @@ Execution note on 2026-03-13:
   where `demo_shell<B>(...)` and `gate_panel<B>(...)` now accept `IntoUiElement<fret_app::App>`
   inputs and reserve `.into_element(cx)` for the shell/panel child-landing seams instead of
   forcing callers to pre-land `AnyElement`.
+- the same gallery helper inventory now also records the internal docs prose/layout helpers:
+  `apps/fret-ui-gallery/src/ui/doc_layout.rs::{wrap_row,wrap_controls_row,muted_full_width,muted_inline}` and the local
+  `notes_block(... )::muted_flex_1_min_w_0(...)` now use the default-app
+  `UiCx -> impl UiChild` posture instead of host-generic `ElementContext<'_, H> -> AnyElement`.
 - the shadcn surface gate now also records
   `ecosystem/fret-ui-shadcn/src/{context_menu,dropdown_menu,menubar}.rs`,
   where the internal `menu_icon_slot(...)` wrappers now accept `IntoUiElement<H>` inputs instead

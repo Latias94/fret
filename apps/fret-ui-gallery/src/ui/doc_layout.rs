@@ -1,5 +1,5 @@
 use super::*;
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::facade as shadcn;
 
@@ -151,7 +151,7 @@ pub(in crate::ui) fn render_doc_page(
     let body = ui::v_flex(move |cx| {
         let mut out: Vec<AnyElement> = Vec::with_capacity(sections.len() + 1);
         if let Some(intro) = intro {
-            out.push(muted_full_width(cx, intro));
+            out.push(muted_full_width(cx, intro).into_element(cx));
         }
         out.extend(
             sections
@@ -200,13 +200,16 @@ pub(in crate::ui) fn wrap_preview_page(
 /// Prefer this over the legacy stack-based hstack helper for "control bars" that can contain many
 /// toggles/buttons.
 #[cfg(feature = "gallery-dev")]
-pub(in crate::ui) fn wrap_row(
+pub(in crate::ui) fn wrap_row<F>(
     cx: &mut UiCx<'_>,
     theme: &Theme,
     gap: Space,
     align: fret_ui::element::CrossAlign,
-    children: impl FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,
-) -> AnyElement {
+    children: F,
+) -> impl UiChild + use<F>
+where
+    F: FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,
+{
     let gap = fret_ui_kit::MetricRef::space(gap).resolve(theme);
     let layout = decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0());
     cx.flex(
@@ -224,12 +227,15 @@ pub(in crate::ui) fn wrap_row(
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(in crate::ui) fn wrap_controls_row(
+pub(in crate::ui) fn wrap_controls_row<F>(
     cx: &mut UiCx<'_>,
     theme: &Theme,
     gap: Space,
-    children: impl FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,
-) -> AnyElement {
+    children: F,
+) -> impl UiChild + use<F>
+where
+    F: FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,
+{
     wrap_row(
         cx,
         theme,
@@ -239,10 +245,10 @@ pub(in crate::ui) fn wrap_controls_row(
     )
 }
 
-pub(in crate::ui) fn muted_full_width<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
+pub(in crate::ui) fn muted_full_width<T>(cx: &mut UiCx<'_>, text: T) -> impl UiChild + use<T>
+where
+    T: Into<Arc<str>>,
+{
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
         let style = fret_ui_kit::typography::control_text_style(
@@ -320,10 +326,10 @@ pub(in crate::ui) fn text_table<const N: usize>(
     .into_element(cx)
 }
 
-fn muted_inline<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
+fn muted_inline<T>(cx: &mut UiCx<'_>, text: T) -> impl UiChild + use<T>
+where
+    T: Into<Arc<str>>,
+{
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
         let style = fret_ui_kit::typography::control_text_style(
@@ -356,10 +362,10 @@ where
 {
     let lines = lines.into_iter().map(Into::into).collect::<Vec<Arc<str>>>();
 
-    fn muted_flex_1_min_w_0<H: UiHost>(
-        cx: &mut ElementContext<'_, H>,
-        text: impl Into<Arc<str>>,
-    ) -> AnyElement {
+    fn muted_flex_1_min_w_0<T>(cx: &mut UiCx<'_>, text: T) -> impl UiChild + use<T>
+    where
+        T: Into<Arc<str>>,
+    {
         let (style, color) = {
             let theme = Theme::global(&*cx.app);
             let style = fret_ui_kit::typography::control_text_style(
@@ -396,11 +402,16 @@ where
             .iter()
             .cloned()
             .map(|line| {
-                ui::h_row(move |cx| [muted_inline(cx, "•"), muted_flex_1_min_w_0(cx, line)])
-                    .gap(Space::N1)
-                    .items_start()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .into_element(cx)
+                ui::h_row(move |cx| {
+                    [
+                        muted_inline(cx, "•").into_element(cx),
+                        muted_flex_1_min_w_0(cx, line).into_element(cx),
+                    ]
+                })
+                .gap(Space::N1)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx)
             })
             .collect::<Vec<_>>()
     })
@@ -484,12 +495,12 @@ fn render_section(cx: &mut UiCx<'_>, section: DocSection) -> AnyElement {
         });
         if !description.is_empty() {
             let description_el = if description.len() == 1 {
-                muted_full_width(cx, description[0])
+                muted_full_width(cx, description[0]).into_element(cx)
             } else {
                 ui::v_flex(move |cx| {
                     description
                         .into_iter()
-                        .map(|line| muted_full_width(cx, line))
+                        .map(|line| muted_full_width(cx, line).into_element(cx))
                         .collect::<Vec<_>>()
                 })
                 .gap(Space::N1)
