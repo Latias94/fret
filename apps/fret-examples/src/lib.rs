@@ -40,6 +40,49 @@ pub(crate) fn run_native_with_fn_driver_with_hooks<D: 'static, S: 'static>(
     .map_err(anyhow::Error::from)
 }
 
+pub(crate) fn parse_editor_theme_preset_key(
+    key: &str,
+) -> Option<fret_ui_editor::theme::EditorThemePresetV1> {
+    match key.trim().to_ascii_lowercase().as_str() {
+        "" => None,
+        "default" => Some(fret_ui_editor::theme::EditorThemePresetV1::Default),
+        "imgui_like_dense" => Some(fret_ui_editor::theme::EditorThemePresetV1::ImguiLikeDense),
+        _ => None,
+    }
+}
+
+pub(crate) fn editor_theme_preset_from_env(
+    name: &str,
+) -> Option<fret_ui_editor::theme::EditorThemePresetV1> {
+    let raw = std::env::var_os(name)?;
+    parse_editor_theme_preset_key(&raw.to_string_lossy())
+}
+
+/// Shared examples-layer helper for editor surfaces hosted on a shadcn base theme.
+///
+/// This keeps the ordering explicit when `WindowMetricsService` changes can trigger a host-theme
+/// reset: sync the host theme first, then replay the installed editor preset.
+pub(crate) fn sync_shadcn_host_theme_then_reapply_editor_preset_on_window_metrics_change(
+    app: &mut fret_app::App,
+    window: fret_core::AppWindowId,
+    changed: &[std::any::TypeId],
+    base_color: fret::shadcn::themes::ShadcnBaseColor,
+    default_scheme_when_unknown: fret::shadcn::themes::ShadcnColorScheme,
+) -> Option<fret_ui_editor::theme::EditorThemePresetV1> {
+    fret_ui_editor::theme::sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metrics_change(
+        app,
+        changed,
+        |app| {
+            let _ = fret::shadcn::raw::advanced::sync_theme_from_environment(
+                app,
+                window,
+                base_color,
+                default_scheme_when_unknown,
+            );
+        },
+    )
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 pub mod alpha_mode_demo;
 pub mod area_demo;
@@ -531,7 +574,14 @@ mod authoring_surface_policy_tests {
         assert!(IMUI_EDITOR_PROOF_DEMO.contains("fn render_authoring_parity_imui_host<H, F>("));
         assert!(IMUI_EDITOR_PROOF_DEMO.contains(") -> impl IntoUiElement<KernelApp> + use<> {"));
         assert!(IMUI_EDITOR_PROOF_DEMO.contains(") -> impl IntoUiElement<H> + use<H, F>"));
-        assert!(!IMUI_EDITOR_PROOF_DEMO.contains(") -> fret_ui::element::AnyElement {"));
+        assert!(IMUI_EDITOR_PROOF_DEMO.contains("fn proof_compact_readout<H: UiHost>("));
+        assert_eq!(
+            IMUI_EDITOR_PROOF_DEMO
+                .matches(") -> fret_ui::element::AnyElement {")
+                .count(),
+            1,
+            "only the proof-local compact readout leaf helper should keep an AnyElement return"
+        );
     }
 
     #[test]
@@ -1386,5 +1436,23 @@ mod authoring_surface_policy_tests {
         ] {
             assert_shadcn_surface_is_curated(src);
         }
+    }
+
+    #[test]
+    fn parse_editor_theme_preset_key_accepts_supported_values() {
+        assert_eq!(
+            super::parse_editor_theme_preset_key("default"),
+            Some(fret_ui_editor::theme::EditorThemePresetV1::Default)
+        );
+        assert_eq!(
+            super::parse_editor_theme_preset_key(" imgui_like_dense "),
+            Some(fret_ui_editor::theme::EditorThemePresetV1::ImguiLikeDense)
+        );
+    }
+
+    #[test]
+    fn parse_editor_theme_preset_key_rejects_empty_and_unknown_values() {
+        assert_eq!(super::parse_editor_theme_preset_key(""), None);
+        assert_eq!(super::parse_editor_theme_preset_key("neutral"), None);
     }
 }

@@ -62,14 +62,7 @@ fn diag_enabled() -> bool {
 }
 
 fn selected_editor_theme_preset() -> EditorThemePresetV1 {
-    let Some(raw) = std::env::var_os(ENV_EDITOR_PRESET) else {
-        return EditorThemePresetV1::Default;
-    };
-
-    match raw.to_string_lossy().trim().to_ascii_lowercase().as_str() {
-        "imgui_like_dense" => EditorThemePresetV1::ImguiLikeDense,
-        _ => EditorThemePresetV1::Default,
-    }
+    crate::editor_theme_preset_from_env(ENV_EDITOR_PRESET).unwrap_or(EditorThemePresetV1::Default)
 }
 
 fn selected_proof_layout() -> ImUiEditorProofLayout {
@@ -336,17 +329,12 @@ fn replay_editor_theme_preset_on_global_changes(
     _st: &mut ViewWindowState<ImUiEditorProofView>,
     changed: &[std::any::TypeId],
 ) {
-    let _ = fret_ui_editor::theme::sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metrics_change(
+    let _ = crate::sync_shadcn_host_theme_then_reapply_editor_preset_on_window_metrics_change(
         app,
+        window,
         changed,
-        |app| {
-            let _ = shadcn::raw::advanced::sync_theme_from_environment(
-                app,
-                window,
-                EDITOR_HOST_BASE_COLOR,
-                EDITOR_HOST_DEFAULT_SCHEME,
-            );
-        },
+        EDITOR_HOST_BASE_COLOR,
+        EDITOR_HOST_DEFAULT_SCHEME,
     );
 }
 

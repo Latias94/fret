@@ -148,9 +148,15 @@ Interaction contract:
 - [~] `EER-BASE-119` Make editor-owned baseline theming resilient to host/theme resets:
       `fret-ui-editor::theme` now exposes a shared "host sync first, editor preset replay second"
       helper for `WindowMetricsService`-driven theme resets, and `imui_editor_proof_demo` now uses
-      that path instead of hand-rolling a local replay hook. Remaining work: apply the same helper
-      pattern to adjacent promoted editor/workspace surfaces and decide how much of this should be
-      lifted into broader app-integration guidance.
+      that path instead of hand-rolling a local replay hook. The same ordering now also has a
+      shared `fret-examples` integration helper for shadcn-hosted editor surfaces, so the proof
+      demo no longer composes `sync_theme_from_environment` with editor preset replay inline. A
+      second adjacent consumer path now exists too: `workspace_shell_demo` can opt into the same
+      shadcn-hosted editor preset install/replay flow via
+      `FRET_WORKSPACE_SHELL_EDITOR_PRESET`, which keeps the generic workspace demo stable by
+      default while proving the helper is no longer single-surface glue. Remaining work: decide
+      whether the next always-on consumer should live in a broader app/workspace integration layer
+      instead of staying examples-only.
 - [x] `EER-BASE-116` Decide whether `imgui_like_dense` should get matching screenshot proof coverage
       now or only after the default baseline is acceptable.
       Decision: yes. The dense preset now has matching overview / typing / validation screenshot

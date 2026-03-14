@@ -163,7 +163,11 @@ Current checkpoint:
   dead width or dead row height on the review surface,
 - editor preset replay is no longer proof-demo-local glue only: the editor theme helpers now expose
   a reusable "host theme sync, then editor preset replay" path for `WindowMetricsService`-driven
-  resets, and the promoted proof demo uses that shared ordering,
+  resets, the promoted proof demo uses that shared ordering, and `fret-examples` now also exposes a
+  small shadcn-hosted integration helper so future example surfaces do not need to hand-compose the
+  host sync + editor replay sequence again. The first adjacent workspace-surface consumer path now
+  exists as well: `workspace_shell_demo` can opt into the same flow via
+  `FRET_WORKSPACE_SHELL_EDITOR_PRESET` without changing its default neutral shell setup,
 - the default proof surface can produce reviewable overview / typing / validation screenshots,
 - the full authoring proof surface now also has a focused affordance screenshot gate for populated
   text-field clear buttons and percent slider readouts so icon alignment and affix composition stay
