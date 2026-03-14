@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("conversation_demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::{Px, SemanticsRole};
 use fret_icons::IconId;
 use fret_ui::Invalidation;
@@ -12,7 +13,7 @@ use fret_ui_kit::declarative::icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Justify, LayoutRefinement, Radius, Space};
-use fret_ui_shadcn::prelude::{AnyElement, ElementContext, UiHost};
+use fret_ui_shadcn::prelude::AnyElement;
 use std::sync::Arc;
 
 const DIAG_SEED_MESSAGES_ENV: &str = "FRET_UI_GALLERY_AI_CONVERSATION_SEED_MESSAGES";
@@ -48,7 +49,7 @@ fn build_seeded_messages(count: usize) -> Arc<[ui_ai::AiMessage]> {
     Arc::from(seeded.into_boxed_slice())
 }
 
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let messages_model = cx.local_model_keyed("messages", || {
         build_seeded_messages(diag_seed_message_count())
     });

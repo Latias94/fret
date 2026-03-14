@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("queue_demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::{ImageColorSpace, ImageId};
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
@@ -32,7 +33,7 @@ struct DemoTodo {
     completed: bool,
 }
 
-fn demo_queue_image_id<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Option<ImageId> {
+fn demo_queue_image_id(cx: &mut UiCx<'_>) -> Option<ImageId> {
     static SOURCE: OnceLock<ImageSource> = OnceLock::new();
     let source = SOURCE.get_or_init(|| {
         // Keep the snippet self-contained instead of depending on repo-relative demo assets.
@@ -176,7 +177,7 @@ fn default_todos() -> Vec<DemoTodo> {
     ]
 }
 
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let messages = cx.local_model_keyed("messages", default_messages);
     let todos = cx.local_model_keyed("todos", default_todos);
     let action_revision = cx.local_model_keyed("action_revision", || 0_u64);

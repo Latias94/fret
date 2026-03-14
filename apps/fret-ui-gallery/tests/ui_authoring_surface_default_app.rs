@@ -5342,7 +5342,9 @@ fn selected_ai_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
-            &["fn centered<B>(cx: &mut UiCx<'_>, body: B) -> impl UiChild + use<B> where B: UiChild"],
+            &[
+                "fn centered<B>(cx: &mut UiCx<'_>, body: B) -> impl UiChild + use<B> where B: UiChild",
+            ],
             &[
                 "fn centered<H: UiHost, B>(body: B) -> impl IntoUiElement<H> + use<H, B> where B: IntoUiElement<H>",
                 "fn centered<H: UiHost>(cx: &mut ElementContext<'_, H>, body: AnyElement) -> AnyElement",
@@ -5376,7 +5378,9 @@ fn selected_ai_snippet_helpers_prefer_into_ui_element_over_anyelement() {
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/ai/attachments_usage.rs",
-        &["fn render_grid_attachment(cx: &mut UiCx<'_>, data: ui_ai::AttachmentData,) -> impl UiChild + use<>"],
+        &[
+            "fn render_grid_attachment(cx: &mut UiCx<'_>, data: ui_ai::AttachmentData,) -> impl UiChild + use<>",
+        ],
         &[
             "fn render_grid_attachment<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>, data: ui_ai::AttachmentData,) -> impl IntoUiElement<H> + use<H>",
             "fn render_grid_attachment<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>, data: ui_ai::AttachmentData,) -> AnyElement",
@@ -5404,8 +5408,8 @@ fn selected_ai_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/ai/speech_input_demo.rs",
         &[
-            "fn body_text<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>, style: TextStyle, color: Color, align: TextAlign,) -> impl IntoUiElement<H> + use<H>",
-            "fn clear_action<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>, transcript: Model<String>,) -> impl IntoUiElement<H> + use<H>",
+            "fn body_text(cx: &mut UiCx<'_>, text: impl Into<Arc<str>>, style: TextStyle, color: Color, align: TextAlign,) -> impl UiChild + use<>",
+            "fn clear_action(cx: &mut UiCx<'_>, transcript: Model<String>) -> impl UiChild + use<>",
         ],
         &[
             "fn body_text<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>, style: TextStyle, color: Color, align: TextAlign,) -> AnyElement",
@@ -6980,6 +6984,7 @@ fn ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/ai/attachments_list.rs",
             "src/ui/snippets/ai/attachments_usage.rs",
             "src/ui/snippets/ai/audio_player_demo.rs",
+            "src/ui/snippets/ai/canvas_world_layer_spike.rs",
             "src/ui/snippets/ai/chat_demo.rs",
             "src/ui/snippets/ai/chain_of_thought_composable.rs",
             "src/ui/snippets/ai/chain_of_thought_demo.rs",
@@ -6992,14 +6997,19 @@ fn ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/ai/confirmation_demo.rs",
             "src/ui/snippets/ai/confirmation_rejected.rs",
             "src/ui/snippets/ai/confirmation_request.rs",
+            "src/ui/snippets/ai/conversation_demo.rs",
             "src/ui/snippets/ai/context_default.rs",
             "src/ui/snippets/ai/context_demo.rs",
+            "src/ui/snippets/ai/environment_variables_demo.rs",
             "src/ui/snippets/ai/file_tree_basic.rs",
             "src/ui/snippets/ai/file_tree_demo.rs",
             "src/ui/snippets/ai/file_tree_expanded.rs",
             "src/ui/snippets/ai/file_tree_large.rs",
+            "src/ui/snippets/ai/image_demo.rs",
             "src/ui/snippets/ai/inline_citation_demo.rs",
+            "src/ui/snippets/ai/message_branch_demo.rs",
             "src/ui/snippets/ai/message_demo.rs",
+            "src/ui/snippets/ai/message_usage.rs",
             "src/ui/snippets/ai/mic_selector_demo.rs",
             "src/ui/snippets/ai/model_selector_demo.rs",
             "src/ui/snippets/ai/open_in_chat_demo.rs",
@@ -7016,7 +7026,9 @@ fn ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/ai/prompt_input_docs_demo.rs",
             "src/ui/snippets/ai/prompt_input_provider_demo.rs",
             "src/ui/snippets/ai/prompt_input_referenced_sources_demo.rs",
+            "src/ui/snippets/ai/queue_demo.rs",
             "src/ui/snippets/ai/reasoning_demo.rs",
+            "src/ui/snippets/ai/sandbox_demo.rs",
             "src/ui/snippets/ai/schema_display_demo.rs",
             "src/ui/snippets/ai/shimmer_demo.rs",
             "src/ui/snippets/ai/shimmer_duration_demo.rs",
@@ -7024,10 +7036,12 @@ fn ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/ai/snippet_demo.rs",
             "src/ui/snippets/ai/snippet_plain.rs",
             "src/ui/snippets/ai/sources_demo.rs",
+            "src/ui/snippets/ai/speech_input_demo.rs",
             "src/ui/snippets/ai/stack_trace_collapsed.rs",
             "src/ui/snippets/ai/stack_trace_demo.rs",
             "src/ui/snippets/ai/stack_trace_large_demo.rs",
             "src/ui/snippets/ai/stack_trace_no_internal.rs",
+            "src/ui/snippets/ai/suggestions_demo.rs",
             "src/ui/snippets/ai/task_demo.rs",
             "src/ui/snippets/ai/terminal_demo.rs",
             "src/ui/snippets/ai/test_results_basic.rs",
@@ -7035,8 +7049,19 @@ fn ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/ai/test_results_errors.rs",
             "src/ui/snippets/ai/test_results_large_demo.rs",
             "src/ui/snippets/ai/test_results_suites.rs",
+            "src/ui/snippets/ai/transcript_torture.rs",
+            "src/ui/snippets/ai/transcription_demo.rs",
             "src/ui/snippets/ai/voice_selector_demo.rs",
             "src/ui/snippets/ai/web_preview_demo.rs",
+            "src/ui/snippets/ai/workflow_canvas_demo.rs",
+            "src/ui/snippets/ai/workflow_chrome_demo.rs",
+            "src/ui/snippets/ai/workflow_connection_demo.rs",
+            "src/ui/snippets/ai/workflow_controls_demo.rs",
+            "src/ui/snippets/ai/workflow_edge_demo.rs",
+            "src/ui/snippets/ai/workflow_node_demo.rs",
+            "src/ui/snippets/ai/workflow_node_graph_demo.rs",
+            "src/ui/snippets/ai/workflow_panel_demo.rs",
+            "src/ui/snippets/ai/workflow_toolbar_demo.rs",
         ],
         &[
             "use fret::{UiChild, UiCx};",

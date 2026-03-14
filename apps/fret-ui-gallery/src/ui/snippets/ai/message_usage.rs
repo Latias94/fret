@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("message_usage.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::Invalidation;
 use fret_ui::action::OnActivate;
@@ -34,7 +35,7 @@ fn seed_messages() -> Arc<[ui_ai::AiMessage]> {
     )
 }
 
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let messages_model = cx.local_model_keyed("messages", seed_messages);
     let prompt_model = cx.local_model_keyed("prompt", || {
         String::from("Add a small follow-up question...")
