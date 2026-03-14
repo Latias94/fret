@@ -606,6 +606,56 @@ fn popover_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn hover_card_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/hover_card/basic.rs",
+            "src/ui/snippets/hover_card/demo.rs",
+            "src/ui/snippets/hover_card/positioning.rs",
+            "src/ui/snippets/hover_card/rtl.rs",
+            "src/ui/snippets/hover_card/sides.rs",
+            "src/ui/snippets/hover_card/trigger_delays.rs",
+            "src/ui/snippets/hover_card/usage.rs",
+        ],
+        &[
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "pub fn render(cx: &mut UiCx<'_>,",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/hover_card",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn hover_card_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/hover_card.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Trigger Delays\", trigger_delays)",
+            "DocSection::build(cx, \"Positioning\", positioning)",
+            "DocSection::build(cx, \"Basic\", basic)",
+            "DocSection::build(cx, \"Sides\", sides)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Trigger Delays\", trigger_delays)",
+            "DocSection::new(\"Positioning\", positioning)",
+            "DocSection::new(\"Basic\", basic)",
+            "DocSection::new(\"Sides\", sides)",
+            "DocSection::new(\"RTL\", rtl)",
+        ],
+    );
+}
+
+#[test]
 fn progress_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/progress.rs",

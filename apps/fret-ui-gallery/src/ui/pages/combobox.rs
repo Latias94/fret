@@ -79,7 +79,9 @@ pub(super) fn preview_combobox(
         .code_rust_from_file_region(snippets::trigger_button::SOURCE, "example")
         .no_shell();
     let multiple = DocSection::build(cx, "Multiple Selection", multiple)
-        .description("Upstream multi-select chips recipe: select multiple values and remove them via chips.")
+        .description(
+            "Upstream multi-select chips recipe: select multiple values and remove them via chips.",
+        )
         .code_rust_from_file_region(snippets::multiple_selection::SOURCE, "example");
     let custom_items = DocSection::build(cx, "Extras: Custom Items", custom_items)
         .description(

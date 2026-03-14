@@ -40,14 +40,7 @@ pub(super) fn preview_progress(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         Some(
             "Preview follows shadcn Progress docs flow: Demo -> Usage. Gallery adds labeled, controlled, and RTL variants.",
         ),
-        vec![
-            demo,
-            usage,
-            label,
-            controlled,
-            rtl,
-            notes,
-        ],
+        vec![demo, usage, label, controlled, rtl, notes],
     );
 
     vec![body.test_id("ui-gallery-progress")]

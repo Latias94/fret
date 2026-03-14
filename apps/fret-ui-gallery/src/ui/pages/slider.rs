@@ -36,7 +36,9 @@ pub(super) fn preview_slider(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some("Preview follows shadcn Slider docs flow: Demo -> Usage. Extras cover label association and Fret-specific interaction variants."),
+        Some(
+            "Preview follows shadcn Slider docs flow: Demo -> Usage. Extras cover label association and Fret-specific interaction variants.",
+        ),
         vec![demo, usage, label, extras, notes],
     );
 

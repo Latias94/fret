@@ -320,6 +320,14 @@ Execution note on 2026-03-13:
   `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
   now forbidden there by
   `ui_authoring_surface_default_app::{popover_snippets_prefer_ui_cx_on_the_default_app_surface,popover_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the `hover_card` family:
+  `apps/fret-ui-gallery/src/ui/snippets/hover_card/{basic,demo,positioning,rtl,sides,trigger_delays,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep their hover-card
+  demo assets and timing/placement state beside the snippet itself, and
+  `apps/fret-ui-gallery/src/ui/pages/hover_card.rs` now consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{hover_card_snippets_prefer_ui_cx_on_the_default_app_surface,hover_card_page_uses_typed_doc_sections_for_app_facing_snippets}`.
 - the same UI Gallery default-app source gate now also records the `button` family:
   `apps/fret-ui-gallery/src/ui/snippets/button/{demo,usage,size,default,outline,secondary,ghost,destructive,link,icon,with_icon,rounded,loading,button_group,link_render,rtl,variants}.rs`
   now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while

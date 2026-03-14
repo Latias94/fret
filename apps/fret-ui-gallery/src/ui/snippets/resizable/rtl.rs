@@ -46,7 +46,8 @@ fn panel<H: UiHost>(
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let max_w_sm = LayoutRefinement::default().w_full().max_w(Px(384.0));
 
-    let h_fractions = cx.local_model_keyed("ui-gallery-resizable-rtl-h-fractions", || vec![0.5, 0.5]);
+    let h_fractions =
+        cx.local_model_keyed("ui-gallery-resizable-rtl-h-fractions", || vec![0.5, 0.5]);
     let v_fractions =
         cx.local_model_keyed("ui-gallery-resizable-rtl-v-fractions", || vec![0.25, 0.75]);
 

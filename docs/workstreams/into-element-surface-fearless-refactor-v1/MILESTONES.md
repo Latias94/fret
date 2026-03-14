@@ -485,6 +485,12 @@ Exit criteria:
   form state beside the snippet itself, and
   `apps/fret-ui-gallery/src/ui/pages/popover.rs` now routes those snippet-backed sections through
   `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the same UI Gallery default-app top-level snippet cleanup now also records the `hover_card` family:
+  `apps/fret-ui-gallery/src/ui/snippets/hover_card/{basic,demo,positioning,rtl,sides,trigger_delays,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep their demo assets
+  and timing/placement state beside the snippet itself, and
+  `apps/fret-ui-gallery/src/ui/pages/hover_card.rs` now routes those snippet-backed sections
+  through `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
 - the same UI Gallery default-app top-level snippet cleanup now also records the `button` family:
   `apps/fret-ui-gallery/src/ui/snippets/button/{demo,usage,size,default,outline,secondary,ghost,destructive,link,icon,with_icon,rounded,loading,button_group,link_render,rtl,variants}.rs`
   now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while

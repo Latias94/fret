@@ -1,13 +1,11 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::ImageId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    avatar_image: Model<Option<ImageId>>,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>, avatar_image: Model<Option<ImageId>>) -> impl UiChild + use<> {
     // Align with upstream shadcn/ui HoverCard demo composition:
     // - trigger: link-style button (`@nextjs`)
     // - content: `w-80` (320px), avatar + text block

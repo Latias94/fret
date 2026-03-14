@@ -41,8 +41,9 @@ fn panel<H: UiHost>(
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let fractions =
-        cx.local_model_keyed("ui-gallery-resizable-vertical-fractions", || vec![0.25, 0.75]);
+    let fractions = cx.local_model_keyed("ui-gallery-resizable-vertical-fractions", || {
+        vec![0.25, 0.75]
+    });
 
     let group = shadcn::resizable_panel_group(cx, fractions, |cx| {
         [

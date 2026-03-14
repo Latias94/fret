@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("positioning.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn side_content<H: UiHost>(
@@ -35,7 +36,7 @@ fn side_content<H: UiHost>(
         .align(align)
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app).snapshot();
     let muted_fg = theme.color_token("muted-foreground");
     let top_start_content = side_content(

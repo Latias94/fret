@@ -40,6 +40,32 @@ pub(super) fn preview_hover_card(
         .no_shell()
         .description("Implementation notes and regression guidelines.")
         .test_id_prefix("ui-gallery-hover-card-notes");
+    let demo = DocSection::build(cx, "Demo", demo)
+        .description(
+            "Upstream shadcn demo composition: link trigger + 320px content (`w-80`) with avatar and text.",
+        )
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .title_test_id("ui-gallery-section-usage-title")
+        .description("Copyable shadcn-style composition reference for Hover Card.")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let trigger_delays = DocSection::build(cx, "Trigger Delays", trigger_delays)
+        .description(
+            "Use trigger `delay` / `closeDelay` style controls to tune open and close timing.",
+        )
+        .code_rust_from_file_region(snippets::trigger_delays::SOURCE, "example");
+    let positioning = DocSection::build(cx, "Positioning", positioning)
+        .description("Placement is controlled by `side` and `align` on `HoverCardContent`.")
+        .code_rust_from_file_region(snippets::positioning::SOURCE, "example");
+    let basic = DocSection::build(cx, "Basic", basic)
+        .description("Minimal hover card usage surface.")
+        .code_rust_from_file_region(snippets::basic::SOURCE, "example");
+    let sides = DocSection::build(cx, "Sides", sides)
+        .description("Visual sweep of side placements.")
+        .code_rust_from_file_region(snippets::sides::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .description("Hover card should respect right-to-left direction context.")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -47,30 +73,13 @@ pub(super) fn preview_hover_card(
             "Preview mirrors the shadcn Hover Card docs path after `Installation`: `Demo`, `Usage`, `Trigger Delays`, `Positioning`, `Basic`, `Sides`, `RTL`, and `API Reference`.",
         ),
         vec![
-            DocSection::new("Demo", demo)
-                .description(
-                    "Upstream shadcn demo composition: link trigger + 320px content (`w-80`) with avatar and text.",
-                )
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .title_test_id("ui-gallery-section-usage-title")
-                .description("Copyable shadcn-style composition reference for Hover Card.")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Trigger Delays", trigger_delays)
-                .description("Use trigger `delay` / `closeDelay` style controls to tune open and close timing.")
-                .code_rust_from_file_region(snippets::trigger_delays::SOURCE, "example"),
-            DocSection::new("Positioning", positioning)
-                .description("Placement is controlled by `side` and `align` on `HoverCardContent`.")
-                .code_rust_from_file_region(snippets::positioning::SOURCE, "example"),
-            DocSection::new("Basic", basic)
-                .description("Minimal hover card usage surface.")
-                .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
-            DocSection::new("Sides", sides)
-                .description("Visual sweep of side placements.")
-                .code_rust_from_file_region(snippets::sides::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .description("Hover card should respect right-to-left direction context.")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            demo,
+            usage,
+            trigger_delays,
+            positioning,
+            basic,
+            sides,
+            rtl,
             api_reference,
             notes,
         ],

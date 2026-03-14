@@ -27,7 +27,9 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .max_w(Px(1100.0))
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
-        .description("Copyable minimal usage for the chart container + tooltip/legend recipe surface.")
+        .description(
+            "Copyable minimal usage for the chart container + tooltip/legend recipe surface.",
+        )
         .test_id_prefix("ui-gallery-chart-usage")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let contracts_overview = DocSection::build(cx, "Contracts", contracts_overview)

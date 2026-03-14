@@ -148,6 +148,7 @@ Validation addendum on 2026-03-14:
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app dropdown_menu_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app menubar_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app popover_ -- --nocapture`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app hover_card_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app button_ -- --nocapture`
 
 Implementation note on 2026-03-13:
@@ -304,6 +305,12 @@ Implementation note on 2026-03-13:
   form state beside the snippet itself, and
   `apps/fret-ui-gallery/src/ui/pages/popover.rs` now routes those snippet-backed sections through
   `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the same first full legacy page-family sweep now also covers `hover_card`:
+  `apps/fret-ui-gallery/src/ui/snippets/hover_card/{basic,demo,positioning,rtl,sides,trigger_delays,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep their demo assets
+  and timing/placement state beside the snippet itself, and
+  `apps/fret-ui-gallery/src/ui/pages/hover_card.rs` now routes those snippet-backed sections
+  through `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
 - the same first full legacy page-family sweep now also covers `button`:
   `apps/fret-ui-gallery/src/ui/snippets/button/{demo,usage,size,default,outline,secondary,ghost,destructive,link,icon,with_icon,rounded,loading,button_group,link_render,rtl,variants}.rs`
   now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while

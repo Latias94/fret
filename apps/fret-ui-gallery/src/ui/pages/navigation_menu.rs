@@ -43,14 +43,7 @@ pub(super) fn preview_navigation_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         Some(
             "Preview follows shadcn Navigation Menu docs order: Demo, Usage, Link Component, RTL. Container query toggle remains a Fret-specific extra.",
         ),
-        vec![
-            demo,
-            usage,
-            link_component,
-            rtl,
-            demo_with_toggle,
-            notes,
-        ],
+        vec![demo, usage, link_component, rtl, demo_with_toggle, notes],
     );
 
     vec![body.test_id("ui-gallery-navigation-menu")]
