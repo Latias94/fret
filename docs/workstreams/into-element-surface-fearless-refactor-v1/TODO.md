@@ -68,6 +68,12 @@ Execution note on 2026-03-14:
   typed `UiCx -> impl UiChild` posture, their remaining helper signatures no longer spell
   `ElementContext<'_, H>`, and the composite source gates now close the last Material 3 teaching
   drift on this lane.
+- the specialized `ai` lane has now advanced through its first curated snippet sweep:
+  `apps/fret-ui-gallery/src/ui/snippets/ai/{agent_demo,artifact_demo,artifact_code_display,audio_player_demo,chat_demo,code_block_demo,commit_custom_children,commit_demo,commit_large_demo,confirmation_accepted,confirmation_demo,confirmation_rejected,confirmation_request,file_tree_basic,file_tree_demo,file_tree_expanded,file_tree_large,inline_citation_demo,message_demo,open_in_chat_demo,package_info_demo,plan_demo,reasoning_demo,schema_display_demo,snippet_demo,snippet_plain,sources_demo,stack_trace_collapsed,stack_trace_demo,stack_trace_large_demo,stack_trace_no_internal,task_demo,terminal_demo,test_results_basic,test_results_demo,test_results_errors,test_results_large_demo,test_results_suites,tool_demo,web_preview_demo}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and the new
+  `ui_authoring_surface_default_app::ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface`
+  gate forbids those exemplars from drifting back to `ElementContext<'_, H> -> AnyElement`.
+  That reduces the remaining old-signature top-level `ai` snippet renders from 87 to 47.
 - after these tracked landings, the current tracked default-app teaching-surface lane is
   effectively closed; remaining follow-up work now lives on the specialized `ai` lane plus any
   optional dead-field/runtime cleanup.

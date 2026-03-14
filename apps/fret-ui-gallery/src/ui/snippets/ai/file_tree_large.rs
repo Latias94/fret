@@ -1,19 +1,16 @@
 pub const SOURCE: &str = include_str!("file_tree_large.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::{Px, TextAlign, TextOverflow, TextWrap};
 use fret_ui::action::ActionCx;
-use fret_ui::element::{AnyElement, Length, SemanticsDecoration, SizeStyle, TextProps};
-use fret_ui::{ElementContext, UiHost};
+use fret_ui::element::{Length, SemanticsDecoration, SizeStyle, TextProps};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ModelWatchExt;
-use fret_ui_kit::{IntoUiElement, LayoutRefinement, Space, ui};
+use fret_ui_kit::{LayoutRefinement, Space, ui};
 use std::sync::Arc;
 
-fn invisible_marker<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    test_id: &'static str,
-) -> impl IntoUiElement<H> + use<H> {
+fn invisible_marker(cx: &mut UiCx<'_>, test_id: &'static str) -> impl UiChild + use<> {
     cx.text_props(TextProps {
         layout: fret_ui::element::LayoutStyle {
             size: SizeStyle {
@@ -39,7 +36,7 @@ fn invisible_marker<H: UiHost>(
     )
 }
 
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let selected = cx.local_model_keyed("selected", || None::<Arc<str>>);
 
     let selected_value = cx.watch_model(&selected).layout().cloned().flatten();
@@ -88,9 +85,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .into_element(cx)
 }
 
-pub fn preview<H: UiHost + 'static>(
-    cx: &mut ElementContext<'_, H>,
-) -> impl IntoUiElement<H> + use<H> {
+pub fn preview(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     render(cx)
 }
 // endregion: example

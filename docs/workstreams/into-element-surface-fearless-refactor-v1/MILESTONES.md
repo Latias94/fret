@@ -888,6 +888,15 @@ Exit criteria:
   drift on this lane.
 - validation addendum on 2026-03-14:
   `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app material3_ -- --nocapture`
+- the specialized `ai` lane has now advanced through its first curated snippet sweep:
+  `apps/fret-ui-gallery/src/ui/snippets/ai/{agent_demo,artifact_demo,artifact_code_display,audio_player_demo,chat_demo,code_block_demo,commit_custom_children,commit_demo,commit_large_demo,confirmation_accepted,confirmation_demo,confirmation_rejected,confirmation_request,file_tree_basic,file_tree_demo,file_tree_expanded,file_tree_large,inline_citation_demo,message_demo,open_in_chat_demo,package_info_demo,plan_demo,reasoning_demo,schema_display_demo,snippet_demo,snippet_plain,sources_demo,stack_trace_collapsed,stack_trace_demo,stack_trace_large_demo,stack_trace_no_internal,task_demo,terminal_demo,test_results_basic,test_results_demo,test_results_errors,test_results_large_demo,test_results_suites,tool_demo,web_preview_demo}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and the new
+  `ui_authoring_surface_default_app::ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface`
+  gate forbids those exemplars from drifting back to `ElementContext<'_, H> -> AnyElement`.
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface -- --nocapture`
+- remaining specialized-lane count update on 2026-03-14:
+  old-signature top-level `ai` snippet renders now fall from 87 to 47.
 - after these tracked landings, the tracked default-app workstream-local teaching-surface lane is
   now effectively closed; remaining work continues on the specialized `ai` lane plus any optional
   post-cleanup of now-nonessential gallery runtime fields.

@@ -5358,19 +5358,21 @@ fn selected_ai_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
+            &["pub fn preview(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
             &[
                 "pub fn preview<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>,) -> impl IntoUiElement<H> + use<H>",
+                "pub fn preview<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement",
             ],
-            &["pub fn preview<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
         );
     }
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/ai/test_results_demo.rs",
+        &["fn progress_section(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
         &[
             "fn progress_section<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H>",
+            "fn progress_section<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement",
         ],
-        &["fn progress_section<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
@@ -5385,20 +5387,18 @@ fn selected_ai_snippet_helpers_prefer_into_ui_element_over_anyelement() {
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/ai/file_tree_demo.rs",
+        &["fn invisible_marker(cx: &mut UiCx<'_>, test_id: &'static str) -> impl UiChild + use<>"],
         &[
             "fn invisible_marker<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
-        ],
-        &[
             "fn invisible_marker<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id: &'static str,) -> AnyElement",
         ],
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/ai/file_tree_large.rs",
+        &["fn invisible_marker(cx: &mut UiCx<'_>, test_id: &'static str) -> impl UiChild + use<>"],
         &[
             "fn invisible_marker<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
-        ],
-        &[
             "fn invisible_marker<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id: &'static str,) -> AnyElement",
         ],
     );
@@ -6950,6 +6950,111 @@ fn material3_composite_snippets_prefer_ui_cx_on_the_default_app_surface() {
     for relative_path in [
         "src/ui/snippets/material3/gallery.rs",
         "src/ui/snippets/material3/state_matrix.rs",
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+        assert!(
+            !normalized.contains("ElementContext<'_,H>"),
+            "{} reintroduced legacy host-bound helper parameters",
+            path.display()
+        );
+    }
+}
+
+#[test]
+fn ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/ai/agent_demo.rs",
+            "src/ui/snippets/ai/artifact_demo.rs",
+            "src/ui/snippets/ai/artifact_code_display.rs",
+            "src/ui/snippets/ai/audio_player_demo.rs",
+            "src/ui/snippets/ai/chat_demo.rs",
+            "src/ui/snippets/ai/code_block_demo.rs",
+            "src/ui/snippets/ai/commit_custom_children.rs",
+            "src/ui/snippets/ai/commit_demo.rs",
+            "src/ui/snippets/ai/commit_large_demo.rs",
+            "src/ui/snippets/ai/confirmation_accepted.rs",
+            "src/ui/snippets/ai/confirmation_demo.rs",
+            "src/ui/snippets/ai/confirmation_rejected.rs",
+            "src/ui/snippets/ai/confirmation_request.rs",
+            "src/ui/snippets/ai/file_tree_basic.rs",
+            "src/ui/snippets/ai/file_tree_demo.rs",
+            "src/ui/snippets/ai/file_tree_expanded.rs",
+            "src/ui/snippets/ai/file_tree_large.rs",
+            "src/ui/snippets/ai/inline_citation_demo.rs",
+            "src/ui/snippets/ai/message_demo.rs",
+            "src/ui/snippets/ai/open_in_chat_demo.rs",
+            "src/ui/snippets/ai/package_info_demo.rs",
+            "src/ui/snippets/ai/tool_demo.rs",
+            "src/ui/snippets/ai/plan_demo.rs",
+            "src/ui/snippets/ai/reasoning_demo.rs",
+            "src/ui/snippets/ai/schema_display_demo.rs",
+            "src/ui/snippets/ai/snippet_demo.rs",
+            "src/ui/snippets/ai/snippet_plain.rs",
+            "src/ui/snippets/ai/sources_demo.rs",
+            "src/ui/snippets/ai/stack_trace_collapsed.rs",
+            "src/ui/snippets/ai/stack_trace_demo.rs",
+            "src/ui/snippets/ai/stack_trace_large_demo.rs",
+            "src/ui/snippets/ai/stack_trace_no_internal.rs",
+            "src/ui/snippets/ai/task_demo.rs",
+            "src/ui/snippets/ai/terminal_demo.rs",
+            "src/ui/snippets/ai/test_results_basic.rs",
+            "src/ui/snippets/ai/test_results_demo.rs",
+            "src/ui/snippets/ai/test_results_errors.rs",
+            "src/ui/snippets/ai/test_results_large_demo.rs",
+            "src/ui/snippets/ai/test_results_suites.rs",
+            "src/ui/snippets/ai/web_preview_demo.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing AI leaf snippet surface",
+    );
+
+    for relative_path in [
+        "src/ui/snippets/ai/agent_demo.rs",
+        "src/ui/snippets/ai/artifact_demo.rs",
+        "src/ui/snippets/ai/artifact_code_display.rs",
+        "src/ui/snippets/ai/audio_player_demo.rs",
+        "src/ui/snippets/ai/chat_demo.rs",
+        "src/ui/snippets/ai/code_block_demo.rs",
+        "src/ui/snippets/ai/commit_custom_children.rs",
+        "src/ui/snippets/ai/commit_demo.rs",
+        "src/ui/snippets/ai/commit_large_demo.rs",
+        "src/ui/snippets/ai/confirmation_accepted.rs",
+        "src/ui/snippets/ai/confirmation_demo.rs",
+        "src/ui/snippets/ai/confirmation_rejected.rs",
+        "src/ui/snippets/ai/confirmation_request.rs",
+        "src/ui/snippets/ai/file_tree_basic.rs",
+        "src/ui/snippets/ai/file_tree_demo.rs",
+        "src/ui/snippets/ai/file_tree_expanded.rs",
+        "src/ui/snippets/ai/file_tree_large.rs",
+        "src/ui/snippets/ai/inline_citation_demo.rs",
+        "src/ui/snippets/ai/message_demo.rs",
+        "src/ui/snippets/ai/open_in_chat_demo.rs",
+        "src/ui/snippets/ai/package_info_demo.rs",
+        "src/ui/snippets/ai/tool_demo.rs",
+        "src/ui/snippets/ai/plan_demo.rs",
+        "src/ui/snippets/ai/reasoning_demo.rs",
+        "src/ui/snippets/ai/schema_display_demo.rs",
+        "src/ui/snippets/ai/snippet_demo.rs",
+        "src/ui/snippets/ai/snippet_plain.rs",
+        "src/ui/snippets/ai/sources_demo.rs",
+        "src/ui/snippets/ai/stack_trace_collapsed.rs",
+        "src/ui/snippets/ai/stack_trace_demo.rs",
+        "src/ui/snippets/ai/stack_trace_large_demo.rs",
+        "src/ui/snippets/ai/stack_trace_no_internal.rs",
+        "src/ui/snippets/ai/task_demo.rs",
+        "src/ui/snippets/ai/terminal_demo.rs",
+        "src/ui/snippets/ai/test_results_basic.rs",
+        "src/ui/snippets/ai/test_results_demo.rs",
+        "src/ui/snippets/ai/test_results_errors.rs",
+        "src/ui/snippets/ai/test_results_large_demo.rs",
+        "src/ui/snippets/ai/test_results_suites.rs",
+        "src/ui/snippets/ai/web_preview_demo.rs",
     ] {
         let path = manifest_path(relative_path);
         let source = read_path(&path);

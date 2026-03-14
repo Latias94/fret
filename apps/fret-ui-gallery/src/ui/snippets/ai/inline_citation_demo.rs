@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("inline_citation_demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
@@ -8,7 +9,7 @@ use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let selected_model = cx.local_model_keyed("selected", || None::<Arc<str>>);
     let selected_now = cx
         .get_model_cloned(&selected_model, Invalidation::Paint)

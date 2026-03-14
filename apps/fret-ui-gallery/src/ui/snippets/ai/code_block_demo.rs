@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("code_block_demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_icons_lucide::generated_ids::lucide::FILE_CODE;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ModelWatchExt;
@@ -9,7 +10,7 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app).clone();
     let muted_fg = theme.color_token("muted-foreground");
 
