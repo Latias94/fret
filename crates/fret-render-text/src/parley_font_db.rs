@@ -14,6 +14,7 @@ pub struct ParleyShaperFontDbDiagnosticsSnapshot {
     pub registered_font_blobs_total_bytes: u64,
     pub family_id_cache_entries: u64,
     pub baseline_metrics_cache_entries: u64,
+    pub catalog_entries_build_count: u64,
     pub all_font_names_cache_present: bool,
     pub all_font_catalog_entries_cache_present: bool,
 }
@@ -26,6 +27,7 @@ pub(crate) struct ParleyFontDbState {
     all_font_names_cache: Option<Vec<String>>,
     all_font_catalog_entries_cache: Option<Vec<FontCatalogEntryMetadata>>,
     base_line_metrics_cache: HashMap<u64, (f32, f32)>,
+    catalog_entries_build_count: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -45,6 +47,7 @@ impl Default for ParleyFontDbState {
             all_font_names_cache: None,
             all_font_catalog_entries_cache: None,
             base_line_metrics_cache: HashMap::new(),
+            catalog_entries_build_count: 0,
         }
     }
 }
@@ -101,6 +104,7 @@ impl ParleyFontDbState {
             registered_font_blobs_total_bytes: self.registered_font_blobs_total_bytes as u64,
             family_id_cache_entries: self.family_id_cache_lower.len() as u64,
             baseline_metrics_cache_entries: self.base_line_metrics_cache.len() as u64,
+            catalog_entries_build_count: self.catalog_entries_build_count,
             all_font_names_cache_present: self.all_font_names_cache.is_some(),
             all_font_catalog_entries_cache_present: self.all_font_catalog_entries_cache.is_some(),
         }
@@ -203,6 +207,7 @@ impl ParleyFontDbState {
         if let Some(cache) = self.all_font_catalog_entries_cache.as_ref() {
             return cache.clone();
         }
+        self.catalog_entries_build_count = self.catalog_entries_build_count.saturating_add(1);
 
         fn axis_tag_string(tag_be_bytes: [u8; 4]) -> String {
             String::from_utf8_lossy(&tag_be_bytes).to_string()

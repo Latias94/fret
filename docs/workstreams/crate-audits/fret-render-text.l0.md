@@ -69,7 +69,13 @@ Evidence anchors:
   - Files: `crates/fret-render-text/src/parley_shaper.rs`
 - Fallback policy composition and diagnostics snapshot
   - Files: `crates/fret-render-text/src/fallback_policy.rs`
-- Layout adaptation / wrapping / hit testing
+- Wrapper helper seams now split by responsibility
+  - Width-balancing helper: `crates/fret-render-text/src/wrapper_balance.rs`
+  - Boundary / grapheme cut / hit-testing helpers: `crates/fret-render-text/src/wrapper_boundaries.rs`
+  - Paragraph + newline assembly and ellipsis handling: `crates/fret-render-text/src/wrapper_paragraphs.rs`
+  - Range slicing + single-line shaping helpers: `crates/fret-render-text/src/wrapper_slices.rs`
+  - Paragraph range wrapping helpers: `crates/fret-render-text/src/wrapper_ranges.rs`
+- Remaining top-level layout adaptation dispatcher
   - Files: `crates/fret-render-text/src/wrapper.rs`, `crates/fret-render-text/src/measure.rs`,
     `crates/fret-render-text/src/prepare_layout.rs`
 - Geometry and decoration translation
@@ -107,22 +113,31 @@ Evidence anchors:
 - Catalog extraction cost on the foreground path
   - Failure mode: `all_font_catalog_entries()` and related metadata probes become unexpectedly
     expensive on startup or after rescans.
-  - Existing gates: cache presence diagnostics via `font_db_diagnostics_snapshot`.
-  - Missing gate to add: a bounded perf/regression harness for repeated catalog enumeration.
+  - Existing gates: cache presence diagnostics via `font_db_diagnostics_snapshot` plus the
+    crate-local build-count harness
+    `font_catalog_cached_reads_do_not_rebuild_entries_until_invalidated`.
+  - Missing gate to add: optional higher-level perf evidence if catalog enumeration ever becomes a
+    user-visible startup bottleneck in real apps.
 - `wrapper.rs` as a second "god module"
   - Failure mode: line layout, wrapping, metrics, and hit testing regress together because there is
     no smaller ownership boundary.
-  - Existing gates: crate tests exist, but the ownership seam is still broad.
-  - Missing gate to add: split module-level tests aligned to subdomains after extraction.
+  - Existing gates: crate tests exist, and helper seams now isolate balancing, boundary logic,
+    ellipsis/paragraph assembly, range slicing, and paragraph range wrapping from the top-level
+    dispatcher.
+  - Missing gate to add: split module-level tests aligned to the new subdomains so helper ownership
+    is reflected in the test layout as well.
 
 ## 6) Code quality findings (Rust best practices)
 
 - Positive: the crate keeps backend dependencies out and now has a clearer internal seam:
   `ParleyFontDbState` isolates catalog caches, blob retention, and rescan replay from the shaping
   entrypoints.
+- Positive: `wrapper.rs` is no longer the sole owner of all wrapping helpers; boundary math, slice
+  shaping, balancing, paragraph assembly, and range wrapping have moved into dedicated internal
+  modules.
 - The main remaining maintainability risk is responsibility concentration:
   - `ParleyShaper` still owns shaping, locale/fallback inputs, and baseline-metrics orchestration.
-  - `wrapper.rs` owns too much post-shaping behavior.
+  - `wrapper.rs` still carries the top-level public entrypoints and its large in-file test module.
 - No obvious `unsafe` usage was observed in the audited entry points.
 - The fallback-policy contract is strong, but much of its regression coverage currently lives in
   `fret-render-wgpu`, which makes renderer-independent refactors slower to validate.
@@ -130,9 +145,20 @@ Evidence anchors:
 Evidence anchors:
 
 - `crates/fret-render-text/src/parley_font_db.rs` (`ParleyFontDbState`,
-  `all_font_catalog_entries`, `apply_system_font_rescan_result`, `run_system_font_rescan`)
+  `all_font_catalog_entries`, `catalog_entries_build_count`, `apply_system_font_rescan_result`,
+  `run_system_font_rescan`)
 - `crates/fret-render-text/src/parley_shaper.rs` (`font_db_diagnostics_snapshot`,
-  `base_ascent_descent_px_for_style`)
+  `base_ascent_descent_px_for_style`,
+  `font_catalog_cached_reads_do_not_rebuild_entries_until_invalidated`)
+- `crates/fret-render-text/src/wrapper_boundaries.rs` (`hit_test_x`,
+  `clamp_to_grapheme_boundary_down`)
+- `crates/fret-render-text/src/wrapper_balance.rs` (`balanced_word_wrap_width_px`)
+- `crates/fret-render-text/src/wrapper_paragraphs.rs` (`wrap_with_newlines`,
+  `wrap_none_ellipsis`)
+- `crates/fret-render-text/src/wrapper_slices.rs` (`shape_slice`,
+  `shape_slice_measure_only`, `slice_spans`)
+- `crates/fret-render-text/src/wrapper_ranges.rs` (`wrap_grapheme_range`,
+  `wrap_word_range_measure_only`)
 - `crates/fret-render-text/src/fallback_policy.rs` (`TextFallbackPolicyV1`,
   `diagnostics_snapshot`)
 - `crates/fret-render-wgpu/src/text/tests.rs`
@@ -142,8 +168,9 @@ Evidence anchors:
 1. Separate fallback-policy tests from renderer-backend tests by adding crate-local key/snapshot
    coverage — outcome: portable refactors do not need `fret-render-wgpu` to validate policy logic —
    gate: `cargo nextest run -p fret-render-text`.
-2. Split `wrapper.rs` into smaller submodules (`line_breaking`, `hit_test`, `metrics`, `selection`)
-   — outcome: smaller diffs and clearer ownership — gate: `cargo nextest run -p fret-render-text`.
+2. Consider moving the large `wrapper.rs` test module into helper-aligned test files once the team
+   wants review diffs to mirror the new internal seams — outcome: implementation ownership and test
+   ownership match — gate: `cargo nextest run -p fret-render-text`.
 
 ## 8) Open questions / decisions needed
 

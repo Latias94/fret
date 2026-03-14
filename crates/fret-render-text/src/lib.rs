@@ -14,6 +14,11 @@ mod parley_shaper;
 mod prepare_layout;
 mod spans;
 mod wrapper;
+mod wrapper_balance;
+mod wrapper_boundaries;
+mod wrapper_paragraphs;
+mod wrapper_ranges;
+mod wrapper_slices;
 
 pub use cache_keys::*;
 pub use cache_tuning::*;

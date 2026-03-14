@@ -1479,6 +1479,69 @@ mod tests {
     }
 
     #[test]
+    fn font_catalog_cached_reads_do_not_rebuild_entries_until_invalidated() {
+        let mut shaper = ParleyShaper::new_without_system_fonts();
+        let snapshot0 = shaper.font_db_diagnostics_snapshot();
+        assert_eq!(
+            snapshot0.catalog_entries_build_count, 0,
+            "expected no catalog builds before first enumeration"
+        );
+
+        let entries0 = shaper.all_font_catalog_entries();
+        assert!(
+            entries0.is_empty(),
+            "expected bundled-only empty catalog before adding fonts"
+        );
+        let snapshot1 = shaper.font_db_diagnostics_snapshot();
+        assert_eq!(
+            snapshot1.catalog_entries_build_count, 1,
+            "expected first cold enumeration to build the catalog exactly once"
+        );
+        assert!(
+            snapshot1.all_font_catalog_entries_cache_present,
+            "expected catalog cache to be populated after first enumeration"
+        );
+
+        for _ in 0..16 {
+            assert_eq!(
+                entries0,
+                shaper.all_font_catalog_entries(),
+                "expected cached catalog enumeration to stay stable"
+            );
+        }
+        let snapshot2 = shaper.font_db_diagnostics_snapshot();
+        assert_eq!(
+            snapshot2.catalog_entries_build_count, 1,
+            "expected repeated cached enumerations not to rebuild the catalog"
+        );
+
+        let added = shaper.add_fonts(fret_fonts::bootstrap_fonts().iter().map(|b| b.to_vec()));
+        assert!(added > 0, "expected bundled fonts to load");
+        let snapshot3 = shaper.font_db_diagnostics_snapshot();
+        assert!(
+            !snapshot3.all_font_catalog_entries_cache_present,
+            "expected add_fonts to invalidate the catalog cache"
+        );
+        assert_eq!(
+            snapshot3.catalog_entries_build_count, 1,
+            "expected invalidation alone not to rebuild the catalog"
+        );
+
+        let entries1 = shaper.all_font_catalog_entries();
+        assert!(
+            entries1
+                .iter()
+                .any(|e| e.family.eq_ignore_ascii_case("Inter")),
+            "expected rebuilt catalog to include bundled fonts after invalidation"
+        );
+        let snapshot4 = shaper.font_db_diagnostics_snapshot();
+        assert_eq!(
+            snapshot4.catalog_entries_build_count, 2,
+            "expected the first post-invalidation enumeration to rebuild exactly once"
+        );
+    }
+
+    #[test]
     fn registered_font_blobs_dedup_and_lru_eviction_by_count() {
         let _guard = env_lock().lock().unwrap();
         let prev_max_count = std::env::var("FRET_TEXT_REGISTERED_FONT_BLOBS_MAX_COUNT").ok();
