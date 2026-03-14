@@ -1,18 +1,18 @@
 pub const SOURCE: &str = include_str!("range.rs");
 
 // region: example
-use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
+use crate::ui::snippets::date_picker::{default_month, diag_calendar_roving, fixed_today};
+use fret::{UiChild, UiCx};
+use fret_ui_headless::calendar::DateRangeSelection;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    open: Model<bool>,
-    month: Model<CalendarMonth>,
-    selected: Model<DateRangeSelection>,
-) -> AnyElement {
-    let diag_calendar_roving =
-        std::env::var_os("FRET_UI_GALLERY_DIAG_CALENDAR_ROVING").is_some_and(|v| !v.is_empty());
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let today = fixed_today();
+    let open = cx.local_model_keyed("open", || false);
+    let month = cx.local_model_keyed("month", || default_month(today));
+    let selected = cx.local_model_keyed("selected", DateRangeSelection::default);
+    let diag_calendar_roving = diag_calendar_roving();
 
     let mut picker = shadcn::DateRangePicker::new(open, month, selected).placeholder("Pick a date");
 

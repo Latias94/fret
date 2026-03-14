@@ -174,10 +174,7 @@ pub(crate) fn card_doc_scaffold_metrics_json(bisect: u32) -> serde_json::Value {
     })
 }
 
-pub(super) fn preview_card(
-    cx: &mut UiCx<'_>,
-    event_cover_image: Model<Option<ImageId>>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let bisect = ui_gallery_bisect_flags();
     let show_code_tabs = (bisect & BISECT_DISABLE_CARD_CODE_TABS) == 0;
     let show_intro = (bisect & BISECT_DISABLE_CARD_PAGE_INTRO) == 0;
@@ -192,7 +189,7 @@ pub(super) fn preview_card(
     let mut sections: Vec<DocSection> = Vec::new();
     if (bisect & BISECT_DISABLE_CARD_SECTION_DEMO) == 0 {
         let login = snippets::demo::render(cx);
-        let section = DocSection::new("Demo", login)
+        let section = DocSection::build(cx, "Demo", login)
             .test_id_root("ui-gallery-card-section-demo")
             .test_id_prefix("ui-gallery-card-section-demo")
             .no_shell()
@@ -202,7 +199,7 @@ pub(super) fn preview_card(
     }
     if (bisect & BISECT_DISABLE_CARD_SECTION_USAGE) == 0 {
         let usage = snippets::usage::render(cx);
-        let section = DocSection::new("Usage", usage)
+        let section = DocSection::build(cx, "Usage", usage)
             .test_id_root("ui-gallery-card-section-usage")
             .test_id_prefix("ui-gallery-card-section-usage")
             .no_shell()
@@ -212,7 +209,7 @@ pub(super) fn preview_card(
     }
     if (bisect & BISECT_DISABLE_CARD_SECTION_SIZE) == 0 {
         let size = snippets::size::render(cx);
-        let section = DocSection::new("Size", size)
+        let section = DocSection::build(cx, "Size", size)
             .test_id_root("ui-gallery-card-section-size")
             .test_id_prefix("ui-gallery-card-section-size")
             .no_shell()
@@ -221,8 +218,8 @@ pub(super) fn preview_card(
         sections.push(with_card_code(section, snippets::size::SOURCE));
     }
     if (bisect & BISECT_DISABLE_CARD_SECTION_IMAGE) == 0 {
-        let image = snippets::image::render(cx, event_cover_image.clone());
-        let section = DocSection::new("Image", image)
+        let image = snippets::image::render(cx);
+        let section = DocSection::build(cx, "Image", image)
             .test_id_root("ui-gallery-card-section-image")
             .test_id_prefix("ui-gallery-card-section-image")
             .no_shell()
@@ -232,7 +229,7 @@ pub(super) fn preview_card(
     }
     if (bisect & BISECT_DISABLE_CARD_SECTION_RTL) == 0 {
         let rtl = snippets::rtl::render(cx);
-        let section = DocSection::new("RTL", rtl)
+        let section = DocSection::build(cx, "RTL", rtl)
             .test_id_root("ui-gallery-card-section-rtl")
             .test_id_prefix("ui-gallery-card-section-rtl")
             .no_shell()
@@ -242,7 +239,7 @@ pub(super) fn preview_card(
     }
     if (bisect & BISECT_DISABLE_CARD_SECTION_COMPOSITIONS) == 0 {
         let compositions = snippets::compositions::render(cx);
-        let section = DocSection::new("Compositions", compositions)
+        let section = DocSection::build(cx, "Compositions", compositions)
             .test_id_root("ui-gallery-card-section-compositions")
             .test_id_prefix("ui-gallery-card-section-compositions")
             .no_shell()
@@ -252,7 +249,7 @@ pub(super) fn preview_card(
     }
     if (bisect & BISECT_DISABLE_CARD_SECTION_CARD_CONTENT) == 0 {
         let card_content_inline_button = snippets::card_content::render(cx);
-        let section = DocSection::new("CardContent", card_content_inline_button)
+        let section = DocSection::build(cx, "CardContent", card_content_inline_button)
             .test_id_root("ui-gallery-card-section-card-content")
             .test_id_prefix("ui-gallery-card-section-card-content")
             .no_shell()
@@ -262,7 +259,7 @@ pub(super) fn preview_card(
     }
     if (bisect & BISECT_DISABLE_CARD_SECTION_MEETING_NOTES) == 0 {
         let meeting_notes = snippets::meeting_notes::render(cx);
-        let section = DocSection::new("Meeting Notes", meeting_notes)
+        let section = DocSection::build(cx, "Meeting Notes", meeting_notes)
             .test_id_root("ui-gallery-card-section-meeting-notes")
             .test_id_prefix("ui-gallery-card-section-meeting-notes")
             .no_shell()

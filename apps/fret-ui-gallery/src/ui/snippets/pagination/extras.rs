@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("extras.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::{IntoUiElement, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -9,7 +10,7 @@ use std::sync::Arc;
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 const CMD_APP_SAVE: &str = "ui_gallery.app.save";
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let rows_per_page = cx.local_model_keyed("rows_per_page", || Some(Arc::<str>::from("25")));
     let rows_per_page_open = cx.local_model_keyed("rows_per_page_open", || false);
 

@@ -1,30 +1,15 @@
 pub const SOURCE: &str = include_str!("dropdowns.rs");
 
 // region: example
+use crate::ui::snippets::date_picker::fixed_today;
 use fret::{UiChild, UiCx};
 use fret_ui::Invalidation;
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
 
-fn parse_iso_date_ymd(raw: &str) -> Option<Date> {
-    let raw = raw.trim();
-    let (year, rest) = raw.split_once('-')?;
-    let (month, day) = rest.split_once('-')?;
-
-    let year: i32 = year.parse().ok()?;
-    let month: u8 = month.parse().ok()?;
-    let day: u8 = day.parse().ok()?;
-
-    let month = time::Month::try_from(month).ok()?;
-    Date::from_calendar_date(year, month, day).ok()
-}
-
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let today = std::env::var("FRET_UI_GALLERY_FIXED_TODAY")
-        .ok()
-        .and_then(|raw| parse_iso_date_ymd(&raw))
-        .unwrap_or_else(|| time::OffsetDateTime::now_utc().date());
+    let today = fixed_today();
 
     let open = cx.local_model_keyed("open", || false);
     let month = cx.local_model_keyed("month", || CalendarMonth::from_date(today));

@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("spacing.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Color;
 use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_shadcn::toggle_group::ToggleGroupStyle;
@@ -30,7 +31,7 @@ fn accent_item<H: UiHost>(
         .test_id(format!("ui-gallery-toggle-group-spacing-{value}"))
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     shadcn::ToggleGroup::multiple_uncontrolled(["star"])
         .variant(shadcn::ToggleVariant::Outline)
         .size(shadcn::ToggleSize::Sm)

@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -43,7 +43,7 @@ fn password_field(password: Model<String>) -> impl IntoUiElement<fret_app::App> 
     .gap(Space::N2)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let email = cx.local_model_keyed("email", String::new);
     let password = cx.local_model_keyed("password", String::new);
 

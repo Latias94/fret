@@ -23,31 +23,30 @@ pub(super) fn preview_separator(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .no_shell()
         .description("Public surface summary and ownership notes.");
 
+    let demo = DocSection::build(cx, "Demo", demo)
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .description("Copyable minimal usage for `Separator`.")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let vertical = DocSection::build(cx, "Vertical", vertical)
+        .description("Use `orientation=vertical` for vertical separators.")
+        .code_rust_from_file_region(snippets::vertical::SOURCE, "example");
+    let menu = DocSection::build(cx, "Menu", menu)
+        .description("Vertical separators between menu-like items with descriptions.")
+        .code_rust_from_file_region(snippets::menu::SOURCE, "example");
+    let list = DocSection::build(cx, "List", list)
+        .description("Horizontal separators between list items.")
+        .code_rust_from_file_region(snippets::list::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .description("Separator layout should hold under an RTL direction provider.")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+
     let body = doc_layout::render_doc_page(
         cx,
         Some(
             "Preview mirrors the shadcn Separator docs path first: Demo, Usage, Vertical, Menu, List, RTL, and API Reference.",
         ),
-        vec![
-            DocSection::new("Demo", demo)
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .description("Copyable minimal usage for `Separator`.")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Vertical", vertical)
-                .description("Use `orientation=vertical` for vertical separators.")
-                .code_rust_from_file_region(snippets::vertical::SOURCE, "example"),
-            DocSection::new("Menu", menu)
-                .description("Vertical separators between menu-like items with descriptions.")
-                .code_rust_from_file_region(snippets::menu::SOURCE, "example"),
-            DocSection::new("List", list)
-                .description("Horizontal separators between list items.")
-                .code_rust_from_file_region(snippets::list::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .description("Separator layout should hold under an RTL direction provider.")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            api_reference,
-        ],
+        vec![demo, usage, vertical, menu, list, rtl, api_reference],
     );
 
     vec![body.test_id("ui-gallery-separator")]

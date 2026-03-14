@@ -4,19 +4,16 @@ use fret::UiCx;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::command as snippets;
 
-pub(super) fn preview_command_palette(
-    cx: &mut UiCx<'_>,
-    last_action: Model<Arc<str>>,
-) -> Vec<AnyElement> {
-    let usage_palette = snippets::usage::render(cx, last_action.clone());
-    let docs_demo_palette = snippets::docs_demo::render(cx, last_action.clone());
-    let basic_dialog = snippets::basic::render(cx, last_action.clone());
-    let shortcuts_section = snippets::shortcuts::render(cx, last_action.clone());
-    let action_first_view_runtime = snippets::action_first_view::render(cx, last_action.clone());
-    let groups_palette = snippets::groups::render(cx, last_action.clone());
-    let scrollable_palette = snippets::scrollable::render(cx, last_action.clone());
-    let rtl = snippets::rtl::render(cx, last_action.clone());
-    let loading_palette = snippets::loading::render(cx, last_action.clone());
+pub(super) fn preview_command_palette(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    let usage_palette = snippets::usage::render(cx);
+    let docs_demo_palette = snippets::docs_demo::render(cx);
+    let basic_dialog = snippets::basic::render(cx);
+    let shortcuts_section = snippets::shortcuts::render(cx);
+    let action_first_view_runtime = snippets::action_first_view::render(cx);
+    let groups_palette = snippets::groups::render(cx);
+    let scrollable_palette = snippets::scrollable::render(cx);
+    let rtl = snippets::rtl::render(cx);
+    let loading_palette = snippets::loading::render(cx);
 
     let notes_stack = doc_layout::notes_block([
         "Use `CommandDialog` for global discovery (Ctrl/Cmd+P), and keep `CommandPalette` embedded for local filtering surfaces.",
@@ -26,6 +23,49 @@ pub(super) fn preview_command_palette(
     ]);
     let notes_stack =
         DocSection::build(cx, "Notes", notes_stack).test_id_prefix("ui-gallery-command-notes");
+    let docs_demo = DocSection::build(cx, "Demo", docs_demo_palette)
+        .test_id_prefix("ui-gallery-command-docs-demo")
+        .descriptions([
+            "This aligns with the shadcn `command-demo` example (icons + disabled item + shortcuts).",
+            "Use `leading_icon(...)` so icons inherit the row foreground (`currentColor`) for hover/active/disabled states.",
+        ])
+        .code_rust_from_file_region(snippets::docs_demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage_palette)
+        .test_id_prefix("ui-gallery-command-usage")
+        .descriptions([
+            "This mirrors shadcn's docs structure (`Command` + `CommandInput` + `CommandList`) using Fret's `CommandPalette` recipe.",
+            "Keep root chrome recipe-owned, but keep width caps such as `max-w-sm` caller-owned at the usage site.",
+        ])
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let basic = DocSection::build(cx, "Basic", basic_dialog)
+        .test_id_prefix("ui-gallery-command-basic")
+        .code_rust_from_file_region(snippets::basic::SOURCE, "example");
+    let shortcuts = DocSection::build(cx, "Shortcuts", shortcuts_section)
+        .test_id_prefix("ui-gallery-command-shortcuts")
+        .code_rust_from_file_region(snippets::shortcuts::SOURCE, "example");
+    let groups = DocSection::build(cx, "Groups", groups_palette)
+        .code_rust_from_file_region(snippets::groups::SOURCE, "example");
+    let scrollable = DocSection::build(cx, "Scrollable", scrollable_palette)
+        .test_id_prefix("ui-gallery-command-scrollable")
+        .code_rust_from_file_region(snippets::scrollable::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+    let loading = DocSection::build(cx, "Loading", loading_palette)
+        .test_id_prefix("ui-gallery-command-loading")
+        .descriptions([
+            "cmdk supports a non-selectable loading row inside the list (`Command.Loading`).",
+            "In Fret this maps to `shadcn::CommandLoading` as an extra `CommandEntry`.",
+        ])
+        .code_rust_from_file_region(snippets::loading::SOURCE, "example");
+    let action_first_view_runtime =
+        DocSection::build(cx, "Action-first (View runtime)", action_first_view_runtime)
+            .test_id_prefix("ui-gallery-command-action-first-view-runtime")
+            .descriptions([
+                "This section demonstrates action-first authoring using the ecosystem view runtime (`View` + `AppUi`).",
+                "The button binds a stable `ActionId` via `.action(...)`, while the view root stays on the grouped default surface (`cx.state()` + `cx.actions().models::<...>(...)`).",
+                "Advanced host-side action-handler cases stay in cookbook/reference docs; the gallery keeps the default teaching path small on purpose.",
+            ])
+            .code_rust_from_file_region(snippets::action_first_view::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -33,75 +73,15 @@ pub(super) fn preview_command_palette(
             "Preview follows shadcn Command docs order (Demo, Usage, Basic, Shortcuts, Groups, Scrollable, RTL), plus Fret-specific Loading and Action-first sections.",
         ),
         vec![
-            DocSection::new("Demo", docs_demo_palette)
-
-                .test_id_prefix("ui-gallery-command-docs-demo")
-                .descriptions([
-                    "This aligns with the shadcn `command-demo` example (icons + disabled item + shortcuts).",
-                    "Use `leading_icon(...)` so icons inherit the row foreground (`currentColor`) for hover/active/disabled states.",
-                ])
-                .code_rust_from_file_region(
-                    snippets::docs_demo::SOURCE,
-                    "example",
-                ),
-            DocSection::new("Usage", usage_palette)
-
-                .test_id_prefix("ui-gallery-command-usage")
-                .descriptions([
-                    "This mirrors shadcn's docs structure (`Command` + `CommandInput` + `CommandList`) using Fret's `CommandPalette` recipe.",
-                    "Keep root chrome recipe-owned, but keep width caps such as `max-w-sm` caller-owned at the usage site.",
-                ])
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Basic", basic_dialog)
-
-                .test_id_prefix("ui-gallery-command-basic")
-                .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
-            DocSection::new("Shortcuts", shortcuts_section)
-
-                .test_id_prefix("ui-gallery-command-shortcuts")
-                .code_rust_from_file_region(
-                    snippets::shortcuts::SOURCE,
-                    "example",
-                ),
-            DocSection::new("Groups", groups_palette)
-
-                .code_rust_from_file_region(
-                    snippets::groups::SOURCE,
-                    "example",
-                ),
-            DocSection::new("Scrollable", scrollable_palette)
-
-                .test_id_prefix("ui-gallery-command-scrollable")
-                .code_rust_from_file_region(
-                    snippets::scrollable::SOURCE,
-                    "example",
-                ),
-            DocSection::new("RTL", rtl)
-
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Loading", loading_palette)
-
-                .test_id_prefix("ui-gallery-command-loading")
-                .descriptions([
-                    "cmdk supports a non-selectable loading row inside the list (`Command.Loading`).",
-                    "In Fret this maps to `shadcn::CommandLoading` as an extra `CommandEntry`.",
-                ])
-                .code_rust_from_file_region(
-                    snippets::loading::SOURCE,
-                    "example",
-                ),
-            DocSection::new("Action-first (View runtime)", action_first_view_runtime)
-
-                .test_id_prefix("ui-gallery-command-action-first-view-runtime")
-                .descriptions([
-                    "This section demonstrates action-first authoring using the ecosystem view runtime (`View` + `AppUi`).",
-                    "The button binds a stable `ActionId` via `.action(...)`, while the view root stays on the grouped default surface (`cx.state()` + `cx.actions().models::<...>(...)`).",
-                    "Advanced host-side action-handler cases stay in cookbook/reference docs; the gallery keeps the default teaching path small on purpose.",
-                ])
-                .code_rust_from_file_region(
-                    snippets::action_first_view::SOURCE,
-                    "example",
-                ),
+            docs_demo,
+            usage,
+            basic,
+            shortcuts,
+            groups,
+            scrollable,
+            rtl,
+            loading,
+            action_first_view_runtime,
             notes_stack,
         ],
     );

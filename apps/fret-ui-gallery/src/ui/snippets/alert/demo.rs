@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use std::sync::Arc;
 
 use fret_core::{
@@ -113,7 +114,7 @@ fn interactive_link_text<H: UiHost + 'static>(
     .test_id(test_id)
 }
 
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     ui::v_flex(|cx| {
         vec![
             shadcn::alert(|cx| {

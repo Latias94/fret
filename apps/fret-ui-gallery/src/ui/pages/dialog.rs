@@ -28,6 +28,31 @@ pub(super) fn preview_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             "Keep test IDs stable so fretboard diag scripts and regression screenshots remain reusable.",
         )
         .test_id_prefix("ui-gallery-dialog-notes");
+    let demo = DocSection::build(cx, "Demo", demo)
+        .description("Basic dialog with header, form fields, and footer actions.")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .title_test_id("ui-gallery-section-usage-title")
+        .description("Copyable shadcn-style composition reference for Dialog.")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let custom_close = DocSection::build(cx, "Custom Close Button", custom_close)
+        .description("Replace the close affordance with a custom footer action.")
+        .code_rust_from_file_region(snippets::custom_close_button::SOURCE, "example");
+    let no_close = DocSection::build(cx, "No Close Button", no_close)
+        .description("Hide the default close button and rely on Escape or overlay dismissal.")
+        .code_rust_from_file_region(snippets::no_close_button::SOURCE, "example");
+    let sticky_footer = DocSection::build(cx, "Sticky Footer", sticky_footer)
+        .description("Footer stays visible while the content scrolls.")
+        .code_rust_from_file_region(snippets::sticky_footer::SOURCE, "example");
+    let scrollable_content = DocSection::build(cx, "Scrollable Content", scrollable_content)
+        .description("Long body scrolls while keeping the header visible.")
+        .code_rust_from_file_region(snippets::scrollable_content::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .description("Dialog layout should work under an RTL direction provider.")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+    let parts = DocSection::build(cx, "Parts", parts)
+        .description("Fret-specific part surface adapters (Trigger/Portal/Overlay).")
+        .code_rust_from_file_region(snippets::parts::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -35,33 +60,14 @@ pub(super) fn preview_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             "Preview follows shadcn Dialog docs order first, with the Fret-specific `Parts` adapter section appended afterwards.",
         ),
         vec![
-            DocSection::new("Demo", demo)
-                .description("Basic dialog with header, form fields, and footer actions.")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .title_test_id("ui-gallery-section-usage-title")
-                .description("Copyable shadcn-style composition reference for Dialog.")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Custom Close Button", custom_close)
-                .description("Replace the close affordance with a custom footer action.")
-                .code_rust_from_file_region(snippets::custom_close_button::SOURCE, "example"),
-            DocSection::new("No Close Button", no_close)
-                .description(
-                    "Hide the default close button and rely on Escape or overlay dismissal.",
-                )
-                .code_rust_from_file_region(snippets::no_close_button::SOURCE, "example"),
-            DocSection::new("Sticky Footer", sticky_footer)
-                .description("Footer stays visible while the content scrolls.")
-                .code_rust_from_file_region(snippets::sticky_footer::SOURCE, "example"),
-            DocSection::new("Scrollable Content", scrollable_content)
-                .description("Long body scrolls while keeping the header visible.")
-                .code_rust_from_file_region(snippets::scrollable_content::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .description("Dialog layout should work under an RTL direction provider.")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Parts", parts)
-                .description("Fret-specific part surface adapters (Trigger/Portal/Overlay).")
-                .code_rust_from_file_region(snippets::parts::SOURCE, "example"),
+            demo,
+            usage,
+            custom_close,
+            no_close,
+            sticky_footer,
+            scrollable_content,
+            rtl,
+            parts,
             notes,
         ],
     );

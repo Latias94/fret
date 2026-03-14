@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("mobile.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -43,7 +44,7 @@ fn menu_button<H: UiHost>(
         .test_id(test_id)
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let open_mobile = cx.local_model_keyed("open_mobile", || false);
     let selected = cx.local_model_keyed("selected", || Arc::<str>::from("playground"));
 

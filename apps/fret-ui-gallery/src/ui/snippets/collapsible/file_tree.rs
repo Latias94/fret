@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("file_tree.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::{Point, Transform2D};
 use fret_ui::Theme;
 use fret_ui::element::VisualTransformProps;
@@ -131,7 +132,7 @@ fn folder<H: UiHost>(
         )
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let tree_components_open = cx.local_model_keyed("tree_components_open", || true);
     let tree_src_open = cx.local_model_keyed("tree_src_open", || false);
     let tree_src_ui_open = cx.local_model_keyed("tree_src_ui_open", || false);

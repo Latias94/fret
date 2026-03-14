@@ -300,7 +300,7 @@ fn page_preview(
     let combobox_value = models.combobox_value.clone();
     let combobox_open = models.combobox_open.clone();
     let combobox_query = models.combobox_query.clone();
-    let date_picker_open = models.date_picker_open.clone();
+    let _date_picker_open = models.date_picker_open.clone();
     let date_picker_month = models.date_picker_month.clone();
     let date_picker_selected = models.date_picker_selected.clone();
     let data_table_state = models.data_table_state.clone();
@@ -309,9 +309,6 @@ fn page_preview(
     let _tabs_value = models.tabs_value.clone();
     let accordion_value = models.accordion_value.clone();
     let avatar_demo_image = models.avatar_demo_image.clone();
-    let image_fit_demo_wide_image = models.image_fit_demo_wide_image.clone();
-    let image_fit_demo_tall_image = models.image_fit_demo_tall_image.clone();
-    let image_fit_demo_streaming_image = models.image_fit_demo_streaming_image.clone();
     let _progress = models.progress.clone();
     #[cfg(feature = "gallery-dev")]
     let checkbox = models.checkbox.clone();
@@ -330,8 +327,8 @@ fn page_preview(
     let context_menu_edge_open = models.context_menu_edge_open.clone();
     let _cmdk_open = models.cmdk_open.clone();
     let _cmdk_query = models.cmdk_query.clone();
+    #[allow(unused_variables)]
     let last_action = models.last_action.clone();
-    let sonner_position = models.sonner_position.clone();
     #[cfg(feature = "gallery-dev")]
     let virtual_list_torture_jump = models.virtual_list_torture_jump.clone();
     #[cfg(feature = "gallery-dev")]
@@ -469,17 +466,10 @@ fn page_preview(
         #[cfg(feature = "gallery-dev")]
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
         PAGE_BUTTON => pages::preview_button(cx),
-        PAGE_CARD => pages::preview_card(cx, image_fit_demo_wide_image),
+        PAGE_CARD => pages::preview_card(cx),
         PAGE_BADGE => pages::preview_badge(cx),
-        PAGE_AVATAR => pages::preview_avatar(cx, avatar_demo_image),
-        PAGE_IMAGE_OBJECT_FIT => pages::preview_image_object_fit(
-            cx,
-            theme,
-            avatar_demo_image,
-            image_fit_demo_wide_image,
-            image_fit_demo_tall_image,
-            image_fit_demo_streaming_image,
-        ),
+        PAGE_AVATAR => pages::preview_avatar(cx),
+        PAGE_IMAGE_OBJECT_FIT => pages::preview_image_object_fit(cx),
         PAGE_SKELETON => pages::preview_skeleton(cx),
         PAGE_SCROLL_AREA => pages::preview_scroll_area(cx),
         PAGE_TOOLTIP => pages::preview_tooltip(cx),
@@ -525,12 +515,7 @@ fn page_preview(
         PAGE_FORMS => pages::preview_forms(cx),
         PAGE_SELECT => pages::preview_select(cx),
         PAGE_COMBOBOX => pages::preview_combobox(cx, combobox_value, combobox_open, combobox_query),
-        PAGE_DATE_PICKER => pages::preview_date_picker(
-            cx,
-            date_picker_open,
-            date_picker_month,
-            date_picker_selected,
-        ),
+        PAGE_DATE_PICKER => pages::preview_date_picker(cx),
         PAGE_RESIZABLE => pages::preview_resizable(cx),
         PAGE_DATA_TABLE => pages::preview_data_table(cx, data_table_state),
         #[cfg(feature = "gallery-dev")]
@@ -546,9 +531,9 @@ fn page_preview(
             context_menu_open,
             last_action.clone(),
         ),
-        PAGE_COMMAND => pages::preview_command_palette(cx, last_action.clone()),
+        PAGE_COMMAND => pages::preview_command_palette(cx),
         PAGE_TOAST => pages::preview_toast(cx),
-        PAGE_SONNER => pages::preview_sonner(cx, last_action.clone(), sonner_position.clone()),
+        PAGE_SONNER => pages::preview_sonner(cx),
         PAGE_ALERT => pages::preview_alert(cx),
         PAGE_ALERT_DIALOG => pages::preview_alert_dialog(cx),
         PAGE_ASPECT_RATIO => pages::preview_aspect_ratio(

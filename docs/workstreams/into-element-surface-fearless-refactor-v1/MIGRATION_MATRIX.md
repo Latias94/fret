@@ -357,6 +357,183 @@ Execution note on 2026-03-13:
   `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
   now forbidden there by
   `ui_authoring_surface_default_app::{input_group_snippets_prefer_ui_cx_on_the_default_app_surface,input_group_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the `toggle_group` family:
+  `apps/fret-ui-gallery/src/ui/snippets/toggle_group/{custom,demo,disabled,flex_1_items,full_width_items,label,large,outline,rtl,single,size,small,spacing,usage,vertical}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/toggle_group.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{toggle_group_snippets_prefer_ui_cx_on_the_default_app_surface,toggle_group_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the `switch` family:
+  `apps/fret-ui-gallery/src/ui/snippets/switch/{airplane_mode,bluetooth,choice_card,description,disabled,invalid,label,rtl,sizes,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/switch.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{switch_snippets_prefer_ui_cx_on_the_default_app_surface,switch_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the `checkbox` family:
+  `apps/fret-ui-gallery/src/ui/snippets/checkbox/{basic,checked_state,demo,description,disabled,group,invalid_state,label,rtl,table,usage,with_title}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/checkbox.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{checkbox_snippets_prefer_ui_cx_on_the_default_app_surface,checkbox_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the `separator` family:
+  `apps/fret-ui-gallery/src/ui/snippets/separator/{demo,list,menu,rtl,usage,vertical}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/separator.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{separator_snippets_prefer_ui_cx_on_the_default_app_surface,separator_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the `input` family:
+  `apps/fret-ui-gallery/src/ui/snippets/input/{badge,basic,button_group,disabled,field,field_group,file,form,grid,inline,input_group,invalid,label,required,rtl}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/input.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{input_snippets_prefer_ui_cx_on_the_default_app_surface,input_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the `field` family:
+  `apps/fret-ui-gallery/src/ui/snippets/field/{checkbox,choice_card,field_group,fieldset,input,radio,responsive,rtl,select,slider,switch,textarea,validation_and_errors}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/field.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{field_snippets_prefer_ui_cx_on_the_default_app_surface,field_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the `textarea` family:
+  `apps/fret-ui-gallery/src/ui/snippets/textarea/{button,demo,disabled,field,invalid,label,rtl,usage,with_text}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/textarea.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{textarea_snippets_prefer_ui_cx_on_the_default_app_surface,textarea_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the `input_otp` family:
+  `apps/fret-ui-gallery/src/ui/snippets/input_otp/{alphanumeric,controlled,demo,disabled,form,four_digits,invalid,pattern,rtl,separator,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/input_otp.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{input_otp_snippets_prefer_ui_cx_on_the_default_app_surface,input_otp_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the `select` family:
+  `apps/fret-ui-gallery/src/ui/snippets/select/{align_item_with_trigger,demo,diag_surface,disabled,groups,invalid,label,rtl,scrollable}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/select.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{select_snippets_prefer_ui_cx_on_the_default_app_surface,select_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the `calendar` family:
+  `apps/fret-ui-gallery/src/ui/snippets/calendar/{basic,booked_dates,custom_cell_size,date_and_time_picker,date_of_birth_picker,demo,hijri,locale,month_year_selector,natural_language_picker,presets,range,responsive_mixed_semantics,rtl,usage,week_numbers}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/calendar.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{calendar_snippets_prefer_ui_cx_on_the_default_app_surface,calendar_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the `alert_dialog` family:
+  `apps/fret-ui-gallery/src/ui/snippets/alert_dialog/{basic,demo,destructive,detached_trigger,media,parts,rich_content,rtl,small,small_with_media,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/alert_dialog.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{alert_dialog_snippets_prefer_ui_cx_on_the_default_app_surface,alert_dialog_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the `dialog` family:
+  `apps/fret-ui-gallery/src/ui/snippets/dialog/{custom_close_button,demo,no_close_button,parts,rtl,scrollable_content,sticky_footer,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/dialog.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{dialog_snippets_prefer_ui_cx_on_the_default_app_surface,dialog_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the `drawer` family:
+  `apps/fret-ui-gallery/src/ui/snippets/drawer/{demo,responsive_dialog,rtl,scrollable_content,sides,snap_points,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/drawer.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{drawer_snippets_prefer_ui_cx_on_the_default_app_surface,drawer_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the `sheet` family:
+  `apps/fret-ui-gallery/src/ui/snippets/sheet/{demo,no_close_button,parts,rtl,side,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/sheet.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{sheet_snippets_prefer_ui_cx_on_the_default_app_surface,sheet_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the `spinner` / `form` / `empty` /
+  `breadcrumb` / `collapsible` batch:
+  those snippet families now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`,
+  while the corresponding pages consume the previews through `DocSection::build(cx, ...)`; the
+  old `ElementContext<'_, H> -> AnyElement` teaching pattern is now forbidden there by
+  `ui_authoring_surface_default_app::{spinner_snippets_prefer_ui_cx_on_the_default_app_surface,spinner_page_uses_typed_doc_sections_for_app_facing_snippets,form_snippets_prefer_ui_cx_on_the_default_app_surface,form_page_uses_typed_doc_sections_for_app_facing_snippets,empty_snippets_prefer_ui_cx_on_the_default_app_surface,empty_page_uses_typed_doc_sections_for_app_facing_snippets,breadcrumb_snippets_prefer_ui_cx_on_the_default_app_surface,breadcrumb_page_uses_typed_doc_sections_for_app_facing_snippets,collapsible_snippets_prefer_ui_cx_on_the_default_app_surface,collapsible_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app source gate now also records the `skeleton` / `pagination` /
+  `alert` / `sidebar` / `label` batch:
+  those snippet families now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`,
+  while the corresponding pages consume the previews through `DocSection::build(cx, ...)`; the
+  old `ElementContext<'_, H> -> AnyElement` teaching pattern is now forbidden there by
+  `ui_authoring_surface_default_app::{skeleton_snippets_prefer_ui_cx_on_the_default_app_surface,skeleton_page_uses_typed_doc_sections_for_app_facing_snippets,pagination_snippets_prefer_ui_cx_on_the_default_app_surface,pagination_page_uses_typed_doc_sections_for_app_facing_snippets,alert_snippets_prefer_ui_cx_on_the_default_app_surface,alert_page_uses_typed_doc_sections_for_app_facing_snippets,sidebar_snippets_prefer_ui_cx_on_the_default_app_surface,sidebar_page_uses_typed_doc_sections_for_app_facing_snippets,label_snippets_prefer_ui_cx_on_the_default_app_surface,label_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- after the recent `button_group` / `input_group` / `toggle_group` / `switch` / `checkbox` /
+  `separator` / `input` / `field` / `textarea` / `input_otp` / `select` / `calendar` /
+  `alert_dialog` / `dialog` / `drawer` / `sheet` / `spinner` / `form` / `empty` / `breadcrumb` /
+  `collapsible` / `skeleton` / `pagination` / `alert` / `sidebar` / `label` / `kbd` / `icons` /
+  `sonner` default-app sweeps, the tracked default-app workstream-local backlog now falls from 66
+  to 52 top-level snippet renders still teaching `ElementContext<'_, H> -> AnyElement` on that
+  lane (down from 95 before the recent high-yield family batches, 136 before the broader family
+  sweeps, and 184 before the default-app migration run started).
+- the same UI Gallery default-app source gate now also records the `kbd`, `icons`, and `sonner`
+  families:
+  `apps/fret-ui-gallery/src/ui/snippets/kbd/{button,demo,group,input_group,rtl,tooltip}.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/icons/{grid,spinner}.rs`,
+  and
+  `apps/fret-ui-gallery/src/ui/snippets/sonner/{demo,extras,notes,position,setup,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/{kbd,icons,sonner}.rs` consume those previews through
+  `DocSection::build(cx, ...)`; on the `sonner` lane, the page relay models are also removed in
+  favor of snippet-local shared state plus a dedicated local toaster. The old teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{kbd_*,icons_*,sonner_*}`.
+- the same UI Gallery default-app source gate now also records the `date_picker` family:
+  `apps/fret-ui-gallery/src/ui/snippets/date_picker/{basic,demo,dob,dropdowns,input,label,natural_language,notes,presets,range,rtl,time_picker,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/date_picker.rs` consumes those previews through
+  `DocSection::build(cx, ...)` and no longer relays per-demo `open/month/selected/value` state
+  through the page shell. The old teaching pattern is now forbidden there by
+  `ui_authoring_surface_default_app::{date_picker_*}`.
+- the same UI Gallery default-app source gate now also records the `avatar` family:
+  `apps/fret-ui-gallery/src/ui/snippets/avatar/{badge_icon,basic,demo,dropdown,fallback_only,group,group_count,group_count_icon,rtl,sizes,usage,with_badge}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/avatar.rs` consumes those previews through
+  `DocSection::build(cx, ...)` and no longer relays a page-owned image model. The avatar snippet
+  module now owns a self-contained `ImageSource::rgba8(...) -> ImageId` demo asset, and the old
+  teaching pattern is now forbidden there by
+  `ui_authoring_surface_default_app::{avatar_*,selected_avatar_*}`.
+- the same UI Gallery default-app source gate now also records the `command` family:
+  `apps/fret-ui-gallery/src/ui/snippets/command/{action_first_view,basic,docs_demo,groups,loading,rtl,scrollable,shortcuts,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/command.rs` consumes those previews through
+  `DocSection::build(cx, ...)` and no longer relays a page-owned `last_action` model. The shared
+  command local-state/action helpers now live in `snippets/command/mod.rs`, and the old teaching
+  pattern is now forbidden there by
+  `ui_authoring_surface_default_app::{command_*}`.
+- the same UI Gallery default-app source gate now also records the `card` family:
+  `apps/fret-ui-gallery/src/ui/snippets/card/{card_content,compositions,demo,image,meeting_notes,rtl,size,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/card.rs` consumes those previews through
+  `DocSection::build(cx, ...)` and no longer relays a page-owned `event_cover_image` model. The
+  `image` snippet now resolves its demo `ImageSource` entirely inside the snippet, and the old
+  teaching pattern is now forbidden there by
+  `ui_authoring_surface_default_app::{card_*,selected_card_*}`.
+- the same UI Gallery default-app source gate now also records the `image_object_fit` family:
+  `apps/fret-ui-gallery/src/ui/snippets/image_object_fit/{mapping,sampling}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/image_object_fit.rs` consumes those previews through
+  `DocSection::build(cx, ...)` and no longer relays gallery-owned `ImageId` models. The snippet
+  module now generates its own fit/sampling demo `ImageSource`s, and the old teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{image_object_fit_*}`.
+- after that `image_object_fit` sweep, the tracked default-app workstream-local backlog falls from
+  11 to 9
+  top-level snippet renders still teaching `ElementContext<'_, H> -> AnyElement` on that lane.
+- for the default-app authoring lane, the next queue should now continue on the remaining
+  long-tail stateful families after `command` / `card` / `image_object_fit`, with `data_table`
+  and `motion_presets` now carrying most of the remaining tracked backlog, while `ai`,
+  `material3`, `typography`, and `shadcn_extras` continue as separate specialized follow-up
+  lanes.
 - the cookbook advanced-example source gate now also records
   `apps/fret-cookbook/examples/customv1_basics.rs`,
   where `panel_shell(...)` and `preview_content(...)` now use `IntoUiElement<KernelApp>`-based

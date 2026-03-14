@@ -1,10 +1,11 @@
 pub const SOURCE: &str = include_str!("input_group.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let input_value = cx.local_model_keyed("input_value", String::new);
     let textarea_value = cx.local_model_keyed("textarea_value", String::new);
 

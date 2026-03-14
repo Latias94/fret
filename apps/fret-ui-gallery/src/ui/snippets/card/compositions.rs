@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("compositions.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_ui::Theme;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::style as decl_style;
@@ -18,7 +18,7 @@ where
         .items_start()
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app).snapshot();
 
     let gap = MetricRef::space(Space::N4).resolve(&theme);

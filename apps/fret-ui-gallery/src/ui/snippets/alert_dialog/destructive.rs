@@ -1,10 +1,11 @@
 pub const SOURCE: &str = include_str!("destructive.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
-use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use fret_ui_shadcn::facade as shadcn;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model_keyed("open", || false);
     let open_for_trigger = open.clone();
     let open_for_children = open.clone();

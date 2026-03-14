@@ -27,6 +27,35 @@ pub(super) fn preview_alert(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let notes = DocSection::build(cx, "Notes", notes)
         .description("API reference pointers and caveats.")
         .test_id_prefix("ui-gallery-alert-notes");
+    let basic = DocSection::build(cx, "Basic", basic)
+        .description("Modern upstream basic patterns: title-only, title + description, and description-only.")
+        .test_id_prefix("ui-gallery-alert-basic")
+        .code_rust_from_file_region(snippets::basic::SOURCE, "example");
+    let demo = DocSection::build(cx, "With Icons", demo)
+        .description("Modern upstream icon patterns, including rich title/description content and long-text wrapping.")
+        .test_id_prefix("ui-gallery-alert")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let destructive = DocSection::build(cx, "Destructive", destructive)
+        .description("Modern upstream destructive patterns: simple failure state plus multi-paragraph recovery guidance.")
+        .code_rust_from_file_region(snippets::destructive::SOURCE, "example");
+    let action = DocSection::build(cx, "With Actions", action)
+        .description(
+            "Modern upstream action-slot patterns: compact xs button plus inline badge action.",
+        )
+        .code_rust_from_file_region(snippets::action::SOURCE, "example");
+    let rich_title = DocSection::build(cx, "Rich Title", rich_title)
+        .description("Composable title content using `AlertTitle::new_children(...)`.")
+        .test_id_prefix("ui-gallery-alert-rich-title")
+        .code_rust_from_file_region(snippets::rich_title::SOURCE, "example");
+    let interactive_links = DocSection::build(cx, "Interactive Links", interactive_links)
+        .description("A Fret-specific text-link pattern: normal runs open safe URLs, while diagnostics still keep deterministic activation evidence.")
+        .code_rust_from_file_region(snippets::interactive_links::SOURCE, "example");
+    let custom_colors = DocSection::build(cx, "Custom Colors", custom_colors)
+        .description("Custom chrome override for special emphasis.")
+        .code_rust_from_file_region(snippets::custom_colors::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .description("Alert layout under an RTL direction provider.")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -34,33 +63,14 @@ pub(super) fn preview_alert(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             "Preview follows the modern shadcn/Radix example grouping first—Basic, With Icons, Destructive, With Actions—then adds Fret-specific copy-paste surfaces.",
         ),
         vec![
-            DocSection::new("Basic", basic)
-                .description("Modern upstream basic patterns: title-only, title + description, and description-only.")
-                .test_id_prefix("ui-gallery-alert-basic")
-                .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
-            DocSection::new("With Icons", demo)
-                .description("Modern upstream icon patterns, including rich title/description content and long-text wrapping.")
-                .test_id_prefix("ui-gallery-alert")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Destructive", destructive)
-                .description("Modern upstream destructive patterns: simple failure state plus multi-paragraph recovery guidance.")
-                .code_rust_from_file_region(snippets::destructive::SOURCE, "example"),
-            DocSection::new("With Actions", action)
-                .description("Modern upstream action-slot patterns: compact xs button plus inline badge action.")
-                .code_rust_from_file_region(snippets::action::SOURCE, "example"),
-            DocSection::new("Rich Title", rich_title)
-                .description("Composable title content using `AlertTitle::new_children(...)`.")
-                .test_id_prefix("ui-gallery-alert-rich-title")
-                .code_rust_from_file_region(snippets::rich_title::SOURCE, "example"),
-            DocSection::new("Interactive Links", interactive_links)
-                .description("A Fret-specific text-link pattern: normal runs open safe URLs, while diagnostics still keep deterministic activation evidence.")
-                .code_rust_from_file_region(snippets::interactive_links::SOURCE, "example"),
-            DocSection::new("Custom Colors", custom_colors)
-                .description("Custom chrome override for special emphasis.")
-                .code_rust_from_file_region(snippets::custom_colors::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .description("Alert layout under an RTL direction provider.")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            basic,
+            demo,
+            destructive,
+            action,
+            rich_title,
+            interactive_links,
+            custom_colors,
+            rtl,
             notes,
         ],
     );

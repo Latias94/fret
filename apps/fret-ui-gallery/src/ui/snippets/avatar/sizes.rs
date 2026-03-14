@@ -1,6 +1,8 @@
 pub const SOURCE: &str = include_str!("sizes.rs");
 
 // region: example
+use crate::ui::snippets::avatar::demo_image;
+use fret::{UiChild, UiCx};
 use fret_core::ImageId;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -18,15 +20,15 @@ where
 
 fn avatar_with_image<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    avatar_image: Model<Option<ImageId>>,
+    avatar_image: Option<ImageId>,
     size: shadcn::AvatarSize,
     fallback_text: &'static str,
     test_id: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
     shadcn::avatar_sized(cx, size, |cx| {
-        let image = shadcn::AvatarImage::model(avatar_image.clone()).into_element(cx);
+        let image = shadcn::AvatarImage::maybe(avatar_image).into_element(cx);
         let fallback = shadcn::AvatarFallback::new(fallback_text)
-            .when_image_missing_model(avatar_image)
+            .when_image_missing(avatar_image)
             .delay_ms(120)
             .into_element(cx);
         [image, fallback]
@@ -35,15 +37,14 @@ fn avatar_with_image<H: UiHost>(
     .test_id(test_id)
 }
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    avatar_image: Model<Option<ImageId>>,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let avatar_image = demo_image(cx);
+
     wrap_row(|cx| {
         vec![
             avatar_with_image(
                 cx,
-                avatar_image.clone(),
+                avatar_image,
                 shadcn::AvatarSize::Sm,
                 "CN",
                 "ui-gallery-avatar-sizes-sm",
@@ -51,7 +52,7 @@ pub fn render<H: UiHost>(
             .into_element(cx),
             avatar_with_image(
                 cx,
-                avatar_image.clone(),
+                avatar_image,
                 shadcn::AvatarSize::Default,
                 "CN",
                 "ui-gallery-avatar-sizes-default",

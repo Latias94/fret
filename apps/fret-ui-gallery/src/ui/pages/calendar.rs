@@ -69,6 +69,75 @@ pub(super) fn preview_calendar(
     let notes = DocSection::build(cx, "Notes", notes)
         .no_shell()
         .test_id_prefix("ui-gallery-calendar-notes");
+    let demo = DocSection::build(cx, "Demo", demo)
+        .max_w(Px(980.0))
+        .test_id_prefix("ui-gallery-calendar-demo")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .max_w(Px(980.0))
+        .test_id_prefix("ui-gallery-calendar-usage")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let hijri = DocSection::build(cx, "Persian / Hijri / Jalali Calendar", hijri)
+        .max_w(Px(980.0))
+        .test_id_prefix("ui-gallery-calendar-hijri")
+        .code_rust_from_file_region(snippets::hijri::SOURCE, "example");
+    let basic = DocSection::build(cx, "Basic", basic)
+        .max_w(Px(980.0))
+        .test_id_prefix("ui-gallery-calendar-basic")
+        .code_rust_from_file_region(snippets::basic::SOURCE, "example");
+    let range = DocSection::build(cx, "Range Calendar", range)
+        .max_w(Px(980.0))
+        .test_id_prefix("ui-gallery-calendar-range")
+        .code_rust_from_file_region(snippets::range::SOURCE, "example");
+    let month_year_selector = DocSection::build(cx, "Month and Year Selector", month_year_selector)
+        .max_w(Px(980.0))
+        .test_id_prefix("ui-gallery-calendar-caption")
+        .code_rust_from_file_region(snippets::month_year_selector::SOURCE, "example");
+    let presets = DocSection::build(cx, "Presets", presets)
+        .no_shell()
+        .test_id_prefix("ui-gallery-calendar-presets")
+        .code_rust_from_file_region(snippets::presets::SOURCE, "example");
+    let date_and_time_picker = DocSection::build(cx, "Date and Time Picker", date_and_time_picker)
+        .no_shell()
+        .test_id_prefix("ui-gallery-calendar-time")
+        .code_rust_from_file_region(snippets::date_and_time_picker::SOURCE, "example");
+    let booked_dates = DocSection::build(cx, "Booked dates", booked_dates)
+        .max_w(Px(980.0))
+        .test_id_prefix("ui-gallery-calendar-booked")
+        .code_rust_from_file_region(snippets::booked_dates::SOURCE, "example");
+    let custom_cell_size = DocSection::build(cx, "Custom Cell Size", custom_cell_size)
+        .max_w(Px(980.0))
+        .test_id_prefix("ui-gallery-calendar-custom-cell")
+        .code_rust_from_file_region(snippets::custom_cell_size::SOURCE, "example");
+    let week_numbers = DocSection::build(cx, "Week Numbers", week_numbers)
+        .max_w(Px(980.0))
+        .test_id_prefix("ui-gallery-calendar-week-numbers")
+        .code_rust_from_file_region(snippets::week_numbers::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .max_w(Px(980.0))
+        .test_id_prefix("ui-gallery-calendar-rtl")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+    let date_of_birth_picker = DocSection::build(cx, "Date of Birth Picker", date_of_birth_picker)
+        .max_w(Px(980.0))
+        .test_id_prefix("ui-gallery-calendar-dob")
+        .code_rust_from_file_region(snippets::date_of_birth_picker::SOURCE, "example");
+    let natural_language_picker =
+        DocSection::build(cx, "Natural Language Picker", natural_language_picker)
+            .no_shell()
+            .test_id_prefix("ui-gallery-calendar-natural-language")
+            .code_rust_from_file_region(snippets::natural_language_picker::SOURCE, "example");
+    let locale = DocSection::build(cx, "Locale (WIP)", locale)
+        .max_w(Px(980.0))
+        .test_id_prefix("ui-gallery-calendar-locale")
+        .code_rust_from_file_region(snippets::locale::SOURCE, "example");
+    let responsive_mixed_semantics = DocSection::build(
+        cx,
+        "Responsive semantics (Fret)",
+        responsive_mixed_semantics,
+    )
+    .max_w(Px(980.0))
+    .test_id_prefix("ui-gallery-calendar-responsive")
+    .code_rust_from_file_region(snippets::responsive_mixed_semantics::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -76,76 +145,25 @@ pub(super) fn preview_calendar(
             "Preview mirrors the shadcn docs order first (`Demo`, `Usage`, `About`, `Date Picker`, `Persian / Hijri / Jalali Calendar`, `Selected Date (With TimeZone)`, examples, `RTL`), then appends Fret-only regression surfaces.",
         ),
         vec![
-            DocSection::new("Demo", demo)
-                .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-calendar-demo")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-calendar-usage")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
+            demo,
+            usage,
             about,
             date_picker,
-            DocSection::new("Persian / Hijri / Jalali Calendar", hijri)
-                .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-calendar-hijri")
-                .code_rust_from_file_region(snippets::hijri::SOURCE, "example"),
+            hijri,
             selected_date_timezone,
-            DocSection::new("Basic", basic)
-                .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-calendar-basic")
-                .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
-            DocSection::new("Range Calendar", range)
-                .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-calendar-range")
-                .code_rust_from_file_region(snippets::range::SOURCE, "example"),
-            DocSection::new("Month and Year Selector", month_year_selector)
-                .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-calendar-caption")
-                .code_rust_from_file_region(snippets::month_year_selector::SOURCE, "example"),
-            DocSection::new("Presets", presets)
-                .no_shell()
-                .test_id_prefix("ui-gallery-calendar-presets")
-                .code_rust_from_file_region(snippets::presets::SOURCE, "example"),
-            DocSection::new("Date and Time Picker", date_and_time_picker)
-                .no_shell()
-                .test_id_prefix("ui-gallery-calendar-time")
-                .code_rust_from_file_region(snippets::date_and_time_picker::SOURCE, "example"),
-            DocSection::new("Booked dates", booked_dates)
-                .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-calendar-booked")
-                .code_rust_from_file_region(snippets::booked_dates::SOURCE, "example"),
-            DocSection::new("Custom Cell Size", custom_cell_size)
-                .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-calendar-custom-cell")
-                .code_rust_from_file_region(snippets::custom_cell_size::SOURCE, "example"),
-            DocSection::new("Week Numbers", week_numbers)
-                .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-calendar-week-numbers")
-                .code_rust_from_file_region(snippets::week_numbers::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-calendar-rtl")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Date of Birth Picker", date_of_birth_picker)
-                .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-calendar-dob")
-                .code_rust_from_file_region(snippets::date_of_birth_picker::SOURCE, "example"),
-            DocSection::new("Natural Language Picker", natural_language_picker)
-                .no_shell()
-                .test_id_prefix("ui-gallery-calendar-natural-language")
-                .code_rust_from_file_region(snippets::natural_language_picker::SOURCE, "example"),
-            DocSection::new("Locale (WIP)", locale)
-                .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-calendar-locale")
-                .code_rust_from_file_region(snippets::locale::SOURCE, "example"),
-            DocSection::new("Responsive semantics (Fret)", responsive_mixed_semantics)
-                .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-calendar-responsive")
-                .code_rust_from_file_region(
-                    snippets::responsive_mixed_semantics::SOURCE,
-                    "example",
-                ),
+            basic,
+            range,
+            month_year_selector,
+            presets,
+            date_and_time_picker,
+            booked_dates,
+            custom_cell_size,
+            week_numbers,
+            rtl,
+            date_of_birth_picker,
+            natural_language_picker,
+            locale,
+            responsive_mixed_semantics,
             notes,
         ],
     );

@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("dropdown.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::Theme;
 use fret_ui_kit::IntoUiElement;
@@ -17,7 +18,7 @@ fn dot_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElemen
         .into_element(cx)
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model(|| false);
 
     let crumb = bc::Breadcrumb::new().into_element(cx, |cx| {

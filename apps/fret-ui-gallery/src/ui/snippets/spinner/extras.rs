@@ -1,11 +1,12 @@
 pub const SOURCE: &str = include_str!("extras.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use std::f32::consts::TAU;
 
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let custom_icon_row = ui::h_row(|cx| {
         vec![
             shadcn::Spinner::new().into_element(cx),

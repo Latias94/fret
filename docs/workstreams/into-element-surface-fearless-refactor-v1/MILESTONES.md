@@ -520,7 +520,39 @@ Exit criteria:
   `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
   now forbidden there by
   `ui_authoring_surface_default_app::{input_group_snippets_prefer_ui_cx_on_the_default_app_surface,input_group_page_uses_typed_doc_sections_for_app_facing_snippets}`.
-- the next UI Gallery app-facing snippet batch is now the remaining
+- the same UI Gallery default-app top-level snippet cleanup now also records the `toggle_group`
+  family:
+  `apps/fret-ui-gallery/src/ui/snippets/toggle_group/{custom,demo,disabled,flex_1_items,full_width_items,label,large,outline,rtl,single,size,small,spacing,usage,vertical}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/toggle_group.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{toggle_group_snippets_prefer_ui_cx_on_the_default_app_surface,toggle_group_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app top-level snippet cleanup now also records the `switch` family:
+  `apps/fret-ui-gallery/src/ui/snippets/switch/{airplane_mode,bluetooth,choice_card,description,disabled,invalid,label,rtl,sizes,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/switch.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{switch_snippets_prefer_ui_cx_on_the_default_app_surface,switch_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app top-level snippet cleanup now also records the `checkbox`
+  family:
+  `apps/fret-ui-gallery/src/ui/snippets/checkbox/{basic,checked_state,demo,description,disabled,group,invalid_state,label,rtl,table,usage,with_title}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/checkbox.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{checkbox_snippets_prefer_ui_cx_on_the_default_app_surface,checkbox_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the same UI Gallery default-app top-level snippet cleanup now also records the `separator`
+  family:
+  `apps/fret-ui-gallery/src/ui/snippets/separator/{demo,list,menu,rtl,usage,vertical}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/separator.rs` consumes those previews through
+  `DocSection::build(cx, ...)`; the old `ElementContext<'_, H> -> AnyElement` teaching pattern is
+  now forbidden there by
+  `ui_authoring_surface_default_app::{separator_snippets_prefer_ui_cx_on_the_default_app_surface,separator_page_uses_typed_doc_sections_for_app_facing_snippets}`.
+- the next UI Gallery app-facing snippet batch is now `input`, `field`, `textarea`,
+  `input_otp`, and `select`, followed by the remaining
   `ElementContext<'_, H> -> AnyElement` default-authoring families.
 - M6 raw-seam inventory now has executable source gates in `surface_policy_tests.rs`:
   explicit raw/bridge helpers are currently limited to
@@ -708,3 +740,83 @@ Exit criteria:
      `impl IntoUiElement<fret_app::App>` instead of snippet-local raw helper returns;
   3. any remaining shadcn/component helper surface drift only when it is still teaching the wrong
      product vocabulary, not just because an internal wrapper still lands at an explicit root seam.
+- UI Gallery default-app top-level snippet migration also closed a second high-yield family batch:
+  `input`, `field`, `textarea`, `input_otp`, and `select` now expose
+  `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while the corresponding pages
+  consume those previews through `DocSection::build(cx, ...)` and the focused
+  `ui_authoring_surface_default_app::{input_*,field_*,textarea_*,input_otp_*,select_*}` tests
+  now guard the teaching surface.
+- UI Gallery default-app top-level snippet migration also closed a third high-yield family batch:
+  `calendar`, `alert_dialog`, `dialog`, `drawer`, and `sheet` now expose
+  `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while the corresponding pages
+  consume those previews through `DocSection::build(cx, ...)` and the focused
+  `ui_authoring_surface_default_app::{calendar_*,alert_dialog_*,dialog_*,drawer_*,sheet_*}` tests
+  now guard the teaching surface.
+- UI Gallery default-app top-level snippet migration also closed a fourth high-yield family batch:
+  `spinner`, `form`, `empty`, `breadcrumb`, and `collapsible` now expose
+  `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while the corresponding pages
+  consume those previews through `DocSection::build(cx, ...)` and the focused
+  `ui_authoring_surface_default_app::{spinner_*,form_*,empty_*,breadcrumb_*,collapsible_*}` tests
+  now guard the teaching surface.
+- UI Gallery default-app top-level snippet migration also closed a fifth high-yield family batch:
+  `skeleton`, `pagination`, `alert`, `sidebar`, and `label` now expose
+  `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while the corresponding pages
+  consume those previews through `DocSection::build(cx, ...)` and the focused
+  `ui_authoring_surface_default_app::{skeleton_*,pagination_*,alert_*,sidebar_*,label_*}` tests
+  now guard the teaching surface.
+- UI Gallery default-app top-level snippet migration also closed a sixth family batch:
+  `kbd`, `icons`, and `sonner` now expose
+  `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while the corresponding pages
+  consume those previews through `DocSection::build(cx, ...)`; on the `sonner` page, the snippet
+  module now also owns the local toaster id, last-action state, and toaster-position state instead
+  of relaying page models through `ui/content.rs`.
+- the focused
+  `ui_authoring_surface_default_app::{kbd_*,icons_*,sonner_*}` tests now guard that teaching
+  surface.
+- UI Gallery default-app top-level snippet migration also closed the next state-heavy family:
+  `date_picker` now exposes
+  `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>` across
+  `apps/fret-ui-gallery/src/ui/snippets/date_picker/{basic,demo,dob,dropdowns,input,label,natural_language,notes,presets,range,rtl,time_picker,usage}.rs`,
+  while `apps/fret-ui-gallery/src/ui/pages/date_picker.rs` now only assembles doc sections and no
+  longer relays per-demo state through the page shell.
+- the focused `ui_authoring_surface_default_app::{date_picker_*}` tests now guard that teaching
+  surface.
+- UI Gallery default-app top-level snippet migration also closed the self-contained avatar family:
+  `apps/fret-ui-gallery/src/ui/snippets/avatar/{badge_icon,basic,demo,dropdown,fallback_only,group,group_count,group_count_icon,rtl,sizes,usage,with_badge}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/avatar.rs` now only assembles doc sections and no longer
+  relays a page-owned image model through the docs shell.
+- the focused `ui_authoring_surface_default_app::{avatar_*,selected_avatar_*}` tests now guard
+  that teaching surface.
+- the same UI Gallery default-app source gate now also records the `command` family:
+  `apps/fret-ui-gallery/src/ui/snippets/command/{action_first_view,basic,docs_demo,groups,loading,rtl,scrollable,shortcuts,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/command.rs` consumes those previews through
+  `DocSection::build(cx, ...)` and no longer relays a page-owned `last_action` model through the
+  page shell; the shared local state/action helpers now live in `snippets/command/mod.rs`. The
+  old teaching pattern is now forbidden there by
+  `ui_authoring_surface_default_app::{command_*}`.
+- the same UI Gallery default-app source gate now also records the `card` family:
+  `apps/fret-ui-gallery/src/ui/snippets/card/{card_content,compositions,demo,image,meeting_notes,rtl,size,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/card.rs` consumes those previews through
+  `DocSection::build(cx, ...)` and no longer relays a page-owned `event_cover_image` model; the
+  `image` example now resolves its demo `ImageSource` inside the snippet. The old teaching
+  pattern is now forbidden there by
+  `ui_authoring_surface_default_app::{card_*,selected_card_*}`.
+- the same UI Gallery default-app source gate now also records the `image_object_fit` family:
+  `apps/fret-ui-gallery/src/ui/snippets/image_object_fit/{mapping,sampling}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
+  `apps/fret-ui-gallery/src/ui/pages/image_object_fit.rs` consumes those previews through
+  `DocSection::build(cx, ...)` and no longer relays gallery-owned `ImageId` models; the snippet
+  module now generates its own fit/sampling demo `ImageSource`s. The old teaching pattern is now
+  forbidden there by
+  `ui_authoring_surface_default_app::{image_object_fit_*}`.
+- after that batch, the tracked default-app workstream-local backlog falls from 66 to 9
+  top-level snippet renders still teaching `ElementContext<'_, H> -> AnyElement` on that lane
+  (down from 95 before the recent high-yield family batches, 136 before the broader family
+  sweeps, and 184 before the default-app migration run started).
+- for the default-app lane, the next family queue should now continue on the remaining
+  long-tail stateful pages after `command` / `card` / `image_object_fit`, with `data_table` and
+  `motion_presets` now carrying most of the remaining tracked backlog; `ai`, `material3`,
+  `typography`, and `shadcn_extras` continue on their own specialized follow-up lanes.

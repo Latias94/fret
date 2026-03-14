@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("input.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
@@ -55,13 +56,13 @@ fn parse_date_month_dd_yyyy_en(raw: &str) -> Option<Date> {
     Date::from_calendar_date(year, month, day).ok()
 }
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    open: Model<bool>,
-    month: Model<CalendarMonth>,
-    selected: Model<Option<Date>>,
-    value: Model<String>,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let input_seed = Date::from_calendar_date(2025, time::Month::June, 1).expect("date");
+    let open = cx.local_model_keyed("open", || false);
+    let month = cx.local_model_keyed("month", || CalendarMonth::from_date(input_seed));
+    let selected = cx.local_model_keyed("selected", || Some(input_seed));
+    let value = cx.local_model_keyed("value", || String::from("June 01, 2025"));
+
     let current_value = cx
         .app
         .models()
@@ -102,7 +103,7 @@ pub fn render<H: UiHost>(
     let open_for_key = open.clone();
     let calendar_month = month.clone();
     let calendar_selected = selected.clone();
-    let calendar = move |cx: &mut ElementContext<'_, H>| {
+    let calendar = move |cx: &mut UiCx<'_>| {
         shadcn::Calendar::new(calendar_month.clone(), calendar_selected.clone())
             .close_on_select(open_for_calendar.clone())
             .into_element(cx)

@@ -4,23 +4,9 @@ use fret::UiCx;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::image_object_fit as snippets;
 
-pub(super) fn preview_image_object_fit(
-    cx: &mut UiCx<'_>,
-    theme: &Theme,
-    square_image: Model<Option<ImageId>>,
-    wide_image: Model<Option<ImageId>>,
-    tall_image: Model<Option<ImageId>>,
-    streaming_image: Model<Option<ImageId>>,
-) -> Vec<AnyElement> {
-    let mapping = snippets::mapping::render(
-        cx,
-        theme,
-        square_image.clone(),
-        wide_image.clone(),
-        tall_image.clone(),
-    );
-
-    let sampling = snippets::sampling::render(cx, streaming_image.clone());
+pub(super) fn preview_image_object_fit(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    let mapping = snippets::mapping::render(cx);
+    let sampling = snippets::sampling::render(cx);
 
     let notes = doc_layout::notes_block([
         "Use `ViewportFit::Contain` to avoid cropping; use `Cover` when you want to fill the frame.",
@@ -28,22 +14,18 @@ pub(super) fn preview_image_object_fit(
         "If pixel art looks blurry, prefer `ImageSamplingHint::Nearest` for scaling.",
     ]);
     let notes = DocSection::build(cx, "Notes", notes).description("Usage notes.");
+    let mapping = DocSection::build(cx, "Fit mapping", mapping)
+        .max_w(Px(980.0))
+        .description("Compare Stretch / Contain / Cover across wide, tall, and square sources.")
+        .code_rust_from_file_region(snippets::mapping::SOURCE, "example");
+    let sampling = DocSection::build(cx, "Sampling", sampling)
+        .description("Linear vs nearest sampling (useful for pixel art).")
+        .code_rust_from_file_region(snippets::sampling::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some("MediaImage object-fit demo using gallery asset-backed ImageIds."),
-        vec![
-            DocSection::new("Fit mapping", mapping)
-                .max_w(Px(980.0))
-                .description(
-                    "Compare Stretch / Contain / Cover across wide, tall, and square sources.",
-                )
-                .code_rust_from_file_region(snippets::mapping::SOURCE, "example"),
-            DocSection::new("Sampling", sampling)
-                .description("Linear vs nearest sampling (useful for pixel art).")
-                .code_rust_from_file_region(snippets::sampling::SOURCE, "example"),
-            notes,
-        ],
+        Some("MediaImage object-fit demo using self-contained generated ImageSources."),
+        vec![mapping, sampling, notes],
     );
 
     vec![body.test_id("ui-gallery-image-object-fit")]

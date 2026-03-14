@@ -50,6 +50,47 @@ pub(super) fn preview_alert_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .title_test_id("ui-gallery-section-notes-title")
         .test_id_prefix("ui-gallery-alert-dialog-notes")
         .description("Parity notes and implementation pointers.");
+    let demo = DocSection::build(cx, "Demo", demo)
+        .description("Default-sized modal alert dialog.")
+        .test_id_prefix("ui-gallery-alert-dialog-demo-docsec")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .title_test_id("ui-gallery-section-usage-title")
+        .description("Copyable shadcn-style composition reference for Alert Dialog.")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let basic = DocSection::build(cx, "Basic", basic)
+        .description("A minimal alert dialog with default buttons.")
+        .code_rust_from_file_region(snippets::basic::SOURCE, "example");
+    let small = DocSection::build(cx, "Small", small)
+        .description("Compact dialog size for short copy.")
+        .test_id_prefix("ui-gallery-alert-dialog-small-docsec")
+        .code_rust_from_file_region(snippets::small::SOURCE, "example");
+    let media = DocSection::build(cx, "Media", media)
+        .description("Dialogs can optionally show a leading media/icon in the header.")
+        .test_id_prefix("ui-gallery-alert-dialog-media-docsec")
+        .code_rust_from_file_region(snippets::media::SOURCE, "example");
+    let small_with_media = DocSection::build(cx, "Small with Media", small_with_media)
+        .description("Small size + media variant.")
+        .code_rust_from_file_region(snippets::small_with_media::SOURCE, "example");
+    let destructive = DocSection::build(cx, "Destructive", destructive)
+        .description("Destructive styling for irreversible actions.")
+        .test_id_prefix("ui-gallery-alert-dialog-destructive-docsec")
+        .code_rust_from_file_region(snippets::destructive::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .description("All shadcn components should work under an RTL direction provider.")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+    let parts = DocSection::build(cx, "Parts", parts)
+        .description("Fret-specific part surface adapters for shadcn-style call sites.")
+        .test_id_prefix("ui-gallery-alert-dialog-parts-docsec")
+        .code_rust_from_file_region(snippets::parts::SOURCE, "example");
+    let detached_trigger = DocSection::build(cx, "Detached Trigger", detached_trigger)
+        .description("Use `AlertDialogHandle` when the opener and the dialog content are authored in different subtrees.")
+        .test_id_prefix("ui-gallery-alert-dialog-detached-trigger-docsec")
+        .code_rust_from_file_region(snippets::detached_trigger::SOURCE, "example");
+    let rich_content = DocSection::build(cx, "Rich Content", rich_content)
+        .description("Composable title/description content plus custom footer button content using `new_children(...)` and `children(...)`.")
+        .test_id_prefix("ui-gallery-alert-dialog-rich-content-docsec")
+        .code_rust_from_file_region(snippets::rich_content::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -57,49 +98,19 @@ pub(super) fn preview_alert_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             "Preview mirrors the shadcn Alert Dialog docs path after `Installation`, then keeps Fret-only follow-ups explicit under `Fret Extras`.",
         ),
         vec![
-            DocSection::new("Demo", demo)
-                .description("Default-sized modal alert dialog.")
-                .test_id_prefix("ui-gallery-alert-dialog-demo-docsec")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .title_test_id("ui-gallery-section-usage-title")
-                .description("Copyable shadcn-style composition reference for Alert Dialog.")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Basic", basic)
-                .description("A minimal alert dialog with default buttons.")
-                .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
-            DocSection::new("Small", small)
-                .description("Compact dialog size for short copy.")
-                .test_id_prefix("ui-gallery-alert-dialog-small-docsec")
-                .code_rust_from_file_region(snippets::small::SOURCE, "example"),
-            DocSection::new("Media", media)
-                .description("Dialogs can optionally show a leading media/icon in the header.")
-                .test_id_prefix("ui-gallery-alert-dialog-media-docsec")
-                .code_rust_from_file_region(snippets::media::SOURCE, "example"),
-            DocSection::new("Small with Media", small_with_media)
-                .description("Small size + media variant.")
-                .code_rust_from_file_region(snippets::small_with_media::SOURCE, "example"),
-            DocSection::new("Destructive", destructive)
-                .description("Destructive styling for irreversible actions.")
-                .test_id_prefix("ui-gallery-alert-dialog-destructive-docsec")
-                .code_rust_from_file_region(snippets::destructive::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .description("All shadcn components should work under an RTL direction provider.")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            demo,
+            usage,
+            basic,
+            small,
+            media,
+            small_with_media,
+            destructive,
+            rtl,
             api_reference,
             extras,
-            DocSection::new("Parts", parts)
-                .description("Fret-specific part surface adapters for shadcn-style call sites.")
-                .test_id_prefix("ui-gallery-alert-dialog-parts-docsec")
-                .code_rust_from_file_region(snippets::parts::SOURCE, "example"),
-            DocSection::new("Detached Trigger", detached_trigger)
-                .description("Use `AlertDialogHandle` when the opener and the dialog content are authored in different subtrees.")
-                .test_id_prefix("ui-gallery-alert-dialog-detached-trigger-docsec")
-                .code_rust_from_file_region(snippets::detached_trigger::SOURCE, "example"),
-            DocSection::new("Rich Content", rich_content)
-                .description("Composable title/description content plus custom footer button content using `new_children(...)` and `children(...)`.")
-                .test_id_prefix("ui-gallery-alert-dialog-rich-content-docsec")
-                .code_rust_from_file_region(snippets::rich_content::SOURCE, "example"),
+            parts,
+            detached_trigger,
+            rich_content,
             notes,
         ],
     );

@@ -1,11 +1,12 @@
 pub const SOURCE: &str = include_str!("select.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let value = cx.local_model_keyed("value", || Some(Arc::<str>::from("engineering")));
     let open = cx.local_model_keyed("open", || false);
     let max_w_md = LayoutRefinement::default().w_full().max_w(Px(520.0));

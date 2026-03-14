@@ -1,6 +1,8 @@
 pub const SOURCE: &str = include_str!("group_count_icon.rs");
 
 // region: example
+use crate::ui::snippets::avatar::demo_image;
+use fret::{UiChild, UiCx};
 use fret_core::{ImageId, Px};
 use fret_ui::Theme;
 use fret_ui_kit::{ColorRef, IntoUiElement};
@@ -22,13 +24,13 @@ fn icon<H: UiHost>(
 
 fn avatar_with_image<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    avatar_image: Model<Option<ImageId>>,
+    avatar_image: Option<ImageId>,
     size: shadcn::AvatarSize,
     fallback_text: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
-    let image = shadcn::AvatarImage::model(avatar_image.clone()).into_element(cx);
+    let image = shadcn::AvatarImage::maybe(avatar_image).into_element(cx);
     let fallback = shadcn::AvatarFallback::new(fallback_text)
-        .when_image_missing_model(avatar_image)
+        .when_image_missing(avatar_image)
         .delay_ms(120)
         .into_element(cx);
     shadcn::Avatar::new([image, fallback])
@@ -36,15 +38,14 @@ fn avatar_with_image<H: UiHost>(
         .into_element(cx)
 }
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    avatar_image: Model<Option<ImageId>>,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let avatar_image = demo_image(cx);
+
     let avatars = (0..2)
         .map(|idx| {
             avatar_with_image(
                 cx,
-                avatar_image.clone(),
+                avatar_image,
                 shadcn::AvatarSize::Default,
                 ["CN", "ML"][idx],
             )

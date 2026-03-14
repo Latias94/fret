@@ -20,35 +20,33 @@ pub(super) fn preview_pagination(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "The root approximates upstream `<nav aria-label=\"pagination\">` with `Region + label`, and the content/items emit `List` / `ListItem` semantics to mirror the upstream `ul/li` structure.",
     ]);
     let notes = DocSection::build(cx, "Notes", notes).description("API surface and parity notes.");
+    let demo = DocSection::build(cx, "Demo", demo)
+        .description("shadcn demo: Previous, numbered links, ellipsis, and Next.")
+        .test_id_prefix("ui-gallery-pagination-demo")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .description("Copyable minimal usage for the wrapper-family pagination surface.")
+        .test_id_prefix("ui-gallery-pagination-usage")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let simple = DocSection::build(cx, "Simple", simple)
+        .description("A simple pagination with only page numbers.")
+        .test_id_prefix("ui-gallery-pagination-simple")
+        .code_rust_from_file_region(snippets::simple::SOURCE, "example");
+    let icons_only = DocSection::build(cx, "Icons Only", icons_only)
+        .description("Use just the previous and next buttons without page numbers.")
+        .test_id_prefix("ui-gallery-pagination-icons-only")
+        .code_rust_from_file_region(snippets::icons_only::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .description("RTL smoke check for icon direction and localized numerals.")
+        .test_id_prefix("ui-gallery-pagination-rtl")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
             "Preview follows shadcn Pagination docs order directly, with app-layer routing notes captured in the notes section.",
         ),
-        vec![
-            DocSection::new("Demo", demo)
-                .description("shadcn demo: Previous, numbered links, ellipsis, and Next.")
-                .test_id_prefix("ui-gallery-pagination-demo")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .description("Copyable minimal usage for the wrapper-family pagination surface.")
-                .test_id_prefix("ui-gallery-pagination-usage")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Simple", simple)
-                .description("A simple pagination with only page numbers.")
-                .test_id_prefix("ui-gallery-pagination-simple")
-                .code_rust_from_file_region(snippets::simple::SOURCE, "example"),
-            DocSection::new("Icons Only", icons_only)
-                .description("Use just the previous and next buttons without page numbers.")
-                .test_id_prefix("ui-gallery-pagination-icons-only")
-                .code_rust_from_file_region(snippets::icons_only::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .description("RTL smoke check for icon direction and localized numerals.")
-                .test_id_prefix("ui-gallery-pagination-rtl")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            notes,
-        ],
+        vec![demo, usage, simple, icons_only, rtl, notes],
     );
 
     vec![body.test_id("ui-gallery-pagination")]

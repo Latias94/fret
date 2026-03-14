@@ -1,15 +1,14 @@
 pub const SOURCE: &str = include_str!("sampling.rs");
 
 // region: example
-use fret_core::ImageId;
+use fret::{UiChild, UiCx};
 use fret_core::scene::ImageSamplingHint;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    streaming_image: Model<Option<ImageId>>,
-) -> AnyElement {
-    let linear = shadcn::MediaImage::model(streaming_image.clone())
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let sampling_image = super::sampling_image(cx);
+
+    let linear = shadcn::MediaImage::maybe(sampling_image.clone())
         .fit(fret_core::ViewportFit::Stretch)
         .loading(true)
         .sampling_hint(ImageSamplingHint::Linear)
@@ -18,7 +17,7 @@ pub fn render<H: UiHost>(
         .into_element(cx)
         .test_id("ui-gallery-image-sampling-linear");
 
-    let nearest = shadcn::MediaImage::model(streaming_image)
+    let nearest = shadcn::MediaImage::maybe(sampling_image)
         .fit(fret_core::ViewportFit::Stretch)
         .loading(true)
         .sampling_hint(ImageSamplingHint::Nearest)

@@ -37,6 +37,34 @@ pub(super) fn preview_drawer(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .no_shell()
         .title_test_id("ui-gallery-section-notes-title")
         .description("Implementation notes and regression guidelines.");
+    let demo = DocSection::build(cx, "Demo", demo)
+        .description(
+            "Official shadcn drawer demo with a centered max-width body, goal controls, and footer actions.",
+        )
+        .test_id_prefix("ui-gallery-drawer")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .title_test_id("ui-gallery-section-usage-title")
+        .description("Copyable shadcn-style composition reference for Drawer.")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let scrollable_content = DocSection::build(cx, "Scrollable Content", scrollable_content)
+        .description("Keep actions visible while the content area scrolls.")
+        .code_rust_from_file_region(snippets::scrollable_content::SOURCE, "example");
+    let sides = DocSection::build(cx, "Sides", sides)
+        .description("Use the `direction` prop to control drawer placement.")
+        .code_rust_from_file_region(snippets::sides::SOURCE, "example");
+    let responsive_dialog = DocSection::build(cx, "Responsive Dialog", responsive_dialog)
+        .descriptions([
+            "Responsive patterns often use Dialog on desktop and Drawer on mobile.",
+            "Both branches preserve the official profile-form structure, while gallery renders them side by side for deterministic testing.",
+        ])
+        .code_rust_from_file_region(snippets::responsive_dialog::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .description("Drawer layout should follow right-to-left direction context.")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+    let snap_points = DocSection::build(cx, "Snap Points", snap_points)
+        .description("Drag settles to the nearest snap point (Vaul-style).")
+        .code_rust_from_file_region(snippets::snap_points::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -44,35 +72,14 @@ pub(super) fn preview_drawer(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             "Preview mirrors the shadcn Drawer docs path after `About` and `Installation`, then keeps Vaul-specific `Snap Points` as a focused follow-up.",
         ),
         vec![
-            DocSection::new("Demo", demo)
-                .description(
-                    "Official shadcn drawer demo with a centered max-width body, goal controls, and footer actions.",
-                )
-                .test_id_prefix("ui-gallery-drawer")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .title_test_id("ui-gallery-section-usage-title")
-                .description("Copyable shadcn-style composition reference for Drawer.")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Scrollable Content", scrollable_content)
-                .description("Keep actions visible while the content area scrolls.")
-                .code_rust_from_file_region(snippets::scrollable_content::SOURCE, "example"),
-            DocSection::new("Sides", sides)
-                .description("Use the `direction` prop to control drawer placement.")
-                .code_rust_from_file_region(snippets::sides::SOURCE, "example"),
-            DocSection::new("Responsive Dialog", responsive_dialog)
-                .descriptions([
-                    "Responsive patterns often use Dialog on desktop and Drawer on mobile.",
-                    "Both branches preserve the official profile-form structure, while gallery renders them side by side for deterministic testing.",
-                ])
-                .code_rust_from_file_region(snippets::responsive_dialog::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .description("Drawer layout should follow right-to-left direction context.")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            demo,
+            usage,
+            scrollable_content,
+            sides,
+            responsive_dialog,
+            rtl,
             api_reference,
-            DocSection::new("Snap Points", snap_points)
-                .description("Drag settles to the nearest snap point (Vaul-style).")
-                .code_rust_from_file_region(snippets::snap_points::SOURCE, "example"),
+            snap_points,
             notes,
         ],
     );

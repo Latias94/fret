@@ -718,6 +718,1450 @@ fn input_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn input_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/input/badge.rs",
+            "src/ui/snippets/input/basic.rs",
+            "src/ui/snippets/input/button_group.rs",
+            "src/ui/snippets/input/disabled.rs",
+            "src/ui/snippets/input/field.rs",
+            "src/ui/snippets/input/field_group.rs",
+            "src/ui/snippets/input/file.rs",
+            "src/ui/snippets/input/form.rs",
+            "src/ui/snippets/input/grid.rs",
+            "src/ui/snippets/input/inline.rs",
+            "src/ui/snippets/input/input_group.rs",
+            "src/ui/snippets/input/invalid.rs",
+            "src/ui/snippets/input/label.rs",
+            "src/ui/snippets/input/required.rs",
+            "src/ui/snippets/input/rtl.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/input",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn input_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/input.rs",
+        &[
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Basic\", basic)",
+            "DocSection::build(cx, \"Field\", field)",
+            "DocSection::build(cx, \"Field Group\", field_group)",
+            "DocSection::build(cx, \"Disabled\", disabled)",
+            "DocSection::build(cx, \"Invalid\", invalid)",
+            "DocSection::build(cx, \"File\", file)",
+            "DocSection::build(cx, \"Inline\", inline)",
+            "DocSection::build(cx, \"Grid\", grid)",
+            "DocSection::build(cx, \"Required\", required)",
+            "DocSection::build(cx, \"Badge\", badge)",
+            "DocSection::build(cx, \"Input Group\", input_group)",
+            "DocSection::build(cx, \"Button Group\", button_group)",
+            "DocSection::build(cx, \"Form\", form)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Label Association\", label)",
+        ],
+        &[
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Basic\", basic)",
+            "DocSection::new(\"Field\", field)",
+            "DocSection::new(\"Field Group\", field_group)",
+            "DocSection::new(\"Disabled\", disabled)",
+            "DocSection::new(\"Invalid\", invalid)",
+            "DocSection::new(\"File\", file)",
+            "DocSection::new(\"Inline\", inline)",
+            "DocSection::new(\"Grid\", grid)",
+            "DocSection::new(\"Required\", required)",
+            "DocSection::new(\"Badge\", badge)",
+            "DocSection::new(\"Input Group\", input_group)",
+            "DocSection::new(\"Button Group\", button_group)",
+            "DocSection::new(\"Form\", form)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Label Association\", label)",
+        ],
+    );
+}
+
+#[test]
+fn field_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/field/checkbox.rs",
+            "src/ui/snippets/field/choice_card.rs",
+            "src/ui/snippets/field/field_group.rs",
+            "src/ui/snippets/field/fieldset.rs",
+            "src/ui/snippets/field/input.rs",
+            "src/ui/snippets/field/radio.rs",
+            "src/ui/snippets/field/responsive.rs",
+            "src/ui/snippets/field/rtl.rs",
+            "src/ui/snippets/field/select.rs",
+            "src/ui/snippets/field/slider.rs",
+            "src/ui/snippets/field/switch.rs",
+            "src/ui/snippets/field/textarea.rs",
+            "src/ui/snippets/field/validation_and_errors.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/field",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn field_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/field.rs",
+        &[
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Anatomy\", anatomy)",
+            "DocSection::build(cx, \"Input\", input)",
+            "DocSection::build(cx, \"Textarea\", textarea)",
+            "DocSection::build(cx, \"Select\", select)",
+            "DocSection::build(cx, \"Slider\", slider)",
+            "DocSection::build(cx, \"Fieldset\", fieldset)",
+            "DocSection::build(cx, \"Checkbox\", checkbox)",
+            "DocSection::build(cx, \"Radio\", radio)",
+            "DocSection::build(cx, \"Switch\", switch)",
+            "DocSection::build(cx, \"Choice Card\", choice_card)",
+            "DocSection::build(cx, \"Field Group\", field_group)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Responsive Layout\", responsive)",
+            "DocSection::build(cx, \"Validation and Errors\", validation_and_errors)",
+        ],
+        &[
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Anatomy\", anatomy)",
+            "DocSection::new(\"Input\", input)",
+            "DocSection::new(\"Textarea\", textarea)",
+            "DocSection::new(\"Select\", select)",
+            "DocSection::new(\"Slider\", slider)",
+            "DocSection::new(\"Fieldset\", fieldset)",
+            "DocSection::new(\"Checkbox\", checkbox)",
+            "DocSection::new(\"Radio\", radio)",
+            "DocSection::new(\"Switch\", switch)",
+            "DocSection::new(\"Choice Card\", choice_card)",
+            "DocSection::new(\"Field Group\", field_group)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Responsive Layout\", responsive)",
+            "DocSection::new(\"Validation and Errors\", validation_and_errors)",
+        ],
+    );
+}
+
+#[test]
+fn textarea_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/textarea/button.rs",
+            "src/ui/snippets/textarea/demo.rs",
+            "src/ui/snippets/textarea/disabled.rs",
+            "src/ui/snippets/textarea/field.rs",
+            "src/ui/snippets/textarea/invalid.rs",
+            "src/ui/snippets/textarea/label.rs",
+            "src/ui/snippets/textarea/rtl.rs",
+            "src/ui/snippets/textarea/usage.rs",
+            "src/ui/snippets/textarea/with_text.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/textarea",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn textarea_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/textarea.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Field\", field)",
+            "DocSection::build(cx, \"Disabled\", disabled)",
+            "DocSection::build(cx, \"Invalid\", invalid)",
+            "DocSection::build(cx, \"Button\", button)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"With Text\", with_text)",
+            "DocSection::build(cx, \"Label Association\", label)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Field\", field)",
+            "DocSection::new(\"Disabled\", disabled)",
+            "DocSection::new(\"Invalid\", invalid)",
+            "DocSection::new(\"Button\", button)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"With Text\", with_text)",
+            "DocSection::new(\"Label Association\", label)",
+        ],
+    );
+}
+
+#[test]
+fn input_otp_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/input_otp/alphanumeric.rs",
+            "src/ui/snippets/input_otp/controlled.rs",
+            "src/ui/snippets/input_otp/demo.rs",
+            "src/ui/snippets/input_otp/disabled.rs",
+            "src/ui/snippets/input_otp/form.rs",
+            "src/ui/snippets/input_otp/four_digits.rs",
+            "src/ui/snippets/input_otp/invalid.rs",
+            "src/ui/snippets/input_otp/pattern.rs",
+            "src/ui/snippets/input_otp/rtl.rs",
+            "src/ui/snippets/input_otp/separator.rs",
+            "src/ui/snippets/input_otp/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/input_otp",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn input_otp_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/input_otp.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Pattern\", pattern)",
+            "DocSection::build(cx, \"Separator\", separator)",
+            "DocSection::build(cx, \"Disabled\", disabled)",
+            "DocSection::build(cx, \"Controlled\", controlled)",
+            "DocSection::build(cx, \"Invalid\", invalid)",
+            "DocSection::build(cx, \"Four Digits\", four_digits)",
+            "DocSection::build(cx, \"Alphanumeric\", alphanumeric)",
+            "DocSection::build(cx, \"Form\", form)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Pattern\", pattern)",
+            "DocSection::new(\"Separator\", separator)",
+            "DocSection::new(\"Disabled\", disabled)",
+            "DocSection::new(\"Controlled\", controlled)",
+            "DocSection::new(\"Invalid\", invalid)",
+            "DocSection::new(\"Four Digits\", four_digits)",
+            "DocSection::new(\"Alphanumeric\", alphanumeric)",
+            "DocSection::new(\"Form\", form)",
+            "DocSection::new(\"RTL\", rtl)",
+        ],
+    );
+}
+
+#[test]
+fn select_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/select/align_item_with_trigger.rs",
+            "src/ui/snippets/select/demo.rs",
+            "src/ui/snippets/select/diag_surface.rs",
+            "src/ui/snippets/select/disabled.rs",
+            "src/ui/snippets/select/groups.rs",
+            "src/ui/snippets/select/invalid.rs",
+            "src/ui/snippets/select/label.rs",
+            "src/ui/snippets/select/rtl.rs",
+            "src/ui/snippets/select/scrollable.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/select",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn select_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/select.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Label Association\", label)",
+            "DocSection::build(cx, \"Diag Surface\", diag_surface)",
+            "DocSection::build(cx, \"Align Item With Trigger\", align_item)",
+            "DocSection::build(cx, \"Groups\", groups)",
+            "DocSection::build(cx, \"Scrollable\", scrollable)",
+            "DocSection::build(cx, \"Disabled\", disabled)",
+            "DocSection::build(cx, \"Invalid\", invalid)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Label Association\", label)",
+            "DocSection::new(\"Diag Surface\", diag_surface)",
+            "DocSection::new(\"Align Item With Trigger\", align_item)",
+            "DocSection::new(\"Groups\", groups)",
+            "DocSection::new(\"Scrollable\", scrollable)",
+            "DocSection::new(\"Disabled\", disabled)",
+            "DocSection::new(\"Invalid\", invalid)",
+            "DocSection::new(\"RTL\", rtl)",
+        ],
+    );
+}
+
+#[test]
+fn calendar_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/calendar/basic.rs",
+            "src/ui/snippets/calendar/booked_dates.rs",
+            "src/ui/snippets/calendar/custom_cell_size.rs",
+            "src/ui/snippets/calendar/date_and_time_picker.rs",
+            "src/ui/snippets/calendar/date_of_birth_picker.rs",
+            "src/ui/snippets/calendar/demo.rs",
+            "src/ui/snippets/calendar/hijri.rs",
+            "src/ui/snippets/calendar/locale.rs",
+            "src/ui/snippets/calendar/month_year_selector.rs",
+            "src/ui/snippets/calendar/natural_language_picker.rs",
+            "src/ui/snippets/calendar/presets.rs",
+            "src/ui/snippets/calendar/range.rs",
+            "src/ui/snippets/calendar/responsive_mixed_semantics.rs",
+            "src/ui/snippets/calendar/rtl.rs",
+            "src/ui/snippets/calendar/usage.rs",
+            "src/ui/snippets/calendar/week_numbers.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/calendar",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn calendar_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/calendar.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Persian / Hijri / Jalali Calendar\", hijri)",
+            "DocSection::build(cx, \"Basic\", basic)",
+            "DocSection::build(cx, \"Range Calendar\", range)",
+            "DocSection::build(cx, \"Month and Year Selector\", month_year_selector)",
+            "DocSection::build(cx, \"Presets\", presets)",
+            "DocSection::build(cx, \"Date and Time Picker\", date_and_time_picker)",
+            "DocSection::build(cx, \"Booked dates\", booked_dates)",
+            "DocSection::build(cx, \"Custom Cell Size\", custom_cell_size)",
+            "DocSection::build(cx, \"Week Numbers\", week_numbers)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Date of Birth Picker\", date_of_birth_picker)",
+            "DocSection::build(cx, \"Natural Language Picker\", natural_language_picker)",
+            "DocSection::build(cx, \"Locale (WIP)\", locale)",
+            "DocSection::build(cx, \"Responsive semantics (Fret)\", responsive_mixed_semantics,)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Persian / Hijri / Jalali Calendar\", hijri)",
+            "DocSection::new(\"Basic\", basic)",
+            "DocSection::new(\"Range Calendar\", range)",
+            "DocSection::new(\"Month and Year Selector\", month_year_selector)",
+            "DocSection::new(\"Presets\", presets)",
+            "DocSection::new(\"Date and Time Picker\", date_and_time_picker)",
+            "DocSection::new(\"Booked dates\", booked_dates)",
+            "DocSection::new(\"Custom Cell Size\", custom_cell_size)",
+            "DocSection::new(\"Week Numbers\", week_numbers)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Date of Birth Picker\", date_of_birth_picker)",
+            "DocSection::new(\"Natural Language Picker\", natural_language_picker)",
+            "DocSection::new(\"Locale (WIP)\", locale)",
+            "DocSection::new(\"Responsive semantics (Fret)\", responsive_mixed_semantics)",
+        ],
+    );
+}
+
+#[test]
+fn alert_dialog_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/alert_dialog/basic.rs",
+            "src/ui/snippets/alert_dialog/demo.rs",
+            "src/ui/snippets/alert_dialog/destructive.rs",
+            "src/ui/snippets/alert_dialog/detached_trigger.rs",
+            "src/ui/snippets/alert_dialog/media.rs",
+            "src/ui/snippets/alert_dialog/parts.rs",
+            "src/ui/snippets/alert_dialog/rich_content.rs",
+            "src/ui/snippets/alert_dialog/rtl.rs",
+            "src/ui/snippets/alert_dialog/small.rs",
+            "src/ui/snippets/alert_dialog/small_with_media.rs",
+            "src/ui/snippets/alert_dialog/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/alert_dialog",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn alert_dialog_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/alert_dialog.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Basic\", basic)",
+            "DocSection::build(cx, \"Small\", small)",
+            "DocSection::build(cx, \"Media\", media)",
+            "DocSection::build(cx, \"Small with Media\", small_with_media)",
+            "DocSection::build(cx, \"Destructive\", destructive)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Parts\", parts)",
+            "DocSection::build(cx, \"Detached Trigger\", detached_trigger)",
+            "DocSection::build(cx, \"Rich Content\", rich_content)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Basic\", basic)",
+            "DocSection::new(\"Small\", small)",
+            "DocSection::new(\"Media\", media)",
+            "DocSection::new(\"Small with Media\", small_with_media)",
+            "DocSection::new(\"Destructive\", destructive)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Parts\", parts)",
+            "DocSection::new(\"Detached Trigger\", detached_trigger)",
+            "DocSection::new(\"Rich Content\", rich_content)",
+        ],
+    );
+}
+
+#[test]
+fn dialog_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/dialog/custom_close_button.rs",
+            "src/ui/snippets/dialog/demo.rs",
+            "src/ui/snippets/dialog/no_close_button.rs",
+            "src/ui/snippets/dialog/parts.rs",
+            "src/ui/snippets/dialog/rtl.rs",
+            "src/ui/snippets/dialog/scrollable_content.rs",
+            "src/ui/snippets/dialog/sticky_footer.rs",
+            "src/ui/snippets/dialog/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/dialog",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn dialog_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/dialog.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Custom Close Button\", custom_close)",
+            "DocSection::build(cx, \"No Close Button\", no_close)",
+            "DocSection::build(cx, \"Sticky Footer\", sticky_footer)",
+            "DocSection::build(cx, \"Scrollable Content\", scrollable_content)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Parts\", parts)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Custom Close Button\", custom_close)",
+            "DocSection::new(\"No Close Button\", no_close)",
+            "DocSection::new(\"Sticky Footer\", sticky_footer)",
+            "DocSection::new(\"Scrollable Content\", scrollable_content)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Parts\", parts)",
+        ],
+    );
+}
+
+#[test]
+fn drawer_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/drawer/demo.rs",
+            "src/ui/snippets/drawer/responsive_dialog.rs",
+            "src/ui/snippets/drawer/rtl.rs",
+            "src/ui/snippets/drawer/scrollable_content.rs",
+            "src/ui/snippets/drawer/sides.rs",
+            "src/ui/snippets/drawer/snap_points.rs",
+            "src/ui/snippets/drawer/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/drawer",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn drawer_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/drawer.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Scrollable Content\", scrollable_content)",
+            "DocSection::build(cx, \"Sides\", sides)",
+            "DocSection::build(cx, \"Responsive Dialog\", responsive_dialog)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Snap Points\", snap_points)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Scrollable Content\", scrollable_content)",
+            "DocSection::new(\"Sides\", sides)",
+            "DocSection::new(\"Responsive Dialog\", responsive_dialog)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Snap Points\", snap_points)",
+        ],
+    );
+}
+
+#[test]
+fn sheet_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/sheet/demo.rs",
+            "src/ui/snippets/sheet/no_close_button.rs",
+            "src/ui/snippets/sheet/parts.rs",
+            "src/ui/snippets/sheet/rtl.rs",
+            "src/ui/snippets/sheet/side.rs",
+            "src/ui/snippets/sheet/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/sheet",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn sheet_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/sheet.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Side\", side)",
+            "DocSection::build(cx, \"No Close Button\", no_close_button)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Parts\", parts)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Side\", side)",
+            "DocSection::new(\"No Close Button\", no_close_button)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Parts\", parts)",
+        ],
+    );
+}
+
+#[test]
+fn spinner_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/spinner/badges.rs",
+            "src/ui/snippets/spinner/buttons.rs",
+            "src/ui/snippets/spinner/customization.rs",
+            "src/ui/snippets/spinner/demo.rs",
+            "src/ui/snippets/spinner/empty.rs",
+            "src/ui/snippets/spinner/extras.rs",
+            "src/ui/snippets/spinner/input_group.rs",
+            "src/ui/snippets/spinner/rtl.rs",
+            "src/ui/snippets/spinner/sizes.rs",
+            "src/ui/snippets/spinner/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/spinner",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn spinner_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/spinner.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Customization\", customization)",
+            "DocSection::build(cx, \"Size\", sizes)",
+            "DocSection::build(cx, \"Button\", buttons)",
+            "DocSection::build(cx, \"Badge\", badges)",
+            "DocSection::build(cx, \"Input Group\", input_group)",
+            "DocSection::build(cx, \"Empty\", empty)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Extras\", extras)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Customization\", customization)",
+            "DocSection::new(\"Size\", sizes)",
+            "DocSection::new(\"Button\", buttons)",
+            "DocSection::new(\"Badge\", badges)",
+            "DocSection::new(\"Input Group\", input_group)",
+            "DocSection::new(\"Empty\", empty)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Extras\", extras)",
+        ],
+    );
+}
+
+#[test]
+fn form_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/form/controls.rs",
+            "src/ui/snippets/form/demo.rs",
+            "src/ui/snippets/form/fieldset.rs",
+            "src/ui/snippets/form/input.rs",
+            "src/ui/snippets/form/rtl.rs",
+            "src/ui/snippets/form/textarea.rs",
+            "src/ui/snippets/form/upstream_demo.rs",
+            "src/ui/snippets/form/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/form",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn form_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/form.rs",
+        &[
+            "DocSection::build(cx, \"Form Demo\", upstream_demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Input\", input)",
+            "DocSection::build(cx, \"Textarea\", textarea)",
+            "DocSection::build(cx, \"Checkbox + Switch\", controls)",
+            "DocSection::build(cx, \"Fieldset\", fieldset)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "DocSection::new(\"Form Demo\", upstream_demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Input\", input)",
+            "DocSection::new(\"Textarea\", textarea)",
+            "DocSection::new(\"Checkbox + Switch\", controls)",
+            "DocSection::new(\"Fieldset\", fieldset)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Notes\", notes)",
+        ],
+    );
+}
+
+#[test]
+fn empty_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/empty/avatar.rs",
+            "src/ui/snippets/empty/avatar_group.rs",
+            "src/ui/snippets/empty/background.rs",
+            "src/ui/snippets/empty/demo.rs",
+            "src/ui/snippets/empty/input_group.rs",
+            "src/ui/snippets/empty/outline.rs",
+            "src/ui/snippets/empty/rtl.rs",
+            "src/ui/snippets/empty/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/empty",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn empty_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/empty.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Outline\", outline)",
+            "DocSection::build(cx, \"Background\", background)",
+            "DocSection::build(cx, \"Avatar\", avatar)",
+            "DocSection::build(cx, \"Avatar Group\", avatar_group)",
+            "DocSection::build(cx, \"InputGroup\", input_group)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Outline\", outline)",
+            "DocSection::new(\"Background\", background)",
+            "DocSection::new(\"Avatar\", avatar)",
+            "DocSection::new(\"Avatar Group\", avatar_group)",
+            "DocSection::new(\"InputGroup\", input_group)",
+            "DocSection::new(\"RTL\", rtl)",
+        ],
+    );
+}
+
+#[test]
+fn breadcrumb_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/breadcrumb/basic.rs",
+            "src/ui/snippets/breadcrumb/collapsed.rs",
+            "src/ui/snippets/breadcrumb/custom_separator.rs",
+            "src/ui/snippets/breadcrumb/demo.rs",
+            "src/ui/snippets/breadcrumb/dropdown.rs",
+            "src/ui/snippets/breadcrumb/link_component.rs",
+            "src/ui/snippets/breadcrumb/rtl.rs",
+            "src/ui/snippets/breadcrumb/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/breadcrumb",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn breadcrumb_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/breadcrumb.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Basic\", basic)",
+            "DocSection::build(cx, \"Custom Separator\", custom_separator)",
+            "DocSection::build(cx, \"Dropdown\", dropdown)",
+            "DocSection::build(cx, \"Collapsed\", collapsed)",
+            "DocSection::build(cx, \"Link Component\", link_component)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Responsive\", responsive)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Basic\", basic)",
+            "DocSection::new(\"Custom Separator\", custom_separator)",
+            "DocSection::new(\"Dropdown\", dropdown)",
+            "DocSection::new(\"Collapsed\", collapsed)",
+            "DocSection::new(\"Link Component\", link_component)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Responsive\", responsive)",
+        ],
+    );
+}
+
+#[test]
+fn collapsible_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/collapsible/basic.rs",
+            "src/ui/snippets/collapsible/controlled_state.rs",
+            "src/ui/snippets/collapsible/demo.rs",
+            "src/ui/snippets/collapsible/file_tree.rs",
+            "src/ui/snippets/collapsible/rtl.rs",
+            "src/ui/snippets/collapsible/settings_panel.rs",
+            "src/ui/snippets/collapsible/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/collapsible",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn collapsible_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/collapsible.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Controlled State\", controlled_state)",
+            "DocSection::build(cx, \"Basic\", basic)",
+            "DocSection::build(cx, \"Settings Panel\", settings)",
+            "DocSection::build(cx, \"File Tree\", file_tree)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Controlled State\", controlled_state)",
+            "DocSection::new(\"Basic\", basic)",
+            "DocSection::new(\"Settings Panel\", settings)",
+            "DocSection::new(\"File Tree\", file_tree)",
+            "DocSection::new(\"RTL\", rtl)",
+        ],
+    );
+}
+
+#[test]
+fn skeleton_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/skeleton/avatar.rs",
+            "src/ui/snippets/skeleton/card.rs",
+            "src/ui/snippets/skeleton/demo.rs",
+            "src/ui/snippets/skeleton/form.rs",
+            "src/ui/snippets/skeleton/rtl.rs",
+            "src/ui/snippets/skeleton/table.rs",
+            "src/ui/snippets/skeleton/text.rs",
+            "src/ui/snippets/skeleton/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/skeleton",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn skeleton_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/skeleton.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Avatar\", avatar)",
+            "DocSection::build(cx, \"Card\", card)",
+            "DocSection::build(cx, \"Text\", text_section)",
+            "DocSection::build(cx, \"Form\", form)",
+            "DocSection::build(cx, \"Table\", table)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Avatar\", avatar)",
+            "DocSection::new(\"Card\", card)",
+            "DocSection::new(\"Text\", text_section)",
+            "DocSection::new(\"Form\", form)",
+            "DocSection::new(\"Table\", table)",
+            "DocSection::new(\"RTL\", rtl)",
+        ],
+    );
+}
+
+#[test]
+fn pagination_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/pagination/demo.rs",
+            "src/ui/snippets/pagination/extras.rs",
+            "src/ui/snippets/pagination/icons_only.rs",
+            "src/ui/snippets/pagination/rtl.rs",
+            "src/ui/snippets/pagination/simple.rs",
+            "src/ui/snippets/pagination/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/pagination",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn pagination_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/pagination.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Simple\", simple)",
+            "DocSection::build(cx, \"Icons Only\", icons_only)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Simple\", simple)",
+            "DocSection::new(\"Icons Only\", icons_only)",
+            "DocSection::new(\"RTL\", rtl)",
+        ],
+    );
+}
+
+#[test]
+fn alert_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/alert/action.rs",
+            "src/ui/snippets/alert/basic.rs",
+            "src/ui/snippets/alert/custom_colors.rs",
+            "src/ui/snippets/alert/demo.rs",
+            "src/ui/snippets/alert/destructive.rs",
+            "src/ui/snippets/alert/interactive_links.rs",
+            "src/ui/snippets/alert/rich_title.rs",
+            "src/ui/snippets/alert/rtl.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/alert",
+        &[
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement",
+            "pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement",
+        ],
+    );
+}
+
+#[test]
+fn alert_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/alert.rs",
+        &[
+            "DocSection::build(cx, \"Basic\", basic)",
+            "DocSection::build(cx, \"With Icons\", demo)",
+            "DocSection::build(cx, \"Destructive\", destructive)",
+            "DocSection::build(cx, \"With Actions\", action)",
+            "DocSection::build(cx, \"Rich Title\", rich_title)",
+            "DocSection::build(cx, \"Interactive Links\", interactive_links)",
+            "DocSection::build(cx, \"Custom Colors\", custom_colors)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "DocSection::new(\"Basic\", basic)",
+            "DocSection::new(\"With Icons\", demo)",
+            "DocSection::new(\"Destructive\", destructive)",
+            "DocSection::new(\"With Actions\", action)",
+            "DocSection::new(\"Rich Title\", rich_title)",
+            "DocSection::new(\"Interactive Links\", interactive_links)",
+            "DocSection::new(\"Custom Colors\", custom_colors)",
+            "DocSection::new(\"RTL\", rtl)",
+        ],
+    );
+}
+
+#[test]
+fn sidebar_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/sidebar/controlled.rs",
+            "src/ui/snippets/sidebar/demo.rs",
+            "src/ui/snippets/sidebar/mobile.rs",
+            "src/ui/snippets/sidebar/rtl.rs",
+            "src/ui/snippets/sidebar/usage.rs",
+            "src/ui/snippets/sidebar/use_sidebar.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/sidebar",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn sidebar_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/sidebar.rs",
+        &[
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"SidebarProvider\", controlled)",
+            "DocSection::build(cx, \"Sidebar\", demo)",
+            "DocSection::build(cx, \"useSidebar\", use_sidebar)",
+            "DocSection::build(cx, \"Extras: Mobile\", mobile)",
+            "DocSection::build(cx, \"Extras: RTL\", rtl)",
+            "DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"SidebarProvider\", controlled)",
+            "DocSection::new(\"Sidebar\", demo)",
+            "DocSection::new(\"useSidebar\", use_sidebar)",
+            "DocSection::new(\"Extras: Mobile\", mobile)",
+        ],
+    );
+}
+
+#[test]
+fn label_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/label/demo.rs",
+            "src/ui/snippets/label/label_in_field.rs",
+            "src/ui/snippets/label/rtl.rs",
+            "src/ui/snippets/label/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/label",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn label_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/label.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Label in Field\", label_in_field)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Label in Field\", label_in_field)",
+            "DocSection::new(\"RTL\", rtl)",
+        ],
+    );
+}
+
+#[test]
+fn kbd_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/kbd/button.rs",
+            "src/ui/snippets/kbd/demo.rs",
+            "src/ui/snippets/kbd/group.rs",
+            "src/ui/snippets/kbd/input_group.rs",
+            "src/ui/snippets/kbd/rtl.rs",
+            "src/ui/snippets/kbd/tooltip.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/kbd",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn kbd_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/kbd.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Group\", group)",
+            "DocSection::build(cx, \"Button\", button)",
+            "DocSection::build(cx, \"Tooltip\", tooltip)",
+            "DocSection::build(cx, \"Input Group\", input_group)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Group\", group)",
+            "DocSection::new(\"Button\", button)",
+            "DocSection::new(\"Tooltip\", tooltip)",
+            "DocSection::new(\"Input Group\", input_group)",
+            "DocSection::new(\"RTL\", rtl)",
+        ],
+    );
+}
+
+#[test]
+fn icons_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/icons/grid.rs",
+            "src/ui/snippets/icons/spinner.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/icons",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn icons_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/icons.rs",
+        &[
+            "DocSection::build(cx, \"Icons\", grid)",
+            "DocSection::build(cx, \"Spinner\", spinner_row)",
+            "DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "DocSection::new(\"Icons\", grid)",
+            "DocSection::new(\"Spinner\", spinner_row)",
+        ],
+    );
+}
+
+#[test]
+fn sonner_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/sonner/demo.rs",
+            "src/ui/snippets/sonner/extras.rs",
+            "src/ui/snippets/sonner/notes.rs",
+            "src/ui/snippets/sonner/position.rs",
+            "src/ui/snippets/sonner/setup.rs",
+            "src/ui/snippets/sonner/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent("src/ui/snippets/sonner", &["pub fn render<H: UiHost>("]);
+}
+
+#[test]
+fn sonner_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/sonner.rs",
+        &[
+            "DocSection::build(cx, \"Setup\", setup)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Position\", position)",
+            "DocSection::build(cx, \"Extras\", extras)",
+            "DocSection::build(cx, \"Notes\", notes)",
+            "let toaster = snippets::local_toaster(cx);",
+        ],
+        &[
+            "DocSection::new(\"Setup\", setup)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Position\", position)",
+            "DocSection::new(\"Extras\", extras)",
+            "preview_sonner(cx, last_action, sonner_position)",
+        ],
+    );
+}
+
+#[test]
+fn date_picker_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/date_picker/basic.rs",
+            "src/ui/snippets/date_picker/demo.rs",
+            "src/ui/snippets/date_picker/dob.rs",
+            "src/ui/snippets/date_picker/dropdowns.rs",
+            "src/ui/snippets/date_picker/input.rs",
+            "src/ui/snippets/date_picker/label.rs",
+            "src/ui/snippets/date_picker/natural_language.rs",
+            "src/ui/snippets/date_picker/notes.rs",
+            "src/ui/snippets/date_picker/presets.rs",
+            "src/ui/snippets/date_picker/range.rs",
+            "src/ui/snippets/date_picker/rtl.rs",
+            "src/ui/snippets/date_picker/time_picker.rs",
+            "src/ui/snippets/date_picker/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/date_picker",
+        &["pub fn render<H: UiHost>("],
+    );
+}
+
+#[test]
+fn date_picker_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/date_picker.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Basic\", basic)",
+            "DocSection::build(cx, \"Range Picker\", range)",
+            "DocSection::build(cx, \"Date of Birth\", dob)",
+            "DocSection::build(cx, \"Input\", input)",
+            "DocSection::build(cx, \"Time Picker\", time_picker)",
+            "DocSection::build(cx, \"Natural Language Picker\", natural_language)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Label Association\", label)",
+            "DocSection::build(cx, \"Extras: With Presets\", presets)",
+            "DocSection::build(cx, \"Extras: With Dropdowns\", dropdowns)",
+            "DocSection::build(cx, \"Notes\", notes_stack)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Basic\", basic)",
+            "DocSection::new(\"Range Picker\", range)",
+            "DocSection::new(\"Date of Birth\", dob)",
+            "DocSection::new(\"Input\", input)",
+            "DocSection::new(\"Time Picker\", time_picker)",
+            "DocSection::new(\"Natural Language Picker\", natural_language)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Label Association\", label)",
+            "DocSection::new(\"Extras: With Presets\", presets)",
+            "preview_date_picker(cx, open, month, selected)",
+        ],
+    );
+}
+
+#[test]
+fn avatar_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/avatar/badge_icon.rs",
+            "src/ui/snippets/avatar/basic.rs",
+            "src/ui/snippets/avatar/demo.rs",
+            "src/ui/snippets/avatar/dropdown.rs",
+            "src/ui/snippets/avatar/fallback_only.rs",
+            "src/ui/snippets/avatar/group.rs",
+            "src/ui/snippets/avatar/group_count.rs",
+            "src/ui/snippets/avatar/group_count_icon.rs",
+            "src/ui/snippets/avatar/rtl.rs",
+            "src/ui/snippets/avatar/sizes.rs",
+            "src/ui/snippets/avatar/usage.rs",
+            "src/ui/snippets/avatar/with_badge.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent("src/ui/snippets/avatar", &["pub fn render<H: UiHost>("]);
+}
+
+#[test]
+fn avatar_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/avatar.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Basic\", basic)",
+            "DocSection::build(cx, \"Badge\", with_badge)",
+            "DocSection::build(cx, \"Badge with Icon\", badge_icon)",
+            "DocSection::build(cx, \"Avatar Group\", avatar_group)",
+            "DocSection::build(cx, \"Avatar Group Count\", group_count)",
+            "DocSection::build(cx, \"Avatar Group with Icon\", group_count_icon)",
+            "DocSection::build(cx, \"Sizes\", sizes)",
+            "DocSection::build(cx, \"Dropdown\", dropdown)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Fallback only (Fret)\", fallback)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
+            "DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Basic\", basic)",
+            "DocSection::new(\"Badge\", with_badge)",
+            "DocSection::new(\"Badge with Icon\", badge_icon)",
+            "DocSection::new(\"Avatar Group\", avatar_group)",
+            "DocSection::new(\"Avatar Group Count\", group_count)",
+            "DocSection::new(\"Avatar Group with Icon\", group_count_icon)",
+            "DocSection::new(\"Sizes\", sizes)",
+            "DocSection::new(\"Dropdown\", dropdown)",
+            "DocSection::new(\"RTL\", rtl)",
+            "preview_avatar(cx, avatar_image)",
+        ],
+    );
+}
+
+#[test]
+fn command_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/command/action_first_view.rs",
+            "src/ui/snippets/command/basic.rs",
+            "src/ui/snippets/command/docs_demo.rs",
+            "src/ui/snippets/command/groups.rs",
+            "src/ui/snippets/command/loading.rs",
+            "src/ui/snippets/command/rtl.rs",
+            "src/ui/snippets/command/scrollable.rs",
+            "src/ui/snippets/command/shortcuts.rs",
+            "src/ui/snippets/command/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent("src/ui/snippets/command", &["pub fn render<H: UiHost>("]);
+}
+
+#[test]
+fn command_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/command.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", docs_demo_palette)",
+            "DocSection::build(cx, \"Usage\", usage_palette)",
+            "DocSection::build(cx, \"Basic\", basic_dialog)",
+            "DocSection::build(cx, \"Shortcuts\", shortcuts_section)",
+            "DocSection::build(cx, \"Groups\", groups_palette)",
+            "DocSection::build(cx, \"Scrollable\", scrollable_palette)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Loading\", loading_palette)",
+            "DocSection::build(cx, \"Action-first (View runtime)\", action_first_view_runtime)",
+            "DocSection::build(cx, \"Notes\", notes_stack)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", docs_demo_palette)",
+            "DocSection::new(\"Usage\", usage_palette)",
+            "DocSection::new(\"Basic\", basic_dialog)",
+            "DocSection::new(\"Shortcuts\", shortcuts_section)",
+            "DocSection::new(\"Groups\", groups_palette)",
+            "DocSection::new(\"Scrollable\", scrollable_palette)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Loading\", loading_palette)",
+            "preview_command_palette(cx, last_action)",
+        ],
+    );
+}
+
+#[test]
 fn popover_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
@@ -1448,23 +2892,100 @@ fn tabs_page_uses_typed_doc_sections_for_app_facing_snippets() {
 
 #[test]
 fn card_snippets_prefer_ui_cx_on_the_default_app_surface() {
-    for path in rust_sources("src/ui/snippets/card") {
-        if path.file_name().is_some_and(|name| name == "mod.rs") {
-            continue;
-        }
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/card/card_content.rs",
+            "src/ui/snippets/card/compositions.rs",
+            "src/ui/snippets/card/demo.rs",
+            "src/ui/snippets/card/image.rs",
+            "src/ui/snippets/card/meeting_notes.rs",
+            "src/ui/snippets/card/rtl.rs",
+            "src/ui/snippets/card/size.rs",
+            "src/ui/snippets/card/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
 
-        let source = read_path(&path);
-        assert_default_app_surface(
-            &path,
-            &source,
-            &[
-                "pub fn render(cx: &mut UiCx<'_>) -> AnyElement",
-                "pub fn render(cx: &mut UiCx<'_>,",
-                "pub fn render(\n    cx: &mut UiCx<'_>,",
-            ],
-            "app-facing snippet surface",
-        );
-    }
+    assert_sources_absent(
+        "src/ui/snippets/card",
+        &[
+            "pub fn render(cx: &mut UiCx<'_>) -> AnyElement",
+            "pub fn render(cx: &mut UiCx<'_>,",
+        ],
+    );
+}
+
+#[test]
+fn card_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/card.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", login)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Size\", size)",
+            "DocSection::build(cx, \"Image\", image)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Compositions\", compositions)",
+            "DocSection::build(cx, \"CardContent\", card_content_inline_button)",
+            "DocSection::build(cx, \"Meeting Notes\", meeting_notes)",
+            "DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", login)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Size\", size)",
+            "DocSection::new(\"Image\", image)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Compositions\", compositions)",
+            "DocSection::new(\"CardContent\", card_content_inline_button)",
+            "DocSection::new(\"Meeting Notes\", meeting_notes)",
+            "preview_card(cx, event_cover_image)",
+        ],
+    );
+}
+
+#[test]
+fn image_object_fit_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/image_object_fit/mapping.rs",
+            "src/ui/snippets/image_object_fit/sampling.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/image_object_fit",
+        &[
+            "pub fn render<H: UiHost>(",
+            "pub fn render(cx: &mut ElementContext<'_, H>",
+        ],
+    );
+}
+
+#[test]
+fn image_object_fit_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/image_object_fit.rs",
+        &[
+            "DocSection::build(cx, \"Fit mapping\", mapping)",
+            "DocSection::build(cx, \"Sampling\", sampling)",
+            "DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "DocSection::new(\"Fit mapping\", mapping)",
+            "DocSection::new(\"Sampling\", sampling)",
+            "preview_image_object_fit(cx, theme, square_image, wide_image, tall_image, streaming_image)",
+        ],
+    );
 }
 
 #[test]
@@ -2908,10 +4429,10 @@ fn selected_avatar_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
             &[
-                "fn avatar_with_image<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<ImageId>>, size: shadcn::AvatarSize, fallback_text: &'static str,) -> impl IntoUiElement<H> + use<H>",
+                "fn avatar_with_image<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Option<ImageId>, size: shadcn::AvatarSize, fallback_text: &'static str,) -> impl IntoUiElement<H> + use<H>",
             ],
             &[
-                "fn avatar_with_image<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<ImageId>>, size: shadcn::AvatarSize, fallback_text: &'static str,) -> AnyElement",
+                "fn avatar_with_image<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Option<ImageId>, size: shadcn::AvatarSize, fallback_text: &'static str,) -> AnyElement",
             ],
         );
     }
@@ -2919,11 +4440,11 @@ fn selected_avatar_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/avatar/sizes.rs",
         &[
-            "fn avatar_with_image<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<ImageId>>, size: shadcn::AvatarSize, fallback_text: &'static str, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            "fn avatar_with_image<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Option<ImageId>, size: shadcn::AvatarSize, fallback_text: &'static str, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
             "shadcn::avatar_sized(",
         ],
         &[
-            "fn avatar_with_image<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<ImageId>>, size: shadcn::AvatarSize, fallback_text: &'static str, test_id: &'static str,) -> AnyElement",
+            "fn avatar_with_image<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Option<ImageId>, size: shadcn::AvatarSize, fallback_text: &'static str, test_id: &'static str,) -> AnyElement",
             "shadcn::Avatar::new([image, fallback]).size(size)",
         ],
     );
@@ -2931,20 +4452,20 @@ fn selected_avatar_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/avatar/demo.rs",
         &[
-            "fn avatar_with_badge<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<ImageId>>, fallback_text: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            "fn avatar_with_badge<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Option<ImageId>, fallback_text: &'static str,) -> impl IntoUiElement<H> + use<H>",
         ],
         &[
-            "fn avatar_with_badge<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<ImageId>>, fallback_text: &'static str,) -> AnyElement",
+            "fn avatar_with_badge<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Option<ImageId>, fallback_text: &'static str,) -> AnyElement",
         ],
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/avatar/with_badge.rs",
         &[
-            "fn avatar_with_badge<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<fret_core::ImageId>>, size: shadcn::AvatarSize, badge: shadcn::AvatarBadge, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            "fn avatar_with_badge<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Option<fret_core::ImageId>, size: shadcn::AvatarSize, badge: shadcn::AvatarBadge, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
         ],
         &[
-            "fn avatar_with_badge<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<fret_core::ImageId>>, size: shadcn::AvatarSize, badge: shadcn::AvatarBadge, test_id: &'static str,) -> AnyElement",
+            "fn avatar_with_badge<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Option<fret_core::ImageId>, size: shadcn::AvatarSize, badge: shadcn::AvatarBadge, test_id: &'static str,) -> AnyElement",
         ],
     );
 
@@ -2961,20 +4482,20 @@ fn selected_avatar_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/avatar/group.rs",
         &[
-            "fn group<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<ImageId>>, size: shadcn::AvatarSize, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            "fn group<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Option<ImageId>, size: shadcn::AvatarSize, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
         ],
         &[
-            "fn group<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<ImageId>>, size: shadcn::AvatarSize, test_id: &'static str,) -> AnyElement",
+            "fn group<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Option<ImageId>, size: shadcn::AvatarSize, test_id: &'static str,) -> AnyElement",
         ],
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/avatar/group_count.rs",
         &[
-            "fn group_with_count<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<ImageId>>, size: shadcn::AvatarSize, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            "fn group_with_count<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Option<ImageId>, size: shadcn::AvatarSize, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
         ],
         &[
-            "fn group_with_count<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Model<Option<ImageId>>, size: shadcn::AvatarSize, test_id: &'static str,) -> AnyElement",
+            "fn group_with_count<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Option<ImageId>, size: shadcn::AvatarSize, test_id: &'static str,) -> AnyElement",
         ],
     );
 
@@ -3914,6 +5435,204 @@ fn selected_toggle_group_snippet_helpers_prefer_into_ui_element_over_anyelement(
 }
 
 #[test]
+fn toggle_group_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/toggle_group/custom.rs",
+            "src/ui/snippets/toggle_group/demo.rs",
+            "src/ui/snippets/toggle_group/disabled.rs",
+            "src/ui/snippets/toggle_group/flex_1_items.rs",
+            "src/ui/snippets/toggle_group/full_width_items.rs",
+            "src/ui/snippets/toggle_group/label.rs",
+            "src/ui/snippets/toggle_group/large.rs",
+            "src/ui/snippets/toggle_group/outline.rs",
+            "src/ui/snippets/toggle_group/rtl.rs",
+            "src/ui/snippets/toggle_group/single.rs",
+            "src/ui/snippets/toggle_group/size.rs",
+            "src/ui/snippets/toggle_group/small.rs",
+            "src/ui/snippets/toggle_group/spacing.rs",
+            "src/ui/snippets/toggle_group/usage.rs",
+            "src/ui/snippets/toggle_group/vertical.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/toggle_group",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn toggle_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/toggle_group.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Outline\", outline)",
+            "DocSection::build(cx, \"Size\", size)",
+            "DocSection::build(cx, \"Spacing\", spacing)",
+            "DocSection::build(cx, \"Vertical\", vertical)",
+            "DocSection::build(cx, \"Disabled\", disabled)",
+            "DocSection::build(cx, \"Custom\", custom)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Single (Fret)\", single)",
+            "DocSection::build(cx, \"Small (Fret)\", small)",
+            "DocSection::build(cx, \"Large (Fret)\", large)",
+            "DocSection::build(cx, \"Label Association (Fret)\", label)",
+            "DocSection::build(cx, \"Full Width Items (Fret)\", full_width_items)",
+            "DocSection::build(cx, \"Flex-1 Items (Fret)\", stretch)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Outline\", outline)",
+            "DocSection::new(\"Size\", size)",
+            "DocSection::new(\"Spacing\", spacing)",
+            "DocSection::new(\"Vertical\", vertical)",
+            "DocSection::new(\"Disabled\", disabled)",
+            "DocSection::new(\"Custom\", custom)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Single (Fret)\", single)",
+            "DocSection::new(\"Small (Fret)\", small)",
+            "DocSection::new(\"Large (Fret)\", large)",
+            "DocSection::new(\"Label Association (Fret)\", label)",
+            "DocSection::new(\"Full Width Items (Fret)\", full_width_items)",
+            "DocSection::new(\"Flex-1 Items (Fret)\", stretch)",
+        ],
+    );
+}
+
+#[test]
+fn switch_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/switch/airplane_mode.rs",
+            "src/ui/snippets/switch/bluetooth.rs",
+            "src/ui/snippets/switch/choice_card.rs",
+            "src/ui/snippets/switch/description.rs",
+            "src/ui/snippets/switch/disabled.rs",
+            "src/ui/snippets/switch/invalid.rs",
+            "src/ui/snippets/switch/label.rs",
+            "src/ui/snippets/switch/rtl.rs",
+            "src/ui/snippets/switch/sizes.rs",
+            "src/ui/snippets/switch/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/switch",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn switch_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/switch.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Description\", description)",
+            "DocSection::build(cx, \"Choice Card\", choice_card)",
+            "DocSection::build(cx, \"Disabled\", disabled)",
+            "DocSection::build(cx, \"Invalid\", invalid)",
+            "DocSection::build(cx, \"Size\", sizes)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Label Association\", label)",
+            "DocSection::build(cx, \"Style Override\", style_override)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Description\", description)",
+            "DocSection::new(\"Choice Card\", choice_card)",
+            "DocSection::new(\"Disabled\", disabled)",
+            "DocSection::new(\"Invalid\", invalid)",
+            "DocSection::new(\"Size\", sizes)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Label Association\", label)",
+            "DocSection::new(\"Style Override\", style_override)",
+        ],
+    );
+}
+
+#[test]
+fn checkbox_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/checkbox/basic.rs",
+            "src/ui/snippets/checkbox/checked_state.rs",
+            "src/ui/snippets/checkbox/demo.rs",
+            "src/ui/snippets/checkbox/description.rs",
+            "src/ui/snippets/checkbox/disabled.rs",
+            "src/ui/snippets/checkbox/group.rs",
+            "src/ui/snippets/checkbox/invalid_state.rs",
+            "src/ui/snippets/checkbox/label.rs",
+            "src/ui/snippets/checkbox/rtl.rs",
+            "src/ui/snippets/checkbox/table.rs",
+            "src/ui/snippets/checkbox/usage.rs",
+            "src/ui/snippets/checkbox/with_title.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/checkbox",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn checkbox_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/checkbox.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Checked State\", checked_state)",
+            "DocSection::build(cx, \"Invalid State\", invalid_state)",
+            "DocSection::build(cx, \"Basic\", basic)",
+            "DocSection::build(cx, \"Description\", description_section)",
+            "DocSection::build(cx, \"Disabled\", disabled_section)",
+            "DocSection::build(cx, \"Group\", group)",
+            "DocSection::build(cx, \"Table\", table)",
+            "DocSection::build(cx, \"RTL\", rtl_section)",
+            "DocSection::build(cx, \"Label Association (Fret)\", label)",
+            "DocSection::build(cx, \"With Title (Fret)\", with_title_section)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Checked State\", checked_state)",
+            "DocSection::new(\"Invalid State\", invalid_state)",
+            "DocSection::new(\"Basic\", basic)",
+            "DocSection::new(\"Description\", description_section)",
+            "DocSection::new(\"Disabled\", disabled_section)",
+            "DocSection::new(\"Group\", group)",
+            "DocSection::new(\"Table\", table)",
+            "DocSection::new(\"RTL\", rtl_section)",
+            "DocSection::new(\"Label Association (Fret)\", label)",
+            "DocSection::new(\"With Title (Fret)\", with_title_section)",
+        ],
+    );
+}
+
+#[test]
 fn toggle_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
@@ -4325,6 +6044,53 @@ fn selected_separator_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         ],
         &[
             "fn row<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, value: &'static str,) -> AnyElement",
+        ],
+    );
+}
+
+#[test]
+fn separator_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/separator/demo.rs",
+            "src/ui/snippets/separator/list.rs",
+            "src/ui/snippets/separator/menu.rs",
+            "src/ui/snippets/separator/rtl.rs",
+            "src/ui/snippets/separator/usage.rs",
+            "src/ui/snippets/separator/vertical.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/separator",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn separator_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/separator.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Vertical\", vertical)",
+            "DocSection::build(cx, \"Menu\", menu)",
+            "DocSection::build(cx, \"List\", list)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Vertical\", vertical)",
+            "DocSection::new(\"Menu\", menu)",
+            "DocSection::new(\"List\", list)",
+            "DocSection::new(\"RTL\", rtl)",
         ],
     );
 }

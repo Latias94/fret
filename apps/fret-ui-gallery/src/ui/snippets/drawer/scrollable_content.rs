@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("scrollable_content.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::Theme;
 use fret_ui_kit::IntoUiElement;
@@ -28,7 +29,7 @@ fn paragraph_block<H: UiHost>(
     .layout(LayoutRefinement::default().w_full())
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model(|| false);
     let trigger_open = open.clone();
     let close_open = open.clone();

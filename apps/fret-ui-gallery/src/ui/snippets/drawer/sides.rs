@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("sides.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_kit::{IntoUiElement, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -45,7 +46,7 @@ fn side_button<H: UiHost>(
     )
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let top_open = cx.local_model_keyed("top_open", || false);
     let right_open = cx.local_model_keyed("right_open", || false);
     let bottom_open = cx.local_model_keyed("bottom_open", || false);

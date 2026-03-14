@@ -1,11 +1,12 @@
 pub const SOURCE: &str = include_str!("groups.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     shadcn::Select::new_controllable(cx, None, None::<Arc<str>>, None, false)
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(192.0)))
         .into_element_parts(

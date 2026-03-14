@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("date_of_birth_picker.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
@@ -30,7 +31,7 @@ fn format_date_locale_short_en_us(date: Date) -> String {
     format!("{month}/{}/{}", date.day(), date.year())
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let today = today_from_env_or_now();
     let open = cx.local_model_keyed("open", || false);
     let month = cx.local_model_keyed("month", || CalendarMonth::from_date(today));
