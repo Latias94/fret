@@ -29,6 +29,23 @@ macro_rules! children {
     }};
 }
 
+/// Land typed child values at the last possible moment inside wrapper-style helpers.
+pub(crate) fn collect_children<H, I>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    children: I,
+) -> Vec<fret_ui::element::AnyElement>
+where
+    H: fret_ui::UiHost,
+    I: IntoIterator,
+    I::Item: crate::ui_builder::IntoUiElement<H>,
+{
+    let mut out = Vec::new();
+    for child in children {
+        out.push(crate::ui_builder::IntoUiElement::into_element(child, cx));
+    }
+    out
+}
+
 /// Implement the `UiBuilder` patch + render glue for a component that supports both chrome and
 /// layout refinements.
 ///
@@ -389,10 +406,15 @@ mod default_semantics_tests {
 #[cfg(test)]
 mod source_policy_tests {
     const LIB_RS: &str = include_str!("lib.rs");
+    const DECLARATIVE_BLOOM_RS: &str = include_str!("declarative/bloom.rs");
+    const DECLARATIVE_DISMISSIBLE_RS: &str = include_str!("declarative/dismissible.rs");
     const DECLARATIVE_MOD_RS: &str = include_str!("declarative/mod.rs");
     const DECLARATIVE_PRELUDE_RS: &str = include_str!("declarative/prelude.rs");
     const DECLARATIVE_SEMANTICS_RS: &str = include_str!("declarative/semantics.rs");
+    const DECLARATIVE_VISUALLY_HIDDEN_RS: &str = include_str!("declarative/visually_hidden.rs");
+    const DECLARATIVE_PIXELATE_RS: &str = include_str!("declarative/pixelate.rs");
     const IMUI_RS: &str = include_str!("imui.rs");
+    const PRIMITIVES_FOCUS_SCOPE_RS: &str = include_str!("primitives/focus_scope.rs");
     const UI_RS: &str = include_str!("ui.rs");
     const UI_BUILDER_RS: &str = include_str!("ui_builder.rs");
 
@@ -515,5 +537,32 @@ mod source_policy_tests {
         assert!(public_surface.contains("pub trait UiElementTestIdExt: Sized"));
         assert!(public_surface.contains("pub trait UiElementA11yExt: Sized"));
         assert!(public_surface.contains("pub trait UiElementKeyContextExt: Sized"));
+    }
+
+    #[test]
+    fn wrapper_helpers_prefer_typed_child_inputs() {
+        for (label, source) in [
+            ("declarative/bloom.rs", DECLARATIVE_BLOOM_RS),
+            ("declarative/dismissible.rs", DECLARATIVE_DISMISSIBLE_RS),
+            ("declarative/pixelate.rs", DECLARATIVE_PIXELATE_RS),
+            (
+                "declarative/visually_hidden.rs",
+                DECLARATIVE_VISUALLY_HIDDEN_RS,
+            ),
+            ("primitives/focus_scope.rs", PRIMITIVES_FOCUS_SCOPE_RS),
+        ] {
+            assert!(
+                source.contains("T: IntoUiElement<H>"),
+                "{label} should accept typed child values on the public wrapper surface"
+            );
+            assert!(
+                !source.contains("IntoIterator<Item = AnyElement>"),
+                "{label} reintroduced raw AnyElement child items on the public surface"
+            );
+            assert!(
+                source.contains("collect_children(cx,"),
+                "{label} should land typed child values only behind the wrapper seam"
+            );
+        }
     }
 }

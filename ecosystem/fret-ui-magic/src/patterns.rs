@@ -8,8 +8,10 @@ use fret_ui_kit::declarative::reduced_motion_queries;
 use fret_ui_kit::declarative::scheduling::set_continuous_frames;
 use fret_ui_kit::recipes::catalog::VisualCatalog;
 use fret_ui_kit::recipes::resolve::{
-    DegradationReason, RecipeDegradedEvent, report_recipe_degraded,
+    report_recipe_degraded, DegradationReason, RecipeDegradedEvent,
 };
+
+use crate::collect_children;
 
 fn material_id_from_catalog<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -126,13 +128,14 @@ impl Default for DotPatternProps {
     }
 }
 
-pub fn dot_pattern<H: UiHost, I>(
+pub fn dot_pattern<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     props: DotPatternProps,
     children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: fret_ui_kit::IntoUiElement<H>,
 {
     let label = "magic.pattern.dot_grid";
     let desc = MaterialDescriptor::new(MaterialKind::DotGrid);
@@ -146,7 +149,10 @@ where
                 corner_radii: props.corner_radii,
                 ..Default::default()
             },
-            children,
+            move |cx| {
+                let items = children(cx);
+                collect_children(cx, items)
+            },
         );
     };
 
@@ -175,7 +181,10 @@ where
             corner_radii: props.corner_radii,
             ..Default::default()
         },
-        children,
+        move |cx| {
+            let items = children(cx);
+            collect_children(cx, items)
+        },
     )
 }
 
@@ -216,13 +225,14 @@ impl Default for GridPatternProps {
     }
 }
 
-pub fn grid_pattern<H: UiHost, I>(
+pub fn grid_pattern<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     props: GridPatternProps,
     children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: fret_ui_kit::IntoUiElement<H>,
 {
     let label = "magic.pattern.grid";
     let desc = MaterialDescriptor::new(MaterialKind::Grid);
@@ -236,7 +246,10 @@ where
                 corner_radii: props.corner_radii,
                 ..Default::default()
             },
-            children,
+            move |cx| {
+                let items = children(cx);
+                collect_children(cx, items)
+            },
         );
     };
 
@@ -247,8 +260,8 @@ where
             rgba(props.base),
             rgba(props.lines),
             [
-                props.spacing.0.0,
-                props.spacing.1.0,
+                props.spacing.0 .0,
+                props.spacing.1 .0,
                 props.line_width.0,
                 props.seed as f32,
             ],
@@ -265,7 +278,10 @@ where
             corner_radii: props.corner_radii,
             ..Default::default()
         },
-        children,
+        move |cx| {
+            let items = children(cx);
+            collect_children(cx, items)
+        },
     )
 }
 
@@ -308,13 +324,14 @@ impl Default for StripePatternProps {
     }
 }
 
-pub fn stripe_pattern<H: UiHost, I>(
+pub fn stripe_pattern<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     props: StripePatternProps,
     children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: fret_ui_kit::IntoUiElement<H>,
 {
     let label = "magic.pattern.stripe";
     let desc = MaterialDescriptor::new(MaterialKind::Stripe);
@@ -328,7 +345,10 @@ where
                 corner_radii: props.corner_radii,
                 ..Default::default()
             },
-            children,
+            move |cx| {
+                let items = children(cx);
+                collect_children(cx, items)
+            },
         );
     };
 
@@ -357,6 +377,9 @@ where
             corner_radii: props.corner_radii,
             ..Default::default()
         },
-        children,
+        move |cx| {
+            let items = children(cx);
+            collect_children(cx, items)
+        },
     )
 }

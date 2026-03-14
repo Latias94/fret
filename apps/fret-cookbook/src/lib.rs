@@ -306,6 +306,9 @@ mod authoring_surface_policy_tests {
         assert!(!ROUTER_EXAMPLE.contains("set_router_command_availability(window"));
         assert!(ROUTER_EXAMPLE.contains(".setup(fret::router::app::install)"));
         assert!(!ROUTER_EXAMPLE.contains(".setup(fret::router::install_app)"));
+        assert!(ROUTER_EXAMPLE.contains(".into_element_by_leaf("));
+        assert!(!ROUTER_EXAMPLE.contains(".into_element_by_leaf_ui("));
+        assert!(!ROUTER_EXAMPLE.contains("router_outlet_ui("));
 
         assert!(DATA_TABLE_EXAMPLE.contains("use fret_runtime::Model;"));
         assert!(DATA_TABLE_EXAMPLE.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
@@ -328,8 +331,51 @@ mod authoring_surface_policy_tests {
     fn shared_scaffold_uses_component_surface_instead_of_legacy_prelude() {
         assert!(SCAFFOLD.contains("use fret::component::prelude::*;"));
         assert!(SCAFFOLD.contains("&mut ComponentCx<'_, H>"));
+        assert!(SCAFFOLD.contains("B: IntoUiElement<H>"));
         assert!(!SCAFFOLD.contains("&mut ElementContext<'_, H>"));
         assert!(!SCAFFOLD.contains("use fret::prelude::*;"));
+        assert!(!SCAFFOLD.contains("surface: AnyElement"));
+        assert!(!SCAFFOLD.contains("centered_page_ui<"));
+        assert!(!SCAFFOLD.contains("centered_page_background_ui("));
+        assert!(!SCAFFOLD.contains("centered_page_muted_ui("));
+    }
+
+    #[test]
+    fn cookbook_examples_use_unified_centered_page_helpers() {
+        for src in [
+            UNDO_EXAMPLE,
+            DRAG_EXAMPLE,
+            EXTERNAL_TEXTURE_IMPORT_EXAMPLE,
+            CUSTOM_V1_EXAMPLE,
+            ASSETS_RELOAD_EPOCH_EXAMPLE,
+            DROP_SHADOW_EXAMPLE,
+            GIZMO_EXAMPLE,
+            DATE_PICKER_EXAMPLE,
+            COMMANDS_KEYMAP_EXAMPLE,
+            FORM_EXAMPLE,
+            DOCKING_EXAMPLE,
+            EFFECTS_LAYER_EXAMPLE,
+            CHART_INTERACTIONS_EXAMPLE,
+            SIMPLE_TODO_EXAMPLE,
+            TOAST_EXAMPLE,
+            ICONS_AND_ASSETS_EXAMPLE,
+            HELLO_COUNTER_EXAMPLE,
+            CANVAS_PAN_ZOOM_EXAMPLE,
+            TOGGLE_EXAMPLE,
+            TEXT_INPUT_EXAMPLE,
+            ASYNC_INBOX_EXAMPLE,
+            QUERY_EXAMPLE,
+            PAYLOAD_ACTIONS_EXAMPLE,
+            MARKDOWN_AND_CODE_EXAMPLE,
+            THEME_SWITCHING_EXAMPLE,
+            SIMPLE_TODO_V2_TARGET_EXAMPLE,
+            DATA_TABLE_EXAMPLE,
+            ROUTER_EXAMPLE,
+            VIRTUAL_LIST_EXAMPLE,
+        ] {
+            assert!(!src.contains("centered_page_background_ui("));
+            assert!(!src.contains("centered_page_muted_ui("));
+        }
     }
 
     #[test]

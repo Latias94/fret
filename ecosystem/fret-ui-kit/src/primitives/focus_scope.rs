@@ -10,41 +10,51 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::tree::UiLayerId;
 use fret_ui::{ElementContext, UiHost, UiTree};
 
+use crate::{IntoUiElement, collect_children};
+
 pub use fret_ui::element::FocusScopeProps;
 
 /// Convenience helper for building a trapped focus scope (Tab/Shift+Tab loops within the subtree).
 #[track_caller]
-pub fn focus_trap<H: UiHost, I>(
+pub fn focus_trap<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     cx.focus_scope(
         FocusScopeProps {
             trap_focus: true,
             ..Default::default()
         },
-        f,
+        move |cx| {
+            let items = f(cx);
+            collect_children(cx, items)
+        },
     )
 }
 
 /// Like `focus_trap`, but also exposes the scope element ID.
 #[track_caller]
-pub fn focus_trap_with_id<H: UiHost, I>(
+pub fn focus_trap_with_id<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     f: impl FnOnce(&mut ElementContext<'_, H>, fret_ui::elements::GlobalElementId) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     cx.focus_scope_with_id(
         FocusScopeProps {
             trap_focus: true,
             ..Default::default()
         },
-        f,
+        move |cx, id| {
+            let items = f(cx, id);
+            collect_children(cx, items)
+        },
     )
 }
 

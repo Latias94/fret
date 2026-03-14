@@ -2,7 +2,7 @@
 
 This file defines milestones for the workstream in `DESIGN.md`.
 
-## Current execution stance (2026-03-13)
+## Current execution stance (2026-03-14)
 
 This workstream is the **current main authoring lane**.
 
@@ -18,18 +18,106 @@ Execution rule:
 - use the canonical compare set
   (`simple_todo_v2_target`, `todo_demo`, scaffold simple-todo template)
   as the first downstream proof that the new conversion surface improves authoring feel,
-- let ecosystem trait/docs cleanup follow this work rather than compete with it.
+- let ecosystem trait/docs cleanup follow this work rather than compete with it,
+- treat the remaining work primarily as **family-lane classification plus targeted closeout**,
+  not as an excuse to invent more root-builder variants.
 
-Current readout on 2026-03-13:
+Current readout on 2026-03-14:
 
 | Milestone | State | Notes |
 | --- | --- | --- |
 | M0 | Done | target vocabulary is locked and the classification table is now recorded in `MIGRATION_MATRIX.md` |
 | M1 | Done | `IntoUiElement<H>` is the curated component conversion name; docs/preludes/tests reflect it |
 | M2 | Done | `UiBuilder<T>` and host-bound child builders now land through `IntoUiElement<H>`; `UiBuilderHostBoundIntoElementExt` is deleted; child collection now also consumes `IntoUiElement<H>` directly |
-| M3 | In progress | curated `fret` / `fret-ui-kit` surfaces and the canonical todo/scaffold compare set are aligned; `fret::UiChild` now lands directly through `IntoUiElement<App>`; `fret-ui-shadcn` ui_ext glue, `ui_builder_ext` helper closures, overlay/single-child builders, and `fret-router-ui` outlet helpers now land through `IntoUiElement<H>`; selected advanced examples (`assets_demo`, `async_playground_demo`, `custom_effect_v1_demo`, `custom_effect_v2_demo`, `custom_effect_v3_demo`, `postprocess_theme_demo`, `drop_shadow_demo`, `markdown_demo`, `liquid_glass_demo`, `customv1_basics`, `drop_shadow_basics`, `icons_and_assets_basics`, `hello_world_compare_demo`) now also prefer `impl IntoUiElement<...>` for non-raw helpers, including `custom_effect_v1_demo::{stage,lens_row,plain_lens,custom_effect_lens,lens_shell,inspector}`, `custom_effect_v2_demo::{stage,lens_row,plain_lens,custom_effect_lens,lens_shell,inspector}`, `async_playground_demo::{header_bar,body,catalog_panel,main_panel,inspector_panel,policy_editor,query_panel_for_mode,query_inputs_row,query_result_view,status_badge}`, `custom_effect_v3_demo::{stage,stage_controls,animated_backdrop,lens_row,lens_shell}`, and `postprocess_theme_demo::{inspector,stage,stage_body,stage_cards}`; selected default-app WebGPU examples now also keep typed helper signatures, including `custom_effect_v2_identity_web_demo::{lens,inspector}`, `custom_effect_v2_web_demo::{lens,inspector}`, `custom_effect_v2_lut_web_demo::{lens,inspector}`, and `custom_effect_v2_glass_chrome_web_demo::{label_row,lens,controls_panel}`, while keeping explicit raw seams such as the internal body landing inside `custom_effect_v1_demo::lens_shell(...)` / `custom_effect_v2_demo::lens_shell(...)`, stage-tile child-array assembly in the WebGPU demos, and the retained bridge seam `chart_interactions_basics::chart_canvas(...)`; selected UI Gallery AI and Material 3 doc pages now keep page-local helpers on `impl UiChild + use<>`, including `material3/shared.rs::material3_variant_toggle_row(...)`, while `material3/shared.rs::render_material3_demo_page<D>(...)`, `doc_layout.rs::DocSection::build<P>(...)`, and `doc_layout.rs::notes_block(...)` now keep page/document wrappers on a typed lane so selected doc pages such as `pages/aspect_ratio.rs`, `pages/ai_artifact_demo.rs`, `pages/ai_context_demo.rs`, `pages/ai_model_selector_demo.rs`, `pages/ai_mic_selector_demo.rs`, `pages/ai_voice_selector_demo.rs`, `pages/ai_file_tree_demo.rs`, `pages/ai_commit_demo.rs`, `pages/ai_test_results_demo.rs`, `pages/ai_persona_demo.rs`, `pages/ai_checkpoint_demo.rs`, `pages/ai_chain_of_thought_demo.rs`, `pages/ai_shimmer_demo.rs`, `pages/ai_agent_demo.rs`, `pages/ai_attachments_demo.rs`, `pages/ai_confirmation_demo.rs`, `pages/ai_inline_citation_demo.rs`, `pages/ai_message_demo.rs`, `pages/ai_speech_input_demo.rs`, `pages/ai_stack_trace_demo.rs`, `pages/avatar.rs`, `pages/button.rs`, `pages/button_group.rs`, `pages/alert_dialog.rs`, `pages/hover_card.rs`, `pages/dropdown_menu.rs`, `pages/calendar.rs`, `pages/accordion.rs`, `pages/alert.rs`, `pages/dialog.rs`, `pages/navigation_menu.rs`, `pages/sheet.rs`, `pages/drawer.rs`, `pages/popover.rs`, `pages/select.rs`, `pages/context_menu.rs`, `pages/menubar.rs`, `pages/progress.rs`, `pages/pagination.rs`, `pages/tabs.rs`, `pages/scroll_area.rs`, `pages/command.rs`, `pages/slider.rs`, `pages/icons.rs`, `pages/typography.rs`, `pages/badge.rs`, `pages/checkbox.rs`, `pages/collapsible.rs`, `pages/empty.rs`, `pages/input.rs`, `pages/label.rs`, `pages/kbd.rs`, `pages/spinner.rs`, `pages/tooltip.rs`, `pages/switch.rs`, `pages/toggle.rs`, `pages/toggle_group.rs`, `pages/separator.rs`, `pages/textarea.rs`, `pages/radio_group.rs`, `pages/skeleton.rs`, `pages/table.rs`, `pages/image_object_fit.rs`, `pages/breadcrumb.rs`, `pages/card.rs`, `pages/input_otp.rs`, `pages/resizable.rs`, `pages/sidebar.rs`, `pages/sonner.rs`, `pages/form.rs`, `pages/carousel.rs`, `pages/chart.rs`, `pages/combobox.rs`, `pages/data_table.rs`, `pages/item.rs`, `pages/native_select.rs`, `pages/date_picker.rs`, `pages/field.rs`, and `pages/input_group.rs` now also teach typed `Features/Notes` blocks instead of eager `AnyElement` landing, the first-party Gallery docs prose helper now no longer ships the legacy `doc_layout::notes(...) -> AnyElement` shim, selected UI Gallery badge snippets now keep local `row(...)` helpers on `impl IntoUiElement<H> + use<H, F>`, selected UI Gallery avatar snippets now keep row wrappers, avatar builders, and icon/group helpers on `impl IntoUiElement<H> + use<...>`, selected UI Gallery button snippets now keep row wrappers and local size-composition helpers on `impl IntoUiElement<H> + use<...>`, selected UI Gallery card snippets now keep `meeting_notes::{marker,item}`, `compositions::cell`, and `demo::{email_field,password_field}` on `impl IntoUiElement<fret_app::App> + use<>`, and first-party card exemplars now also teach the typed helper family directly: `card(...)`, `card_header(...)`, `card_action(...)`, `card_title(...)`, `card_description(...)`, `card_content(...)`, and `card_footer(...)` plus `ui::children![cx; ...]` for heterogeneous slot child lists; selected UI Gallery navigation-menu docs snippet now keeps `list_item(...)` and `icon_row(...)` on `impl IntoUiElement<fret_app::App> + use<>`, selected UI Gallery tabs snippets now keep local `field(...)` helpers on `impl IntoUiElement<fret_app::App> + use<>`, selected UI Gallery collapsible snippets now keep `rotated_lucide(...)`, `radius_input(...)`, `details_collapsible(...)`, `file_leaf(...)`, and `folder(...)` on `impl IntoUiElement<H> + use<H>`, selected UI Gallery hover-card snippets now keep `card(...)` / `demo_content(...)` helpers on `impl IntoUiElement<H> + use<H>`, selected UI Gallery tooltip snippets now keep `make_tooltip(...)` / `make_tooltip_with_test_ids(...)` on `impl IntoUiElement<H> + use<H>`, selected UI Gallery resizable snippets now keep `panel(...)` / `box_group(...)` helpers on `impl IntoUiElement<H> + use<...>`, including `resizable/{demo,vertical,handle,rtl}.rs`, selected UI Gallery scroll-area snippets now keep `nested_scroll_routing::row(...)`, `demo::tag_row(...)`, and `expand_at_bottom::{toggle_button,empty_row}` on `impl IntoUiElement<H> + use<H>`, selected UI Gallery data-table snippets now keep `align_end(...)`, `align_inline_start(...)`, `footer(...)`, and `bottom_controls(...)` on `impl IntoUiElement<fret_app::App> + use<...>`, selected UI Gallery table-action snippets now keep `align_end(...)` and `action_row(...)` on `impl IntoUiElement<fret_app::App> + use<...>`, selected UI Gallery table snippets now keep `make_invoice_table(...)` on `impl IntoUiElement<fret_app::App> + use<>` and now drop helper-local `cx` from the `demo` / `footer` / `rtl` variants where the body can stay late-landed, selected UI Gallery separator snippets now keep `section(...)` / `row(...)` helpers on `impl IntoUiElement<H> + use<H>`, selected UI Gallery sidebar snippets now keep `menu_button(...)` helpers on `impl IntoUiElement<...>`-based signatures across `sidebar/{demo,controlled,mobile,rtl}.rs`, selected UI Gallery aspect-ratio snippets now keep `portrait_image(...)`, `square_image(...)`, `rtl_image(...)`, `ratio_example(...)`, and `render_preview(...)` helpers on `impl IntoUiElement<H> + use<H>`, including `aspect_ratio/{demo,portrait,square,rtl}.rs`, selected UI Gallery context-menu snippets now keep `trigger_surface(...)` and `side_menu(...)` helpers on `impl IntoUiElement<H>` with explicit trigger landing seams, including `context_menu/sides.rs`, selected UI Gallery combobox snippets now keep local `state_row(...)` and `state_rows(...)` helpers on `impl IntoUiElement<fret_app::App> + use<>`, selected UI Gallery pagination snippets now keep local `page_number(...)` helpers on `impl IntoUiElement<H> + use<H>`, selected UI Gallery carousel snippets now keep local `slide_card(...)` / `slide(...)` helpers on `impl IntoUiElement<fret_app::App> + use<>`, including the `api`, `duration_embla`, `rtl`, `plugin_autoplay*`, and `events` demos, selected UI Gallery skeleton snippets now keep local `round(...)` / `row(...)` helpers on `impl IntoUiElement<H> + use<H>`, selected UI Gallery popover wrapper helpers now accept/return `IntoUiElement<H>` instead of forcing `AnyElement`, and selected `popover/{demo,with_form}.rs` snippets now also teach `ui::children![cx; ...]` for `PopoverContent` / `PopoverHeader` / `FieldGroup` / `Field` assembly, selected UI Gallery dropdown-menu preview wrappers now accept/return `IntoUiElement<H>`, selected UI Gallery AI wrapper/doc-preview helpers now also accept or expose `IntoUiElement<H>`-based signatures (`centered(...)`, `preview(...)`, `progress_section(...)`, `render_grid_attachment(...)`, `render_list_attachment(...)`, `invisible_marker(...)`, `body_text(...)`, and `clear_action(...)`), including `file_tree_large.rs::preview(...)`; internal gallery wrapper shells now also keep typed wrapper seams in `doc_layout.rs::demo_shell<B>(...)` and `code_editor/mvp/gates.rs::gate_panel<B>(...)`; `fret-ui-shadcn` internal menu-slot wrappers in `context_menu.rs`, `dropdown_menu.rs`, and `menubar.rs` now also accept `IntoUiElement<H>` inputs on `menu_icon_slot(...)`; the thin public constructor/wrapper trial now covers `badge.rs::badge<H, T>(...)`, `checkbox.rs::{checkbox<H>(...), checkbox_opt<H>(...)}`, `progress.rs::progress<H>(...)`, `switch.rs::{switch<H>(...), switch_opt<H>(...)}`, `kbd.rs::kbd<H, T>(...)`, `separator.rs::separator<H>()`, `input_group.rs::input_group<H>(...)`, `input_otp.rs::input_otp<H>(...)`, `command.rs::command<H, I, F, T>(...)`, and the `card.rs` wrapper family, while `kbd.rs::kbd_icon<H>(...)` remains intentionally raw because `Kbd::from_children(...)` still owns concrete landed-child storage; combobox anchor overrides now reuse the generic `PopoverAnchor::build(...).into_anchor(cx)` path instead of a combobox-specific raw alias; the dedicated typography sweep is now landed, so `fret-ui-shadcn/src/typography.rs` keeps the `raw::typography::*` namespace but exposes typed helper outputs and first-party Gallery/examples/`fret-genui-shadcn` call sites now land those helpers explicitly via `.into_element(cx)` only where a concrete `AnyElement` seam is still required, while eager constructor examples such as the accordion snippets and selected dialog/sheet/drawer modal-form snippets now teach `ui::children![cx; ...]` instead of ad-hoc `vec![...into_element(cx)]` child assembly; selected breadcrumb helpers now keep separators on `IntoUiElement<H>`, selected button-group, toggle-group, and drawer helpers now expose `IntoUiElement`-based signatures, including `drawer/{demo,responsive_dialog,sides,scrollable_content}.rs`, selected UI Gallery sheet/dialog snippets now keep `profile_fields(...)` helpers on `impl IntoUiElement<H> + use<H>`, selected UI Gallery dialog scroll/sticky snippets now keep `lorem_block(...)` helpers on `impl IntoUiElement<H> + use<H>`, and selected item, toast, alert, slider, and motion-presets helpers now also stay on `IntoUiElement`-based signatures, including `item/{avatar,icon,link,link_render,dropdown,extras_rtl,gallery}.rs` helpers such as `icon(...)`, `icon_button(...)`, `outline_button(...)`, `outline_button_sm(...)`, `item_basic(...)`, `item_icon(...)`, `item_avatar(...)`, and `item_team(...)`, plus `toast/deprecated.rs::centered(...)`, `sonner/{demo,extras,position}.rs::wrap_controls_row(...)`, `alert/{interactive_links,demo}.rs::{interactive_link,interactive_link_text}(...)`, and `slider/demo.rs::controlled(...)`; broader shadcn/gallery/helper cleanup still remains |
-| M4 | In progress | prelude gates are in place, curated component-authoring docs now teach only `IntoUiElement<H>`, stale-name source/doc guards now cover curated docs, `UiChildIntoElement` is now deleted from code, `fret_ui_shadcn::prelude::*` now re-exports `IntoUiElement` so typed direct-crate helpers do not need ad-hoc trait imports, exported `fret-ui-kit` adapter macros plus built-in primitive glue now also attach `IntoUiElement<H>` directly instead of spelling `UiIntoElement` on the first-party macro surface, the public RenderOnce helper macro is now renamed to `ui_component_render_once!`, declarative semantics wrappers (`UiElementTestIdExt`, `UiElementA11yExt`, `UiElementKeyContextExt`) now also land through `IntoUiElement<H>` directly instead of depending on `UiIntoElement` in production code, built-in text primitives (`ui::TextBox`, `ui::RawTextBox`) now also land through `IntoUiElement<H>` directly, the legacy `UiIntoElement` bridge name is now deleted from production code entirely, `docs/first-hour.md` and the `fret-ui-ai` message/workflow builder smoke tests now also stay on the public `IntoUiElement<...>` contract, the shadcn source-alignment guidance now explicitly treats typed doc/page wrapper entry points (for example `DocSection::build(...)`) as part of the first-party exemplar contract, and the focused UI Gallery source gate now covers an expanded `selected_*` helper set across AI/Material 3 pages plus internal wrapper constructors and first-party snippets/wrappers for avatar/button/card/navigation-menu/tabs/collapsible/tooltip/hover-card/context-menu/aspect-ratio/resizable/scroll-area/data-table/table-action/table/separator/sidebar/combobox/pagination/carousel/skeleton/popover/dropdown-menu/item/toast/sonner/alert/slider and other authoring surfaces; only historical docs and negative source-policy assertions still mention the old name |
+| M3 | In progress | surface migration is broadly landed across the curated app/component lanes, the canonical todo/scaffold compare set, and the first-party Gallery/doc scaffolds; the previously ambiguous families are now classified (`Select` / `Combobox` / `Command` => direct recipe root/bridge, `NavigationMenu` / `Pagination` => dual-lane), the high-signal `Select` / `Combobox` snippets now also prefer the compact direct root builder chains instead of teaching closure-based `into_element_parts(...)` as the default copyable story, the default-app UI Gallery `pages/` + `snippets/` surface is now effectively closed on the target posture (no `DocSection::new(...)`, no default snippet `UiCx -> AnyElement`, only intentional diagnostics raw roots remain), the internal preview page surface is now also off `DocSection::new(...)`, and the remaining M3 work is now mostly keeping the audited intentional seam inventory explicit (`doc_layout` scaffold vectors, preview-registry `Vec<AnyElement>`, overlay diagnostics vectors, scroll-area diagnostics raw roots) rather than broad page/snippet migration |
+| M4 | In progress | prelude gates are in place, curated component-authoring docs now teach only `IntoUiElement<H>`, stale-name source/doc guards now cover curated docs, `UiChildIntoElement` is now deleted from code, `fret_ui_shadcn::prelude::*` now re-exports `IntoUiElement` so typed direct-crate helpers do not need ad-hoc trait imports, exported `fret-ui-kit` adapter macros plus built-in primitive glue now also attach `IntoUiElement<H>` directly instead of spelling `UiIntoElement` on the first-party macro surface, the public RenderOnce helper macro is now renamed to `ui_component_render_once!`, declarative semantics wrappers (`UiElementTestIdExt`, `UiElementA11yExt`, `UiElementKeyContextExt`) now also land through `IntoUiElement<H>` directly instead of depending on `UiIntoElement` in production code, built-in text primitives (`ui::TextBox`, `ui::RawTextBox`) now also land through `IntoUiElement<H>` directly, the legacy `UiIntoElement` bridge name is now deleted from production code entirely, `docs/first-hour.md` and the `fret-ui-ai` message/workflow builder smoke tests now also stay on the public `IntoUiElement<...>` contract, the shadcn source-alignment guidance now explicitly treats typed doc/page wrapper entry points (for example `DocSection::build(...)`) as part of the first-party exemplar contract, and the focused UI Gallery source gate now also covers the `Select` / `Combobox` compact-chain default story in addition to the expanded `selected_*` helper set across AI/Material 3 pages plus internal wrapper constructors and first-party snippets/wrappers for avatar/button/card/navigation-menu/tabs/collapsible/tooltip/hover-card/context-menu/aspect-ratio/resizable/scroll-area/data-table/table-action/table/separator/sidebar/combobox/pagination/carousel/skeleton/popover/dropdown-menu/item/toast/sonner/alert/slider and other authoring surfaces; only historical docs and negative source-policy assertions still mention the old name |
 | M6 | Done | the shadcn raw-seam inventory is now explicitly closed: `use_combobox_anchor(...)` is deleted in favor of `PopoverAnchor::build(...).into_anchor(cx)`, `TooltipContent::{build,text}(...)` and `state.rs::{use_selector_badge,query_status_badge,query_error_alert}` are back on the typed lane, and the only remaining deliberate raw helper contracts on that lane are `kbd.rs::kbd_icon(...)` plus the final-wrapper `text_edit_context_menu*` family, both guarded by source-policy tests and reflected in `TARGET_INTERFACE_STATE.md` / `MIGRATION_MATRIX.md` |
+
+Implementation addendum on 2026-03-14:
+
+- the workstream now explicitly recognizes three first-party family lanes:
+  compose-root default lane, dual-lane families, and direct recipe root/bridge families.
+- the overlay/menu teaching surface is largely stable after the current sweep:
+  `DropdownMenu`, `ContextMenu`, `Dialog`, `Sheet`, `AlertDialog`, and `Drawer` now have an
+  explicit default copyable root story, while `Carousel` and `Menubar` are recorded as dual-lane
+  families rather than "default vs advanced" splits.
+- the current follow-up classification is:
+  `Select`, `Combobox`, and `Command` stay on the direct recipe root/bridge lane;
+  `NavigationMenu` and `Pagination` are dual-lane families.
+- the `Select` / `Combobox` follow-up has now advanced from classification to copyable default
+  authoring:
+  `Select` first-party snippets now prefer the compact
+  `.trigger(...).value(...).content(...).entries(...)` chain,
+  `Combobox` gained root-lane builder steps for
+  `.trigger(...).input(...).clear(...).content(...)`,
+  the `Select` gallery snippet family is now fully off `into_element_parts(...)`,
+  the direct-root `Combobox::new(...)` snippets are now also off `into_element_parts(...)`,
+  `ComboboxChips` now also exposes matching compact root builder steps,
+  and the focused UI Gallery source gate now locks the whole first-party `combobox` snippet
+  folder onto compact-chain stories without inventing a `compose()` lane.
+- the `Command` direct-root lane is now also explicitly locked on the first-party teaching
+  surface:
+  `apps/fret-ui-gallery/src/ui/snippets/command/*.rs` now has a source gate forbidding
+  `CommandInput::new(...)` and `CommandList::new(...)`, so the default snippet surface cannot
+  silently drift back to split root authoring before a shared context contract exists.
+- the form-input authoring lane is now more explicit too:
+  `InputGroup` is recorded as a dual-lane family, the remaining `input_group/dropdown.rs`
+  first-party snippet now uses the compact `InputGroup::new(model)` slot shorthand rather than
+  `into_element_parts(...)`, and the page copy now keeps the compact shorthand as the first-party
+  ergonomic lane while preserving parts as the direct docs-parity lane.
+- `InputOtp` is now also locked onto a compact default root story:
+  the first-party `apps/fret-ui-gallery/src/ui/snippets/input_otp/*.rs` surface now prefers
+  `InputOTP::new(model)` plus `length(...)` and optional `group_size(...)`, the focused gallery
+  source gate forbids `into_element_parts(...)` drift on that default lane, and
+  `ecosystem/fret-ui-shadcn/src/input_otp.rs` now also has a compact-lane unit test for
+  auto-inserted separators via `group_size(Some(...))`.
+- the `Carousel` dual-lane surface is now source-aligned too:
+  the first-party docs-first snippets
+  `usage.rs`,
+  `basic.rs`,
+  `sizes_thirds.rs`,
+  `sizes.rs`,
+  `spacing.rs`,
+  `spacing_responsive.rs`,
+  `orientation_vertical.rs`,
+  `options.rs`,
+  and `loop_carousel.rs`
+  now all stay on the compact `Carousel::new(items)` builder lane, while `parts.rs` remains the
+  upstream-shaped copyable lane.
+  A follow-up tightening pass moved the ordinary diagnostics snippets
+  `api.rs`,
+  `demo.rs`,
+  `duration_embla.rs`,
+  `expandable.rs`,
+  `focus_watch.rs`,
+  `loop_downgrade_cannot_loop.rs`,
+  `plugin_autoplay.rs`,
+  `plugin_autoplay_controlled.rs`,
+  `plugin_autoplay_delays.rs`,
+  `plugin_autoplay_stop_on_focus.rs`,
+  `plugin_autoplay_stop_on_last_snap.rs`,
+  and `plugin_wheel_gestures.rs`
+  onto that same compact builder lane, leaving only `parts.rs` plus the custom-control
+  diagnostics snippets `events.rs` and `rtl.rs` on the explicit parts lane.
+  The focused gallery source gate now locks that split instead of relying only on the page notes.
+- the internal preview registry seam is now explicitly classified as intentional rather than
+  migration debt:
+  `apps/fret-ui-gallery/src/ui/previews/**::preview_*` remains `-> Vec<AnyElement>` because the
+  registry still dispatches concrete preview-root vectors, while the page-local preview helpers,
+  `DocSection::build(...)`, and `wrap_preview_page(...)` / `render_doc_page(...)` stay on the
+  typed lane.
+- the selected first-party shadcn family lanes now also have a curated export completeness guard:
+  `surface_policy_tests::authoring_critical_family_exports_stay_on_root_and_curated_facade`
+  locks the crate root and `facade` exports for `Select`, `Combobox`, `ComboboxChips`, `Command`,
+  `NavigationMenu`, and `Pagination`, so newly added builder parts do not strand the curated
+  `shadcn::...` namespace behind root-only exports.
+- there is no remaining ambiguous family on the current shadcn focus lane; future families should
+  declare their lane in the audit/tracker before new root APIs are added.
+- the corresponding first-party page notes are now source-gated too:
+  `ui_authoring_surface_default_app::direct_recipe_root_pages_mark_their_default_lane_without_inventing_compose`
+  and
+  `ui_authoring_surface_default_app::navigation_menu_and_pagination_pages_keep_their_dual_lane_story`
+  now lock the page-level teaching surface for those classifications.
 
 Execution addendum on 2026-03-14:
 
@@ -59,6 +147,8 @@ Execution addendum on 2026-03-14:
   `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_internal_previews wrap_preview_page_callers_land_the_typed_preview_shell_explicitly -- --exact --nocapture`
 - validation addendum on 2026-03-14:
   `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_internal_previews render_doc_page_callers_land_the_typed_doc_page_explicitly -- --exact --nocapture`
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_internal_previews internal_preview_scaffold_retains_only_the_audited_vec_anyelement_seams -- --exact --nocapture`
 - the AI page surface now also closes its remaining section-registration tail:
   `apps/fret-ui-gallery/src/ui/pages/ai_*.rs` now use `DocSection::build(cx, ...)` instead of
   `DocSection::new(...)` for first-party demo sections, and
@@ -69,10 +159,27 @@ Execution addendum on 2026-03-14:
   `overlay/widgets.rs`, and
   `overlay/flags.rs` now split between typed helper shells and intentional retained seams:
   `layout.rs::{row,row_end,compose_body}` plus `flags.rs::last_action_status(...)` now expose
-  `UiCx -> impl UiChild + use<>`, while `preview_overlay(...)`, `OverlayWidgets`, and
-  `status_flags(...)` remain raw only as the current diagnostics composition boundary, and
+  `UiCx -> impl UiChild + use<>`, `widgets.rs` now keeps all widget helpers on the same typed lane
+  without an `OverlayWidgets` landed inventory, while `preview_overlay(...)` and `status_flags(...)`
+  remain raw only as the current diagnostics composition boundary, and
   `gallery_overlay_preview_retains_intentional_raw_boundaries` now prevents accidental drift
-  until that preview is reworked as a batch.
+  while ecosystem-level overlay root APIs continue to migrate toward a more uniform typed
+  composition story.
+- ecosystem addendum on 2026-03-14:
+  `DropdownMenu::compose()` and `ContextMenu::compose()` now exist as typed root builders on the
+  shadcn layer, both implementing `IntoUiElement<H>` directly; the canonical gallery usage
+  snippets and the overlay diagnostics helpers now use that path, so menu roots no longer have to
+  pay an immediate `build_parts(...) -> AnyElement` cliff just to stay on the typed authoring lane.
+- overlay-family addendum on 2026-03-14:
+  `DialogComposition`, `AlertDialogComposition`, `SheetComposition`, and `DrawerComposition` now
+  also implement `IntoUiElement<H>` directly, and the gallery overlay diagnostics helpers for
+  dialog / alert-dialog / sheet now return those typed composition builders instead of calling the
+  eager root `into_element(...)` closures inside the helper body.
+- snippet-surface addendum on 2026-03-14:
+  the first-party gallery menu snippets now use `compose()` as the default root teaching path
+  across `dropdown_menu/*`, `context_menu/*`, and `avatar/dropdown.rs`; only
+  `dropdown_menu/parts.rs` intentionally continues to show the lower-level `build_parts(...)`
+  adapter surface.
 - validation addendum on 2026-03-14:
   `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_overlay_preview_retains_intentional_raw_boundaries -- --exact --nocapture`
 - validation addendum on 2026-03-14:
@@ -285,6 +392,44 @@ Exit criteria:
   helpers as `impl UiChild`, drops helper-local `cx` from `todo_page(...)`, and keeps the
   explicit `.into_element(cx)` step only at the final render-root `Ui` conversion in the emitted
   templates.
+- the same page-shell cleanup now also reaches the shared cookbook scaffold:
+  `apps/fret-cookbook/src/scaffold.rs::{centered_page,centered_page_background,centered_page_muted}`
+  now accept `IntoUiElement<H>` directly, keep `AnyElement` only as the named final page-root
+  landing seam, and delete the parallel `centered_page*_ui(...)` overload family from the
+  authoring surface.
+- the same ecosystem helper cleanup now also reaches `fret-router-ui`:
+  `router_outlet(...)`, `router_outlet_with_test_id(...)`, and
+  `RouterOutlet::{into_element,into_element_by_leaf,into_element_by_leaf_with_status}` now all
+  accept `IntoUiElement<App>` outputs directly on the single named outlet surface, while the
+  temporary `RouterOutletIntoElement` adapter and every outlet `*_ui(...)` overload are deleted.
+  `apps/fret-cookbook/examples/router_basics.rs` now teaches `.into_element_by_leaf(...)`
+  directly.
+- the same crate now also closes the router-link child surface:
+  `router_link*` helpers accept iterable `IntoUiElement<App>` children directly instead of
+  publishing `IntoIterator<Item = AnyElement>`, and the crate-level source gate now locks that
+  public surface so link helpers do not regress back to raw child item types.
+- the same helper cleanup now also reaches `fret-ui-magic`:
+  `magic_card`, `border_beam`, `lens`, `marquee`, `dot_pattern`, `grid_pattern`, `stripe_pattern`,
+  `dock`, and `sparkles_text` now accept iterable `IntoUiElement<H>` children directly while
+  keeping `AnyElement` only as the final visual wrapper seam. The crate-level `collect_children(...)`
+  helper and source gate now lock that policy.
+- the same visual-wrapper cleanup now also reaches `fret-ui-kit` declarative effect panels:
+  `ecosystem/fret-ui-kit/src/declarative/{bloom,pixelate}.rs` now keep `AnyElement` only as the
+  final effect-layer wrapper seam, while `bloom_panel(...)` and `pixelate_panel(...)` accept
+  iterable `IntoUiElement<H>` children directly. The shared crate-local `collect_children(...)`
+  helper and a focused source-policy gate now lock that posture.
+- the same wrapper cleanup now also reaches `fret-ui-kit` policy wrappers:
+  `ecosystem/fret-ui-kit/src/declarative/{dismissible,visually_hidden}.rs` and
+  `ecosystem/fret-ui-kit/src/primitives/focus_scope.rs::{focus_trap,focus_trap_with_id}` now keep
+  `AnyElement`/`NodeId` only as the final dismissible-root or focus/a11y wrapper seam, while their
+  child closures accept iterable `IntoUiElement<H>` values directly. The same shared
+  `collect_children(...)` helper and the expanded source-policy gate now lock that posture.
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-fret-cookbook cargo test -p fret-cookbook --lib --message-format=short`
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-fret-cookbook cargo check -p fret-cookbook --examples --message-format=short`
+- validation addendum on 2026-03-14:
+  `CARGO_TARGET_DIR=target/codex-fret-ui-kit cargo test -p fret-ui-kit source_policy_tests::wrapper_helpers_prefer_typed_child_inputs --lib --message-format=short`
 - the same app-facing cleanup now also starts closing the UI Gallery top-level snippet lane:
   `apps/fret-ui-gallery/src/ui/snippets/accordion/{basic,borders,card,demo,disabled,extras,multiple,rtl,usage}.rs`
   now expose `impl UiChild + use<>` on their top-level `render(...)` surface, and
@@ -431,7 +576,8 @@ Exit criteria:
   now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
   `apps/fret-ui-gallery/src/ui/pages/scroll_area.rs` consumes those previews through
   `DocSection::build(cx, ...)` and intentionally keeps
-  `drag_baseline` / `expand_at_bottom` on `DocSection::new(...)`; the old
+  `drag_baseline` / `expand_at_bottom` as the only two diagnostics-owned raw harness roots
+  registered through `DocSection::build(cx, ...)`; the old
   `pub fn render(...) -> AnyElement` teaching pattern is now forbidden for the app-facing family by
   `ui_authoring_surface_default_app::{scroll_area_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface,scroll_area_page_uses_typed_doc_sections_for_app_facing_snippets}`, while
   `selected_scroll_area_snippet_helpers_prefer_into_ui_element_over_anyelement` now also locks the

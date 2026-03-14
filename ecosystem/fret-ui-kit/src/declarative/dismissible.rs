@@ -1,6 +1,7 @@
 use fret_core::{AppWindowId, NodeId, Rect, UiServices};
-use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost, UiTree};
+
+use crate::{IntoUiElement, collect_children};
 
 pub use fret_ui::action::DismissReason;
 
@@ -8,7 +9,7 @@ pub use fret_ui::action::DismissReason;
 ///
 /// This is a small wrapper over `fret-ui`'s `render_dismissible_root_with_hooks(...)` so component
 /// crates can depend on `fret-ui-kit` as the stable policy surface (ADR 0067).
-pub fn render_dismissible_root_with_hooks<H: UiHost + 'static, I>(
+pub fn render_dismissible_root_with_hooks<H: UiHost + 'static, I, T>(
     ui: &mut UiTree<H>,
     app: &mut H,
     services: &mut dyn UiServices,
@@ -18,9 +19,19 @@ pub fn render_dismissible_root_with_hooks<H: UiHost + 'static, I>(
     render: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> NodeId
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     fret_ui::declarative::render_dismissible_root_with_hooks(
-        ui, app, services, window, bounds, root_name, render,
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        root_name,
+        move |cx| {
+            let items = render(cx);
+            collect_children(cx, items)
+        },
     )
 }

@@ -135,9 +135,75 @@ fn helper(cx: &mut UiCx<'_>) -> impl fret_ui_kit::IntoUiElement<fret_app::App> +
   once a wrapper/helper family is promoted onto the default authoring path, Gallery pages and
   snippets should teach that wrapper family by default and should not silently fall back to eager
   `*::new(...)` constructors or lower-level `*::build(...)` forms.
+- curated namespace rule:
+  if a family is taught through `fret_ui_shadcn::{facade as shadcn, prelude::*};`, every
+  authoring-critical type on that lane must be reachable from both the crate root and the curated
+  `facade` namespace; do not strand newly added builder steps or parts behind root-only exports.
 - lower-level builder names such as `Card::build(...)` may still appear in first-party docs only
   when they are explicitly labeled as advanced or late-child-collection escape hatches rather than
   default-equal alternatives.
+
+### Family authoring taxonomy
+
+The app-facing typed surface does **not** require every shadcn family to converge on one identical
+root story.
+
+The target is a small, explicit taxonomy of first-party authoring lanes:
+
+| Lane | Default teaching path | Family examples | Contract rule |
+| --- | --- | --- | --- |
+| Compose-root default lane | typed root builder + `compose()` | `DropdownMenu`, `ContextMenu`, `Dialog`, `Sheet`, `AlertDialog`, `Drawer` | teach one default copyable root path; keep lower-level `build_parts(...)` / `into_element_parts(...)` or `Parts` examples as focused follow-ups rather than equal defaults |
+| Dual-lane family | compact typed lane **and** upstream-shaped copyable lane | `Carousel`, `Menubar`, `InputGroup` | do not force these families into an "advanced escape hatch" narrative; both lanes are legitimate first-party teaching surfaces and must be labeled explicitly |
+| Direct recipe root/bridge | recipe-level root story without a generic `compose()` story | `Popover`, `HoverCard`, `Tooltip`, `Select`, `Combobox`, `Command`, `InputOtp` | keep the recipe root/bridge as the public story; when the root already owns typed builder steps, teach that compact chain first and keep `into_element_parts(...)` only as the focused upstream-shaped adapter on the same lane; do not invent a `compose()` root just for uniformity if the family is already clear and source-aligned |
+
+This workstream therefore treats "write UI feel" as a **lane-classification** problem as much as a
+trait-signature problem.
+
+The first-party rule is:
+
+- every family that appears on the default Gallery/docs surface must declare which lane it belongs
+  to,
+- every page/snippet pair must teach exactly that lane on the copyable/default path,
+- every secondary lane must be labeled either as a focused follow-up or as an equal second lane,
+- no fourth lane should be introduced unless the existing three are demonstrably insufficient.
+
+Current classification queue after the 2026-03-14 follow-up:
+
+- none on the current shadcn focus lane
+
+Current classification snapshot:
+
+- compose-root default lane:
+  `DropdownMenu`, `ContextMenu`, `Dialog`, `Sheet`, `AlertDialog`, `Drawer`
+- dual-lane family:
+  `Carousel`, `Menubar`, `NavigationMenu`, `Pagination`, `InputGroup`
+- direct recipe root/bridge:
+  `Popover`, `HoverCard`, `Tooltip`, `Select`, `Combobox`, `Command`, `InputOtp`
+
+Current direct-root compact-chain readout on 2026-03-14:
+
+- `Select` keeps the direct recipe lane, but the default first-party root story is now the compact
+  builder chain `.trigger(...).value(...).content(...).entries(...)`; `into_element_parts(...)`
+  remains the focused upstream-shaped adapter on that same lane.
+- `Combobox` keeps the direct recipe lane, but the default first-party root story is now the
+  compact builder chain `.trigger(...).input(...).clear(...).content(...)`;
+  `into_element_parts(...)` remains the focused upstream-shaped patch seam on that same lane.
+- `InputOtp` now also keeps the direct recipe lane, and the default first-party root story is the
+  compact builder using `length(...)` plus optional `group_size(...)`; `into_element_parts(...)`
+  remains the upstream-shaped bridge when callers explicitly want slot/group authoring.
+- `InputGroup` now sits on the dual-lane family list: first-party default snippets prefer the
+  compact `InputGroup::new(model)` slot shorthand, while the explicit addon/control parts remain a
+  legitimate docs-parity lane rather than an advanced-only escape hatch.
+- `Carousel` now also has an explicit dual-lane readout: docs-first examples such as `Usage`,
+  `Basic`, `Sizes`, `Spacing`, `Orientation`, `Options`, and `Loop`, plus ordinary diagnostics
+  demos such as `Demo`, `API`, `Focus`, `Duration`, autoplay/wheel examples, and loop downgrade,
+  prefer the compact `Carousel::new(items)` builder lane. Only `parts.rs` and diagnostics-specific
+  snippets that need explicit control parts or control-level `test_id`s (currently `Events` and
+  `RTL`) remain on the upstream-shaped parts lane.
+
+Future families should be classified into one of the three lanes above **before** widening API
+surface area again. If a family really does not fit, document the mismatch first instead of
+silently adding another root-builder pattern.
 
 ## Component Surface
 
@@ -340,6 +406,54 @@ The same rule also applies to ecosystem-level explicit landing helpers:
 - Their closure inputs should still accept values via `IntoUiElement<H>` rather than regressing to
   `AnyElement`-typed closure signatures.
 
+The same rule now also applies to shared cookbook page-shell helpers:
+
+- `apps/fret-cookbook/src/scaffold.rs::{centered_page,centered_page_background,centered_page_muted}`
+  intentionally remain named final page-root landing seams returning `AnyElement`, but they now
+  accept `IntoUiElement<H>` inputs directly and no longer split the surface into separate
+  `*_ui(...)` overloads for host-bound builders.
+
+The same rule now also applies to router adoption helpers:
+
+- `ecosystem/fret-router-ui/src/lib.rs::{router_outlet,router_outlet_with_test_id}`
+- `ecosystem/fret-router-ui/src/lib.rs::RouterOutlet::{into_element,into_element_by_leaf,into_element_by_leaf_with_status}`
+- `ecosystem/fret-router-ui/src/lib.rs::{router_link,router_link_to,router_link_to_with_test_id,router_link_to_typed_route,router_link_to_typed_route_with_test_id,router_link_with_props,router_link_with_test_id}`
+
+Those helpers intentionally still return a landed `AnyElement` because they own the router
+snapshot read or final pressable/outlet landing seam, but their closure outputs and iterable child
+inputs now accept `IntoUiElement<App>` directly and do not split into parallel `*_ui(...)`
+overloads, crate-local conversion traits, or `IntoIterator<Item = AnyElement>`-typed public child
+surfaces.
+
+The same rule also applies to first-party visual helper crates that own only a final wrapper seam:
+
+- `ecosystem/fret-ui-magic/src/{magic_card,border_beam,lens,marquee,patterns,dock,sparkles_text}.rs`
+
+Those helpers still return `AnyElement` because they own the final effect/material/wrapper landing
+boundary, but their child closures now accept iterable `IntoUiElement<H>` values directly instead
+of publishing `IntoIterator<Item = AnyElement>` on the public surface.
+
+The same wrapper rule now also applies to `fret-ui-kit` declarative effect panels:
+
+- `ecosystem/fret-ui-kit/src/declarative/{bloom,pixelate}.rs`
+
+`bloom_panel(...)` and `pixelate_panel(...)` still return `AnyElement` because they own the final
+effect-layer wrapper boundary, but their child closures now accept iterable `IntoUiElement<H>`
+values directly and land them behind the crate-local `collect_children(...)` helper instead of
+publishing raw `IntoIterator<Item = AnyElement>` child items on the public surface.
+
+The same wrapper rule also applies to policy helpers that only bridge into a focus/a11y/runtime
+wrapper:
+
+- `ecosystem/fret-ui-kit/src/declarative/{dismissible,visually_hidden}.rs`
+- `ecosystem/fret-ui-kit/src/primitives/focus_scope.rs::{focus_trap,focus_trap_with_id}`
+
+Those helpers still return `AnyElement` or `NodeId` because they own the final dismissible root,
+semantics wrapper, or focus-scope wrapper boundary, but their child closures now accept iterable
+`IntoUiElement<H>` values directly and land them behind the same crate-local
+`collect_children(...)` helper instead of publishing raw `IntoIterator<Item = AnyElement>` child
+items on the public surface.
+
 The same wrapper rule also applies to internal gallery scaffolds:
 
 - `src/ui/doc_layout.rs::demo_shell<B>(...)`
@@ -358,6 +472,15 @@ The rest of the doc-layout helper family now stays on the typed lane:
   now return `impl UiChild` while still landing concrete child vectors internally where needed
   (page aggregation, preview harness vectors, decorated tab panels, code-block chrome, and title
   decoration).
+- `src/ui/doc_layout.rs::render_doc_page(...)` intentionally still aggregates
+  `Vec<AnyElement>` internally because the centered docs shell still owns the final section-body
+  assembly step after the typed helper surface has already converged.
+- `src/ui/doc_layout.rs::wrap_preview_page(..., elements: Vec<AnyElement>)` intentionally keeps
+  the preview-root vector input explicit because the internal preview registry still dispatches
+  concrete preview vectors rather than a single typed wrapper value.
+- `src/ui/doc_layout.rs::{wrap_row,wrap_controls_row}` intentionally keep
+  `FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>` child closures because the shared flex-row scaffold
+  still owns a heterogeneous late-child collection seam.
 - internal preview pages now keep the final landing explicit when consuming
   `wrap_preview_page(...)`; see
   `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs::wrap_preview_page_callers_land_the_typed_preview_shell_explicitly`.
@@ -367,18 +490,30 @@ The rest of the doc-layout helper family now stays on the typed lane:
   and
   `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs::render_doc_page_callers_land_the_typed_doc_page_explicitly`.
 
+Current intentional internal preview registry seam:
+
+- `src/ui/previews/**::preview_*` remains `-> Vec<AnyElement>` because the preview registry still
+  dispatches concrete page-root vectors rather than a single typed wrapper value.
+- this is an internal registration boundary, not the taught authoring surface:
+  page-local helpers, `DocSection::build(...)`, and `wrap_preview_page(...)` / `render_doc_page(...)`
+  stay on typed helper signatures, with explicit landing occurring only at the registry return
+  seam.
+- until the preview registry API itself changes, do not "fix" these entry points by forcing them
+  to `-> AnyElement`; keep the registry seam explicit and keep the local helper/page layers typed.
+
 Current intentional raw internal-overlay-preview exceptions:
 
 - `src/ui/previews/gallery/overlays/overlay.rs::preview_overlay(...)` remains
   `-> Vec<AnyElement>` because the preview still assembles cached overlay roots plus status labels
   as a concrete diagnostics result vector.
 - `src/ui/previews/gallery/overlays/overlay/layout.rs::{row,row_end,compose_body}` are now back
-  on `UiCx -> impl UiChild + use<>`; they still consume landed widget roots from
-  `OverlayWidgets`, but the explicit landing now lives at the cached-preview seam in
+  on `UiCx -> impl UiChild + use<>`; they now compose typed widget helpers directly, and the
+  explicit landing now lives at the cached-preview seam in
   `overlay.rs`.
-- `src/ui/previews/gallery/overlays/overlay/widgets.rs::{OverlayWidgets,overlay_reset,dropdown,context_menu,context_menu_edge,underlay,tooltip,hover_card,popover,dialog,dialog_glass,alert_dialog,sheet,portal_geometry}`
-  remain raw because each helper owns an overlay/provider root or a concretely decorated preview
-  node before row composition.
+- `src/ui/previews/gallery/overlays/overlay/widgets.rs::{overlay_reset,dropdown,context_menu,context_menu_edge,underlay,tooltip,hover_card,popover,dialog,dialog_glass,alert_dialog,sheet,portal_geometry}`
+  are now back on typed helper signatures; some helpers still lower to concrete overlay/provider
+  roots internally because the current shadcn overlay APIs land roots eagerly, but that is now an
+  ecosystem-layer follow-up rather than a preview-surface contract leak.
 - `src/ui/previews/gallery/overlays/overlay/flags.rs::last_action_status(...)` is now back on a
   typed helper signature, with the explicit landing moved to `overlay.rs`.
 - `src/ui/previews/gallery/overlays/overlay/flags.rs::status_flags(...)` remains
@@ -390,13 +525,16 @@ Current intentional raw scroll-area diagnostics exceptions:
 - `src/ui/snippets/scroll_area/drag_baseline.rs::render(...)` remains `-> AnyElement` because the
   harness owns timer-driven content growth, a retained `ScrollHandle`, explicit scrollbar
   semantics, and the final landed diagnostics root consumed by `pages/scroll_area.rs` through
-  `DocSection::new(...)`.
+  `DocSection::build(cx, ...)`.
 - `src/ui/snippets/scroll_area/expand_at_bottom.rs::render(...)` remains `-> AnyElement` because
   the harness owns the pinned-extents regression probe, wrapper-budget stress tree, and the final
-  landed diagnostics root consumed by `pages/scroll_area.rs` through `DocSection::new(...)`.
+  landed diagnostics root consumed by `pages/scroll_area.rs` through `DocSection::build(cx, ...)`.
+- those two files are now the entire audited raw-root inventory for
+  `src/ui/snippets/scroll_area/**`; do not add another `render(...) -> AnyElement` there unless
+  the snippet is genuinely a diagnostics-owned harness root.
 - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs::scroll_area_diagnostics_snippets_remain_intentional_raw_boundaries`
-  is the source gate that keeps those two raw seams explicit while the ordinary scroll-area docs
-  surface stays on `UiCx -> impl UiChild`.
+  is the source gate that keeps that exact two-file raw inventory explicit while the ordinary
+  scroll-area docs surface stays on `UiCx -> impl UiChild`.
 
 The same input rule also applies to internal shadcn menu-slot wrappers:
 
@@ -433,6 +571,11 @@ Implementation fallback rule:
   result as `impl IntoUiElement<H>`.
 - keep that fallback inside the helper so callers still see the unified conversion contract rather
   than a raw `AnyElement` signature.
+- current positive example on 2026-03-14:
+  `ecosystem/fret-ui-shadcn::{DialogComposition<H, _>,AlertDialogComposition<H, _>,SheetComposition<H, _>,DrawerComposition<H, _>,DropdownMenuComposition<H, _>,ContextMenuComposition<H, _>}`
+  now implement
+  `IntoUiElement<H>` directly, so extracted helpers can return typed menu roots without paying an
+  eager root landing step.
 
 ### Raw helper
 

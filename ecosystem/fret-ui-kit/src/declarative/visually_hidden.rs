@@ -6,16 +6,19 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, UiHost};
 
+use crate::{IntoUiElement, collect_children};
+
 /// A Radix-aligned `VisuallyHidden` helper.
 ///
 /// This is a layout-only + semantics-only wrapper that keeps its subtree in the a11y tree while
 /// remaining effectively invisible.
-pub fn visually_hidden<H: UiHost, I>(
+pub fn visually_hidden<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     cx.semantics(
         SemanticsProps {
@@ -36,7 +39,10 @@ where
             },
             ..Default::default()
         },
-        f,
+        move |cx| {
+            let items = f(cx);
+            collect_children(cx, items)
+        },
     )
 }
 
@@ -65,6 +71,6 @@ pub fn visually_hidden_label<H: UiHost>(
             },
             ..Default::default()
         },
-        |_cx| Vec::new(),
+        |_cx| Vec::<AnyElement>::new(),
     )
 }

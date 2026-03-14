@@ -10,8 +10,10 @@ use fret_ui_kit::declarative::reduced_motion_queries;
 use fret_ui_kit::declarative::scheduling::set_continuous_frames;
 use fret_ui_kit::recipes::catalog::VisualCatalog;
 use fret_ui_kit::recipes::resolve::{
-    DegradationReason, RecipeDegradedEvent, report_recipe_degraded,
+    report_recipe_degraded, DegradationReason, RecipeDegradedEvent,
 };
+
+use crate::collect_children;
 
 fn rgba(c: Color) -> [f32; 4] {
     [c.r, c.g, c.b, c.a]
@@ -85,13 +87,14 @@ impl Default for SparklesTextProps {
 /// This draws a deterministic “sparkle field” material in an additive compositing group over the
 /// child content. It does **not** yet clip sparkles to glyph alpha (requires a richer alpha mask
 /// substrate than v1 gradient masks).
-pub fn sparkles_text<H: UiHost, I>(
+pub fn sparkles_text<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     props: SparklesTextProps,
     children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: fret_ui_kit::IntoUiElement<H>,
 {
     let label = "magic.sparkles_text.sparkle_field";
     let desc = MaterialDescriptor::new(MaterialKind::Sparkle);
@@ -128,7 +131,10 @@ where
                 background: None,
                 ..Default::default()
             },
-            children,
+            move |cx| {
+                let items = children(cx);
+                collect_children(cx, items)
+            },
         );
     };
 
@@ -159,7 +165,8 @@ where
             ..Default::default()
         },
         move |cx| {
-            let mut out: Vec<AnyElement> = children(cx).into_iter().collect();
+            let items = children(cx);
+            let mut out = collect_children(cx, items);
 
             let overlay_layout = LayoutStyle {
                 position: PositionStyle::Absolute,
