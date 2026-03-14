@@ -287,9 +287,9 @@ Execution note on 2026-03-13:
   Their roving-list, pressable, and content wrappers now land those typed values behind the shared
   crate-local `collect_children(...)` helper. The expanded source-policy gate and
   `cargo check -p fret-ui-kit --lib` cover this batch.
-- the same helper inventory now also records the dialog/popover/alert-dialog/select overlay helpers in
+- the same helper inventory now also records the dialog/popover/alert-dialog/select/tooltip overlay helpers in
   `fret-ui-kit`:
-  `ecosystem/fret-ui-kit/src/primitives/{alert_dialog,dialog,popover,select}.rs` now accept iterable
+  `ecosystem/fret-ui-kit/src/primitives/{alert_dialog,dialog,popover,select,tooltip}.rs` now accept iterable
   `IntoUiElement<H>` children directly on wrapper helpers that still have an `ElementContext`
   available, landing them through the shared crate-local `collect_children(...)` helper before
   assembling barriers, semantics wrappers, and modal layer vectors. The no-`cx`
@@ -301,6 +301,13 @@ Execution note on 2026-03-13:
   container wrapper lands those typed values behind the shared crate-local `collect_children(...)`
   helper. The expanded source-policy gate and `cargo check -p fret-ui-kit --lib` cover this
   batch.
+- the same helper inventory now also records the virtualized table helpers in `fret-ui-kit`:
+  `ecosystem/fret-ui-kit/src/declarative/table.rs` now accepts iterable `IntoUiElement<H>` values
+  for header and cell render closures in `table_virtualized(...)` and
+  `table_virtualized_copyable(...)` instead of publishing `IntoIterator<Item = AnyElement>`. The
+  table-owned header container lands those typed values behind the shared crate-local
+  `collect_children(...)` helper. The expanded source-policy gate and
+  `cargo check -p fret-ui-kit --lib` cover this batch.
 - the internal declarative semantics surface now also records
   `ecosystem/fret-ui-kit/src/declarative/semantics.rs`,
   where `UiElementTestIdExt`, `UiElementA11yExt`, and `UiElementKeyContextExt` wrappers now land

@@ -33,7 +33,7 @@ use crate::declarative::action_hooks::ActionHooksExt;
 use crate::declarative::collection_semantics::CollectionSemanticsExt as _;
 use crate::declarative::model_watch::ModelWatchExt as _;
 use crate::ui;
-use crate::{LayoutRefinement, MetricRef, Size, Space};
+use crate::{IntoUiElement, LayoutRefinement, MetricRef, Size, Space, collect_children};
 
 use crate::headless::table::{
     Aggregation, ColumnDef, ColumnId, ColumnResizeDirection, ColumnResizeMode, ExpandingState,
@@ -2331,7 +2331,7 @@ impl Default for TableKeyboardNavState {
 
 #[allow(clippy::too_many_arguments)]
 #[track_caller]
-pub fn table_virtualized<H: UiHost, TData, IHeader, ICell>(
+pub fn table_virtualized<H: UiHost, TData, IHeader, TH, ICell, TC>(
     cx: &mut ElementContext<'_, H>,
     data: &[TData],
     columns: &[ColumnDef<TData>],
@@ -2351,8 +2351,10 @@ pub fn table_virtualized<H: UiHost, TData, IHeader, ICell>(
     output: Option<Model<TableViewOutput>>,
 ) -> AnyElement
 where
-    IHeader: IntoIterator<Item = AnyElement>,
-    ICell: IntoIterator<Item = AnyElement>,
+    IHeader: IntoIterator<Item = TH>,
+    TH: IntoUiElement<H>,
+    ICell: IntoIterator<Item = TC>,
+    TC: IntoUiElement<H>,
 {
     table_virtualized_impl(
         cx,
@@ -2377,7 +2379,7 @@ where
 /// `copy_text_at` receives the data index for the selected/active leaf row.
 #[allow(clippy::too_many_arguments)]
 #[track_caller]
-pub fn table_virtualized_copyable<H: UiHost, TData, IHeader, ICell>(
+pub fn table_virtualized_copyable<H: UiHost, TData, IHeader, TH, ICell, TC>(
     cx: &mut ElementContext<'_, H>,
     data: &[TData],
     columns: &[ColumnDef<TData>],
@@ -2398,8 +2400,10 @@ pub fn table_virtualized_copyable<H: UiHost, TData, IHeader, ICell>(
     output: Option<Model<TableViewOutput>>,
 ) -> AnyElement
 where
-    IHeader: IntoIterator<Item = AnyElement>,
-    ICell: IntoIterator<Item = AnyElement>,
+    IHeader: IntoIterator<Item = TH>,
+    TH: IntoUiElement<H>,
+    ICell: IntoIterator<Item = TC>,
+    TC: IntoUiElement<H>,
 {
     table_virtualized_impl(
         cx,
@@ -3646,7 +3650,7 @@ where
 
 #[allow(clippy::too_many_arguments)]
 #[track_caller]
-fn table_virtualized_impl<H: UiHost, TData, IHeader, ICell>(
+fn table_virtualized_impl<H: UiHost, TData, IHeader, TH, ICell, TC>(
     cx: &mut ElementContext<'_, H>,
     data: &[TData],
     columns: &[ColumnDef<TData>],
@@ -3667,8 +3671,10 @@ fn table_virtualized_impl<H: UiHost, TData, IHeader, ICell>(
     output: Option<Model<TableViewOutput>>,
 ) -> AnyElement
 where
-    IHeader: IntoIterator<Item = AnyElement>,
-    ICell: IntoIterator<Item = AnyElement>,
+    IHeader: IntoIterator<Item = TH>,
+    TH: IntoUiElement<H>,
+    ICell: IntoIterator<Item = TC>,
+    TC: IntoUiElement<H>,
 {
     let profile = std::env::var_os("FRET_TABLE_PROFILE").is_some();
     let state_value = cx.watch_model(&state).layout().cloned_or_default();
@@ -5003,8 +5009,6 @@ where
                                                                                             );
                                                                                         }
 
-                                                                                        let cell =
-                                                                                            render_header_cell(cx, col, sort_state);
                                                                                         vec![cx.container(
                                                                                             ContainerProps {
                                                                                                 padding: Edges::symmetric(
@@ -5024,7 +5028,17 @@ where
                                                                                                 },
                                                                                                 ..Default::default()
                                                                                             },
-                                                                                            |_cx| cell,
+                                                                                            |cx| {
+                                                                                                let items =
+                                                                                                    render_header_cell(
+                                                                                                        cx,
+                                                                                                        col,
+                                                                                                        sort_state,
+                                                                                                    );
+                                                                                                collect_children(
+                                                                                                    cx, items,
+                                                                                                )
+                                                                                            },
                                                                                         )]
                                                                                     },
                                                                                 ));

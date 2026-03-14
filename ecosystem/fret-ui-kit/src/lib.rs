@@ -417,6 +417,7 @@ mod source_policy_tests {
     const DECLARATIVE_PRELUDE_RS: &str = include_str!("declarative/prelude.rs");
     const DECLARATIVE_SCROLL_RS: &str = include_str!("declarative/scroll.rs");
     const DECLARATIVE_SEMANTICS_RS: &str = include_str!("declarative/semantics.rs");
+    const DECLARATIVE_TABLE_RS: &str = include_str!("declarative/table.rs");
     const DECLARATIVE_VISUALLY_HIDDEN_RS: &str = include_str!("declarative/visually_hidden.rs");
     const DECLARATIVE_PIXELATE_RS: &str = include_str!("declarative/pixelate.rs");
     const IMUI_RS: &str = include_str!("imui.rs");
@@ -435,6 +436,7 @@ mod source_policy_tests {
     const PRIMITIVES_TABS_RS: &str = include_str!("primitives/tabs.rs");
     const PRIMITIVES_TOGGLE_RS: &str = include_str!("primitives/toggle.rs");
     const PRIMITIVES_TOOLBAR_RS: &str = include_str!("primitives/toolbar.rs");
+    const PRIMITIVES_TOOLTIP_RS: &str = include_str!("primitives/tooltip.rs");
     const RECIPES_SORTABLE_DND_RS: &str = include_str!("recipes/sortable_dnd.rs");
     const UI_RS: &str = include_str!("ui.rs");
     const UI_BUILDER_RS: &str = include_str!("ui_builder.rs");
@@ -609,6 +611,11 @@ mod source_policy_tests {
                 "collect_children(cx,",
             ),
             (
+                "declarative/table.rs",
+                DECLARATIVE_TABLE_RS,
+                "collect_children(",
+            ),
+            (
                 "declarative/visually_hidden.rs",
                 DECLARATIVE_VISUALLY_HIDDEN_RS,
                 "collect_children(cx,",
@@ -718,6 +725,13 @@ mod source_policy_tests {
                 PRIMITIVES_SELECT_RS,
                 "pub fn select_modal_barrier<H: UiHost, I, T>(",
                 "collect_children(cx, barrier_children)",
+                "children: impl IntoIterator<Item = AnyElement>",
+            ),
+            (
+                "primitives/tooltip.rs",
+                PRIMITIVES_TOOLTIP_RS,
+                "pub fn request<H: UiHost, I, T>(",
+                "collect_children(cx, children)",
                 "children: impl IntoIterator<Item = AnyElement>",
             ),
         ] {

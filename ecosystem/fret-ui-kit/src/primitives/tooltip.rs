@@ -37,7 +37,7 @@ use crate::headless::hover_intent::{HoverIntentConfig, HoverIntentState, HoverIn
 use crate::headless::safe_hover;
 use crate::primitives::popper;
 use crate::primitives::trigger_a11y;
-use crate::{OverlayController, OverlayPresence, OverlayRequest};
+use crate::{IntoUiElement, OverlayController, OverlayPresence, OverlayRequest, collect_children};
 
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerMoveCx, UiActionHost};
@@ -834,6 +834,25 @@ impl TooltipRoot {
             .layout()
             .copied()
             .unwrap_or(false)
+    }
+
+    pub fn request<H: UiHost, I, T>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+        id: GlobalElementId,
+        presence: OverlayPresence,
+        children: I,
+    ) -> OverlayRequest
+    where
+        I: IntoIterator<Item = T>,
+        T: IntoUiElement<H>,
+    {
+        tooltip_request(
+            id,
+            self.open_model(cx),
+            presence,
+            collect_children(cx, children),
+        )
     }
 }
 

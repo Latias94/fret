@@ -464,9 +464,9 @@ Exit criteria:
   accordion pressable wrappers, and tab/accordion content wrappers now land those typed values
   behind `collect_children(...)`. The expanded source-policy gate and
   `cargo check -p fret-ui-kit --lib` lock that posture.
-- the same wrapper cleanup now also reaches the dialog/popover/alert-dialog/select overlay helpers in
+- the same wrapper cleanup now also reaches the dialog/popover/alert-dialog/select/tooltip overlay helpers in
   `fret-ui-kit`:
-  `ecosystem/fret-ui-kit/src/primitives/{alert_dialog,dialog,popover,select}.rs` now accept iterable
+  `ecosystem/fret-ui-kit/src/primitives/{alert_dialog,dialog,popover,select,tooltip}.rs` now accept iterable
   `IntoUiElement<H>` values on wrapper helpers that still have an `ElementContext` available, and
   land them through `collect_children(...)` before assembling barriers, semantics wrappers, and
   modal layer vectors. The final overlay-request constructors remain the explicit raw
@@ -477,6 +477,12 @@ Exit criteria:
   row-content closures directly and lands them through `collect_children(...)` inside the row
   container wrapper. The expanded source-policy gate and `cargo check -p fret-ui-kit --lib` lock
   that posture.
+- the same wrapper cleanup now also reaches the virtualized table helpers in `fret-ui-kit`:
+  `ecosystem/fret-ui-kit/src/declarative/table.rs` now accepts iterable `IntoUiElement<H>` values
+  for header and cell render closures in `table_virtualized(...)` and
+  `table_virtualized_copyable(...)`, with table-owned header containers landing typed values
+  through `collect_children(...)`. The expanded source-policy gate and
+  `cargo check -p fret-ui-kit --lib` lock that posture.
 - validation addendum on 2026-03-14:
   `CARGO_TARGET_DIR=target/codex-fret-cookbook cargo test -p fret-cookbook --lib --message-format=short`
 - validation addendum on 2026-03-14:

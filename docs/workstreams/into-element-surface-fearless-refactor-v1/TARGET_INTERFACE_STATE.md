@@ -513,12 +513,13 @@ public child closures now accept iterable `IntoUiElement<H>` values directly. Th
 pressable, and content wrappers land those typed values behind `collect_children(...)` instead of
 publishing raw `IntoIterator<Item = AnyElement>` child items on the public surface.
 
-The same split now also applies to dialog/popover/alert-dialog/select overlay helpers in `fret-ui-kit`:
+The same split now also applies to dialog/popover/alert-dialog/select/tooltip overlay helpers in `fret-ui-kit`:
 
 - `ecosystem/fret-ui-kit/src/primitives/alert_dialog.rs`
 - `ecosystem/fret-ui-kit/src/primitives/dialog.rs`
 - `ecosystem/fret-ui-kit/src/primitives/popover.rs`
 - `ecosystem/fret-ui-kit/src/primitives/select.rs`
+- `ecosystem/fret-ui-kit/src/primitives/tooltip.rs`
 
 Wrapper helpers that still receive an `ElementContext` now accept iterable `IntoUiElement<H>`
 values directly and land them behind `collect_children(...)` before assembling barriers, semantics
@@ -533,6 +534,15 @@ The same wrapper rule also now applies to the sortable DnD recipe helper in `fre
 Its row-content closure now accepts iterable `IntoUiElement<H>` values directly and lands them
 behind `collect_children(...)` inside the row container wrapper instead of publishing raw
 `IntoIterator<Item = AnyElement>` child items on the public surface.
+
+The same wrapper rule now also applies to the virtualized table helpers in `fret-ui-kit`:
+
+- `ecosystem/fret-ui-kit/src/declarative/table.rs`
+
+`table_virtualized(...)` and `table_virtualized_copyable(...)` now accept iterable
+`IntoUiElement<H>` values for header and cell render closures directly. Their header-cell landing
+now happens behind `collect_children(...)` inside the table-owned container wrapper instead of
+publishing raw `IntoIterator<Item = AnyElement>` child items on the public surface.
 
 The same wrapper rule also applies to internal gallery scaffolds:
 
