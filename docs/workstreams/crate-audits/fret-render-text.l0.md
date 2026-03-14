@@ -29,9 +29,12 @@ Evidence anchors:
   - `SystemFontRescanSeed`
   - `SystemFontRescanResult`
   - `effective_text_scale_factor`
-- "Accidental" exports to consider removing:
-  - `src/lib.rs` currently exposes 15 `pub mod` entries, which makes most internal modules
-    reachable by downstream crates even when they are implementation details.
+- Facade posture after `FR-RENDER-TEXT-011`:
+  - `src/lib.rs` now exposes an explicit root facade (`pub use`) while internal modules stay
+    crate-private, which removes direct downstream dependence on module layout.
+- Remaining surface risk to review:
+  - root `pub use` coverage is still broad, so future changes should audit which items truly belong
+    in the stable text-engine facade versus renderer-internal helper space.
 - Feature flags and intent:
   - no crate-level feature matrix beyond dev-time font bundle expansion in tests, which is good for
     portability but means public modules do most of the contract work.
@@ -79,11 +82,11 @@ Evidence anchors:
 
 ## 5) Refactor hazards (what can regress easily)
 
-- Public-surface drift via `pub mod`
-  - Failure mode: downstream crates start depending on internals from `wrapper`, `fallback_policy`,
-    or `parley_shaper`, making future module moves painful.
-  - Existing gates: none focused on API surface.
-  - Missing gate to add: a surface review or `public_api` snapshot before shrinking exports.
+- Facade drift at the crate root
+  - Failure mode: downstream crates start depending on incidental root re-exports, making future
+    ownership cleanup harder even though module paths are now private.
+  - Existing gates: `cargo check -p fret-render-text -p fret-render-wgpu -p fret-typography-real-shaping-gates`.
+  - Missing gate to add: a surface review or `public_api` snapshot before trimming root re-exports.
 - Residual ownership concentration around `ParleyShaper`
   - Failure mode: a shaping refactor still regresses baseline-metrics caching or font-context
     orchestration even after the font DB/catalog/rescan state moved into `parley_font_db.rs`.
@@ -136,13 +139,10 @@ Evidence anchors:
 
 ## 7) Recommended refactor steps (small, gated)
 
-1. Reduce `src/lib.rs` to an explicit facade and make internal modules crate-private where possible
-   — outcome: a smaller accidental API surface — gate: `cargo check -p fret-render-text` plus any
-   caller fixes.
-2. Separate fallback-policy tests from renderer-backend tests by adding crate-local key/snapshot
+1. Separate fallback-policy tests from renderer-backend tests by adding crate-local key/snapshot
    coverage — outcome: portable refactors do not need `fret-render-wgpu` to validate policy logic —
    gate: `cargo nextest run -p fret-render-text`.
-3. Split `wrapper.rs` into smaller submodules (`line_breaking`, `hit_test`, `metrics`, `selection`)
+2. Split `wrapper.rs` into smaller submodules (`line_breaking`, `hit_test`, `metrics`, `selection`)
    — outcome: smaller diffs and clearer ownership — gate: `cargo nextest run -p fret-render-text`.
 
 ## 8) Open questions / decisions needed

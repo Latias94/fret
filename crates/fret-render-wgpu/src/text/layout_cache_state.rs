@@ -1,6 +1,5 @@
 use super::TextShape;
-use fret_render_text::cache_keys::TextShapeKey;
-use fret_render_text::measure::TextMeasureCaches;
+use fret_render_text::{TextMeasureCaches, TextShapeKey};
 use std::{collections::HashMap, sync::Arc};
 
 pub(crate) struct TextLayoutCacheState {

@@ -1,7 +1,6 @@
 use super::super::TextSystem;
 use super::glyph_raster::{PreparedGlyphRaster, prepared_glyph_raster_from_image};
-use fret_render_text::font_instance_key::FontFaceKey;
-use fret_render_text::parley_shaper::ParleyGlyph;
+use fret_render_text::{FontFaceKey, ParleyGlyph};
 
 impl TextSystem {
     pub(super) fn render_prepared_glyph_raster(

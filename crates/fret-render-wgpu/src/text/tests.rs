@@ -3,8 +3,10 @@ use fret_core::{
     AttributedText, Color, DecorationLineStyle, FontWeight, Px, TextConstraints, TextOverflow,
     TextPaintStyle, TextShapingStyle, TextSpan, TextStyle, TextWrap, UnderlineStyle,
 };
-use fret_render_text::cache_keys::{TextMeasureKey, spans_shaping_fingerprint};
-use fret_render_text::spans::{ResolvedSpan, paint_span_for_text_range, sanitize_spans_for_text};
+use fret_render_text::{
+    ResolvedSpan, TextMeasureKey, paint_span_for_text_range, sanitize_spans_for_text,
+    spans_shaping_fingerprint,
+};
 use std::sync::Arc;
 
 fn pending_upload_bytes_for_key(text: &super::TextSystem, key: super::GlyphKey) -> Vec<u8> {
@@ -16,7 +18,7 @@ fn pending_upload_bytes_for_key(text: &super::TextSystem, key: super::GlyphKey) 
 }
 
 fn reset_bundled_only_font_runtime(text: &mut super::TextSystem) {
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
@@ -1151,7 +1153,7 @@ fn font_trace_records_missing_glyphs_for_named_family_when_system_fonts_are_abse
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
@@ -1215,7 +1217,7 @@ fn cjk_fallback_uses_common_fallback_for_named_family_when_system_fonts_are_abse
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
@@ -1312,7 +1314,7 @@ fn emoji_fallback_uses_bundled_color_font_without_explicit_family_when_system_fo
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
@@ -1745,7 +1747,7 @@ fn variable_font_axis_overrides_participate_in_face_key_and_raster_output() {
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
@@ -1856,7 +1858,7 @@ fn variable_font_weight_changes_face_key_and_raster_output() {
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
@@ -1961,7 +1963,7 @@ fn open_type_feature_overrides_can_change_shaped_glyph_output_for_known_font_fix
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
@@ -2090,7 +2092,7 @@ fn open_type_feature_overrides_can_change_word_wrap_breakpoints_for_known_font_f
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
@@ -2465,7 +2467,7 @@ fn synthesis_skew_participates_in_face_key_and_raster_output() {
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
@@ -2577,7 +2579,7 @@ fn common_fallback_stack_suffix_dedupes_and_preserves_order() {
     ];
     let defaults = &["Noto Sans CJK SC", "Noto Sans Arabic", "Noto Color Emoji"];
 
-    let suffix = fret_render_text::fallback_policy::common_fallback_stack_suffix(&config, defaults);
+    let suffix = fret_render_text::common_fallback_stack_suffix(&config, defaults);
     assert_eq!(
         suffix,
         "Noto Color Emoji, Noto Sans CJK SC, Noto Sans Arabic"
@@ -2590,7 +2592,7 @@ fn fallback_policy_key_normalizes_family_candidates_and_stays_stable_across_case
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Make the test independent from host/system fonts.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
@@ -3007,7 +3009,7 @@ fn mixed_script_fallback_uses_bundled_faces_when_system_fonts_are_absent() {
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
@@ -3156,7 +3158,7 @@ fn mixed_script_fallback_uses_bundled_faces_for_named_family_when_system_fonts_a
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime

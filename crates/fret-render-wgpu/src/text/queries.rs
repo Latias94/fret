@@ -16,7 +16,7 @@ impl TextSystem {
             );
         }
         let stops = blob.shape.caret_stops.as_ref();
-        Some(fret_render_text::geometry::caret_x_from_stops(stops, index))
+        Some(fret_render_text::caret_x_from_stops(stops, index))
     }
 
     pub fn hit_test_x(&self, blob: TextBlobId, x: Px) -> Option<usize> {
@@ -26,7 +26,7 @@ impl TextSystem {
             return Some(self.hit_test_point(blob_id, Point::new(x, Px(0.0)))?.index);
         }
         let stops = blob.shape.caret_stops.as_ref();
-        Some(fret_render_text::geometry::hit_test_x_from_stops(stops, x))
+        Some(fret_render_text::hit_test_x_from_stops(stops, x))
     }
 
     pub fn caret_stops(&self, blob: TextBlobId) -> Option<&[(usize, Px)]> {
@@ -40,16 +40,12 @@ impl TextSystem {
         affinity: CaretAffinity,
     ) -> Option<Rect> {
         let blob = self.blob_state.blobs.get(blob)?;
-        fret_render_text::geometry::caret_rect_from_lines(
-            blob.shape.lines.as_ref(),
-            index,
-            affinity,
-        )
+        fret_render_text::caret_rect_from_lines(blob.shape.lines.as_ref(), index, affinity)
     }
 
     pub fn hit_test_point(&self, blob: TextBlobId, point: Point) -> Option<HitTestResult> {
         let blob = self.blob_state.blobs.get(blob)?;
-        fret_render_text::geometry::hit_test_point_from_lines(blob.shape.lines.as_ref(), point)
+        fret_render_text::hit_test_point_from_lines(blob.shape.lines.as_ref(), point)
     }
 
     pub fn selection_rects(
@@ -59,11 +55,7 @@ impl TextSystem {
         out: &mut Vec<Rect>,
     ) -> Option<()> {
         let blob = self.blob_state.blobs.get(blob)?;
-        fret_render_text::geometry::selection_rects_from_lines(
-            blob.shape.lines.as_ref(),
-            range,
-            out,
-        );
+        fret_render_text::selection_rects_from_lines(blob.shape.lines.as_ref(), range, out);
         Some(())
     }
 
@@ -75,7 +67,7 @@ impl TextSystem {
         out: &mut Vec<Rect>,
     ) -> Option<()> {
         let blob = self.blob_state.blobs.get(blob)?;
-        fret_render_text::geometry::selection_rects_from_lines_clipped(
+        fret_render_text::selection_rects_from_lines_clipped(
             blob.shape.lines.as_ref(),
             range,
             clip,

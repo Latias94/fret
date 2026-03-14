@@ -1,6 +1,4 @@
-use fret_render_text::fallback_policy::TextFallbackPolicyV1;
-use fret_render_text::font_stack::GenericFamilyInjectionState;
-use fret_render_text::font_trace::FontTraceState;
+use fret_render_text::{FontTraceState, GenericFamilyInjectionState, TextFallbackPolicyV1};
 
 pub(crate) struct TextFontRuntimeState {
     pub(crate) font_stack_key: u64,

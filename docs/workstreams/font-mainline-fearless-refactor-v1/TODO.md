@@ -23,7 +23,7 @@ Status: Active
 
 - [x] FR-RENDER-TEXT-010 Extract font DB/catalog/rescan logic from `parley_shaper.rs` into a
       dedicated ownership seam.
-- [ ] FR-RENDER-TEXT-011 Reduce `src/lib.rs` to an explicit facade and shrink accidental `pub mod`
+- [x] FR-RENDER-TEXT-011 Reduce `src/lib.rs` to an explicit facade and shrink accidental `pub mod`
       surface.
 - [ ] FR-RENDER-TEXT-012 Split `wrapper.rs` by responsibility (`metrics`, `hit_test`, `wrapping`,
       selection/layout helpers).

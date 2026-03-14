@@ -3,7 +3,9 @@ use super::{TextLine, TextSystem};
 use fret_core::{
     AttributedText, TextBlobId, TextConstraints, TextInputRef, TextMetrics, TextStyle,
 };
-use fret_render_text::font_instance_key::FontFaceKey;
+use fret_render_text::{
+    FontFaceKey, TextBlobKey, WrappedLayout, sanitize_spans_for_text, wrap_with_constraints,
+};
 use std::{collections::HashMap, sync::Arc};
 
 mod cache_flow;
@@ -17,7 +19,7 @@ mod glyph_render;
 mod shape_build;
 
 pub(super) struct PrepareShapeBuildContext {
-    pub(super) wrapped: crate::text::wrapper::WrappedLayout,
+    pub(super) wrapped: WrappedLayout,
     pub(super) epoch: u64,
     pub(super) glyphs: Vec<super::GlyphInstance>,
     pub(super) face_usage: HashMap<FontFaceKey, (u32, u32)>,
@@ -27,7 +29,7 @@ pub(super) struct PrepareShapeBuildContext {
 impl TextSystem {
     fn prepare_with_key(
         &mut self,
-        key: fret_render_text::cache_keys::TextBlobKey,
+        key: TextBlobKey,
         style: &TextStyle,
         spans: Option<&[fret_core::TextSpan]>,
         constraints: TextConstraints,
@@ -44,7 +46,7 @@ impl TextSystem {
         match input {
             TextInputRef::Plain { text, style } => self.prepare(text, style, constraints),
             TextInputRef::Attributed { text, base, spans } => {
-                let spans = fret_render_text::spans::sanitize_spans_for_text(text, spans);
+                let spans = sanitize_spans_for_text(text, spans);
                 if spans.is_none() {
                     return self.prepare(text, base, constraints);
                 }
@@ -63,12 +65,7 @@ impl TextSystem {
         style: &TextStyle,
         constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics) {
-        let key = fret_render_text::cache_keys::TextBlobKey::new(
-            text,
-            style,
-            constraints,
-            self.font_runtime.font_stack_key,
-        );
+        let key = TextBlobKey::new(text, style, constraints, self.font_runtime.font_stack_key);
         self.prepare_with_key(key, style, None, constraints)
     }
 
@@ -78,10 +75,7 @@ impl TextSystem {
         base_style: &TextStyle,
         constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics) {
-        let spans = fret_render_text::spans::sanitize_spans_for_text(
-            rich.text.as_ref(),
-            rich.spans.as_ref(),
-        );
+        let spans = sanitize_spans_for_text(rich.text.as_ref(), rich.spans.as_ref());
         if spans.is_none() {
             return self.prepare(rich.text.as_ref(), base_style, constraints);
         }
@@ -89,7 +83,7 @@ impl TextSystem {
             text: rich.text.clone(),
             spans: spans.expect("non-empty spans"),
         };
-        let key = fret_render_text::cache_keys::TextBlobKey::new_attributed(
+        let key = TextBlobKey::new_attributed(
             &rich,
             base_style,
             constraints,
@@ -102,8 +96,8 @@ impl TextSystem {
         &mut self,
         input: TextInputRef<'_>,
         constraints: TextConstraints,
-    ) -> crate::text::wrapper::WrappedLayout {
-        crate::text::wrapper::wrap_with_constraints(&mut self.parley_shaper, input, constraints)
+    ) -> WrappedLayout {
+        wrap_with_constraints(&mut self.parley_shaper, input, constraints)
     }
 }
 

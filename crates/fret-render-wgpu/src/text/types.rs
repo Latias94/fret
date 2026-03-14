@@ -1,6 +1,6 @@
 use super::atlas::GlyphKey;
 use fret_core::{TextMetrics, geometry::Px};
-use fret_render_text::decorations::TextDecoration;
+use fret_render_text::TextDecoration;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -68,7 +68,7 @@ pub(crate) struct TextFontFaceUsage {
     pub(crate) missing_glyphs: u32,
 }
 
-pub use fret_render_text::line_layout::TextLineLayout as TextLine;
+pub use fret_render_text::TextLineLayout as TextLine;
 
 #[allow(dead_code)]
 pub(crate) fn subpixel_mask_to_alpha(data: &[u8]) -> Vec<u8> {
