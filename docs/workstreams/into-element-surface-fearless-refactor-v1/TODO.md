@@ -149,7 +149,10 @@ Validation addendum on 2026-03-14:
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app menubar_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app popover_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app hover_card_ -- --nocapture`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app tooltip_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app button_ -- --nocapture`
+- `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app button_group_ -- --nocapture`
+- `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app input_group_ -- --nocapture`
 
 Implementation note on 2026-03-13:
 
@@ -311,17 +314,34 @@ Implementation note on 2026-03-13:
   and timing/placement state beside the snippet itself, and
   `apps/fret-ui-gallery/src/ui/pages/hover_card.rs` now routes those snippet-backed sections
   through `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the same first full legacy page-family sweep now also covers `tooltip`:
+  `apps/fret-ui-gallery/src/ui/snippets/tooltip/{demo,disabled_button,keyboard_focus,keyboard_shortcut,long_content,rtl,sides,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep their tooltip-local
+  provider/content composition beside the snippet itself, and
+  `apps/fret-ui-gallery/src/ui/pages/tooltip.rs` now routes those snippet-backed sections through
+  `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
 - the same first full legacy page-family sweep now also covers `button`:
   `apps/fret-ui-gallery/src/ui/snippets/button/{demo,usage,size,default,outline,secondary,ghost,destructive,link,icon,with_icon,rounded,loading,button_group,link_render,rtl,variants}.rs`
   now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
   `apps/fret-ui-gallery/src/ui/pages/button.rs` now routes those snippet-backed sections through
   `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the same first full legacy page-family sweep now also covers `button_group`:
+  `apps/fret-ui-gallery/src/ui/snippets/button_group/{accessibility,button_group_select,demo,dropdown_menu,flex_1_items,input,input_group,nested,orientation,popover,rtl,separator,size,split,text,usage}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep their local menu /
+  select / input / tooltip state beside the snippet itself, and
+  `apps/fret-ui-gallery/src/ui/pages/button_group.rs` now routes those snippet-backed sections
+  through `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
+- the same first full legacy page-family sweep now also covers `input_group`:
+  `apps/fret-ui-gallery/src/ui/snippets/input_group/{align_block_end,align_block_start,align_inline_end,align_inline_start,button,button_group,custom_input,demo,dropdown,icon,kbd,label,rtl,spinner,text,textarea,tooltip}.rs`
+  now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, keep their local input /
+  dropdown / tooltip state beside the snippet itself, and
+  `apps/fret-ui-gallery/src/ui/pages/input_group.rs` now routes those snippet-backed sections
+  through `DocSection::build(cx, ...)` instead of `DocSection::new(...)`.
 - after `accordion` / `tabs` / `toggle` / `radio_group` / `slider` / `native_select` /
   `resizable` / `navigation_menu` / `scroll_area` / `progress` / `chart` / `combobox` /
-  `carousel` / `item` / `table` plus the remaining curated tail snippets, the next default-app UI
-  Gallery app-facing queue should move to the next full legacy page-family sweeps:
-  `button_group`, then `input_group`, followed by the next remaining
-  `ElementContext<'_, H>`-based families.
+  `carousel` / `item` / `table` plus the remaining curated tail snippets and the recent
+  `button` / `button_group` / `input_group` full-family sweeps, the next default-app UI Gallery
+  app-facing queue should move to the next remaining `ElementContext<'_, H>`-based families.
 - `apps/fret-cookbook/examples/customv1_basics.rs` now keeps both advanced reusable helpers
   `panel_shell(...)` and `preview_content(...)` on `IntoUiElement<KernelApp>`-based signatures
   instead of returning raw `AnyElement` for non-raw composition.

@@ -559,6 +559,165 @@ fn button_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn button_group_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/button_group/accessibility.rs",
+            "src/ui/snippets/button_group/button_group_select.rs",
+            "src/ui/snippets/button_group/demo.rs",
+            "src/ui/snippets/button_group/dropdown_menu.rs",
+            "src/ui/snippets/button_group/flex_1_items.rs",
+            "src/ui/snippets/button_group/input.rs",
+            "src/ui/snippets/button_group/input_group.rs",
+            "src/ui/snippets/button_group/nested.rs",
+            "src/ui/snippets/button_group/orientation.rs",
+            "src/ui/snippets/button_group/popover.rs",
+            "src/ui/snippets/button_group/rtl.rs",
+            "src/ui/snippets/button_group/separator.rs",
+            "src/ui/snippets/button_group/size.rs",
+            "src/ui/snippets/button_group/split.rs",
+            "src/ui/snippets/button_group/text.rs",
+            "src/ui/snippets/button_group/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/button_group",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn button_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/button_group.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Accessibility\", accessibility)",
+            "DocSection::build(cx, \"Orientation\", orientation)",
+            "DocSection::build(cx, \"Size\", size)",
+            "DocSection::build(cx, \"Nested\", nested)",
+            "DocSection::build(cx, \"Separator\", separator)",
+            "DocSection::build(cx, \"Split\", split)",
+            "DocSection::build(cx, \"Input\", input)",
+            "DocSection::build(cx, \"Input Group\", input_group)",
+            "DocSection::build(cx, \"Dropdown Menu\", dropdown)",
+            "DocSection::build(cx, \"Select\", select)",
+            "DocSection::build(cx, \"Popover\", popover)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"ButtonGroupText\", text)",
+            "DocSection::build(cx, \"Flex-1 items (Fret)\", flex_1)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Accessibility\", accessibility)",
+            "DocSection::new(\"Orientation\", orientation)",
+            "DocSection::new(\"Size\", size)",
+            "DocSection::new(\"Nested\", nested)",
+            "DocSection::new(\"Separator\", separator)",
+            "DocSection::new(\"Split\", split)",
+            "DocSection::new(\"Input\", input)",
+            "DocSection::new(\"Input Group\", input_group)",
+            "DocSection::new(\"Dropdown Menu\", dropdown)",
+            "DocSection::new(\"Select\", select)",
+            "DocSection::new(\"Popover\", popover)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"ButtonGroupText\", text)",
+            "DocSection::new(\"Flex-1 items (Fret)\", flex_1)",
+        ],
+    );
+}
+
+#[test]
+fn input_group_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/input_group/align_block_end.rs",
+            "src/ui/snippets/input_group/align_block_start.rs",
+            "src/ui/snippets/input_group/align_inline_end.rs",
+            "src/ui/snippets/input_group/align_inline_start.rs",
+            "src/ui/snippets/input_group/button.rs",
+            "src/ui/snippets/input_group/button_group.rs",
+            "src/ui/snippets/input_group/custom_input.rs",
+            "src/ui/snippets/input_group/demo.rs",
+            "src/ui/snippets/input_group/dropdown.rs",
+            "src/ui/snippets/input_group/icon.rs",
+            "src/ui/snippets/input_group/kbd.rs",
+            "src/ui/snippets/input_group/label.rs",
+            "src/ui/snippets/input_group/rtl.rs",
+            "src/ui/snippets/input_group/spinner.rs",
+            "src/ui/snippets/input_group/text.rs",
+            "src/ui/snippets/input_group/textarea.rs",
+            "src/ui/snippets/input_group/tooltip.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/input_group",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn input_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/input_group.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Align / inline-start\", align_inline_start)",
+            "DocSection::build(cx, \"Align / inline-end\", align_inline_end)",
+            "DocSection::build(cx, \"Align / block-start\", align_block_start)",
+            "DocSection::build(cx, \"Align / block-end\", align_block_end)",
+            "DocSection::build(cx, \"Icon\", icon)",
+            "DocSection::build(cx, \"Text\", text)",
+            "DocSection::build(cx, \"Button\", button)",
+            "DocSection::build(cx, \"Kbd\", kbd)",
+            "DocSection::build(cx, \"Dropdown\", dropdown)",
+            "DocSection::build(cx, \"Spinner\", spinner)",
+            "DocSection::build(cx, \"Textarea\", textarea)",
+            "DocSection::build(cx, \"Custom Input\", custom_input)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Tooltip\", tooltip)",
+            "DocSection::build(cx, \"Label Association\", label)",
+            "DocSection::build(cx, \"Button Group\", button_group)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Align / inline-start\", align_inline_start)",
+            "DocSection::new(\"Align / inline-end\", align_inline_end)",
+            "DocSection::new(\"Align / block-start\", align_block_start)",
+            "DocSection::new(\"Align / block-end\", align_block_end)",
+            "DocSection::new(\"Icon\", icon)",
+            "DocSection::new(\"Text\", text)",
+            "DocSection::new(\"Button\", button)",
+            "DocSection::new(\"Kbd\", kbd)",
+            "DocSection::new(\"Dropdown\", dropdown)",
+            "DocSection::new(\"Spinner\", spinner)",
+            "DocSection::new(\"Textarea\", textarea)",
+            "DocSection::new(\"Custom Input\", custom_input)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Tooltip\", tooltip)",
+            "DocSection::new(\"Label Association\", label)",
+            "DocSection::new(\"Button Group\", button_group)",
+        ],
+    );
+}
+
+#[test]
 fn popover_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
@@ -651,6 +810,59 @@ fn hover_card_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Basic\", basic)",
             "DocSection::new(\"Sides\", sides)",
             "DocSection::new(\"RTL\", rtl)",
+        ],
+    );
+}
+
+#[test]
+fn tooltip_snippets_prefer_ui_cx_on_the_default_app_surface() {
+    assert_curated_default_app_paths(
+        &[
+            "src/ui/snippets/tooltip/demo.rs",
+            "src/ui/snippets/tooltip/disabled_button.rs",
+            "src/ui/snippets/tooltip/keyboard_focus.rs",
+            "src/ui/snippets/tooltip/keyboard_shortcut.rs",
+            "src/ui/snippets/tooltip/long_content.rs",
+            "src/ui/snippets/tooltip/rtl.rs",
+            "src/ui/snippets/tooltip/sides.rs",
+            "src/ui/snippets/tooltip/usage.rs",
+        ],
+        &[
+            "use fret::{UiChild, UiCx};",
+            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        ],
+        "app-facing snippet surface",
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/tooltip",
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn tooltip_page_uses_typed_doc_sections_for_app_facing_snippets() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/tooltip.rs",
+        &[
+            "DocSection::build(cx, \"Demo\", demo_tooltip)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Side\", side_row)",
+            "DocSection::build(cx, \"With Keyboard Shortcut\", keyboard_tooltip)",
+            "DocSection::build(cx, \"Disabled Button\", disabled_tooltip)",
+            "DocSection::build(cx, \"RTL\", rtl_row)",
+            "DocSection::build(cx, \"Long Content\", long_content_tooltip)",
+            "DocSection::build(cx, \"Keyboard Focus\", focus_row)",
+        ],
+        &[
+            "DocSection::new(\"Demo\", demo_tooltip)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Side\", side_row)",
+            "DocSection::new(\"With Keyboard Shortcut\", keyboard_tooltip)",
+            "DocSection::new(\"Disabled Button\", disabled_tooltip)",
+            "DocSection::new(\"RTL\", rtl_row)",
+            "DocSection::new(\"Long Content\", long_content_tooltip)",
+            "DocSection::new(\"Keyboard Focus\", focus_row)",
         ],
     );
 }

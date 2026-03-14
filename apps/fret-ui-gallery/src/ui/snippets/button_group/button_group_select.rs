@@ -1,11 +1,12 @@
 pub const SOURCE: &str = include_str!("button_group_select.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::{FontId, Px};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let currency_value = cx.local_model_keyed("currency_value", || Some(Arc::<str>::from("$")));
     let currency_open = cx.local_model_keyed("currency_open", || false);
     let amount_value = cx.local_model_keyed("amount_value", String::new);

@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("sides.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::time::Duration;
@@ -23,7 +24,7 @@ fn make_tooltip<H: UiHost>(
     .into_element(cx)
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     shadcn::TooltipProvider::new()
         .delay(Duration::ZERO)
         .timeout_duration(Duration::from_millis(400))

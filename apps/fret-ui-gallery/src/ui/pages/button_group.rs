@@ -51,62 +51,79 @@ pub(super) fn preview_button_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .no_shell()
         .test_id_prefix("ui-gallery-button-group-notes");
 
+    let demo = DocSection::build(cx, "Demo", demo)
+        .test_id_prefix("ui-gallery-button-group-demo")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .test_id_prefix("ui-gallery-button-group-usage")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let accessibility = DocSection::build(cx, "Accessibility", accessibility)
+        .test_id_prefix("ui-gallery-button-group-accessibility")
+        .code_rust_from_file_region(snippets::accessibility::SOURCE, "example");
+    let orientation = DocSection::build(cx, "Orientation", orientation)
+        .test_id_prefix("ui-gallery-button-group-orientation")
+        .code_rust_from_file_region(snippets::orientation::SOURCE, "example");
+    let size = DocSection::build(cx, "Size", size)
+        .test_id_prefix("ui-gallery-button-group-size")
+        .code_rust_from_file_region(snippets::size::SOURCE, "example");
+    let nested = DocSection::build(cx, "Nested", nested)
+        .test_id_prefix("ui-gallery-button-group-nested")
+        .code_rust_from_file_region(snippets::nested::SOURCE, "example");
+    let separator = DocSection::build(cx, "Separator", separator)
+        .test_id_prefix("ui-gallery-button-group-separator")
+        .code_rust_from_file_region(snippets::separator::SOURCE, "example");
+    let split = DocSection::build(cx, "Split", split)
+        .test_id_prefix("ui-gallery-button-group-split")
+        .code_rust_from_file_region(snippets::split::SOURCE, "example");
+    let input = DocSection::build(cx, "Input", input)
+        .test_id_prefix("ui-gallery-button-group-input")
+        .code_rust_from_file_region(snippets::input::SOURCE, "example");
+    let input_group = DocSection::build(cx, "Input Group", input_group)
+        .test_id_prefix("ui-gallery-button-group-input-group")
+        .code_rust_from_file_region(snippets::input_group::SOURCE, "example");
+    let dropdown = DocSection::build(cx, "Dropdown Menu", dropdown)
+        .test_id_prefix("ui-gallery-button-group-dropdown")
+        .code_rust_from_file_region(snippets::dropdown_menu::SOURCE, "example");
+    let select = DocSection::build(cx, "Select", select)
+        .test_id_prefix("ui-gallery-button-group-select")
+        .code_rust_from_file_region(snippets::button_group_select::SOURCE, "example");
+    let popover = DocSection::build(cx, "Popover", popover)
+        .test_id_prefix("ui-gallery-button-group-popover")
+        .code_rust_from_file_region(snippets::popover::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .test_id_prefix("ui-gallery-button-group-rtl")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+    let text = DocSection::build(cx, "ButtonGroupText", text)
+        .test_id_prefix("ui-gallery-button-group-text")
+        .code_rust_from_file_region(snippets::text::SOURCE, "example");
+    let flex_1 = DocSection::build(cx, "Flex-1 items (Fret)", flex_1)
+        .test_id_prefix("ui-gallery-button-group-flex1")
+        .code_rust_from_file_region(snippets::flex_1_items::SOURCE, "example");
+
     let body = doc_layout::render_doc_page(
         cx,
         Some(
             "Preview mirrors the shadcn Button Group docs order first, then appends Fret-specific follow-ups for `ButtonGroupText` and caller-owned flex growth.",
         ),
         vec![
-            DocSection::new("Demo", demo)
-                .test_id_prefix("ui-gallery-button-group-demo")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .test_id_prefix("ui-gallery-button-group-usage")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Accessibility", accessibility)
-                .test_id_prefix("ui-gallery-button-group-accessibility")
-                .code_rust_from_file_region(snippets::accessibility::SOURCE, "example"),
+            demo,
+            usage,
+            accessibility,
             vs_toggle_group,
-            DocSection::new("Orientation", orientation)
-                .test_id_prefix("ui-gallery-button-group-orientation")
-                .code_rust_from_file_region(snippets::orientation::SOURCE, "example"),
-            DocSection::new("Size", size)
-                .test_id_prefix("ui-gallery-button-group-size")
-                .code_rust_from_file_region(snippets::size::SOURCE, "example"),
-            DocSection::new("Nested", nested)
-                .test_id_prefix("ui-gallery-button-group-nested")
-                .code_rust_from_file_region(snippets::nested::SOURCE, "example"),
-            DocSection::new("Separator", separator)
-                .test_id_prefix("ui-gallery-button-group-separator")
-                .code_rust_from_file_region(snippets::separator::SOURCE, "example"),
-            DocSection::new("Split", split)
-                .test_id_prefix("ui-gallery-button-group-split")
-                .code_rust_from_file_region(snippets::split::SOURCE, "example"),
-            DocSection::new("Input", input)
-                .test_id_prefix("ui-gallery-button-group-input")
-                .code_rust_from_file_region(snippets::input::SOURCE, "example"),
-            DocSection::new("Input Group", input_group)
-                .test_id_prefix("ui-gallery-button-group-input-group")
-                .code_rust_from_file_region(snippets::input_group::SOURCE, "example"),
-            DocSection::new("Dropdown Menu", dropdown)
-                .test_id_prefix("ui-gallery-button-group-dropdown")
-                .code_rust_from_file_region(snippets::dropdown_menu::SOURCE, "example"),
-            DocSection::new("Select", select)
-                .test_id_prefix("ui-gallery-button-group-select")
-                .code_rust_from_file_region(snippets::button_group_select::SOURCE, "example"),
-            DocSection::new("Popover", popover)
-                .test_id_prefix("ui-gallery-button-group-popover")
-                .code_rust_from_file_region(snippets::popover::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .test_id_prefix("ui-gallery-button-group-rtl")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            orientation,
+            size,
+            nested,
+            separator,
+            split,
+            input,
+            input_group,
+            dropdown,
+            select,
+            popover,
+            rtl,
             api_reference,
-            DocSection::new("ButtonGroupText", text)
-                .test_id_prefix("ui-gallery-button-group-text")
-                .code_rust_from_file_region(snippets::text::SOURCE, "example"),
-            DocSection::new("Flex-1 items (Fret)", flex_1)
-                .test_id_prefix("ui-gallery-button-group-flex1")
-                .code_rust_from_file_region(snippets::flex_1_items::SOURCE, "example"),
+            text,
+            flex_1,
             notes,
         ],
     );
