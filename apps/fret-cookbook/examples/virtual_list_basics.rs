@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use fret::app::prelude::*;
 use fret::{
+    children::UiElementSinkExt as _,
     icons::IconId,
     style::{LayoutRefinement, Space, Theme},
 };

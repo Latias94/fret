@@ -75,13 +75,13 @@ pub(super) fn top_bar_view(
                 .test_id("ui-gallery-settings-open")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
-                .on_click(CommandId::new(CMD_APP_SETTINGS))
+                .action(CMD_APP_SETTINGS)
                 .into_element(cx),
             shadcn::Button::new("Command palette")
                 .test_id("ui-gallery-command-palette")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
-                .on_click(fret_app::core_commands::COMMAND_PALETTE)
+                .action(fret_app::core_commands::COMMAND_PALETTE)
                 .into_element(cx),
         ])
         .into_element(cx);

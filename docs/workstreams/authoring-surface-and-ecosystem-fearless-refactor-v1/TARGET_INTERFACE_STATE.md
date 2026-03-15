@@ -23,8 +23,9 @@ Closeout note on 2026-03-15:
     `on_activate*` helper re-exports from the app lane, and an explicit `fret::style` /
     `fret::icons` split for high-frequency icon/style nouns, followed by an explicit `fret::env`
     split for adaptive declarative helpers),
-  - shadcn first-contact discovery still relies on policy tests to keep crate root / facade / raw
-    paths mentally separated,
+  - shadcn first-contact discovery still needs final doc tightening even though the curated
+    `prelude`, crate-internal recipe/helper glue, and public component families are now off the
+    hidden flat root and the default component lane is `facade as shadcn`,
   - the dedicated conversion-surface tracker is still actively deleting vocabulary families,
 - remaining work is therefore narrow follow-through rather than broad redesign:
   delete-ready cleanup, app-prelude narrowing, shadcn discovery-lane tightening, stale-doc
@@ -83,11 +84,17 @@ Target exports:
 Explicit secondary app lanes:
 
 - `fret::actions::*` for explicit command metadata, payload-action contracts, and action-registry
-  helper nouns beyond bare `CommandId`
+  helper nouns beyond bare `CommandId`; add `ElementCommandGatingExt as _` when code needs
+  explicit `cx.action_is_enabled(...)` reads
+- `fret::activate::{on_activate, on_activate_notify, on_activate_request_redraw,
+  on_activate_request_redraw_notify}` for intentional raw activation-helper glue outside the
+  default app lane
 - `fret::workspace_menu::*` for opt-in in-window menubar/menu-model integration helpers
 - `fret::semantics::SemanticsRole` for explicit semantic-role nouns
 - `fret::selector::{DepsBuilder, DepsSignature}` for selector dependency signatures
 - `fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}` for explicit query nouns
+- `fret::children::UiElementSinkExt as _` for explicit sink-style `*_build(|cx, out| ...)`
+  collection when a view intentionally opts into manual child pipelines
 
 Target non-exports:
 
@@ -108,6 +115,7 @@ Target non-exports:
 - `TypedAction`
 - `actions` as a default app-prelude module export
 - `workspace_menu` as a default app-prelude module export
+- `ElementCommandGatingExt`
 - `DepsBuilder`
 - `DepsSignature`
 - `QueryKey`
@@ -120,6 +128,7 @@ Target non-exports:
 - `UiElementA11yExt` as a named app-prelude export
 - `UiElementKeyContextExt` as a named app-prelude export
 - `UiElementTestIdExt` as a named app-prelude export
+- `UiElementSinkExt`
 - `Length`
 - `SemanticsProps`
 - `HoverRegionProps`
@@ -228,6 +237,7 @@ Target non-exports:
 - app builder
 - app-runtime-only globals/installation seams
 - `CommandId` as a default component-prelude noun
+- raw `on_activate*` helper families
 - runner/manual assembly types
 - legacy split conversion names such as `UiIntoElement`, `UiHostBoundIntoElement`,
   and `UiChildIntoElement`
@@ -239,6 +249,9 @@ Target rule:
 - reusable component code that needs explicit command identity values should import
   `fret::actions::CommandId` (or `fret-runtime`) explicitly instead of relying on the component
   prelude.
+- reusable component code that needs raw activation helper glue should import it explicitly from
+  `fret::activate::{on_activate, on_activate_notify, on_activate_request_redraw,
+  on_activate_request_redraw_notify}` instead of relying on the component prelude.
 - `IntoUiElement<H>` is the single public conversion vocabulary on this lane; the older split
   conversion taxonomy is considered deleted from the intended public product surface.
 
@@ -376,8 +389,9 @@ Direct crate usage rule for first-party recipe crates:
   `fret::shadcn::raw::advanced::*` when intentionally exiting the curated `fret` facade)
 - theme presets stay on `shadcn::themes::*`
 - full crate-root escape hatches must be explicit via `shadcn::raw::*`
-- the full `fret_ui_shadcn` crate root is retained as a compatibility/implementation surface, not
-  as a co-equal first-contact discovery lane
+- the full `fret_ui_shadcn` crate root is no longer a component-family or direction-utility
+  discovery lane; remaining flat-root exposure is limited to explicit glue residue rather than
+  peer first-contact API
 - first-party teaching surfaces may currently use only the documented raw lanes:
   `shadcn::raw::typography::*`, `shadcn::raw::extras::*`,
   `shadcn::raw::breadcrumb::primitives`, low-level `shadcn::raw::icon::*`, and

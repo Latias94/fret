@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("workflow_controls_demo.rs");
 
 // region: example
+use fret::app::AppActivateExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
@@ -10,24 +11,11 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::prelude::*;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    use std::sync::Arc;
-
     use fret_ui::Invalidation;
-    use fret_ui::action::OnActivate;
     let clicks_model = cx.local_model_keyed("clicks", || 0u32);
     let clicks = cx
         .get_model_copied(&clicks_model, Invalidation::Paint)
         .unwrap_or(0);
-
-    let bump: OnActivate = Arc::new({
-        let clicks_model = clicks_model.clone();
-        move |host, acx, _reason| {
-            let _ = host
-                .models_mut()
-                .update(&clicks_model, |v| *v = v.saturating_add(1));
-            host.request_redraw(acx.window);
-        }
-    });
 
     let marker = cx
         .text(format!("clicks={clicks}"))
@@ -36,15 +24,39 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let controls = ui_ai::WorkflowControls::new([
         ui_ai::WorkflowControlsButton::new("Zoom in", fret_icons::ids::ui::PLUS)
             .test_id("ui-ai-workflow-controls-demo-zoom-in")
-            .on_activate(bump.clone())
+            .listen(cx, {
+                let clicks_model = clicks_model.clone();
+                move |host, acx| {
+                    let _ = host
+                        .models_mut()
+                        .update(&clicks_model, |v| *v = v.saturating_add(1));
+                    host.request_redraw(acx.window);
+                }
+            })
             .into_element(cx),
         ui_ai::WorkflowControlsButton::new("Zoom out", fret_icons::ids::ui::MINUS)
             .test_id("ui-ai-workflow-controls-demo-zoom-out")
-            .on_activate(bump.clone())
+            .listen(cx, {
+                let clicks_model = clicks_model.clone();
+                move |host, acx| {
+                    let _ = host
+                        .models_mut()
+                        .update(&clicks_model, |v| *v = v.saturating_add(1));
+                    host.request_redraw(acx.window);
+                }
+            })
             .into_element(cx),
         ui_ai::WorkflowControlsButton::new("Fit", fret_icons::ids::ui::EYE)
             .test_id("ui-ai-workflow-controls-demo-fit")
-            .on_activate(bump.clone())
+            .listen(cx, {
+                let clicks_model = clicks_model.clone();
+                move |host, acx| {
+                    let _ = host
+                        .models_mut()
+                        .update(&clicks_model, |v| *v = v.saturating_add(1));
+                    host.request_redraw(acx.window);
+                }
+            })
             .into_element(cx),
     ])
     .test_id("ui-ai-workflow-controls-demo-controls")

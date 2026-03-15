@@ -36,7 +36,7 @@ fn item_basic(
 
     shadcn::Item::new(children)
         .variant(shadcn::ItemVariant::Outline)
-        .on_click(CMD_APP_OPEN)
+        .action(CMD_APP_OPEN)
         .refine_layout(LayoutRefinement::default().w_full())
         .into_element(cx)
         .test_id(test_id)

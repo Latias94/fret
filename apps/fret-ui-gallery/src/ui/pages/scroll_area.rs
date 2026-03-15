@@ -1,14 +1,15 @@
 use super::super::*;
 use fret::UiCx;
 
+use crate::ui::diagnostics::scroll_area as diagnostics;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::scroll_area as snippets;
 
 pub(super) fn preview_scroll_area(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
-    let drag_baseline = snippets::drag_baseline::render(cx);
-    let expand_at_bottom = snippets::expand_at_bottom::render(cx);
+    let drag_baseline = diagnostics::drag_baseline::render(cx);
+    let expand_at_bottom = diagnostics::expand_at_bottom::render(cx);
     let horizontal = snippets::horizontal::render(cx);
     let nested_scroll_routing = snippets::nested_scroll_routing::render(cx);
     let rtl = snippets::rtl::render(cx);
@@ -37,16 +38,16 @@ pub(super) fn preview_scroll_area(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = DocSection::build(cx, "RTL", rtl)
         .description("ScrollArea behavior under an RTL direction provider.")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
-    let drag_baseline = DocSection::build(cx, "Scrollbar drag baseline", drag_baseline)
+    let drag_baseline = DocSection::build_diagnostics(cx, "Scrollbar drag baseline", drag_baseline)
         .description(
             "Diagnostics harness (Fret-only): drag the thumb, then arm content growth. The thumb should not jump when extents change mid-drag.",
         )
-        .code_rust_from_file_region(snippets::drag_baseline::SOURCE, "example");
-    let expand_at_bottom = DocSection::build(cx, "Expand at bottom", expand_at_bottom)
+        .code_rust_from_file_region(diagnostics::drag_baseline::SOURCE, "example");
+    let expand_at_bottom = DocSection::build_diagnostics(cx, "Expand at bottom", expand_at_bottom)
         .description(
             "Diagnostics harness: content expands while already at the scroll extent edge (pinned extents regression).",
         )
-        .code_rust_from_file_region(snippets::expand_at_bottom::SOURCE, "example");
+        .code_rust_from_file_region(diagnostics::expand_at_bottom::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,

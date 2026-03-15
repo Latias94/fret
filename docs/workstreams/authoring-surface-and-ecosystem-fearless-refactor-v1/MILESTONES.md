@@ -30,10 +30,9 @@ Closeout note on 2026-03-15:
 - the highest-value first-party docs/examples/gates are already aligned to that posture,
 - selector/query helper nouns now live on explicit `fret::selector::*` / `fret::query::*` lanes
   instead of widening `fret::app::prelude::*`,
+- raw `on_activate*` helper glue is now also explicit on `fret::activate::{...}` instead of
+  widening `fret::component::prelude::*`,
 - but the closeout is **not** complete while:
-  - `fret::app::prelude::*` still overlaps too heavily with `fret::component::prelude::*` on some
-    named high-frequency types even after the first cleanup batch hid overlap-heavy extension
-    trait names and removed raw `on_activate*` helper exports from the app lane,
   - shadcn first-contact discovery still depends on source-policy tests to keep crate-root/facade
     lanes from competing in first-party teaching surfaces,
   - status docs imply the surface is more closed than the active conversion-surface tracker
@@ -50,11 +49,13 @@ reopening this one.
 
 1. Treat the remaining anonymous semantics/a11y/test-id helpers as the intentional app-lane
    keeper set; they are no longer active app-prelude narrowing debt.
-2. Audit the remaining high-frequency app/component prelude overlap (`Px`, `SemanticsRole`,
-   `CommandId`, and any still-duplicated icon helpers) now that selector/query nouns have moved to
-   explicit lanes.
+2. Treat `Px` as the intentional shared primitive across app/component lanes; it is no longer
+   active prelude-narrowing debt.
 3. Keep shadcn first-contact discovery on the already-landed `facade as shadcn` path and only add
    maintenance/gates when new first-party code tries to reintroduce crate-root drift.
+   Current progress: curated `prelude` and crate-internal recipe/helper glue no longer depend on
+   hidden flat root exports, and the first-contact teaching lane is already `facade as shadcn`;
+   remaining work is maintenance/gate follow-through rather than another export-structure reset.
 4. Finish the conversion-surface reset under
    `docs/workstreams/into-element-surface-fearless-refactor-v1/`.
 5. Continue thin small-app authoring sugar after the lane above is stable, starting with
@@ -132,13 +133,14 @@ Deliverables:
   - `fret-router`
 - clear app/component/advanced ownership per ecosystem crate.
 - one taught first-contact lane for `fret-ui-shadcn`
-  (`use fret_ui_shadcn::{facade as shadcn, prelude::*};`) with raw/advanced/root residuals kept
-  explicit rather than peer-discoverable.
+  (`use fret_ui_shadcn::{facade as shadcn, prelude::*};`) with raw/advanced seams explicit and the
+  flat crate root removed from component-family discovery.
 
 Exit criteria:
 
 - The same extension seams are used by first-party and expected of third-party libraries.
 - First-party shadcn teaching surfaces no longer need to compensate for multiple peer discovery
+  lanes because component-family flat-root exports are gone.
   lanes beyond the explicitly documented raw/advanced escape hatches.
 
 ## Milestone 4 — Delete the old surface and clean the docs

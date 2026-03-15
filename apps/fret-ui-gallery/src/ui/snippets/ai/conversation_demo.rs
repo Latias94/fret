@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("conversation_demo.rs");
 
 // region: example
+use fret::app::AppActivateExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::{Px, SemanticsRole};
 use fret_icons::IconId;
 use fret_ui::Invalidation;
 use fret_ui::action::OnActivate;
-use fret_ui::element::AnyElement;
 use fret_ui::element::SemanticsProps;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
@@ -100,10 +100,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         }
     });
 
-    let download: OnActivate = Arc::new({
+    let download = {
         let messages_model = messages_model.clone();
         let exported_md_len_model = exported_md_len_model.clone();
-        move |host, acx, _reason| {
+        move |host, acx| {
             let messages = host
                 .models_mut()
                 .get_cloned(&messages_model)
@@ -114,7 +114,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             });
             host.request_redraw(acx.window);
         }
-    });
+    };
 
     let conversation = ui_ai::Conversation::new([])
         .content_revision(revision)
@@ -122,7 +122,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .test_id("ui-ai-conversation-demo-transcript-root")
         .refine_layout(LayoutRefinement::default().w_full().flex_1().min_h_0())
         .into_element_with_children(cx, |cx| {
-            let content_children: Vec<AnyElement> = if messages_empty {
+            let content_children = if messages_empty {
                 vec![
                     ui_ai::ConversationEmptyState::new("Start a conversation")
                         .description("Type a message below to begin chatting.")
@@ -135,7 +135,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .iter()
                     .enumerate()
                     .map(|(index, message)| {
-                        let content_parts: Vec<AnyElement> = message
+                        let content_parts = message
                             .parts
                             .iter()
                             .filter_map(|part| match part {
@@ -149,7 +149,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                 ),
                                 _ => None,
                             })
-                            .collect();
+                            .collect::<Vec<_>>();
 
                         ui_ai::Message::new(
                             message.role,
@@ -166,7 +166,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 ui_ai::ConversationContent::new(content_children).into_element(cx),
                 ui_ai::ConversationDownload::new("Download conversation")
                     .disabled(messages_empty)
-                    .on_activate(download.clone())
+                    .listen(cx, download)
                     .test_id("ui-ai-conversation-demo-download")
                     .into_element(cx),
                 ui_ai::ConversationScrollButton::default()
@@ -185,7 +185,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             numeric_value: Some(exported_md_len as f64),
             ..Default::default()
         },
-        |_cx| Vec::<AnyElement>::new(),
+        |_cx| Vec::<_>::new(),
     );
     let instrumentation = cx.semantics(
         SemanticsProps {

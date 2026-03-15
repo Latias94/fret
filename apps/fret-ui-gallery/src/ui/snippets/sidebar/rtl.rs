@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
+use fret::app::AppActivateExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::element::SemanticsDecoration;
@@ -30,18 +31,17 @@ fn menu_button(
     let is_active = active_value.as_ref() == value;
     let selected_for_activate = selected_model.clone();
     let value_for_activate: Arc<str> = Arc::from(value);
-    let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-        let _ = host
-            .models_mut()
-            .update(&selected_for_activate, |v| *v = value_for_activate.clone());
-        host.request_redraw(action_cx.window);
-    });
 
     shadcn::SidebarMenuButton::new(label)
         .icon(fret_icons::IconId::new_static(icon))
         .active(is_active)
         .collapsed(collapsed)
-        .on_activate(on_activate)
+        .listen(cx, move |host, action_cx| {
+            let _ = host
+                .models_mut()
+                .update(&selected_for_activate, |v| *v = value_for_activate.clone());
+            host.request_redraw(action_cx.window);
+        })
         .test_id(test_id)
 }
 

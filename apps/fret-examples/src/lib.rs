@@ -361,10 +361,13 @@ mod authoring_surface_policy_tests {
         assert!(!src.contains("KernelApp"));
         assert!(!src.contains("AppWindowId"));
         assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
-        assert!(src.contains("todo_page(cx, theme, card)"));
-        assert!(src.contains(
-            "fn todo_page(cx: &mut UiCx<'_>, theme: ThemeSnapshot, content: impl UiChild) -> Ui"
-        ));
+        assert!(src.contains("ui::children![cx; todo_page(theme, card)].into()"));
+        assert!(
+            src.contains(
+                "fn todo_page(theme: ThemeSnapshot, content: impl UiChild) -> impl UiChild"
+            )
+        );
+        assert!(!src.contains("fn todo_page(cx: &mut UiCx<'_>,"));
         assert!(!src.contains("let card = card.into_element(cx);"));
         assert!(!src.contains("todo_page(theme, card).into_element(cx).into()"));
     }
@@ -612,10 +615,14 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn hello_counter_demo_prefers_root_helper_surface() {
-        assert!(HELLO_COUNTER_DEMO.contains("hello_counter_page(cx.elements(), theme, card)"));
+        assert!(
+            HELLO_COUNTER_DEMO
+                .contains("ui::children![cx; hello_counter_page(theme, card)].into()")
+        );
         assert!(HELLO_COUNTER_DEMO.contains(
-            "fn hello_counter_page(cx: &mut UiCx<'_>, theme: ThemeSnapshot, card: impl UiChild) -> Ui"
+            "fn hello_counter_page(theme: ThemeSnapshot, card: impl UiChild) -> impl UiChild"
         ));
+        assert!(!HELLO_COUNTER_DEMO.contains("fn hello_counter_page(cx: &mut UiCx<'_>,"));
         assert!(!HELLO_COUNTER_DEMO.contains(".test_id(TEST_ID_ROOT).into_element(cx).into()"));
     }
 

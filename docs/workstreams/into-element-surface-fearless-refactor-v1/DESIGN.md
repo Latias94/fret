@@ -163,7 +163,14 @@ This workstream therefore keeps:
 The app-facing teaching surface should stay:
 
 - `fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui`
-- `fn helper(cx: &mut UiCx<'_>) -> impl UiChild`
+- `fn helper(...) -> impl UiChild`
+
+Clarification on 2026-03-15:
+
+- spell `cx: &mut UiCx<'_>` on an app helper only when the helper body actually needs
+  runtime/context access,
+- if a page-shell helper only composes existing `UiChild` values, prefer dropping `cx` and
+  late-landing it at the render root via `ui::children![cx; helper(...)]`.
 
 App docs should not need to explain:
 

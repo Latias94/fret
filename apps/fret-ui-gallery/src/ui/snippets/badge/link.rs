@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("link.rs");
 
 // region: example
+use fret::view::AppActivateExt as _;
 use fret::{UiChild, UiCx};
 use fret_icons::IconId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -19,7 +20,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .trailing_icon(IconId::new_static("lucide.arrow-up-right"))
                 // Avoid launching the system browser during diag runs; the render surface still applies
                 // link semantics and Enter-only activation.
-                .on_activate(Arc::new(|_host, _acx, _reason| {}))
+                .listen(cx, |_host, _acx| {})
                 .test_id("ui-gallery-badge-link")
                 .into_element(cx),
         ]

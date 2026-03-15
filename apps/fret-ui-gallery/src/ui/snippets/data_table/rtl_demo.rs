@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("rtl_demo.rs");
 
 // region: example
+use fret::app::AppActivateExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_runtime::{CommandId, Model};
 use fret_ui::Theme;
-use fret_ui::action::OnActivate;
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt as _;
@@ -112,24 +112,6 @@ fn bottom_controls(
     let prev_enabled = output_value.pagination.can_prev;
     let next_enabled = output_value.pagination.can_next;
 
-    let prev_on_activate: OnActivate = {
-        let state = state.clone();
-        Arc::new(move |host, _acx, _reason| {
-            let _ = host.models_mut().update(&state, |st| {
-                st.pagination.page_index = st.pagination.page_index.saturating_sub(1);
-            });
-        })
-    };
-
-    let next_on_activate: OnActivate = {
-        let state = state.clone();
-        Arc::new(move |host, _acx, _reason| {
-            let _ = host.models_mut().update(&state, |st| {
-                st.pagination.page_index = st.pagination.page_index.saturating_add(1);
-            });
-        })
-    };
-
     let theme = Theme::global(&*cx.app);
     let muted_fg = theme.color_by_key("muted-foreground");
     let mut text = ui::text(label).text_sm().nowrap();
@@ -145,13 +127,27 @@ fn bottom_controls(
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
                 .disabled(!prev_enabled)
-                .on_activate(prev_on_activate.clone())
+                .listen(cx, {
+                    let state = state.clone();
+                    move |host, _action_cx| {
+                        let _ = host.models_mut().update(&state, |st| {
+                            st.pagination.page_index = st.pagination.page_index.saturating_sub(1);
+                        });
+                    }
+                })
                 .into_element(cx),
             shadcn::Button::new(lang.next)
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
                 .disabled(!next_enabled)
-                .on_activate(next_on_activate.clone())
+                .listen(cx, {
+                    let state = state.clone();
+                    move |host, _action_cx| {
+                        let _ = host.models_mut().update(&state, |st| {
+                            st.pagination.page_index = st.pagination.page_index.saturating_add(1);
+                        });
+                    }
+                })
                 .into_element(cx),
         ]
     })

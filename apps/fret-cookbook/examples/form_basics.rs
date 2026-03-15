@@ -1,4 +1,6 @@
 use fret::app::prelude::*;
+use fret::children::UiElementSinkExt as _;
+use fret::semantics::SemanticsRole;
 use fret::style::Space;
 use fret_ui::CommandAvailability;
 use fret_ui::element::SemanticsDecoration;

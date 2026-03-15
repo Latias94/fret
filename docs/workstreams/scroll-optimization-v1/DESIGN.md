@@ -61,7 +61,7 @@ Diagnostics scripts:
   - Suite: `tools/diag-scripts/suites/ui-gallery-scroll-area/` (run: `cargo run -p fretboard -- diag suite ui-gallery-scroll-area --launch -- cargo run -p fret-ui-gallery --release`).
 - `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json`
   - Starts a scrollbar thumb drag, triggers content growth mid-drag, and asserts scrollbar semantics `y` stays stable.
-  - Harness snippet (keep `test_id`s stable): `apps/fret-ui-gallery/src/ui/snippets/scroll_area/drag_baseline.rs`.
+  - Harness diagnostics module (keep `test_id`s stable): `apps/fret-ui-gallery/src/ui/diagnostics/scroll_area/drag_baseline.rs`.
   - Suite: `tools/diag-scripts/suites/ui-gallery-scroll-area/`.
 - `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-wheel-torture.json`
   - Repeated wheel input for perf/robustness evidence (captures a bundle; no perf threshold gate yet).
@@ -79,7 +79,7 @@ Diagnostics scripts:
   - Suite: `tools/diag-scripts/suites/ui-gallery-scroll-area/`.
 - `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-expand-at-bottom.json`
   - Expands content while already at the scroll extent edge (pinned extents regression coverage).
-  - Harness snippet: `apps/fret-ui-gallery/src/ui/snippets/scroll_area/expand_at_bottom.rs`.
+  - Harness diagnostics module: `apps/fret-ui-gallery/src/ui/diagnostics/scroll_area/expand_at_bottom.rs`.
   - Suite: `tools/diag-scripts/suites/diag-hardening-smoke/`.
 - `tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-wheel-torture.json`
   - Repeated wheel input against the VirtualList torture harness (captures a bundle for perf attribution).

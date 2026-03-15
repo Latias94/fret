@@ -33,7 +33,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         target: None,
         rel: None,
     })
-    .on_click(CMD_APP_OPEN)
+    .action(CMD_APP_OPEN)
     .refine_layout(LayoutRefinement::default().w_full())
     .into_element(cx)
     .test_id("ui-gallery-item-link-row-a");
@@ -54,7 +54,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         target: Some(Arc::<str>::from("_blank")),
         rel: Some(Arc::<str>::from("noopener noreferrer")),
     })
-    .on_click(CMD_APP_OPEN)
+    .action(CMD_APP_OPEN)
     .refine_layout(LayoutRefinement::default().w_full())
     .into_element(cx)
     .test_id("ui-gallery-item-link-row-b");

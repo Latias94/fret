@@ -43,7 +43,7 @@ pub fn render(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     cx;
                     shadcn::Button::new("Open Sonner page")
                         .variant(shadcn::ButtonVariant::Secondary)
-                        .on_click(CMD_NAV_SONNER)
+                        .action(CMD_NAV_SONNER)
                         .ui()
                         .test_id("ui-gallery-toast-open-sonner"),
                 ]

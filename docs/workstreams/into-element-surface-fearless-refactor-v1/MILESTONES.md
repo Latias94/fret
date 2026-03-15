@@ -384,9 +384,13 @@ Exit criteria:
   `ui::for_each_keyed_with_cx(...)` for the per-row model-watch scope.
 - the same page-shell cleanup now also reaches the scaffold generation lane:
   `apps/fretboard/src/scaffold/templates.rs` now generates both `todo` and `simple-todo` page
-  helpers as `impl UiChild`, drops helper-local `cx` from `todo_page(...)`, and keeps the
-  explicit `.into_element(cx)` step only at the final render-root `Ui` conversion in the emitted
-  templates.
+  helpers as `impl UiChild`, drops helper-local `cx` from `todo_page(...)`, and lands those page
+  shells at the render root through `ui::children![cx; todo_page(...)]` in the emitted templates.
+- the same first-contact cleanup now also reaches the onboarding and counter samples:
+  `apps/fret-cookbook/examples/hello.rs::hello_page(...)` and
+  `apps/fret-examples/src/hello_counter_demo.rs::hello_counter_page(...)` now both stay on
+  `impl UiChild`, drop helper-local `cx`, and let `render(...)` land them through
+  `ui::children![cx; ...]` instead of helper-local `.into_element(cx)`.
 - the same page-shell cleanup now also reaches the shared cookbook scaffold:
   `apps/fret-cookbook/src/scaffold.rs::{centered_page,centered_page_background,centered_page_muted}`
   now accept `IntoUiElement<H>` directly, keep `AnyElement` only as the named final page-root
@@ -631,17 +635,19 @@ Exit criteria:
   `apps/fret-ui-gallery/src/ui/snippets/scroll_area/{demo,usage,horizontal,nested_scroll_routing,rtl}.rs`
   now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, while
   `apps/fret-ui-gallery/src/ui/pages/scroll_area.rs` consumes those previews through
-  `DocSection::build(cx, ...)` and intentionally keeps
-  `drag_baseline` / `expand_at_bottom` as the only two diagnostics-owned raw harness roots
-  registered through `DocSection::build(cx, ...)`; the old
+  `DocSection::build(cx, ...)`, while the Fret-only diagnostics harnesses now live in
+  `apps/fret-ui-gallery/src/ui/diagnostics/scroll_area/{drag_baseline,expand_at_bottom}.rs` and
+  are registered through `DocSection::build_diagnostics(cx, ...)`; the old
   `pub fn render(...) -> AnyElement` teaching pattern is now forbidden for the app-facing family by
-  `ui_authoring_surface_default_app::{scroll_area_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface,scroll_area_page_uses_typed_doc_sections_for_app_facing_snippets}`, while
+  `ui_authoring_surface_default_app::{copyable_ui_gallery_snippet_lane_has_no_top_level_raw_render_roots,scroll_area_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface,scroll_area_page_uses_typed_doc_sections_for_app_facing_snippets}`, while
   `selected_scroll_area_snippet_helpers_prefer_into_ui_element_over_anyelement` now also locks the
   helper-family preference for `shadcn::scroll_area(...)`, and
-  `scroll_area_diagnostics_snippets_remain_intentional_raw_boundaries` prevents the two
-  diagnostics harnesses from regressing into accidental app-facing teaching examples.
+  `scroll_area_app_facing_snippet_lane_has_no_raw_boundaries`,
+  `scroll_area_diagnostics_lane_keeps_intentional_raw_boundaries`, and
+  `ui_gallery_diagnostics_raw_render_roots_are_explicitly_documented` prevent the two diagnostics
+  harnesses from regressing back into the copyable snippet lane or silently losing their rationale.
 - validation addendum on 2026-03-14:
-  `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app scroll_area_diagnostics_snippets_remain_intentional_raw_boundaries -- --exact --nocapture`
+  `CARGO_TARGET_DIR=target/codex-ui-gallery cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app scroll_area_diagnostics_lane_keeps_intentional_raw_boundaries -- --exact --nocapture`
 - the same UI Gallery default-app top-level snippet cleanup now also records the
   `progress` family:
   `apps/fret-ui-gallery/src/ui/snippets/progress/{demo,usage,label,controlled,rtl}.rs`

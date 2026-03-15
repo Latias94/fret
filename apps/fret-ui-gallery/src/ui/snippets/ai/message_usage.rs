@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("message_usage.rs");
 
 // region: example
+use fret::app::AppActivateExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::Invalidation;
@@ -58,14 +59,14 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .map(|value| value.to_string())
         .unwrap_or_else(|| String::from("<none>"));
 
-    let set_action = |label: &'static str| -> OnActivate {
+    let set_action = |label: &'static str| {
         let last_action_model = last_action_model.clone();
-        Arc::new(move |host, action_cx, _reason| {
+        move |host, action_cx| {
             let _ = host.models_mut().update(&last_action_model, |value| {
                 *value = Some(Arc::<str>::from(label));
             });
             host.request_redraw(action_cx.window);
-        })
+        }
     };
 
     let on_send: OnActivate = Arc::new({
@@ -154,13 +155,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                 .tooltip("Retry")
                                 .icon(fret_icons::ids::ui::LOADER)
                                 .test_id("ui-ai-message-usage-action-retry")
-                                .on_activate(set_action("assistant.retry"))
+                                .listen(cx, set_action("assistant.retry"))
                                 .into_element(cx),
                             ui_ai::MessageAction::new("Copy")
                                 .tooltip("Copy")
                                 .icon(fret_icons::ids::ui::COPY)
                                 .test_id("ui-ai-message-usage-action-copy")
-                                .on_activate(set_action("assistant.copy"))
+                                .listen(cx, set_action("assistant.copy"))
                                 .into_element(cx),
                         ])
                         .justify(Justify::Start)

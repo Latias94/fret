@@ -382,11 +382,11 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GizmoBasicsWindowState)
             cx;
             shadcn::Button::new("Reset")
                 .variant(shadcn::ButtonVariant::Outline)
-                .on_click(CMD_RESET)
+                .action(CMD_RESET)
                 .test_id(TEST_ID_RESET),
             shadcn::Button::new(snap_label)
                 .variant(shadcn::ButtonVariant::Secondary)
-                .on_click(CMD_TOGGLE_SNAP)
+                .action(CMD_TOGGLE_SNAP)
                 .test_id(TEST_ID_TOGGLE_SNAP),
             pos_badges,
         ]

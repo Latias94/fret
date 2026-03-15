@@ -131,6 +131,11 @@ Key points:
 - `ui::*` constructors return `UiBuilder<T>` (a patchable builder surface).
 - Apply layout/chrome refinement via fluent methods (`px_2()`, `gap(Space::N2)`, `rounded_md()`, ...).
 - Convert into `AnyElement` at the boundary via `.into_element(cx)`.
+- If a local helper actually reads state, emits text/layout nodes, or otherwise needs runtime
+  access, give it `cx: &mut UiCx<'_>`.
+- If a local helper is only a pure page shell around already-typed children, prefer
+  `fn page(...) -> impl UiChild` and let `render(...)` late-land it through
+  `ui::children![cx; page(...)]`.
 - If you have a patchable component type (implements `UiPatchTarget`), you can opt into the same fluent
   authoring style with `.ui()`.
 - Most `ui::*` layout constructors accept children through `IntoUiElement<H>`, so you can pass `UiBuilder` values
@@ -167,6 +172,8 @@ If you truly need manual sink-style collection, keep `*_build(...)` as an explic
 hatch rather than the default keyed-list story:
 
 ```rust
+use fret::children::UiElementSinkExt as _;
+
 let list = ui::v_flex_build(|cx, out| {
     for it in items.iter() {
         out.push_ui(cx, expensive_manual_child(it));

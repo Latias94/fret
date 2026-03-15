@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("web_preview_demo.rs");
 
 // region: example
+use fret::app::AppActivateExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
@@ -85,11 +86,11 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             let back = ui_ai::WebPreviewNavigationButton::new([cx.text("←")])
                 .disabled(!can_back)
                 .test_id("ui-ai-web-preview-demo-nav-back")
-                .on_activate(Arc::new({
+                .listen(cx, {
                     let history = history.clone();
                     let history_ix = history_ix.clone();
                     let url = controller.url.clone();
-                    move |host, action_cx, _reason| {
+                    move |host, action_cx| {
                         let ix = host.models_mut().get_cloned(&history_ix).unwrap_or(0);
                         if ix == 0 {
                             return;
@@ -105,17 +106,17 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         let _ = host.models_mut().update(&url, |v| *v = next_url);
                         host.notify(action_cx);
                     }
-                }))
+                })
                 .into_element(cx);
 
             let forward = ui_ai::WebPreviewNavigationButton::new([cx.text("→")])
                 .disabled(!can_forward)
                 .test_id("ui-ai-web-preview-demo-nav-forward")
-                .on_activate(Arc::new({
+                .listen(cx, {
                     let history = history.clone();
                     let history_ix = history_ix.clone();
                     let url = controller.url.clone();
-                    move |host, action_cx, _reason| {
+                    move |host, action_cx| {
                         let ix = host.models_mut().get_cloned(&history_ix).unwrap_or(0);
                         let len = host.models_mut().read(&history, |h| h.len()).unwrap_or(0);
                         if len == 0 || ix + 1 >= len {
@@ -132,7 +133,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         let _ = host.models_mut().update(&url, |v| *v = next_url);
                         host.notify(action_cx);
                     }
-                }))
+                })
                 .into_element(cx);
 
             let url = ui_ai::WebPreviewUrl::new()

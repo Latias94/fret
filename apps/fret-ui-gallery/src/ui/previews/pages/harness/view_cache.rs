@@ -105,13 +105,13 @@ pub(in crate::ui) fn preview_view_cache(
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
                 .test_id("ui-gallery-view-cache-bump-counter")
-                .on_click(CMD_VIEW_CACHE_BUMP)
+                .action(CMD_VIEW_CACHE_BUMP)
                 .into_element(cx),
             shadcn::Button::new("Reset counter")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
                 .test_id("ui-gallery-view-cache-reset-counter")
-                .on_click(CMD_VIEW_CACHE_RESET)
+                .action(CMD_VIEW_CACHE_RESET)
                 .into_element(cx),
         ]
     })

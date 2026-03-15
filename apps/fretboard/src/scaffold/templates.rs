@@ -568,7 +568,7 @@ __ADD_BTN_DEF__
 
         let input = shadcn::Input::new(&draft_state)
             .placeholder("Add a task…")
-            .submit_command(act::Add.into());
+            .submit_action(act::Add);
 
         let input_row = ui::h_flex(|cx| ui::children![cx; input, add_btn])
             .gap(Space::N2)
@@ -638,15 +638,14 @@ __PALETTE_BUTTON__
         .max_w(Px(520.0))
         ;
 
-        todo_page(cx, theme, card)
+        ui::children![cx; todo_page(theme, card)].into()
     }
 }
 
 fn todo_page(
-    cx: &mut UiCx<'_>,
     theme: ThemeSnapshot,
     content: impl UiChild,
-) -> Ui {
+) -> impl UiChild {
     ui::container(move |cx| ui::children![cx;
         ui::v_flex(|cx| ui::children![cx; content])
             .w_full()
@@ -659,8 +658,6 @@ fn todo_page(
     .p(Space::N6)
     .w_full()
     .h_full()
-    .into_element(cx)
-    .into()
 }
 
 fn filter_chip(
@@ -975,7 +972,7 @@ __ADD_BTN_DEF__
 
         let input = shadcn::Input::new(&draft_state)
             .placeholder("Add a task?")
-            .submit_command(act::Add.into());
+            .submit_action(act::Add);
 
         let input_row = ui::h_flex(|cx| ui::children![cx; input, add_btn])
             .gap(Space::N2)
@@ -1038,22 +1035,19 @@ __PALETTE_BUTTON__
         .justify_center()
         .items_center();
 
-        todo_page(cx, theme, content)
+        ui::children![cx; todo_page(theme, content)].into()
     }
 }
 
 fn todo_page(
-    cx: &mut UiCx<'_>,
     theme: ThemeSnapshot,
     content: impl UiChild,
-) -> Ui {
+) -> impl UiChild {
     ui::container(|cx| ui::children![cx; content])
         .bg(ColorRef::Color(theme.color_token("muted")))
         .p(Space::N6)
         .w_full()
         .h_full()
-        .into_element(cx)
-        .into()
 }
 
 fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {
@@ -1399,6 +1393,8 @@ mod tests {
         assert!(!src.contains("shadcn::CardContent::build(|cx, out| {"));
         assert!(src.contains("cx.actions().locals::<act::Add>"));
         assert!(src.contains("cx.actions().locals::<act::ClearDone>"));
+        assert!(src.contains(".submit_action(act::Add)"));
+        assert!(!src.contains(".submit_command(act::Add.into())"));
         assert!(src.contains("cx.actions()\n            .local_update::<act::RefreshTip, u64>("));
         assert!(
             src.contains("cx.actions()\n            .local_set::<act::FilterAll, TodoFilter>(")
@@ -1414,12 +1410,12 @@ mod tests {
         assert!(src.contains("let draft_state = cx.state().local::<String>();"));
         assert!(src.contains("let filter_state = cx.state().local_init(|| TodoFilter::All);"));
         assert!(src.contains("let todos_state = cx.state().local_init(|| {"));
-        assert!(src.contains("todo_page(cx, theme, card)"));
+        assert!(src.contains("ui::children![cx; todo_page(theme, card)].into()"));
         assert!(!src.contains("let card = card.into_element(cx);"));
         assert!(!src.contains("todo_page(theme, card).into_element(cx).into()"));
         assert!(src.contains("fn todo_page("));
-        assert!(src.contains("cx: &mut UiCx<'_>,"));
-        assert!(src.contains(") -> Ui {"));
+        assert!(!src.contains("cx: &mut UiCx<'_>,"));
+        assert!(src.contains(") -> impl UiChild {"));
         assert!(!src.contains("Model<Vec<TodoItem>>"));
         assert!(!src.contains("Model<bool>"));
         assert!(!src.contains(".models_mut().insert("));
@@ -1498,18 +1494,20 @@ mod tests {
         assert!(!src.contains("shadcn::CardContent::build(|cx, out| {"));
         assert!(src.contains("cx.actions().locals::<act::Add>"));
         assert!(src.contains("cx.actions().locals::<act::ClearDone>"));
+        assert!(src.contains(".submit_action(act::Add)"));
+        assert!(!src.contains(".submit_command(act::Add.into())"));
         assert!(src.contains("cx.actions()\n            .payload::<act::Toggle>()"));
         assert!(src.contains(".local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {"));
         assert!(src.contains("fret::payload_actions!([Toggle(u64) ="));
         assert!(src.contains("let draft_state = cx.state().local::<String>();"));
         assert!(src.contains("let next_id_state = cx.state().local_init(|| 3u64);"));
         assert!(src.contains("let todos_state = cx.state().local_init(|| {"));
-        assert!(src.contains("todo_page(cx, theme, content)"));
+        assert!(src.contains("ui::children![cx; todo_page(theme, content)].into()"));
         assert!(!src.contains("let content = content.into_element(cx);"));
         assert!(!src.contains("todo_page(theme, content).into_element(cx).into()"));
         assert!(src.contains("fn todo_page("));
-        assert!(src.contains("cx: &mut UiCx<'_>,"));
-        assert!(src.contains(") -> Ui {"));
+        assert!(!src.contains("cx: &mut UiCx<'_>,"));
+        assert!(src.contains(") -> impl UiChild {"));
         assert!(src.contains("shadcn::Input::new(&draft_state)"));
         assert!(src.contains("shadcn::Checkbox::from_checked(row.done)"));
         assert!(!src.contains("Model<Vec<TodoItem>>"));

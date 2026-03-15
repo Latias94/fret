@@ -61,6 +61,18 @@ impl DocSection {
         Self::new(title, preview.into_element(cx))
     }
 
+    /// Marks a section as a Fret-only diagnostics harness while keeping the shared doc scaffold.
+    pub(in crate::ui) fn build_diagnostics<P>(
+        cx: &mut UiCx<'_>,
+        title: &'static str,
+        preview: P,
+    ) -> Self
+    where
+        P: IntoUiElement<fret_app::App>,
+    {
+        Self::build(cx, title, preview)
+    }
+
     pub(in crate::ui) fn title_test_id(mut self, title_test_id: &'static str) -> Self {
         self.title_test_id = Some(title_test_id);
         self

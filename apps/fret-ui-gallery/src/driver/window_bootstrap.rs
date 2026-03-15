@@ -227,9 +227,11 @@ impl UiGalleryDriver {
         let settings_menu_bar_in_window_open = app.models_mut().insert(false);
         let text_common_fallback_injection =
             Self::current_text_font_family_config(app).common_fallback_injection;
-        let settings_text_common_fallback_injection = app.models_mut().insert(Some(
-            Self::text_common_fallback_injection_key(text_common_fallback_injection),
-        ));
+        let settings_text_common_fallback_injection =
+            app.models_mut()
+                .insert(Some(Self::text_common_fallback_injection_key(
+                    text_common_fallback_injection,
+                )));
         let settings_text_common_fallback_injection_open = app.models_mut().insert(false);
         let settings_edit_can_undo = app.models_mut().insert(true);
         let settings_edit_can_redo = app.models_mut().insert(true);

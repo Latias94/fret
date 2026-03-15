@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("chat_demo.rs");
 
 // region: example
+use fret::app::AppActivateExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_ai as ui_ai;
@@ -405,12 +406,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         }
     });
 
-    let start_streaming: OnActivate = Arc::new({
+    let start_streaming = {
         let messages = messages.clone();
         let pending = pending.clone();
         let loading = loading.clone();
         let content_revision = content_revision.clone();
-        move |host, _action_cx, _reason| {
+        move |host, _action_cx| {
             fn chunk_for_demo(text: &str, chars_per_chunk: usize) -> Arc<[Arc<str>]> {
                 let mut out = Vec::new();
                 let mut buf = String::new();
@@ -504,7 +505,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .models_mut()
                 .update(&content_revision, |v| *v = v.saturating_add(1));
         }
-    });
+    };
 
     let header = ui::v_flex(|cx| {
         vec![
@@ -514,7 +515,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .variant(shadcn::ButtonVariant::Secondary)
                 .size(shadcn::ButtonSize::Sm)
                 .test_id("ui-gallery-ai-chat-start-stream")
-                .on_activate(start_streaming.clone())
+                .listen(cx, start_streaming)
                 .into_element(cx),
         ]
     })

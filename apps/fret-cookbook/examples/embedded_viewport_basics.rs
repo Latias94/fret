@@ -332,34 +332,34 @@ fn view(
             cx;
             shadcn::Button::new("640?360")
                 .variant(shadcn::ButtonVariant::Secondary)
-                .on_click(CMD_SIZE_640)
+                .action(CMD_SIZE_640)
                 .disabled(preset == 0)
                 .test_id(TEST_ID_SIZE_640),
             shadcn::Button::new("960?540")
                 .variant(shadcn::ButtonVariant::Secondary)
-                .on_click(CMD_SIZE_960)
+                .action(CMD_SIZE_960)
                 .disabled(preset == 1)
                 .test_id(TEST_ID_SIZE_960),
             shadcn::Button::new("1280?720")
                 .variant(shadcn::ButtonVariant::Secondary)
-                .on_click(CMD_SIZE_1280)
+                .action(CMD_SIZE_1280)
                 .disabled(preset == 2)
                 .test_id(TEST_ID_SIZE_1280),
             shadcn::Separator::new()
                 .orientation(shadcn::SeparatorOrientation::Vertical),
             shadcn::Button::new("Fit: Contain")
                 .variant(shadcn::ButtonVariant::Secondary)
-                .on_click(CMD_FIT_CONTAIN)
+                .action(CMD_FIT_CONTAIN)
                 .disabled(fit == ViewportFit::Contain)
                 .test_id(TEST_ID_FIT_CONTAIN),
             shadcn::Button::new("Cover")
                 .variant(shadcn::ButtonVariant::Secondary)
-                .on_click(CMD_FIT_COVER)
+                .action(CMD_FIT_COVER)
                 .disabled(fit == ViewportFit::Cover)
                 .test_id(TEST_ID_FIT_COVER),
             shadcn::Button::new("Stretch")
                 .variant(shadcn::ButtonVariant::Secondary)
-                .on_click(CMD_FIT_STRETCH)
+                .action(CMD_FIT_STRETCH)
                 .disabled(fit == ViewportFit::Stretch)
                 .test_id(TEST_ID_FIT_STRETCH),
         ]

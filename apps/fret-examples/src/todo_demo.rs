@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret::app::prelude::*;
+use fret::semantics::SemanticsRole;
 use fret::style::{ColorRef, Space, Theme};
 use fret_ui::element::SemanticsDecoration;
 
@@ -228,11 +229,11 @@ impl View for TodoDemoView {
                 rows.len() != before
             });
 
-        todo_page(cx, theme, card)
+        ui::children![cx; todo_page(theme, card)].into()
     }
 }
 
-fn todo_page(cx: &mut UiCx<'_>, theme: ThemeSnapshot, content: impl UiChild) -> Ui {
+fn todo_page(theme: ThemeSnapshot, content: impl UiChild) -> impl UiChild {
     ui::container(move |cx| {
         ui::children![
             cx;
@@ -248,8 +249,6 @@ fn todo_page(cx: &mut UiCx<'_>, theme: ThemeSnapshot, content: impl UiChild) -> 
     .w_full()
     .h_full()
     .test_id(TEST_ID_ROOT)
-    .into_element(cx)
-    .into()
 }
 
 fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {

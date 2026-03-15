@@ -374,23 +374,23 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut DockingBasicsWindowStat
             cx;
             shadcn::Button::new("Reset layout")
                 .variant(shadcn::ButtonVariant::Outline)
-                .on_click(CMD_RESET_LAYOUT)
+                .action(CMD_RESET_LAYOUT)
                 .test_id(TEST_ID_RESET_LAYOUT),
             shadcn::Button::new("Activate Hierarchy")
                 .variant(shadcn::ButtonVariant::Secondary)
-                .on_click(CMD_ACTIVATE_HIERARCHY)
+                .action(CMD_ACTIVATE_HIERARCHY)
                 .test_id(TEST_ID_ACTIVATE_HIERARCHY),
             shadcn::Button::new("Activate Inspector")
                 .variant(shadcn::ButtonVariant::Secondary)
-                .on_click(CMD_ACTIVATE_INSPECTOR)
+                .action(CMD_ACTIVATE_INSPECTOR)
                 .test_id(TEST_ID_ACTIVATE_INSPECTOR),
             shadcn::Button::new("Activate Editor")
                 .variant(shadcn::ButtonVariant::Secondary)
-                .on_click(CMD_ACTIVATE_EDITOR)
+                .action(CMD_ACTIVATE_EDITOR)
                 .test_id(TEST_ID_ACTIVATE_EDITOR),
             shadcn::Button::new("Activate Console")
                 .variant(shadcn::ButtonVariant::Secondary)
-                .on_click(CMD_ACTIVATE_CONSOLE)
+                .action(CMD_ACTIVATE_CONSOLE)
                 .test_id(TEST_ID_ACTIVATE_CONSOLE),
             active_left_badge,
             active_right_badge,

@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("mobile.rs");
 
 // region: example
+use fret::app::AppActivateExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_kit::IntoUiElement;
@@ -29,18 +30,17 @@ fn menu_button<H: UiHost>(
     let is_active = active_value.as_ref() == value;
     let selected_for_activate = selected_model.clone();
     let value_for_activate: Arc<str> = Arc::from(value);
-    let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-        let _ = host
-            .models_mut()
-            .update(&selected_for_activate, |v| *v = value_for_activate.clone());
-        host.request_redraw(action_cx.window);
-    });
 
     shadcn::SidebarMenuButton::new(label)
         .icon(fret_icons::IconId::new_static(icon))
         .active(is_active)
         .collapsed(collapsed)
-        .on_activate(on_activate)
+        .listen(cx, move |host, action_cx| {
+            let _ = host
+                .models_mut()
+                .update(&selected_for_activate, |v| *v = value_for_activate.clone());
+            host.request_redraw(action_cx.window);
+        })
         .test_id(test_id)
 }
 
@@ -59,11 +59,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             let selected_value = resolve_selected(cx, &selected, "playground");
 
             let open_mobile_for_toggle = open_mobile.clone();
-            let on_toggle_open_mobile: fret_ui::action::OnActivate =
-                Arc::new(move |host, action_cx, _reason| {
-                    let _ = host.models_mut().update(&open_mobile_for_toggle, |v| *v = !*v);
-                    host.request_redraw(action_cx.window);
-                });
 
             let header = ui::h_flex(|cx| {
                     vec![
@@ -73,7 +68,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         shadcn::Button::new("Toggle open_mobile")
                             .variant(shadcn::ButtonVariant::Ghost)
                             .size(shadcn::ButtonSize::Sm)
-                            .on_activate(on_toggle_open_mobile)
+                            .listen(cx, {
+                                let open_mobile_for_toggle = open_mobile_for_toggle.clone();
+                                move |host, action_cx| {
+                                    let _ = host
+                                        .models_mut()
+                                        .update(&open_mobile_for_toggle, |v| *v = !*v);
+                                    host.request_redraw(action_cx.window);
+                                }
+                            })
                             .test_id("ui-gallery-sidebar-mobile-external-toggle")
                             .into_element(cx),
                         shadcn::raw::typography::muted(

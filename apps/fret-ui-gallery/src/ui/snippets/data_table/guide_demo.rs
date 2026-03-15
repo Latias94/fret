@@ -4,7 +4,6 @@ pub const SOURCE: &str = include_str!("guide_demo.rs");
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_runtime::{CommandId, Model};
-use fret_ui::element::AnyElement;
 use fret_ui_headless::table::{ColumnDef, RowKey, Table, TableState};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt as _;
@@ -93,7 +92,7 @@ where
         .justify_end()
 }
 
-fn guide_demo_content(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+fn guide_demo_content(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let assets = cx.slot_state(
         || {
             let data: Arc<[DemoProcessRow]> = Arc::from(vec![
@@ -493,21 +492,24 @@ fn guide_demo_content(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         )
         .test_id("ui-gallery-data-table-listlike-root");
 
-    vec![
-        responsive_toggle,
-        toolbar,
-        table,
-        list_like_table,
-        shadcn::DataTablePagination::new(state, output).into_element(cx),
-    ]
+    let pagination = shadcn::DataTablePagination::new(state, output).into_element(cx);
+
+    ui::v_flex(move |_cx| {
+        vec![
+            responsive_toggle,
+            toolbar,
+            table,
+            list_like_table,
+            pagination,
+        ]
+    })
+    .gap(Space::N3)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full())
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let guide_content = guide_demo_content(cx);
-    ui::v_flex(move |_cx| guide_content)
-        .gap(Space::N3)
-        .items_start()
-        .layout(LayoutRefinement::default().w_full())
+    guide_demo_content(cx)
         .into_element(cx)
         .test_id("ui-gallery-data-table-guide-demo")
 }

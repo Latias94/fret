@@ -17,7 +17,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             bc::BreadcrumbLink::new("Home")
                                 .href("https://example.com")
                                 // Keep the gallery deterministic while preserving link semantics.
-                                .on_click(CMD_APP_OPEN)
+                                .action(CMD_APP_OPEN)
                                 // This is the explicit Fret alternative to upstream `render` /
                                 // `asChild`: keep the link surface typed, but allow custom inline
                                 // children for the visual content.
@@ -30,7 +30,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         vec![
                             bc::BreadcrumbLink::new("Components")
                                 .href("https://example.com/components")
-                                .on_click(CMD_APP_OPEN)
+                                .action(CMD_APP_OPEN)
                                 .children(|cx| [ui::text("Components").into_element(cx)])
                                 .into_element(cx),
                         ]

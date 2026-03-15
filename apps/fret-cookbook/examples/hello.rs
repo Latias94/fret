@@ -46,11 +46,11 @@ impl View for HelloView {
         cx.actions()
             .availability::<act::Click>(|_host, _acx| CommandAvailability::Available);
 
-        hello_page(cx, render_marker, count_value)
+        ui::children![cx; hello_page(render_marker, count_value)].into()
     }
 }
 
-fn hello_page(cx: &mut UiCx<'_>, render_marker: &'static str, count_value: u32) -> Ui {
+fn hello_page(render_marker: &'static str, count_value: u32) -> impl UiChild {
     ui::v_flex(|cx| {
         ui::children![
             cx;
@@ -67,8 +67,6 @@ fn hello_page(cx: &mut UiCx<'_>, render_marker: &'static str, count_value: u32) 
     .items_center()
     .justify_center()
     .test_id(TEST_ID_ROOT)
-    .into_element(cx)
-    .into()
 }
 
 fn main() -> anyhow::Result<()> {

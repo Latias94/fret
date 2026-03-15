@@ -145,7 +145,7 @@ now taught as `LocalState` + view runtime + typed actions.
   - `cx.actions().locals::<A>(|tx| ...)` - default for most typed UI actions that coordinate view-owned `LocalState<T>` slots.
   - `cx.actions().models::<A>(|models| ...)` - drop down when coordinating shared `Model<T>` graphs (cross-view ownership).
   - `cx.actions().transient::<A>(...)` - default when the real work must happen with `&mut App` in `render()`.
-  - widget-local `.on_activate(cx.actions().dispatch::<A>())` / `.listener(...)` - activation-only glue on the default app lane; raw `on_activate*` helper families stay component/advanced-oriented.
+- widget-local `.dispatch::<A>(cx)` / `.dispatch_payload::<A>(cx, ...)` / `.listen(cx, ...)` - activation-only glue on the default app lane; raw `on_activate*` helper families stay component/advanced-oriented.
   - Treat raw `on_action` / `on_action_notify` and single-model aliases as advanced shorthands; keep first-contact docs and templates focused on the three entrypoints above. The remaining in-tree examples are cookbook-only host-side categories (toasts, background scheduling, RAF effects).
 - Surface taxonomy:
   - **Default**: `hello`, `simple-todo`, `todo`, plus stable cookbook lessons

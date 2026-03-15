@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("extras.rs");
 
 // region: example
 use crate::ui::snippets::sonner::{last_action_model, request};
+use fret::app::AppActivateExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_kit::IntoUiElement;
@@ -23,25 +24,23 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let sonner = shadcn::Sonner::global(&mut *cx.app);
     let last_action_model = last_action_model(cx);
 
-    let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-        sonner.toast(
-            host,
-            action_cx.window,
-            request("Swipe to dismiss")
-                .description("Drag up to dismiss (pinned)")
-                .duration(None)
-                .dismissible(true)
-                .test_id("ui-gallery-sonner-demo-toast-swipe"),
-        );
-        let _ = host.models_mut().update(&last_action_model, |v| {
-            *v = Arc::<str>::from("sonner.extras.swipe_dismiss");
-        });
-        host.request_redraw(action_cx.window);
-    });
-
     let swipe = shadcn::Button::new("Swipe Dismiss Toast")
         .variant(shadcn::ButtonVariant::Outline)
-        .on_activate(on_activate)
+        .listen(cx, move |host, action_cx| {
+            sonner.toast(
+                host,
+                action_cx.window,
+                request("Swipe to dismiss")
+                    .description("Drag up to dismiss (pinned)")
+                    .duration(None)
+                    .dismissible(true)
+                    .test_id("ui-gallery-sonner-demo-toast-swipe"),
+            );
+            let _ = host.models_mut().update(&last_action_model, |v| {
+                *v = Arc::<str>::from("sonner.extras.swipe_dismiss");
+            });
+            host.request_redraw(action_cx.window);
+        })
         .test_id("ui-gallery-sonner-demo-show-swipe")
         .into_element(cx);
 

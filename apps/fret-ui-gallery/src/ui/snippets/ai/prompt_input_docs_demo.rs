@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("prompt_input_docs_demo.rs");
 
 // region: example
+use fret::app::AppActivateExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_icons::IconId;
@@ -61,13 +62,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             let searching = cx
                 .get_model_cloned(&use_web_search, fret_ui::Invalidation::Layout)
                 .unwrap_or(false);
-            let toggle_search: fret_ui::action::OnActivate = Arc::new({
+            let toggle_search = {
                 let use_web_search = use_web_search.clone();
-                move |host, action_cx, _reason| {
+                move |host, action_cx| {
                     let _ = host.models_mut().update(&use_web_search, |v| *v = !*v);
                     host.notify(action_cx);
                 }
-            });
+            };
 
             let search_btn = ui_ai::PromptInputButton::new("Search")
                 .children([
@@ -85,7 +86,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     shadcn::ButtonVariant::Ghost
                 })
                 .test_id("ui-gallery-ai-prompt-input-docs-search")
-                .on_activate(toggle_search)
+                .listen(cx, toggle_search)
                 .into_element(cx);
 
             let select = shadcn::Select::new(model_value.clone(), model_open.clone())

@@ -60,8 +60,8 @@ The default app-facing event story should collapse to four concepts:
      expose a stable action slot,
    - use `widget.dispatch_payload::<act::ToggleTodo>(cx, todo.id)` only when the widget-local
      surface is activation-only but the action still needs payload dispatch,
-   - treat raw `.on_activate(cx.actions().dispatch* / listener(...))` as the lower-level building
-     block behind that sugar, not as the default teaching lane.
+   - treat raw `.on_activate(...)` wired with `cx.actions().dispatch* / listener(...)` as the
+     lower-level building block behind that sugar, not as the default teaching lane.
 3. **Handle actions at the view/root layer**
    - `cx.actions().locals::<A>(...)`
    - `cx.actions().models::<A>(...)`
@@ -154,15 +154,16 @@ Demote:
 ### Phase 2.5 — Land thin app-facing sugar for activation-only seams
 
 Status (as of 2026-03-15): landed in `ecosystem/fret` as `fret::app::AppActivateSurface` plus the
-blanket `AppActivateExt` methods imported by `fret::app::prelude::*`.
+blanket `AppActivateExt` methods imported by `fret::app::prelude::*`, with an explicit app-lane
+import path available as `use fret::app::AppActivateExt as _;`.
 
 Default shape:
 
 ```rust,ignore
-shadcn::DrawerTrigger::build(...)
+activation_only_widget()
     .dispatch::<act::OpenPalette>(cx);
 
-custom_canvas_hotspot(...)
+activation_only_widget()
     .listen(cx, |host, acx| {
         host.request_redraw(acx.window);
         host.notify(acx);
@@ -173,15 +174,39 @@ Trait boundary:
 
 - app-facing extension trait in `ecosystem/fret`,
 - implemented only for widgets/types that already expose `on_activate(...)`,
+- current first-party coverage intentionally stays narrow and real: `shadcn::Badge`,
+  `shadcn::Button`, `shadcn::SidebarMenuButton`, `shadcn::extras::{BannerAction, BannerClose, Ticker}`,
+  optional `fret_ui_ai::{ArtifactAction, ArtifactClose, CheckpointTrigger, ConfirmationAction, ConversationDownload, MessageAction, PromptInputButton, WebPreviewNavigationButton, WorkflowControlsButton}`,
+  plus Material 3 `Card`, `DialogAction`, and `TopAppBarAction`,
 - powered internally by `cx.actions().dispatch(...)` / `dispatch_payload(...)` / `listener(...)`,
 - kept off `crates/fret-ui` and off component-policy crates.
 - custom widgets join this lane by implementing `fret::app::AppActivateSurface` and forwarding
   their `on_activate(...)` slot.
+- intentionally excluded: surfaces whose callback contract already carries extra domain data or a
+  specialized `ActionCx`-only seam, such as `fret_ui_ai::Attachment` (`Arc<str>` id payload),
+  `QueueItemAction`, `Test`, `FileTreeAction`, `Suggestion`, `MessageBranch`, and terminal/file-tree
+  helper actions. Those remain component-owned typed callbacks rather than joining a second generic
+  app-facing trait family.
+
+Current first-party teaching evidence (as of 2026-03-15):
+
+- selected UI Gallery activation-only snippets now import `fret::app::AppActivateExt as _;`,
+- those snippets prefer `.listen(cx, |host, acx| { ... })` over reopening raw `.on_activate(...)`,
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` locks that default teaching
+  surface with `selected_activation_snippets_prefer_app_activate_listen`, including the primary
+  `sonner/demo` snippet, the data-table pagination demos, `scroll_area/nested_scroll_routing`, and
+  the AI `artifact_code_display` / `artifact_demo` / `chat_demo` / `checkpoint_demo` /
+  `confirmation_demo` / `conversation_demo` / `message_usage` / `prompt_input_docs_demo` /
+  `prompt_input_referenced_sources_demo` / `reasoning_demo` / `transcript_torture` /
+  `web_preview_demo` / `workflow_controls_demo` / `workflow_node_graph_demo` / `message_demo` /
+  `task_demo` / `persona_demo` snippets when `fret`'s optional `ui-ai` lane is enabled.
 
 Non-goals for this thin sugar lane:
 
 - do not replace `.action(...)` as the default for widgets that already have action slots,
 - do not add a new family like `click`, `submit`, `select`, `listener_notify`, `listener_redraw`,
+- do not introduce a parallel `AppActionCxSurface`-style trait family for custom callback
+  signatures; keep payload/context-carrying widget contracts typed and component-local,
 - do not flatten the grouped `cx.actions()` namespace back into another flat helper taxonomy.
 
 ### Phase 3 — Shrink command-shaped widget naming

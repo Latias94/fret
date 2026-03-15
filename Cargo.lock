@@ -1728,8 +1728,10 @@ dependencies = [
  "fret-runtime",
  "fret-selector",
  "fret-ui",
+ "fret-ui-ai",
  "fret-ui-editor",
  "fret-ui-kit",
+ "fret-ui-material3",
  "fret-ui-shadcn",
  "fret-workspace",
  "slotmap",
@@ -1792,6 +1794,7 @@ version = "0.1.0"
 dependencies = [
  "blake3",
  "fret-app",
+ "fret-assets",
  "fret-canvas",
  "fret-core",
  "fret-diag-protocol",
@@ -2210,6 +2213,7 @@ dependencies = [
 name = "fret-fonts"
 version = "0.1.0"
 dependencies = [
+ "fret-assets",
  "read-fonts",
 ]
 
@@ -2289,6 +2293,10 @@ dependencies = [
 [[package]]
 name = "fret-icons"
 version = "0.1.0"
+dependencies = [
+ "fret-icons-lucide",
+ "fret-icons-radix",
+]
 
 [[package]]
 name = "fret-icons-lucide"

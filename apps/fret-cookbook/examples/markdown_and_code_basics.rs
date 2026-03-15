@@ -2,8 +2,9 @@ use std::sync::Arc;
 
 use fret::app::prelude::*;
 use fret::{
+    children::UiElementSinkExt as _,
     icons::IconId,
-    style::{LayoutRefinement, MetricRef, Size, Space},
+    style::{LayoutRefinement, MetricRef, Space},
 };
 use fret_code_view::CodeBlockWrap;
 use fret_markdown as markdown;

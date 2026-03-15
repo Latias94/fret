@@ -1,17 +1,16 @@
 pub const SOURCE: &str = include_str!("checkpoint_demo.rs");
 
 // region: example
+use fret::app::AppActivateExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::Invalidation;
-use fret_ui::action::OnActivate;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
-use std::sync::Arc;
 
 #[derive(Clone, Copy)]
 struct DemoMessage {
@@ -55,9 +54,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .unwrap_or(INITIAL_MESSAGES.len())
         .min(INITIAL_MESSAGES.len());
 
-    let restore_to_checkpoint: OnActivate = Arc::new({
+    let restore_to_checkpoint = {
         let visible_message_count_model = visible_message_count_model.clone();
-        move |host, acx, _reason| {
+        move |host, acx| {
             let _ = host
                 .models_mut()
                 .update(&visible_message_count_model, |count| {
@@ -65,11 +64,11 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 });
             host.request_redraw(acx.window);
         }
-    });
+    };
 
-    let reset_demo: OnActivate = Arc::new({
+    let reset_demo = {
         let visible_message_count_model = visible_message_count_model.clone();
-        move |host, acx, _reason| {
+        move |host, acx| {
             let _ = host
                 .models_mut()
                 .update(&visible_message_count_model, |count| {
@@ -77,7 +76,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 });
             host.request_redraw(acx.window);
         }
-    });
+    };
 
     let restored_marker = (visible_message_count == INITIAL_CHECKPOINTS[0].message_count)
         .then(|| {
@@ -116,7 +115,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             .tooltip(checkpoint.tooltip)
                             .tooltip_panel_test_id("ui-ai-checkpoint-tooltip-panel")
                             .test_id("ui-ai-checkpoint-trigger")
-                            .on_activate(restore_to_checkpoint.clone())
+                            .listen(cx, restore_to_checkpoint.clone())
                             .into_element(cx),
                     ])
                     .test_id("ui-ai-checkpoint-row")
@@ -161,7 +160,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
                 .test_id("ui-ai-checkpoint-reset")
-                .on_activate(reset_demo.clone())
+                .listen(cx, reset_demo.clone())
                 .into_element(cx),
         ]
     })

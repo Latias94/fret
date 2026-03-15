@@ -132,7 +132,7 @@ fn item_avatar(
     let actions = shadcn::ItemActions::new([add]).into_element(cx);
 
     shadcn::Item::new([media, content, actions])
-        .on_click(CMD_APP_OPEN)
+        .action(CMD_APP_OPEN)
         .refine_layout(LayoutRefinement::default().w_full())
         .into_element(cx)
         .test_id(test_id)
@@ -176,7 +176,7 @@ fn item_team(
         .into_element(cx);
 
     shadcn::Item::new([media, content, actions])
-        .on_click(CMD_APP_OPEN)
+        .action(CMD_APP_OPEN)
         .refine_layout(LayoutRefinement::default().w_full())
         .into_element(cx)
         .test_id(test_id)
@@ -493,7 +493,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             rows.push(
                 shadcn::Item::new([media, content, duration, actions])
                     .variant(shadcn::ItemVariant::Outline)
-                    .on_click(CMD_APP_OPEN)
+                    .action(CMD_APP_OPEN)
                     .refine_layout(LayoutRefinement::default().w_full())
                     .into_element(cx)
                     .test_id(format!("ui-gallery-item-music-{idx}")),
@@ -558,7 +558,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
             children.push(
                 shadcn::Item::new([content, number_col])
-                    .on_click(CMD_APP_OPEN)
+                    .action(CMD_APP_OPEN)
                     .refine_layout(LayoutRefinement::default().w_full())
                     .into_element(cx)
                     .test_id(format!("ui-gallery-item-issue-{idx}")),

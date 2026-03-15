@@ -231,22 +231,22 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> ViewElements 
                 shadcn::Button::new("None")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
-                    .on_click(CommandId::from(CMD_TO_NONE))
+                    .action(CMD_TO_NONE)
                     .test_id(TEST_ID_TO_NONE),
                 shadcn::Button::new("Mica")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
-                    .on_click(CommandId::from(CMD_TO_MICA))
+                    .action(CMD_TO_MICA)
                     .test_id(TEST_ID_TO_MICA),
                 shadcn::Button::new("Acrylic")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
-                    .on_click(CommandId::from(CMD_TO_ACRYLIC))
+                    .action(CMD_TO_ACRYLIC)
                     .test_id(TEST_ID_TO_ACRYLIC),
                 shadcn::Button::new("Quit")
                     .variant(shadcn::ButtonVariant::Destructive)
                     .size(shadcn::ButtonSize::Sm)
-                    .on_click(CommandId::from(CMD_QUIT)),
+                    .action(CMD_QUIT),
             ]
         } else if is_macos {
             ui::children![
@@ -254,17 +254,17 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> ViewElements 
                 shadcn::Button::new("None")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
-                    .on_click(CommandId::from(CMD_TO_NONE))
+                    .action(CMD_TO_NONE)
                     .test_id(TEST_ID_TO_NONE),
                 shadcn::Button::new("Vibrancy")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
-                    .on_click(CommandId::from(CMD_TO_VIBRANCY))
+                    .action(CMD_TO_VIBRANCY)
                     .test_id(TEST_ID_TO_VIBRANCY),
                 shadcn::Button::new("Quit")
                     .variant(shadcn::ButtonVariant::Destructive)
                     .size(shadcn::ButtonSize::Sm)
-                    .on_click(CommandId::from(CMD_QUIT)),
+                    .action(CMD_QUIT),
             ]
         } else {
             ui::children![
@@ -272,7 +272,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> ViewElements 
                 shadcn::Button::new("Quit")
                     .variant(shadcn::ButtonVariant::Destructive)
                     .size(shadcn::ButtonSize::Sm)
-                    .on_click(CommandId::from(CMD_QUIT)),
+                    .action(CMD_QUIT),
             ]
         };
 

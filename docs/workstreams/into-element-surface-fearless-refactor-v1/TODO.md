@@ -41,11 +41,11 @@ Execution note on 2026-03-14:
   a redundant `.into()` after that scaffold call.
 - `apps/fret-examples/src/todo_demo.rs` and the generated todo/simple-todo helpers in
   `apps/fretboard/src/scaffold/templates.rs` now also keep their `todo_page(...)` helpers on that
-  same root-owned lane (`UiCx` -> `Ui`), so the canonical compare set no longer teaches
+  same typed-child lane (`impl UiChild`), so the canonical compare set no longer teaches
   `todo_page(...).into_element(cx).into()` as the default root wrapper pattern either.
-- the onboarding cookbook `hello.rs` sample now also uses `hello_page(cx, ...) -> Ui`, so the
-  first-contact app example no longer teaches `let root = ...; root.into_element(cx).into()` in
-  `render()`.
+- the onboarding cookbook `hello.rs` sample now also uses `hello_page(...) -> impl UiChild`, so
+  the first-contact app example no longer teaches `let root = ...; root.into_element(cx).into()`
+  in `render()`.
 - the advanced `assets_demo` example now also follows the typed root-helper rule:
   `assets_page(cx, ...) -> Ui` owns the final landing, so the advanced/manual lane does not have
   to keep a root-local `let page = ...; page.into()` seam when the page wrapper itself is not raw.
@@ -64,7 +64,7 @@ Execution note on 2026-03-14:
   `simple_todo_demo`, `cjk_conformance_demo`, and `emoji_conformance_demo` now keep their root
   shells on local `ElementContext<'_, App>` helpers returning `IntoUiElement<App>`.
 - the first-contact `hello_counter_demo` on the default app lane now also keeps its root shell on
-  `hello_counter_page(cx, ...) -> Ui`, so that example no longer teaches inline root wrapper
+  `hello_counter_page(...) -> impl UiChild`, so that example no longer teaches inline root wrapper
   chrome inside `render(...)`.
 - the advanced compare sample `hello_world_compare_demo` now also keeps its final root panel on a
   local `hello_world_compare_root(cx, ...) -> Ui` helper instead of leaving the whole final
@@ -190,10 +190,12 @@ Execution note on 2026-03-14:
 - the default-app UI Gallery page/snippet surface is now effectively closed on the target posture:
   `apps/fret-ui-gallery/src/ui/{pages,snippets}` no longer contains `DocSection::new(...)`,
   there is no remaining default snippet `render(cx: &mut UiCx<'_>) -> AnyElement`,
-  and the only remaining raw top-level snippet renders on that lane are the intentional
-  diagnostics harness roots
-  `scroll_area/drag_baseline.rs` and
-  `scroll_area/expand_at_bottom.rs`.
+  and the former scroll-area diagnostics exceptions now live on the dedicated
+  `apps/fret-ui-gallery/src/ui/diagnostics/scroll_area/{drag_baseline,expand_at_bottom}.rs` lane.
+- the source-policy closure is now lane-level rather than family-level:
+  `ui_authoring_surface_default_app::{copyable_ui_gallery_snippet_lane_has_no_top_level_raw_render_roots,ui_gallery_diagnostics_raw_render_roots_are_explicitly_documented}`
+  keeps the entire copyable snippet tree off raw landed roots and requires every diagnostics raw
+  root to carry an explicit rationale comment.
 - the internal preview page surface is now aligned on the same typed section posture too:
   `apps/fret-ui-gallery/src/ui/previews/pages/**` no longer contains `DocSection::new(...)`, and
   the focused `ui_authoring_surface_internal_previews` gate now locks the selected harness/torture
@@ -209,7 +211,7 @@ Execution note on 2026-03-14:
   `apps/fret-ui-gallery/src/ui/previews/**::preview_*` registry vectors,
   `apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay.rs` /
   `overlay/flags.rs` diagnostics result vectors,
-  and the two `apps/fret-ui-gallery/src/ui/snippets/scroll_area/*` diagnostics raw roots.
+  and the two `apps/fret-ui-gallery/src/ui/diagnostics/scroll_area/*` diagnostics raw roots.
 
 Closeout note on 2026-03-15:
 
@@ -223,6 +225,11 @@ Closeout note on 2026-03-15:
   itself onto the wrong lane,
 - if a future change reopens conversion-surface design, document the new boundary first instead of
   treating this TODO as a standing invitation to widen APIs again.
+- clarified default-app helper posture:
+  named app helpers no longer imply `UiCx -> Ui` by default;
+  pure page-shell helpers should stay on `fn helper(...) -> impl UiChild` and let `render(...)`
+  own the final late landing, while helpers that actually touch runtime/context state may still
+  take `&mut UiCx<'_>`.
 
 ## M0 — Lock the target vocabulary
 
@@ -403,8 +410,8 @@ Implementation note on 2026-03-13:
   the keyed child scope.
 - `apps/fretboard/src/scaffold/templates.rs::{todo_page(...),simple_todo::todo_page(...)}`
   now follows that same rule: page helpers stay on `impl UiChild`, drop helper-local `cx`, and
-  keep the explicit `.into_element(cx)` only at the final render-root conversion for the generated
-  `todo` / `simple-todo` templates.
+  let the generated `todo` / `simple-todo` templates land those helpers through
+  `ui::children![cx; todo_page(...)]` instead of helper-local `.into_element(cx)`.
 - `apps/fret-cookbook/src/scaffold.rs::{centered_page,centered_page_background,centered_page_muted}`
   now follows the same input-side rule: the shared cookbook page shell accepts
   `IntoUiElement<H>` directly, keeps `AnyElement` only as the named final page-root landing seam,
@@ -466,11 +473,12 @@ Implementation note on 2026-03-13:
   now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, the app-facing examples
   now consistently teach `shadcn::scroll_area(cx, |_cx| [...])`, and
   `apps/fret-ui-gallery/src/ui/pages/scroll_area.rs` routes those previews through
-  `DocSection::build(cx, ...)` while intentionally keeping `drag_baseline` /
-  `expand_at_bottom` as the only two diagnostics-owned raw harness roots on that lane; the dedicated
-  diagnostics harness snippets now also carry explicit raw-boundary comments, and
-  `ui_authoring_surface_default_app::scroll_area_diagnostics_snippets_remain_intentional_raw_boundaries`
-  locks their host-generic `-> AnyElement` render roots.
+  `DocSection::build(cx, ...)`, while the dedicated diagnostics harnesses now live in
+  `apps/fret-ui-gallery/src/ui/diagnostics/scroll_area/{drag_baseline,expand_at_bottom}.rs`,
+  carry explicit raw-boundary comments, and are registered through
+  `DocSection::build_diagnostics(cx, ...)`; the pair of source gates
+  `ui_authoring_surface_default_app::{scroll_area_app_facing_snippet_lane_has_no_raw_boundaries,scroll_area_diagnostics_lane_keeps_intentional_raw_boundaries}`
+  now lock the split between copyable snippets and raw diagnostics roots.
 - the same UI Gallery top-level snippet cleanup now also covers the progress family:
   `apps/fret-ui-gallery/src/ui/snippets/progress/{demo,usage,label,controlled,rtl}.rs`
   now expose `pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>`, and

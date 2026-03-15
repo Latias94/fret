@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("confirmation_demo.rs");
 
 // region: example
+use fret::app::AppActivateExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui::Invalidation;
 use fret_ui::Theme;
@@ -10,7 +11,6 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::ui;
 use fret_ui_kit::{Items, LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
-use std::sync::Arc;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let state = cx.local_model_keyed("state", || ui_ai::ToolUiPartState::InputAvailable);
@@ -27,10 +27,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .variant(shadcn::ButtonVariant::Secondary)
         .size(shadcn::ButtonSize::Sm)
         .test_id("ui-ai-confirmation-requested-btn")
-        .on_activate(Arc::new({
+        .listen(cx, {
             let state = state.clone();
             let approval = approval.clone();
-            move |host, action_cx, _reason| {
+            move |host, action_cx| {
                 let _ = host
                     .models_mut()
                     .update(&state, |v| *v = ui_ai::ToolUiPartState::ApprovalRequested);
@@ -39,16 +39,16 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 });
                 host.notify(action_cx);
             }
-        }))
+        })
         .into_element(cx);
 
     let reject_btn = ui_ai::ConfirmationAction::new("Reject")
         .variant(shadcn::ButtonVariant::Outline)
         .test_id("ui-ai-confirmation-reject")
-        .on_activate(Arc::new({
+        .listen(cx, {
             let state = state.clone();
             let approval = approval.clone();
-            move |host, action_cx, _reason| {
+            move |host, action_cx| {
                 let _ = host
                     .models_mut()
                     .update(&state, |v| *v = ui_ai::ToolUiPartState::OutputDenied);
@@ -59,16 +59,16 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 });
                 host.notify(action_cx);
             }
-        }))
+        })
         .into_element(cx);
 
     let approve_btn = ui_ai::ConfirmationAction::new("Approve")
         .variant(shadcn::ButtonVariant::Default)
         .test_id("ui-ai-confirmation-approve")
-        .on_activate(Arc::new({
+        .listen(cx, {
             let state = state.clone();
             let approval = approval.clone();
-            move |host, action_cx, _reason| {
+            move |host, action_cx| {
                 let _ = host
                     .models_mut()
                     .update(&state, |v| *v = ui_ai::ToolUiPartState::ApprovalResponded);
@@ -79,7 +79,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 });
                 host.notify(action_cx);
             }
-        }))
+        })
         .into_element(cx);
 
     let confirmation = match approval_now {

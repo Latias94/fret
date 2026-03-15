@@ -172,6 +172,14 @@ Priority correction on 2026-03-15:
   - [x] Ninth batch on 2026-03-15: remove `actions` / `workspace_menu` module re-exports from
     `fret::app::prelude::*`; app code now reaches those heavier module surfaces through explicit
     `fret::actions::*` / `fret::workspace_menu::*` lanes instead of first-contact wildcard imports.
+  - [x] Tenth batch on 2026-03-15: remove `UiElementSinkExt as _` from
+    `fret::app::prelude::*`; sink-style `*_build(|cx, out| ...)` composition now requires an
+    explicit `use fret::children::UiElementSinkExt as _;` import in the small set of app examples
+    that intentionally opt into manual child pipelines.
+  - [x] Eleventh batch on 2026-03-15: keep command-availability reads off the default app
+    prelude; code that intentionally calls `cx.action_is_enabled(...)` now imports
+    `use fret::actions::ElementCommandGatingExt as _;` explicitly instead of rediscovering command
+    gating through first-contact wildcard imports.
   - Minimum audit set:
     - semantics/test-id/key-context helper families that are still duplicated across app and
       component preludes without an app-specific justification,
@@ -192,6 +200,9 @@ Priority correction on 2026-03-15:
     of `fret::app::prelude::*`, and points adaptive helpers at `fret::env::{...}`.
   - `docs/crate-usage-guide.md` now also teaches reusable component authors to import
     `fret::actions::CommandId` explicitly instead of expecting it from
+    `fret::component::prelude::*`.
+  - `docs/crate-usage-guide.md` and `docs/component-author-guide.md` now also teach raw
+    activation helper glue as an explicit `fret::activate::{...}` lane instead of part of
     `fret::component::prelude::*`.
   - `ecosystem/fret/README.md` and `docs/crate-usage-guide.md` now teach
     `fret::semantics::SemanticsRole` as the explicit app-facing semantic-role lane.
@@ -233,15 +244,19 @@ Priority correction on 2026-03-15:
     `use fret_ui_shadcn as shadcn;`, `shadcn::shadcn_themes::*`, or root
     `shadcn::typography::*`.
   - [x] Audit remaining first-party docs/examples for root-level shadcn app-install teaching.
-  - [ ] Reduce first-contact shadcn discovery to one taught lane.
+  - [x] Reduce first-contact shadcn discovery to one taught lane.
     - Goal: `use fret_ui_shadcn::{facade as shadcn, prelude::*};` is the only default first-contact
-      story, while crate-root exports are treated as compatibility/implementation residue and
-      `shadcn::raw::*` stays explicit.
+      story, while component-family crate-root exports stay deleted and `shadcn::raw::*` remains
+      explicit.
     - This is not just a docs issue: if first-party tests must keep forbidding alternative import
       paths, the public surface still needs more self-constraint.
     - Exit condition: docs and status docs stop talking about crate root / facade as peer teaching
-      lanes, and the remaining root-level exposure is explicitly classified as retained raw or
-      compatibility surface.
+      lanes, and the remaining root-level exposure is explicitly classified as raw or narrow glue
+      residue.
+    - 2026-03-15 progress: the curated `prelude`, raw seam doctests, crate-internal recipe/helper
+      glue, crate-local tests, and first-party workspace call sites are now off hidden flat root
+      component exports; the component-family and direction-utility delete passes have landed and
+      the remaining root lane is limited to non-component glue residue.
     - 2026-03-15 follow-up: first-party UI Gallery snippet/page surfaces no longer use
       `fret_ui_shadcn::icon::*`, `fret_ui_shadcn::empty::*`, `fret_ui_shadcn::select::*`,
       `fret_ui_shadcn::tabs::*`, or similar flat root/module lanes; gallery authoring now flows

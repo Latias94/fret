@@ -1,4 +1,7 @@
+use fret::actions::ElementCommandGatingExt as _;
 use fret::app::prelude::*;
+use fret::children::UiElementSinkExt as _;
+use fret::semantics::SemanticsRole;
 use fret::style::Space;
 use fret_app::{
     CommandMeta, CommandScope, DefaultKeybinding, InputContext, KeyChord, KeymapService, Platform,

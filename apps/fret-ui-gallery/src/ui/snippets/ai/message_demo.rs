@@ -1,9 +1,9 @@
 pub const SOURCE: &str = include_str!("message_demo.rs");
 
 // region: example
+use fret::app::AppActivateExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui::Invalidation;
-use fret_ui::action::OnActivate;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{Justify, LayoutRefinement, Space};
@@ -22,14 +22,14 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .text(format!("last_action={last_action}"))
         .test_id("ui-ai-message-demo-last-action");
 
-    let set_action = |label: &'static str| -> OnActivate {
+    let set_action = |label: &'static str| {
         let last_action_model = last_action_model.clone();
-        Arc::new(move |host, acx, _reason| {
+        move |host, acx| {
             let _ = host.models_mut().update(&last_action_model, |v| {
                 *v = Some(Arc::<str>::from(label));
             });
             host.request_redraw(acx.window);
-        })
+        }
     };
 
     let assistant_actions = ui_ai::MessageActions::new([
@@ -37,13 +37,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .tooltip("Copy message")
             .icon(fret_icons::ids::ui::COPY)
             .test_id("ui-ai-message-demo-assistant-action-copy")
-            .on_activate(set_action("assistant.copy"))
+            .listen(cx, set_action("assistant.copy"))
             .into_element(cx),
         ui_ai::MessageAction::new("Regenerate")
             .tooltip("Regenerate")
             .icon(fret_icons::ids::ui::LOADER)
             .test_id("ui-ai-message-demo-assistant-action-regenerate")
-            .on_activate(set_action("assistant.regenerate"))
+            .listen(cx, set_action("assistant.regenerate"))
             .into_element(cx),
     ])
     .justify(Justify::Start)
@@ -54,7 +54,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .tooltip("Edit message")
         .icon(fret_icons::ids::ui::FILE)
         .test_id("ui-ai-message-demo-user-action-edit")
-        .on_activate(set_action("user.edit"))
+        .listen(cx, set_action("user.edit"))
         .into_element(cx)])
     .justify(Justify::End)
     .test_id("ui-ai-message-demo-user-actions")

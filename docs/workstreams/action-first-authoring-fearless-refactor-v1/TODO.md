@@ -807,6 +807,23 @@ Current sequencing note (as of 2026-03-09):
     alias debt is no longer concentrated on those secondary stable slots.
   - Source-policy update (as of 2026-03-15): `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs` now locks those default-facing clickable surfaces on the action-first alias wording so future cleanup does not silently regress them back to command-shaped-only naming.
   - Toast follow-up (as of 2026-03-15): `ecosystem/fret-ui-shadcn/src/sonner.rs` now exposes `ToastMessageOptions::action_id(...)` / `action_command(...)` / `cancel_id(...)` / `cancel_command(...)`, and the primary Sonner gallery demo now prefers `action_id(...)` / `cancel_id(...)` while keeping the same toast dispatch internals.
+  - Button teaching-surface follow-up (as of 2026-03-15): the remaining first-party `Button`
+    demos/snippets that bind stable action IDs now also prefer `.action(...)` instead of the
+    legacy `.on_click(...)` spelling across curated cookbook/examples, `components_gallery`, and
+    the ui-gallery driver/snippet surfaces (`chrome`, `settings_sheet`, `view_cache`, code-editor
+    previews, input file browse, and the deprecated toast redirect card).
+  - Button teaching-surface gate update (as of 2026-03-15):
+    `tools/gate_button_action_default_surfaces.py` now locks that curated first-party slice to the
+    action-first builder spelling, and `tools/pre_release.py` runs the gate with the rest of the
+    default-surface policy suite.
+  - Gallery action-alias follow-up (as of 2026-03-15): the remaining ui-gallery snippets/pages for
+    widgets that already expose stable action slots now also prefer `.action(...)` across
+    `SidebarMenuButton` navigation, `NavigationMenuItem` link-component, `Button` link-render,
+    `BreadcrumbLink`, `Item`, and the `Pagination*` family.
+  - Gallery action-alias gate update (as of 2026-03-15):
+    `tools/gate_gallery_action_alias_default_surfaces.py` now keeps that curated ui-gallery slice
+    off legacy `.on_click(...)`, and `tools/pre_release.py` runs the gate alongside the other
+    default-surface policy checks.
 
 - [x] AFA-postv1-021 Land the menu-family action-first alias pass for `ContextMenu*` / `Menubar*`.
   - Goal: remove the largest remaining command-shaped builder inconsistency from the default component surface without changing menu routing internals.
@@ -1046,6 +1063,21 @@ Current sequencing note (as of 2026-03-09):
     - `ecosystem/fret/src/view.rs` (`AppActivateSurface`, `AppActivateExt`)
     - `ecosystem/fret/src/lib.rs` (`fret::app::prelude::*` imports `AppActivateExt as _`; `fret::app::AppActivateSurface`)
     - `docs/first-hour.md`
+  - Follow-up evidence (as of 2026-03-15):
+    - `ecosystem/fret/src/lib.rs` now explicitly exports `fret::app::AppActivateExt` alongside
+      `fret::app::AppActivateSurface`, and the facade self-tests lock that shape
+    - `ecosystem/fret/src/view.rs` now extends the same thin sugar lane to
+      `fret_ui_shadcn::facade::Button`, `fret_ui_shadcn::facade::SidebarMenuButton`, and optional
+      `fret_ui_ai::{ArtifactAction, ArtifactClose, CheckpointTrigger, ConfirmationAction, ConversationDownload, MessageAction, PromptInputButton, WebPreviewNavigationButton, WorkflowControlsButton}`
+    - `ecosystem/fret/src/view.rs` source-policy also locks the exclusion boundary: no
+      `AppActionCxSurface` family, and no `AppActivateSurface` impls for typed payload/context
+      callbacks like `fret_ui_ai::{Attachment, FileTreeAction, MessageBranch, QueueItemAction, Suggestion, Test}`.
+    - selected activation-only UI Gallery snippets (`ai/{artifact_code_display,artifact_demo,chat_demo,checkpoint_demo,confirmation_demo,conversation_demo,message_usage,message_demo,persona_demo,prompt_input_docs_demo,prompt_input_referenced_sources_demo,reasoning_demo,task_demo,transcript_torture,web_preview_demo,workflow_controls_demo,workflow_node_graph_demo}`,
+      `drawer/demo`, `data_table/{basic_demo,default_demo,rtl_demo}`,
+      `scroll_area/nested_scroll_routing`, `sidebar/{demo,controlled,mobile,rtl}`,
+      `sonner/{demo,extras,usage,position}`) now prefer `.listen(cx, ...)`
+    - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
+      (`selected_activation_snippets_prefer_app_activate_listen`) locks that default teaching lane
 - Payload actions (v2+), behind strict determinism + validation rules.
   - See: `docs/adr/0312-payload-actions-v2.md`
 

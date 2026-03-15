@@ -545,42 +545,69 @@ pub trait AppActivateSurface: Sized {
     fn on_activate(self, on_activate: OnActivate) -> Self;
 }
 
+#[doc(hidden)]
+pub trait AppActivateCxMarker {}
+
+impl<'cx, 'a, H: UiHost> AppActivateCxMarker for AppUi<'cx, 'a, H> {}
+
+impl<'a, H: UiHost> AppActivateCxMarker for ElementContext<'a, H> {}
+
 /// Thin app-facing sugar for activation-only widget surfaces.
 ///
 /// Prefer widget-native `.action(...)` / `.action_payload(...)` whenever a stable action slot
 /// already exists. Use this only for activation-only surfaces that would otherwise force
-/// `.on_activate(cx.actions().dispatch::<A>())` boilerplate.
+/// `.dispatch::<A>(cx)` / `.dispatch_payload::<A>(cx, payload)` / `.listen(cx, ...)` boilerplate
+/// to reopen the raw `OnActivate` closure shape. The `cx` argument intentionally accepts both
+/// `View::render(&mut AppUi)` and extracted `UiCx` helper builders so the sugar stays consistent
+/// after authors split UI into smaller functions.
 pub trait AppActivateExt: AppActivateSurface {
-    fn dispatch<A, H: UiHost>(self, cx: &mut AppUi<'_, '_, H>) -> Self
+    fn dispatch<A, Cx: AppActivateCxMarker>(self, _cx: &mut Cx) -> Self
     where
         A: crate::TypedAction,
     {
-        <Self as AppActivateSurface>::on_activate(self, cx.actions().dispatch::<A>())
+        <Self as AppActivateSurface>::on_activate(self, dispatch_action_listener::<A>())
     }
 
-    fn dispatch_payload<A, H: UiHost>(self, cx: &mut AppUi<'_, '_, H>, payload: A::Payload) -> Self
+    fn dispatch_payload<A, Cx: AppActivateCxMarker>(self, _cx: &mut Cx, payload: A::Payload) -> Self
     where
         A: crate::actions::TypedPayloadAction,
         A::Payload: Clone,
     {
-        <Self as AppActivateSurface>::on_activate(self, cx.actions().dispatch_payload::<A>(payload))
+        <Self as AppActivateSurface>::on_activate(
+            self,
+            dispatch_payload_action_listener::<A>(payload),
+        )
     }
 
-    fn listen<H: UiHost>(
+    fn listen<Cx: AppActivateCxMarker>(
         self,
-        cx: &mut AppUi<'_, '_, H>,
+        _cx: &mut Cx,
         f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static,
     ) -> Self {
-        <Self as AppActivateSurface>::on_activate(self, cx.actions().listener(f))
+        <Self as AppActivateSurface>::on_activate(self, action_listener(f))
     }
 }
 
 impl<T> AppActivateExt for T where T: AppActivateSurface {}
 
 #[cfg(feature = "shadcn")]
-impl AppActivateSurface for fret_ui_shadcn::Badge {
+impl AppActivateSurface for fret_ui_shadcn::facade::Button {
     fn on_activate(self, on_activate: OnActivate) -> Self {
-        fret_ui_shadcn::Badge::on_activate(self, on_activate)
+        fret_ui_shadcn::facade::Button::on_activate(self, on_activate)
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl AppActivateSurface for fret_ui_shadcn::facade::Badge {
+    fn on_activate(self, on_activate: OnActivate) -> Self {
+        fret_ui_shadcn::facade::Badge::on_activate(self, on_activate)
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl AppActivateSurface for fret_ui_shadcn::facade::SidebarMenuButton {
+    fn on_activate(self, on_activate: OnActivate) -> Self {
+        fret_ui_shadcn::facade::SidebarMenuButton::on_activate(self, on_activate)
     }
 }
 
@@ -602,6 +629,90 @@ impl AppActivateSurface for fret_ui_shadcn::extras::BannerClose {
 impl AppActivateSurface for fret_ui_shadcn::extras::Ticker {
     fn on_activate(self, on_activate: OnActivate) -> Self {
         fret_ui_shadcn::extras::Ticker::on_activate(self, on_activate)
+    }
+}
+
+#[cfg(feature = "material3")]
+impl AppActivateSurface for fret_ui_material3::Card {
+    fn on_activate(self, on_activate: OnActivate) -> Self {
+        fret_ui_material3::Card::on_activate(self, on_activate)
+    }
+}
+
+#[cfg(feature = "material3")]
+impl AppActivateSurface for fret_ui_material3::DialogAction {
+    fn on_activate(self, on_activate: OnActivate) -> Self {
+        fret_ui_material3::DialogAction::on_activate(self, on_activate)
+    }
+}
+
+#[cfg(feature = "material3")]
+impl AppActivateSurface for fret_ui_material3::TopAppBarAction {
+    fn on_activate(self, on_activate: OnActivate) -> Self {
+        fret_ui_material3::TopAppBarAction::on_activate(self, on_activate)
+    }
+}
+
+#[cfg(feature = "ui-ai")]
+impl AppActivateSurface for fret_ui_ai::WorkflowControlsButton {
+    fn on_activate(self, on_activate: OnActivate) -> Self {
+        fret_ui_ai::WorkflowControlsButton::on_activate(self, on_activate)
+    }
+}
+
+#[cfg(feature = "ui-ai")]
+impl AppActivateSurface for fret_ui_ai::MessageAction {
+    fn on_activate(self, on_activate: OnActivate) -> Self {
+        fret_ui_ai::MessageAction::on_activate(self, on_activate)
+    }
+}
+
+#[cfg(feature = "ui-ai")]
+impl AppActivateSurface for fret_ui_ai::ArtifactClose {
+    fn on_activate(self, on_activate: OnActivate) -> Self {
+        fret_ui_ai::ArtifactClose::on_activate(self, on_activate)
+    }
+}
+
+#[cfg(feature = "ui-ai")]
+impl AppActivateSurface for fret_ui_ai::ConfirmationAction {
+    fn on_activate(self, on_activate: OnActivate) -> Self {
+        fret_ui_ai::ConfirmationAction::on_activate(self, on_activate)
+    }
+}
+
+#[cfg(feature = "ui-ai")]
+impl AppActivateSurface for fret_ui_ai::CheckpointTrigger {
+    fn on_activate(self, on_activate: OnActivate) -> Self {
+        fret_ui_ai::CheckpointTrigger::on_activate(self, on_activate)
+    }
+}
+
+#[cfg(feature = "ui-ai")]
+impl AppActivateSurface for fret_ui_ai::ArtifactAction {
+    fn on_activate(self, on_activate: OnActivate) -> Self {
+        fret_ui_ai::ArtifactAction::on_activate(self, on_activate)
+    }
+}
+
+#[cfg(feature = "ui-ai")]
+impl AppActivateSurface for fret_ui_ai::ConversationDownload {
+    fn on_activate(self, on_activate: OnActivate) -> Self {
+        fret_ui_ai::ConversationDownload::on_activate(self, on_activate)
+    }
+}
+
+#[cfg(feature = "ui-ai")]
+impl AppActivateSurface for fret_ui_ai::PromptInputButton {
+    fn on_activate(self, on_activate: OnActivate) -> Self {
+        fret_ui_ai::PromptInputButton::on_activate(self, on_activate)
+    }
+}
+
+#[cfg(feature = "ui-ai")]
+impl AppActivateSurface for fret_ui_ai::WebPreviewNavigationButton {
+    fn on_activate(self, on_activate: OnActivate) -> Self {
+        fret_ui_ai::WebPreviewNavigationButton::on_activate(self, on_activate)
     }
 }
 
@@ -1699,14 +1810,14 @@ mod tests {
         assert!(api_source.contains("pub trait AppUiRawStateExt"));
         assert!(api_source.contains("pub trait UiCxDataExt"));
         assert!(api_source.contains("pub fn actions(&mut self) -> AppUiActions"));
+        assert!(api_source.contains("pub trait AppActivateCxMarker"));
         assert!(api_source.contains("pub trait AppActivateSurface"));
         assert!(api_source.contains("pub trait AppActivateExt"));
-        assert!(api_source.contains("fn dispatch<A, H: UiHost>(self, cx: &mut AppUi"));
-        assert!(
-            api_source
-                .contains("fn dispatch_payload<A, H: UiHost>(self, cx: &mut AppUi<'_, '_, H>,")
-        );
-        assert!(api_source.contains("fn listen<H: UiHost>("));
+        assert!(api_source.contains("AppActivateCxMarker for AppUi"));
+        assert!(api_source.contains("AppActivateCxMarker for ElementContext"));
+        assert!(api_source.contains("fn dispatch<A, Cx: AppActivateCxMarker>(self, _cx: &mut Cx)"));
+        assert!(api_source.contains("fn dispatch_payload<A, Cx: AppActivateCxMarker>("));
+        assert!(api_source.contains("fn listen<Cx: AppActivateCxMarker>("));
         assert!(api_source.contains("pub fn dispatch<A>(self) -> OnActivate"));
         assert!(
             api_source
@@ -1715,7 +1826,17 @@ mod tests {
         assert!(api_source.contains("pub fn listener("));
         #[cfg(feature = "shadcn")]
         {
-            assert!(api_source.contains("impl AppActivateSurface for fret_ui_shadcn::Badge"));
+            assert!(
+                api_source.contains("impl AppActivateSurface for fret_ui_shadcn::facade::Button")
+            );
+            assert!(
+                api_source.contains("impl AppActivateSurface for fret_ui_shadcn::facade::Badge")
+            );
+            assert!(
+                api_source.contains(
+                    "impl AppActivateSurface for fret_ui_shadcn::facade::SidebarMenuButton"
+                )
+            );
             assert!(
                 api_source
                     .contains("impl AppActivateSurface for fret_ui_shadcn::extras::BannerAction")
@@ -1728,7 +1849,55 @@ mod tests {
                 api_source.contains("impl AppActivateSurface for fret_ui_shadcn::extras::Ticker")
             );
         }
+        #[cfg(feature = "material3")]
+        {
+            assert!(api_source.contains("impl AppActivateSurface for fret_ui_material3::Card"));
+            assert!(
+                api_source.contains("impl AppActivateSurface for fret_ui_material3::DialogAction")
+            );
+            assert!(
+                api_source
+                    .contains("impl AppActivateSurface for fret_ui_material3::TopAppBarAction")
+            );
+        }
+        #[cfg(feature = "ui-ai")]
+        {
+            assert!(
+                api_source
+                    .contains("impl AppActivateSurface for fret_ui_ai::WorkflowControlsButton")
+            );
+            assert!(api_source.contains("impl AppActivateSurface for fret_ui_ai::MessageAction"));
+            assert!(api_source.contains("impl AppActivateSurface for fret_ui_ai::ArtifactClose"));
+            assert!(
+                api_source.contains("impl AppActivateSurface for fret_ui_ai::ConfirmationAction")
+            );
+            assert!(
+                api_source.contains("impl AppActivateSurface for fret_ui_ai::CheckpointTrigger")
+            );
+            assert!(api_source.contains("impl AppActivateSurface for fret_ui_ai::ArtifactAction"));
+            assert!(
+                api_source.contains("impl AppActivateSurface for fret_ui_ai::ConversationDownload")
+            );
+            assert!(
+                api_source.contains("impl AppActivateSurface for fret_ui_ai::PromptInputButton")
+            );
+            assert!(
+                api_source
+                    .contains("impl AppActivateSurface for fret_ui_ai::WebPreviewNavigationButton")
+            );
+        }
         assert!(api_source.contains("pub fn data(&mut self) -> AppUiData"));
         assert!(api_source.contains("pub fn effects(&mut self) -> AppUiEffects"));
+        assert!(!api_source.contains("pub trait AppActionCxSurface"));
+        assert!(!api_source.contains("pub trait AppActionCxExt"));
+        assert!(!api_source.contains("impl AppActivateSurface for fret_ui_ai::Attachment"));
+        assert!(!api_source.contains("impl AppActivateSurface for fret_ui_ai::QueueItemAction"));
+        assert!(!api_source.contains("impl AppActivateSurface for fret_ui_ai::Test"));
+        assert!(!api_source.contains("impl AppActivateSurface for fret_ui_ai::FileTreeAction"));
+        assert!(!api_source.contains("impl AppActivateSurface for fret_ui_ai::Suggestion"));
+        assert!(!api_source.contains("impl AppActivateSurface for fret_ui_ai::MessageBranch"));
+        assert!(
+            !api_source.contains("impl AppActivateSurface for fret_ui_ai::TerminalClearButton")
+        );
     }
 }

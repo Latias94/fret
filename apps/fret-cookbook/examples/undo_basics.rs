@@ -1,4 +1,5 @@
 use fret::app::prelude::*;
+use fret::semantics::SemanticsRole;
 use fret::style::{ColorRef, Space, Theme};
 use fret_app::Effect;
 use fret_app::{

@@ -27,32 +27,32 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         shadcn::pagination_item(
                             shadcn::PaginationPrevious::new()
                                 .text("السابق")
-                                .on_click(CMD_APP_OPEN),
+                                .action(CMD_APP_OPEN),
                         ),
                         shadcn::pagination_item(
                             shadcn::pagination_link(
                                 |cx| ui::children![cx; cx.text(to_arabic_numerals(1))],
                             )
-                            .on_click(CMD_APP_OPEN),
+                            .action(CMD_APP_OPEN),
                         ),
                         shadcn::pagination_item(
                             shadcn::pagination_link(
                                 |cx| ui::children![cx; cx.text(to_arabic_numerals(2))],
                             )
-                            .on_click(CMD_APP_SAVE)
+                            .action(CMD_APP_SAVE)
                             .active(true),
                         ),
                         shadcn::pagination_item(
                             shadcn::pagination_link(
                                 |cx| ui::children![cx; cx.text(to_arabic_numerals(3))],
                             )
-                            .on_click(CMD_APP_SAVE),
+                            .action(CMD_APP_SAVE),
                         ),
                         shadcn::pagination_item(shadcn::PaginationEllipsis::new()),
                         shadcn::pagination_item(
                             shadcn::PaginationNext::new()
                                 .text("التالي")
-                                .on_click(CMD_APP_SAVE),
+                                .action(CMD_APP_SAVE),
                         ),
                     ]
                 }),
