@@ -8,7 +8,10 @@ fn crate_usage_guide_keeps_query_guidance_on_grouped_app_surfaces() {
     assert!(CRATE_USAGE_GUIDE.contains("Extracted `UiCx` helpers keep that same grouped"));
     assert!(CRATE_USAGE_GUIDE.contains("`UiCxDataExt`"));
     assert!(CRATE_USAGE_GUIDE.contains("working directly with low-level"));
-    assert!(CRATE_USAGE_GUIDE.contains("generic writer extensions outside the app-facing `fret` facades."));
+    assert!(
+        CRATE_USAGE_GUIDE
+            .contains("generic writer extensions outside the app-facing `fret` facades.")
+    );
     assert!(!CRATE_USAGE_GUIDE.contains("`ElementContext` helpers like `cx.use_query_async(...)`"));
     assert!(!CRATE_USAGE_GUIDE.contains("`cx.use_query_async(...)`"));
 }
