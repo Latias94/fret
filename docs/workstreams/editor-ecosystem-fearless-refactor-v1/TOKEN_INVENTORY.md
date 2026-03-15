@@ -4,7 +4,7 @@ Tracking doc: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/DESIGN.md`
 Related ADR: `docs/adr/0316-editor-ecosystem-token-namespaces-and-skinning-boundary-v1.md`
 
 Status: Draft  
-Last updated: 2026-03-09
+Last updated: 2026-03-14
 
 ## Purpose
 
@@ -44,7 +44,7 @@ It also records where stable seeding already exists today in adjacent crates suc
 
 | Category | Current families / keys | Notes |
 | --- | --- | --- |
-| Canonical editor-owned keys already modeled as constants | `editor.density.*`, `editor.numeric.*`, `editor.property.*`, `editor.checkbox.*`, `editor.enum_select.*`, `editor.axis.*`, `editor.vec.*`, `editor.color.*`, `editor.slider.*` | This is the clearest and healthiest namespace posture in the current editor ecosystem. |
+| Canonical editor-owned keys already modeled as constants | `editor.density.*`, `editor.numeric.*`, `editor.property.*`, `editor.popup.*`, `editor.checkbox.*`, `editor.enum_select.*`, `editor.axis.*`, `editor.vec.*`, `editor.color.*`, `editor.slider.*` | This is the clearest and healthiest namespace posture in the current editor ecosystem. The latest baseline cleanup also split `editor.property.group_border` from the outer panel frame and `editor.property.panel_header_*` from repeated section headers so nested inspector hierarchy can be tuned without one shared chrome weight for every level, and now also promotes shared popup surface background/border intent into `editor.popup.*` so dark editor popups stop inheriting a host theme's `popover` card. |
 | Shared component compatibility keys still read | `component.text_field.*`, `component.checkbox.*`, `component.input.*`, `component.slider.*`, `component.card.*` | These are compatibility / reuse bridges, not editor-owned namespaces. |
 | Generic semantic palette fallbacks still read | `background`, `foreground`, `muted`, `muted-foreground`, `accent`, `border`, `ring`, `primary`, `card`, `popover`, `destructive`, `secondary` | These are expected as safe fallbacks, but they should not be treated as editor ownership. |
 | Seeding / preset entrypoint | `apply_editor_theme_preset_v1`, `EditorThemePresetV1::{Default, ImguiLikeDense}` | Today this is the only editor ecosystem crate with an explicit preset patch path. |
@@ -54,6 +54,8 @@ Important observation:
 - `fret-ui-editor` already owns real `editor.*` keys,
 - but the current preset still patches shared `component.text_field.*` keys and generic palette
   keys like `card`, `muted`, `border`, `foreground`, `accent`, and `ring`.
+- The popup-surface cleanup now moves one more visible seam out of that host-palette dependency:
+  shared popup shells can read `editor.popup.*` first instead of inheriting `popover`.
 
 That is acceptable for a proof preset, but it is not the final clean ownership seam for reusable
 editor skinning.
@@ -109,7 +111,8 @@ Important observation:
 | --- | --- | --- | --- | --- |
 | `editor.density.*` | `fret-ui-editor` | Implemented | Read via `EditorTokenKeys`, seeded in `fret-ui-editor/src/theme.rs` | Stable for v1 use. |
 | `editor.numeric.*` | `fret-ui-editor` | Implemented | Read via `EditorTokenKeys`, seeded in preset patch | Stable for v1 use. |
-| `editor.property.*` | `fret-ui-editor` | Implemented | Read via `EditorTokenKeys`, seeded in preset patch | Stable for v1 use. |
+| `editor.property.*` | `fret-ui-editor` | Implemented | Read via `EditorTokenKeys`, seeded in preset patch | Stable for v1 use. The current set now includes separate outer-panel vs inner-group frame tuning (`editor.property.panel_border` and `editor.property.group_border`) plus a dedicated top-band pair (`editor.property.panel_header_bg` / `editor.property.panel_header_border`) above repeated group headers. |
+| `editor.popup.*` | `fret-ui-editor` | Implemented | Shared popup surface background/border plus radius/shadow metrics now read via `EditorTokenKeys` and are seeded in the preset patch | Stable for v1 use. This is the current landing zone for assist/select/color popup chrome that should not depend on a host theme's `popover` tone or require per-control geometry tuning. |
 | `editor.checkbox.*` | `fret-ui-editor` | Implemented | Read via `EditorTokenKeys`, seeded in preset patch | Stable for v1 use. |
 | `editor.enum_select.*` | `fret-ui-editor` | Partial | Only `editor.enum_select.max_list_height` exists today | Good enough for current proof work. |
 | `editor.axis.*` | `fret-ui-editor` | Implemented | Read via `VecEdit` axis color resolution | Stable for v1 use. |

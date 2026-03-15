@@ -41,6 +41,10 @@ batteries = [
 app = [
     "shadcn",
 ]
+editor = [
+    "dep:fret-ui-editor",
+    "shadcn",
+]
 
 # Derived + async state helpers used by `AppUi`.
 state = ["state-selector", "state-query"]
@@ -100,6 +104,7 @@ fret-query = { version = "0.1.0", path = "../fret-query", optional = true }
 fret-router = { version = "0.1.0", path = "../fret-router", optional = true }
 fret-router-ui = { version = "0.1.0", path = "../fret-router-ui", optional = true }
 fret-selector = { version = "0.1.0", path = "../fret-selector", optional = true }
+fret-ui-editor = { version = "0.1.0", path = "../fret-ui-editor", optional = true }
 fret-ui-shadcn = { version = "0.1.0", path = "../fret-ui-shadcn", optional = true, features = ["app-integration"] }
 fret-ui-kit = { version = "0.1.0", path = "../fret-ui-kit" }
 

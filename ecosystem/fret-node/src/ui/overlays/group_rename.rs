@@ -28,6 +28,14 @@ fn group_rename_rect_at(style: &NodeGraphStyle, desired_origin: Point, bounds: R
     )
 }
 
+fn rename_overlay_should_cancel_on_focus_loss(
+    child: Option<fret_core::NodeId>,
+    focus: Option<fret_core::NodeId>,
+    just_opened: bool,
+) -> bool {
+    !just_opened && child.is_some_and(|child| focus != Some(child))
+}
+
 /// UI-only overlay state for a node graph editor instance.
 #[derive(Debug, Default, Clone)]
 pub struct NodeGraphOverlayState {
@@ -47,7 +55,7 @@ pub struct SymbolRenameOverlay {
     pub invoked_at_window: Point,
 }
 
-/// Overlay host that provides a TextInput-backed group rename UI.
+/// Overlay host that provides a TextInput-backed inline rename UI.
 ///
 /// Expected children:
 /// - child 0: a `BoundTextInput` bound to `group_rename_text`.
@@ -262,7 +270,18 @@ impl<H: UiHost> Widget<H> for NodeGraphOverlayHost {
 
         if let Some(rename) = group_rename {
             self.last_opened_symbol = None;
-            if self.last_opened_group != Some(rename.group) {
+            let just_opened = self.last_opened_group != Some(rename.group);
+            if rename_overlay_should_cancel_on_focus_loss(child, cx.focus, just_opened) {
+                self.close_group_rename(cx.app);
+                self.last_opened_group = None;
+                self.group_rename_bounds = None;
+                self.active = false;
+                if let Some(child) = child {
+                    layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
+                }
+                return cx.bounds.size;
+            }
+            if just_opened {
                 self.last_opened_group = Some(rename.group);
                 let title = self
                     .graph
@@ -287,7 +306,18 @@ impl<H: UiHost> Widget<H> for NodeGraphOverlayHost {
             }
         } else if let Some(rename) = symbol_rename {
             self.last_opened_group = None;
-            if self.last_opened_symbol != Some(rename.symbol) {
+            let just_opened = self.last_opened_symbol != Some(rename.symbol);
+            if rename_overlay_should_cancel_on_focus_loss(child, cx.focus, just_opened) {
+                self.close_symbol_rename(cx.app);
+                self.last_opened_symbol = None;
+                self.group_rename_bounds = None;
+                self.active = false;
+                if let Some(child) = child {
+                    layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
+                }
+                return cx.bounds.size;
+            }
+            if just_opened {
                 self.last_opened_symbol = Some(rename.symbol);
                 let name = self
                     .graph

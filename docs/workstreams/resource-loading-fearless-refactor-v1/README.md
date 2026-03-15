@@ -87,11 +87,23 @@ This workstream takes a fearless posture:
   - `fretboard new todo --ui-assets` / `fretboard new simple-todo --ui-assets` now scaffold an
     `assets/` directory and mount it via `FretApp::asset_dir("assets")` so first-contact app
     templates do not bounce users back to path-first loading.
+- A first compile-time embedded artifact lane now exists for packaged/web/mobile-friendly builds:
+  - `fretboard assets rust write --dir ... --out ... --app-bundle ...` emits a generated Rust
+    module with:
+    - `StaticAssetEntry` registrations,
+    - stable content-based revisions,
+    - media-type inference for common asset kinds,
+    - `include_bytes!`-backed bytes owned by the package build.
+  - The generated module supports two consumption surfaces:
+    - `--surface fret` for apps using the `fret` facade,
+    - `--surface framework` for lower-level/runtime-facing crates that want direct
+      `fret-assets` / `fret-runtime` integration.
 - `fret-ui-assets` can now resolve bundle/embedded assets through the host-installed resolver for
   image and SVG bytes, while keeping the existing async image invalidation ergonomics.
 - Legacy file-path helpers still exist only as migration/dev/native compatibility shims.
-- Generated directory scanning is only a native/package-dev convenience lane today; it is not yet
-  a packaged web/mobile tooling story.
+- Generated directory scanning is still only a native/package-dev convenience lane today; the new
+  generated Rust module is the first packaged/web/mobile-friendly lane, but it does not yet cover
+  hashed web output rewriting or mobile platform-native bundle mapping.
 - Font startup still remains split across desktop/web/SVG text and is not solved by the current
   slice.
 

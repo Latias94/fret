@@ -361,6 +361,19 @@ impl PropertyRow {
             Some(el)
         });
 
+        let actions_el = actions(cx);
+        let has_action_slot = actions_el.is_some();
+        let status_slot_w = if has_action_slot {
+            status_slot_w
+        } else {
+            Px(0.0)
+        };
+        let reset_slot_w = if has_reset_slot {
+            reset_slot_w
+        } else {
+            Px(0.0)
+        };
+
         let row = match variant {
             PropertyRowLayoutVariant::Row => cx.flex(
                 FlexProps {
@@ -448,65 +461,71 @@ impl PropertyRow {
                                 |cx| vec![value(cx)],
                             );
 
-                            let reset_slot = cx.flex(
-                                FlexProps {
-                                    layout: LayoutStyle {
-                                        size: SizeStyle {
-                                            width: Length::Px(reset_slot_w),
-                                            height: Length::Auto,
-                                            min_height: Some(Length::Px(density.row_height)),
+                            let mut out = vec![value];
+
+                            if let Some(reset_el) = reset_el {
+                                out.push(cx.flex(
+                                    FlexProps {
+                                        layout: LayoutStyle {
+                                            size: SizeStyle {
+                                                width: Length::Px(reset_slot_w),
+                                                height: Length::Auto,
+                                                min_height: Some(Length::Px(density.row_height)),
+                                                ..Default::default()
+                                            },
+                                            flex: FlexItemStyle {
+                                                order: 0,
+                                                grow: 0.0,
+                                                shrink: 0.0,
+                                                basis: Length::Px(reset_slot_w),
+                                                align_self: None,
+                                            },
+                                            overflow: Overflow::Clip,
                                             ..Default::default()
                                         },
-                                        flex: FlexItemStyle {
-                                            order: 0,
-                                            grow: 0.0,
-                                            shrink: 0.0,
-                                            basis: Length::Px(reset_slot_w),
-                                            align_self: None,
-                                        },
-                                        overflow: Overflow::Clip,
-                                        ..Default::default()
+                                        direction: Axis::Horizontal,
+                                        gap: SpacingLength::Px(Px(0.0)),
+                                        padding: Edges::all(Px(0.0)).into(),
+                                        justify: MainAlign::End,
+                                        align: CrossAlign::Center,
+                                        wrap: false,
                                     },
-                                    direction: Axis::Horizontal,
-                                    gap: SpacingLength::Px(Px(0.0)),
-                                    padding: Edges::all(Px(0.0)).into(),
-                                    justify: MainAlign::End,
-                                    align: CrossAlign::Center,
-                                    wrap: false,
-                                },
-                                move |_cx| reset_el.into_iter().collect::<Vec<_>>(),
-                            );
+                                    move |_cx| vec![reset_el],
+                                ));
+                            }
 
-                            let action_slot = cx.flex(
-                                FlexProps {
-                                    layout: LayoutStyle {
-                                        size: SizeStyle {
-                                            width: Length::Px(status_slot_w),
-                                            height: Length::Auto,
-                                            min_height: Some(Length::Px(density.row_height)),
+                            if let Some(action_el) = actions_el {
+                                out.push(cx.flex(
+                                    FlexProps {
+                                        layout: LayoutStyle {
+                                            size: SizeStyle {
+                                                width: Length::Px(status_slot_w),
+                                                height: Length::Auto,
+                                                min_height: Some(Length::Px(density.row_height)),
+                                                ..Default::default()
+                                            },
+                                            flex: FlexItemStyle {
+                                                order: 0,
+                                                grow: 0.0,
+                                                shrink: 0.0,
+                                                basis: Length::Px(status_slot_w),
+                                                align_self: None,
+                                            },
+                                            overflow: Overflow::Clip,
                                             ..Default::default()
                                         },
-                                        flex: FlexItemStyle {
-                                            order: 0,
-                                            grow: 0.0,
-                                            shrink: 0.0,
-                                            basis: Length::Px(status_slot_w),
-                                            align_self: None,
-                                        },
-                                        overflow: Overflow::Clip,
-                                        ..Default::default()
+                                        direction: Axis::Horizontal,
+                                        gap: SpacingLength::Px(Px(0.0)),
+                                        padding: Edges::all(Px(0.0)).into(),
+                                        justify: MainAlign::End,
+                                        align: CrossAlign::Center,
+                                        wrap: false,
                                     },
-                                    direction: Axis::Horizontal,
-                                    gap: SpacingLength::Px(Px(0.0)),
-                                    padding: Edges::all(Px(0.0)).into(),
-                                    justify: MainAlign::End,
-                                    align: CrossAlign::Center,
-                                    wrap: false,
-                                },
-                                move |cx| actions(cx).into_iter().collect::<Vec<_>>(),
-                            );
+                                    move |_cx| vec![action_el],
+                                ));
+                            }
 
-                            vec![value, reset_slot, action_slot]
+                            out
                         },
                     );
 
@@ -571,65 +590,75 @@ impl PropertyRow {
                                     |cx| vec![label(cx)],
                                 );
 
-                                let reset_slot = cx.flex(
-                                    FlexProps {
-                                        layout: LayoutStyle {
-                                            size: SizeStyle {
-                                                width: Length::Px(reset_slot_w),
-                                                height: Length::Auto,
-                                                min_height: Some(Length::Px(density.row_height)),
+                                let mut out = vec![label];
+
+                                if let Some(reset_el) = reset_el {
+                                    out.push(cx.flex(
+                                        FlexProps {
+                                            layout: LayoutStyle {
+                                                size: SizeStyle {
+                                                    width: Length::Px(reset_slot_w),
+                                                    height: Length::Auto,
+                                                    min_height: Some(Length::Px(
+                                                        density.row_height,
+                                                    )),
+                                                    ..Default::default()
+                                                },
+                                                flex: FlexItemStyle {
+                                                    order: 0,
+                                                    grow: 0.0,
+                                                    shrink: 0.0,
+                                                    basis: Length::Px(reset_slot_w),
+                                                    align_self: None,
+                                                },
+                                                overflow: Overflow::Clip,
                                                 ..Default::default()
                                             },
-                                            flex: FlexItemStyle {
-                                                order: 0,
-                                                grow: 0.0,
-                                                shrink: 0.0,
-                                                basis: Length::Px(reset_slot_w),
-                                                align_self: None,
-                                            },
-                                            overflow: Overflow::Clip,
-                                            ..Default::default()
+                                            direction: Axis::Horizontal,
+                                            gap: SpacingLength::Px(Px(0.0)),
+                                            padding: Edges::all(Px(0.0)).into(),
+                                            justify: MainAlign::End,
+                                            align: CrossAlign::Center,
+                                            wrap: false,
                                         },
-                                        direction: Axis::Horizontal,
-                                        gap: SpacingLength::Px(Px(0.0)),
-                                        padding: Edges::all(Px(0.0)).into(),
-                                        justify: MainAlign::End,
-                                        align: CrossAlign::Center,
-                                        wrap: false,
-                                    },
-                                    move |_cx| reset_el.into_iter().collect::<Vec<_>>(),
-                                );
+                                        move |_cx| vec![reset_el],
+                                    ));
+                                }
 
-                                let action_slot = cx.flex(
-                                    FlexProps {
-                                        layout: LayoutStyle {
-                                            size: SizeStyle {
-                                                width: Length::Px(status_slot_w),
-                                                height: Length::Auto,
-                                                min_height: Some(Length::Px(density.row_height)),
+                                if let Some(action_el) = actions_el {
+                                    out.push(cx.flex(
+                                        FlexProps {
+                                            layout: LayoutStyle {
+                                                size: SizeStyle {
+                                                    width: Length::Px(status_slot_w),
+                                                    height: Length::Auto,
+                                                    min_height: Some(Length::Px(
+                                                        density.row_height,
+                                                    )),
+                                                    ..Default::default()
+                                                },
+                                                flex: FlexItemStyle {
+                                                    order: 0,
+                                                    grow: 0.0,
+                                                    shrink: 0.0,
+                                                    basis: Length::Px(status_slot_w),
+                                                    align_self: None,
+                                                },
+                                                overflow: Overflow::Clip,
                                                 ..Default::default()
                                             },
-                                            flex: FlexItemStyle {
-                                                order: 0,
-                                                grow: 0.0,
-                                                shrink: 0.0,
-                                                basis: Length::Px(status_slot_w),
-                                                align_self: None,
-                                            },
-                                            overflow: Overflow::Clip,
-                                            ..Default::default()
+                                            direction: Axis::Horizontal,
+                                            gap: SpacingLength::Px(Px(0.0)),
+                                            padding: Edges::all(Px(0.0)).into(),
+                                            justify: MainAlign::End,
+                                            align: CrossAlign::Center,
+                                            wrap: false,
                                         },
-                                        direction: Axis::Horizontal,
-                                        gap: SpacingLength::Px(Px(0.0)),
-                                        padding: Edges::all(Px(0.0)).into(),
-                                        justify: MainAlign::End,
-                                        align: CrossAlign::Center,
-                                        wrap: false,
-                                    },
-                                    move |cx| actions(cx).into_iter().collect::<Vec<_>>(),
-                                );
+                                        move |_cx| vec![action_el],
+                                    ));
+                                }
 
-                                vec![label, reset_slot, action_slot]
+                                out
                             },
                         );
 

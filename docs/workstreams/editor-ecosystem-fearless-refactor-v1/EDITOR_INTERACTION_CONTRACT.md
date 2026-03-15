@@ -11,7 +11,7 @@ Related docs:
 
 Status: Active design note (workstream contract, not an ADR)
 
-Last updated: 2026-03-13
+Last updated: 2026-03-15
 
 ## Purpose
 
@@ -232,6 +232,17 @@ Default commit points for the current buffered editor baseline:
 - single-line Enter commits explicitly,
 - multiline `Ctrl/Cmd+Enter` commits explicitly while plain Enter remains text insertion.
 
+Current promoted opt-in blur exceptions above that baseline:
+
+- `TextFieldBlurBehavior::Cancel` is valid for inline-rename-style editor surfaces that should
+  abandon a local draft when focus leaves the field; the first non-proof in-tree consumer now also
+  exists in `fret-node`'s retained rename overlay host, where focus loss cancels the rename
+  session and restores focus to the canvas without queueing a transaction,
+- `TextFieldBlurBehavior::PreserveDraft` is valid for multiline notes/description surfaces that
+  should keep the local draft alive across blur until an explicit commit/cancel,
+- and both exceptions remain proofed editor-policy opt-ins rather than a promoted higher-level
+  helper/recipe; `Cancel` now has one non-proof consumer, while `PreserveDraft` still needs one.
+
 Editor-owned extension hooks already permitted on top of that baseline:
 
 - password-mode rendering for single-line fields,
@@ -269,6 +280,7 @@ Rules already exercised by `imui_editor_proof_demo` and its focused diag gate:
 Current evidence anchor:
 
 - `tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-history.json`
+- `tools/diag-scripts/ui-editor/imui/imui-editor-proof-text-field-multiline-session-policy.json`
 
 ## Keyboard and focus rules
 

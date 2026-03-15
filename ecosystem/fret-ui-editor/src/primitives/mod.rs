@@ -6,6 +6,8 @@ pub(crate) mod icons;
 pub(crate) mod input_group;
 pub(crate) mod inspector_layout;
 pub mod numeric_text_entry;
+pub(crate) mod popup_surface;
+pub mod readout;
 pub(crate) mod style;
 pub mod text_entry;
 pub mod tokens;
@@ -29,5 +31,6 @@ pub use numeric_format::{
 };
 pub use numeric_text_entry::NumericInputSelectionBehavior;
 pub use numeric_value::{NumericValueConstraints, constrain_numeric_value};
+pub use readout::{EditorCompactReadoutStyle, compact_readout_text_px};
 pub use text_entry::{EditorTextCancelBehavior, EditorTextSelectionBehavior};
 pub use tokens::EditorTokenKeys;

@@ -147,11 +147,13 @@ impl InspectorPanel {
                 let header_gap = self.options.header_gap.unwrap_or(metrics.panel_header_gap);
                 let padding = self.options.padding.unwrap_or_else(|| Edges::all(Px(0.0)));
                 let header_bg = theme
-                    .color_by_key(EditorTokenKeys::PROPERTY_HEADER_BG)
+                    .color_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_BG)
+                    .or_else(|| theme.color_by_key(EditorTokenKeys::PROPERTY_HEADER_BG))
                     .or_else(|| theme.color_by_key("muted"))
                     .unwrap_or_else(|| theme.color_token("background"));
                 let header_border = theme
-                    .color_by_key(EditorTokenKeys::PROPERTY_HEADER_BORDER)
+                    .color_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_BORDER)
+                    .or_else(|| theme.color_by_key(EditorTokenKeys::PROPERTY_HEADER_BORDER))
                     .or_else(|| theme.color_by_key("border"))
                     .unwrap_or_else(|| theme.color_token("foreground"));
                 let panel_bg = theme
@@ -290,8 +292,20 @@ impl InspectorPanel {
                             },
                             ..Default::default()
                         },
-                        padding: Edges::all(density.padding_x).into(),
+                        padding: Edges {
+                            top: Px(density.padding_y.0 + 3.0),
+                            right: density.padding_x,
+                            bottom: Px(density.padding_y.0 + 4.0),
+                            left: density.padding_x,
+                        }
+                        .into(),
                         background: Some(header_bg),
+                        corner_radii: Corners {
+                            top_left: radius,
+                            top_right: radius,
+                            bottom_right: Px(0.0),
+                            bottom_left: Px(0.0),
+                        },
                         border: Edges {
                             top: Px(0.0),
                             right: Px(0.0),

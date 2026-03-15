@@ -87,7 +87,8 @@ pub fn reapply_installed_editor_theme_preset_v1<H: UiHost>(
 /// host app to rebuild its base theme.
 ///
 /// This is the common "host changed first, editor patch second" ordering used by apps that keep a
-/// host-owned theme in sync with environment light/dark preferences.
+/// host-owned theme in sync with environment light/dark preferences. If the host sync turns out to
+/// be a no-op, the installed editor preset is not replayed again.
 pub fn sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metrics_change<
     H: UiHost,
 >(
@@ -99,7 +100,11 @@ pub fn sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metr
         return None;
     }
 
+    let theme_revision_before = Theme::global(&*app).revision();
     sync_host_theme(app);
+    if Theme::global(&*app).revision() == theme_revision_before {
+        return None;
+    }
     reapply_installed_editor_theme_preset_v1(app)
 }
 
@@ -144,20 +149,20 @@ fn editor_theme_patch_v1() -> ThemeConfig {
     // Property grid responsiveness (stack label/value vertically in narrow inspectors).
     metric(&mut cfg, EditorTokenKeys::PROPERTY_LABEL_WIDTH, 124.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_COLUMN_GAP, 10.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_TRAILING_GAP, 8.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_TRAILING_GAP, 6.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_ROW_GAP, 5.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_VALUE_MAX_WIDTH, 640.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_STATUS_SLOT_WIDTH, 72.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_VALUE_MAX_WIDTH, 1024.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_STATUS_SLOT_WIDTH, 56.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_RESET_SLOT_WIDTH, 24.0);
     metric(
         &mut cfg,
         EditorTokenKeys::PROPERTY_GROUP_HEADER_HEIGHT,
-        26.0,
+        28.0,
     );
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_GROUP_CONTENT_GAP, 8.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_GROUP_CONTENT_GAP, 10.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_AUTO_STACK_BELOW, 520.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_GAP, 12.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_HEADER_GAP, 10.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_GAP, 14.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_HEADER_GAP, 12.0);
 
     // Text-field-like metrics (used by MiniSearchBox / NumericInput / ColorEdit).
     metric(&mut cfg, "component.text_field.padding_x", 6.0);
@@ -182,11 +187,28 @@ fn editor_theme_patch_v1() -> ThemeConfig {
     color(&mut cfg, "muted-foreground", "#9eabbc");
     color(&mut cfg, "accent", "#355a86");
     color(&mut cfg, "ring", "#7faee8");
+    color(&mut cfg, EditorTokenKeys::POPUP_BG, "#131b25");
+    color(&mut cfg, EditorTokenKeys::POPUP_BORDER, "#46596c");
+    metric(&mut cfg, EditorTokenKeys::POPUP_RADIUS, 8.0);
+    metric(&mut cfg, EditorTokenKeys::POPUP_SHADOW_OFFSET_Y, 6.0);
+    metric(&mut cfg, EditorTokenKeys::POPUP_SHADOW_BLUR, 16.0);
+    metric(&mut cfg, EditorTokenKeys::POPUP_SHADOW_SPREAD, -4.0);
 
     color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BG, "#0f151d");
-    color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BORDER, "#364454");
-    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BG, "#1d2631");
-    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BORDER, "#3a495a");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BORDER, "#3d4d5f");
+    color(
+        &mut cfg,
+        EditorTokenKeys::PROPERTY_PANEL_HEADER_BG,
+        "#243445",
+    );
+    color(
+        &mut cfg,
+        EditorTokenKeys::PROPERTY_PANEL_HEADER_BORDER,
+        "#5a7087",
+    );
+    color(&mut cfg, EditorTokenKeys::PROPERTY_GROUP_BORDER, "#33414f");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BG, "#19232e");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BORDER, "#384857");
     color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_FG, "#edf3fa");
 
     color(&mut cfg, EditorTokenKeys::CONTROL_INVALID_FG, "#ffd3d6");
@@ -224,20 +246,20 @@ fn imgui_like_dense_patch_v1() -> ThemeConfig {
     metric(&mut cfg, EditorTokenKeys::NUMERIC_SCRUB_DRAG_THRESHOLD, 2.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_LABEL_WIDTH, 120.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_COLUMN_GAP, 6.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_TRAILING_GAP, 5.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_TRAILING_GAP, 3.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_ROW_GAP, 4.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_VALUE_MAX_WIDTH, 560.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_STATUS_SLOT_WIDTH, 64.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_VALUE_MAX_WIDTH, 840.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_STATUS_SLOT_WIDTH, 48.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_RESET_SLOT_WIDTH, 22.0);
     metric(
         &mut cfg,
         EditorTokenKeys::PROPERTY_GROUP_HEADER_HEIGHT,
-        23.0,
+        24.0,
     );
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_GROUP_CONTENT_GAP, 5.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_GROUP_CONTENT_GAP, 6.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_AUTO_STACK_BELOW, 480.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_GAP, 9.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_HEADER_GAP, 7.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_GAP, 10.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_HEADER_GAP, 8.0);
     metric(&mut cfg, EditorTokenKeys::CHECKBOX_SIZE, 14.0);
     metric(&mut cfg, EditorTokenKeys::CHECKBOX_RADIUS, 2.0);
     metric(&mut cfg, EditorTokenKeys::VEC_AUTO_STACK_BELOW, 400.0);
@@ -265,11 +287,28 @@ fn imgui_like_dense_patch_v1() -> ThemeConfig {
     color(&mut cfg, "muted-foreground", "#acb4bf");
     color(&mut cfg, "accent", "#4c88c7");
     color(&mut cfg, "ring", "#6ea8e0");
+    color(&mut cfg, EditorTokenKeys::POPUP_BG, "#24292f");
+    color(&mut cfg, EditorTokenKeys::POPUP_BORDER, "#687686");
+    metric(&mut cfg, EditorTokenKeys::POPUP_RADIUS, 4.0);
+    metric(&mut cfg, EditorTokenKeys::POPUP_SHADOW_OFFSET_Y, 4.0);
+    metric(&mut cfg, EditorTokenKeys::POPUP_SHADOW_BLUR, 12.0);
+    metric(&mut cfg, EditorTokenKeys::POPUP_SHADOW_SPREAD, -3.0);
 
     color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BG, "#1d2127");
-    color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BORDER, "#4a5562");
-    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BG, "#2b3138");
-    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BORDER, "#56616f");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BORDER, "#54606d");
+    color(
+        &mut cfg,
+        EditorTokenKeys::PROPERTY_PANEL_HEADER_BG,
+        "#36414c",
+    );
+    color(
+        &mut cfg,
+        EditorTokenKeys::PROPERTY_PANEL_HEADER_BORDER,
+        "#728294",
+    );
+    color(&mut cfg, EditorTokenKeys::PROPERTY_GROUP_BORDER, "#47515d");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BG, "#283039");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BORDER, "#56626f");
     color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_FG, "#e6e8eb");
 
     color(&mut cfg, EditorTokenKeys::CONTROL_INVALID_FG, "#ffcbc7");
@@ -293,7 +332,7 @@ fn color(cfg: &mut ThemeConfig, key: &str, value: &str) {
 #[cfg(test)]
 mod tests {
     use fret_app::App;
-    use fret_core::{Color, Px};
+    use fret_core::{AppWindowId, Color, Px};
     use fret_ui::Theme;
     use fret_ui_shadcn::shadcn_themes::{
         ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york,
@@ -328,15 +367,15 @@ mod tests {
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_TRAILING_GAP),
-            Some(Px(8.0))
+            Some(Px(6.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_VALUE_MAX_WIDTH),
-            Some(Px(640.0))
+            Some(Px(1024.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_STATUS_SLOT_WIDTH),
-            Some(Px(72.0))
+            Some(Px(56.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_RESET_SLOT_WIDTH),
@@ -344,19 +383,19 @@ mod tests {
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_GROUP_CONTENT_GAP),
-            Some(Px(8.0))
-        );
-        assert_eq!(
-            theme.metric_by_key(EditorTokenKeys::PROPERTY_PANEL_GAP),
-            Some(Px(12.0))
-        );
-        assert_eq!(
-            theme.metric_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_GAP),
             Some(Px(10.0))
         );
         assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::PROPERTY_PANEL_GAP),
+            Some(Px(14.0))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_GAP),
+            Some(Px(12.0))
+        );
+        assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_GROUP_HEADER_HEIGHT),
-            Some(Px(26.0))
+            Some(Px(28.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::SLIDER_THUMB_DIAMETER),
@@ -369,6 +408,54 @@ mod tests {
         assert_eq!(
             theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_BG),
             Some(Color::from_srgb_hex_rgb(0x0f_15_1d))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::POPUP_BG),
+            Some(Color::from_srgb_hex_rgb(0x13_1b_25))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::POPUP_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x46_59_6c))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::POPUP_RADIUS),
+            Some(Px(8.0))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::POPUP_SHADOW_OFFSET_Y),
+            Some(Px(6.0))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::POPUP_SHADOW_BLUR),
+            Some(Px(16.0))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::POPUP_SHADOW_SPREAD),
+            Some(Px(-4.0))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x3d_4d_5f))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_BG),
+            Some(Color::from_srgb_hex_rgb(0x24_34_45))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x5a_70_87))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_GROUP_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x33_41_4f))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_HEADER_BG),
+            Some(Color::from_srgb_hex_rgb(0x19_23_2e))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_HEADER_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x38_48_57))
         );
         assert_eq!(
             theme.color_by_key(EditorTokenKeys::CONTROL_INVALID_BORDER),
@@ -392,35 +479,75 @@ mod tests {
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_TRAILING_GAP),
-            Some(Px(5.0))
+            Some(Px(3.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_VALUE_MAX_WIDTH),
-            Some(Px(560.0))
+            Some(Px(840.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_STATUS_SLOT_WIDTH),
-            Some(Px(64.0))
+            Some(Px(48.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_RESET_SLOT_WIDTH),
             Some(Px(22.0))
         );
         assert_eq!(
+            theme.color_by_key(EditorTokenKeys::POPUP_BG),
+            Some(Color::from_srgb_hex_rgb(0x24_29_2f))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::POPUP_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x68_76_86))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::POPUP_RADIUS),
+            Some(Px(4.0))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::POPUP_SHADOW_OFFSET_Y),
+            Some(Px(4.0))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::POPUP_SHADOW_BLUR),
+            Some(Px(12.0))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::POPUP_SHADOW_SPREAD),
+            Some(Px(-3.0))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_BG),
+            Some(Color::from_srgb_hex_rgb(0x36_41_4c))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x72_82_94))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_HEADER_BG),
+            Some(Color::from_srgb_hex_rgb(0x28_30_39))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_HEADER_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x56_62_6f))
+        );
+        assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_GROUP_CONTENT_GAP),
-            Some(Px(5.0))
+            Some(Px(6.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_PANEL_GAP),
-            Some(Px(9.0))
+            Some(Px(10.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_GAP),
-            Some(Px(7.0))
+            Some(Px(8.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_GROUP_HEADER_HEIGHT),
-            Some(Px(23.0))
+            Some(Px(24.0))
         );
         assert_eq!(
             theme.metric_by_key("component.text_field.radius"),
@@ -437,6 +564,26 @@ mod tests {
         assert_eq!(
             theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_BG),
             Some(Color::from_srgb_hex_rgb(0x1d_21_27))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_BG),
+            Some(Color::from_srgb_hex_rgb(0x36_41_4c))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x72_82_94))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_GROUP_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x47_51_5d))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_HEADER_BG),
+            Some(Color::from_srgb_hex_rgb(0x28_30_39))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_HEADER_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x56_62_6f))
         );
         assert_eq!(
             theme.color_by_key(EditorTokenKeys::CONTROL_INVALID_BG),
@@ -500,6 +647,47 @@ mod tests {
             );
 
         assert_eq!(replayed, Some(EditorThemePresetV1::Default));
+        assert_eq!(
+            Theme::global(&app).color_by_key("component.text_field.bg"),
+            expected_field_bg
+        );
+    }
+
+    #[test]
+    fn window_metrics_helper_skips_replay_when_host_theme_sync_is_noop() {
+        let mut app = App::new();
+        let window = AppWindowId::from(slotmap::KeyData::from_ffi(1));
+        app.with_global_mut(fret_core::WindowMetricsService::default, |svc, _app| {
+            svc.set_color_scheme(window, Some(fret_core::ColorScheme::Dark));
+        });
+        let _ = fret_ui_shadcn::advanced::sync_theme_from_environment(
+            &mut app,
+            window,
+            ShadcnBaseColor::Slate,
+            ShadcnColorScheme::Dark,
+        );
+        install_editor_theme_preset_v1(&mut app, EditorThemePresetV1::Default);
+
+        let expected_field_bg = Theme::global(&app).color_by_key("component.text_field.bg");
+        let before_rev = Theme::global(&app).revision();
+        let changed = [TypeId::of::<fret_core::WindowMetricsService>()];
+
+        let replayed =
+            sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metrics_change(
+                &mut app,
+                &changed,
+                |app| {
+                    let _ = fret_ui_shadcn::advanced::sync_theme_from_environment(
+                        app,
+                        window,
+                        ShadcnBaseColor::Slate,
+                        ShadcnColorScheme::Dark,
+                    );
+                },
+            );
+
+        assert_eq!(replayed, None);
+        assert_eq!(Theme::global(&app).revision(), before_rev);
         assert_eq!(
             Theme::global(&app).color_by_key("component.text_field.bg"),
             expected_field_bg

@@ -1728,6 +1728,7 @@ dependencies = [
  "fret-runtime",
  "fret-selector",
  "fret-ui",
+ "fret-ui-editor",
  "fret-ui-kit",
  "fret-ui-shadcn",
  "fret-workspace",
@@ -2822,6 +2823,7 @@ dependencies = [
  "fret-ui-kit",
  "fret-ui-shadcn",
  "fret-undo",
+ "slotmap",
 ]
 
 [[package]]

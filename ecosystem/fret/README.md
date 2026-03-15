@@ -147,6 +147,7 @@ same logical locator.
 - `state`: enable selector/query helpers on `AppUi` (`cx.data().selector(...)`, `cx.data().query(...)`) for the default app surface, plus the explicit `fret::selector::*` / `fret::query::*` secondary lanes when app code needs state helper nouns.
 - `router`: enable the explicit app-level router surface (`fret::router::{app::install, RouterUiStore, RouterOutlet, ...}`).
 - `docking`: enable the explicit advanced docking surface (`fret::docking::{core::*, DockManager, handle_dock_op, ...}`).
+- `editor`: keep installed `fret-ui-editor` presets resilient to `FretApp` shadcn theme resets.
 - `batteries`: “works out of the box” opt-in bundle (config files + UI assets + icons + preloading + diagnostics).
 - `config-files`: load layered config files from `.fret/` (settings/keymap/menubar).
 - `diagnostics`: enable default diagnostics wiring (tracing + panic hook; plus extra dev tooling).
@@ -221,6 +222,9 @@ runtime-captured values.
 The same explicit-lane rule applies to optional state helpers: keep grouped `cx.data().selector(...)`
 and `cx.data().query*` as the default app story, and import `DepsBuilder` / `QueryKey`-style nouns
 from `fret::selector::*` / `fret::query::*` only when app code actually needs to spell them.
+Editor-themed apps can also opt into `fret`'s `editor` feature to make
+installed `fret-ui-editor` presets survive the default `FretApp` shadcn auto-theme replay; the
+actual editor widgets and presets still live in `fret-ui-editor`.
 
 That makes `fret` suitable for both general-purpose desktop apps and many editor-style customizations
 before you need to depend on `fret-bootstrap` or `fret-launch` directly.

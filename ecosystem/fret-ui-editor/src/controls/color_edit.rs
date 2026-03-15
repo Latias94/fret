@@ -24,6 +24,9 @@ use fret_ui_kit::{ChromeRefinement, OverlayController, OverlayPresence, OverlayR
 
 use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::input_group::derived_test_id;
+use crate::primitives::popup_surface::resolve_editor_popup_surface_chrome;
+use crate::primitives::style::EditorStyle;
+use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 #[derive(Debug, Clone)]
@@ -109,23 +112,20 @@ impl ColorEdit {
         let draft = draft_model(cx);
         let error = error_model(cx);
 
-        let (density, swatch_size, popup_padding, border, ring) = {
+        let (density, frame_chrome, swatch_size, popup_padding, ring) = {
             let theme = Theme::global(&*cx.app);
             let density = EditorDensity::resolve(theme);
+            let frame_chrome = EditorStyle::resolve(theme).frame_chrome_small();
             let swatch_size = theme
                 .metric_by_key(EditorTokenKeys::COLOR_SWATCH_SIZE)
                 .unwrap_or(density.icon_size);
             let popup_padding = theme
                 .metric_by_key(EditorTokenKeys::COLOR_POPUP_PADDING)
                 .unwrap_or(Px(8.0));
-            let border = theme
-                .color_by_key("border")
-                .or_else(|| theme.color_by_key("component.input.border"))
-                .unwrap_or_else(|| theme.color_token("foreground"));
             let ring = theme
                 .color_by_key("ring")
                 .unwrap_or_else(|| theme.color_token("primary"));
-            (density, swatch_size, popup_padding, border, ring)
+            (density, frame_chrome, swatch_size, popup_padding, ring)
         };
 
         let current = cx
@@ -255,6 +255,8 @@ impl ColorEdit {
 
         let swatch = {
             let open_for_activate = open.clone();
+            let open_for_paint = open.clone();
+            let enabled_for_paint = self.options.enabled;
             let on_activate: OnActivate =
                 Arc::new(move |host, action_cx: ActionCx, _reason: ActivateReason| {
                     let prev = host
@@ -288,12 +290,30 @@ impl ColorEdit {
                         offset: Px(2.0),
                         color: ring,
                         offset_color: None,
-                        corner_radii: Corners::all(Px(6.0)),
+                        corner_radii: Corners::all(frame_chrome.radius),
                     }),
                     ..Default::default()
                 },
-                move |cx, _st| {
+                move |cx, st| {
                     cx.pressable_add_on_activate(on_activate.clone());
+
+                    let is_open = cx
+                        .get_model_copied(&open_for_paint, Invalidation::Paint)
+                        .unwrap_or(false);
+                    let visuals = {
+                        let theme = Theme::global(&*cx.app);
+                        EditorWidgetVisuals::new(theme).frame_visuals(
+                            frame_chrome,
+                            EditorFrameState {
+                                enabled: enabled_for_paint,
+                                hovered: st.hovered || st.hovered_raw,
+                                pressed: st.pressed,
+                                focused: st.focused,
+                                open: is_open,
+                                semantic: EditorFrameSemanticState::default(),
+                            },
+                        )
+                    };
 
                     vec![cx.container(
                         ContainerProps {
@@ -306,9 +326,9 @@ impl ColorEdit {
                                 ..Default::default()
                             },
                             background: Some(current),
-                            border: Edges::all(Px(1.0)),
-                            border_color: Some(border),
-                            corner_radii: Corners::all(Px(4.0)),
+                            border: Edges::all(frame_chrome.border_width),
+                            border_color: Some(visuals.border),
+                            corner_radii: Corners::all(frame_chrome.radius),
                             ..Default::default()
                         },
                         |_cx| vec![],
@@ -450,6 +470,10 @@ fn request_popup_overlay<H: UiHost>(
             ..Default::default()
         },
         move |cx| {
+            let popup_chrome = {
+                let theme = Theme::global(&*cx.app);
+                resolve_editor_popup_surface_chrome(theme, true)
+            };
             let popup = cx.container(
                 ContainerProps {
                     layout: LayoutStyle {
@@ -461,10 +485,11 @@ fn request_popup_overlay<H: UiHost>(
                         ..Default::default()
                     },
                     padding: Edges::all(popup_padding).into(),
-                    background: Some(Theme::global(&*cx.app).color_token("popover")),
+                    background: Some(popup_chrome.bg),
                     border: Edges::all(Px(1.0)),
-                    border_color: Some(Theme::global(&*cx.app).color_token("border")),
-                    corner_radii: Corners::all(Px(8.0)),
+                    border_color: Some(popup_chrome.border),
+                    corner_radii: Corners::all(popup_chrome.radius),
+                    shadow: popup_chrome.shadow,
                     ..Default::default()
                 },
                 move |cx| vec![cx.text("Color picker (stub)")],

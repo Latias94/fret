@@ -98,7 +98,7 @@ impl PropertyGroup {
                 header_bg,
                 header_border,
                 panel_bg,
-                panel_border,
+                group_border,
                 radius,
                 header_fg,
             ) = {
@@ -123,8 +123,9 @@ impl PropertyGroup {
                     .or_else(|| theme.color_by_key("card"))
                     .or_else(|| theme.color_by_key("component.card.bg"))
                     .unwrap_or_else(|| theme.color_token("background"));
-                let panel_border = theme
-                    .color_by_key(EditorTokenKeys::PROPERTY_PANEL_BORDER)
+                let group_border = theme
+                    .color_by_key(EditorTokenKeys::PROPERTY_GROUP_BORDER)
+                    .or_else(|| theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_BORDER))
                     .or_else(|| theme.color_by_key("border"))
                     .or_else(|| theme.color_by_key("component.card.border"))
                     .unwrap_or_else(|| theme.color_token("foreground"));
@@ -139,7 +140,7 @@ impl PropertyGroup {
                     header_bg,
                     header_border,
                     panel_bg,
-                    panel_border,
+                    group_border,
                     radius,
                     header_fg,
                 )
@@ -224,6 +225,12 @@ impl PropertyGroup {
                                 ..Default::default()
                             },
                             background: Some(header_bg),
+                            corner_radii: Corners {
+                                top_left: radius,
+                                top_right: radius,
+                                bottom_right: Px(0.0),
+                                bottom_left: Px(0.0),
+                            },
                             border: Edges {
                                 top: Px(0.0),
                                 right: Px(0.0),
@@ -247,10 +254,12 @@ impl PropertyGroup {
                                         },
                                         direction: Axis::Horizontal,
                                         gap: SpacingLength::Px(Px(6.0)),
-                                        padding: Edges::symmetric(
-                                            density.padding_x,
-                                            density.padding_y,
-                                        )
+                                        padding: Edges {
+                                            top: Px(density.padding_y.0 + 2.0),
+                                            right: density.padding_x,
+                                            bottom: Px(density.padding_y.0 + 2.0),
+                                            left: density.padding_x,
+                                        }
                                         .into(),
                                         justify: MainAlign::Start,
                                         align: CrossAlign::Center,
@@ -323,7 +332,13 @@ impl PropertyGroup {
                         },
                         direction: Axis::Vertical,
                         gap: SpacingLength::Px(gap),
-                        padding: Edges::symmetric(density.padding_x, density.padding_y).into(),
+                        padding: Edges {
+                            top: Px(density.padding_y.0 + 2.0),
+                            right: density.padding_x,
+                            bottom: Px(density.padding_y.0 + 4.0),
+                            left: density.padding_x,
+                        }
+                        .into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Stretch,
                         wrap: false,
@@ -359,7 +374,7 @@ impl PropertyGroup {
                     padding: Edges::all(Px(0.0)).into(),
                     background: Some(panel_bg),
                     border: Edges::all(Px(1.0)),
-                    border_color: Some(panel_border),
+                    border_color: Some(group_border),
                     corner_radii: Corners::all(radius),
                     ..Default::default()
                 },

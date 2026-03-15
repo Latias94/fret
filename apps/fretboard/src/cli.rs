@@ -50,6 +50,7 @@ pub(crate) fn help() -> Result<(), String> {
 Usage:
   fretboard help
   fretboard assets manifest write --dir <dir> --out <path> (--app-bundle <name> | --package-bundle <name> | --bundle <id>) [--force]
+  fretboard assets rust write --dir <dir> --out <path> (--app-bundle <name> | --package-bundle <name> | --bundle <id>) [--surface <fret|framework>] [--crate-root <dir>] [--force]
   fretboard new [template] [--path <path>] [--name <name>] [--ui-assets] [--icons <lucide|radix|none>] [--command-palette] [--no-check]
   fretboard new             # interactive wizard
   fretboard new todo        # non-interactive (template shortcut)
@@ -133,6 +134,7 @@ Usage:
 
 Examples:
   fretboard assets manifest write --dir assets --out assets.manifest.json --app-bundle my-todo
+  fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle my-todo
   fretboard new todo --name my-todo
   fretboard new simple-todo --name my-simple-todo
   fretboard new hello --name hello-world

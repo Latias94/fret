@@ -162,6 +162,10 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       app-facing facade
     - `fretboard assets manifest write ...` now emits an explicit manifest artifact from a scanned
       bundle directory
+    - `fretboard assets rust write ...` now emits a compile-time embedded Rust module for
+      packaged/web/mobile-friendly bundle assets
+    - the generated Rust module supports both `--surface fret` and `--surface framework`
+      consumption lanes
     - `FretApp::asset_dir(...)` / `UiAppBuilder::with_asset_dir(...)` keep the directory-scanning
       convenience lane on the builder/startup surface
     - `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` keep that manifest
@@ -180,7 +184,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       `fret-assets` / `fret-runtime` imports
   - Remaining:
     - broader first-party packaged/web/mobile manifest tooling story
-    - packaged/web/mobile manifest layering guidance for future tooling stacks
+    - packaged/web/mobile manifest layering guidance beyond generated Rust embedding
+      (hashed web outputs, mobile bundle/resource mapping, hybrid packaged + remote lanes)
     - ecosystem-oriented bundle identity guidance
     - final migration of remaining first-party gallery/bootstrap surfaces
 

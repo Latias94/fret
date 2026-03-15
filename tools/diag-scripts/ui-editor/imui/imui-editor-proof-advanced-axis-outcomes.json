@@ -35,31 +35,6 @@
       "timeout_frames": 600
     },
     {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "label_contains",
-        "target": {
-          "kind": "test_id",
-          "id": "imui-editor-proof.editor.advanced.position.outcome"
-        },
-        "text": "Idle"
-      },
-      "timeout_frames": 240
-    },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "label_contains",
-        "target": {
-          "kind": "test_id",
-          "id": "imui-editor-proof.editor.advanced.transform.outcome"
-        },
-        "text": "Idle"
-      },
-      "timeout_frames": 240
-    },
-
-    {
       "type": "click_stable",
       "target": { "kind": "test_id", "id": "imui-editor-proof.editor.advanced.position.x" },
       "click_count": 2

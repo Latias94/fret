@@ -40,10 +40,10 @@ impl InspectorLayoutMetrics {
                 .unwrap_or(Px(124.0)),
             value_max_width: theme
                 .metric_by_key(EditorTokenKeys::PROPERTY_VALUE_MAX_WIDTH)
-                .unwrap_or(Px(560.0)),
+                .unwrap_or(Px(1024.0)),
             status_slot_width: theme
                 .metric_by_key(EditorTokenKeys::PROPERTY_STATUS_SLOT_WIDTH)
-                .unwrap_or(Px(64.0)),
+                .unwrap_or(Px(56.0)),
             reset_slot_width: theme
                 .metric_by_key(EditorTokenKeys::PROPERTY_RESET_SLOT_WIDTH)
                 .unwrap_or(density.hit_thickness),

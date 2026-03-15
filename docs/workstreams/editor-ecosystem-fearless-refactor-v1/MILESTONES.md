@@ -61,8 +61,26 @@ Deliverables:
   typed-edit and invalid semantics for field-like surfaces,
 - shared property-grid / inspector layout metrics for label, value, reset, status, group, and panel
   lanes,
+- distinct outer-panel and inner-group frame tokens so inspector sections stop reading like nested
+  generic cards when the default baseline gets stronger contrast,
+- distinct panel-header and group-header tokens so the top inspector band can carry more framing
+  weight than repeated section headers without reintroducing visual clutter,
 - one editor-owned trailing affordance baseline so reset/clear/remove/icon actions stop drifting
   between narrow hit targets and row-height targets,
+- one editor-owned popup surface chrome baseline for assist panels, select lists, and color-edit
+  popovers so secondary widgets stop drifting between host `popover` cards and editor-owned field
+  chrome,
+- a compact status-marker treatment that stays in the same chrome family as editor fields instead of
+  reintroducing bright floating pill tags on populated rows,
+- a compact non-edit readout treatment so populated percent/value/outcome labels stay visible
+  without reading like primary editable text,
+- one small shared editor readout-text primitive so slider/value readouts and proof committed /
+  outcome labels stop drifting in typography/color while proof-only layout geometry still stays
+  local,
+- a dense-preset tail calibration pass so the imgui-like preset inherits the same compact status
+  and readout grammar instead of widening its right lane again,
+- proof-local outcome/readout instrumentation that follows the same lane grammar, so idle states
+  collapse instead of reserving dead width or dead row height on review surfaces,
 - stronger typed-edit, focus, active, and invalid state clarity,
 - screenshot proof coverage for the neutral default baseline,
 - focused authoring-affordance screenshots that pin clear-button alignment and percent readout
@@ -95,23 +113,31 @@ Deliverables:
 - focused popup screenshot/diag evidence for the anchored-overlay assist surface so popup geometry,
   in-window clamping, active-row review state, and overlay placement traces stay reviewable on the
   promoted proof surface,
-- focused diag coverage for buffered blur commit, multiline explicit commit, and Escape cancel on
-  the promoted proof surface,
+- focused popup screenshot/diag evidence across the other real popup consumers as well, so
+  trigger-owned select lists and color-edit popovers share the same review discipline instead of
+  depending on ad-hoc manual screenshots,
+- focused diag coverage for default buffered blur commit plus the first editor opt-in blur
+  exceptions (`Cancel` for inline rename, `PreserveDraft` for multiline notes), alongside
+  multiline explicit commit and Escape cancel on the promoted proof surface,
 - and a boring close-out path for screenshot automation after typed-mode interactions and reruns.
 
 Exit gates:
 
 - the default editor baseline is visually legible enough to review without "squinting through gray",
+- inspector sections read as structured groups rather than as one repeated card-within-card frame,
 - proof/demo startup and host theme sync no longer silently erase the intended editor preset,
 - overview / typing / invalid screenshots are all meaningful and reproducible,
 - authoring-parity screenshots make clear-button alignment and percent slider composition reviewable
   without manual proof setup,
 - the screenshot proof can switch into a review-only composition without manual window/layout setup,
+- idle proof-local outcome placeholders no longer waste right-lane width or idle row height on the
+  promoted review surface while committed/canceled readouts remain diagnosable,
 - starter-set controls share one layout/state grammar instead of per-control heuristics,
 - repeated screenshot runs reset proof-local filter/search state instead of depending on a fresh
   launch,
-- buffered text-session proof coverage demonstrates blur commit, multiline explicit commit, and
-  cancel/revert without relying on manual inspection,
+- buffered text-session proof coverage demonstrates default blur commit, inline-rename
+  cancel-on-blur, multiline preserve-draft, explicit multiline commit, and cancel/revert without
+  relying on manual inspection,
 - a promoted text-assist/history proof plus diag gate demonstrate input-owned assist semantics
   (`expanded`, controlled listbox relation, `active_descendant`) and Enter-accept behavior without
   moving primary focus into the popup, and that proof is backed by shared `fret-ui-kit`
@@ -120,8 +146,9 @@ Exit gates:
 - trigger-owned editor select surfaces reuse shared `fret-ui-kit::primitives::combobox` policy for
   close reasons, focus restore, and query clearing instead of keeping a separate editor-local
   popup/list lifecycle,
-- the anchored-overlay popup path is also backed by focused screenshot/bundle/layout evidence and
-  an overlay-placement trace instead of only the behavioral history script,
+- popup-capable secondary widgets no longer inherit a light host `popover` surface against the dark
+  editor baseline, and the anchored-overlay/select/color popup paths are backed by focused
+  screenshot/bundle/layout evidence instead of only behavioral scripts,
 - repeated-control identity coverage exists on a promoted loop-built surface rather than only in
   local reasoning or code comments,
 - and this workstream can point to clear proof/gate evidence for baseline correctness.

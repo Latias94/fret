@@ -1,4 +1,5 @@
 use anyhow::Context as _;
+use fret::{shadcn, shadcn::themes::ShadcnColorScheme};
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{AppWindowId, Axis, Edges, Event, Px, Rect, SemanticsRole};
@@ -32,6 +33,11 @@ use fret_workspace::{
 use std::collections::HashSet;
 use std::sync::Arc;
 
+const ENV_WORKSPACE_SHELL_EDITOR_PRESET: &str = "FRET_WORKSPACE_SHELL_EDITOR_PRESET";
+const WORKSPACE_SHELL_HOST_BASE_COLOR: shadcn::themes::ShadcnBaseColor =
+    shadcn::themes::ShadcnBaseColor::Slate;
+const WORKSPACE_SHELL_HOST_DEFAULT_SCHEME: ShadcnColorScheme = ShadcnColorScheme::Dark;
+
 fn env_bool(name: &str, default: bool) -> bool {
     let Some(v) = std::env::var_os(name).filter(|v| !v.is_empty()) else {
         return default;
@@ -46,6 +52,11 @@ fn env_usize(name: &str) -> Option<usize> {
     };
     let v = v.to_string_lossy();
     v.trim().parse::<usize>().ok()
+}
+
+fn selected_workspace_shell_editor_theme_preset()
+-> Option<fret_ui_editor::theme::EditorThemePresetV1> {
+    crate::editor_theme_preset_from_env(ENV_WORKSPACE_SHELL_EDITOR_PRESET)
 }
 
 fn fill_layout() -> LayoutStyle {
@@ -897,7 +908,18 @@ fn handle_global_changes(
     context: WinitWindowContext<'_, WorkspaceShellWindowState>,
     changed: &[std::any::TypeId],
 ) {
-    let WinitWindowContext { app, state, .. } = context;
+    let WinitWindowContext {
+        app, state, window, ..
+    } = context;
+    if selected_workspace_shell_editor_theme_preset().is_some() {
+        let _ = crate::sync_shadcn_host_theme_then_reapply_editor_preset_on_window_metrics_change(
+            app,
+            window,
+            changed,
+            WORKSPACE_SHELL_HOST_BASE_COLOR,
+            WORKSPACE_SHELL_HOST_DEFAULT_SCHEME,
+        );
+    }
     state.ui.propagate_global_changes(app, changed);
 }
 
@@ -1313,6 +1335,14 @@ pub fn run() -> anyhow::Result<()> {
     app.set_global(PlatformCapabilities::default());
     fret_workspace::commands::register_workspace_commands(app.commands_mut());
     fret_app::install_command_default_keybindings_into_keymap(&mut app);
+    if let Some(preset) = selected_workspace_shell_editor_theme_preset() {
+        shadcn::themes::apply_shadcn_new_york(
+            &mut app,
+            WORKSPACE_SHELL_HOST_BASE_COLOR,
+            WORKSPACE_SHELL_HOST_DEFAULT_SCHEME,
+        );
+        fret_ui_editor::theme::install_editor_theme_preset_v1(&mut app, preset);
+    }
 
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo workspace_shell_demo".to_string(),

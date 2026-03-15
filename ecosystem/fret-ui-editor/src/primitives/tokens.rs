@@ -39,6 +39,9 @@ impl EditorTokenKeys {
     pub const PROPERTY_PANEL_HEADER_GAP: &'static str = "editor.property.panel_header_gap";
     pub const PROPERTY_PANEL_BG: &'static str = "editor.property.panel_bg";
     pub const PROPERTY_PANEL_BORDER: &'static str = "editor.property.panel_border";
+    pub const PROPERTY_PANEL_HEADER_BG: &'static str = "editor.property.panel_header_bg";
+    pub const PROPERTY_PANEL_HEADER_BORDER: &'static str = "editor.property.panel_header_border";
+    pub const PROPERTY_GROUP_BORDER: &'static str = "editor.property.group_border";
     pub const PROPERTY_HEADER_BG: &'static str = "editor.property.header_bg";
     pub const PROPERTY_HEADER_BORDER: &'static str = "editor.property.header_border";
     pub const PROPERTY_HEADER_FG: &'static str = "editor.property.header_fg";
@@ -47,6 +50,12 @@ impl EditorTokenKeys {
     pub const CHECKBOX_RADIUS: &'static str = "editor.checkbox.radius";
 
     pub const ENUM_SELECT_MAX_LIST_HEIGHT: &'static str = "editor.enum_select.max_list_height";
+    pub const POPUP_BG: &'static str = "editor.popup.bg";
+    pub const POPUP_BORDER: &'static str = "editor.popup.border";
+    pub const POPUP_RADIUS: &'static str = "editor.popup.radius";
+    pub const POPUP_SHADOW_OFFSET_Y: &'static str = "editor.popup.shadow_offset_y";
+    pub const POPUP_SHADOW_BLUR: &'static str = "editor.popup.shadow.blur";
+    pub const POPUP_SHADOW_SPREAD: &'static str = "editor.popup.shadow.spread";
 
     pub const AXIS_X_COLOR: &'static str = "editor.axis.x_color";
     pub const AXIS_Y_COLOR: &'static str = "editor.axis.y_color";

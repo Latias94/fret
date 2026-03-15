@@ -38,29 +38,75 @@ Interaction contract:
       field chrome, contrast bands, separators, label/readout clarity, and group hierarchy.
       Recent progress: trailing affordances now use a shared row-height-square baseline, property-row
       reset actions keep subtle idle chrome, and field-status badges now use short labels plus
-      border-defined semantic tones instead of raw filled pills. Default inspector hierarchy tokens
-      now also give property groups taller headers, stronger header/body contrast, and a bit more
-      panel/content separation. `InspectorPanel` now renders its own header band/separator instead
-      of letting search/toolbar chrome visually merge into the first section.
-      Remaining work: separators, group hierarchy, and the final balance between neutral default and
-      editor-specific contrast still need another screenshot-driven pass.
+      border-defined semantic tones instead of raw filled pills, and the latest default rerun
+      further compacts them into darker field-chrome micro-tags while narrowing the shared status
+      slot to `56px`. Default inspector hierarchy tokens now also give property groups taller
+      headers, stronger header/body contrast, clearer section borders, and a bit more panel/content
+      separation. `InspectorPanel` now renders its own header band/separator with stronger section
+      framing instead of letting search/toolbar chrome visually merge into the first section,
+      `PropertyGroup` content now has a little more vertical breathing room so section bodies stop
+      reading as one uninterrupted slab, and the latest separator cleanup also splits outer panel
+      border tone from inner property-group border tone so the default preset no longer depends on
+      one shared frame weight for both levels of hierarchy. The follow-up pass now also separates
+      panel-header band tokens from property-group header tokens, so the inspector search/title
+      band can stay stronger than the repeated section bars below it. The latest screenshot-driven
+      calibration pass then pushed that split a bit further in both default and dense presets:
+      panel header background/border tokens are now slightly stronger while repeated group headers
+      are slightly quieter, so the top band reads more clearly as panel-owned chrome instead of one
+      more repeated section bar.
+      Remaining work: keep that hierarchy stable while adjacent proof surfaces evolve and only do a
+      further tonal pass if a new proof surface shows the panel/group boundary collapsing again.
 - [~] `EER-BASE-111` Finish `EditorWidgetVisuals` convergence for the existing starter-set controls
       before promoting more components.
       Shared field-state grammar now routes joined text fields/search boxes, numeric inputs,
       drag-value / slider typing paths, axis drag values, and enum-select triggers through the same
       editor-owned `EditorWidgetVisuals` baseline, and numeric typing now also uses the same
       row-height line box as the surrounding non-typing affordances so editor rows stop visibly
-      jumping when scrub/value displays switch into text-entry mode. Remaining work: extend that
-      convergence to the remaining secondary widgets and keep pruning residual per-control chrome
-      heuristics.
+      jumping when scrub/value displays switch into text-entry mode. The latest pass now also
+      removes one more widget-local chrome island: `ColorEdit` swatch buttons keep their true color
+      fill, but their border/open/focus treatment now reuses shared editor frame visuals instead of
+      hard-coded swatch border/radius tuning. Popup-shell chrome now also converges across the
+      existing assist/select/color consumers: `TextAssistField`, `InspectorPanel` search history,
+      `EnumSelect`, and `ColorEdit` all reuse one editor popup-surface resolver, and editor-owned
+      `editor.popup.*` tokens now keep those popups on the dark editor baseline instead of
+      inheriting a host theme's bright `popover` surface. Focused screenshot coverage now exists
+      for that seam via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-popup-screenshots.json`,
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-inspector-search-assist-popup-screenshots.json`,
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-enum-select-selected-row-reveal.json`,
+      and
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-color-popup-screenshots.json`.
+      The follow-up decision is now landed as well: popup radius and shadow geometry are editor-owned
+      metric tokens (`editor.popup.radius`, `editor.popup.shadow_*`), so the dense preset can keep a
+      tighter popup silhouette/elevation than the default preset without reopening per-control local
+      tuning. Remaining work: keep pruning residual per-control chrome heuristics and only widen the
+      popup token set again if a real second geometry family appears.
 - [~] `EER-BASE-112` Define and land inspector/property layout grammar:
       shared `InspectorLayoutMetrics` now feed `PropertyRow`, `PropertyGrid`,
       `PropertyGridVirtualized`, `PropertyGroup`, and `InspectorPanel`, and the row grammar is now
       explicit (`label -> value -> reset slot -> status/actions slot`). Trailing affordances now
       converge on a row-height-square baseline across property-row reset buttons, joined-input
-      clear/remove segments, and gradient-row icon actions.
-      Remaining work: tune wide-inspector slack, badge/status lane balance, and any dense-mode
-      overrides from screenshot review rather than ad-hoc per-demo tweaks.
+      clear/remove segments, and gradient-row icon actions. Empty reset/status lanes now collapse
+      when unused, and the shared default value-lane cap was widened in the screenshot-reviewed
+      baseline so default inspector rows stop pinning common controls to half-width on large review
+      surfaces. Proof-local trailing numeric outcome readouts now also start empty and collapse
+      their slot until a real commit/cancel outcome exists, and the same empty-state rule now also
+      removes the text-session full-row password/notes outcome rows until those surfaces emit a
+      real outcome, which keeps the promoted proof aligned with the shared lane grammar instead of
+      reserving dead width or dead row height for `Idle`. The next density pass also softens
+      non-empty readouts themselves: slider value displays now sit back as muted trailing readouts
+      instead of reading like another editable text segment, and proof-only committed/outcome rows
+      now reuse the same compact muted readout treatment so diagnostics labels stop visually
+      overpowering the editable controls they describe. That readout convergence now has one small
+      shared primitive too: compact non-edit readout text styling is editor-owned and shared by the
+      promoted slider/value surfaces plus proof committed/outcome readouts, while proof-local
+      layout/container geometry still stays local until a second real layout family appears. The
+      dense imgui-like preset now also has a first dedicated calibration pass for that same tail
+      grammar (`PROPERTY_TRAILING_GAP=3`, `PROPERTY_STATUS_SLOT_WIDTH=48`) so dense overview rows
+      stop keeping more right-lane slack than the updated default baseline.
+      Remaining work: calibrate any dense-mode overrides from screenshot review rather than ad-hoc
+      per-demo tweaks, and only lift more than that shared text-style seam into a reusable editor
+      primitive if a second real readout layout family appears.
 - [x] `EER-BASE-113` Make typed-edit, focus, active, and invalid states visually explicit across
       numeric, text, and select-like controls.
       `EditorWidgetVisuals` now owns a shared semantic layer for typed-edit and invalid field
@@ -77,9 +123,21 @@ Interaction contract:
       via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-authoring-affordances-screenshots-default.json`,
       which pins populated text-field clear buttons plus percent slider readouts on the proof
-      surface where the original visual regressions showed up.
-      Remaining work: keep these compositions stable while token/layout cleanup continues and
-      extend the same review discipline to adjacent proof surfaces.
+      surface where the original visual regressions showed up. The same full-layout proof now also
+      keeps its preface materially shorter: proof metadata was reduced, and the shared-state
+      readout was compressed so screenshot review centers the paired authoring columns instead of a
+      tall block of explanatory text. The default overview / typing / validation screenshot proof
+      was rerun after tightening both trailing and full-row proof-local outcomes and after
+      compacting populated status badges, so the review-only composition now also proves empty proof
+      readouts do not reappear as right-lane gaps or idle spacer rows while populated status cues
+      stay inside the same dark field-chrome family. The follow-up default and authoring screenshot
+      reruns now also keep non-empty slider/value/outcome readouts in a muted compact style, which
+      makes the proof surface materially easier to scan when diagnostics rows are populated. The
+      dense screenshot proof was rerun after a dense-only tail calibration pass and now confirms
+      the tighter right-lane treatment survives the compact preset as well.
+      Remaining work: keep these compositions stable while token/layout cleanup continues, extend
+      the same review discipline to adjacent proof surfaces, and do one more density pass on the
+      remaining non-empty proof readouts.
 - [x] `EER-BASE-115` Add screenshot/diag coverage for the neutral default editor baseline.
       The default screenshot proof now exists via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-default.json`,
@@ -87,12 +145,17 @@ Interaction contract:
       inspector surface. The script is rerun-safe inside one session, and the launched
       `fretboard diag run --session-auto --launch --pack --ai-packet --include-screenshots`
       workflow now exits cleanly after success instead of waiting for a redundant post-pass dump.
-- [~] `EER-BASE-119` Make editor-owned baseline theming resilient to host/theme resets:
+- [x] `EER-BASE-119` Make editor-owned baseline theming resilient to host/theme resets:
       `fret-ui-editor::theme` now exposes a shared "host sync first, editor preset replay second"
       helper for `WindowMetricsService`-driven theme resets, and `imui_editor_proof_demo` now uses
-      that path instead of hand-rolling a local replay hook. Remaining work: apply the same helper
-      pattern to adjacent promoted editor/workspace surfaces and decide how much of this should be
-      lifted into broader app-integration guidance.
+      that path instead of hand-rolling a local replay hook. The helper now only replays when the
+      host sync actually mutated the theme, so repeated `WindowMetricsService` notifications do not
+      churn editor theme revisions. The same ordering now also has a shared `fret-examples`
+      integration helper for shadcn-hosted manual surfaces, and `workspace_shell_demo` can opt
+      into that path via `FRET_WORKSPACE_SHELL_EDITOR_PRESET`. The broader always-on consumer now
+      lives in the right app-facing layer too: `fret`'s optional `editor` feature teaches the
+      default `FretApp` shadcn auto-theme middleware to replay any installed editor preset after a
+      host theme reset, so shadcn-hosted editor apps no longer need demo-local replay glue.
 - [x] `EER-BASE-116` Decide whether `imgui_like_dense` should get matching screenshot proof coverage
       now or only after the default baseline is acceptable.
       Decision: yes. The dense preset now has matching overview / typing / validation screenshot
@@ -135,7 +198,19 @@ Interaction contract:
       surface now exposes stable committed-value / committed-line-count / outcome readouts so diag
       can prove draft-vs-committed behavior directly without conflating it with search-box
       semantics, and no-op focus/blur cycles no longer emit misleading commit/cancel outcomes. The
-      same control also exposes password-mode rendering, a commit/cancel outcome hook, and
+      promoted proof now also locks the first two explicit opt-in blur policies above that
+      baseline: inline rename uses `BlurBehavior::Cancel`, while multiline notes use
+      `BlurBehavior::PreserveDraft` until explicit `Ctrl/Cmd+Enter` commit or Escape cancel.
+      `BlurBehavior::Cancel` now also has a first non-proof in-tree consumer via
+      `fret-node::ui::overlays::group_rename`: the node-graph rename overlay now cancels on focus
+      loss, closes, and restores focus to the canvas without queueing a rename transaction, which
+      makes the inline-rename semantic real outside the proof surface too. Those choices still do
+      not automatically justify a wider public helper/API though: the new consumer is retained
+      overlay-host code, while declarative `TextField` authoring only has proof evidence so far.
+      The focused launched diag gate was
+      rerun on 2026-03-15 against `fret-demo --bin imui_editor_proof_demo`, so that proof-local
+      split now has fresh packed evidence instead of only a script update. The same control also
+      exposes password-mode rendering, a commit/cancel outcome hook, and
       assistive semantics placeholders for future completion/history surfaces while keeping that
       policy in the ecosystem layer. The first reusable assist glue above that baseline now also
       lives in `fret-ui-kit::headless::text_assist`: it preserves the existing
@@ -156,10 +231,10 @@ Interaction contract:
       `fret-ui-kit::primitives::combobox` helpers for close reasons, focus restore, and
       close-time query clearing rather than keeping a separate editor-local copy, while popup open
       now also reveals the selected row instead of restarting long lists at the top. The remaining
-      work is to promote only the next shared layer that has real multi-consumer evidence beyond
-      this reveal baseline, decide where editor surfaces should opt into `BlurBehavior::Cancel` /
-      `PreserveDraft`, and keep multiline/editor proof coverage tight before new promoted
-      components land.
+      work is narrower now: decide whether inline-rename cancel should gain a declarative/shared
+      helper beyond the retained `fret-node` overlay consumer, find the first non-proof consumer
+      for `BlurBehavior::PreserveDraft`, and keep multiline/editor proof coverage tight before new
+      promoted components land.
 - [ ] `EER-BASE-118` Do not promote new reusable editor components until `EER-BASE-110` through
       `EER-BASE-117` are in materially better shape.
 
@@ -268,8 +343,11 @@ Interaction contract:
       steps so the gate matches the real keydown-plus-text-input path. Multiline buffered
       text-session coverage now also exists via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-text-field-multiline-session-policy.json`,
-      which proves blur commit, explicit `Ctrl/Cmd+Enter` commit, and Escape cancel against the
-      promoted proof readouts. Composite numeric coverage now also exists via
+      which now proves inline-rename cancel-on-blur plus multiline preserve-draft, explicit
+      `Ctrl/Cmd+Enter` commit, and Escape cancel against the promoted proof readouts. That
+      launched `fretboard diag run --session-auto --pack --ai-packet --launch` path was rerun on
+      2026-03-15 against `fret-demo --bin imui_editor_proof_demo` and passed end-to-end. Composite
+      numeric coverage now also exists via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-advanced-axis-outcomes.json`, which
       proves `VecEdit` / `TransformEdit` axis-level typed commit/cancel against the promoted
       advanced proof readouts instead of inferring those sessions from raw value drift.
@@ -309,6 +387,15 @@ Interaction contract:
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-authoring-affordances-screenshots-default.json`;
       the anchored-overlay assist path now also has a focused popup screenshot proof via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-popup-screenshots.json`.
+      The default baseline screenshot proof was rerun again after the proof-local outcome
+      tightening and the populated status-badge compaction pass, confirming that empty numeric and
+      text-session outcome states collapse instead of leaving dead trailing width or idle spacer
+      rows while populated `Mixed` / `Loading` cues no longer reintroduce bright floating pills on
+      the default overview surface. The follow-up reruns on both the default review surface and the
+      authoring-affordance surface also confirmed that populated `%` value readouts plus
+      committed/outcome proof labels can stay visible without reading like primary editable text.
+      The dense preset proof was rerun too, confirming the same muted readout treatment still fits
+      after pulling its trailing gap/status slot slightly tighter.
       Their next job is to drive token/layout cleanup, not just exist, and to stay aligned with the
       new shared inspector lane grammar plus the authoring proof surfaces where clear-affordance,
       affix, and popup-geometry regressions tend to show up first.
