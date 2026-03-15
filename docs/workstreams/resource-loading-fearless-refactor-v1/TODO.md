@@ -189,11 +189,16 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - the plan intentionally lowers to the existing ordered builder registrations:
       `asset_dir(...)`, `asset_manifest(...)`, `with_bundle_asset_entries(...)`, and
       `with_embedded_asset_entries(...)`,
+    - generated `--surface fret` modules now publish `preferred_startup_plan()` /
+      `preferred_startup_mode()` and route `mount(builder)?` through `with_asset_startup(...)`,
+      so native debug startup automatically uses the file-backed development lane while
+      packaged/web/mobile keeps the compiled bundle lane,
     - missing selected lanes now fail as startup configuration errors instead of silently falling
       through to ad-hoc runtime glue.
   - Remaining:
     - watcher/hot-reload policy is still implicit in the native file-manifest resolver layer,
-    - packaged-mode selection is still manual at startup sites until tooling owns the switch.
+    - the preferred mode heuristic is only first-party tooling policy today and is not yet a
+      shared runner/build profile contract.
 
 - [~] RESLOAD-pack-210 Define the bootstrap/build-tool integration point.
   - Candidates:
@@ -203,12 +208,15 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
   - Current landed slice:
     - the first app-facing integration point is now explicit in `ecosystem/fret`:
       `AssetStartupPlan` + `AssetStartupMode` on the builder surface,
-    - generated `--surface fret` modules already expose the packaged-lane ingredients
-      (`ENTRIES`, `bundle_id()`, `Bundle`, `install(app)`, `mount(builder)`), so tooling can feed
-      the startup plan without inventing a second contract.
+    - generated `--surface fret` modules now expose startup-policy helpers
+      (`preferred_startup_plan()`, `preferred_startup_mode()`, `mount(builder)?`) in addition to
+      the packaged-lane ingredients (`ENTRIES`, `bundle_id()`, `Bundle`, `install(app)`),
+    - `fretboard new {simple-todo,todo} --ui-assets` now consumes that generated startup surface
+      directly, so the first-party scaffold owns the preferred mode choice without bespoke app
+      code.
   - Remaining:
-    - define who owns selecting `AssetStartupMode` for debug/dev/package workflows,
-    - decide whether `fretboard` should emit a higher-level helper around the startup plan,
+    - decide whether `fret-bootstrap` / `fret-launch` should adopt the same preferred-mode policy
+      for non-scaffolded apps,
     - wire the same story through any future `fret-bootstrap` / `fret-launch` packaging helpers.
 
 ## Font baseline unification
@@ -349,8 +357,10 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - replacing the primary resolver now keeps its existing stack slot, so it does not silently
       jump ahead of newer registrations
     - `fretboard` todo/simple-todo scaffolds now create `assets/` plus a checked-in
-      `src/generated_assets.rs` stub and mount it through `generated_assets::mount(builder)` when
+      `src/generated_assets.rs` stub and mount it through `generated_assets::mount(builder)?` when
       `--ui-assets` is enabled
+    - those generated modules now also publish `preferred_startup_plan()` /
+      `preferred_startup_mode()` so the scaffold owns native-debug vs packaged startup behavior
     - scaffold READMEs now teach the regeneration command
       `fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle ...`
       instead of teaching `FretApp::asset_dir("assets")` as the default first-contact story
@@ -478,7 +488,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
 - [~] RESLOAD-mig-700 Migrate first-party users onto the new bundle-based asset story.
   - Current landed slice:
     - `fretboard -- new {simple-todo,todo} --ui-assets` already starts on generated
-      `src/generated_assets.rs` modules and `generated_assets::mount(builder)` instead of teaching
+      `src/generated_assets.rs` modules and `generated_assets::mount(builder)?` instead of teaching
       `.asset_dir("assets")` as the default first-contact story.
     - cookbook examples now cover all three first-party lanes explicitly:
       - app-owned compile-time bundle assets,

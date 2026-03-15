@@ -120,7 +120,10 @@ escape hatches.
 
 - Portable default:
   - generate Rust asset modules with `fretboard assets rust write ...`,
-  - mount them with `generated_assets::mount(builder)` or install them with a named bundle.
+  - mount them with `generated_assets::mount(builder)?` or install them with a named bundle.
+  - first-party generated modules now also publish `preferred_startup_plan()` /
+    `preferred_startup_mode()` so native debug can stay file-backed while packaged targets stay on
+    compiled bundle bytes.
 - Native/package-dev convenience:
   - `FretApp::asset_dir(...)`,
   - `UiAppBuilder::with_asset_dir(...)`,

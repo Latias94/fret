@@ -96,7 +96,9 @@ This workstream takes a fearless posture:
   - `fretboard new todo --ui-assets` / `fretboard new simple-todo --ui-assets` now scaffold:
     - an `assets/` directory for app-owned files,
     - a checked-in `src/generated_assets.rs` stub for the portable compile-time lane,
-    - `generated_assets::mount(builder)` on the default `fret` builder path,
+    - `generated_assets::mount(builder)?` on the default `fret` builder path,
+    - generated startup helpers (`preferred_startup_plan()` / `preferred_startup_mode()`) that
+      select native debug development mounts vs packaged bundle mounts,
     - and an explicit regeneration command for `fretboard assets rust write ...`.
 - A first compile-time embedded artifact lane now exists for packaged/web/mobile-friendly builds:
   - `fretboard assets rust write --dir ... --out ... --app-bundle ...` emits a generated Rust
@@ -111,8 +113,9 @@ This workstream takes a fearless posture:
       `fret-assets` / `fret-runtime` integration.
   - The `--surface fret` module now exposes both:
     - `register(app)` for direct host/app registration,
-    - `mount(builder)` for `UiAppBuilder` startup-path mounting via
-      `with_bundle_asset_entries(...)`.
+    - `mount(builder)?` for `UiAppBuilder` startup-path mounting via `with_asset_startup(...)`,
+    - and startup-plan helpers so tooling can own the preferred development vs packaged switch
+      without inventing a second contract.
   - `FretApp::asset_entries(...)`, `FretApp::bundle_asset_entries(...)`,
     `FretApp::embedded_asset_entries(...)`, `UiAppBuilder::with_bundle_asset_entries(...)`, and
     `UiAppBuilder::with_embedded_asset_entries(...)` now keep compile-time/static registrations on

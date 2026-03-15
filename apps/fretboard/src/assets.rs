@@ -330,6 +330,7 @@ fn render_rust_asset_module(
     dir_abs: &Path,
     surface: RustSurface,
 ) -> Result<String, String> {
+    let source_dir_literal = render_source_dir_literal(crate_root_abs, dir_abs)?;
     let mut out = String::new();
     writeln!(
         out,
@@ -348,12 +349,12 @@ fn render_rust_asset_module(
         RustSurface::Fret => {
             writeln!(
                 out,
-                "use fret::assets::{{self, AssetBundleId, AssetKey, AssetLocator, AssetRevision, StaticAssetEntry}};\n"
+                "use fret::assets::{{self, AssetBundleId, AssetKey, AssetLocator, AssetRevision, AssetStartupMode, AssetStartupPlan, StaticAssetEntry}};\n"
             )
             .expect("write to string");
             writeln!(
                 out,
-                "// `--surface fret` modules expose `Bundle`, `install(app)`, `register(app)`, and `mount(builder)`.\n"
+                "// `--surface fret` modules expose startup helpers plus `Bundle`, `install(app)`, `register(app)`, and `mount(builder)`.\n"
             )
             .expect("write to string");
         }
@@ -382,6 +383,13 @@ fn render_rust_asset_module(
         "pub fn locator(key: impl Into<AssetKey>) -> AssetLocator {{\n    AssetLocator::bundle(bundle_id(), key)\n}}\n"
     )
     .expect("write to string");
+    if matches!(surface, RustSurface::Fret) {
+        writeln!(
+            out,
+            "pub const DEVELOPMENT_SOURCE_DIR: &str = {source_dir_literal};\n"
+        )
+        .expect("write to string");
+    }
     writeln!(out, "pub const ENTRIES: &[StaticAssetEntry] = &[").expect("write to string");
 
     for entry in &bundle.entries {
@@ -424,6 +432,21 @@ fn render_rust_asset_module(
         RustSurface::Fret => {
             writeln!(
                 out,
+                "pub fn packaged_startup_plan() -> AssetStartupPlan {{\n    AssetStartupPlan::new().packaged_bundle_entries(bundle_id(), ENTRIES.iter().copied())\n}}\n"
+            )
+            .expect("write to string");
+            writeln!(
+                out,
+                "pub fn preferred_startup_plan() -> AssetStartupPlan {{\n    let plan = packaged_startup_plan();\n    #[cfg(not(target_arch = \"wasm32\"))]\n    let plan = plan.development_bundle_dir(bundle_id(), DEVELOPMENT_SOURCE_DIR);\n    plan\n}}\n"
+            )
+            .expect("write to string");
+            writeln!(
+                out,
+                "pub const fn preferred_startup_mode() -> AssetStartupMode {{\n    #[cfg(all(not(target_arch = \"wasm32\"), debug_assertions))]\n    {{\n        AssetStartupMode::Development\n    }}\n    #[cfg(not(all(not(target_arch = \"wasm32\"), debug_assertions)))]\n    {{\n        AssetStartupMode::Packaged\n    }}\n}}\n"
+            )
+            .expect("write to string");
+            writeln!(
+                out,
                 "pub fn register(app: &mut fret::app::App) {{\n    assets::register_bundle_entries(app, bundle_id(), ENTRIES.iter().copied());\n}}\n"
             )
             .expect("write to string");
@@ -439,7 +462,7 @@ fn render_rust_asset_module(
             .expect("write to string");
             writeln!(
                 out,
-                "pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::UiAppBuilder<S> {{\n    builder.with_bundle_asset_entries(bundle_id(), ENTRIES.iter().copied())\n}}"
+                "pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::Result<fret::UiAppBuilder<S>> {{\n    builder.with_asset_startup(bundle_id(), preferred_startup_mode(), preferred_startup_plan())\n}}"
             )
             .expect("write to string");
         }
@@ -453,6 +476,25 @@ fn render_rust_asset_module(
     }
 
     Ok(out)
+}
+
+fn render_source_dir_literal(crate_root_abs: &Path, dir_abs: &Path) -> Result<String, String> {
+    let rel_dir = dir_abs.strip_prefix(crate_root_abs).map_err(|_| {
+        format!(
+            "asset source dir `{}` must live under crate root `{}` when generating a Rust module",
+            dir_abs.display(),
+            crate_root_abs.display()
+        )
+    })?;
+    let rel_dir = path_to_forward_slashes(rel_dir);
+    if rel_dir.is_empty() {
+        Ok("env!(\"CARGO_MANIFEST_DIR\")".to_string())
+    } else {
+        Ok(format!(
+            "concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/\", {:?})",
+            rel_dir
+        ))
+    }
 }
 
 fn asset_path_from_key(root: &Path, key: &str) -> PathBuf {
@@ -679,13 +721,27 @@ mod tests {
         .expect("rust write should succeed");
 
         let generated = std::fs::read_to_string(&out).expect("read generated module");
-        assert!(generated.contains("use fret::assets::{self, AssetBundleId, AssetKey, AssetLocator, AssetRevision, StaticAssetEntry};"));
+        assert!(generated.contains("use fret::assets::{self, AssetBundleId, AssetKey, AssetLocator, AssetRevision, AssetStartupMode, AssetStartupPlan, StaticAssetEntry};"));
         assert!(generated.contains(
-            "// `--surface fret` modules expose `Bundle`, `install(app)`, `register(app)`, and `mount(builder)`."
+            "// `--surface fret` modules expose startup helpers plus `Bundle`, `install(app)`, `register(app)`, and `mount(builder)`."
         ));
         assert!(generated.contains("AssetBundleId::app(\"demo-app\")"));
+        assert!(generated.contains(
+            "pub const DEVELOPMENT_SOURCE_DIR: &str = concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/\", \"assets\");"
+        ));
         assert!(generated.contains("include_bytes!(concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/\", \"assets/icons/search.svg\"))"));
         assert!(generated.contains(".with_media_type(\"image/svg+xml\")"));
+        assert!(generated.contains("pub fn packaged_startup_plan() -> AssetStartupPlan"));
+        assert!(generated.contains(
+            "AssetStartupPlan::new().packaged_bundle_entries(bundle_id(), ENTRIES.iter().copied())"
+        ));
+        assert!(generated.contains("pub fn preferred_startup_plan() -> AssetStartupPlan"));
+        assert!(generated.contains(
+            "let plan = plan.development_bundle_dir(bundle_id(), DEVELOPMENT_SOURCE_DIR);"
+        ));
+        assert!(generated.contains("pub const fn preferred_startup_mode() -> AssetStartupMode"));
+        assert!(generated.contains("AssetStartupMode::Development"));
+        assert!(generated.contains("AssetStartupMode::Packaged"));
         assert!(generated.contains("pub fn register(app: &mut fret::app::App)"));
         assert!(generated.contains("pub fn install(app: &mut fret::app::App)"));
         assert!(generated.contains("pub struct Bundle;"));
@@ -696,11 +752,11 @@ mod tests {
             "assets::register_bundle_entries(app, bundle_id(), ENTRIES.iter().copied());"
         ));
         assert!(generated.contains(
-            "pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::UiAppBuilder<S>"
+            "pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::Result<fret::UiAppBuilder<S>>"
         ));
         assert!(
             generated.contains(
-                "builder.with_bundle_asset_entries(bundle_id(), ENTRIES.iter().copied())"
+                "builder.with_asset_startup(bundle_id(), preferred_startup_mode(), preferred_startup_plan())"
             )
         );
     }

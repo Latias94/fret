@@ -515,18 +515,25 @@ mod tests {
         let main_rs = std::fs::read_to_string(out_dir.join("src/main.rs"))
             .expect("generated main.rs should exist");
         assert!(main_rs.contains("mod generated_assets;"));
-        assert!(main_rs.contains("generated_assets::mount(builder)"));
+        assert!(main_rs.contains("generated_assets::mount(builder)?"));
 
         let generated_assets = std::fs::read_to_string(out_dir.join("src/generated_assets.rs"))
             .expect("generated assets stub should exist");
         assert!(generated_assets.contains("AssetBundleId::app(\"todo-app\")"));
         assert!(
-            generated_assets.contains("pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>)")
+            generated_assets.contains(
+                "pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::Result<fret::UiAppBuilder<S>>"
+            )
+        );
+        assert!(generated_assets.contains("pub fn preferred_startup_plan() -> AssetStartupPlan"));
+        assert!(
+            generated_assets.contains("pub const fn preferred_startup_mode() -> AssetStartupMode")
         );
 
         let readme = std::fs::read_to_string(out_dir.join("README.md"))
             .expect("generated README.md should exist");
-        assert!(readme.contains("`generated_assets::mount(builder)`"));
+        assert!(readme.contains("`generated_assets::mount(builder)?`"));
+        assert!(readme.contains("`preferred_startup_plan()` / `preferred_startup_mode()`"));
         assert!(readme.contains(
             "`fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle todo-app --force`"
         ));

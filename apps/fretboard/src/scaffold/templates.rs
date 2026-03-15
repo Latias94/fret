@@ -26,7 +26,7 @@ fn generated_assets_builder_prefix(opts: ScaffoldOptions) -> &'static str {
 
 fn generated_assets_builder_suffix(opts: ScaffoldOptions) -> &'static str {
     if opts.ui_assets {
-        ";\n    generated_assets::mount(builder)\n"
+        ";\n    generated_assets::mount(builder)?\n"
     } else {
         ""
     }
@@ -273,7 +273,7 @@ use fret::{
     icons::{icon, IconId},
     query::{QueryKey, QueryPolicy, QueryState, QueryStatus},
     selector::DepsBuilder,
-    style::{ColorRef, Radius, Space, Theme},
+    style::{ColorRef, Radius, Space, Theme, ThemeSnapshot},
 };
 
 __GENERATED_ASSET_MODULE__
@@ -851,7 +851,7 @@ pub(super) fn simple_todo_template_main_rs(package_name: &str, opts: ScaffoldOpt
 use fret::app::prelude::*;
 use fret::{
     icons::{icon, IconId},
-    style::{ColorRef, Radius, Space, Theme},
+    style::{ColorRef, Radius, Space, Theme, ThemeSnapshot},
 };
 
 __GENERATED_ASSET_MODULE__
@@ -1112,9 +1112,12 @@ pub(super) fn generated_assets_stub_rs(package_name: &str) -> String {
 // Regenerate this file after editing `assets/`:
 //   fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle {package_name} --force
 // Ecosystem/package crates can use `Bundle` or `install(app)` on the app setup surface; apps on
-// the builder lane can use `mount(builder)`.
+// the builder lane can use `mount(builder)?`.
 
-use fret::assets::{{self, AssetBundleId, AssetKey, AssetLocator, StaticAssetEntry}};
+use fret::assets::{{
+    self, AssetBundleId, AssetKey, AssetLocator, AssetStartupMode, AssetStartupPlan,
+    StaticAssetEntry,
+}};
 
 pub fn bundle_id() -> AssetBundleId {{
     AssetBundleId::app("{package_name}")
@@ -1124,7 +1127,31 @@ pub fn locator(key: impl Into<AssetKey>) -> AssetLocator {{
     AssetLocator::bundle(bundle_id(), key)
 }}
 
+pub const DEVELOPMENT_SOURCE_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets");
+
 pub const ENTRIES: &[StaticAssetEntry] = &[];
+
+pub fn packaged_startup_plan() -> AssetStartupPlan {{
+    AssetStartupPlan::new().packaged_bundle_entries(bundle_id(), ENTRIES.iter().copied())
+}}
+
+pub fn preferred_startup_plan() -> AssetStartupPlan {{
+    let plan = packaged_startup_plan();
+    #[cfg(not(target_arch = "wasm32"))]
+    let plan = plan.development_bundle_dir(bundle_id(), DEVELOPMENT_SOURCE_DIR);
+    plan
+}}
+
+pub const fn preferred_startup_mode() -> AssetStartupMode {{
+    #[cfg(all(not(target_arch = "wasm32"), debug_assertions))]
+    {{
+        AssetStartupMode::Development
+    }}
+    #[cfg(not(all(not(target_arch = "wasm32"), debug_assertions)))]
+    {{
+        AssetStartupMode::Packaged
+    }}
+}}
 
 pub fn register(app: &mut fret::app::App) {{
     assets::register_bundle_entries(app, bundle_id(), ENTRIES.iter().copied());
@@ -1142,8 +1169,8 @@ impl fret::integration::InstallIntoApp for Bundle {{
     }}
 }}
 
-pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::UiAppBuilder<S> {{
-    builder.with_bundle_asset_entries(bundle_id(), ENTRIES.iter().copied())
+pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::Result<fret::UiAppBuilder<S>> {{
+    builder.with_asset_startup(bundle_id(), preferred_startup_mode(), preferred_startup_plan())
 }}
 "#
     )
@@ -1152,7 +1179,7 @@ pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::UiAppBuilder<S
 pub(super) fn todo_template_readme_md(package_name: &str, opts: ScaffoldOptions) -> String {
     let ui_assets_line = if opts.ui_assets {
         format!(
-            "- UI assets: enabled (`fret/ui-assets` + `src/generated_assets.rs` + `generated_assets::mount(builder)`)\n- Portable asset lane: place app-owned files under `assets/`, then regenerate `src/generated_assets.rs` with `fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle {package_name} --force`\n- Resolve app-owned files via `generated_assets::locator(\"...\")` or `AssetBundleId::app(\"{package_name}\")`\n- Native/package-dev escape hatch: `FretApp::asset_dir(\"assets\")` still exists, but the scaffold intentionally starts on the compile-time portable lane\n"
+            "- UI assets: enabled (`fret/ui-assets` + `src/generated_assets.rs` + `generated_assets::mount(builder)?`)\n- Portable asset lane: place app-owned files under `assets/`, then regenerate `src/generated_assets.rs` with `fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle {package_name} --force`\n- Startup ownership: generated assets now publish `preferred_startup_plan()` / `preferred_startup_mode()`, so debug native uses the file-backed development lane while packaged/web/mobile stays on the compiled bundle lane\n- Resolve app-owned files via `generated_assets::locator(\"...\")` or `AssetBundleId::app(\"{package_name}\")`\n- Lower-level escape hatch: `FretApp::asset_dir(\"assets\")` still exists when you intentionally want manual startup layering\n"
         )
     } else {
         "- UI assets: disabled (use `fretboard new todo --ui-assets` if you need images/SVG caches + a default app asset bundle)\n".to_string()
@@ -1235,7 +1262,7 @@ cargo run --release
 pub(super) fn simple_todo_template_readme_md(package_name: &str, opts: ScaffoldOptions) -> String {
     let ui_assets_line = if opts.ui_assets {
         format!(
-            "- UI assets: enabled (`fret/ui-assets` + `src/generated_assets.rs` + `generated_assets::mount(builder)`)\n- Portable asset lane: place app-owned files under `assets/`, then regenerate `src/generated_assets.rs` with `fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle {package_name} --force`\n- Resolve app-owned files via `generated_assets::locator(\"...\")` or `AssetBundleId::app(\"{package_name}\")`\n- Native/package-dev escape hatch: `FretApp::asset_dir(\"assets\")` still exists, but the scaffold intentionally starts on the compile-time portable lane\n"
+            "- UI assets: enabled (`fret/ui-assets` + `src/generated_assets.rs` + `generated_assets::mount(builder)?`)\n- Portable asset lane: place app-owned files under `assets/`, then regenerate `src/generated_assets.rs` with `fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle {package_name} --force`\n- Startup ownership: generated assets now publish `preferred_startup_plan()` / `preferred_startup_mode()`, so debug native uses the file-backed development lane while packaged/web/mobile stays on the compiled bundle lane\n- Resolve app-owned files via `generated_assets::locator(\"...\")` or `AssetBundleId::app(\"{package_name}\")`\n- Lower-level escape hatch: `FretApp::asset_dir(\"assets\")` still exists when you intentionally want manual startup layering\n"
         )
     } else {
         "- UI assets: disabled (use `fretboard new simple-todo --ui-assets` if you need images/SVG caches + a default app asset bundle)\n".to_string()
@@ -1362,7 +1389,7 @@ mod tests {
         let src = todo_template_main_rs("todo-app", opts());
         assert!(src.contains("use fret::app::prelude::*;"));
         assert!(src.contains("icons::{icon, IconId},"));
-        assert!(src.contains("style::{ColorRef, Radius, Space, Theme},"));
+        assert!(src.contains("style::{ColorRef, Radius, Space, Theme, ThemeSnapshot},"));
         assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
         assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
         assert!(src.contains("cx: &mut UiCx<'_>,"));
@@ -1414,7 +1441,6 @@ mod tests {
         assert!(!src.contains("let card = card.into_element(cx);"));
         assert!(!src.contains("todo_page(theme, card).into_element(cx).into()"));
         assert!(src.contains("fn todo_page("));
-        assert!(!src.contains("cx: &mut UiCx<'_>,"));
         assert!(src.contains(") -> impl UiChild {"));
         assert!(!src.contains("Model<Vec<TodoItem>>"));
         assert!(!src.contains("Model<bool>"));
@@ -1439,7 +1465,7 @@ mod tests {
         let src = todo_template_main_rs("todo-app", opts_with_ui_assets());
         assert!(src.contains("mod generated_assets;"));
         assert!(src.contains("let builder = FretApp::new(\"todo-app\")"));
-        assert!(src.contains("generated_assets::mount(builder)"));
+        assert!(src.contains("generated_assets::mount(builder)?"));
         assert!(!src.contains(".asset_dir(\"assets\")"));
     }
 
@@ -1469,7 +1495,7 @@ mod tests {
         let src = simple_todo_template_main_rs("simple-todo-app", opts());
         assert!(src.contains("use fret::app::prelude::*;"));
         assert!(src.contains("icons::{icon, IconId},"));
-        assert!(src.contains("style::{ColorRef, Radius, Space, Theme},"));
+        assert!(src.contains("style::{ColorRef, Radius, Space, Theme, ThemeSnapshot},"));
         assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
         assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
         assert!(src.contains("impl UiChild"));
@@ -1533,7 +1559,7 @@ mod tests {
         let src = simple_todo_template_main_rs("simple-todo-app", opts_with_ui_assets());
         assert!(src.contains("mod generated_assets;"));
         assert!(src.contains("let builder = FretApp::new(\"simple-todo-app\")"));
-        assert!(src.contains("generated_assets::mount(builder)"));
+        assert!(src.contains("generated_assets::mount(builder)?"));
         assert!(!src.contains(".asset_dir(\"assets\")"));
     }
 
@@ -1577,7 +1603,10 @@ mod tests {
 
         let simple_with_assets =
             simple_todo_template_readme_md("simple-todo-app", opts_with_ui_assets());
-        assert!(simple_with_assets.contains("`generated_assets::mount(builder)`"));
+        assert!(simple_with_assets.contains("`generated_assets::mount(builder)?`"));
+        assert!(
+            simple_with_assets.contains("`preferred_startup_plan()` / `preferred_startup_mode()`")
+        );
         assert!(simple_with_assets.contains(
             "`fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle simple-todo-app --force`"
         ));
@@ -1594,7 +1623,10 @@ mod tests {
         assert!(!todo.contains("on_action_notify_transient"));
 
         let todo_with_assets = todo_template_readme_md("todo-app", opts_with_ui_assets());
-        assert!(todo_with_assets.contains("`generated_assets::mount(builder)`"));
+        assert!(todo_with_assets.contains("`generated_assets::mount(builder)?`"));
+        assert!(
+            todo_with_assets.contains("`preferred_startup_plan()` / `preferred_startup_mode()`")
+        );
         assert!(todo_with_assets.contains(
             "`fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle todo-app --force`"
         ));
@@ -1606,11 +1638,22 @@ mod tests {
         let src = generated_assets_stub_rs("todo-app");
         assert!(src.contains("AssetBundleId::app(\"todo-app\")"));
         assert!(src.contains("pub fn locator(key: impl Into<AssetKey>) -> AssetLocator"));
+        assert!(src.contains(
+            "pub const DEVELOPMENT_SOURCE_DIR: &str = concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/assets\");"
+        ));
+        assert!(src.contains("pub fn packaged_startup_plan() -> AssetStartupPlan"));
+        assert!(src.contains("pub fn preferred_startup_plan() -> AssetStartupPlan"));
+        assert!(src.contains("pub const fn preferred_startup_mode() -> AssetStartupMode"));
         assert!(src.contains("pub fn register(app: &mut fret::app::App)"));
         assert!(src.contains("pub fn install(app: &mut fret::app::App)"));
         assert!(src.contains("pub struct Bundle;"));
         assert!(src.contains("impl fret::integration::InstallIntoApp for Bundle"));
-        assert!(src.contains("pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>)"));
+        assert!(src.contains(
+            "pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::Result<fret::UiAppBuilder<S>>"
+        ));
+        assert!(src.contains(
+            "builder.with_asset_startup(bundle_id(), preferred_startup_mode(), preferred_startup_plan())"
+        ));
         assert!(src.contains("register(app);"));
         assert!(src.contains(
             "fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle todo-app --force"

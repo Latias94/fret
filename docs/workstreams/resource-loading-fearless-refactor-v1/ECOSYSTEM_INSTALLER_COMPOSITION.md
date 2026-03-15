@@ -125,9 +125,13 @@ shipped bytes.
 
 Typical examples:
 
-- app-owned assets mounted through `generated_assets::mount(builder)`,
+- app-owned assets mounted through `generated_assets::mount(builder)?`,
 - a reusable asset-only crate that can expose the generated `Bundle` / `install(app)` surface as-is,
 - one package bundle with no additional icon packs, commands, theme wiring, or runtime globals.
+
+The generated module can also publish first-party startup helpers such as
+`preferred_startup_plan()` / `preferred_startup_mode()` when tooling wants to own the development
+vs packaged switch directly.
 
 Wrap that generated module in a hand-written higher-level installer/bundle surface when the crate
 also composes other app-facing responsibilities.
